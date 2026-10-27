@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Label;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -24,6 +25,12 @@ import ua.bookloom.ui.ThemeTestSupport;
  * owns every count the translation depends on and the checks, in one card. Each figure is shown by exactly one of them.
  */
 class ImportBookFactsTest extends ImportBookTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final List<String> DETAILS_ROWS =
             List.of("file", "format", "titleAuthor", "declaredLang", "chapters", "drm");
@@ -66,7 +73,7 @@ class ImportBookFactsTest extends ImportBookTestBase {
                 "format | EPUB",
                 "titleAuthor | Title · Author",
                 "declaredLang | English (en)",
-                "chapters | 2 · ~78,000 words",
+                "chapters | 2 · about 78,200 words",
                 "drm | none"
             })
     void details_bookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {
@@ -158,12 +165,15 @@ class ImportBookFactsTest extends ImportBookTestBase {
                 .hasSize(1);
     }
 
-    // IF the word count were shown in the facts as well as with the chapters, THEN two roundings could disagree.
+    // IF one place on the page rounded the word count differently from another, THEN the page would give two figures
+    // for one book; the verdict, the fold's summary and the chapters row all word it through the same owner.
     @Test
-    void figures_bookOpened_theWordCountIsOnTheScreenOnce() throws TimeoutException {
+    void figures_bookOpened_everyPlaceTheWordCountAppearsSaysTheSameRoundedFigure() throws TimeoutException {
         openCheckedFactsBook();
 
-        assertThat(labelsContaining("78,000", "import-screen")).hasSize(1);
+        assertThat(labelsContaining("78,", "import-screen"))
+                .hasSize(3)
+                .allSatisfy(text -> assertThat(text).contains("about 78,200 words"));
     }
 
     // IF the run total were a second card or lost with the old Structure screen, THEN the person would not learn why
@@ -175,8 +185,9 @@ class ImportBookFactsTest extends ImportBookTestBase {
         openCheckedFactsBook();
 
         assertThat(labelText("structure-run-total"))
-                .isEqualTo("5 segments in the book text + 31 other texts (titles, alt texts, contents, metadata)"
-                        + " = 36 to translate");
+                .isEqualTo(
+                        "5 segments in the book text + 31 other texts (titles, picture descriptions, contents, book details)"
+                                + " = 36 to translate");
         assertThat(isInside("structure-run-total", "import-facts-card")).isTrue();
     }
 
@@ -215,7 +226,7 @@ class ImportBookFactsTest extends ImportBookTestBase {
         openCheckedFactsBook(FAITHFUL, new BookPlan(Map.of("unit-0", 3), List.of("s-2")));
 
         assertThat(labelText("structure-chunk-warning-text"))
-                .isEqualTo("1 segment exceeds the chunk budget — it will be split by sentence and re-joined.");
+                .isEqualTo("1 segment exceeds the group budget — it will be split by sentence and re-joined.");
         assertThat(isInside("structure-chunk-warning", "import-facts-card")).isTrue();
     }
 

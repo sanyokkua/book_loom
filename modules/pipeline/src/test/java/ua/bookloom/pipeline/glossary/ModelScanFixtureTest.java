@@ -35,7 +35,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -76,7 +76,7 @@ class ModelScanFixtureTest {
     private static final Pattern CANDIDATE_LINE = Pattern.compile("(?m)^(.+?) — ");
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×(?: — \"(.*?)\")?");
 
-    private final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+    private final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
 
     @ParameterizedTest
     @ValueSource(strings = {"earth-gravity.md", "earth-gravity.epub", "earth-gravity.fb2", "earth-gravity.txt"})

@@ -3,7 +3,6 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import javafx.scene.Node;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.UnknownGender;
@@ -47,13 +46,8 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
-    private boolean isAsking() {
-        final Node card = scene.getRoot().lookup("#" + CARD);
-        return card != null && card.isVisible() && card.getScene() != null;
-    }
-
     private void awaitAsking() throws Exception {
-        awaitFx(this::isAsking);
+        awaitFx(() -> isVisibleInScene(CARD));
     }
 
     // IF the run started silently, THEN a character the book names forty times would be drafted with a guessed gender.
@@ -79,7 +73,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         onFx(() -> button("genders-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
         final CharacterGendersDialog dialog = injector.getInstance(CharacterGendersDialog.class);
         final int[] started = {0};
         onFx(() -> dialog.startAfterAsking(() -> started[0]++));
@@ -112,7 +106,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(engine.requests()).isEmpty();
-        assertThat(isAsking()).isTrue();
+        assertThat(isVisibleInScene(CARD)).isTrue();
     }
 
     @Test
@@ -122,7 +116,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         job.awaitRunStarted();
-        assertThat(isAsking()).isFalse();
+        assertThat(isVisibleInScene(CARD)).isFalse();
     }
 
     // IF a suggested gender were listed like a missing one, THEN the person would be told to set what the table shows.

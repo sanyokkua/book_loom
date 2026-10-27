@@ -5,10 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
@@ -34,24 +30,12 @@ public final class StateMirror {
     /** The activity log keeps this many of the newest entries; a whole book would otherwise exhaust the list view. */
     public static final int MAX_LOG_ENTRIES = 500;
 
-    /** The value of {@link #waitingSeconds()} while no model request has been outstanding long enough to mention. */
-    public static final int NOT_WAITING = -1;
-
     private final ReadOnlyObjectWrapper<RunState> runState = new ReadOnlyObjectWrapper<>(RunState.IDLE);
-    private final ReadOnlyIntegerWrapper accepted = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper remaining = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper section = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper sections = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
     private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
-    private final ReadOnlyDoubleWrapper progressFraction = new ReadOnlyDoubleWrapper();
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable String> runProjectId = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunMode> runMode = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
@@ -82,97 +66,6 @@ public final class StateMirror {
     }
 
     /**
-     * Segments accepted so far.
-     *
-     * @return the read-only count; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty accepted() {
-        return accepted.getReadOnlyProperty();
-    }
-
-    /**
-     * Segments flagged so far.
-     *
-     * @return the read-only count; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty flagged() {
-        return flagged.getReadOnlyProperty();
-    }
-
-    /**
-     * Segments not decided yet.
-     *
-     * @return the read-only count; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty remaining() {
-        return remaining.getReadOnlyProperty();
-    }
-
-    /**
-     * Accepted plus flagged plus remaining.
-     *
-     * @return the read-only count; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty total() {
-        return total.getReadOnlyProperty();
-    }
-
-    /**
-     * The 1-based body unit the run is translating.
-     *
-     * @return the read-only position, zero before the first; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty section() {
-        return section.getReadOnlyProperty();
-    }
-
-    /**
-     * How many body units the book has.
-     *
-     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty sections() {
-        return sections.getReadOnlyProperty();
-    }
-
-    /**
-     * The 1-based chunk within the section being translated.
-     *
-     * @return the read-only position, zero before the first; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty chunk() {
-        return chunk.getReadOnlyProperty();
-    }
-
-    /**
-     * How many chunks the section has.
-     *
-     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
-     */
-    public ReadOnlyIntegerProperty chunks() {
-        return chunks.getReadOnlyProperty();
-    }
-
-    /**
-     * Decided segments over the total.
-     *
-     * @return the read-only proportion between 0.0 and 1.0; read on the FX thread
-     */
-    public ReadOnlyDoubleProperty progressFraction() {
-        return progressFraction.getReadOnlyProperty();
-    }
-
-    /**
-     * How long the request now outstanding has been waiting, once that is long enough for the banner to say so.
-     *
-     * @return a read-only whole number of seconds, or {@link #NOT_WAITING} when there is nothing to say; read on the FX
-     *     thread
-     */
-    public ReadOnlyIntegerProperty waitingSeconds() {
-        return waitingSeconds.getReadOnlyProperty();
-    }
-
-    /**
      * The error that ended the run, or absent for every other outcome including a stop.
      *
      * @return a read-only property holding {@code null} unless the run failed; read on the FX thread
@@ -197,6 +90,16 @@ public final class StateMirror {
      */
     public ReadOnlyObjectProperty<@Nullable String> runFileName() {
         return runFileName.getReadOnlyProperty();
+    }
+
+    /**
+     * The stored project the run translates, so a window that opens another project can tell the run is not its own.
+     *
+     * @return a read-only property holding {@code null} while no run exists or its starter named no project; read on
+     *     the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable String> runProjectId() {
+        return runProjectId.getReadOnlyProperty();
     }
 
     /**
@@ -245,7 +148,21 @@ public final class StateMirror {
     public void publishRunStarted(final String fileName, final @Nullable RunMode mode) {
         Objects.requireNonNull(fileName, "fileName");
         log.debug("publishing run started on {} with mode {}", fileName, mode);
-        Platform.runLater(() -> resetTo(fileName, mode, RunState.RUNNING));
+        Platform.runLater(() -> resetTo(null, fileName, mode, RunState.RUNNING));
+    }
+
+    /**
+     * As {@link #publishRunStarted(String, RunMode)}, naming the stored project the run translates.
+     *
+     * @param projectId the non-null id of the project the run belongs to
+     * @param fileName the non-null name of the book file the run translates
+     * @param mode the dial and review mode the title bar names, or {@code null} when the caller names none
+     */
+    public void publishRunStarted(final String projectId, final String fileName, final @Nullable RunMode mode) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(fileName, "fileName");
+        log.debug("publishing run started on project {} ({}) with mode {}", projectId, fileName, mode);
+        Platform.runLater(() -> resetTo(projectId, fileName, mode, RunState.RUNNING));
     }
 
     /**
@@ -254,7 +171,7 @@ public final class StateMirror {
      */
     public void publishRunCleared() {
         log.debug("publishing run cleared");
-        Platform.runLater(() -> resetTo(null, null, RunState.IDLE));
+        Platform.runLater(() -> resetTo(null, null, null, RunState.IDLE));
     }
 
     /**
@@ -268,30 +185,19 @@ public final class StateMirror {
         Platform.runLater(() -> runState.set(state));
     }
 
-    /**
-     * Shows how long the model has been slow to answer, or withdraws the notice.
-     *
-     * <p>Not logged here: the run session logs when a wait is first shown and when it is cleared, and this is called
-     * once a second while one lasts.
-     *
-     * @param seconds whole seconds the outstanding request has waited, or {@link #NOT_WAITING} to withdraw the notice
-     */
-    public void publishWaitingSeconds(final int seconds) {
-        Platform.runLater(() -> waitingSeconds.set(seconds));
-    }
-
     void showFlagged(final int count) {
         applyFigures(figures.get().withFlagged(count));
     }
 
     /**
-     * Shows the figures derived from a snapshot.
+     * Shows the figures derived from a snapshot. Until the run publishes its steps ({@link LiveSection#publishSteps}),
+     * the share of work is counted from the segments alone.
      *
-     * @param progress the engine's latest snapshot
+     * @param snapshot the engine's latest snapshot
      */
-    public void publishProgress(final JobProgress progress) {
-        Objects.requireNonNull(progress, "progress");
-        final RunFigures figures = RunFigures.from(progress);
+    public void publishProgress(final JobProgress snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        final RunFigures figures = RunFigures.from(snapshot);
         Platform.runLater(() -> applyFigures(figures));
     }
 
@@ -345,14 +251,18 @@ public final class StateMirror {
         });
     }
 
-    private void resetTo(final @Nullable String fileName, final @Nullable RunMode mode, final RunState state) {
+    private void resetTo(
+            final @Nullable String projectId,
+            final @Nullable String fileName,
+            final @Nullable RunMode mode,
+            final RunState state) {
         applyFigures(RunFigures.EMPTY);
+        runProjectId.set(projectId);
         runFileName.set(fileName);
         runMode.set(mode);
         logEntries.clear();
         failure.set(null);
         report.set(null);
-        waitingSeconds.set(NOT_WAITING);
         live.reset();
         review.reset();
         runState.set(state);
@@ -360,15 +270,7 @@ public final class StateMirror {
 
     private void applyFigures(final RunFigures figures) {
         this.figures.set(figures);
-        accepted.set(figures.accepted());
-        flagged.set(figures.flagged());
-        remaining.set(figures.remaining());
-        total.set(figures.total());
-        section.set(figures.section());
-        sections.set(figures.sections());
-        chunk.set(figures.chunk());
-        chunks.set(figures.chunks());
-        progressFraction.set(figures.fraction());
+        live.showCount(figures.total() - figures.remaining(), figures.total());
     }
 
     // A line that says what the previous one said is counted on it instead of repeated, so a stalled call that fails

@@ -20,6 +20,9 @@ import ua.bookloom.ui.ViewNames;
 /** Start translation on the names and style screen: it begins a run only when Translating would offer a start. */
 class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
+    // Wide enough that the content area, the window less the navigation column, is regular, not compact.
+    private static final double WIDE_SCENE = 1600;
+
     private void showNamesStyle() {
         glossary.willAnswer(Result.ok(List.of()));
         glossary.willAnswer(Result.ok(List.of()));
@@ -31,8 +34,9 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         return ThemeTestSupport.onFx(() -> navigator.currentView().get());
     }
 
-    private void awaitBanner(final String title) throws Exception {
-        awaitFx(() -> title.equals(labelText("translating-banner-title")));
+    // The title bar's state text of the run-state row, which every surface follows.
+    private void awaitState(final String prefix) throws Exception {
+        awaitFx(() -> labelText("shell-run-state").startsWith(prefix));
     }
 
     private void openBookOnly() throws TimeoutException {
@@ -42,18 +46,41 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         chooseTarget();
     }
 
-    // IF the screen had no heading, subtitle, note or footer, THEN the step would be an empty wall.
+    // IF the screen had no heading, purpose line or footer, THEN the step would be an empty wall.
     @Test
-    void screen_shown_holdsHeadingSubtitleNoteAndFooter() throws Exception {
+    void screen_shown_holdsHeadingPurposeAndFooter() throws Exception {
         openBookOnly();
         showNamesStyle();
 
         assertThat(labelText("names-style-title")).isEqualTo("Names & style");
-        assertThat(labelText("names-style-subtitle")).startsWith("The scan lists the names and terms");
-        assertThat(labelText("names-style-banner-text"))
-                .isEqualTo("Skip this and the app builds names on the fly as it translates.");
-        assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
+        assertThat(labelText("names-style-purpose"))
+                .isEqualTo("Decide how names and repeated words are translated. Optional — skip it and BookLoom"
+                        + " builds both while it translates.");
         assertThat(button("names-style-start").getText()).isEqualTo("Start translation");
+    }
+
+    // IF Back kept its long label in a compact content area, THEN the toolbar would push the run actions out of sight.
+    @Test
+    void backControl_compactContentArea_readsShortBackWithTheFullLabelAsTooltip() throws Exception {
+        openBookOnly();
+        showNamesStyle();
+
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+
+        assertThat(button("names-style-back").getText()).isEqualTo("‹ Back");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(button("names-style-back")))
+                .isEqualTo("Back to Book Brief");
+    }
+
+    // IF Back stayed short in a wide window, THEN the step it leads to would be named only on hover.
+    @Test
+    void backControl_wideContentArea_readsTheFullLabel() throws Exception {
+        openBookOnly();
+        showNamesStyle();
+
+        resizeScene(WIDE_SCENE, CONTENT_AT_MINIMUM_HEIGHT);
+
+        assertThat(button("names-style-back").getText()).isEqualTo("Back to Book Brief");
     }
 
     // IF Back did not lead to the Book Brief, THEN the step could not be left backwards.
@@ -76,9 +103,9 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-start").fire());
 
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
-        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet");
+        assertThat(labelText("translating-banner-title")).isEqualTo("Cannot start yet — no AI model is chosen.");
         assertThat(labelText("translating-banner-text"))
-                .isEqualTo("Choose a model in the provider settings, then start the translation.");
+                .isEqualTo("Choose an AI model in Settings › Providers, then start the translation.");
         assertThat(engine.requests()).isEmpty();
     }
 
@@ -100,7 +127,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
 
@@ -110,7 +137,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
     void forward_runUnderWay_offersBackToTheRunAndOnlyShowsIt() throws Exception {
         runningThenBackToNamesStyle();
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Back to the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         onFx(() -> button("names-style-start").fire());
 
         assertThat(engine.requests()).hasSize(1);
@@ -118,44 +145,45 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 
-    // IF a paused run were started again from here, THEN two jobs would work on one project; the button resumes it.
+    // IF a paused run were started again from here, THEN two jobs would work on one project; the button shows it.
     @Test
-    void forward_runPaused_offersResumeAndResumesTheSameJob() throws Exception {
+    void forward_runPaused_offersGoToTranslatingAndOnlyShowsIt() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> button("translating-pause").fire());
         job.emit(new Paused(PauseReason.REQUESTED, null, ProgressFixtures.progress(1, 2, 5, 0, 5)));
-        awaitBanner("Paused");
+        awaitState("Paused at");
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         onFx(() -> button("names-style-start").fire());
 
         assertThat(engine.requests()).hasSize(1);
-        assertThat(job.calls()).contains("resume");
+        assertThat(job.calls()).doesNotContain("resume");
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 
-    // IF a stopped run were offered a fresh start here, THEN Resume would be bypassed by a first-segment run.
+    // IF a stopped run were offered a fresh start here, THEN Continue translation would be bypassed by a first-segment
+    // run.
     @Test
-    void forward_runStopped_offersResumeNotStart() throws Exception {
+    void forward_runStopped_offersGoToTranslatingNotStart() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
-        awaitBanner("Translating");
+        awaitState("0 % done");
         onFx(() -> button("translating-stop").fire());
         job.finish(Result.ok(cancelledReport()));
-        awaitBanner("Run stopped");
+        awaitState("Stopped at");
 
         showNamesStyleAgain();
 
-        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
+        assertThat(button("names-style-start").getText()).isEqualTo("Go to Translating");
         assertThat(TooltipProbe.tipText(required("names-style-start")))
-                .startsWith("Continues the paused or stopped translation");
+                .startsWith("Opens the Translating step, where the translation can be continued");
     }
 
     private void showNamesStyleAgain() {
@@ -175,7 +203,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
                         .map(column -> ((Label) column.getGraphic()).getText())
                         .toList()))
-                .containsExactly("Term", "Type", "Target", "Gender", "Locked", "");
+                .containsExactly("Term", "Kind", "Translation", "Gender", "Locked", "");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
         assertThat(button("names-style-start").isDisabled()).isFalse();
         assertThat(button("names-style-scan").getText()).isEqualTo("Scan");

@@ -39,11 +39,14 @@ final class ConformanceCases {
         ABOUT,
         ERROR_DIALOG,
         REPLACE_RUN,
-        RETRY,
         EXPORT_COMPLETE,
         ADD_TERM,
         RESULTS,
-        REVIEW_PANEL
+        REVIEW_DESK,
+        DELETE_PROVIDER,
+        UNSAVED_PROVIDER,
+        TEST_DIALOG,
+        SWITCH_PROVIDER
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -54,6 +57,8 @@ final class ConformanceCases {
         BOOK_REFUSED,
         BOOK_DRM_BLOCKED,
         BOOK_UNSUPPORTED,
+        BOOK_READING,
+        BOOK_ALREADY_STORED,
         LANGUAGE_MISMATCH,
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
@@ -62,8 +67,23 @@ final class ConformanceCases {
         REVIEW_SELECTED,
         BOOK_REPORTED,
         GLOSSARY_LISTED,
+        GLOSSARY_WHILE_TRANSLATING,
+        GLOSSARY_WHILE_HIDDEN,
         BOOK_WITHOUT_LANGUAGE,
-        BRIEF_SUGGESTED
+        BRIEF_SUGGESTED,
+        PROJECTS_LISTED,
+        PROJECTS_EMPTY,
+        PROVIDER_FORM_DIRTY,
+        PROVIDER_FOLD_OPEN,
+        PROVIDER_TESTED,
+        PROVIDER_CONNECTION_FAILED,
+        PROVIDER_IN_USE,
+        MODELS_OPEN,
+        MODELS_DIRTY,
+        GENERATION_OPEN,
+        APPEARANCE_OPEN,
+        AUTOMATION_OPEN,
+        STORAGE_OPEN
     }
 
     /**
@@ -126,15 +146,8 @@ final class ConformanceCases {
                     null,
                     Overlay.REPLACE_RUN,
                     List.of(
-                            new Part("#replace-run-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#replace-run-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
-            new Screen(
-                    "RETRY_DIALOG",
-                    null,
-                    Overlay.RETRY,
-                    List.of(
-                            new Part("#retry-note-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#retry-note-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#open-another-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#open-another-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             new Screen(
                     "EXPORT_COMPLETE_DIALOG",
                     null,
@@ -166,32 +179,32 @@ final class ConformanceCases {
                     Preparation.BOOK_REFUSED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-refusal", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-refusal", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_DRM_BLOCKED",
                     ViewNames.IMPORT,
                     Preparation.BOOK_DRM_BLOCKED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-drm", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-drm", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_UNSUPPORTED",
                     ViewNames.IMPORT,
                     Preparation.BOOK_UNSUPPORTED,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-unsupported", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#import-unsupported", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-verdict", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_LANGUAGE_MISMATCH",
                     ViewNames.IMPORT,
                     Preparation.LANGUAGE_MISMATCH,
                     Overlay.NONE,
                     List.of(
-                            new Part("#import-mismatch", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
-                            new Part("#import-mismatch", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
+                            new Part("#import-verdict", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part("#import-verdict", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             new Screen(
                     "BOOK_BRIEF",
                     ViewNames.BOOK_BRIEF,
@@ -239,113 +252,6 @@ final class ConformanceCases {
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             ConformanceResultsCase.RESULTS_DIALOG,
-            // Ready to translate: the ready card and the banner in the info role.
-            new Screen(
-                    "TRANSLATING",
-                    ViewNames.TRANSLATING,
-                    Preparation.NONE,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
-            // Running: the bar's track surface-2 and its fill the primary, the tiles, the live panel and the log.
-            new Screen(
-                    "TRANSLATING_RUNNING",
-                    ViewNames.TRANSLATING,
-                    Preparation.RUN_STARTED,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#translating-progress-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-progress-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part(
-                                    "#translating-progress .track", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
-                            new Part("#translating-progress .bar", Kind.BACKGROUND, "primary", "#a58075", "#c4917e"),
-                            new Part("#translating-tile-accepted", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-tile-accepted", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#translating-log-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-log-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#translating-live-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-live-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            // The call's segments sit in a framed scroll area; its state chip takes the waiting role.
-                            new Part(
-                                    "#translating-live-card-current-segments",
-                                    Kind.BACKGROUND,
-                                    "surface",
-                                    "#ffffff",
-                                    "#33424a"),
-                            new Part(
-                                    "#translating-live-card-current-state",
-                                    Kind.BACKGROUND,
-                                    "warn-bg",
-                                    "#f6ecd8",
-                                    "#3a3327"),
-                            // The prompt context is a tinted, framed body under the segments.
-                            new Part(
-                                    "#translating-live-card-current-prompt-body",
-                                    Kind.BACKGROUND,
-                                    "surface-alt",
-                                    "#fbf9f4",
-                                    "#38474f"),
-                            new Part(
-                                    "#translating-live-card-current-prompt-body",
-                                    Kind.BORDER,
-                                    "border",
-                                    "#ddd5c8",
-                                    "#48585f"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
-            new Screen(
-                    "TRANSLATING_COMPLETED",
-                    ViewNames.TRANSLATING,
-                    Preparation.RUN_COMPLETED,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#translating-outcome-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#translating-outcome-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part(
-                                    "#translating-outcome-tile-accepted",
-                                    Kind.BACKGROUND,
-                                    "surface",
-                                    "#ffffff",
-                                    "#33424a"),
-                            new Part("#translating-banner", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
-                            new Part("#translating-banner", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
-            // The review panel open beside a paused run: its card on the surface role, the judge badge on surface-2.
-            new Screen(
-                    "TRANSLATING_REVIEW",
-                    ViewNames.TRANSLATING,
-                    Preparation.REVIEW_SELECTED,
-                    Overlay.REVIEW_PANEL,
-                    List.of(
-                            new Part("#review-panel", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#review-panel", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#review-judge", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
-                            new Part("#review-target", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            // A finding's kind is strong text and its note body text, readable on the card in both
-                            // blocks.
-                            new Part(".finding-kind", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
-                            new Part(".finding-note", Kind.TEXT, "text", "#2c3941", "#e6ebed"))),
-            // A pause on a provider error is the run's own state: the banner takes the err role, light and dark.
-            new Screen(
-                    "TRANSLATING_PROVIDER_ERROR",
-                    ViewNames.TRANSLATING,
-                    Preparation.RUN_PROVIDER_FAILED,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#translating-banner", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
-                            new Part("#translating-progress > .bar", Kind.BACKGROUND, "err", "#b0574c", "#cc7a6f"))),
-            // A run that waits for the provider by itself is a warning, not an error: it will go on without the person.
-            new Screen(
-                    "TRANSLATING_WAITING_FOR_PROVIDER",
-                    ViewNames.TRANSLATING,
-                    Preparation.RUN_WAITING_FOR_PROVIDER,
-                    Overlay.NONE,
-                    List.of(
-                            new Part("#translating-banner", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
-                            new Part("#translating-banner", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
             // consistency track on the cool border role. It needs an open book to show them; the finished state
             // follows a real export.
@@ -374,7 +280,13 @@ final class ConformanceCases {
 
     /** Every screen, the import screen's open-book cases and the names screen's included. */
     static final List<Screen> SCREENS = Stream.of(
-                    BASE.stream(), ImportConformanceCases.SCREENS.stream(), NamesStyleConformanceCases.SCREENS.stream())
+                    BASE.stream(),
+                    ImportConformanceCases.SCREENS.stream(),
+                    NamesStyleConformanceCases.SCREENS.stream(),
+                    ProjectsConformanceCases.SCREENS.stream(),
+                    ExportConformanceCases.SCREENS.stream(),
+                    SettingsConformanceCases.SCREENS.stream(),
+                    TranslatingConformanceCases.SCREENS.stream())
             .flatMap(cases -> cases)
             .toList();
 }

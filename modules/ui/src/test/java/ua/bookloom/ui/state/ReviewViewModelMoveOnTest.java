@@ -55,13 +55,13 @@ class ReviewViewModelMoveOnTest extends ReviewViewModelTestBase {
     void saveEdit_edited_confirmsTheSaveAndMovesOn() {
         listedAndSelected("ch05.xhtml:11");
         onFx(() -> {
-            review.editorText().set("Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері!");
+            review.editorText().set("Гейл відчинив ⟦0⟧старі⟦1⟧ двері!");
             return null;
         });
 
         press(review::saveEdit);
 
-        assertThat(toasts.raised())
+        assertThat(toasts.feedback())
                 .extracting(raised -> raised.severity() + ":" + raised.key() + ":" + raised.args())
                 .contains("success:" + MessageKey.REVIEW_SAVED + ":[ch5 · p12]");
         assertThat(selectedId()).isEqualTo("ch07.xhtml:39");

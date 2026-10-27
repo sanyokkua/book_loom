@@ -7,14 +7,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.ThemeTestSupport;
 
@@ -27,22 +24,16 @@ class ImportFocusTraversalTest extends ImportBookTestBase {
     // Far more presses than the screen has controls: a screen that needs more is trapping the focus.
     private static final int MAX_PRESSES = 200;
 
-    // In reading order: the drop zone, the tree, then the segment browser, then the way on.
+    // In reading order: the drop zone, the closed fold, the tree, then the segment browser, then the way on.
     private static final List<String> IN_ORDER = List.of(
             "import-browse",
+            "import-about",
             "structure-tree",
             "structure-segments-search",
             "structure-segments-kind",
             "structure-segments",
             "import-cancel",
             "import-continue");
-
-    private Node pressTab() {
-        Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
-        return scene.getFocusOwner();
-    }
 
     private static List<String> idsAbove(final Node owner) {
         final List<String> ids = new ArrayList<>();

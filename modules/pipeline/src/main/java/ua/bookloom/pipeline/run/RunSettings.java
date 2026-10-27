@@ -51,6 +51,16 @@ public record RunSettings(
                 RelevantPairsSwitch.isOn());
     }
 
+    /**
+     * The same settings sized for another window.
+     *
+     * @param newWindow the context window in tokens; positive
+     * @return a copy whose {@code window} is replaced
+     */
+    public RunSettings withWindow(final int newWindow) {
+        return new RunSettings(projectId, mode, dial, frame, names, newWindow, relevantPairs);
+    }
+
     /** Rejects a missing component. */
     public RunSettings {
         Objects.requireNonNull(projectId, "projectId");

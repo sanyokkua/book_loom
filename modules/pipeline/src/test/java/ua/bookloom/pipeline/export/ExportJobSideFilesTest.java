@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SideFile;
@@ -115,7 +116,14 @@ class ExportJobSideFilesTest {
         final Instant started = Instant.parse("2026-10-09T08:00:00Z");
         ok(fixture.runs()
                 .save(new RunRecord(
-                        "run-1", id, started, started.plusSeconds(3725), JobState.COMPLETED, 2, 1, "gemma3:12b")));
+                        "run-1",
+                        id,
+                        started,
+                        started.plusSeconds(3725),
+                        JobState.COMPLETED,
+                        2,
+                        1,
+                        new ModelSelection("ollama", "gemma3:12b"))));
 
         ok(fixture.export(
                 request(id, tempDir.resolve("Frankenstein.uk.epub"), false, Set.of(SideFile.QUALITY_REPORT))));
@@ -189,19 +197,21 @@ class ExportJobSideFilesTest {
         assertThat(hiddenFiles(tempDir)).isEmpty();
     }
 
-    // A side file's temporary path that is a link is refused, so the file it points at is never written through.
+    // IF a hidden link of the old temporary name were written through or removed, THEN the file it points at would
+    // change; the side file is written through a new temporary of its own instead.
     @Test
-    void run_sideFileTemporaryIsSymbolicLink_returnsValidationAndKeepsTheLinkedFile() throws IOException {
+    void run_hiddenLinkBesideTheSideFile_isLeftAloneAndTheSideFileIsWritten() throws IOException {
         final String id = frankenstein();
         final Path elsewhere = Files.writeString(tempDir.resolve("elsewhere.txt"), "kept");
-        Files.createSymbolicLink(tempDir.resolve(".Frankenstein.uk.report.md"), elsewhere);
+        final Path link = Files.createSymbolicLink(tempDir.resolve(".Frankenstein.uk.report.md"), elsewhere);
 
         final Result<ExportReport> result = fixture.export(
                 request(id, tempDir.resolve("Frankenstein.uk.epub"), true, Set.of(SideFile.QUALITY_REPORT)));
 
-        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(result.isOk()).isTrue();
         assertThat(Files.readString(elsewhere)).isEqualTo("kept");
-        assertThat(tempDir.resolve("Frankenstein.uk.report.md")).doesNotExist();
+        assertThat(Files.isSymbolicLink(link)).isTrue();
+        assertThat(tempDir.resolve("Frankenstein.uk.report.md")).exists();
     }
 
     /** One chapter: an accepted paragraph with an ampersand, a flagged one with a finding, and a pending one. */

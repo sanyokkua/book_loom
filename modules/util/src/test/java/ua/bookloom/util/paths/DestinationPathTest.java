@@ -80,4 +80,31 @@ class DestinationPathTest {
                 .isThrownBy(() -> DestinationPath.destinationFor(Path.of("/books/A.epub"), BookFormat.EPUB, null))
                 .withMessageContaining("targetLanguage");
     }
+
+    // IF the label went after the suffix, THEN the file would lose its format; it follows the language.
+    @Test
+    void destinationFor_withLabel_putsItAfterTheLanguageBeforeTheSuffix() {
+        final Path destination = DestinationPath.destinationFor(
+                Path.of("/books/earth-gravity.md"), BookFormat.MARKDOWN, "uk", "26b-max");
+
+        assertThat(destination).isEqualTo(Path.of("/books/earth-gravity.uk.26b-max.md"));
+    }
+
+    // IF the composite suffix were split when a label is present, THEN the zip would be named wrongly.
+    @Test
+    void destinationFor_withLabelOnFb2Zip_keepsTheCompoundSuffixTogether() {
+        final Path destination =
+                DestinationPath.destinationFor(Path.of("/books/book.fb2.zip"), BookFormat.FB2, "uk", "formal");
+
+        assertThat(destination).isEqualTo(Path.of("/books/book.uk.formal.fb2.zip"));
+    }
+
+    // IF a null label changed the name, THEN the command line and the window would disagree.
+    @Test
+    void destinationFor_nullLabel_isTheCommandLinesName() {
+        final Path destination =
+                DestinationPath.destinationFor(Path.of("/books/earth-gravity.fb2.zip"), BookFormat.FB2, "uk", null);
+
+        assertThat(destination).isEqualTo(Path.of("/books/earth-gravity.uk.fb2.zip"));
+    }
 }

@@ -44,7 +44,7 @@ class BookBriefEvidenceBasisTest extends BookBriefScreenTestBase {
                         NarratorPerson.UNSPECIFIED,
                         Gender.UNKNOWN,
                         Map.of(BriefField.GENRE, evidence))));
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-evidence-genre"));
     }
 

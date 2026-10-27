@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Verifies that connection-timeout variants are reused without sharing the wrong configuration. */
 class HttpClientsTest {
@@ -41,7 +42,7 @@ class HttpClientsTest {
 
     @Test
     void llmModule_httpClientsProvidesOneSharedHolder() {
-        final Injector injector = Guice.createInjector(new LlmModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new LlmTestStorageModule());
 
         assertThat(injector.getInstance(HttpClients.class)).isSameAs(injector.getInstance(HttpClients.class));
     }

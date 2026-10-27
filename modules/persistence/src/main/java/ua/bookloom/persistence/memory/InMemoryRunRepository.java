@@ -1,7 +1,6 @@
 package ua.bookloom.persistence.memory;
 
 import com.google.inject.Inject;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +12,8 @@ import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.project.RunRecord;
 
 /**
- * Stores a project's translation-run history over the shared {@link InMemoryStore}, upserted by run id so every
- * state change of one run lands in one record.
+ * Stores a project's run started last over the shared {@link InMemoryStore}, by the SQLite adapter's rule: a saved
+ * record replaces the held one when it is the same run or was started no earlier.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -26,8 +25,13 @@ public final class InMemoryRunRepository implements RunRepository {
     public Result<RunRecord> save(final RunRecord run) {
         Objects.requireNonNull(run, "run");
         try {
-            store.runs(run.projectId()).put(run.runId(), run);
-            log.debug("Run saved projectId={} runId={} state={}", run.projectId(), run.runId(), run.state());
+            final RunRecord held = store.keepRun(run);
+            log.debug(
+                    "Run saved projectId={} runId={} state={} kept={}",
+                    run.projectId(),
+                    run.runId(),
+                    run.state(),
+                    held.equals(run));
             return Result.ok(run);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
@@ -38,7 +42,9 @@ public final class InMemoryRunRepository implements RunRepository {
     public Result<Optional<RunRecord>> latest(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         try {
-            return Result.ok(store.runs(projectId).values().stream().max(Comparator.comparing(RunRecord::startedAt)));
+            final Optional<RunRecord> latest = Optional.ofNullable(store.latestRun(projectId));
+            log.debug("Run latest projectId={} found={}", projectId, latest.isPresent());
+            return Result.ok(latest);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

@@ -66,7 +66,7 @@ exact bytes — DD-43) is a release gate. Model detail: `03_DOCUMENT_MODEL.md`.
 
 **Invariant:** the only outbound network traffic the application ever makes is **user-triggered provider
 communication** — inference, model discovery, and verification — with the provider the user configured (a local
-Ollama/LM Studio endpoint or an OpenAI-compatible URL). No telemetry, no update checks, no analytics, no background
+Ollama/LM Studio endpoint or an OpenAI-compatible URL), plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. No telemetry, no update checks, no analytics, no background
 fetch. Startup, import, parsing, QA, persistence, and export are fully local. See
 `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (`NFR-OFFLINE-*`).
 
@@ -90,7 +90,7 @@ flowchart TD
     subgraph Services
         DOC[":document<br/>parse · mask · reassemble · repackage"]
         LLM[":llm<br/>Provider · discovery · inference · gate · retry"]
-        PERS[":persistence<br/>SQLite · Flyway · JDBI · settings KV"]
+        PERS[":persistence<br/>SQLite · JDBI · JSON documents · settings KV"]
     end
     subgraph Foundation
         API[":api<br/>ports · records · Result · AppError · ErrorCode"]
@@ -115,7 +115,7 @@ flowchart TD
     LLM --> UTIL
     PERS --> API
     UTIL --> API
-    LLM -. "user-triggered provider communication only<br/>(inference · discovery · verification)" .-> EXT
+    LLM -. "user-triggered provider communication only<br/>(inference · discovery · verification) + first-launch local listing (ADR-0044)" .-> EXT
 
     style API fill:#e7d6c0,stroke:#a58075
     style EXT fill:#b2babd,stroke:#3a4a52

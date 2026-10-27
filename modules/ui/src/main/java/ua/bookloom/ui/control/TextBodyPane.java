@@ -1,6 +1,6 @@
 package ua.bookloom.ui.control;
 
-import java.util.function.Consumer;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -16,7 +16,7 @@ abstract class TextBodyPane extends CopyablePane {
     TextBodyPane(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final MessageKey tip,
             final MessageKey copyLabel,
             final MessageKey copyTip) {
@@ -26,7 +26,7 @@ abstract class TextBodyPane extends CopyablePane {
     private TextBodyPane(
             final String id,
             final Messages messages,
-            final Consumer<String> clipboard,
+            final TextClipboard clipboard,
             final MessageKey tip,
             final MessageKey copyLabel,
             final MessageKey copyTip,
@@ -36,9 +36,14 @@ abstract class TextBodyPane extends CopyablePane {
         expandedProperty().addListener((observed, was, now) -> refill());
     }
 
+    /** Whether what the section holds is on show now; a nested block is open only inside an open host. */
+    boolean isOpen() {
+        return isExpanded();
+    }
+
     /** Puts the section's current text into the area if it is open; called after what the section shows changed. */
     final void refill() {
-        final String text = isExpanded() && isVisible() ? plainText() : "";
+        final String text = isOpen() && isVisible() ? plainText() : "";
         if (!text.equals(area.getText())) {
             area.setText(text);
         }

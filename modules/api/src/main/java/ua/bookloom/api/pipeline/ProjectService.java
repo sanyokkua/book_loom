@@ -2,9 +2,9 @@ package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 
 /**
  * Opens, plans and closes a project, the seam the Import and Book Brief screens call.
@@ -12,41 +12,52 @@ import ua.bookloom.api.project.Project;
 public interface ProjectService {
 
     /**
-     * Inspects and, when the file can be opened, opens a candidate book and creates its project.
+     * Lists the stored projects with how much of each is already decided, so a screen can ask before a new import
+     * discards work.
      *
-     * @param source the non-null candidate file
-     * @return the inspection result and, when it opened, the new project's profile and default brief
+     * @return one summary per stored project, most recently opened first; never null, empty when none is stored
      */
-    Result<ImportedBook> importBook(Path source);
+    Result<List<ProjectSummary>> list();
 
     /**
-     * Counts the segments already decided in the project that importing {@code source} would reuse, so the person is
-     * asked before an import discards them.
+     * Inspects and, when the file can be opened, opens a candidate book and creates its project (or, for a file that
+     * already has one, resets that project's segments and keeps its id).
      *
      * @param source the non-null candidate file
-     * @return the number of stored segments of that file's project that are not pending; {@code 0} when the file was
-     *     never imported or its content changed since, because stored decisions of another text mean nothing for it
+     * @return the inspection result and, when it opened, the project's id, profile and default brief; the id is
+     *     {@code null} when the inspection refused the file
      */
-    Result<Integer> decidedSegments(Path source);
+    Result<ImportedBook> create(Path source);
 
     /**
-     * Opens a file whose project is already stored and keeps that project, its brief and its decided segments, where
-     * {@link #importBook} would reset the segments.
+     * Opens a stored project and keeps its brief and decided segments, where {@link #create} would reset the segments.
      *
-     * @param source the non-null file whose project is stored
-     * @return the opened book with its stored brief; a {@code validation} error when no project is stored for it or
-     *     the file's content changed since it was imported
+     * @param projectId the non-null id of a stored project
+     * @return {@link ProjectOpening.Opened} with the book and whether its run was interrupted;
+     *     {@link ProjectOpening.BookFileMissing} or {@link ProjectOpening.BookFileChanged} as data; a {@code validation}
+     *     error when no such project is stored
      */
-    Result<ImportedBook> continueBook(Path source);
+    Result<ProjectOpening> open(String projectId);
 
     /**
      * Replaces a project's Book Brief.
      *
      * @param projectId the non-null owning project's id
      * @param brief the non-null replacement brief
-     * @return the project with its updated brief
+     * @return {@link ProjectChange.Saved} with the stored project (an automatic name follows a changed language pair);
+     *     {@link ProjectChange.PairInUse} or {@link ProjectChange.NameInUse} as data, with nothing stored, when the
+     *     change would clash inside the book; a {@code validation} error for an unknown project
      */
-    Result<Project> updateBrief(String projectId, BookBrief brief);
+    Result<ProjectChange> updateBrief(String projectId, BookBrief brief);
+
+    /**
+     * Renames a project.
+     *
+     * @param projectId the non-null id of a stored project
+     * @param name the name the person typed (it then stays), or {@code null} to use the automatic name again
+     * @return a {@link ProjectChange}; a {@code validation} error for an unknown project or a blank name
+     */
+    Result<ProjectChange> rename(String projectId, @Nullable String name);
 
     /**
      * Computes how a run would chunk a project's units before it starts.
@@ -81,4 +92,45 @@ public interface ProjectService {
      * @return {@code true} once the book is released
      */
     Result<Boolean> close(String projectId);
+
+    /**
+     * Removes a project and everything stored for it; the book file, exported files and the book's other projects stay.
+     *
+     * @param projectId the non-null id of a stored project
+     * @return {@code true} once removed; a {@code validation} error for an unknown project
+     */
+    Result<Boolean> remove(String projectId);
+
+    /**
+     * Creates a project of the same book for another target language, without importing the book again.
+     *
+     * @param projectId the non-null id of the project to copy the brief, the Glossary and the Recurring terms from
+     * @param target the non-null target language tag
+     * @param name the name the person typed, or {@code null} for the automatic one
+     * @return {@link ProjectChange.Saved} with the new project, or a clash as data with nothing stored; a
+     *     {@code validation} error for an unknown project
+     */
+    Result<ProjectChange> translateInto(String projectId, String target, @Nullable String name);
+
+    /**
+     * Replaces a project's brief and gives it the name the person typed, in one stored change; the way out of a
+     * language pair another project of the book already uses.
+     *
+     * @param projectId the non-null id of a stored project
+     * @param brief the non-null replacement brief
+     * @param name the non-null typed name; it then stays
+     * @return {@link ProjectChange.Saved}, or {@link ProjectChange.NameInUse} as data with nothing stored; a
+     *     {@code validation} error for an unknown project or a blank name
+     */
+    Result<ProjectChange> makeSecondTranslation(String projectId, BookBrief brief, String name);
+
+    /**
+     * Points a project's book, and every project of it, at another file when its content hash matches.
+     *
+     * @param projectId the non-null id of a stored project
+     * @param chosen the non-null file the person found
+     * @return {@link BookRelocation.Relocated} or {@link BookRelocation.DifferentBook}; a {@code validation} error for
+     *     an unknown project
+     */
+    Result<BookRelocation> relocate(String projectId, Path chosen);
 }

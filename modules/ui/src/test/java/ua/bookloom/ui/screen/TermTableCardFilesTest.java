@@ -14,10 +14,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.ui.RecordingCsvChooser;
+import ua.bookloom.ui.RecordingFileChooser;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
-import ua.bookloom.ui.state.CsvFileChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 
 /** Search, CSV import and export and the hover explanations of the two term cards (15i.U5). */
 class TermTableCardFilesTest extends TermTableCardTestBase {
@@ -66,8 +66,8 @@ class TermTableCardFilesTest extends TermTableCardTestBase {
         assertThat(listedTerms()).containsExactlyInAnyOrder("master", "imp");
     }
 
-    private RecordingCsvChooser chooser() {
-        return (RecordingCsvChooser) injector.getInstance(CsvFileChooser.class);
+    private RecordingFileChooser chooser() {
+        return (RecordingFileChooser) injector.getInstance(FileChooserPort.class);
     }
 
     private void queueImportAnswers() {

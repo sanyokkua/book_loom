@@ -29,7 +29,7 @@ explicitly — read them before planning work.
 | ADR-0006 | Credentials stored as a reference                                                     | DD-11               |
 | ADR-0007 | Automatic-first tiered translation pipeline                                           | DD-15…DD-19         |
 | ADR-0008 | Inference concurrency — single-flight gate + typed retry                              | DD-12, DD-13        |
-| ADR-0009 | Persistence — SQLite + Flyway + JDBI                                                  | DD-20               |
+| ADR-0009 | Persistence — SQLite + Flyway + JDBI (amended by ADR-0043)                            | DD-20               |
 | ADR-0010 | Offline network policy                                                                | DD-01               |
 | ADR-0011 | App icon & branding — one background-removed master, per-OS derivation                | DD-29               |
 | ADR-0012 | Per-project provider/model binding + change confirmation + preflight verification     | DD-31               |
@@ -63,3 +63,6 @@ explicitly — read them before planning work.
 | ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
 | ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |
 | ADR-0042 | The source language may be Auto; the model identifies it, the code uses generic rules | EC-LANG-1           |
+| ADR-0043 | Application state in SQLite as JSON documents; no schema migrations before release     | DD-20               |
+| ADR-0044 | Look for a local AI program once, by itself, at first launch (amends ADR-0010)        | DD-01               |
+| ADR-0045 | Review is an in-window dialog; the review mode is a stored setting                    | DD-45               |

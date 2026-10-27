@@ -43,6 +43,14 @@ anchors; the requirement tables under each anchor carry the individual IDs.
 | `01_Product/11_NOTIFICATIONS_AND_ERRORS.md` | toasts · banners · error-dialog · typed-error-surface · error-code-categories · empty-states                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `01_Product/12_PROMPT_CATALOG.md`           | prompt-construction · output-contract · draft-translation · reviewer-in-place-fixes · directed-fix-repair · name-term-pre-scan · backward-revision-consistency · book-brief-tone-setup · rolling-summary-update                                                                                                                                                                                                                                         |
 
+## storage-anchors {#storage-anchors}
+
+Added by `finalize-ui-and-persistence`: the SQLite data model, cited by the `local-storage` capability.
+
+| File | Anchors |
+|---|---|
+| `02_Architecture/06_DATA_MODEL_SQLITE.md` | storage-conventions · tables · settings-serialization · secret-references · corruption-and-recovery · record-shapes · resume-support |
+
 ## id-scheme-map {#id-scheme-map}
 
 | ID scheme       | Defined in                                                                                                                                                                                                                                                          | Resolve via              |

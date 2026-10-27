@@ -15,9 +15,10 @@ import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * Which workflow steps cannot be opened yet and why, so the navigation, the toolbar and the navigator all give the same
- * answer. Import and Settings are always open; every other screen needs a book, and the steps that read the languages
- * (names and style, translating) also need two different ones. Export needs only a book, because a stopped
- * or running book can be exported at any time. The properties are touched on the FX Application Thread only.
+ * answer. Projects and Settings are always open; the five numbered steps, Import included, need an open project, and
+ * the steps that read the languages (names and style, translating) also need two different ones. Export needs only a
+ * project, because a stopped or running book can be exported at any time. "New translation" reaches Import without
+ * a project through {@code Navigator.openImportEmpty}, which does not ask this class. The properties are touched on the FX Application Thread only.
  */
 @Slf4j
 @Singleton
@@ -70,11 +71,11 @@ public final class StepAvailability implements StepLocks {
     private static @Nullable MessageKey reasonFor(
             final ViewNames step, final boolean hasBook, final boolean languagesUsable) {
         return switch (step) {
-            case IMPORT, SETTINGS, PROJECTS -> null;
-            case BOOK_BRIEF, EXPORT -> hasBook ? null : MessageKey.NAV_LOCKED_NO_BOOK;
+            case SETTINGS, PROJECTS -> null;
+            case IMPORT, BOOK_BRIEF, EXPORT -> hasBook ? null : MessageKey.NAV_LOCKED_NO_PROJECT;
             case NAMES_STYLE, TRANSLATING -> {
                 if (!hasBook) {
-                    yield MessageKey.NAV_LOCKED_NO_BOOK;
+                    yield MessageKey.NAV_LOCKED_NO_PROJECT;
                 }
                 yield languagesUsable ? null : MessageKey.NAV_LOCKED_NO_LANGUAGES;
             }

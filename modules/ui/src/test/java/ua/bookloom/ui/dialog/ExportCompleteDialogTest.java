@@ -26,7 +26,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
     private static final Path BOOK = Path.of("/books/Frankenstein.uk.epub");
     private static final int SIZE = 958_464;
-    private static final double MAX_CARD_WIDTH = 640;
+    private static final double MAX_CARD_WIDTH = 720;
 
     private void show() {
         show(List.of(), ConsistencySummary.NOT_RUN);
@@ -54,7 +54,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 .contains(
                         "Export complete",
                         "Frankenstein.uk.epub was written and validated.",
-                        "/books",
+                        "/books/Frankenstein.uk.epub",
                         "Re-opened and verified",
                         "936 KB",
                         "Close",
@@ -62,12 +62,12 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         "Open book");
     }
 
-    // IF a long folder were only cut short, THEN a person could not tell where the book went.
+    // IF Saved as named only the folder, THEN a person could not tell which file in it is the book.
     @Test
-    void show_outcome_locationShowsTheWholeFolderOnHover() {
+    void show_outcome_locationShowsTheWholeFilePathOnHover() {
         show();
 
-        assertThat(TooltipProbe.tipText(required("export-complete-location"))).isEqualTo("/books");
+        assertThat(TooltipProbe.tipText(required("export-complete-location"))).isEqualTo("/books/Frankenstein.uk.epub");
     }
 
     @Test
@@ -78,7 +78,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
                 .contains(
-                        "Also written",
+                        "Also saved",
                         "Frankenstein.uk.glossary.csv",
                         "Frankenstein.uk.report.md",
                         "Consistency pass: 1 segment adjusted");
@@ -115,7 +115,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
         show();
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
-                .noneMatch(text -> text.startsWith("Also written") || text.startsWith("Consistency pass"));
+                .noneMatch(text -> text.startsWith("Also saved") || text.startsWith("Consistency pass"));
     }
 
     // Segments written in the source for a broken translation are named, so a partial book is never a surprise.
@@ -168,7 +168,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
         final Label line = (Label) scene.getRoot().lookup("#export-complete-no-target-text");
         assertThat(line.getText())
-                .isEqualTo("2 flagged segments have no translation and were written in the source language:"
+                .isEqualTo("2 segments to review have no translation and were written in the source language:"
                         + " ch12 · p02, ch12 · p06");
         assertThat(scene.getRoot().lookup("#export-complete-source-fallbacks-text"))
                 .isNull();
@@ -343,9 +343,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
         showLongPathCopyingTo(new ArrayList<>());
 
         final Label location = (Label) required("export-complete-location");
-        assertThat(location.getText())
-                .isEqualTo(
-                        java.util.Objects.requireNonNull(LONG_BOOK.getParent()).toString());
+        assertThat(location.getText()).isEqualTo(LONG_BOOK.toString());
         assertThat(location.isWrapText()).isTrue();
         assertThat(ThemeTestSupport.onFx(() ->
                         required(ExportCompleteDialog.CARD_ID).getLayoutBounds().getWidth()))

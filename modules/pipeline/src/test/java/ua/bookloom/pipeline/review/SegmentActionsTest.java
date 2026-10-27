@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -140,6 +141,21 @@ class SegmentActionsTest {
         assertThat(record.reviewed()).isTrue();
     }
 
+    // IF a blank edit were saved, THEN the book would be exported with an empty paragraph where the text was.
+    @ParameterizedTest
+    @ValueSource(strings = {"", "   ", "\n\t "})
+    void saveEdit_blankText_isValidationAndChangesNothing(final String edit) {
+        final Desk desk = ReviewFixtures.epub(tempDir);
+        accept(desk, "ch02.xhtml:3", "Дощ ущух лише надвечір.");
+        final SegmentRecord before = stored(desk, "ch02.xhtml:3");
+
+        final Result<SegmentRecord> result = desk.actions().saveEdit(desk.projectId(), "ch02.xhtml:3", edit);
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(error(result).title()).isEqualTo("Cannot save the edit");
+        assertThat(stored(desk, "ch02.xhtml:3")).isEqualTo(before);
+    }
+
     @Test
     void saveEdit_secondSave_staysRevisedWithTheNewText() {
         // REVISED -> REVISED by another saved edit
@@ -235,20 +251,6 @@ class SegmentActionsTest {
                 ok(desk.actions().saveEdit(desk.projectId(), "Book.md:4", "Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері."));
 
         assertThat(record.userTarget()).isEqualTo("Гейл відчинив *старі* двері.");
-    }
-
-    @Test
-    void saveEdit_tokensDropped_putsThemBackByPositionAndSaves() {
-        // an edit that only lost its placeholders keeps the person's words: each is put back where it stood
-        final Desk desk = ReviewFixtures.markdown(tempDir);
-        flag(desk, "Book.md:4", OLD_DOOR);
-
-        final SegmentRecord record =
-                ok(desk.actions().saveEdit(desk.projectId(), "Book.md:4", "Він відчинив старі двері."));
-
-        assertThat(record.status()).isEqualTo(SegmentStatus.REVISED);
-        assertThat(record.maskedUserTarget()).isEqualTo("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
-        assertThat(record.userTarget()).isEqualTo("Він відчинив *старі* двері.");
     }
 
     @Test

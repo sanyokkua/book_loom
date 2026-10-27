@@ -46,6 +46,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
@@ -72,6 +73,37 @@ public final class ConsistencyPass {
     private final LexiconRepository lexicon;
     private final SummaryRepository summaries;
     private final CheckedParagraphs checked;
+    private final RequestDefaultsSource requestDefaultsSource;
+
+    /** A pass whose requests use the defaults the environment alone gives (the command line, tests). */
+    public ConsistencyPass(
+            final DocumentPort documents,
+            final OpenProjects openProjects,
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final DeferralRepository deferrals,
+            final GlossaryRepository glossary,
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final RetryDraft retryDraft,
+            final LexiconRepository lexicon,
+            final SummaryRepository summaries,
+            final CheckedParagraphs checked) {
+        this(
+                documents,
+                openProjects,
+                projects,
+                segments,
+                deferrals,
+                glossary,
+                templates,
+                mapper,
+                retryDraft,
+                lexicon,
+                summaries,
+                checked,
+                RequestDefaultsSource.environmentOnly());
+    }
 
     /**
      * Runs the pass over a project's open deferrals.
@@ -309,7 +341,7 @@ public final class ConsistencyPass {
         document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
         return new PassInputs(
                 projectId,
-                CallFrame.forBook(brief, document, openProjects.index(projectId)),
+                CallFrame.forBook(brief, document, openProjects.index(projectId), requestDefaultsSource.current()),
                 brief.names(),
                 TypographyGate.around(GateFunction.of(documents, document.format()), target),
                 sources,

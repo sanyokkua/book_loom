@@ -16,7 +16,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * A capitalised word the book also writes in lower case is a common word to a scan no reading follows, but a scan the
@@ -99,7 +99,7 @@ class FrequencyScanReadingTest {
             final String line, @Nullable final QualityDial dial, final boolean kept) {
         final BookSlice story = GlossaryTestSegments.of(
                 lines(copies(line, 5), "There was a mark on the wall.", "Nobody knew who made the mark."));
-        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
         final ScanProposals proposals = Objects.requireNonNull(
                 FrequencyScan.proposals(PROJECT, story.index(), story.ordinals(), LANGUAGE, glossary)

@@ -64,6 +64,7 @@ public final class NamesStyleViewModel {
     private final GlossaryAdditions additions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
+    private final ResultsReview review = new ResultsReview();
     private final AutoEstimate autoEstimate;
     private String projectId = "";
     private final Openings openings = new Openings();
@@ -157,10 +158,11 @@ public final class NamesStyleViewModel {
                 new RecurringTerms.ModelActions(
                         modelRuns::scanTerms, modelRuns::reviewTerms, modelRuns::translateTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
-        this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
+        this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages), messages);
         this.additions = new GlossaryAdditions(
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
-        this.genderConfirmations = new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId);
+        this.genderConfirmations =
+                new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
         rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
                 (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
     }
@@ -223,6 +225,11 @@ public final class NamesStyleViewModel {
      */
     public ReadOnlyObjectProperty<@Nullable ChangeResults> results() {
         return changeLog.results();
+    }
+
+    /** {@return the results of a pass that ended in the background, from the message that offers them to their opening} */
+    public ResultsReview resultsReview() {
+        return review;
     }
 
     /** {@return the marks of the rows the last operation added or changed, which the next operation clears} */

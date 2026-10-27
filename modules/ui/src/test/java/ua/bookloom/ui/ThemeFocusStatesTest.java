@@ -17,7 +17,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
-import javafx.scene.control.Labeled;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Slider;
 import javafx.scene.control.Tab;
@@ -93,7 +92,6 @@ class ThemeFocusStatesTest extends FxTestBase {
                 Named.of("list", new Sample(ThemeFocusStatesTest::list, null, "focus")),
                 Named.of("table", new Sample(ThemeFocusStatesTest::table, null, "focus")),
                 Named.of("tree", new Sample(ThemeFocusStatesTest::tree, null, "focus")),
-                Named.of("filter chip", new Sample(ThemeFocusStatesTest::chip, null, "focus")),
                 Named.of("navigation entry", new Sample(() -> button("nav-item"), "shell-nav", "nav-focus")),
                 Named.of(
                         "title bar button",
@@ -267,12 +265,6 @@ class ThemeFocusStatesTest extends FxTestBase {
         final Button button = new Button("Retry with note");
         button.getStyleClass().add(style);
         return button;
-    }
-
-    private static Labeled chip() {
-        final ToggleButton chip = new ToggleButton("names");
-        chip.getStyleClass().add("review-chip");
-        return chip;
     }
 
     private static ComboBox<String> combo() {

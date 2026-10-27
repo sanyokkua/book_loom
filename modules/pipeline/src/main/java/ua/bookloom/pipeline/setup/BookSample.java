@@ -17,12 +17,15 @@ import ua.bookloom.pipeline.narrator.NarratorDetector;
  * @param wholeStory whether the window holds every line of the story, so one reading of it is the whole book's
  * @param languageTag the source language whose quote marks tell the characters' speech from the narration, or null for
  *     the general table
+ * @param location where the window lies in the book, as the review desk names places (the first and last paragraph);
+ *     empty when not known
  */
 record BookSample(
         List<String> passages,
         int dialoguePercent,
         boolean wholeStory,
-        @Nullable String languageTag) {
+        @Nullable String languageTag,
+        String location) {
 
     private static final Pattern SPACES = Pattern.compile("\\s+");
     private static final Pattern LINES = Pattern.compile("\\R");
@@ -34,6 +37,7 @@ record BookSample(
     /** Copies the passages and rejects a share that is no percentage. */
     BookSample {
         passages = List.copyOf(Objects.requireNonNull(passages, "passages"));
+        Objects.requireNonNull(location, "location");
         if (dialoguePercent < 0 || dialoguePercent > MAX_PERCENT) {
             throw new IllegalArgumentException("dialoguePercent " + dialoguePercent);
         }
@@ -41,12 +45,21 @@ record BookSample(
 
     /** A window that is not known to hold the whole story, its speech told by the general quote marks. */
     BookSample(final List<String> passages, final int dialoguePercent) {
-        this(passages, dialoguePercent, false, null);
+        this(passages, dialoguePercent, false, null, "");
     }
 
     /** A window whose speech is told by the general quote marks. */
     BookSample(final List<String> passages, final int dialoguePercent, final boolean wholeStory) {
-        this(passages, dialoguePercent, wholeStory, null);
+        this(passages, dialoguePercent, wholeStory, null, "");
+    }
+
+    /** A window whose place in the book is not known. */
+    BookSample(
+            final List<String> passages,
+            final int dialoguePercent,
+            final boolean wholeStory,
+            final @Nullable String languageTag) {
+        this(passages, dialoguePercent, wholeStory, languageTag, "");
     }
 
     /** The window as the prompt shows it, under the label the prompt's rules name; empty for no window. */

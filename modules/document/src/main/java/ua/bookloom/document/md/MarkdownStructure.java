@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.StructureNode;
@@ -12,12 +13,14 @@ import ua.bookloom.api.document.StructureNode;
 /**
  * Builds a Markdown book's structure tree from its heading segments and their commonmark levels (task 4.4): text
  * before the first heading is an untitled leading node, and each heading's own node counts every segment from
- * itself to the next heading of the same or a shallower level.
+ * itself to the next heading of the same or a shallower level. The book is one unit, so each node names that unit and
+ * the position of its first segment, which is how a picked chapter lists its own segments only.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MarkdownStructure {
 
@@ -26,20 +29,28 @@ final class MarkdownStructure {
     /**
      * Builds the top-level structure nodes.
      *
+     * @param unitId the id of the one body unit, which every node points into from its own first segment
      * @param segments the unit's segments, in document order
      * @param headingLevels every {@code Heading} node's commonmark level, in document order — matched positionally
      *     to this unit's {@code HEADING}-kind segments
      * @return the top-level nodes, in document order
      */
-    static List<StructureNode> build(List<Segment> segments, List<Integer> headingLevels) {
+    static List<StructureNode> build(String unitId, List<Segment> segments, List<Integer> headingLevels) {
         final List<Boundary> boundaries = boundariesOf(segments, headingLevels);
         final List<StructureNode> topLevel = new ArrayList<>();
         final int firstHeadingIndex =
                 boundaries.isEmpty() ? segments.size() : boundaries.get(0).segmentIndex();
         if (firstHeadingIndex > 0) {
-            topLevel.add(new StructureNode("", null, firstHeadingIndex, List.of()));
+            topLevel.add(new StructureNode("", unitId, firstHeadingIndex, List.of(), 0));
         }
-        topLevel.addAll(nest(boundaries, countsOf(boundaries, segments.size()), 0, boundaries.size()));
+        topLevel.addAll(nest(unitId, boundaries, countsOf(boundaries, segments.size()), 0, boundaries.size()));
+        log.debug(
+                "markdown structure of unit {}: {} segment(s), {} heading(s), {} top-level node(s), leading {}",
+                unitId,
+                segments.size(),
+                boundaries.size(),
+                topLevel.size(),
+                firstHeadingIndex);
         return topLevel;
     }
 
@@ -80,13 +91,15 @@ final class MarkdownStructure {
     }
 
     /** Nests {@code boundaries[start:end)} by level — the first entry in the range is always its shallowest. */
-    private static List<StructureNode> nest(List<Boundary> boundaries, int[] counts, int start, int end) {
+    private static List<StructureNode> nest(
+            String unitId, List<Boundary> boundaries, int[] counts, int start, int end) {
         final List<StructureNode> nodes = new ArrayList<>();
         int i = start;
         while (i < end) {
             final int childEnd = nextSiblingIndex(boundaries, i, end);
-            final List<StructureNode> children = nest(boundaries, counts, i + 1, childEnd);
-            nodes.add(new StructureNode(boundaries.get(i).title(), null, counts[i], children));
+            final List<StructureNode> children = nest(unitId, boundaries, counts, i + 1, childEnd);
+            final Boundary boundary = boundaries.get(i);
+            nodes.add(new StructureNode(boundary.title(), unitId, counts[i], children, boundary.segmentIndex()));
             i = childEnd;
         }
         return nodes;

@@ -15,7 +15,6 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
@@ -45,6 +44,8 @@ public final class SegmentActions {
     private static final String NO_MACHINE_TARGET = "There is no machine translation to accept — edit it or retry.";
     private static final String NO_TARGET_TO_REVERT_TO =
             "There is no machine translation to revert to — edit it again or retry.";
+    private static final String BLANK_EDIT =
+            "The edit is empty — type the translation, or leave the segment for later.";
     private static final String NOT_OPEN = "The book of this project is not open, so the edit cannot be checked.";
     private static final String ACCEPT = "accept";
     private static final String SAVE_EDIT = "save the edit";
@@ -80,7 +81,8 @@ public final class SegmentActions {
      * @param segmentId the non-null segment id
      * @param maskedText the non-null edit as the editor shows it, the book's {@code ⟦gN⟧} tokens in place
      * @return the stored record, REVISED and reviewed, with the edit in plain and masked form; {@code validation}
-     *     for a PENDING segment, for an unknown id, or naming the placeholder the edit broke, with nothing changed
+     *     for a PENDING segment, for an unknown id, for a blank edit, or naming the placeholder the edit broke, with
+     *     nothing changed
      */
     public Result<SegmentRecord> saveEdit(final String projectId, final String segmentId, final String maskedText) {
         Objects.requireNonNull(projectId, "projectId");
@@ -152,9 +154,12 @@ public final class SegmentActions {
     }
 
     private Result<SegmentRecord> edited(final SegmentRecord record, final String maskedText) {
-        log.debug("saveEdit: status={}", record.status());
+        log.debug("saveEdit: status={} blank={}", record.status(), maskedText.isBlank());
         if (record.status() == SegmentStatus.PENDING) {
             return wrongStatus(SAVE_EDIT, record, "flagged, accepted or revised");
+        }
+        if (maskedText.isBlank()) {
+            return refuse(SAVE_EDIT, record.segmentId(), BLANK_EDIT);
         }
         final Document document = openProjects.get(record.projectId());
         if (document == null) {
@@ -170,15 +175,11 @@ public final class SegmentActions {
     private Result<SegmentRecord> restored(
             final SegmentRecord record, final BookFormat format, final Segment segment, final String maskedText) {
         final String candidate = WhitespaceRestoration.restore(segment.masked(), maskedText.strip());
-        // An edit that only lost or repeated a token keeps the person's words: the token is put back by position.
-        final GateResult gate = GateFunction.of(documents, format)
-                .restoreRepairing(segment, candidate, PlaceholderRepair.RESTORE_MISSING);
+        // A lost or repeated mark is refused, never put back by position: the editor holds Save until each is in place.
+        final GateResult gate = GateFunction.of(documents, format).restore(segment, candidate);
         return switch (gate) {
             case GateResult.Restored restored -> {
-                log.debug(
-                        "saveEdit: gate outcome=Restored segment={} tokensPutBack={}",
-                        record.segmentId(),
-                        restored.autoRepair() != null);
+                log.debug("saveEdit: gate outcome=Restored segment={}", record.segmentId());
                 yield write(
                                 SAVE_EDIT,
                                 record,

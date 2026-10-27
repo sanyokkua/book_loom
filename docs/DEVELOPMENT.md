@@ -88,7 +88,7 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 | `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close; book inspection, sentence splitting, auxiliary text units; the placeholder gate checks the multiset and the order/nesting of paired placeholders (ADR-0040) |
 | `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
 | `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the judge and self-heal — built and tested but not yet wired into a run |
-| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034), proven by `RepositoryContractTest`; SQLite + Flyway + JDBI planned |
+| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034; command line, tests) and, built by `finalize-ui-and-persistence`, SQLite + JDBI adapters for the window (ADR-0043; Flyway only from the first release); `RepositoryContractTest` runs against both |
 | `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
@@ -152,6 +152,13 @@ green `:app:run` therefore says nothing about the JPMS graph; the packaged image
 is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals) — the last of these is
 switched off on `:app:translate` below, but not here.
 
+**Provider keys reach `:app:run` too.** A Gradle daemon started before you exported a key never sees it, and an IDE or a
+Dock launch never sees a shell's `export`. BookLoom's one lookup (`ua.bookloom.app.SystemEnvironmentVariables`) reads
+the process environment, then the user's OS store — `launchctl getenv` on macOS, the registry user and machine
+environment on Windows, `environment.d` and `/etc/environment` on Linux — at call time, so `launchctl setenv NAME
+value` works without restarting the daemon or the window. How to set a key per OS: the README's
+[Provider keys](../README.md#provider-keys).
+
 **What the window can do.** The whole workflow, in five numbered steps and Settings. *Import*: open a book of any of the
 four formats (EPUB, FB2, Markdown, TXT); the card reports its format, declared language, cover and chapter count, refuses
 a DRM-protected or unsupported file, and shows the book's structure tree and its round-trip check. *Book Brief*: source
@@ -176,7 +183,7 @@ Translating screen's ready card and in the session facts of the detailed log.
 
 **What it cannot do yet.** Persist anything across a restart (`:persistence` binds every repository port to an
 in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme, provider, model and brief are not
-remembered), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
+remembered; ADR-0043 moves the window to SQLite), switch the interface language inside the app, open the Projects entry (greyed, no screen), or use the
 Settings tabs Models, Generation, Automation and Storage.
 
 **Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else
@@ -237,8 +244,9 @@ the same folder (on macOS `~/Library/Logs/BookLoom-Dev/bookloom-trace.log` for a
 book text included — one line per event (a line break inside a message is written as ` ⏎ `), with the `job`/`segment`
 MDC on each line, rolled at 20 MB into `bookloom-trace.1.log.gz` … `.4.log.gz` (about 100 MB at most). It is **on by
 default in a development run** and off in an installed app, where `BOOKLOOM_TRACE_FILE=1` (or
-`-Dbookloom.trace.file=true`; `0`/`false` switches a dev run off) turns it on for that launch — nothing is saved yet,
-so the environment variable is the durable way. `bookloom.log`, the console and their level are unchanged; third-party
+`-Dbookloom.trace.file=true`; `0`/`false` switches a dev run off) turns it on for that launch; the durable way is the
+Settings › Storage & logs switch, which writes the marker file `detailed-log.on` in the data folder and applies from the
+next launch (the variable or property still wins over it, and a development run writes the log whatever the switch says). `bookloom.log`, the console and their level are unchanged; third-party
 loggers stay at `WARN` in both files. Each file (and each rotated-in file) starts with a `#` session header: version,
 OS, JVM, JavaFX, locale, log level, detailed-log state, and the session facts known so far — provider, kind, endpoint
 host (never a URL's user part, path or query), model, dial, review mode, the brief's choices, the book's file name,
@@ -1834,10 +1842,10 @@ always did. Two switches let the eval measure where that is wrong; neither chang
 
 | Switch | Meaning | Eval wiring |
 |---|---|---|
-| `BOOKLOOM_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` (else `-Dbookloom.reasoning`) | the named `PromptName` calls think (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property) | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
+| `BOOKLOOM_REASONING="low"` or `"DRAFT_BATCH_JSON=on,TERM_READING=low"` (else `-Dbookloom.reasoning`) | a bare `off`, `low` or `on` sets the level of every call that is not named; `NAME=on\|low\|off` sets one `PromptName` call (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property). **Set, it replaces the stored Generation setting entirely; unset, the stored setting (`run.reasoning`, Off when nothing is stored) applies to every call.** `BOOKLOOM_SAMPLING` (`server`\|`tuned`) works the same way against `run.sampling` | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
 | `BOOKLOOM_BATCH_NOTES=on\|off` (else `-Dbookloom.batch.notes`, default off) | the batch draft writes a one-line `notes` string before each `target` (hard phrases and idioms); the code reads it only to log it at TRACE and never validates or stores it | `BOOKLOOM_EVAL_BATCH_NOTES`, `scripts/eval-matrix.sh --batch-notes on` |
 
-A call that thinks sends Ollama `think:true` and LM Studio `reasoning_effort:"medium"`, and its output cap grows by 1,024
+A call that thinks sends Ollama `think:true` (`"low"` at Low) and LM Studio `reasoning_effort:"medium"` (`"low"` at Low), and its output cap grows by 1,024
 tokens for the reasoning (a gpt-oss model gets that room once, thinking or not); the Ollama runaway line guard is sized
 from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` and `batchNotes`.
 
@@ -1941,6 +1949,14 @@ The gate is **branch coverage ≥ 0.80 per module**, applied to `:api`, `:util`,
 Prone + NullAway (as javac plugins; every package is `@NullMarked`), SpotBugs + FindSecBugs (`config/spotbugs/`),
 ArchUnit (`:app:archTest`), the tests, and the JaCoCo verification. `./gradlew spotlessApply` fixes formatting;
 `spotlessCheck` only reports it.
+
+The fit tests measure text with the platform's font, so they can pass on macOS and fail on the Ubuntu runner. Run them
+there before pushing a UI change (needs a Docker daemon, e.g. `colima start --cpu 2 --memory 4`; the first run builds a
+small image and compiles, later runs reuse both):
+
+```bash
+scripts/ci-linux-ui.sh     # the fit tests on Ubuntu; add --tests '*SomeTest' for another :ui selection
+```
 
 CI-only, because it needs the network: the licence gate.
 

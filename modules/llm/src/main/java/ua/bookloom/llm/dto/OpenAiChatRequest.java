@@ -16,6 +16,8 @@ import org.jspecify.annotations.Nullable;
  * @param temperature optional generation control, omitted when absent
  * @param responseFormat optional strict structured-output mode, omitted when absent
  * @param maxTokens optional cap on the completion length, omitted when absent
+ * @param maxCompletionTokens optional cap on the completion length for a model that names it so, omitted when absent;
+ *     never sent together with {@code max_tokens}
  * @param seed optional sampling seed, omitted when absent
  * @param reasoningEffort optional reasoning control, {@code none} to turn a thinking model's reasoning off; omitted
  *     when absent. Ollama's and LM Studio's OpenAI-compatible endpoints both honour {@code none}.
@@ -32,6 +34,7 @@ public record OpenAiChatRequest(
         @JsonProperty("temperature") @Nullable Double temperature,
         @JsonProperty("response_format") @Nullable ResponseFormatDto responseFormat,
         @JsonProperty("max_tokens") @Nullable Integer maxTokens,
+        @JsonProperty("max_completion_tokens") @Nullable Integer maxCompletionTokens,
         @JsonProperty("seed") @Nullable Integer seed,
         @JsonProperty("reasoning_effort") @Nullable String reasoningEffort,
         @JsonProperty("top_p") @Nullable Double topP,
@@ -56,6 +59,7 @@ public record OpenAiChatRequest(
                 temperature,
                 responseFormat,
                 maxTokens,
+                null,
                 seed,
                 reasoningEffort,
                 null,

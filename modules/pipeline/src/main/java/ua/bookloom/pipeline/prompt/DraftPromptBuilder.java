@@ -39,6 +39,11 @@ public final class DraftPromptBuilder {
         return frame.targetLanguage();
     }
 
+    /** The reasoning plan and sampling mode the run's draft requests are built with. */
+    public RequestDefaults requestDefaults() {
+        return frame.requestDefaults();
+    }
+
     /** Builds the catalog system and user messages for one masked segment. */
     public List<ChatMessage> messagesFor(final Segment segment) {
         return messagesFor(segment, DraftContext.empty());

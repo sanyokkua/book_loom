@@ -17,5 +17,19 @@ public enum InspectionVerdict {
     DRM_PROTECTED,
 
     /** The file's type is not one of the four formats this application parses. */
-    UNSUPPORTED
+    UNSUPPORTED,
+
+    /**
+     * The file's name promises one of the four formats, but its content is not that format (an {@code .epub} that is
+     * no archive, an {@code .fb2} with no FictionBook root): the file is damaged rather than of another type, so the
+     * refusal names the format it could not be read as.
+     */
+    DAMAGED,
+
+    /**
+     * The book opened, but its body holds no word to translate (an empty or whitespace-only file, a body with no
+     * paragraph). Never answered by {@link BookInspector#inspect}, which does not read the text: the import answers it
+     * after opening the book, and creates no project for it.
+     */
+    NO_TEXT
 }

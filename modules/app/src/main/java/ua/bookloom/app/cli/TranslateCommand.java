@@ -167,7 +167,8 @@ public final class TranslateCommand {
         final Integer detected = capabilities.detectedTokens(selection).orElse(null);
         log.debug("translate command detectedContext={}", detected);
         final Result<TranslationJob> job = engine.newJob(
-                new RunRequest(projectId, ReviewMode.UNATTENDED, detected, selection.modelId()), dataOf(model));
+                new RunRequest(projectId, ReviewMode.UNATTENDED, detected, selection.modelId(), selection),
+                dataOf(model));
         if (job.isErr()) {
             return printError(errorOf(job), out);
         }

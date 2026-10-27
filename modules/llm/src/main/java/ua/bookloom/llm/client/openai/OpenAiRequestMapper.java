@@ -15,7 +15,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
@@ -31,6 +33,9 @@ final class OpenAiRequestMapper {
 
     /** The {@code reasoning_effort} a call that thinks asks for: the server's usual middle level. */
     static final String REASONING_ON = "medium";
+
+    /** The {@code reasoning_effort} of a call that thinks a little. */
+    static final String REASONING_LOW = "low";
 
     private final ProviderConfig config;
     private final ObjectMapper mapper;
@@ -83,13 +88,17 @@ final class OpenAiRequestMapper {
         final List<OpenAiChatRequest.Message> messages =
                 request.messages().stream().map(this::toOpenAiMessage).toList();
         try {
+            final Integer cap = outputCap(request);
+            final boolean completionField = request.outputField() == OutputLengthField.MAX_COMPLETION_TOKENS;
+            log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
             final OpenAiChatRequest payload = new OpenAiChatRequest(
                     modelId,
                     messages,
                     false,
                     request.temperature(),
                     responseFormat,
-                    maxTokens(request),
+                    completionField ? null : cap,
+                    completionField ? cap : null,
                     request.seed(),
                     reasoningEffort(request.reasoningEnabled()),
                     request.samplingOrNone().topP(),
@@ -102,17 +111,22 @@ final class OpenAiRequestMapper {
         }
     }
 
-    private static @Nullable Integer maxTokens(ChatRequest request) {
-        return Boolean.TRUE.equals(request.reasoningEnabled())
+    private static @Nullable Integer outputCap(ChatRequest request) {
+        final ReasoningLevel level = request.reasoningEnabled();
+        return level != null && level.isThinking()
                 ? ReasoningHeadroom.raise(request.maxOutputTokens())
                 : request.maxOutputTokens();
     }
 
-    private static @Nullable String reasoningEffort(@Nullable Boolean reasoningEnabled) {
+    private static @Nullable String reasoningEffort(@Nullable ReasoningLevel reasoningEnabled) {
         if (reasoningEnabled == null) {
             return null;
         }
-        return reasoningEnabled ? REASONING_ON : REASONING_OFF;
+        return switch (reasoningEnabled) {
+            case ON -> REASONING_ON;
+            case LOW -> REASONING_LOW;
+            case OFF -> REASONING_OFF;
+        };
     }
 
     private OpenAiChatRequest.Message toOpenAiMessage(ChatMessage message) {

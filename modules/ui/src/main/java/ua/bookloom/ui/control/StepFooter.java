@@ -21,6 +21,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The caller supplies each action's node id, label, hover explanation, button style class and effect, so the ids the
  * screens and their tests already address stay as they were. The forward action can be drawn unavailable, for the last step.
+ * A step whose run actions belong in the toolbar too (Translating's Start, Pause, Resume, Stop and Review) adds them as a
+ * run group, which sits just before the forward action wherever the buttons are.
  */
 @Slf4j
 public final class StepFooter extends HBox {
@@ -52,8 +54,12 @@ public final class StepFooter extends HBox {
 
     private final Button forward;
     private final @Nullable Button back;
+    private final @Nullable Action backAction;
+    private @Nullable String compactBack;
+    private boolean backShort;
     private final Region spacer = new Region();
     private final Label hint = new Label();
+    private final List<Node> runGroup = new ArrayList<>();
     private boolean hinting;
     private @Nullable Pane host;
 
@@ -62,6 +68,7 @@ public final class StepFooter extends HBox {
         Objects.requireNonNull(forward, "forward");
         setAlignment(Pos.CENTER_LEFT);
         getStyleClass().add("step-footer");
+        this.backAction = backAction;
         this.back = backAction == null ? null : button(backAction);
         HBox.setHgrow(spacer, Priority.ALWAYS);
         this.forward = button(forward);
@@ -69,6 +76,7 @@ public final class StepFooter extends HBox {
         hint.setId(forward.id() + "-hint");
         hint.getStyleClass().add("muted");
         restoreInPlace();
+        LayoutClass.follow(this, this::showBack);
         sceneProperty().addListener((observed, was, scene) -> {
             if (scene == null) {
                 release();
@@ -117,7 +125,31 @@ public final class StepFooter extends HBox {
     }
 
     private List<Node> forwardNodes() {
-        return hinting ? List.of(hint, forward) : List.of(forward);
+        final List<Node> nodes = new ArrayList<>(runGroup);
+        if (hinting) {
+            nodes.add(hint);
+        }
+        nodes.add(forward);
+        return nodes;
+    }
+
+    /**
+     * Adds the step's run actions, which sit just before the forward action, in this order.
+     *
+     * @param actions the buttons; each keeps the id, label and state its owner gives it
+     * @return this footer
+     */
+    public StepFooter withRunGroup(final List<? extends Node> actions) {
+        Objects.requireNonNull(actions, "actions");
+        runGroup.addAll(actions);
+        final Pane slot = host;
+        if (slot == null) {
+            restoreInPlace();
+        } else {
+            slot.getChildren().addAll(slot.getChildren().indexOf(forward), actions);
+        }
+        log.debug("footer {} holds {} run actions", forward.getId(), actions.size());
+        return this;
     }
 
     private List<Node> hostedNodes() {
@@ -130,8 +162,38 @@ public final class StepFooter extends HBox {
     }
 
     /**
-     * Says why the forward action cannot be pressed. A disabled button shows no tooltip, so the reason is a visible
-     * line beside it, in the footer or in the toolbar wherever the buttons are.
+     * Gives Back a short label for a compact content area (README L2), where the full label becomes its tooltip.
+     *
+     * @param label the already translated short label, such as "‹ Back"
+     * @return this footer
+     */
+    public StepFooter withCompactBack(final String label) {
+        compactBack = Objects.requireNonNull(label, "label");
+        showBack();
+        return this;
+    }
+
+    // The content area's width class (LayoutClass); a footer outside the shell has all its room and stays full.
+    private void showBack() {
+        final Button button = back;
+        final Action action = backAction;
+        final String shortLabel = compactBack;
+        if (button == null || action == null || shortLabel == null) {
+            return;
+        }
+        final boolean compact = LayoutClass.of(this) == LayoutClass.Width.COMPACT;
+        if (compact == backShort) {
+            return;
+        }
+        backShort = compact;
+        log.debug("footer back {} reads {}", action.id(), compact ? "short" : "in full");
+        button.setText(compact ? shortLabel : action.label());
+        Tips.install(button, compact ? action.label() : action.tip());
+    }
+
+    /**
+     * Says why the forward action cannot be pressed, as a visible line beside it, in the footer or in the toolbar
+     * wherever the buttons are, so the reason is read without hovering.
      *
      * @param reason the already translated reason, or {@code null} to remove the line because the action can be pressed
      */

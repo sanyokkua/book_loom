@@ -10,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -26,12 +27,17 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.UuidIdSource;
 
 /** The zero-edit round trip over the real document module, with decorators that damage the written copy. */
 class RoundTripCheckTest {
@@ -44,7 +50,7 @@ class RoundTripCheckTest {
     @TempDir
     private Path tempDir;
 
-    private final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+    private final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
 
     @Test
     void roundTrip_faithfulBookWithImageAndFont_reportsEverythingPreserved() {
@@ -128,7 +134,7 @@ class RoundTripCheckTest {
 
     private RoundTripReport roundTrip(final DocumentPort port, final Path book) {
         final ProjectServiceImpl service = service(port);
-        final Result<ImportedBook> imported = service.importBook(book);
+        final Result<ImportedBook> imported = service.create(book);
         final String id =
                 Objects.requireNonNull(Objects.requireNonNull(imported.data()).projectId());
         final Result<RoundTripReport> result = service.roundTrip(id);
@@ -142,7 +148,16 @@ class RoundTripCheckTest {
                 port,
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
-                new OpenProjects());
+                new OpenProjects(),
+                Clock.systemUTC(),
+                new UuidIdSource(),
+                injector.getInstance(RunRepository.class),
+                new ProjectCopies(
+                        injector.getInstance(GlossaryRepository.class),
+                        injector.getInstance(LexiconRepository.class),
+                        injector.getInstance(SegmentRepository.class),
+                        new UuidIdSource()),
+                injector.getInstance(SettingsRepository.class));
     }
 
     private Path book(@Nullable final String language) {

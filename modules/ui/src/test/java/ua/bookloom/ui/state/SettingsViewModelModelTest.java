@@ -29,7 +29,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
         });
 
         assertThat(offered(viewModel)).isEmpty();
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("mistral-small:24b");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("mistral-small:24b");
     }
 
     // IF a listed model could not be chosen, THEN the list would be decoration and the check could never be enabled
@@ -46,7 +46,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("gemma3:12b");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("gemma3:12b");
     }
 
     // IF the typed text were stripped as it is typed, THEN a person could not type a space inside an identifier one
@@ -64,7 +64,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
         });
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("  mistral-small:24b \t");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("  mistral-small:24b \t");
         assertThat(verifier.selections()).containsExactly(new ModelSelection("ollama", "mistral-small:24b"));
     }
 
@@ -82,7 +82,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("mistral-small:24b");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("mistral-small:24b");
     }
 
     // IF the check were available with no model, or stayed unavailable after one is chosen, THEN it would either
@@ -115,7 +115,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
     // mean nothing there; the old list must be gone at once, before the new server has answered, and the new
     // provider must be the one asked.
     @Test
-    void selectProvider_differentProvider_clearsModelAndListAtOnceThenAsksTheNewProvider() throws InterruptedException {
+    void editProvider_differentProvider_clearsModelAndListAtOnceThenAsksTheNewProvider() throws InterruptedException {
         catalog = ScriptedModelCatalog.returning("gemma3:12b", "qwen3:8b");
         final CountingPool pool = useCountingPool();
         final SettingsViewModel viewModel = viewModel();
@@ -132,12 +132,12 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
         catalog.hold();
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
         catalog.awaitCalls(2);
 
-        assertThat(onFx(() -> viewModel.model().get())).isEmpty();
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEmpty();
         assertThat(offered(viewModel)).isEmpty();
         assertThat(onFx(() -> viewModel.modelListing().noListObtained().get())).isFalse();
         assertThat(onFx(() -> viewModel.modelListing().listing().get())).isTrue();
@@ -148,13 +148,13 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
     // IF re-selecting the current provider threw its list away or asked the server again, THEN clicking the
     // already-selected row would flicker the list and repeat a request for nothing.
     @Test
-    void selectProvider_sameProvider_keepsOfferedListAndDoesNotAskAgain() {
+    void editProvider_sameProvider_keepsOfferedListAndDoesNotAskAgain() {
         catalog = ScriptedModelCatalog.returning("gemma3:12b");
         final SettingsViewModel viewModel = viewModel();
         refreshAndAwait(viewModel);
 
         onFx(() -> {
-            viewModel.selectProvider("ollama");
+            viewModel.editProvider("ollama");
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -184,7 +184,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
         });
 
         assertThat(onFx(() -> viewModel.modelListing().listing().get())).isTrue();
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("mistral-small:24b");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("mistral-small:24b");
         assertThat(onFx(() ->
                         viewModel.tests().available(ProviderTest.INFERENCE).get()))
                 .isTrue();
@@ -198,6 +198,6 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(offered(viewModel)).containsExactly("gemma3:12b");
-        assertThat(onFx(() -> viewModel.model().get())).isEqualTo("mistral-small:24b");
+        assertThat(onFx(() -> viewModel.draftModel().get())).isEqualTo("mistral-small:24b");
     }
 }

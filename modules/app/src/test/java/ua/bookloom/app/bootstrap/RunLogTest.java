@@ -26,7 +26,7 @@ import ua.bookloom.util.paths.AppPaths;
 class RunLogTest {
 
     private static final ResolvedTraceFile TRACE_ON =
-            new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null);
+            new ResolvedTraceFile(true, ResolvedTraceFile.Source.ENVIRONMENT, null);
     private static final int ROTATIONS = 6;
     private static final int OLD_RUNS = 12;
 
@@ -135,7 +135,7 @@ class RunLogTest {
     void configure_quietOrdinaryLevel_infoLineOnlyInRunLog(final Level level, final boolean detailed)
             throws IOException {
         final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
-        final ResolvedTraceFile trace = new ResolvedTraceFile(detailed, ResolvedLogLevel.Source.ENVIRONMENT, null);
+        final ResolvedTraceFile trace = new ResolvedTraceFile(detailed, ResolvedTraceFile.Source.ENVIRONMENT, null);
 
         LoggingBootstrap.configure(logDir, false, resolved(level), trace, () -> "# session");
         LoggerFactory.getLogger("ua.bookloom.test").info("lifecycle marker line");

@@ -56,7 +56,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The whole-book scenario {@link WholeBookPipelineEndToEndTest} checks facet by facet: the real document, persistence
@@ -162,11 +162,11 @@ final class WholeBookRun {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new PipelineModule(),
                 new ReviewModeTestModule());
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(book));
+        final ImportedBook imported = dataOf(projects.create(book));
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
         dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief("en", "uk", dial)));
         return new Project(injector, id);

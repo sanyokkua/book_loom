@@ -31,7 +31,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -54,7 +54,7 @@ class RollingSummaryKeeperTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         summaries = injector.getInstance(SummaryRepository.class);
         glossary = injector.getInstance(GlossaryRepository.class);
         model = new ScriptedChatModel();

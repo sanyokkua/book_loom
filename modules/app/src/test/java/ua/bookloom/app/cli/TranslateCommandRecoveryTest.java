@@ -27,6 +27,7 @@ import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.app.cli.CliRunFakes.ScriptedClock;
 import ua.bookloom.app.cli.CliRunFakes.ScriptedModels;
 import ua.bookloom.app.cli.CliRunFakes.ScriptedProbe;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.RecoveryTimer;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
@@ -199,10 +200,11 @@ class TranslateCommandRecoveryTest {
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> null, name -> null));
         final Injector core =
-                Guice.createInjector(Modules.override(new CoreModules(startup)).with(binder -> {
-                    binder.bind(Clock.class).toInstance(clock);
-                    binder.bind(RecoveryTimer.class).toInstance(clock::advanceBy);
-                }));
+                Guice.createInjector(Modules.override(new CoreModules(startup, new InMemoryPersistenceModule()))
+                        .with(binder -> {
+                            binder.bind(Clock.class).toInstance(clock);
+                            binder.bind(RecoveryTimer.class).toInstance(clock::advanceBy);
+                        }));
         return TranslateCommandTestFakes.commandOver(
                 core, models, new TranslateCommandTestFakes.RecordingProviderConfigs(), probe);
     }

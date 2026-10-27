@@ -98,8 +98,12 @@ final class RevisionCall {
             final RevisionGuards.Mode mode,
             final ModelCalls calls) {
         final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, inputs.frame(), user);
-        final ChatRequest request =
-                ChatRequests.build(name, messages, SelfHealCalls.outputLimit(segment.masked(), inputs.frame()), false);
+        final ChatRequest request = ChatRequests.build(
+                name,
+                messages,
+                SelfHealCalls.outputLimit(segment.masked(), inputs.frame()),
+                false,
+                inputs.frame().requestDefaults());
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.REVISION,

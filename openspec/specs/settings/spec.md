@@ -8,252 +8,790 @@ interface looks.
 
 ## Requirements
 
-### Requirement: Offer two local providers from first launch
-
-The application SHALL present, without any configuration, a provider named for Ollama at
-`http://localhost:11434` and a provider named for LM Studio at `http://localhost:1234/v1`, and SHALL let a person
-select which of the two is in use.
-
-Exactly one provider SHALL be selected at any time.
-
-The application SHALL NOT offer to add, edit or delete a provider, and SHALL show those actions as unavailable.
-
-**Source:** FR-PROV-01, FR-PROV-02, FR-PROV-04
-(`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`),
-`docs/specification/01_Product/07_SETTINGS.md#providers-tab`.
-In plain words: the two servers almost everybody runs locally are already known to the application, so the first
-run needs no setup at all — pick one, pick a model, translate. Adding a third provider is a real feature with a
-dialog, credential handling and validation behind it; leaving its buttons greyed is honest about that, and
-hiding them would make the screen look finished when it is not.
-
-#### Scenario: Both providers are listed with no setup
-
-- **WHEN** the provider settings are opened on a first launch
-- **THEN** a provider at `http://localhost:11434` and a provider at `http://localhost:1234/v1` are both listed
-
-#### Scenario: Selecting one deselects the other
-
-- **WHEN** the LM Studio provider is selected while the Ollama provider was selected
-- **THEN** LM Studio is the selected provider and Ollama is not
-
-#### Scenario: Adding a provider is unavailable
-
-- **WHEN** the provider settings are shown
-- **THEN** the actions to add, edit and delete a provider are present and unavailable
-
 ### Requirement: Check a provider in three stages and report each one
 
-The application SHALL offer three actions on the selected provider — Test connection, Test models and Test inference —
-each of which runs its own stage and every stage before it: Test connection asks whether the server answers at all; Test
-models also asks whether its list of models can be read and contains the chosen model; Test inference also asks whether
-it returns a usable answer to a short request.
+The application SHALL offer Test connection, Test models and Test inference on the provider being edited, each running on the form as it stands, saved or not, and each running its own stage and every stage before it; Test models SHALL run without a chosen model (then it only counts the listed models) and only Test inference SHALL wait for one. A failed connection SHALL read "does not answer" only when nothing answered: a missing key reads "the key is not set", a refused sign-in (401/403) "answered, but refused the sign-in", and any other answered error "answered, but the check did not pass", each with the reason under it.
 
-Test connection SHALL be available without a chosen model. Test models and Test inference SHALL be unavailable until a
-model is chosen, because their stages are asked about a particular model.
-
-Each finding SHALL show, when its stage passes, the value it measured — the connection's round-trip time, the number of
-models listed, the inference's duration — and, when it fails, its own failure code.
-
-WHEN a stage fails outright, the application SHALL report that stage's own failure and SHALL report the stages after it
-as not attempted, never as passed.
-
-WHEN the model listing cannot be read but the server answers, the application SHALL report that stage as a
-qualified pass rather than a failure.
-
-**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-edit-provider`, `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#three-stage-verification`. In plain words: "it does not work" is useless; "the server answers in 41 ms but that model is not loaded" tells you what to do next. Three buttons let a person ask the cheap question first — is anything listening — before choosing a model at all. The measured values turn a green tick into something comparable: a 1.2-second answer and a 40-second one both pass, and only one of them will translate a book tonight. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
+**Source**: FR-PROV-06, FR-PROV-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S2, S3 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person can test a new provider before saving it, and the answer is a sentence they can act on, not a code. A server with no listing endpoint is a normal, working configuration, so an unreadable listing is a qualified pass, not a failure.
 
 #### Scenario: The check is unavailable until a model is chosen
 
-- **WHEN** the Ollama provider is selected and no model has been chosen
-- **THEN** Test connection is available and Test models and Test inference are present and unavailable
+- **WHEN** the Ollama provider is being edited and no model has been chosen
+- **THEN** Test connection and Test models are available and Test inference is present and unavailable
+- **WHEN** Test models is used and the server lists 7 models
+- **THEN** the result reads `7 models found`
 - **WHEN** `gemma3:12b` is then chosen
-- **THEN** Test models and Test inference become available
+- **THEN** Test inference becomes available
+
+#### Scenario: A refused sign-in is not "does not answer"
+
+- **WHEN** Test connection is used on `Office LM` and the server answers HTTP 401
+- **THEN** the result reads `Office LM answered, but refused the sign-in` and the line under it reads "The server answered 401 (not authorised): the sign-in is missing or wrong. Check the sign-in type and the key variable."
 
 #### Scenario: A passing connection shows its time
 
 - **WHEN** Test connection is used and the server at `http://localhost:11434` answers in 41 ms
-- **THEN** the connection finding reads `reachable 41 ms`
-- **AND** the models and inference findings are not reported
+- **THEN** the result reads `Ollama answers (41 ms)`
+- **AND** the models and inference results are not reported
+
+#### Scenario: A failed Test connection rules the later tests out in the test dialog
+
+- **WHEN** Test connection alone is used, nothing answers, and Details is opened and its Models tab pressed
+- **THEN** the Models and Inference tabs can be pressed and each says `Not attempted — the connection failed first.`, with no request line
 
 #### Scenario: An unreachable server fails the first stage only
 
 - **WHEN** Test inference is used and nothing is listening at `http://localhost:11434`
-- **THEN** the connection finding reports `unreachable`
-- **AND** the models and inference findings are reported as not attempted, not as passed
+- **THEN** the connection result reports that Ollama does not answer
+- **AND** the models and inference results are reported as not attempted, not as passed
 
 #### Scenario: A reachable server with the chosen model passes all three
 
-- **WHEN** `gemma3:12b` is chosen, Test inference is used, and the server answers in 41 ms, lists 3 models including
-  `gemma3:12b`, and answers the short request in 1.2 s
-- **THEN** the findings read `reachable 41 ms`, `3 models` and `inference 1.2 s`
+- **WHEN** `gemma3:12b` is chosen, Test inference is used, and the server answers in 41 ms, lists 7 models including `gemma3:12b`, and answers the short request in 1.2 s
+- **THEN** the results read `Ollama answers (41 ms)`, `7 models found — the chosen one is there` and `The model replied in 1.2 s`
 
 #### Scenario: A server with no model listing still passes
 
-- **WHEN** Test inference is used and the selected provider answers but its listing cannot be read
-- **THEN** the models finding is reported as a qualified pass carrying a note
-- **AND** the inference finding is still attempted
+- **WHEN** Test inference is used and the provider answers but its listing cannot be read
+- **THEN** the models result is reported as a qualified pass carrying a note
+- **AND** the inference result is still attempted
 
 #### Scenario: A check in flight reports itself
 
-- **WHEN** Test models has been started and the verification port has not yet answered
+- **WHEN** Test models has been started and the verification has not yet answered
 - **THEN** the screen reports the test as in progress and the three test actions are unavailable
 - **AND** they become available again when the report arrives
 
+#### Scenario: An unsaved provider can be tested
+
+- **WHEN** a new provider `Office LM` at `http://10.0.0.5:1234/v1` has not been saved and Test connection is used
+- **THEN** the server at that address is asked and the result is shown, and `Office LM` is still not stored
+
 ### Requirement: Choose a model from the list, or name one the list does not hold
 
-The application SHALL offer the models the selected provider reports, and SHALL also accept a model identifier
-typed by hand.
+The application SHALL offer the models the provider being edited reports, SHALL accept a model identifier typed by hand, and SHALL also offer the provider's custom models.
 
-IF the provider reports no models, or its listing cannot be read, THEN the application SHALL leave the typed
-entry available and SHALL say that no list was obtained rather than presenting an empty choice as the whole
-truth.
-
-WHEN the selected provider changes, the application SHALL discard the previously offered list and the chosen
-model.
-
-WHERE the chosen model or the selected provider has advice (Ollama `gemma4` 26B recommended and E4B the minimum, a warning
-for E2B and for gpt-oss, and for LM Studio that it is slower, does not stream and sends more control codes), the
-application SHALL show it as a note under the chooser, decided from the model's name and the provider's kind alone, and
-SHALL show no note and take no room for a model it has no advice about on a server with none.
-
-The model chooser SHALL be shown on the providers area's detail card, for the selected provider, and SHALL NOT be
-shown on any other area, because the models area this build leaves unavailable ("Show every settings area, and
-enable only what works") is where the reference rendering draws it.
-
-**Source**: FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38, `docs/specification/01_Product/07_SETTINGS.md#models-tab`. In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid state rather than a broken one. Typing the identifier has to stay possible in all three cases, or the application becomes unusable against exactly the servers it was written for. The chosen model is discarded on a provider change because a model identifier means nothing on a different server. The chooser itself now lives on the providers card rather than behind the drawn Models tab, because that tab stays unavailable in this build: putting the same control where the working tab already is is what lets a person actually pick a model, instead of drawing it behind a door nothing in this build opens.
+**Source**: FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-model`), DD-38, `docs/specification/mockups/README.md#providers`. In plain words: some servers list what they hold and some do not, and a server that holds nothing is a valid state rather than a broken one. Typing the identifier has to stay possible in all three cases. The chosen model is discarded on a provider change because a model identifier means nothing on a different server.
 
 #### Scenario: A listed model can be chosen
 
-- **WHEN** the selected provider reports `gemma3:12b` and `qwen3:8b`
+- **WHEN** the provider reports `gemma3:12b` and `qwen3:8b`
 - **THEN** both are offered, and choosing `gemma3:12b` makes it the chosen model
 
 #### Scenario: An unlisted model can be typed
 
-- **WHEN** the selected provider reports no models and `mistral-small:24b` is typed
+- **WHEN** the provider reports no models and `mistral-small:24b` is typed
 - **THEN** `mistral-small:24b` is the chosen model
 
 #### Scenario: An unreadable listing says so
 
-- **WHEN** the selected provider's listing cannot be read
+- **WHEN** the provider's listing cannot be read
 - **THEN** the application reports that no list was obtained and keeps the typed entry available
 
 #### Scenario: Changing provider clears the model
 
-- **WHEN** `gemma3:12b` is chosen on the Ollama provider and the LM Studio provider is then selected
+- **WHEN** `gemma3:12b` is chosen on the Ollama provider and the LM Studio provider is then edited
 - **THEN** no model is chosen and the offered list is empty until it is fetched again
 
 #### Scenario: A model note follows the chosen model
 
-- **WHEN** the Ollama provider is selected and `gemma4:26b-mlx` is typed
+- **WHEN** the Ollama provider is edited and `gemma4:26b-mlx` is typed
 - **THEN** a note under the chooser says it is recommended
 - **AND** typing `gemma4:e2b-mlx` instead shows a warning, and an unknown model shows no note
 
 #### Scenario: LM Studio's limits are stated
 
-- **WHEN** the LM Studio provider is selected
-- **THEN** a note says it is slower, does not stream its replies and sends more control codes, even before a model is
-  chosen
+- **WHEN** the LM Studio provider is edited
+- **THEN** a note says it is slower, does not stream its replies and sends more control codes, even before a model is chosen
 
 #### Scenario: A listing in flight reports itself
 
-- **WHEN** the model list has been asked for and the catalogue port has not yet answered
+- **WHEN** the model list has been asked for and has not yet been answered
 - **THEN** the screen reports the listing as in progress
 - **AND** the typed entry stays available throughout, because it needs no list
 
 #### Scenario: The chooser lives on the providers card
 
-- **WHEN** the settings screen is opened on the providers area
-- **THEN** the model chooser is shown there, for the selected provider
-- **AND** no model chooser is drawn on any other area
+- **WHEN** the settings screen is opened on the Providers area
+- **THEN** the model chooser is the Model field of the Connection details fold
+- **AND** Change model on the summary card opens the fold on that field
 
-### Requirement: Show every settings area, and enable only what works
+### Requirement: Describe each provider in its row and its detail card
 
-The settings screen SHALL carry the subtitle "Everything is local. Nothing leaves your machine." and SHALL present its
-areas as a row of tabs whose selected tab is marked by an underline.
+The Providers area SHALL list each provider as a row showing its name, its endpoint's host and port, and a badge "current" or "idle"; and SHALL show a summary card — "Your AI model: Ollama · gemma4:e4b — ready ✓" for the current provider, "This provider's model: …" for another — with its speed and model count, or that no listing has been made yet, and the actions Test and Change model.
 
-The settings screen SHALL present all six areas — providers, models, generation, appearance, automation, and
-storage and logs — and SHALL show as unavailable every area this build does not implement.
+**Source**: FR-PROV-01, FR-PROV-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), S3, theme H (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: a person sees at a glance which AI model is in use and whether it works, without opening the form. The host alone tells `127.0.0.1:11434` from `127.0.0.1:1234`.
 
-The available areas SHALL be providers and appearance.
+#### Scenario: The rows name their hosts and status
 
-The appearance area SHALL carry the theme choice and, beside it, the accent shown as a fixed, read-only value,
-because the accent is not selectable in this version.
+- **WHEN** the Providers area is shown with the Ollama and LM Studio providers the first-launch look stored, Ollama current
+- **THEN** the Ollama row shows `127.0.0.1:11434` and the badge `current`
+- **AND** the LM Studio row shows `127.0.0.1:1234` and the badge `idle`
 
-**Source**: FR-SETTINGS-02, FR-SETTINGS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-settings`), FR-THEME-4 (`docs/specification/01_Product/09_THEMING.md#token-model`), `docs/specification/01_Product/07_SETTINGS.md#settings-tabs`, `docs/specification/01_Product/07_SETTINGS.md#appearance-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: the same reasoning as the greyed navigation entries — showing the shape of the finished settings screen tells a person what this application will eventually let them control, and an empty tab that opens is worse than one that says it is not ready. The subtitle and the underline tabs are how the reference draws the screen, and the subtitle states the promise the whole application keeps. The accent is named because the appearance tab has exactly three rows in the specification and this build has one of them; leaving the accent out entirely would read as an oversight rather than as the deliberate "fixed in v1" that it is. It is read-only rather than disabled: there is nothing coming to enable.
+#### Scenario: The detail card after a listing
+
+- **WHEN** Ollama is current with the model `gemma4:e4b`, it answered in about 1 second and its last listing returned 7 models
+- **THEN** the summary card reads `Your AI model: Ollama · gemma4:e4b — ready ✓` with `Answers in about 1 second · 7 models available`, and offers Test and Change model
+
+#### Scenario: The detail card before any listing
+
+- **WHEN** LM Studio is current and its models have not been listed
+- **THEN** the summary card says that no listing has been made yet and still offers Test and Change model
+
+#### Scenario: The card of a provider that is not current
+
+- **WHEN** the LM Studio row, which is not current, is selected
+- **THEN** the card begins `This provider's model:` and names its model
+
+#### Scenario: Save of the current provider's Model makes it the current model
+
+- **WHEN** Ollama is current, its Model field is changed from `gemma4:e4b` to `gemma4:26b-mlx`, and Save is chosen
+- **THEN** the summary card reads `Your AI model: Ollama · gemma4:26b-mlx` and `gemma4:26b-mlx` is the current AI model
+
+#### Scenario: A provider that is not current and has no typed model
+
+- **WHEN** the LM Studio row, which is not current, is selected and no model has been typed for it
+- **THEN** the card reads `This provider's model: LM Studio · no model chosen yet`
+
+### Requirement: Add, edit and delete providers
+
+The settings screen SHALL let a person add a provider, open a stored provider for editing by choosing its row (there is no separate Edit button), and delete one after confirmation with Delete…; deleting a provider SHALL also remove its per-model settings, and deleting the current provider SHALL leave no current AI model.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a person whose AI program is not one of the two usual local ones can describe it themselves, removing one is never a single accidental click, and a deleted provider leaves nothing behind that could be mistaken for the model in use.
+
+#### Scenario: A provider is added
+
+- **WHEN** the person adds a provider named `Office LM` of kind OpenAI-compatible at `http://10.0.0.5:1234/v1` and saves
+- **THEN** `Office LM` appears in the list with the host `10.0.0.5:1234`
+
+#### Scenario: Choosing a row opens it for editing
+
+- **WHEN** the person chooses the `Office LM` row
+- **THEN** its form opens with the name `Office LM` and the address `http://10.0.0.5:1234/v1`
+
+#### Scenario: Delete asks first
+
+- **WHEN** the person chooses Delete… on `Office LM` and then cancels the confirmation
+- **THEN** `Office LM` is still listed
+
+#### Scenario: A confirmed delete removes it
+
+- **WHEN** the person chooses Delete… on `Office LM` and confirms
+- **THEN** `Office LM` is no longer listed
+
+#### Scenario: Deleting the current provider
+
+- **WHEN** Ollama is current with the model `gemma4:e4b` and Delete… on Ollama is confirmed
+- **THEN** Ollama is no longer listed, no AI model is current, and the settings of `gemma4:e4b` are gone
+
+#### Scenario: Deleting another provider keeps the current one
+
+- **WHEN** Ollama is current with the model `gemma4:e4b` and Delete… on `Office LM` is confirmed
+- **THEN** `Office LM` is no longer listed, Ollama is still current with `gemma4:e4b`, and the settings of `gemma4:e4b` are kept
+
+### Requirement: Describe a provider's connection in a form
+
+The provider form SHALL ask for a name, a kind (Ollama or OpenAI-compatible), an address, a connect timeout and a request timeout, and WHEN the address of an OpenAI-compatible provider does not end in `/v1`, the form SHALL warn that the address usually ends in `/v1`.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: the form asks only for what the person can know, and the most common mistake with OpenAI-style servers, leaving off `/v1`, is flagged before a test fails mysteriously.
+
+#### Scenario: A missing /v1 is flagged
+
+- **WHEN** the kind is OpenAI-compatible and the address is `http://localhost:1234`
+- **THEN** the form warns that the address usually ends in `/v1`
+
+#### Scenario: An Ollama address is not flagged
+
+- **WHEN** the kind is Ollama and the address is `http://localhost:11434`
+- **THEN** no `/v1` warning is shown
+
+### Requirement: Choose how a provider signs in without entering a key
+
+The provider form SHALL offer the sign-in choices None, Bearer token and API-key header (with the header's name, `X-Api-Key` until the person types another), each with one line saying what it sends, SHALL take the key from the environment variable whose name the person enters, and SHALL show that variable as "set" or "not set" without showing its value, looked up the same way a request looks it up (the "Look a variable up where the person set it" requirement of `llm-provider`); WHILE it is "not set" the form SHALL say where to set it.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67` ("Keys are never saved, only environment-variable names"), ADR-0043. In plain words: the form never asks the person to type a secret. It asks where the secret lives and tells them whether BookLoom can find it.
+
+#### Scenario: A variable that exists is shown as set
+
+- **WHEN** Bearer token is chosen with the variable `HOME_API_KEY` and that variable has a value
+- **THEN** the form shows `HOME_API_KEY` as "set" and does not show the value
+
+#### Scenario: A variable that is missing is shown as not set, with where to set it
+
+- **WHEN** API-key header `X-Api-Key` is chosen with the variable `OFFICE_KEY` and no such variable exists
+- **THEN** the form shows `OFFICE_KEY` as "not set"
+- **AND** a line under it says that an app opened from the Dock, the Start menu or an IDE does not see a shell profile's `export` lines and how to set `OFFICE_KEY` for the user account on macOS (`launchctl setenv`), Windows (`setx`) and Linux (`~/.config/environment.d/50-bookloom.conf`), pointing at "Provider keys" in the README
+
+#### Scenario: Each sign-in says what it sends
+
+- **WHEN** Bearer token is chosen
+- **THEN** a line under the choice reads that it sends `Authorization: Bearer <key>`, for LM Studio with a key, OpenAI and most OpenAI-compatible servers
+- **WHEN** API-key header is chosen and the header name is empty
+- **THEN** the header name becomes `X-Api-Key` and the line names it as the example
+
+#### Scenario: A variable written as a reference
+
+- **WHEN** Bearer token is chosen and `$LMS_KEY`, `${LMS_KEY}`, `${env:LMS_KEY}` or `%LMS_KEY%` is typed as the key variable
+- **THEN** the form says under the field "Enter only the variable's name, LMS_KEY, without $ or braces." and Save is held
+
+### Requirement: Let the endpoints be overridden where the server needs it
+
+The provider form SHALL offer a Models endpoint override and an Inference endpoint override, and WHILE the kind is Ollama SHALL show the Inference endpoint override as disabled with the reason that Ollama's chat address is fixed.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: some OpenAI-style servers put their routes under unusual paths, so both can be changed. Ollama's route is fixed, and a greyed field that says why is clearer than a field that silently does nothing.
+
+#### Scenario: An override is accepted for an OpenAI-compatible server
+
+- **WHEN** the kind is OpenAI-compatible and the Models endpoint override is `/catalog/models`
+- **THEN** the form accepts it and the Inference endpoint override is editable
+
+#### Scenario: The inference override is disabled for Ollama
+
+- **WHEN** the kind is changed to Ollama
+- **THEN** the Inference endpoint override is disabled and a note states the reason
+
+### Requirement: Take a provider's custom headers and models
+
+The provider form SHALL let the person add custom headers as name and value rows, where a value MAY be `${env:NAME}`, and SHALL let the person add custom model identifiers shown as chips.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`. In plain words: a company gateway may need an extra header, and some servers do not list the models they serve, so both can be added by hand and a secret header value can point at an environment variable.
+
+#### Scenario: A header with an environment reference
+
+- **WHEN** the header `X-Team-Key` is added with the value `${env:TEAM_KEY}`
+- **THEN** the row is kept with that text, not with a resolved value
+
+#### Scenario: A custom model chip
+
+- **WHEN** the custom model `acme-translate-1` is added
+- **THEN** it appears as a chip and is offered among the models of that provider
+
+### Requirement: Refuse a header name or a timeout a request could not use
+
+IF a custom header's name or the API-key header's name holds a space, a colon, a control character or another character an HTTP header name may not, is longer than 64 characters or reads like a key, or a connect or request timeout is not a whole number from 1 to 3600 seconds, or the address is not an absolute `http`/`https` address with a host, names a port outside 1 to 65535 or carries a user name or password, or the key variable is not the name of an environment variable (letters, digits and underscores, not starting with a digit) or reads like a key (a known key prefix such as `sk-`, `sk_`, `ghp_`, `AKIA…`, or 24 or more characters mixing lower case, upper case and digits), THEN the provider form SHALL show the finding under that field once the person has typed or pressed Save, never naming the refused text back, SHALL refuse Save while explaining on Save's hover what holds it, and the provider store SHALL refuse the same description with `ErrorCode.validation` so nothing of it is written; a stored provider that still carries one SHALL fail its call with `ErrorCode.validation` before anything is sent, and the test dialog and its curl line SHALL show its address without any user name or password.
+
+**Source**: `docs/specification/mockups/README.md#providers`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`. In plain words: such a name or a timeout of years passes a save and then breaks every request as an unexplained transport error; the form says what to fix instead.
+
+#### Scenario: A header name with a space
+
+- **WHEN** the header `X Team` is added with the value `blue`
+- **THEN** Save is held and the form says under the headers that a header name can hold only up to 64 Latin letters, digits and `- _ . ~`, without repeating `X Team`
+
+#### Scenario: A key typed where the variable's name belongs is never shown back
+
+- **WHEN** Bearer token is chosen, `sk_live_51HabcDEF123ghiJKL456` or `$sk_live_51HabcDEF123ghiJKL456` is typed as the key variable and Save is pressed
+- **THEN** Save is held, the field says to type the NAME of a variable, not the key itself, the form shows neither "set" nor "not set" nor the line saying where to set it, no text or tooltip of the window holds the typed text, and the operating system's variables are not asked for it
+
+#### Scenario: A timeout longer than an hour
+
+- **WHEN** the connect timeout is `3601`
+- **THEN** Save is held and the form asks under the connect timeout for at most 3600 seconds
+
+#### Scenario: A key typed where its variable's name belongs
+
+- **WHEN** Bearer token is chosen and `sk-literal-SECRET-abc123` or `sk_live_51HabcDEF123ghiJKL456` is typed as the key variable and Save is pressed
+- **THEN** the form says under the field "Type the NAME of an environment variable that holds the key, not the key itself.", nothing is stored, and the value appears in no log line
+
+#### Scenario: An address with a password or an impossible port
+
+- **WHEN** the address is `http://user:pass@127.0.0.1:11434` or `http://127.0.0.1:65536`
+- **THEN** Save is held with the finding under the address, and nothing is stored
+
+#### Scenario: An address without a scheme
+
+- **WHEN** the address is `127.0.0.1` or `localhost:11434`
+- **THEN** Save is held and the form asks under the address for one that starts with `http://` or `https://`
+
+### Requirement: Use one provider and ask first while the open project has stored decisions
+
+WHEN the person chooses Use this one on a stored provider, the settings screen SHALL make it the current provider; and WHILE the open project has stored segment decisions, SHALL first ask "Use LM Studio for the rest of this book?" (naming the chosen provider) and change nothing unless the person confirms.
+
+**Source**: S3, decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#changes-while-translating-i`, `docs/specification/mockups/README.md#providers`. In plain words: switching the AI model in the middle of a book changes the voice of the rest, whether or not a run is going at that moment, so the person is asked once and told that segments already done keep their translation.
+
+#### Scenario: Use this one with no project open
+
+- **WHEN** no project is open and Use this one is chosen on `LM Studio`
+- **THEN** `LM Studio` carries the badge `current` at once and the previous provider shows `idle`
+
+#### Scenario: Use this one in the middle of a book asks first
+
+- **WHEN** the open project `Earth Gravity · EN → UK` has 74 of 142 segments decided, no run is going, and Use this one is chosen on `LM Studio`
+- **THEN** the question "Use LM Studio for the rest of this book?" is shown with "Using the same AI model keeps the style even. Segments already done keep their translation."
+- **AND** the current provider changes only when the person confirms
+
+#### Scenario: Keep changes nothing
+
+- **WHEN** the question "Use LM Studio for the rest of this book?" is answered with Keep Ollama
+- **THEN** `Ollama` stays current, the badges are as they were and nothing is stored
+
+### Requirement: Show a provider's connection details and open them when they matter
+
+The provider detail SHALL hold the connection form in a fold called Connection details, and the fold SHALL open by itself when the provider has a problem, when the provider is new, or when Show technical details is on.
+
+**Source**: theme H (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`. In plain words: someone whose AI model works never needs to see the form, and someone who needs it finds it already open.
+
+#### Scenario: A healthy provider keeps the fold closed
+
+- **WHEN** the current provider `Ollama` passed its last check
+- **THEN** the Connection details fold is closed
+
+#### Scenario: A failed check opens the fold
+
+- **WHEN** the last check of `Ollama` reported "Ollama does not answer"
+- **THEN** the Connection details fold is open
+
+#### Scenario: A new provider opens the fold
+
+- **WHEN** the person starts adding a provider
+- **THEN** the Connection details fold is open
+
+### Requirement: Show a check's details in a test dialog
+
+WHEN the person opens the details of a check, the settings screen SHALL show a dialog with a verdict banner, the request line with Copy as curl (the key hidden), three columns Body, a table of Status, Time, First token, Speed, Tokens and Structured, and Response, and a footer that switches between the tests that have run and closes; a copy is confirmed in the dialog's footer, never in a toast.
+
+**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#dialog--test-connection--models--inference-s2`. In plain words: when a test fails, a person or a helper can see exactly what was asked and what came back, and can reproduce it in a terminal without the secret being exposed.
+
+#### Scenario: The dialog shows the request and the answer
+
+- **WHEN** the inference check of `Ollama` with `gemma4:e4b` is opened
+- **THEN** the banner reads "The model replied correctly. Translation can start."
+- **AND** the request line shows `POST http://127.0.0.1:11434/api/chat` and the three columns are filled
+
+#### Scenario: Copy as curl hides the key
+
+- **WHEN** Copy as curl is used for a provider that signs in with a bearer token from `HOME_API_KEY`
+- **THEN** the copied command carries `Authorization: Bearer ••••` and no key value
+
+#### Scenario: Copying says so in the dialog's footer
+
+- **WHEN** Copy as curl is used in the test dialog
+- **THEN** the footer reads "Copied as curl — the key is hidden." and no toast is shown
+
+#### Scenario: A check result opens the test dialog
+
+- **WHEN** the check result `The model replied in 1.2 s` is activated
+- **THEN** the test dialog opens on the inference check
+
+### Requirement: Describe each model on the Models tab and keep its own settings
+
+The Models tab SHALL list the models across all providers, and SHALL keep for the chosen model its own optional settings, with the explanation "Each model keeps its own settings. All are optional — off means BookLoom picks the value per task."
+
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: one model may refuse a setting that another accepts, so settings belong to a model, and leaving them off always means the safe default.
+
+#### Scenario: Two models keep different settings
+
+- **WHEN** `gemma4:e4b` is given the context window 16384 and `gpt-oss:20b` is left unchanged
+- **THEN** the Models tab shows 16384 for `gemma4:e4b` and no value for `gpt-oss:20b`
+
+### Requirement: Say which providers did not list their models on the Models tab
+
+WHEN the Models tab reads the providers' models and a provider's program does not list them, the tab SHALL say under the chooser which providers did not answer and that only the models BookLoom already knows are shown for them, until a later reading has every provider answer.
+
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: Refresh with Ollama closed changed nothing on the screen, so it looked broken; the line says why the list is short.
+
+#### Scenario: Refresh while Ollama is closed
+
+- **WHEN** Ollama does not answer and Refresh is pressed on the Models tab
+- **THEN** the line under the chooser reads `Ollama did not answer, so only its models BookLoom already knows are shown.`
+
+### Requirement: Say that Restart now is under way and bring the window back where it was
+
+WHEN Restart now is pressed, the button SHALL read `Restarting...` until the window closes, and the next copy SHALL open its window at the place and size the closing window had (maximized when it was), unless that place is on no screen now. An ordinary launch SHALL open at the default size.
+
+**Source**: `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: for the two seconds before the window closed nothing changed on screen, and the new window came back at 1024 × 700 in the middle of the screen; the closing copy now hands its place to the next one through the next copy's environment (`BOOKLOOM_WINDOW`).
+
+#### Scenario: The window comes back as it was
+
+- **WHEN** the window is 1300 × 820 at 40, 60 and Restart now is pressed
+- **THEN** the button reads `Restarting...`, and the next copy's window is 1300 × 820 at 40, 60
+
+#### Scenario: A place on no screen is not used
+
+- **WHEN** the closing window was on a display that is no longer connected
+- **THEN** the next copy opens at the default size and place
+
+### Requirement: Report what the program says about a model
+
+The Models tab SHALL show, as found out from the program, how much the model can read at once, how much is loaded now where the program says so, and whether it gives structured answers.
+
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: before changing a number, a person sees what the model itself reports about its limits.
+
+#### Scenario: Reported limits are shown
+
+- **WHEN** `gemma4:e4b` reports a context length of 131072 and 16384 loaded
+- **THEN** the Models tab shows both figures under "Found out from the program"
+
+#### Scenario: The loaded figure is read from Ollama only
+
+- **WHEN** the model belongs to an OpenAI-compatible provider
+- **THEN** the Models tab shows only how much it can read at once and no loaded figure, and no `/api/ps` request is sent
+
+#### Scenario: Structured answers come from this session's last inference test
+
+- **WHEN** no inference test of `gemma4:e4b` has run since the application started
+- **THEN** the Models tab reads "structured answers: not checked yet" and names the Providers tab test that checks it
+
+### Requirement: Choose how the temperature is sent for a model
+
+The Models tab SHALL offer for each model Let BookLoom choose (the default), My value (one value for every request) and Don't send (the temperature is left out entirely).
+
+**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: most models want the tuned values, some people want one fixed value, and a few models refuse the setting altogether, so the choice is explicit and Don't send exists for them.
+
+#### Scenario: My value sets one temperature
+
+- **WHEN** My value is chosen for `gemma4:e4b` with `0.5`
+- **THEN** the Models tab shows `0.5` as the value that every request to that model will carry
+
+#### Scenario: Don't send is selectable
+
+- **WHEN** Don't send is chosen for `gpt-oss:20b`
+- **THEN** the Models tab shows that no temperature will be sent to that model
+
+### Requirement: Set a model's context window and answer length
+
+The Models tab SHALL offer for each model a Use context window number (filled in from what is loaded) from 512 to 1,048,576 tokens, a Limit answer length switch no larger than the window, and under Advanced the field that carries the answer length, `max_completion_tokens` or `max_tokens`, which SHALL NOT apply to Ollama.
+
+**Source**: decision 6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#models-decision-6`. In plain words: a person can widen the window a model reads or cap how long it may answer, and for OpenAI-style servers choose the field name the server expects. Ollama has no such choice, so the field is not offered for it.
+
+#### Scenario: A context window outside its range
+
+- **WHEN** Use context window is on with `256`, or with `2000000`
+- **THEN** Save is held and the tab asks for a context window from 512 to 1,048,576 tokens
+
+#### Scenario: An answer cap larger than the window
+
+- **WHEN** Use context window is `8192` and Limit answer length is `8193`
+- **THEN** Save is held and the tab says the answer length limit cannot be larger than the context window
+
+#### Scenario: The context window is filled in from the program
+
+- **WHEN** `gemma4:e4b` has 16384 tokens loaded and the tab is opened
+- **THEN** Use context window shows `16384`
+
+#### Scenario: The field choice is absent for Ollama
+
+- **WHEN** the model belongs to an Ollama provider
+- **THEN** the Advanced answer-length field choice is not offered
+
+#### Scenario: The field choice is offered for OpenAI-compatible servers
+
+- **WHEN** the model belongs to an OpenAI-compatible provider
+- **THEN** Advanced offers `max_completion_tokens` and `max_tokens`
+
+#### Scenario: The loaded figure is a suggestion while the window is off
+
+- **WHEN** nothing is stored for `gpt-oss:20b`, 16384 tokens are loaded and Use context window is off
+- **THEN** the number field shows `16384` disabled, the draft is unchanged and the footer shows no unsaved mark
+
+### Requirement: List the settings a model refused and let the person send them again
+
+The Models tab SHALL list under "Settings this model refused" each setting the model refused, when it was refused and what BookLoom did instead, with Send again on each row, and SHALL say "Nothing refused" when the list is empty.
+
+**Source**: S6 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), FR-INFER-09e (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#response-handling`), `docs/specification/mockups/README.md#refused-settings-s6`. In plain words: BookLoom learns by itself that a model rejects a setting, and the person can see what it learned and undo it if the model was updated.
+
+#### Scenario: A refusal is listed
+
+- **WHEN** `gpt-oss:20b` refused `temperature` on 2026-10-20 and BookLoom stopped sending it
+- **THEN** the list shows a row for `temperature` with that date and the action taken
+
+#### Scenario: Send again forgets the refusal
+
+- **WHEN** Send again is chosen on the `temperature` row
+- **THEN** the row disappears and the next request to that model carries the temperature again
+
+#### Scenario: An empty list says so
+
+- **WHEN** a model has refused nothing
+- **THEN** the section reads "Nothing refused"
+
+#### Scenario: Send again acts at once and leaves unsaved typing
+
+- **WHEN** the temperature choice of `gpt-oss:20b` is changed to My value and Send again is chosen on its `temperature` row
+- **THEN** the stored refusal is removed at once and the unsaved temperature choice stays in the form
+
+### Requirement: Save Providers and Models through a pinned footer and guard leaving
+
+The Providers and Models tabs SHALL change nothing until saved, SHALL show a pinned footer with "● Unsaved changes", Cancel and Save while they hold changes, and WHEN the person leaves with changes SHALL ask Keep editing, Discard or Save.
+
+**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#other-dialogs`. In plain words: a provider's address typed halfway must not become live, and moving to another tab must not silently lose or silently apply what the person typed.
+
+#### Scenario: A change shows the footer
+
+- **WHEN** the request timeout of `Ollama` is changed from 180 to 240 seconds
+- **THEN** the footer shows "● Unsaved changes", Cancel and Save, and the stored timeout is still 180
+
+#### Scenario: Leaving asks what to do
+
+- **WHEN** the person opens the Appearance tab with unsaved changes on Providers
+- **THEN** the question offers Keep editing, Discard and Save, and the Appearance tab opens only after Discard or Save
+
+#### Scenario: Switching provider asks naming it
+
+- **WHEN** `Ollama` has unsaved changes and the `LM Studio` row is chosen
+- **THEN** the question "Save the changes to Ollama?" is asked with Keep editing, Discard and Save
+- **AND** `LM Studio` opens only after Discard or Save
+
+#### Scenario: Switching model asks naming it
+
+- **WHEN** `gemma4:e4b` of `Ollama` has unsaved changes and `gpt-oss:20b` is chosen in the model list
+- **THEN** the question "Save the settings of gemma4:e4b · Ollama?" is asked once with Keep editing, Discard and Save
+- **AND** `gpt-oss:20b` opens only after Discard or Save
+
+#### Scenario: Leaving Models asks
+
+- **WHEN** the Models tab holds unsaved changes and the Providers tab is opened
+- **THEN** the question is asked and the Providers tab opens only after Discard or Save
+
+#### Scenario: Save stores the change
+
+- **WHEN** Save is chosen
+- **THEN** the stored timeout is 240 and the footer disappears
+
+### Requirement: Apply the other tabs at once and say when
+
+The Generation, Appearance, Automation and Storage & logs tabs SHALL apply a change at once and SHALL say when it takes effect: "Changes apply at once", "to the segments not translated yet", or "after BookLoom restarts".
+
+**Source**: theme H, option H1 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`. In plain words: a switch takes effect when flipped, and the screen is honest about the cases where the running translation or the next launch is what changes.
+
+#### Scenario: A theme change applies at once
+
+- **WHEN** the dark theme is chosen on Appearance
+- **THEN** the window turns dark immediately and the tab says "Changes apply at once"
+
+#### Scenario: A generation change reaches only later segments
+
+- **WHEN** Thinking before answering is changed during a run
+- **THEN** the tab says the change applies "to the segments not translated yet"
+
+### Requirement: Show how quality, thinking and sampling are set on Generation
+
+The Generation tab SHALL show what each quality choice does as a read-only table, SHALL offer Thinking before answering as Off, Low or On, SHALL offer Sampling as Program defaults or Tuned by BookLoom, and SHALL show the time limits as fixed read-only values.
+
+**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#generation-tab`. In plain words: the person can see what Fast, Balanced and Max mean without being able to break them, and can change only the two knobs that the program really has.
+
+#### Scenario: The quality table is read-only
+
+- **WHEN** the Generation tab is opened
+- **THEN** the quality table lists Fast, Balanced and Max and none of its cells can be edited
+
+#### Scenario: Thinking is chosen
+
+- **WHEN** Low is chosen for Thinking before answering
+- **THEN** the stored choice is Low and it is read again after a restart
+
+#### Scenario: A running translation keeps its settings until it starts again
+
+- **WHEN** a translation is running, paused or stopping and the Generation tab is opened
+- **THEN** a note says the run keeps the settings it started with and that a change reaches its segments not translated yet when it starts or continues again
+
+#### Scenario: An override is named
+
+- **WHEN** the environment variable `BOOKLOOM_REASONING` is set and the Generation tab is opened
+- **THEN** a note beside Thinking names `BOOKLOOM_REASONING` as deciding this launch and says the choice made here is kept for launches without it
+
+### Requirement: Choose the theme, the language and technical details on Appearance
+
+The Appearance tab SHALL offer the theme, the language of the app with the note "Applies after BookLoom restarts." and a Restart now action, and a Show technical details switch, and SHALL NOT offer an accent row.
+
+**Source**: S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#appearance-tab`. In plain words: the language changes on the next launch because the whole window is built in one language, and Restart now saves the wait. The old fixed accent line is gone because nothing could change it.
+
+#### Scenario: A language choice waits for a restart
+
+- **WHEN** Ukrainian is chosen while the window is in English
+- **THEN** the window stays in English, the note "Applies after BookLoom restarts." is shown and Restart now is offered
+
+#### Scenario: Technical details are a switch
+
+- **WHEN** Show technical details is switched on
+- **THEN** technical details appear where the screens offer them and stay on after a restart
+
+#### Scenario: There is no accent row
+
+- **WHEN** the Appearance tab is opened
+- **THEN** it has no accent row
+
+### Requirement: Choose when to stop and ask on Automation
+
+The Automation tab SHALL offer When to stop and ask you, a default quality, and switches to open the review desk when a translation finishes with segments to review, to run the last check before saving by default, to Keep the computer awake (on by default) and to Reopen the last project (on by default), and SHALL NOT offer a switch for operating-system notifications.
+
+**Source**: S4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: how often BookLoom interrupts, and what it does at the end of a run, is the person's choice. Notifications are not offered because BookLoom sends none. What the window opens at launch with Reopen the last project on is the `app-shell` capability's rule.
+
+#### Scenario: The stop-and-ask choice is stored
+
+- **WHEN** After every segment is chosen
+- **THEN** the next run pauses after each decided segment
+
+#### Scenario: No notification switch
+
+- **WHEN** the Automation tab is opened
+- **THEN** it holds no switch for operating-system notifications
+
+#### Scenario: Reopen the last project is a stored switch
+
+- **WHEN** Reopen the last project is switched off and the application is closed and opened again
+- **THEN** the Automation tab shows Reopen the last project switched off
+
+#### Scenario: An explicit launch value is named on Automation
+
+- **WHEN** BookLoom was launched with `BOOKLOOM_REVIEW_MODE=unattended` and the Automation tab is opened
+- **THEN** a note under When to stop and ask you says `BOOKLOOM_REVIEW_MODE` is set for this launch, so it decides this, and that the choice made here is kept for launches without it
+
+#### Scenario: A new book takes the default quality
+
+- **WHEN** Max quality is chosen as the default quality for new books and a book is opened that has no stored project, or whose stored project has no target language yet (it is created again from the book)
+- **THEN** that project's Book Brief holds Max quality, and a stored project that already has a target language keeps the quality its own Book Brief holds
+
+#### Scenario: The last-check default is unwritten until chosen
+
+- **WHEN** the Automation tab is opened and the last-check default has never been written
+- **THEN** its switch is off with a hint that it is not chosen yet (on for books at Max quality, off otherwise), and once the switch is changed the written value wins and the hint is gone
+
+### Requirement: Name the review modes with one set of words
+
+The Automation tab's When to stop and ask you SHALL offer exactly these three choices, each standing for one review mode of the run and one launch value:
+
+| Automation choice | Review mode of the run | Launch value |
+|---|---|---|
+| Never — translate unattended | Unattended | `unattended` |
+| When something needs review | Assisted | `assisted` |
+| After every segment | Manual | `manual` |
+
+The long phrases belong to the Automation tab. Every other screen that names the mode (the title bar, the Translating screen) uses the short words Unattended, Assisted and Manual, and `BOOKLOOM_REVIEW_MODE` and `bookloom.review.mode` take the launch values.
+
+**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`, ADR-0045. In plain words: the tab, the other screens and the environment variable name the same three modes, so a person and a script mean the same thing: the tab says it in long sentences, the rest of the application in one word, and a script in the launch value. The default is Never — translate unattended.
+
+#### Scenario: The words map to the modes
+
+- **WHEN** When something needs review is chosen and a run is started
+- **THEN** the run's review mode is Assisted
+
+#### Scenario: Nothing stored means unattended
+
+- **WHEN** nothing is stored for When to stop and ask you, no launch value is set, and a run is started
+- **THEN** the run's review mode is Unattended
+
+### Requirement: Show storage and logs on one tab
+
+The Storage & logs tab SHALL show where the projects are saved, how large they are (the database with its write-ahead file) and how many projects it holds, an Open data folder action (it opens the data folder, never the log folder), Make a backup… and Delete all data…, and SHALL show the log folder, that 10 launches are kept, a Detailed diagnostic log switch that applies after BookLoom restarts (a launch value `BOOKLOOM_TRACE_FILE` or `bookloom.trace.file` wins over it and is named), Open log folder and Save a diagnostic bundle…, and SHALL show each path in short form with the full path as its tooltip. Make a backup… SHALL write only to a file the person picks, SHALL never replace an existing file, and SHALL NOT carry any key. Delete all data… SHALL ask first, with Cancel as the default and a Make a backup first answer, and SHALL delete only as the `local-storage` capability's "Delete all data on request" says.
+
+**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#storage-and-logs-tab`. In plain words: a person can find their saved work and the logs without hunting through the file system, and can make a backup or hand support a bundle. Long paths stay readable, and the whole path is one hover away.
+
+#### Scenario: A long path is shortened
+
+- **WHEN** the projects are saved in `~/Library/Application Support/BookLoom`
+- **THEN** the tab shows a shortened form and the tooltip shows the full path
+
+#### Scenario: Logs keep ten launches
+
+- **WHEN** the Storage & logs tab is opened
+- **THEN** it states that 10 launches are kept
+
+#### Scenario: The detailed log switch applies after a restart
+
+- **WHEN** Detailed diagnostic log is switched on and BookLoom is closed and opened again
+- **THEN** the detailed log is written in the new launch, the tab said before the restart that the switch applies after BookLoom restarts, and the log written in the first launch did not change
+
+#### Scenario: A launch value decides the detailed log
+
+- **WHEN** BookLoom was launched with `BOOKLOOM_TRACE_FILE=0` while Detailed diagnostic log is switched on
+- **THEN** the detailed log is not written, and a note under the switch names `BOOKLOOM_TRACE_FILE` as the value that decides this launch
+
+#### Scenario: Make a backup writes a copy that opens
+
+- **WHEN** Make a backup… is used with a new file name
+- **THEN** the file holds all the projects and settings as they were, contains no key, and the saved work itself is unchanged and still writable
+
+#### Scenario: Make a backup refuses an existing file
+
+- **WHEN** Make a backup… is used with the name of a file that already exists
+- **THEN** the file is left untouched and an error with the code `validation` says a file with that name is already there
+
+#### Scenario: Delete all data asks first and Cancel changes nothing
+
+- **WHEN** Delete all data… is used and the question is answered Cancel
+- **THEN** the question had said that all projects, translations, glossaries, providers and settings are deleted and that the book files, the exported files and the logs are not touched, and nothing is deleted and BookLoom does not restart
+
+#### Scenario: Make a backup first asks again
+
+- **WHEN** the question of Delete all data… is answered Make a backup first and a new file name is chosen
+- **THEN** the backup is written as Make a backup… writes it, nothing is deleted, and the question is asked again
+
+### Requirement: Show all six settings areas, every one enabled
+
+The settings screen SHALL carry the subtitle "Your books stay on this computer. BookLoom sends your text only to the AI model you choose here.", SHALL present six areas — Providers, Models, Generation, Appearance, Automation, and Storage & logs — as a row of tabs whose selected tab is marked by an underline, and SHALL have every one of them enabled, with no accent row on Appearance.
+
+**Source**: decision 6, S4, S5 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/01_Product/07_SETTINGS.md#settings-tabs`. In plain words: with the models, generation, automation and storage tabs built, nothing is greyed any more. The subtitle states the promise precisely: the books stay here, and the book's text goes only to the AI model the person chose (the first-launch look asks for model lists and sends no text).
 
 #### Scenario: All six areas are listed
 
 - **WHEN** the settings screen is opened
-- **THEN** areas for providers, models, generation, appearance, automation, and storage and logs are all present
-- **AND** the subtitle reads `Everything is local. Nothing leaves your machine.`
+- **THEN** tabs for Providers, Models, Generation, Appearance, Automation, and Storage & logs are all present and enabled
+- **AND** the subtitle reads `Your books stay on this computer. BookLoom sends your text only to the AI model you choose here.`
 
 #### Scenario: The selected area is underlined
 
-- **WHEN** the settings screen is opened on the providers area
-- **THEN** the providers tab is marked by an underline and no other tab is
+- **WHEN** the settings screen is opened on the Providers tab
+- **THEN** the Providers tab is marked by an underline and no other tab is
 
-#### Scenario: An unimplemented area does not open
+#### Scenario: Every area opens
 
-- **WHEN** the generation area is activated
-- **THEN** it does not open and the previously shown area stays
+- **WHEN** the Generation tab is activated
+- **THEN** it opens and shows its own settings
 
-#### Scenario: The appearance area shows a fixed accent
+#### Scenario: The appearance area has no accent
 
-- **WHEN** the appearance area is shown
-- **THEN** it presents the theme choice and reports the accent as a fixed value
-- **AND** no control offers to change the accent
+- **WHEN** the Appearance area is shown
+- **THEN** it presents the theme choice and no accent row
 
-### Requirement: Keep nothing chosen here beyond the session
+### Requirement: Apply the app language after a restart and the review mode at the next run start
 
-The application SHALL apply a chosen provider, model and theme immediately, and SHALL NOT store any of them. A
-subsequent launch SHALL start from the built-in providers with no model chosen, and SHALL take its theme and its
-displayed language from the operating system.
+The application SHALL apply a changed app language at the next launch and a changed When to stop and ask you at the next run start, leaving a running run in its mode; WHERE the review mode is set by the environment variable `BOOKLOOM_REVIEW_MODE` or the launch property `bookloom.review.mode`, that value SHALL win over the stored choice.
 
-This build offers no control that changes the displayed language; `localization` states that the language is
-chosen from the operating system alone.
+**Source**: `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D12". In plain words: the language needs a restart because every screen is built in one language; the review mode belongs to a run, so a change steers the next run rather than surprising the one going. Scripts and evaluations that set the mode explicitly keep control of it.
 
-**Source:** FR-PROV-04, FR-MODEL-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`,
-`#fr-model`), FR-UI-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-ui`).
-In plain words: the application has no storage yet, so it remembers nothing, and this says so instead of leaving
-a person to discover it. Remembering the chosen model per provider is specified behaviour that arrives with local
-storage; until then, pretending otherwise would be the more expensive mistake. The interface language is not
-listed among the things applied here because nothing in this build chooses it — FR-UI-06's in-app switch needs
-both a control and somewhere to remember the answer, and it is deferred whole rather than half-built.
+#### Scenario: A changed review mode reaches the next run
 
-#### Scenario: A chosen model is gone after a restart
+- **WHEN** a run is going in Unattended, the person chooses After every segment on Automation, the run ends, and a new run is started
+- **THEN** the running run keeps translating without pausing, and the new run pauses after each decided segment
 
-- **WHEN** `gemma3:12b` is chosen, the application is closed, and it is launched again
-- **THEN** no model is chosen
+#### Scenario: An explicit launch value wins
 
-#### Scenario: Nothing chosen is written anywhere
+- **WHEN** BookLoom was launched with `BOOKLOOM_REVIEW_MODE=unattended`, After every segment is stored on Automation, and a run is started
+- **THEN** the run translates unattended
 
-- **WHEN** the Ollama provider, the model `gemma3:12b` and the dark theme have been chosen
-- **THEN** the application's data directory contains no file recording a provider, a model, a theme or a language
+#### Scenario: The language waits for the next launch
 
-### Requirement: Describe each provider in its row and its detail card
+- **WHEN** Ukrainian is chosen on Appearance while the window is in English, and the application is restarted
+- **THEN** the window stays in English until the restart and is in Ukrainian after it
 
-The providers area SHALL list each provider as a row showing its display name, its endpoint's host and port without the
-scheme or path, and a status badge reading "current" for the selected provider and "idle" for every other.
+### Requirement: Release the keep-awake hold at once when the switch is turned off
 
-The providers area SHALL show, for the selected provider, a detail card naming its kind, its full endpoint, and the
-models found by the last listing of it — their count and the first three names — or saying that no listing has been
-made yet.
+WHEN Keep the computer awake is turned off while the application holds the computer awake, the application SHALL release the hold at once and SHALL NOT take it again while the switch is off.
 
-**Source**: FR-PROV-01, FR-PROV-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-settings`. In plain words: a person should see at a glance which server is in use, where it lives, and what it offers, without opening anything. The host alone is enough to tell `localhost:11434` from `localhost:1234`; the full endpoint is in the card for whoever needs it. Adding, editing and deleting providers stay unavailable, as before.
+**Source**: `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `docs/specification/01_Product/07_SETTINGS.md#automation-tab`. In plain words: the switch applies at once like the other Automation switches, so a person who wants the laptop to sleep is not overruled by a run that is already going. When the computer is held awake is the `app-shell` capability's rule.
 
-#### Scenario: The rows name their hosts and status
+#### Scenario: Turning the switch off releases the hold
 
-- **WHEN** the providers area is shown with Ollama selected
-- **THEN** the Ollama row shows `localhost:11434` and the badge `current`
-- **AND** the LM Studio row shows `localhost:1234` and the badge `idle`
+- **WHEN** a run is translating with the computer held awake and Keep the computer awake is switched off
+- **THEN** the hold is released at once, the run goes on, and no hold is taken for the rest of the run
 
-#### Scenario: The detail card after a listing
+### Requirement: Store the speed the inference test measured on the model
 
-- **WHEN** Ollama is selected and its last listing returned `gemma3:12b`, `qwen3:8b`, `mistral-small:24b` and `phi4:14b`
-- **THEN** the detail card shows the kind Ollama, the endpoint `http://localhost:11434`, and
-  `4 · gemma3:12b, qwen3:8b, mistral-small:24b`
+WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured. WHEN a translation ends, the stored value SHALL be that run's seconds per drafted segment (the seconds its drafting calls took, pauses left out, divided by the segments drafted); a run that drafted nothing SHALL store nothing.
 
-#### Scenario: The detail card before any listing
+**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
 
-- **WHEN** LM Studio is selected and its models have not been listed
-- **THEN** the detail card shows the endpoint `http://localhost:1234/v1` and says that no listing has been made yet
+#### Scenario: The measured speed is stored and named
+
+- **WHEN** Test inference for `gemma4:e4b` passes and measures 3.0 seconds per segment, and the application is restarted
+- **THEN** the settings of `gemma4:e4b` hold 3.0 seconds per segment, measured by the inference test, and the estimate before Start says it comes from the inference test
+
+#### Scenario: A translation's own speed replaces the test's
+
+- **WHEN** a translation of the book with `gemma4:e4b` ends after Test inference had stored a speed
+- **THEN** the stored speed is the translation's and the estimate before Start says it comes from an earlier translation
+
+#### Scenario: A run that drafted nothing stores nothing
+
+- **WHEN** a translation is cancelled or refused before any segment was drafted
+- **THEN** the speed stored on the model is unchanged

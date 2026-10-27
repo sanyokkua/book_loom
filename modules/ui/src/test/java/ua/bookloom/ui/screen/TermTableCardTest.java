@@ -4,14 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
+import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.stage.Window;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.PriorityRow;
 import ua.bookloom.ui.control.TwoColumns;
 
@@ -72,12 +79,12 @@ class TermTableCardTest extends TermTableCardTestBase {
     @CsvSource({
         "en, 960, 640, names-style",
         "en, 960, 640, recurring",
-        "en, 1024, 700, names-style",
-        "en, 1024, 700, recurring",
+        "en, 980, 700, names-style",
+        "en, 980, 700, recurring",
         "uk, 960, 640, names-style",
         "uk, 960, 640, recurring",
-        "uk, 1024, 700, names-style",
-        "uk, 1024, 700, recurring"
+        "uk, 980, 700, names-style",
+        "uk, 980, 700, recurring"
     })
     void toolbar_narrowCard_foldsImportAndExportIntoTheMenuAndKeepsTheRest(
             final String tag, final double width, final double height, final String card) throws Exception {
@@ -87,7 +94,7 @@ class TermTableCardTest extends TermTableCardTestBase {
     }
 
     @ParameterizedTest
-    @CsvSource({"en, names-style, Import…, Export…", "uk, recurring, Імпорт…, Експорт…"})
+    @CsvSource({"en, names-style, Import..., Export...", "uk, recurring, Імпорт..., Експорт..."})
     void menu_foldedToolbar_holdsImportThenExportWithTheirOwnWords(
             final String tag, final String card, final String importCaption, final String exportCaption)
             throws Exception {
@@ -100,6 +107,36 @@ class TermTableCardTest extends TermTableCardTestBase {
 
         assertThat(files).extracting(MenuItem::getText).containsExactly(importCaption, exportCaption);
         assertThat(files).extracting(MenuItem::getId).containsExactly(card + "-more-import", card + "-more-export");
+    }
+
+    // IF the folded menu opened no popup under a real click, THEN Import and Export would be out of reach in a narrow
+    // window.
+    @ParameterizedTest
+    @CsvSource({"names-style", "recurring"})
+    void menu_foldedToolbarClicked_opensAPopupOfferingImportAndExport(final String card) throws Exception {
+        showScreen("en", 960, 640, ROSALIND);
+        final MenuButton more = (MenuButton) required(card + "-more");
+        // The stacked Recurring terms card starts below the fold, where a person scrolls before clicking.
+        ThemeTestSupport.onFx(() -> {
+            scrollIntoView(more);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        clickOn(more);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(ThemeTestSupport.onFx(more::isShowing)).isTrue();
+        assertThat(ThemeTestSupport.onFx(() -> Window.getWindows().stream()
+                        .filter(window -> window instanceof ContextMenu && window.isShowing())
+                        .flatMap(window -> window.getScene().getRoot().lookupAll(".label").stream())
+                        .filter(Node::isVisible)
+                        .map(label -> ((Labeled) label).getText())
+                        .toList()))
+                .contains("Import...", "Export...");
+        clickOn("Export...");
+        WaitForAsyncUtils.waitForFxEvents();
+        assertThat(ThemeTestSupport.onFx(more::isShowing)).isFalse();
     }
 
     // IF the menu showed Review and Translate while their buttons are in the row, THEN each action would be offered
@@ -117,6 +154,22 @@ class TermTableCardTest extends TermTableCardTestBase {
                         .map(MenuItem::isVisible)
                         .toList()))
                 .containsExactly(false, false);
+    }
+
+    // Scrolls the nearest scroll pane so that the node's top is in its viewport, as the person's wheel would.
+    private static void scrollIntoView(final Node node) {
+        Node walk = node.getParent();
+        while (walk != null && !(walk instanceof ScrollPane)) {
+            walk = walk.getParent();
+        }
+        if (walk instanceof ScrollPane pane && pane.getContent() != null) {
+            final double top = pane.getContent()
+                    .sceneToLocal(node.localToScene(node.getBoundsInLocal()))
+                    .getMinY();
+            final double room = pane.getContent().getBoundsInLocal().getHeight()
+                    - pane.getViewportBounds().getHeight();
+            pane.setVvalue(room <= 0 ? 0 : Math.min(1, top / room));
+        }
     }
 
     /** The scene bounds of every toolbar part of a card that a person can see. */
@@ -143,7 +196,7 @@ class TermTableCardTest extends TermTableCardTestBase {
 
     // IF the toolbar broke onto a second line or ran past the card, THEN the squeeze would look like a defect.
     @ParameterizedTest
-    @CsvSource({"en, 960, 640", "en, 1024, 700", "en, 1440, 900", "uk, 960, 640", "uk, 1024, 700", "uk, 1440, 900"})
+    @CsvSource({"en, 960, 640", "en, 1024, 700", "en, 1920, 700", "uk, 960, 640", "uk, 1024, 700", "uk, 1920, 700"})
     void toolbar_atEachWindowSize_staysOnOneLineInsideItsCard(final String tag, final double width, final double height)
             throws Exception {
         showScreen(tag, width, height, ROSALIND);
@@ -176,16 +229,16 @@ class TermTableCardTest extends TermTableCardTestBase {
     // ---- two equal cards: stacked below the breakpoint, side by side above ------------------------------------
 
     // IF the screen kept the cards stacked on a wide window, THEN half the width would sit empty; IF it split a narrow
-    // one, THEN both tables would be unreadably narrow.
+    // one, THEN both tables would be unreadably narrow. The switch is the content area's WIDE class (1440 px).
     @ParameterizedTest
-    @CsvSource({"960, 640, true", "1024, 700, true", "1300, 800, true", "1440, 900, false"})
+    @CsvSource({"1280, 800, true", "1660, 900, true", "1700, 900, false", "1920, 700, false"})
     void cards_atEachWindowSize_stackBelowTheBreakpointAndSitSideBySideAbove(
             final double width, final double height, final boolean stacked) throws Exception {
         showScreen("en", width, height, ROSALIND);
 
         final TwoColumns columns = (TwoColumns) required("names-style-card").getParent();
         assertThat(required("recurring-card").getParent()).isSameAs(columns);
-        assertThat(columns.breakpointProperty().get()).isEqualTo(1040.0);
+        assertThat(columns.sideBySideFrom()).isEqualTo(LayoutClass.Width.WIDE);
         assertThat(ThemeTestSupport.onFx(columns::isStacked)).isEqualTo(stacked);
     }
 
@@ -205,7 +258,7 @@ class TermTableCardTest extends TermTableCardTestBase {
 
     @Test
     void cards_sideBySide_areEqualInWidthWithTheGlossaryOnTheLeft() throws Exception {
-        showScreen("en", 1440, 900, ROSALIND);
+        showScreen("en", 1920, 700, ROSALIND);
 
         final var glossaryBounds = ThemeTestSupport.onFx(() -> required("names-style-card")
                 .localToScene(required("names-style-card").getBoundsInLocal()));

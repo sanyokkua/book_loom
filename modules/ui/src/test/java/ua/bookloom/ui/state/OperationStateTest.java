@@ -15,7 +15,8 @@ import ua.bookloom.ui.i18n.MessageKey;
 class OperationStateTest {
 
     private final MutableClock clock = new MutableClock();
-    private final ActivityTracker tracker = new ActivityTracker(new StateMirror(), new KeepAwake.Off(), clock);
+    private final ActivityTracker tracker =
+            new ActivityTracker(new StateMirror(), new KeepAwake.Off(), new KeepAwakeGate(), clock);
 
     // IF a kind that asks the model did not block, THEN the person could change the book under a running scan.
     @ParameterizedTest

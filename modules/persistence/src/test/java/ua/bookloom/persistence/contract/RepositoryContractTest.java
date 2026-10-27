@@ -3,6 +3,7 @@ package ua.bookloom.persistence.contract;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
@@ -70,7 +72,12 @@ public abstract class RepositoryContractTest {
                 base.source(),
                 base.format(),
                 base.contentHash(),
-                base.brief().withNarrator(narrator)));
+                base.brief().withNarrator(narrator),
+                base.name(),
+                base.nameOrigin(),
+                base.title(),
+                base.createdAt(),
+                base.lastOpenedAt()));
 
         assertThat(repository.find("p1").data())
                 .isPresent()
@@ -103,6 +110,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void firstPending_afterAcceptAndFlag_skipsFlaggedAndMovesToTheNextUnit() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         final Set<SegmentKind> keptFrontmatter = seedFiveSegments(repository);
 
@@ -122,6 +130,7 @@ public abstract class RepositoryContractTest {
     // A flagged segment no target passed for keeps the model's refused reply, and a machine target clears it.
     @Test
     void update_rejectedTargetKeptThenMachineTargetSet_isStoredThenCleared() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         seedFiveSegments(repository);
 
@@ -139,6 +148,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void firstPending_auxiliarySegments_respectKeptAuxiliaryKinds() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         final Set<SegmentKind> keptFrontmatter = seedFiveSegments(repository);
         final Set<SegmentKind> keptNone = Set.of();
@@ -162,6 +172,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void countsByStatus_countsARevisedSegment() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -172,6 +183,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void byUnit_returnsThatUnitsSegmentsInDocumentOrder() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll(
                 "p1",
@@ -187,6 +199,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void update_unknownSegmentId_answersValidation() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -199,6 +212,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void records_ofOneProject_areInvisibleToAnother() {
+        givenProjects("p1", "p2");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         repository.saveAll("p2", List.of(pending("p2", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
@@ -213,6 +227,7 @@ public abstract class RepositoryContractTest {
 
     @Test
     void update_concurrentIncrements_endsAtTheExpectedTotal() {
+        givenProjects("p1");
         final SegmentRepository repository = segmentRepository();
         repository.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
 
@@ -265,8 +280,34 @@ public abstract class RepositoryContractTest {
         return repository.firstPending("p1", keptAuxiliaryKinds).data().map(SegmentRecord::segmentId);
     }
 
+    /**
+     * Saves a project for each id: a stored adapter keeps a project's records only under a project that exists, as
+     * the application always creates the project first.
+     */
+    protected void givenProjects(final String... ids) {
+        for (final String id : ids) {
+            assertThat(projectRepository().save(project(id)).isOk()).isTrue();
+        }
+    }
+
     protected static Project project(final String id) {
-        return new Project(id, Path.of(id + ".epub"), BookFormat.EPUB, "hash-" + id, BookBrief.defaults("en"));
+        return project(id, "hash-" + id, id, "en", "uk");
+    }
+
+    protected static Project project(
+            final String id, final String hash, final String name, final String source, final String target) {
+        final BookBrief brief = BookBrief.defaults(source).withLanguages(source, target);
+        return new Project(
+                id,
+                Path.of(hash + ".epub"),
+                BookFormat.EPUB,
+                hash,
+                brief,
+                name,
+                NameOrigin.USER,
+                "Book",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-02T00:00:00Z"));
     }
 
     protected static SegmentRecord pending(

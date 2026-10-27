@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
@@ -24,8 +23,8 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -52,6 +51,7 @@ import ua.bookloom.ui.notify.Toasts;
 public final class TranslatingViewModel {
 
     private final StateMirror mirror;
+    private final ContinueGuard guard;
     private final TranslationRunner runner;
     private final CurrentProject current;
     private final SettingsViewModel settings;
@@ -63,6 +63,13 @@ public final class TranslatingViewModel {
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ObjectBinding<@Nullable ActivityKind> otherWork;
+    private final MissingInputNotice missingInputs;
+    // The countdown republishes the recovery every second; only whether it still waits changes the controls.
+    private final ChangeListener<@Nullable RecoveryState> onRecovery = (observed, was, now) -> {
+        if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
+            refreshControls();
+        }
+    };
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
@@ -82,6 +89,7 @@ public final class TranslatingViewModel {
      * @param desk where the count of undecided segments is read
      * @param executor the daemon executor that read runs on, never the FX thread
      * @param activities the model work under way, which holds start and resume while it runs
+     * @param guard what a continued run asks about the model before anything is prepared
      */
     @Inject
     public TranslatingViewModel(
@@ -94,7 +102,9 @@ public final class TranslatingViewModel {
             final ErrorPresenter errors,
             final ReviewDesk desk,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final ContinueGuard guard) {
+        this.guard = Objects.requireNonNull(guard, "guard");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.current = Objects.requireNonNull(current, "current");
@@ -103,6 +113,7 @@ public final class TranslatingViewModel {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.pending = new PendingCount(desk, executor);
+        this.missingInputs = new MissingInputNotice(notice, current, settings);
         // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
         final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);
         this.otherWork = Bindings.createObjectBinding(
@@ -113,17 +124,13 @@ public final class TranslatingViewModel {
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         otherWork.addListener((observed, was, now) -> refreshControls());
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
-        // The countdown republishes the recovery every second; only whether it still waits changes the controls.
-        mirror.review().recovery().addListener((observed, was, now) -> {
-            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
-                refreshControls();
-            }
-        });
+        mirror.review().recovery().addListener(onRecovery);
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
         current.brief().addListener(onBrief);
         mirror.review().providerError().addListener(onProviderError);
+        missingInputs.briefChanged(current.brief().get());
         log.debug("translating view model ready");
     }
 
@@ -180,6 +187,10 @@ public final class TranslatingViewModel {
      */
     public ReadOnlyIntegerProperty pendingCount() {
         return pending.count();
+    }
+
+    PendingCount pendingCounts() {
+        return pending;
     }
 
     /** Reads the pending count in the background, on each showing and when a run ends; FX thread only. */
@@ -258,36 +269,15 @@ public final class TranslatingViewModel {
     }
 
     private void onModelTextChanged() {
-        clearIfSupplied(RunNotice.Input.MODEL, () -> settings.selection().isPresent());
+        missingInputs.modelTextChanged();
     }
 
     private void onBookChanged(final @Nullable OpenedBook book) {
-        clearIfSupplied(RunNotice.Input.BOOK, () -> book != null);
+        missingInputs.bookChanged(book);
     }
 
     private void onBriefChanged(final @Nullable BookBrief brief) {
-        clearIfSupplied(RunNotice.Input.TARGET_LANGUAGE, () -> brief != null && brief.targetLanguage() != null);
-    }
-
-    /** Withdraws a refusal that named {@code input} once that input exists, so a ready start never reads as refused. */
-    private void clearIfSupplied(final RunNotice.Input input, final BooleanSupplier supplied) {
-        if (notice.get() instanceof RunNotice.MissingInput missing
-                && missing.which() == input
-                && supplied.getAsBoolean()) {
-            log.debug("{} is now supplied: withdrawing the missing-input notice", input);
-            notice.set(null);
-        }
-    }
-
-    private Optional<RunNotice.Input> missingInput(final boolean modelChosen) {
-        final BookBrief brief = current.brief().get();
-        if (brief == null) {
-            return Optional.of(RunNotice.Input.BOOK);
-        }
-        if (brief.targetLanguage() == null) {
-            return Optional.of(RunNotice.Input.TARGET_LANGUAGE);
-        }
-        return modelChosen ? Optional.empty() : Optional.of(RunNotice.Input.MODEL);
+        missingInputs.briefChanged(brief);
     }
 
     private boolean offered(final String control, final ControlState state) {
@@ -301,18 +291,19 @@ public final class TranslatingViewModel {
     }
 
     private void begin(final boolean announce) {
-        final Optional<ModelSelection> selection = settings.selection();
-        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
-        if (missing.isPresent()) {
-            log.debug("run refused: {} is missing", missing.get());
-            notice.set(new RunNotice.MissingInput(missing.get()));
+        final Optional<ModelSelection> selection = missingInputs.refuseIfMissing();
+        if (selection.isEmpty()) {
             return;
         }
-        notice.set(null);
-        final ModelSelection chosen = selection.orElseThrow();
+        final ModelSelection chosen = selection.get();
         log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
         preparing.set(true);
-        starter.start(chosen, failure -> finishPreparing(failure, announce));
+        guard.confirm(chosen, model -> launch(model, announce), () -> preparing.set(false));
+    }
+
+    private void launch(final ModelSelection model, final boolean announce) {
+        log.debug("launching the run with {}/{}", model.providerId(), model.modelId());
+        starter.start(model, failure -> finishPreparing(failure, announce));
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */
@@ -322,7 +313,7 @@ public final class TranslatingViewModel {
             if (failure != null) {
                 route(failure);
             } else if (announce) {
-                toasts.info(MessageKey.TOAST_RUN_STARTED);
+                toasts.raise(ToastOccasion.RUN_STARTED);
             }
         });
     }
@@ -378,7 +369,7 @@ public final class TranslatingViewModel {
         switch (now) {
             case RUNNING -> notice.set(null);
             case FAILED -> {
-                final RunNotice.Refused refused = RunEnding.routeFailure(mirror, errors);
+                final RunNotice.Refused refused = RunEnding.routeFailure(mirror);
                 if (refused != null) {
                     notice.set(refused);
                 }

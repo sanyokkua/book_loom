@@ -32,15 +32,14 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
@@ -75,6 +74,8 @@ final class ConformancePreparations {
             case BOOK_REFUSED -> refuseABook();
             case BOOK_DRM_BLOCKED -> blockABook();
             case BOOK_UNSUPPORTED -> refuseAnUnsupportedFile();
+            case BOOK_READING -> new ImportPreparations(injector, projects).readABook();
+            case BOOK_ALREADY_STORED -> new ImportPreparations(injector, projects).dropAKnownBook();
             case LANGUAGE_MISMATCH -> openAMismatchedBook();
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();
@@ -83,13 +84,57 @@ final class ConformancePreparations {
             case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
             case GLOSSARY_LISTED -> listAGlossary();
+            case GLOSSARY_WHILE_TRANSLATING -> listAGlossaryAndStartARun();
+            case GLOSSARY_WHILE_HIDDEN -> listAGlossaryAndHideThePass();
             case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
             case BRIEF_SUGGESTED -> suggestTheBrief();
+            case PROJECTS_LISTED -> listProjects();
+            case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
+            // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
+            default -> new SettingsPreparations(injector).prepare(preparation);
         }
     }
 
+    // Projects listed after the screen was first shown: go away and come back, as a person does, then wait for the
+    // card.
+    private void listProjects() throws TimeoutException {
+        final Path source = Path.of("/books/earth-gravity.epub");
+        projects.willList(List.of(ProjectFixtures.summary(
+                ProjectFixtures.project(
+                        ScriptedProjectService.storedProjectOf(source).id(),
+                        "earth-gravity.epub",
+                        ProjectFixtures.BOOK_HASH,
+                        "en",
+                        "uk",
+                        ua.bookloom.api.project.NameOrigin.AUTO,
+                        "Earth Gravity · EN → UK",
+                        UiTestInjector.NOW),
+                10,
+                ProjectFixtures.run(
+                        ScriptedProjectService.storedProjectOf(source).id(), JobState.PAUSED),
+                null)));
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        onFx(() -> navigator.navigate(ViewNames.SETTINGS));
+        onFx(() -> navigator.navigate(ViewNames.PROJECTS));
+        awaitNode("projects-screen");
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> navigator.content().get().lookup(".card") != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void awaitNode(final String id) throws TimeoutException {
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> navigator.content().get().lookup("#" + id) != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     private void openABook() throws TimeoutException {
-        final Path source = Path.of("Frankenstein.epub");
+        final Path source = Path.of("/books/Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openAndAwait(source, ImportState.Detected.class);
     }
@@ -99,6 +144,7 @@ final class ConformancePreparations {
         projects.onRoundTrip(Result.ok(new RoundTripReport(true, true, List.of(), 9, 9)));
         projects.onPlan(Result.ok(new BookPlan(Map.of("unit-0", 3), List.of("s-4"))));
         scriptSegments();
+        new ImportPreparations(injector, projects).showTechnicalLines();
         openABook();
         final StructureChecksViewModel checks = injector.getInstance(StructureChecksViewModel.class);
         WaitForAsyncUtils.waitFor(
@@ -131,11 +177,21 @@ final class ConformancePreparations {
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
     private void listAGlossary() throws TimeoutException {
         glossary.willAnswer(Result.ok(List.of(
-                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false)
-                        .withSuggestedGender(Gender.MALE),
-                new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
-                        .withSuggestedTarget("Віктор"))));
+                AutoNamesFixture.character("e1", "Frankenstein", Gender.UNKNOWN).withSuggestedGender(Gender.MALE),
+                AutoNamesFixture.character("e2", "Victor", Gender.MALE).withSuggestedTarget("Віктор"),
+                AutoNamesFixture.character("e3", "Justine", Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE),
+                AutoNamesFixture.character("e4", "Clerval", Gender.UNKNOWN).withNoGenderEvidence())));
         openABook();
+    }
+
+    private void listAGlossaryAndStartARun() throws TimeoutException {
+        listAGlossary();
+        startARun();
+    }
+
+    private void listAGlossaryAndHideThePass() throws TimeoutException {
+        listAGlossary();
+        HiddenPassPreparation.hide(injector);
     }
 
     // A diary that declares no language: the brief's source is Auto.
@@ -153,6 +209,24 @@ final class ConformancePreparations {
             injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b");
             return null;
         });
+        scriptTheDiaryAnswer();
+        onFx(() -> {
+            brief.styleSuggestion().ask();
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> brief.styleSuggestion().pending().get() != null));
+        pressApply();
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> brief.styleSuggestion().languageProposal().get() != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void scriptTheDiaryAnswer() {
         ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
                 .answersBrief(Result.ok(new BriefSuggestion(
                         "Diary",
@@ -163,15 +237,21 @@ final class ConformancePreparations {
                         Gender.UNKNOWN,
                         Map.of(BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 4)),
                         "en")));
+    }
+
+    // What the dialog's Apply button does: the offer's action writes the brief and ends the dialog.
+    private void pressApply() {
         onFx(() -> {
-            brief.styleSuggestion().ask();
+            java.util.Objects.requireNonNull(injector.getInstance(ua.bookloom.ui.state.ActivityTracker.class)
+                            .running()
+                            .getFirst()
+                            .progress()
+                            .outcome()
+                            .offer())
+                    .apply()
+                    .run();
             return null;
         });
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> brief.styleSuggestion().languageProposal().get() != null));
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void refuseABook() throws TimeoutException {
@@ -215,7 +295,9 @@ final class ConformancePreparations {
 
     private void completeARun() {
         final JobReport report = new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
-        injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub", null);
+        mirror.publishOutcome(RunState.COMPLETED, report, null);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -265,16 +347,15 @@ final class ConformancePreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    // A run with a call waiting and the one before it answered, so the live blocks and the prompt context are drawn.
+    // A run with a call waiting and two rows in it, so the strip, the live list and the prompt context are drawn.
     private void startARun() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
         final List<PromptSection> prompt = LiveCallFixtures.smallPrompt();
         mirror.live()
-                .publishCalls(LiveCallFixtures.calls(
+                .publishCalls(LiveRowFixtures.calls(
                         LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
-                        LiveCallFixtures.answered(
-                                LiveCallFixtures.waiting(1, 2, "It was a dreary night.", prompt), "{}")));
+                        LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -282,6 +363,7 @@ final class ConformancePreparations {
         final AppError unreachable =
                 AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing is listening at http://localhost:11434.");
         final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.publishRunState(RunState.PAUSED);
         mirror.review().publishProviderError(unreachable);
         WaitForAsyncUtils.waitForFxEvents();

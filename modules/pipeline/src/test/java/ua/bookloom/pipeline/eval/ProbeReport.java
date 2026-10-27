@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.TokenUsage;
 
 /** Prints one probe repeat as plain text: each call's request, reply and usage, then the case's verdict. */
@@ -95,11 +96,11 @@ final class ProbeReport {
                 + " think=" + think(request.reasoningEnabled()) + " sampling=" + request.sampling();
     }
 
-    private static String think(@Nullable final Boolean reasoning) {
+    private static String think(@Nullable final ReasoningLevel reasoning) {
         if (reasoning == null) {
             return "provider-default";
         }
-        return reasoning ? "on" : "off";
+        return reasoning.name().toLowerCase(java.util.Locale.ROOT);
     }
 
     /** The usage the provider reported, with the wall time the probe measured. */

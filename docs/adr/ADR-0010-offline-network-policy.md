@@ -1,6 +1,6 @@
 # ADR-0010 — Enforce an offline invariant: the only outbound call is user-triggered inference
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect **Amended by:** ADR-0044
 
 ## Context and problem statement
 

@@ -3,9 +3,12 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
@@ -14,14 +17,19 @@ import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
+import ua.bookloom.ui.RecordingProjectRepository;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
+import ua.bookloom.ui.UiTestInjector;
+import ua.bookloom.ui.dialog.RecordingConfirmPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -47,6 +55,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     ScriptedChatModelFactory models;
     SettingsViewModel settings;
     WorkflowProgress progress;
+    final MemorySettings storedSettings = new MemorySettings();
+    final RecordingProjectRepository store = new RecordingProjectRepository();
 
     /** A provider that never says what window its model has. */
     final ModelCapabilities capabilities = (providerId, modelId) -> Result.ok(ContextLength.unknown());
@@ -75,7 +85,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         exportService = new ScriptedExportService();
         models = ScriptedChatModelFactory.ok();
         settings = onFx(this::newSettings);
-        progress = onFx(() -> new WorkflowProgress(current, mirror));
+        progress = onFx(() -> new WorkflowProgress(current, mirror, desk, new DirectExecutor()));
         exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }
@@ -89,17 +99,41 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                         new RecordingToasts(),
                         new RecordingErrorPresenter(),
                         new DirectExecutor(),
-                        activities),
-                new RecordingToasts(),
+                        activities,
+                        messages),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
-                activities);
+                activities,
+                new MemorySettings(),
+                messages,
+                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                new StructuredAnswers());
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */
     ExportViewModel newExports(final ExecutorService executor) {
+        return newExports(executor, null);
+    }
+
+    /** Builds an export view model with a setup helper, or none. FX thread only. */
+    ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
-                current, desk, messages, exportService, models, settings, progress, executor, activities, null);
+                current,
+                desk,
+                projects,
+                messages,
+                exportService,
+                models,
+                settings,
+                progress,
+                executor,
+                activities,
+                setup,
+                storedSettings,
+                store,
+                new RecordingConfirmPrompt(),
+                (ExportOutcome outcome) -> {},
+                Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC));
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */
@@ -148,14 +182,6 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    void setOverwrite(final boolean overwrite) {
-        onFx(() -> {
-            exports.setOverwrite(overwrite);
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
     void refresh() {
         onFx(() -> {
             exports.refresh();
@@ -170,10 +196,6 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     String target() {
         return onFx(() -> String.valueOf(current.brief().get().targetLanguage()));
-    }
-
-    boolean overwrite() {
-        return onFx(() -> exports.overwrite().get());
     }
 
     boolean destinationExists() {

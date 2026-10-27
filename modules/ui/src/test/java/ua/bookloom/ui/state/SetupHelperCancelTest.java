@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +20,10 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
+import ua.bookloom.ui.RecordingToasts;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /** Stopping a model proposal interrupts the call it waits on and still answers the caller once, as cancelled. */
 class SetupHelperCancelTest extends ExportViewModelTestBase {
@@ -40,7 +45,8 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
             settings.model().set("gemma3:12b");
             return null;
         });
-        final SetupHelper helper = new SetupHelper(blocking, models, settings, worker, activities, capabilities);
+        final SetupHelper helper =
+                new SetupHelper(blocking, models, settings, worker, activities, capabilities, hiddenWork(activities));
         final AtomicReference<Result<FileNameSuggestion>> answer = new AtomicReference<>();
         onFx(() -> helper.run(ActivityKind.SUGGEST_NAME, model -> blocking.suggestFileName("p", model), answer::set));
         assertThat(waiting.await(5, TimeUnit.SECONDS)).isTrue();
@@ -87,5 +93,14 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
         public Result<Narrator> recheckNarrator(final String projectId) {
             throw new UnsupportedOperationException("not asked");
         }
+
+        @Override
+        public Result<NarratorHint> detectNarrator(final String projectId) {
+            throw new UnsupportedOperationException("not asked");
+        }
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

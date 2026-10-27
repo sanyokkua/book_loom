@@ -97,8 +97,12 @@ public final class DraftRequests {
         final OutputLimit limit = OutputLimit.forSource(
                 attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
         final boolean lower = step == DraftStep.DRAFT && attempt.lowerTemperature();
-        final ChatRequest request =
-                ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, lower);
+        final ChatRequest request = ChatRequests.build(
+                step.promptName(),
+                messagesFor(attempt, step, rejected, diagnostic),
+                limit,
+                lower,
+                promptBuilder.requestDefaults());
         log.debug(
                 "Built chat request segmentId={} maskedLength={} messageCount={} expectedTokens={} capTokens={}",
                 attempt.segment().id(),

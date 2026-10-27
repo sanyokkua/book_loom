@@ -15,8 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.StepLocks;
 
 /**
@@ -26,9 +26,10 @@ import ua.bookloom.ui.state.StepLocks;
  * with the active message catalogue and the {@link GuiceControllerFactory}, and a failed load leaves the previous
  * view in place: a screen that cannot be built must not blank the window. Both properties change only here, so the
  * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
- * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While work the
- * window waits for runs (a blocking activity) every navigation is refused, and a screen whose step is still locked
- * ({@link StepLocks}) is refused with a message that says what is missing.
+ * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While short work the
+ * window waits for runs every navigation is refused (long work asks instead), and a screen whose step is still locked
+ * ({@link StepLocks}) is refused silently: the reason is shown where the step is offered (a disabled button's hover
+ * explanation), not as a transient message.
  */
 @Slf4j
 @Singleton
@@ -40,7 +41,7 @@ public final class Navigator {
     private final LeaveGuard leaveGuard;
     private final ActivityTracker activities;
     private final StepLocks locks;
-    private final Toasts toasts;
+    private final ImportViewModel importer;
     private final ReadOnlyObjectWrapper<ViewNames> currentView = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<Parent> content = new ReadOnlyObjectWrapper<>();
 
@@ -73,36 +74,68 @@ public final class Navigator {
      */
     public boolean navigate(final ViewNames target) {
         Objects.requireNonNull(target, "target");
+        return navigate(target, true, () -> {});
+    }
+
+    /**
+     * Opens Import showing the drop zone although steps 1 to 5 are locked, which is how "New translation" reaches the
+     * first step with no project open. An open project stays open; only the screen starts empty. The refusals of
+     * {@link #navigate} other than the step lock apply.
+     *
+     * @return {@code true} if Import is now current; {@code false} if short work is running, Import is already
+     *     current, its view failed to load, or leaving the current screen first asks the person
+     */
+    public boolean openImportEmpty() {
+        log.debug("opening Import empty from {}", currentView.get());
+        return navigate(ViewNames.IMPORT, false, importer::showEmpty);
+    }
+
+    /**
+     * Shows a screen whatever its step lock says, for the packaged image's launch smoke, which loads every screen
+     * with no project open.
+     *
+     * @param target the screen to show
+     * @return as {@link #navigate}, except that a locked step is shown
+     */
+    public boolean showIgnoringLocks(final ViewNames target) {
+        Objects.requireNonNull(target, "target");
+        log.debug("showing {} ignoring the step locks", target);
+        return navigate(target, false, () -> {});
+    }
+
+    private boolean navigate(final ViewNames target, final boolean honourLocks, final Runnable beforeShow) {
         final ViewNames source = currentView.get();
         log.debug("navigating {} -> {}", source, target);
-        if (activities.blocking().get()) {
-            log.debug("refused {}: work the window waits for is running", target);
+        if (activities.locking().get()) {
+            log.debug("refused {}: short work the window waits for is running", target);
             return false;
         }
         if (!target.isAvailable()) {
             log.debug("refused {}: it has no screen", target);
             return false;
         }
-        if (isLocked(target)) {
+        if (honourLocks && isLocked(target)) {
             return false;
         }
         if (target == source) {
             log.debug("refused {}: it is already current", target);
             return false;
         }
-        if (!leaveGuard.admits(source, () -> show(source, target))) {
+        final Runnable shown = () -> {
+            beforeShow.run();
+            show(source, target);
+        };
+        if (!leaveGuard.admits(source, shown)) {
             log.debug("navigation {} -> {} waits for the person's answer", source, target);
             return false;
         }
+        beforeShow.run();
         return show(source, target);
     }
 
     private boolean isLocked(final ViewNames target) {
         final Optional<MessageKey> reason = locks.lockReason(target);
-        reason.ifPresent(key -> {
-            log.debug("refused {}: it is locked, {}", target, key);
-            toasts.info(key);
-        });
+        reason.ifPresent(key -> log.debug("refused {}: it is locked, {}", target, key));
         return reason.isPresent();
     }
 

@@ -12,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TabPane;
 import org.junit.jupiter.api.AfterEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
@@ -30,6 +31,7 @@ import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.RecordingJob;
 import ua.bookloom.ui.state.RunState;
@@ -112,6 +114,32 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
         });
     }
 
+    /** Chooses the model, so the run-state rows read as they do with a model chosen ("Ready", not "Cannot start"). */
+    void chooseModel() {
+        ThemeTestSupport.onFx(() -> {
+            injector.getInstance(SettingsViewModel.class).model().set(MODEL);
+            return null;
+        });
+    }
+
+    /** Opens the live card's Activity log tab; the card exists only while a run has started or ended. */
+    void openActivityLog() {
+        onFx(() -> ((TabPane) required("translating-live-tabs"))
+                .getSelectionModel()
+                .select(1));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Shows the screen on a running run and publishes {@code calls}, the way the engine's events would. */
+    void showLive(final LiveCalls calls) {
+        chooseModel();
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
+        publish(RunState.RUNNING);
+        mirror().live().publishCalls(calls);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     StateMirror mirror() {
         return injector.getInstance(StateMirror.class);
     }
@@ -136,7 +164,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     }
 
     ProgressBar progressBar() {
-        return (ProgressBar) required("translating-progress");
+        return (ProgressBar) required("translating-strip-bar");
     }
 
     /** The ids of the four run controls that a person can see and press. */

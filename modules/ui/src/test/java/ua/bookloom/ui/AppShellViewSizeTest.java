@@ -25,11 +25,6 @@ import ua.bookloom.ui.state.Throughput;
  */
 class AppShellViewSizeTest extends ShellTestBase {
 
-    private Bounds sceneBounds(final String id) {
-        final Node node = required(id);
-        return node.localToScene(node.getLayoutBounds());
-    }
-
     // IF the shell were centred and its parts could not shrink, THEN a window this small would push the title bar
     // above the top edge, where nothing could reach it; the sizes run from the minimum down to well below it.
     @ParameterizedTest

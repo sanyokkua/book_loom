@@ -1,11 +1,11 @@
 package ua.bookloom.ui;
 
+import com.google.inject.Inject;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
-import java.util.function.Consumer;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.SetChangeListener;
 import javafx.geometry.Pos;
@@ -22,11 +22,16 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.Motion;
+import ua.bookloom.ui.control.ScrollHost;
+import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.screen.ProviderNames;
-import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.LocalModelProbe;
+import ua.bookloom.ui.state.ModelChoice;
+import ua.bookloom.ui.state.ProbeOutcome;
+import ua.bookloom.ui.state.RunStateSource;
+import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -53,55 +58,53 @@ final class NavColumn {
 
     private final Messages messages;
     private final StepLocks locks;
-    private final Consumer<ViewNames> activation;
+    private final Navigator navigator;
     private final Map<ViewNames, Button> entries = new EnumMap<>(ViewNames.class);
     private final Map<ViewNames, Label> badges = new EnumMap<>(ViewNames.class);
     private final Label footer = new Label();
+    private final Region footerDot = new Region();
+    private boolean footerFailing;
     private final VBox column = new VBox();
-    private final ScrollPane scroll = new ScrollPane(column);
+    private final ScrollPane scroll = new ScrollHost(column);
 
     /**
      * Builds every group and entry.
      *
      * @param messages the catalogue the headings and labels come from
-     * @param activation told which entry was activated, available or not
+     * @param navigator asked to show the entry activated, available or not; it may refuse
      * @param progress the steps to mark as done
-     * @param settings the chosen provider and model the footer names
+     * @param runs the chosen provider and model the footer names, and the AI-model chip it reads as one fact
      * @param locks which steps are closed, and why, so a locked entry is drawn so and explains itself
+     * @param probe the look at the local AI programs: while it runs or asks which model to use, the footer waits
      */
+    @Inject
     NavColumn(
             final Messages messages,
-            final Consumer<ViewNames> activation,
+            final Navigator navigator,
             final WorkflowProgress progress,
-            final SettingsViewModel settings,
-            final StepLocks locks) {
+            final RunStateSource runs,
+            final StepLocks locks,
+            final LocalModelProbe probe) {
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.activation = Objects.requireNonNull(activation, "activation");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
         Objects.requireNonNull(progress, "progress");
-        Objects.requireNonNull(settings, "settings");
+        Objects.requireNonNull(runs, "runs");
         this.locks = Objects.requireNonNull(locks, "locks");
         column.getChildren().add(brand());
         for (final NavGroup group : NavGroup.values()) {
             column.getChildren().add(group(group));
         }
-        column.getChildren().addAll(spacer(), footer(settings));
-        progress.done().addListener((SetChangeListener<ViewNames>) change -> {
-            if (change.wasAdded()) {
-                markDone(change.getElementAdded(), true);
-            } else {
-                markDone(change.getElementRemoved(), false);
-            }
-        });
-        progress.done().forEach(step -> markDone(step, true));
+        column.getChildren()
+                .addAll(
+                        spacer(),
+                        footer(runs, Objects.requireNonNull(probe, "probe").outcome()));
+        followProgress(progress);
         // The column is a scroll pane so a short window can still reach every entry; it keeps the column's id and
         // width and carries its background, and the entries sit in a transparent box inside it.
         scroll.setId(COLUMN_ID);
         scroll.getStyleClass().addAll("shell-nav", "nav-scroll");
-        scroll.setFitToWidth(true);
         // Fitting the height lets the spacer push the footer to the bottom of a tall window.
         scroll.setFitToHeight(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         log.debug("built navigation column with {} entries", entries.size());
     }
 
@@ -122,6 +125,18 @@ final class NavColumn {
      */
     Node view() {
         return scroll;
+    }
+
+    /**
+     * Asks the navigator to show a screen, as a click on its entry does.
+     *
+     * @param target the entry activated; an inert entry is refused by the navigator and changes nothing
+     */
+    void activate(final ViewNames target) {
+        final ViewNames source = navigator.currentView().get();
+        log.debug("activating {} from {}", target, source);
+        final boolean accepted = navigator.navigate(target);
+        log.debug("activation of {} {}", target, accepted ? "accepted" : "refused");
     }
 
     /**
@@ -164,7 +179,26 @@ final class NavColumn {
                 box.getChildren().add(entry(view));
             }
         }
+        if (group == NavGroup.WORKFLOW) {
+            box.getChildren().add(noProjectHint());
+        }
         return box;
+    }
+
+    // The mockup says it in words under the steps, not only on hover: while no project is open the steps are shut.
+    private Label noProjectHint() {
+        final Label hint = new Label(messages.get(MessageKey.NAV_LOCKED_NO_PROJECT));
+        hint.getStyleClass().add("nav-hint");
+        hint.setWrapText(true);
+        final ReadOnlyObjectProperty<@Nullable MessageKey> lock = locks.lock(ViewNames.IMPORT);
+        final Runnable show = () -> {
+            final boolean shut = lock.get() == MessageKey.NAV_LOCKED_NO_PROJECT;
+            hint.setVisible(shut);
+            hint.setManaged(shut);
+        };
+        lock.addListener((observed, old, reason) -> show.run());
+        show.run();
+        return hint;
     }
 
     private Button entry(final ViewNames view) {
@@ -177,7 +211,7 @@ final class NavColumn {
         }
         button.setGraphic(badge(view));
         button.setMaxWidth(Double.MAX_VALUE);
-        button.setOnAction(event -> activation.accept(view));
+        button.setOnAction(event -> activate(view));
         entries.put(view, button);
         final ReadOnlyObjectProperty<@Nullable MessageKey> lock = locks.lock(view);
         lock.addListener((observed, old, reason) -> showLock(view, reason));
@@ -237,26 +271,83 @@ final class NavColumn {
         return spacer;
     }
 
-    private Node footer(final SettingsViewModel settings) {
-        footer.setId("nav-footer");
-        footer.getStyleClass().add("nav-footer");
-        footer.setWrapText(true);
-        footer.setMaxWidth(Double.MAX_VALUE);
-        final Runnable refresh = () -> showSelection(settings);
-        settings.selectedProviderId().addListener((observed, old, current) -> refresh.run());
-        settings.model().addListener((observed, old, current) -> refresh.run());
-        refresh.run();
-        return footer;
+    private void followProgress(final WorkflowProgress progress) {
+        progress.done().addListener((SetChangeListener<ViewNames>) change -> {
+            if (change.wasAdded()) {
+                markDone(change.getElementAdded(), true);
+            } else {
+                markDone(change.getElementRemoved(), false);
+            }
+        });
+        progress.done().forEach(step -> markDone(step, true));
     }
 
-    private void showSelection(final SettingsViewModel settings) {
-        final String provider = settings.selectedProviderId().get();
-        final String model = settings.model().get().strip();
-        log.debug("navigation footer follows provider '{}' and model '{}'", provider, model);
-        footer.setText(
-                provider.isEmpty() || model.isEmpty()
-                        ? messages.get(MessageKey.NAV_FOOTER_NO_MODEL)
-                        : messages.get(
-                                MessageKey.NAV_FOOTER_SELECTION, ProviderNames.displayName(messages, provider), model));
+    // The footer and the title bar's chip read one source, so they can never disagree about the AI model.
+    private Node footer(final RunStateSource runs, final ReadOnlyObjectProperty<ProbeOutcome> probe) {
+        footer.setId("nav-footer");
+        footer.getStyleClass().add("nav-footer-text");
+        footer.setWrapText(true);
+        footer.setMaxWidth(Double.MAX_VALUE);
+        Tips.install(messages, footer, MessageKey.NAV_FOOTER_SELECTION_TIP);
+        footerDot.getStyleClass().add("nav-footer-dot");
+        footer.setGraphic(footerDot);
+        final Runnable refresh = () -> showModel(
+                runs.model().get(), runs.projectOpen().get() ? runs.view().get() : null, probe.get());
+        runs.model().addListener((observed, old, current) -> refresh.run());
+        runs.view().addListener((observed, old, current) -> refresh.run());
+        runs.projectOpen().addListener((observed, old, current) -> refresh.run());
+        probe.addListener((observed, old, current) -> refresh.run());
+        refresh.run();
+        final VBox box = new VBox(footer);
+        box.getStyleClass().add("nav-footer");
+        return box;
+    }
+
+    // Worked out again on every tick of the run's clocks, so only a change of the words is logged.
+    private void showModel(final ModelChoice choice, final @Nullable RunStateView run, final ProbeOutcome probe) {
+        final @Nullable String chipWord =
+                choice.chosen() && run != null && run.chip().meaning() == StateMarker.Meaning.FAILED
+                        ? run.chip().word().in(messages)
+                        : null;
+        // While the look runs or its model question is open, nothing is missing yet, so the footer is not red.
+        final boolean looking = probe instanceof ProbeOutcome.Looking || probe instanceof ProbeOutcome.Asking;
+        final String text = choice.chosen()
+                ? messages.get(
+                        MessageKey.NAV_FOOTER_SELECTION,
+                        choice.provider(),
+                        chipWord == null ? choice.modelId() : chipWord)
+                : messages.get(looking ? MessageKey.NAV_FOOTER_LOOKING : noModelKey(choice, probe));
+        final boolean failing = choice.chosen() ? chipWord != null : !looking;
+        if (!text.equals(footer.getText()) || failing != footerFailing) {
+            log.debug("navigation footer now reads '{}' (failing {}, looking {})", text, failing, looking);
+        }
+        footer.setText(text);
+        markFailing(failing);
+    }
+
+    // "Found" only when the look found nothing or no program is selected; a selected program, or one that answered
+    // with models the person did not choose, lacks only the choice.
+    private static MessageKey noModelKey(final ModelChoice choice, final ProbeOutcome probe) {
+        final boolean nothingFound = probe instanceof ProbeOutcome.NotFound
+                || (choice.provider().isEmpty() && !(probe instanceof ProbeOutcome.Declined));
+        return nothingFound ? MessageKey.NAV_FOOTER_NO_MODEL : MessageKey.NAV_FOOTER_NOT_CHOSEN;
+    }
+
+    // A failing footer is the red state marker, so it reads at the marker's own contrast on the dark column.
+    private void markFailing(final boolean failing) {
+        if (failing == footerFailing) {
+            return;
+        }
+        footerFailing = failing;
+        final StateMarker.Meaning meaning = StateMarker.Meaning.FAILED;
+        if (failing) {
+            footer.getStyleClass().addAll("chip", "state-marker", meaning.styleClass());
+            final FontIcon icon = new FontIcon(meaning.icon());
+            icon.getStyleClass().add("state-icon");
+            footer.setGraphic(icon);
+        } else {
+            footer.getStyleClass().removeAll("chip", "state-marker", meaning.styleClass());
+            footer.setGraphic(footerDot);
+        }
     }
 }

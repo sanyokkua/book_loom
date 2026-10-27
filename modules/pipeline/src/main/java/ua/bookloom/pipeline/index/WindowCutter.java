@@ -105,7 +105,7 @@ final class WindowCutter {
         int markOffset = 0;
         int markLength = 0;
         for (int ordinal = from; ordinal <= to; ordinal++) {
-            final Occurrences.Read read = data.reads().get(ordinal);
+            final Occurrences.Read read = data.read(ordinal);
             final int[] cuts = cuts(read);
             if (ordinal == mention.ordinal()) {
                 mentionAt = pieces.size() + mention.sentence();

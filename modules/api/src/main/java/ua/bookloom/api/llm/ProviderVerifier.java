@@ -1,5 +1,7 @@
 package ua.bookloom.api.llm;
 
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 
 /** Port for verifying a selected provider/model pair. */
@@ -22,4 +24,17 @@ public interface ProviderVerifier {
      *     {@code validation} error for an id nobody registered
      */
     Result<VerificationReport> verifyConnection(String providerId);
+
+    /**
+     * Runs the stages for a description that is not saved; nothing is registered or stored.
+     *
+     * @param draft the unsaved provider description
+     * @param modelId the model to verify
+     * @param policy the verification depth
+     * @return the stage report, or a {@code validation} error for a description the rules refuse
+     */
+    default Result<VerificationReport> verify(ProviderConfig draft, String modelId, VerificationPolicy policy) {
+        return Result.err(AppError.of(
+                ErrorCode.internal, "Not supported", "This verifier cannot check a description that is not saved."));
+    }
 }

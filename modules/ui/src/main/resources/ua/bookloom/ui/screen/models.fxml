@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import ua.bookloom.ui.control.ScrollHost?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.ModelsController" id="settings-models-host">
+    <padding>
+        <Insets top="14"/>
+    </padding>
+    <VBox id="models-card" styleClass="card, form-card" spacing="10" maxWidth="860"
+          VBox.vgrow="ALWAYS">
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <Label styleClass="muted" text="%settings.models.model"/>
+            <ComboBox fx:id="model" id="models-model" styleClass="w-model"/>
+            <Button fx:id="refresh" id="models-refresh" styleClass="btn-ghost" text="%settings.models.refresh"/>
+            <Label fx:id="listing" id="models-listing" styleClass="hint" text="%settings.models.listing"/>
+        </HBox>
+        <Label fx:id="unanswered" id="models-unanswered" styleClass="hint" wrapText="true" minHeight="-Infinity"/>
+        <Label fx:id="explain" id="models-explain" styleClass="hint" wrapText="true" minHeight="-Infinity" text="%settings.models.explain"/>
+        <Label fx:id="empty" id="models-empty" styleClass="hint" wrapText="true" minHeight="-Infinity" text="%settings.models.empty"/>
+        <ScrollHost fx:id="scroll" id="models-scroll" styleClass="form-scroll" VBox.vgrow="ALWAYS">
+            <VBox fx:id="body" id="models-body" spacing="14"/>
+        </ScrollHost>
+        <HBox fx:id="foot" styleClass="form-foot" alignment="CENTER_LEFT" spacing="10">
+            <Label fx:id="dirty" id="models-form-dirty" styleClass="dirty" text="%settings.form.dirty"/>
+            <Label fx:id="saved" id="models-form-saved" styleClass="hint" text="%settings.form.saved"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="cancel" id="models-form-cancel" styleClass="btn-ghost" text="%settings.form.cancel"/>
+            <Button fx:id="save" id="models-form-save" styleClass="btn-primary" text="%settings.models.save"/>
+        </HBox>
+    </VBox>
+</VBox>

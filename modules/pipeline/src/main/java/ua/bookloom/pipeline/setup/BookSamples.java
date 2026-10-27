@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.setup;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -13,12 +14,14 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.Sentences;
 import ua.bookloom.pipeline.checks.StoryMeasure;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
  * Takes single windows of a book's story for the brief suggestion, so the brief is judged from the whole book and not
@@ -44,8 +47,11 @@ final class BookSamples {
     private static final int MIN_WINDOW_TOKENS = 200;
     private static final int MIN_FALLBACK_CHARS = 40;
     private static final int PERCENT = 100;
+    private static final String LOCATOR_SEPARATOR = " · ";
 
-    private record Line(int paragraph, String text) {}
+    private record Line(int paragraph, String text, String segmentId) {}
+
+    private record Para(String segmentId, String text) {}
 
     private record Window(int from, int to) {}
 
@@ -69,13 +75,18 @@ final class BookSamples {
      *
      * @param dial the quality dial; never null
      * @param detectedContext the context length the provider reported, or null; limited as
-     *     {@code ContextBudget.windowFor(detectedContext, null)} limits it
+     *     {@code ContextBudget.windowFor(detectedContext, override)} limits it
+     * @param override the window the person set for the model, or null; replaces the detected one
      * @param fixedTokens the tokens the call's system message, its other user text and the reply's cap take; not
      *     negative
      * @return the window's budget in tokens; at least 200, so a window is never empty
      */
-    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
-        final int window = ContextBudget.windowFor(detectedContext, null);
+    static int windowTokens(
+            final QualityDial dial,
+            @Nullable final Integer detectedContext,
+            @Nullable final Integer override,
+            final int fixedTokens) {
+        final int window = ContextBudget.windowFor(detectedContext, override);
         final int room = window - ContextBudget.SAFETY_MARGIN - fixedTokens;
         final int wanted =
                 switch (Objects.requireNonNull(dial, "dial")) {
@@ -85,13 +96,19 @@ final class BookSamples {
                 };
         final int tokens = Math.max(MIN_WINDOW_TOKENS, Math.min(wanted, room));
         log.debug(
-                "Brief window budget: dial={} model window={} fixed={} room={} -> {} tokens",
+                "Brief window budget: dial={} model window={} override={} fixed={} room={} -> {} tokens",
                 dial,
                 window,
+                override,
                 fixedTokens,
                 room,
                 tokens);
         return tokens;
+    }
+
+    /** As the four-argument form for a model whose window the person did not set. */
+    static int windowTokens(final QualityDial dial, @Nullable final Integer detectedContext, final int fixedTokens) {
+        return windowTokens(dial, detectedContext, null, fixedTokens);
     }
 
     /**
@@ -108,6 +125,7 @@ final class BookSamples {
             final Document document, @Nullable final String languageTag, final int windows, final int windowTokens) {
         Objects.requireNonNull(document, "document");
         final List<Line> lines = lines(storyChapters(chapters(document)));
+        final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
         if (lines.isEmpty()) {
             log.debug("Book samples of {}: no story sentences", document.id());
             return List.of();
@@ -124,7 +142,7 @@ final class BookSamples {
                 windowTokens);
         final List<Window> placed = placed(lines, languageTag, count, windowTokens);
         final List<BookSample> samples = placed.stream()
-                .map(window -> sampleOf(lines, window, languageTag))
+                .map(window -> sampleOf(lines, window, languageTag, locators))
                 .toList();
         log.debug("Book samples of {}: windows {}, dialogue shares {}", document.id(), placed, shares(samples));
         return samples;
@@ -132,10 +150,34 @@ final class BookSamples {
 
     // A window that starts at the story's first sentence and ends at its last holds the whole story.
     private static BookSample sampleOf(
-            final List<Line> lines, final Window window, final @Nullable String languageTag) {
+            final List<Line> lines,
+            final Window window,
+            final @Nullable String languageTag,
+            final Map<String, SegmentLocator> locators) {
         final String text = passage(lines, window);
         final boolean whole = window.from() == 0 && window.to() == lines.size();
-        return new BookSample(List.of(text), dialoguePercent(text, languageTag), whole, languageTag);
+        final String where = location(
+                locators,
+                lines.get(window.from()).segmentId(),
+                lines.get(window.to() - 1).segmentId());
+        return new BookSample(List.of(text), dialoguePercent(text, languageTag), whole, languageTag, where);
+    }
+
+    // "ch1 · p02–p14" inside one chapter, "ch1 · p30 – ch2 · p05" across two, one locator for a one-paragraph window.
+    private static String location(
+            final Map<String, SegmentLocator> locators, final String firstId, final String lastId) {
+        final String first =
+                locators.getOrDefault(firstId, new SegmentLocator("")).text();
+        final String last =
+                locators.getOrDefault(lastId, new SegmentLocator("")).text();
+        if (first.equals(last) || last.isEmpty()) {
+            return first;
+        }
+        final int firstCut = first.indexOf(LOCATOR_SEPARATOR);
+        final int lastCut = last.indexOf(LOCATOR_SEPARATOR);
+        final boolean sameChapter =
+                firstCut > 0 && lastCut > 0 && first.substring(0, firstCut).equals(last.substring(0, lastCut));
+        return sameChapter ? first + "–" + last.substring(lastCut + LOCATOR_SEPARATOR.length()) : first + " – " + last;
     }
 
     // The first window starts at the story's first sentence and the last ends at its last; the others are spread
@@ -202,17 +244,17 @@ final class BookSamples {
      */
     static List<String> paragraphs(final Document document) {
         Objects.requireNonNull(document, "document");
-        return chapters(document).stream().flatMap(List::stream).toList();
+        return chapters(document).stream().flatMap(List::stream).map(Para::text).toList();
     }
 
-    private static List<List<String>> chapters(final Document document) {
-        final List<List<String>> chapters = new ArrayList<>();
+    private static List<List<Para>> chapters(final Document document) {
+        final List<List<Para>> chapters = new ArrayList<>();
         for (final Unit unit : document.units()) {
             if (unit.isAuxiliary() || unit.role() != UnitRole.BODY) {
                 log.trace("Book samples skip unit {} role {}", unit.id(), unit.role());
                 continue;
             }
-            List<String> current = new ArrayList<>();
+            List<Para> current = new ArrayList<>();
             for (final Segment segment : unit.segments()) {
                 if (segment.kind() == SegmentKind.HEADING || segment.kind() == SegmentKind.TITLE) {
                     keep(chapters, current);
@@ -220,7 +262,7 @@ final class BookSamples {
                 } else if (segment.kind() == SegmentKind.PARAGRAPH) {
                     final String text = DisplayText.of(segment.masked());
                     if (!text.isEmpty()) {
-                        current.add(text);
+                        current.add(new Para(segment.id(), text));
                     }
                 }
             }
@@ -229,7 +271,7 @@ final class BookSamples {
         return chapters;
     }
 
-    private static void keep(final List<List<String>> chapters, final List<String> paragraphs) {
+    private static void keep(final List<List<Para>> chapters, final List<Para> paragraphs) {
         if (!paragraphs.isEmpty()) {
             chapters.add(paragraphs);
         }
@@ -237,28 +279,30 @@ final class BookSamples {
 
     // A converter's page or a contents list has short lines and no paragraph of full sentences; when nothing in the
     // book is story by that measure, the whole body is read without its short lines rather than nothing at all.
-    private static List<List<String>> storyChapters(final List<List<String>> chapters) {
-        final List<List<String>> story =
-                chapters.stream().filter(StoryMeasure::isStory).toList();
+    private static List<List<Para>> storyChapters(final List<List<Para>> chapters) {
+        final List<List<Para>> story = chapters.stream()
+                .filter(paragraphs ->
+                        StoryMeasure.isStory(paragraphs.stream().map(Para::text).toList()))
+                .toList();
         log.debug("Book samples: {} of {} chapters are story", story.size(), chapters.size());
         if (!story.isEmpty()) {
             return story;
         }
         return chapters.stream()
                 .map(paragraphs -> paragraphs.stream()
-                        .filter(text -> text.length() >= MIN_FALLBACK_CHARS)
+                        .filter(para -> para.text().length() >= MIN_FALLBACK_CHARS)
                         .toList())
                 .filter(paragraphs -> !paragraphs.isEmpty())
                 .toList();
     }
 
-    private static List<Line> lines(final List<List<String>> chapters) {
+    private static List<Line> lines(final List<List<Para>> chapters) {
         final List<Line> lines = new ArrayList<>();
         int paragraph = 0;
-        for (final List<String> chapter : chapters) {
-            for (final String text : chapter) {
-                for (final String sentence : Sentences.split(text)) {
-                    lines.add(new Line(paragraph, sentence));
+        for (final List<Para> chapter : chapters) {
+            for (final Para para : chapter) {
+                for (final String sentence : Sentences.split(para.text())) {
+                    lines.add(new Line(paragraph, sentence, para.segmentId()));
                 }
                 paragraph++;
             }

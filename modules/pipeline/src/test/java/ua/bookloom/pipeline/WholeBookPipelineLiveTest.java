@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The whole-book scenario of {@link WholeBookPipelineEndToEndTest} against a REAL local model in each dialect: it shows
@@ -81,10 +82,10 @@ class WholeBookPipelineLiveTest {
     /** A real chat model built through {@link LlmModule}, as the app builds one. */
     private static ChatModel model(
             final ProviderKind kind, final URI baseUrl, final String modelEnv, final String defaultModel) {
-        final Injector injector = Guice.createInjector(new LlmModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new InMemoryPersistenceModule());
         final String providerId = "live";
         dataOf(injector.getInstance(ProviderConfigs.class)
-                .register(new ProviderConfig(
+                .save(new ProviderConfig(
                         providerId,
                         kind,
                         baseUrl,

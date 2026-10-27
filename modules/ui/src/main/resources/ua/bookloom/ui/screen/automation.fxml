@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.VBox?>
+<?import org.controlsfx.control.SegmentedButton?>
+<?import org.controlsfx.control.ToggleSwitch?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.AutomationController" id="settings-automation-host">
+    <padding>
+        <Insets top="14"/>
+    </padding>
+    <VBox id="settings-automation-card" styleClass="card" spacing="16" maxWidth="760">
+        <Label id="automation-instant" styleClass="hint" wrapText="true" text="%settings.automation.instant"/>
+        <Label fx:id="running" id="automation-running" styleClass="banner, banner-info, banner-text" wrapText="true"
+               text="%settings.automation.running"/>
+        <VBox spacing="5">
+            <Label styleClass="muted" text="%settings.automation.review"/>
+            <SegmentedButton fx:id="review" id="automation-review" maxWidth="-Infinity">
+                <buttons>
+                    <ToggleButton fx:id="reviewUnattended" id="automation-review-unattended"
+                                  text="%settings.automation.review.unattended"/>
+                    <ToggleButton fx:id="reviewAssisted" id="automation-review-assisted"
+                                  text="%settings.automation.review.assisted"/>
+                    <ToggleButton fx:id="reviewManual" id="automation-review-manual"
+                                  text="%settings.automation.review.manual"/>
+                </buttons>
+            </SegmentedButton>
+            <Label id="automation-review-hint" styleClass="hint" wrapText="true"
+                   text="%settings.automation.review.hint"/>
+            <Label fx:id="reviewOverride" id="automation-review-override" styleClass="hint-warn" wrapText="true"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label styleClass="muted" text="%settings.automation.quality"/>
+            <SegmentedButton fx:id="quality" id="automation-quality" maxWidth="-Infinity">
+                <buttons>
+                    <ToggleButton fx:id="qualityFast" id="automation-quality-fast" text="%settings.automation.quality.fast"/>
+                    <ToggleButton fx:id="qualityBalanced" id="automation-quality-balanced"
+                                  text="%settings.automation.quality.balanced"/>
+                    <ToggleButton fx:id="qualityMax" id="automation-quality-max" text="%settings.automation.quality.max"/>
+                </buttons>
+            </SegmentedButton>
+            <Label id="automation-quality-hint" styleClass="hint" wrapText="true"
+                   text="%settings.automation.quality.hint"/>
+        </VBox>
+        <VBox spacing="5">
+            <ToggleSwitch fx:id="openDesk" id="automation-open-desk" text="%settings.automation.openDesk"/>
+        </VBox>
+        <VBox spacing="5">
+            <ToggleSwitch fx:id="lastCheck" id="automation-last-check" text="%settings.automation.lastCheck"/>
+            <Label fx:id="lastCheckHint" id="automation-last-check-hint" styleClass="hint" wrapText="true"
+                   text="%settings.automation.lastCheck.unset"/>
+        </VBox>
+        <VBox spacing="5">
+            <ToggleSwitch fx:id="keepAwake" id="automation-keep-awake" text="%settings.automation.keepAwake"/>
+            <Label id="automation-keep-awake-hint" styleClass="hint" wrapText="true"
+                   text="%settings.automation.keepAwake.hint"/>
+        </VBox>
+        <VBox spacing="5">
+            <ToggleSwitch fx:id="reopen" id="automation-reopen" text="%settings.automation.reopen"/>
+            <Label id="automation-reopen-hint" styleClass="hint" wrapText="true"
+                   text="%settings.automation.reopen.hint"/>
+        </VBox>
+        <Label fx:id="saveError" id="automation-save-error" styleClass="hint-warn" wrapText="true"
+               text="%settings.automation.saveFailed"/>
+    </VBox>
+</VBox>

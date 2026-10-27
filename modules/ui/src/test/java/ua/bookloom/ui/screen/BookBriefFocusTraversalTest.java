@@ -7,10 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
-import javafx.event.Event;
 import javafx.scene.Node;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -24,10 +21,12 @@ class BookBriefFocusTraversalTest extends BookBriefScreenTestBase {
     // Far more presses than the screen has controls: a screen that needs more is trapping the focus.
     private static final int MAX_PRESSES = 200;
 
-    // One control per card in reading order (the narrator's gender is disabled until the narrator is first person).
+    // One control per card in reading order (the project name's Rename... link follows the languages) (the narrator's
+    // gender is disabled until the narrator is first person).
     private static final List<String> IN_ORDER = List.of(
             "brief-source",
             "brief-target",
+            "brief-rename",
             "brief-policy-names",
             "brief-aux-nav",
             "brief-quality",
@@ -39,13 +38,6 @@ class BookBriefFocusTraversalTest extends BookBriefScreenTestBase {
             "brief-tone-narrator",
             "brief-back",
             "brief-continue");
-
-    private Node pressTab() {
-        Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
-        return scene.getFocusOwner();
-    }
 
     private static List<String> idsAbove(final Node owner) {
         final List<String> ids = new ArrayList<>();

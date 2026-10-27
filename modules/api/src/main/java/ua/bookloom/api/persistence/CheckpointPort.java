@@ -12,7 +12,8 @@ public interface CheckpointPort {
     /**
      * Commits a chunk: its segment records, translation-memory entries and deferrals are all applied or none. A
      * glossary addition whose term already exists, ignoring case, or was removed by the person this session is
-     * skipped and the existing entry is kept — it never fails the commit.
+     * skipped and the existing entry is kept — it never fails the commit. A run record the commit carries is saved in
+     * the same step, as {@link RunRepository#save} saves it.
      *
      * @param commit the non-null chunk to commit
      * @return the number of items applied, or {@code validation} when a segment id does not belong to the project

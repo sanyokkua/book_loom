@@ -5,6 +5,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,10 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedSetupAssistant;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /** The model-suggested style: what it writes into the brief, and what it leaves alone. */
 class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
@@ -39,7 +43,14 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
                 projects,
                 new DirectExecutor(),
                 tag -> true,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
+                new SetupHelper(
+                        assistant,
+                        models,
+                        settings,
+                        new DirectExecutor(),
+                        activities,
+                        capabilities,
+                        hiddenWork(activities))));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -50,12 +61,14 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         });
     }
 
+    // The answer is held until Apply, so a test that wants the fields written presses Apply as the dialog does.
     private void suggest() {
         onFx(() -> {
             brief.styleSuggestion().ask();
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private BookBrief stored() {
@@ -160,13 +173,14 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
     @Test
     void suggestStyle_modelFails_showsItsMessageAndChangesNothing() {
         chooseModel();
-        assistant.answersBrief(Result.err(AppError.of(ErrorCode.validation, "Unreadable", "It could not be read.")));
+        final AppError unreadable = AppError.of(ErrorCode.validation, "Unreadable", "It could not be read.");
+        assistant.answersBrief(Result.err(unreadable));
         final BookBrief before = stored();
 
         suggest();
 
         assertThat(onFx(() -> brief.styleSuggestion().outcome().get()))
-                .isEqualTo(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, "It could not be read."));
+                .isEqualTo(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, unreadable));
         assertThat(stored()).isEqualTo(before);
     }
 
@@ -361,5 +375,9 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
 
         assertThat(stored().narrator().gender()).isEqualTo(Gender.UNKNOWN);
         assertThat(genderSuggested()).isFalse();
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

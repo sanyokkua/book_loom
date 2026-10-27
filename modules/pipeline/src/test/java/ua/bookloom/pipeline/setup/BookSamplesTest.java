@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -99,6 +100,18 @@ class BookSamplesTest {
     void windowTokens_dialAndDetectedContext_isTheDialsSizeLimitedToTheRoomLeft(
             final QualityDial dial, final Integer detectedContext, final int expected) {
         assertThat(BookSamples.windowTokens(dial, detectedContext, 1200)).isEqualTo(expected);
+    }
+
+    // IF the person widened the model's window, THEN the brief's windows grow to the dial's size; a narrower one
+    // shrinks them.
+    @ParameterizedTest
+    @CsvSource(
+            nullValues = "none",
+            value = {"MAX,4096,32768,4000", "MAX,131072,4096,2396", "MAX,none,4096,2396"})
+    void windowTokens_override_wins(
+            final QualityDial dial, @Nullable final Integer detectedContext, final int override, final int expected) {
+        assertThat(BookSamples.windowTokens(dial, detectedContext, override, 1200))
+                .isEqualTo(expected);
     }
 
     // IF the brief read one passage at the start, THEN 590 words would decide the register of a whole book.

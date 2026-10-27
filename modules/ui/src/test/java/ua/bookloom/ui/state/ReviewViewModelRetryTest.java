@@ -228,7 +228,7 @@ class ReviewViewModelRetryTest extends ReviewViewModelTestBase {
         press(() -> review.retry(null, false));
 
         assertThat(onFx(() -> review.problem().get()))
-                .isEqualTo("Choose a model in the provider settings before retrying.");
+                .isEqualTo("Choose a model in the AI model settings before retrying.");
         assertThat(desk.calls()).noneMatch(call -> call.startsWith("retry("));
         assertThat(models.selections()).isEmpty();
     }

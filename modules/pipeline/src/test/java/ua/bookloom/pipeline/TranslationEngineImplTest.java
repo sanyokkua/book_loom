@@ -24,10 +24,11 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /** Covers the public engine boundary: the job it creates runs over the stored project it is asked for. */
 class TranslationEngineImplTest {
@@ -39,7 +40,10 @@ class TranslationEngineImplTest {
     @Test
     void injector_pipelineModule_resolvesTranslationEngineImpl() {
         final TranslationEngine engine = Guice.createInjector(
-                        new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule())
+                        new DocumentModule(),
+                        new InMemoryPersistenceModule(),
+                        new PipelineModule(),
+                        new ReviewModeTestModule())
                 .getInstance(TranslationEngine.class);
 
         assertThat(engine).isInstanceOf(TranslationEngineImpl.class);
@@ -133,8 +137,10 @@ class TranslationEngineImplTest {
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 ConsistencyPassFixture.over(project),
                 Clock.systemUTC(),
+                new UuidIdSource(),
                 RecoveryTimer.REAL,
-                WordValidator.none());
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
     }
 
     private static ScriptedChatModel answers(final String reply) {

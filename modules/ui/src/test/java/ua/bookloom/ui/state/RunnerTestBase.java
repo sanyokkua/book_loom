@@ -82,11 +82,19 @@ abstract class RunnerTestBase extends FxTestBase {
         job = new RecordingJob();
         onFx(() -> {
             mirror.runState().addListener((o, before, after) -> states.add(after));
-            mirror.accepted().addListener((o, before, after) -> acceptedChanges.incrementAndGet());
-            mirror.flagged().addListener((o, before, after) -> flaggedChanges.incrementAndGet());
-            mirror.remaining().addListener((o, before, after) -> remainingChanges.incrementAndGet());
+            mirror.figures().addListener((o, before, after) -> countChanges(before, after));
             return null;
         });
+    }
+
+    private void countChanges(final RunFigures before, final RunFigures after) {
+        count(acceptedChanges, before.accepted(), after.accepted());
+        count(flaggedChanges, before.flagged(), after.flagged());
+        count(remainingChanges, before.remaining(), after.remaining());
+    }
+
+    private static void count(final AtomicInteger changes, final int before, final int after) {
+        changes.addAndGet(before == after ? 0 : 1);
     }
 
     @AfterEach

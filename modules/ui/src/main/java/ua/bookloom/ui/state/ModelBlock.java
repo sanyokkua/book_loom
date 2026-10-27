@@ -8,12 +8,12 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
  * Why the model actions of Names &amp; style are not offered: other model work runs. One line serves all of them, since
- * the scan, the review, the translation and the automatic pass are ruled out by the same work. FX thread only.
+ * the scan, the review, the translation and the automatic pass are ruled out by the same work; a translation at work is
+ * told in the README's words ({@link BlockedWords}). FX thread only.
  */
 @Slf4j
 final class ModelBlock {
@@ -48,13 +48,13 @@ final class ModelBlock {
     Optional<String> refusalFor(final ActivityKind what) {
         final Optional<ActivityKind> conflict = activities.conflictFor(what);
         conflict.ifPresent(kind -> log.debug("the model {} was not started: {} is running", what, kind));
-        return conflict.map(kind -> messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(kind.label())));
+        return conflict.map(kind -> BlockedWords.in(messages, kind, what));
     }
 
     private void refresh() {
         final ActivityKind kind = blocker.get();
         final String line =
-                kind == null || busy.get() ? "" : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(kind.label()));
+                kind == null || busy.get() ? "" : BlockedWords.in(messages, kind, ActivityKind.GLOSSARY_SCAN);
         if (!line.equals(reason.get())) {
             log.debug("glossary model actions blocked by {}", kind);
         }

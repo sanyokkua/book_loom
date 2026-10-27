@@ -133,4 +133,13 @@ public interface ReviewDesk {
      * @return the suspicious segments in document order, empty when every check is quiet
      */
     Result<List<SuspiciousSegment>> audit(String projectId);
+
+    /**
+     * Reads the book's original title: the details' title, else for Markdown the front-matter title, else for
+     * Markdown the first heading, else the file name without its suffix.
+     *
+     * @param projectId the non-null project id
+     * @return the title and its origin
+     */
+    Result<OriginalTitle> originalTitle(String projectId);
 }

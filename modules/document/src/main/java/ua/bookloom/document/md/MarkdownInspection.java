@@ -32,6 +32,7 @@ import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.StructureNode;
+import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
 import ua.bookloom.document.inspect.BodySegments;
 import ua.bookloom.document.inspect.FormatInspection;
@@ -108,8 +109,8 @@ public final class MarkdownInspection implements FormatInspection {
         final Frontmatter.Split split = Frontmatter.split(text);
         final Node root = MarkdownReader.parser().parse(split.body());
         final List<Integer> headingLevels = headingLevelsOf(root, split.body());
-        final List<Segment> segments = document.units().get(0).segments();
-        return MarkdownStructure.build(segments, headingLevels);
+        final Unit body = document.units().get(0);
+        return MarkdownStructure.build(body.id(), body.segments(), headingLevels);
     }
 
     // Only a heading the walk made a segment of has a level here: the levels are matched to heading segments by

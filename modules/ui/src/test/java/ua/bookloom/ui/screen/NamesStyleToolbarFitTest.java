@@ -77,7 +77,7 @@ class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
                 .collect(Collectors.joining());
     }
 
-    // IF a caption were cut to "Model sc…", THEN the person would have to guess what the button does.
+    // IF a caption were cut to "Model sc...", THEN the person would have to guess what the button does.
     @ParameterizedTest(name = "{0} x {1}")
     @CsvSource({
         "en, 960, 640",
@@ -96,7 +96,8 @@ class NamesStyleToolbarFitTest extends TranslatingScreenTestBase {
         assertThat(cutCaptions(CAPTIONS)).isEmpty();
     }
 
-    // IF Stop were squeezed to "S…" while the model works, THEN the one way out of a slow request would be unreadable.
+    // IF Stop were squeezed to "S..." while the model works, THEN the one way out of a slow request would be
+    // unreadable.
     @ParameterizedTest(name = "{0} x {1}")
     @CsvSource({"en, 960, 640", "en, 1024, 700", "uk, 960, 640", "uk, 1024, 700"})
     void toolbar_modelActionRunning_drawsStopAndEveryCaptionWhole(

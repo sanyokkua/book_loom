@@ -3,6 +3,9 @@ package ua.bookloom.ui;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
@@ -15,6 +18,7 @@ import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 
 /** A setup assistant whose answers a test sets, and which records the projects it was asked about. */
 public final class ScriptedSetupAssistant implements SetupAssistant {
@@ -25,10 +29,14 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private Result<FileNameSuggestion> fileName = cast();
     private Result<BriefSuggestion> brief = cast();
     private Result<Narrator> recheck = cast();
+    private Result<NarratorHint> detection = Result.ok(new NarratorHint(NarratorHint.Person.THIRD, 0, List.of(), 0));
+    private final List<String> detected = new ArrayList<>();
     private final List<String> rechecked = new ArrayList<>();
     private final List<Boolean> recheckedOnFxThread = new ArrayList<>();
     private final List<String> asked = new ArrayList<>();
     private final List<@Nullable Integer> detectedContexts = new ArrayList<>();
+    private final List<JobEvent> announced = new CopyOnWriteArrayList<>();
+    private volatile @Nullable CountDownLatch gate;
 
     @SuppressWarnings("unchecked")
     private static <T> Result<T> cast() {
@@ -54,9 +62,39 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     }
 
     /** Sets what the narrator re-check answers; unscripted, it fails, which the window must survive. */
+    public ScriptedSetupAssistant answersDetection(final Result<NarratorHint> answer) {
+        this.detection = answer;
+        return this;
+    }
+
+    /** {@return the projects whose narrator was detected again, in order} */
+    public List<String> detected() {
+        return List.copyOf(detected);
+    }
+
     public ScriptedSetupAssistant answersRecheck(final Result<Narrator> answer) {
         this.recheck = answer;
         return this;
+    }
+
+    /** From now on announces these events to the progress receiver of each brief suggestion, before it answers. */
+    public ScriptedSetupAssistant announces(final List<? extends JobEvent> events) {
+        announced.clear();
+        announced.addAll(events);
+        return this;
+    }
+
+    /** From now on holds each brief suggestion, after its announcements, until {@link #releaseAnswer()}. */
+    public void holdAnswer() {
+        gate = new CountDownLatch(1);
+    }
+
+    /** Lets the held brief suggestions answer. */
+    public void releaseAnswer() {
+        final CountDownLatch held = gate;
+        if (held != null) {
+            held.countDown();
+        }
     }
 
     /** The project ids whose narrator was re-checked, in order. */
@@ -86,7 +124,15 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
             @Nullable final Integer detectedContext,
             final Consumer<JobEvent> progress) {
         detectedContexts.add(detectedContext);
+        announced.forEach(progress);
+        awaitGate();
         return suggestBrief(projectId, model);
+    }
+
+    @Override
+    public Result<NarratorHint> detectNarrator(final String projectId) {
+        detected.add(projectId);
+        return detection;
     }
 
     @Override
@@ -99,6 +145,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
         asked.add(projectId);
+        awaitGate();
         return fileName;
     }
 
@@ -106,5 +153,17 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     public Result<BriefSuggestion> suggestBrief(final String projectId, final ChatModel model) {
         asked.add(projectId);
         return brief;
+    }
+
+    private void awaitGate() {
+        final CountDownLatch held = gate;
+        if (held == null) {
+            return;
+        }
+        try {
+            held.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException stopped) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

@@ -4,30 +4,29 @@ import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
-import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
+import ua.bookloom.ui.dialog.TextClipboard;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The card for one failure: its title and message, its details behind a toggle, and the buttons that answer it.
  *
- * <p>Built like the About card, as a {@link DialogPane} for the {@link ModalHost}, so the stylesheet and the active
+ * <p>Built like the About card, as a {@link ModalCard} for the {@link ModalHost}, so the stylesheet and the active
  * theme reach it. The details expander is hand-built rather than the pane's own: that one carries an untranslated
  * link, and adding and removing the text area keeps the details out of the scene graph until they are asked for.
  * The failure's cause is never read, because it is the one part of an {@link AppError} that was never filtered.
@@ -41,6 +40,7 @@ final class ErrorDialog {
     static final String TOGGLE_ID = "error-details-toggle";
     static final String NOTE_ID = "error-note";
     static final String DETAILS_ID = "error-details";
+    static final String COPY_ID = "error-details-copy";
     static final String RETRY_ID = "error-retry";
     static final String DISMISS_ID = "error-dismiss";
 
@@ -51,6 +51,8 @@ final class ErrorDialog {
     private final @Nullable Runnable onRetry;
     private final Runnable onDismiss;
     private final @Nullable MessageKey note;
+    private final boolean detailsOpen;
+    private final TextClipboard clipboard;
 
     /**
      * Prepares the card's content.
@@ -61,18 +63,24 @@ final class ErrorDialog {
      *     case no Retry button is built even for a retryable failure
      * @param onDismiss what Dismiss does
      * @param note a line shown beneath the message, or {@code null} for none
+     * @param detailsOpen whether the details start expanded ("Show technical details" is on)
+     * @param clipboard where Copy details puts the failure's safe details
      */
     ErrorDialog(
             final Messages messages,
             final AppError error,
             final @Nullable Runnable onRetry,
             final Runnable onDismiss,
-            final @Nullable MessageKey note) {
+            final @Nullable MessageKey note,
+            final boolean detailsOpen,
+            final TextClipboard clipboard) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.error = Objects.requireNonNull(error, "error");
         this.onRetry = onRetry;
         this.onDismiss = Objects.requireNonNull(onDismiss, "onDismiss");
         this.note = note;
+        this.detailsOpen = detailsOpen;
+        this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
     }
 
     /**
@@ -94,46 +102,48 @@ final class ErrorDialog {
     Node card() {
         final Runnable retryAction = error.retryable() ? onRetry : null;
         log.debug("building the error card: retryOffered={}, hasDetails={}", retryAction != null, hasDetails(error));
-        final DialogPane card = new ModalCard();
+        final ModalCard card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        card.setHeader(header());
+        card.iconHeader(Feather.ALERT_OCTAGON, "dialog-icon-err", ErrorWords.title(messages, error))
+                .setId(TITLE_ID);
         card.setContent(body());
         addButtons(card, retryAction);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
     }
 
-    private Node header() {
-        final FontIcon icon = new FontIcon(Feather.ALERT_OCTAGON);
-        icon.getStyleClass().add("dialog-icon-err");
-        final Label title = new Label(error.title());
-        title.setId(TITLE_ID);
-        title.setWrapText(true);
-        title.getStyleClass().add("dialog-title");
-        final HBox header = new HBox(icon, title);
-        header.getStyleClass().addAll("dialog-h", "error-header");
-        return header;
-    }
-
     private Node body() {
-        final Label message = new Label(error.message());
+        final Label message = Wrapped.label(ErrorWords.message(messages, error), "dialog-text");
         message.setId(MESSAGE_ID);
-        message.setWrapText(true);
-        message.getStyleClass().add("dialog-text");
         final VBox body = new VBox(message);
         body.getStyleClass().add("error-body");
         if (note != null) {
-            final Label line = new Label(messages.get(note));
+            final Label line = Wrapped.label(messages.get(note), "dialog-text");
             line.setId(NOTE_ID);
-            line.setWrapText(true);
-            line.getStyleClass().add("dialog-text");
             body.getChildren().add(line);
         }
         if (hasDetails(error)) {
-            body.getChildren().add(detailsToggle(body));
+            body.getChildren().add(detailsControls(body));
         }
         return body;
+    }
+
+    private Node detailsControls(final VBox body) {
+        final HBox row = new HBox(detailsToggle(body), copyButton());
+        row.getStyleClass().add("error-details-actions");
+        return row;
+    }
+
+    // Copies the details field alone: it holds only the allowlisted values, never the cause or a secret.
+    private Node copyButton() {
+        final Button copy = new Button(messages.get(MessageKey.ERROR_DETAILS_COPY));
+        copy.setId(COPY_ID);
+        Tips.install(messages, copy, MessageKey.ERROR_DETAILS_COPY_TIP);
+        copy.getStyleClass().add("btn-secondary");
+        copy.setOnAction(event -> {
+            log.debug("error details copied: code={}", error.code());
+            clipboard.copy(Objects.requireNonNull(error.details(), "details"));
+        });
+        return copy;
     }
 
     private Node detailsToggle(final VBox body) {
@@ -142,17 +152,23 @@ final class ErrorDialog {
         Tips.install(messages, toggle, MessageKey.ERROR_DETAILS_SHOW_TIP);
         toggle.getStyleClass().add("btn-secondary");
         final TextArea details = detailsArea();
-        toggle.setOnAction(event -> {
-            final boolean expanded = toggle.isSelected();
-            log.debug("error details {}", expanded ? "expanded" : "folded");
-            toggle.setText(messages.get(expanded ? MessageKey.ERROR_DETAILS_HIDE : MessageKey.ERROR_DETAILS_SHOW));
-            if (expanded) {
-                body.getChildren().add(details);
-            } else {
-                body.getChildren().remove(details);
-            }
-        });
+        toggle.setOnAction(event -> expand(toggle, body, details));
+        if (detailsOpen) {
+            toggle.setSelected(true);
+            expand(toggle, body, details);
+        }
         return toggle;
+    }
+
+    private void expand(final ToggleButton toggle, final VBox body, final TextArea details) {
+        final boolean expanded = toggle.isSelected();
+        log.debug("error details {}", expanded ? "expanded" : "folded");
+        toggle.setText(messages.get(expanded ? MessageKey.ERROR_DETAILS_HIDE : MessageKey.ERROR_DETAILS_SHOW));
+        if (expanded) {
+            body.getChildren().add(details);
+        } else {
+            body.getChildren().remove(details);
+        }
     }
 
     private TextArea detailsArea() {
@@ -165,24 +181,26 @@ final class ErrorDialog {
         return details;
     }
 
-    private void addButtons(final DialogPane card, final @Nullable Runnable retryAction) {
-        final boolean retryOffered = retryAction != null;
+    private void addButtons(final ModalCard card, final @Nullable Runnable retryAction) {
         if (retryAction != null) {
-            final ButtonType retryType =
-                    new ButtonType(messages.get(MessageKey.ERROR_RETRY), ButtonBar.ButtonData.OK_DONE);
-            card.getButtonTypes().add(retryType);
-            final Button retry = (Button) card.lookupButton(retryType);
-            retry.setId(RETRY_ID);
-            Tips.install(messages, retry, MessageKey.ERROR_RETRY_TIP);
-            retry.getStyleClass().add("btn-primary");
-            retry.setOnAction(event -> retryAction.run());
+            Tips.install(
+                            messages,
+                            card.button(
+                                    messages.get(MessageKey.ERROR_RETRY),
+                                    ButtonBar.ButtonData.OK_DONE,
+                                    RETRY_ID,
+                                    "btn-primary"),
+                            MessageKey.ERROR_RETRY_TIP)
+                    .setOnAction(event -> retryAction.run());
         }
-        card.getButtonTypes().add(ButtonType.CLOSE);
-        final Button dismiss = (Button) card.lookupButton(ButtonType.CLOSE);
-        dismiss.setId(DISMISS_ID);
-        Tips.install(messages, dismiss, MessageKey.COMMON_CLOSE_TIP);
-        dismiss.setText(messages.get(MessageKey.COMMON_CLOSE));
-        dismiss.getStyleClass().add(retryOffered ? "btn-secondary" : "btn-primary");
-        dismiss.setOnAction(event -> onDismiss.run());
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.COMMON_CLOSE),
+                                ButtonBar.ButtonData.CANCEL_CLOSE,
+                                DISMISS_ID,
+                                retryAction != null ? "btn-secondary" : "btn-primary"),
+                        MessageKey.COMMON_CLOSE_TIP)
+                .setOnAction(event -> onDismiss.run());
     }
 }

@@ -230,15 +230,19 @@ class PrepStageTest {
                 .data());
     }
 
-    // IF Start asked the detector for a hint in a book of unknown language, THEN it would read the book as English.
+    // IF a book of unknown language were not judged, THEN its first-person narration would go unnoticed; it is read
+    // with every language that names its first-person pronoun, none of which is shown or chosen.
     @Test
-    void run_autoSourceBookDeclaringNothing_storesNoNarratorHint() {
+    void run_autoSourceBookDeclaringNothing_storesTheFirstPersonHint() {
         final TestProject project =
                 project(TestBooks.markdown(tempDir.resolve("First.md"), FIRST_PERSON_BOOK), brief(null, "uk"));
 
         final PrepStage.Prepared prepared = prepare(project, brief(null, "uk"));
 
-        assertThat(Objects.requireNonNull(prepared).narratorHint()).isNull();
+        assertThat(Objects.requireNonNull(prepared).narratorHint())
+                .isNotNull()
+                .extracting(NarratorHint::person)
+                .isEqualTo(NarratorHint.Person.FIRST);
     }
 
     // Auto still analyses a book that declares a language the application recognises, in that language.

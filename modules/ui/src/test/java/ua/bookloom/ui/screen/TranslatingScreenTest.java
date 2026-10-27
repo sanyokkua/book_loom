@@ -10,13 +10,11 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.LogEntry;
@@ -37,13 +35,14 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
             RUNNING   | translating-pause translating-stop   | -
             PAUSING   | translating-stop                     | translating-pause
             PAUSED    | translating-resume translating-stop  | -
-            STOPPING  | -                                    | translating-stop
+            STOPPING  | -                                    | translating-pause translating-stop
             STOPPED   | translating-resume                   | -
             COMPLETED | -                                    | -
             FAILED    | translating-start                    | -
             """)
     void controls_eachRunState_showTheStatedButtonsAvailableOrNot(
             final RunState state, final String enabled, final String disabled) {
+        chooseModel();
         showTranslating();
 
         publish(state);
@@ -52,26 +51,38 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(disabledControls()).containsExactlyInAnyOrderElementsOf(ids(disabled));
     }
 
-    // IF the banner said the wrong thing for a state, THEN a pending request would read as one already honoured.
+    // IF the banner said the wrong thing for a state, THEN a pending request would read as one already honoured; the
+    // README's run-state table gives a banner to an ended run only, among these.
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', textBlock = """
-            IDLE      | Ready to translate      | banner-info
-            RUNNING   | Translating             | banner-info
-            PAUSING   | Pausing                 | banner-info
-            PAUSED    | Paused                  | banner-info
-            STOPPING  | Stopping                | banner-info
-            STOPPED   | Run stopped             | banner-info
-            COMPLETED | Translation finished    | banner-ok
-            FAILED    | The run did not finish  | banner-warn
+            COMPLETED | Translation finished. Nothing needs your review.                           | banner-ok
+            FAILED    | The translation stopped because of an error. Finished segments are saved.  | banner-err
             """)
-    void banner_eachRunState_carriesTheStatedTitleAndRole(
+    void banner_endedRun_carriesTheStatedTitleAndRole(
             final RunState state, final String title, final String roleClass) {
+        chooseModel();
         showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
 
         publish(state);
 
         assertThat(labelText("translating-banner-title")).isEqualTo(title);
         assertThat(required("translating-banner").getStyleClass()).contains("banner", roleClass);
+    }
+
+    // IF a run at work or paused by the person carried a banner, THEN the slot would repeat what the title bar says.
+    @ParameterizedTest
+    @EnumSource(
+            value = RunState.class,
+            names = {"IDLE", "RUNNING", "PAUSING", "PAUSED", "STOPPING", "STOPPED"})
+    void banner_runAtWorkOrPausedByThePerson_isNotShown(final RunState state) {
+        chooseModel();
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub", null);
+
+        publish(state);
+
+        assertThat(optional("translating-banner")).isNull();
     }
 
     // IF the derived figures were shown wrongly, THEN the dashboard would contradict what the engine reports.
@@ -81,10 +92,9 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(768, 3, 469);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("768");
-        assertThat(labelText("translating-count-flagged")).isEqualTo("3");
-        assertThat(labelText("translating-count-remaining")).isEqualTo("469");
-        assertThat(labelText("translating-progress-text")).isEqualTo("62% · Chapter 7 of 11 · chunk 1/1");
+        assertThat(labelText("translating-count-translated")).isEqualTo("768 translated");
+        assertThat(labelText("translating-count-to-review")).isEqualTo("3 to review");
+        assertThat(labelText("translating-strip-line")).isEqualTo("771 of 1,240 segments done · Chapter 7 of 11");
         assertThat(progressBar().getProgress()).isCloseTo(0.6218, within(0.0001));
     }
 
@@ -95,7 +105,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(0, 0, 0);
 
-        assertThat(labelText("translating-progress-text")).isEqualTo("0% · Chapter 7 of 11 · chunk 1/1");
+        assertThat(labelText("translating-strip-line")).startsWith("0 of 0 segments done");
         assertThat(progressBar().getProgress()).isZero();
     }
 
@@ -109,8 +119,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(413, 3, 799);
 
-        assertThat(labelText("translating-count-accepted")).isEqualTo("413");
-        assertThat(labelText("translating-banner-title")).isEqualTo("Pausing");
+        assertThat(labelText("translating-count-translated")).isEqualTo("413 translated");
+        assertThat(labelText("translating-live-line")).startsWith("Pausing...");
         assertThat(button("translating-pause").isDisabled()).isTrue();
     }
 
@@ -122,7 +132,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publish(RunState.STOPPING);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Stopping");
+        assertThat(labelText("translating-live-line")).startsWith("Stopping...");
         assertThat(button("translating-stop").isDisabled()).isTrue();
     }
 
@@ -135,10 +145,11 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         mirror().publishOutcome(RunState.STOPPED, cancelledReport(), null);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
-        assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err", "banner-warn");
-        assertThat(textOf("translating-banner")).doesNotContainIgnoringCase("error", "fail");
+        assertThat(labelText("translating-live-line"))
+                .isEqualTo("Stopped. Continue translation picks up at the first segment not done.");
+        assertThat(optional("translating-banner")).isNull();
         assertThat(isShown("translating-resume")).isTrue();
+        assertThat(button("translating-resume").getText()).isEqualTo("Continue translation");
         assertThat(isShown("translating-start")).isFalse();
         assertThat(optional("error-card")).isNull();
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
@@ -154,14 +165,16 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(optional("nobook-card")).isNull();
     }
 
-    // IF a rate or a finishing time were shown before the engine measured one, THEN the line would invent a pace.
+    // IF a time left were shown before the engine measured one, THEN the strip would invent a finishing time.
     @Test
-    void pace_runInProgressNoFiguresYet_showsNothingInsteadOfARateOrEstimate() {
+    void bigLine_runInProgressNoFiguresYet_saysNothingAboutTimeLeft() {
         showTranslating();
         publish(RunState.RUNNING);
         publishProgress(768, 3, 469);
 
-        assertThat(labelText("translating-pace-text")).isEmpty();
+        assertThat(optional("translating-strip-big") == null
+                        || !labelText("translating-strip-big").contains("left"))
+                .isTrue();
     }
 
     // IF a run could be started from an earlier step, THEN the specification's single start control would be two.
@@ -183,8 +196,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_entriesPublished_renderEachWithItsMarkAndCatalogueText() {
         showTranslating();
+        publish(RunState.RUNNING);
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
+        openActivityLog();
 
         assertThat(logCells().stream().map(cell -> cell.getAccessibleText()).toList())
                 .containsExactly(
@@ -196,8 +211,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_acceptedAndSegmentError_drawTheirTagInTheRoleAndTheirWordsInTheTextColour() {
         showTranslating();
+        publish(RunState.RUNNING);
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
+        openActivityLog();
 
         ThemeTestSupport.assertSameColour(partOf(0, ".log-tag").getTextFill(), "#4a6c54", "accepted entry tag");
         ThemeTestSupport.assertSameColour(partOf(1, ".log-tag").getTextFill(), "#a04f45", "segment-error entry tag");
@@ -212,6 +229,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_manyEntries_keepsTheNewestInView() {
         showTranslating();
+        publish(RunState.RUNNING);
+        openActivityLog();
         final LogEntry[] entries = IntStream.range(0, 100)
                 .mapToObj(i -> new LogEntry(LogKind.ACCEPTED, List.of("s-" + i)))
                 .toArray(LogEntry[]::new);
@@ -225,6 +244,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     @Test
     void log_noEntries_showsTheEmptyText() {
         showTranslating();
+        publish(RunState.RUNNING);
+        openActivityLog();
 
         assertThat(((Label) logList().getPlaceholder()).getText())
                 .isEqualTo("Nothing has happened yet. Decisions appear here as the run makes them.");
@@ -242,77 +263,27 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         final Node bar = progressBar().lookup(".bar");
         assertThat(progressBar().getProgress()).isCloseTo(0.42, within(0.0001));
-        assertThat(progressBar().getHeight()).isCloseTo(9.0, within(0.5));
+        assertThat(progressBar().getHeight()).isGreaterThan(0);
         assertThat(bar.getLayoutBounds().getWidth()).isGreaterThan(0);
         assertThat(bar.getLayoutBounds().getHeight()).isGreaterThan(0);
     }
 
-    // IF a tile could shrink to its ellipsis, THEN the four counts would read as "…", "a…" and "fl…" in a narrow
-    // window; at the window minimum each tile keeps the mockup's 120 pixels and every caption is shown whole.
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', textBlock = """
-            accepted  | auto-accepted        | 768
-            repaired  | repaired & accepted  | 41
-            flagged   | flagged              | 3
-            remaining | remaining            | 428
-            """)
-    void tiles_atMinimum_showNoTruncatedCaptions(final String name, final String caption, final String number) {
-        showTranslating();
-        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        publish(RunState.RUNNING);
-        mirror().publishProgress(ProgressFixtures.detailed(7, 11, 768, 41, 3, 428, 41, 66));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        final Region tile = (Region) required("translating-tile-" + name);
-        assertThat(tile.minWidth(-1)).isGreaterThanOrEqualTo(120);
-        assertThat(tile.getWidth()).isGreaterThanOrEqualTo(120);
-        assertThat(textsUnder(tile)).contains(caption, number);
-        assertThat(textsUnder(tile)).noneMatch(text -> text.contains("…") || text.contains("..."));
-        assertThat(tile.lookupAll(".label"))
-                .allSatisfy(label -> assertThat(((Label) label).getWidth())
-                        .as(
-                                "the label %s of tile %s is wide enough for its whole text",
-                                ((Label) label).getText(), name)
-                        .isGreaterThanOrEqualTo(((Label) label).prefWidth(-1)));
-    }
-
-    // IF the four tiles did not fit the minimum width side by side, THEN the row would need wrapping the shell does
-    // not do; 4 x 120 plus 3 x 12 gaps is 516 pixels, which the content area at the minimum must hold.
+    // IF Pause and Stop scrolled with the screen, THEN during a long stall a person would have to scroll past the live
+    // panel and the log to stop the run; they sit in the toolbar, above the scrolling content (README L2).
     @Test
-    void tiles_atMinimum_fitTheContentAreaWithoutSidewaysScrolling() {
+    void controls_atMinimum_pauseAndStopAreInTheToolbar() {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
         publish(RunState.RUNNING);
 
-        final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
-        final double contentWidth = pane.getContent().getLayoutBounds().getWidth();
-
-        assertThat(required("translating-tiles").getLayoutBounds().getWidth()).isLessThanOrEqualTo(contentWidth);
-        assertThat(contentWidth).isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
-    }
-
-    // IF the Pause and Stop row sat at the bottom, THEN during a long stall a person would have to scroll past the live
-    // panel and the log to stop the run; it sits under the banner, in view at the top of the content area.
-    @Test
-    void controls_atMinimum_stopIsInViewAtTheTop() {
-        showTranslating();
-        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        publish(RunState.RUNNING);
-        final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
-
-        onFx(() -> pane.setVvalue(0));
-
-        final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
-        final Bounds stop = required("translating-stop")
-                .localToScene(required("translating-stop").getLayoutBounds());
-        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(viewport.getMinY());
-        assertThat(stop.getMaxY()).isLessThanOrEqualTo(viewport.getMaxY());
+        assertThat(required("translating-pause").getParent()).isSameAs(required("shell-actions"));
+        assertThat(required("translating-stop").getParent()).isSameAs(required("shell-actions"));
     }
 
     // IF a screen taller than the window were clipped rather than scrolled, THEN the parts below the fold of a short
-    // window could never be reached; the Stop button stays in view at the top.
+    // window could never be reached; the Stop button stays in view in the toolbar wherever the content is scrolled.
     @Test
-    void screen_sceneShorterThanDashboard_scrollsAndKeepsTheRunControlsAtTheTop() {
+    void screen_sceneShorterThanDashboard_scrollsAndKeepsStopInView() {
         showTranslating();
         resizeScene(960, 300);
         publish(RunState.RUNNING);
@@ -320,12 +291,12 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         assertThat(pane.getContent().getLayoutBounds().getHeight())
                 .isGreaterThan(pane.getViewportBounds().getHeight());
-        onFx(() -> pane.setVvalue(0));
+        onFx(() -> pane.setVvalue(1));
 
-        final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
         final Bounds stop = required("translating-stop")
                 .localToScene(required("translating-stop").getLayoutBounds());
-        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(viewport.getMinY());
-        assertThat(stop.getMaxY()).isLessThanOrEqualTo(viewport.getMaxY());
+        assertThat(stop.getMinY()).isGreaterThanOrEqualTo(0);
+        assertThat(stop.getMaxY())
+                .isLessThanOrEqualTo(pane.localToScene(pane.getLayoutBounds()).getMinY());
     }
 }

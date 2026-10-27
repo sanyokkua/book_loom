@@ -3,6 +3,7 @@ package ua.bookloom.llm;
 import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -12,10 +13,14 @@ import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
+import ua.bookloom.llm.provider.RefusalMemory;
 import ua.bookloom.llm.provider.RejectedCapability;
+import ua.bookloom.llm.provider.SettingDrops;
 import ua.bookloom.llm.retry.RetryPolicy;
 
 /** Binds one model id to a provider client and retries typed failures outside the shared inference gate. */
@@ -30,13 +35,47 @@ public final class GatedChatModel implements ChatModel {
     private final String modelId;
     private final InferenceGate gate;
     private final RetryPolicy retryPolicy;
+    private final String providerId;
+    private final BiFunction<String, String, ModelSettings> settings;
+    private final @org.jspecify.annotations.Nullable RefusalMemory refusals;
 
     /** Captures the concrete provider client, model id, shared gate, and retry policy for each call. */
     public GatedChatModel(ProviderClient client, String modelId, InferenceGate gate, RetryPolicy retryPolicy) {
+        this(client, "", modelId, gate, retryPolicy, ModelSettings::defaults);
+    }
+
+    /** As the four-argument form, applying the model's own settings, read afresh for every call. */
+    public GatedChatModel(
+            ProviderClient client,
+            String providerId,
+            String modelId,
+            InferenceGate gate,
+            RetryPolicy retryPolicy,
+            BiFunction<String, String, ModelSettings> settings) {
+        this(client, providerId, modelId, gate, retryPolicy, settings, null);
+    }
+
+    /** As the six-argument form, remembering the settings a model refuses, or not when {@code refusals} is null. */
+    public GatedChatModel(
+            ProviderClient client,
+            String providerId,
+            String modelId,
+            InferenceGate gate,
+            RetryPolicy retryPolicy,
+            BiFunction<String, String, ModelSettings> settings,
+            @org.jspecify.annotations.Nullable RefusalMemory refusals) {
+        this.refusals = refusals;
+        this.providerId = Objects.requireNonNull(providerId, "providerId");
+        this.settings = Objects.requireNonNull(settings, "settings");
         this.client = Objects.requireNonNull(client, "client");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+    }
+
+    @Override
+    public @org.jspecify.annotations.Nullable Integer contextWindowOverride() {
+        return settings.apply(providerId, modelId).contextWindow();
     }
 
     @Override
@@ -48,28 +87,72 @@ public final class GatedChatModel implements ChatModel {
     public Result<ChatResponse> chat(ChatRequest request, CallAttemptListener attempts) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(attempts, "attempts");
-        ChatRequest candidate = request;
         final EnumSet<RejectedCapability> downgraded = EnumSet.noneOf(RejectedCapability.class);
-        while (true) {
-            final ProviderCallResult<ChatResponse> call = callWithTransportRetry(candidate, attempts);
-            if (call.result().isOk()) {
-                return call.result();
-            }
-            final ChatRequest next = downgrade(candidate, call.rejectedCapability(), downgraded);
-            if (next == null) {
-                return call.result();
-            }
-            candidate = next;
+        return callWithTransportRetry(applied(request, downgraded), attempts, downgraded)
+                .result();
+    }
+
+    // Read once per call, so every retry of it keeps the same settings and a save lands on the next call. The
+    // refusals the model's record already holds are stripped here and join the set of settings not to send again.
+    private ChatRequest applied(ChatRequest request, EnumSet<RejectedCapability> downgraded) {
+        final ModelSettings stored = settings.apply(providerId, modelId);
+        final Double temperature =
+                switch (stored.temperatureChoice()) {
+                    case CHOOSE -> request.temperature();
+                    case VALUE -> stored.temperature();
+                    case OMIT -> null;
+                };
+        final Integer requestCap = request.maxOutputTokens();
+        final Integer maxOutput = stored.maxOutput();
+        final Integer cap = capped(requestCap, maxOutput);
+        final OutputLengthField field = outputField(request, stored);
+        if (refusals != null) {
+            downgraded.addAll(refusals.remembered(stored));
         }
+        log.debug(
+                "Applied model settings model={} kind={} temperatureChoice={} temperature={} cap={} outputField={}"
+                        + " refused={}",
+                modelId,
+                request.callKind(),
+                stored.temperatureChoice(),
+                temperature,
+                cap,
+                field,
+                downgraded);
+        return SettingDrops.stripAll(request.withModelSettings(temperature, cap, field), downgraded);
+    }
+
+    // The person's limit caps a call that states none; where both exist the smaller wins.
+    private static @org.jspecify.annotations.Nullable Integer capped(
+            @org.jspecify.annotations.Nullable Integer requestCap,
+            @org.jspecify.annotations.Nullable Integer maxOutput) {
+        if (requestCap == null) {
+            return maxOutput;
+        }
+        return maxOutput == null ? requestCap : Integer.valueOf(Math.min(requestCap, maxOutput));
+    }
+
+    private static @org.jspecify.annotations.Nullable OutputLengthField outputField(
+            ChatRequest request, ModelSettings stored) {
+        return request.outputField() == null && stored.outputField() != OutputLengthField.MAX_TOKENS
+                ? stored.outputField()
+                : request.outputField();
     }
 
     private ProviderCallResult<ChatResponse> callWithTransportRetry(
-            ChatRequest original, CallAttemptListener attempts) {
-        ChatRequest request = original;
+            ChatRequest first, CallAttemptListener attempts, EnumSet<RejectedCapability> downgraded) {
+        ChatRequest original = first;
+        ChatRequest request = first;
         int attempt = 1;
         int timedOut = 0;
         while (true) {
-            final AttemptResult outcome = attempt(request, new Tries(attempt, timedOut, attempts));
+            final AttemptResult outcome = attempt(request, new Tries(attempt, timedOut, attempts, downgraded));
+            if (outcome.refused()) {
+                // A refusal is not an attempt: the same attempt number goes out again, minus the refused setting.
+                original = SettingDrops.stripAll(original, downgraded);
+                request = SettingDrops.stripAll(request, downgraded);
+                continue;
+            }
             timedOut += outcome.timedOut() ? 1 : 0;
             if (!outcome.retry()) {
                 return outcome.call();
@@ -78,7 +161,9 @@ public final class GatedChatModel implements ChatModel {
                 return ProviderCallResult.withoutRetryAfter(cancelled());
             }
             attempt++;
-            request = outcome.timedOut() ? variedAfterTimeout(original, attempt) : request;
+            request = outcome.timedOut()
+                    ? SettingDrops.stripAll(variedAfterTimeout(original, attempt), downgraded)
+                    : request;
         }
     }
 
@@ -101,6 +186,12 @@ public final class GatedChatModel implements ChatModel {
             return finished(call);
         }
         final AppError error = Objects.requireNonNull(result.error(), "provider error");
+        if (isNewRefusal(call, request, tries.downgraded())) {
+            final RejectedCapability rejected = Objects.requireNonNull(call.rejectedCapability(), "refused setting");
+            tries.downgraded().add(rejected);
+            noteRefusal(rejected);
+            return new AttemptResult(call, false, Duration.ZERO, false, true);
+        }
         tries.listener().failed(reported, error.code());
         return failure(call, error, request, attempt, tries.timedOut());
     }
@@ -154,7 +245,7 @@ public final class GatedChatModel implements ChatModel {
                 : retryPolicy.shouldRetry(error.code(), attempt);
         if (!retry) {
             logStopped(request, attempt, error);
-            return new AttemptResult(call, false, Duration.ZERO, timedOut);
+            return new AttemptResult(call, false, Duration.ZERO, timedOut, false);
         }
         final Duration delay = retryPolicy.delayBeforeRetry(attempt, call.retryAfter());
         log.warn(
@@ -166,7 +257,7 @@ public final class GatedChatModel implements ChatModel {
                 error.code(),
                 delay,
                 timedOut);
-        return new AttemptResult(call, true, delay, timedOut);
+        return new AttemptResult(call, true, delay, timedOut, false);
     }
 
     private void logStopped(ChatRequest request, int attempt, AppError error) {
@@ -194,37 +285,28 @@ public final class GatedChatModel implements ChatModel {
         return original.forRetry(nextAttempt, lowerCap);
     }
 
-    private @org.jspecify.annotations.Nullable ChatRequest downgrade(
-            ChatRequest request,
-            @org.jspecify.annotations.Nullable RejectedCapability rejected,
-            EnumSet<RejectedCapability> downgraded) {
-        if (rejected == null || !downgraded.add(rejected)) {
-            return null;
-        }
-        return switch (rejected) {
-            case STRUCTURED_OUTPUT -> withoutStructuredOutput(request);
-            case REASONING_CONTROL -> withoutReasoningControl(request);
-        };
+    // A reply that refuses a setting the request carried, and that has not been refused on this call before.
+    private static boolean isNewRefusal(
+            ProviderCallResult<ChatResponse> call, ChatRequest request, EnumSet<RejectedCapability> downgraded) {
+        final RejectedCapability rejected = call.rejectedCapability();
+        return rejected != null && !downgraded.contains(rejected) && SettingDrops.without(request, rejected) != null;
     }
 
-    private @org.jspecify.annotations.Nullable ChatRequest withoutStructuredOutput(ChatRequest request) {
-        if (request.responseFormat() == null) {
-            return null;
+    private void noteRefusal(RejectedCapability rejected) {
+        log.warn(
+                "Model refused a setting providerId={} model={} setting={} instead={}; the request is repeated"
+                        + " without it, not counted as an attempt",
+                providerId,
+                modelId,
+                rejected.settingName(),
+                rejected.insteadDid());
+        if (refusals != null) {
+            refusals.remember(providerId, modelId, rejected);
         }
-        log.info("Provider rejected structured output; retrying once without that capability model={}", modelId);
-        return request.withoutResponseFormat();
-    }
-
-    private @org.jspecify.annotations.Nullable ChatRequest withoutReasoningControl(ChatRequest request) {
-        if (request.reasoningEnabled() == null) {
-            return null;
-        }
-        log.info("Provider rejected reasoning control; retrying once without that capability model={}", modelId);
-        return request.withoutReasoning();
     }
 
     private static AttemptResult finished(ProviderCallResult<ChatResponse> call) {
-        return new AttemptResult(call, false, Duration.ZERO, false);
+        return new AttemptResult(call, false, Duration.ZERO, false, false);
     }
 
     private static Result<ChatResponse> cancelled() {
@@ -233,8 +315,9 @@ public final class GatedChatModel implements ChatModel {
     }
 
     /** Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it. */
-    private record Tries(int attempt, int timedOut, CallAttemptListener listener) {}
+    private record Tries(
+            int attempt, int timedOut, CallAttemptListener listener, EnumSet<RejectedCapability> downgraded) {}
 
     private record AttemptResult(
-            ProviderCallResult<ChatResponse> call, boolean retry, Duration delay, boolean timedOut) {}
+            ProviderCallResult<ChatResponse> call, boolean retry, Duration delay, boolean timedOut, boolean refused) {}
 }

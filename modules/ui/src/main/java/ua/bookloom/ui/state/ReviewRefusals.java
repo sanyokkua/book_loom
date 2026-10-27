@@ -5,8 +5,12 @@ import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Severity;
+import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -20,17 +24,14 @@ final class ReviewRefusals {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final Consumer<String> inPlace;
-    private final Runnable onSaveRefused;
+    private final Messages messages;
 
     ReviewRefusals(
-            final Toasts toasts,
-            final ErrorPresenter errors,
-            final Consumer<String> inPlace,
-            final Runnable onSaveRefused) {
+            final Toasts toasts, final ErrorPresenter errors, final Consumer<String> inPlace, final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.inPlace = Objects.requireNonNull(inPlace, "inPlace");
-        this.onSaveRefused = Objects.requireNonNull(onSaveRefused, "onSaveRefused");
     }
 
     /** Refuses an action before any call, because a run is translating: the same one warning a desk answer gives. */
@@ -41,8 +42,8 @@ final class ReviewRefusals {
     /** Confirms an accepted or saved segment, which the panel has just moved on from; other actions stay silent. */
     void confirm(final String action, final String locator, final int remaining) {
         switch (action) {
-            case "accept" -> toasts.success(MessageKey.REVIEW_ACCEPTED, locator, remaining);
-            case "saveEdit" -> toasts.success(MessageKey.REVIEW_SAVED, locator);
+            case "accept" -> toasts.feedback(Severity.SUCCESS, MessageKey.REVIEW_ACCEPTED, locator, remaining);
+            case "saveEdit" -> toasts.feedback(Severity.SUCCESS, MessageKey.REVIEW_SAVED, locator);
             default -> log.debug("review {} of {} needs no confirmation", action, locator);
         }
     }
@@ -57,14 +58,11 @@ final class ReviewRefusals {
         switch (FailureSurface.of(error.code())) {
             case WARNING_TOAST -> {
                 log.warn("review {} of segment {} refused as busy", action, segmentId);
-                toasts.warning(MessageKey.REVIEW_BUSY);
+                toasts.raise(ToastOccasion.RETRY_REFUSED);
             }
             case IN_PLACE -> {
                 log.warn("review {} of segment {} refused: {}", action, segmentId, error.code());
-                inPlace.accept(error.message());
-                if ("saveEdit".equals(action)) {
-                    onSaveRefused.run();
-                }
+                inPlace.accept(ErrorWords.message(messages, error));
             }
             case DIALOG, PROVIDER_ERROR, FLAGGED_SEGMENT -> errors.present(error);
             case STOPPED, SETTINGS_ONLY -> log.debug("review {} answered {}: nothing to show", action, error.code());

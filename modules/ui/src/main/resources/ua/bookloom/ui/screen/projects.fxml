@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.ProjectsController" id="projects-screen" styleClass="content-capped" spacing="14">
+    <Label id="projects-title" styleClass="screen-title" text="%nav.projects"/>
+    <Label id="projects-purpose" styleClass="muted" wrapText="true" text="%projects.purpose"/>
+    <VBox fx:id="host" id="projects-state" spacing="14" VBox.vgrow="ALWAYS"/>
+</VBox>

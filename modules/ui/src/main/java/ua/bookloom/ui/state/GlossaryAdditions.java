@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -49,7 +50,7 @@ record GlossaryAdditions(
             final AppError failure = answer.error();
             if (failure != null) {
                 log.warn("adding entry {} refused with {}", entry.id(), failure.code());
-                onRefused.accept(failure.message());
+                onRefused.accept(ErrorWords.message(messages, failure));
                 return;
             }
             rows.add(Objects.requireNonNull(answer.data(), "data"));

@@ -15,17 +15,42 @@ import java.util.Objects;
  * @param refused answers of either step that broke a rule, counted by the rule's name ({@code quotes},
  *     {@code sentences}, {@code worse}, {@code checks}…); never null, empty when none was refused
  * @param skipped segments whose call failed (a timeout, an unreachable provider), so they were left as they were
+ * @param notReread paragraphs the check never reached because the person had the file written early; they stay as
+ *     they were stored
  */
 public record ConsistencyChecks(
-        int retriedImproved, int retriedKept, int neighbourUnchanged, Map<String, Integer> refused, int skipped) {
+        int retriedImproved,
+        int retriedKept,
+        int neighbourUnchanged,
+        Map<String, Integer> refused,
+        int skipped,
+        int notReread) {
 
     /** The checks of a pass with no model step. */
     public static final ConsistencyChecks NONE = new ConsistencyChecks(0, 0, 0, Map.of(), 0);
 
+    /**
+     * The checks of a pass that ran to its end, so nothing was left unread.
+     *
+     * @param retriedImproved flagged or doubted segments whose fresh draft replaced the old text
+     * @param retriedKept segments whose fresh draft was no better
+     * @param neighbourUnchanged paragraphs the neighbour check left as they were
+     * @param refused refused answers by rule; never null
+     * @param skipped segments whose call failed
+     */
+    public ConsistencyChecks(
+            final int retriedImproved,
+            final int retriedKept,
+            final int neighbourUnchanged,
+            final Map<String, Integer> refused,
+            final int skipped) {
+        this(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped, 0);
+    }
+
     /** Rejects a negative count and copies the refusals. */
     public ConsistencyChecks {
         refused = Map.copyOf(Objects.requireNonNull(refused, "refused"));
-        if (retriedImproved < 0 || retriedKept < 0 || neighbourUnchanged < 0 || skipped < 0) {
+        if (retriedImproved < 0 || retriedKept < 0 || neighbourUnchanged < 0 || skipped < 0 || notReread < 0) {
             throw new IllegalArgumentException("no count may be negative");
         }
         if (refused.values().stream().anyMatch(count -> count < 1)) {

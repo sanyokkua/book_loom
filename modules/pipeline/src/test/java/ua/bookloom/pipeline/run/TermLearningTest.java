@@ -29,7 +29,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** What a stored chunk teaches the lexicon: counted once its records are stored, never for what was not kept. */
@@ -48,7 +48,7 @@ class TermLearningTest {
 
     @BeforeEach
     void setUp() {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
         stores = new RunStores(
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
@@ -199,10 +199,7 @@ class TermLearningTest {
     @Test
     void replay_storedDecisions_giveTheSameLearnedRenderingAsLearningChunkByChunk() {
         final List<Map.Entry<Segment, SegmentRecord>> book = book(4);
-        final int chunk = 5;
-        for (int from = 0; from < book.size(); from += chunk) {
-            learnFrom(book.subList(from, Math.min(from + chunk, book.size())));
-        }
+        learnInChunksOfFive(book);
         final LexiconEntry incremental = master();
         stores.lexicon().update(PROJECT, "master", entry -> entry.withLearned(null));
         stores.segments()
@@ -233,13 +230,7 @@ class TermLearningTest {
             {"The master and the lord ate.", "Господар їв."},
             {"The master and the lord slept.", "Господар спав."}
         };
-        final List<Map.Entry<Segment, SegmentRecord>> book = new ArrayList<>(book(0));
-        for (final String[] pair : pairs) {
-            final Segment segment = segment(book.size(), pair[0]);
-            book.add(Map.entry(segment, decided(segment, pair[1], SegmentStatus.ACCEPTED, SegmentPath.DRAFT)));
-        }
-
-        learnFrom(book);
+        learnFrom(companyBook(pairs));
 
         final List<LexiconEntry> held =
                 Objects.requireNonNull(stores.lexicon().all(PROJECT).data());
@@ -259,17 +250,18 @@ class TermLearningTest {
             {"The Times printed it.", "Часи надрукували це."},
             {"The Times wrote so.", "Часи написали так."}
         };
-        final List<Map.Entry<Segment, SegmentRecord>> book = new ArrayList<>(book(0));
-        for (final String[] pair : pairs) {
-            final Segment segment = segment(book.size(), pair[0]);
-            book.add(Map.entry(segment, decided(segment, pair[1], SegmentStatus.ACCEPTED, SegmentPath.DRAFT)));
-        }
-
-        learnFrom(book);
+        learnFrom(companyBook(pairs));
 
         assertThat(Objects.requireNonNull(stores.lexicon().all(PROJECT).data()))
                 .filteredOn(entry -> entry.term().equals("times"))
                 .allSatisfy(entry -> assertThat(entry.learned()).isNull());
+    }
+
+    private void learnInChunksOfFive(final List<Map.Entry<Segment, SegmentRecord>> book) {
+        final int chunk = 5;
+        for (int from = 0; from < book.size(); from += chunk) {
+            learnFrom(book.subList(from, Math.min(from + chunk, book.size())));
+        }
     }
 
     private List<Map.Entry<Segment, SegmentRecord>> companyBook(final String[][] pairs) {

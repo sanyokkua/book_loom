@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
@@ -15,18 +16,16 @@ import javafx.geometry.Pos;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.api.pipeline.SegmentPreview;
-import ua.bookloom.ui.control.PlaceholderFlow;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -46,7 +45,6 @@ import ua.bookloom.ui.state.StructureSegmentsViewModel;
 final class StructureSegmentsPane extends VBox {
 
     private static final double SPACING = 8;
-    private static final double PREVIEW_HEIGHT = 120;
     private static final double ROW_HEIGHT = 34;
     private static final int MIN_ROWS = 6;
     private static final int PREFERRED_ROWS = 10;
@@ -62,22 +60,33 @@ final class StructureSegmentsPane extends VBox {
     private final Label note = new Label();
     private final TextField search = new TextField();
     private final ComboBox<SegmentKind> kinds = new ComboBox<>();
-    private final Label meta = new Label();
-    private final PlaceholderFlow text = new PlaceholderFlow("structure-preview-text");
+    private final StructureTextPane reading;
     private final ChangeListener<StructureSegments> onState = (observed, was, now) -> show(now);
+    private final ReadOnlyBooleanProperty technical;
+    // The rows read the switch as they fill, so a change redraws them.
+    private final ChangeListener<Boolean> onTechnical = (observed, was, now) -> list.refresh();
     private boolean isLoaded;
+    private boolean isRelisting;
+    private @Nullable String pickedId;
 
-    StructureSegmentsPane(final StructureSegmentsViewModel model, final Messages messages) {
+    StructureSegmentsPane(
+            final StructureSegmentsViewModel model,
+            final Messages messages,
+            final StructureTextPane reading,
+            final ReadOnlyBooleanProperty technical) {
         super(SPACING);
+        this.technical = Objects.requireNonNull(technical, "technical");
         Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.reading = Objects.requireNonNull(reading, "reading");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
         header.setId("structure-segments-header");
         header.getStyleClass().add("muted");
         final StackPane stack = listStack();
         VBox.setVgrow(stack, Priority.ALWAYS);
-        getChildren().addAll(header, filters(), stack, reading());
+        getChildren().addAll(header, filters(), stack);
         model.state().addListener(new WeakChangeListener<>(onState));
+        technical.addListener(new WeakChangeListener<>(onTechnical));
         show(model.state().get());
     }
 
@@ -87,6 +96,7 @@ final class StructureSegmentsPane extends VBox {
         Tips.install(messages, search, MessageKey.STRUCTURE_SEARCH_HINT);
         HBox.setHgrow(search, Priority.ALWAYS);
         kinds.setId("structure-segments-kind");
+        kinds.setMinWidth(Region.USE_PREF_SIZE);
         kinds.setConverter(new StringConverter<>() {
             @Override
             public String toString(final @Nullable SegmentKind kind) {
@@ -113,11 +123,11 @@ final class StructureSegmentsPane extends VBox {
     private StackPane listStack() {
         list.setId("structure-segments");
         list.getStyleClass().add("structure-segments");
-        list.setCellFactory(view -> new StructureSegmentCell(messages, numbers));
+        list.setCellFactory(view -> new StructureSegmentCell(messages, numbers, technical));
         list.setMinHeight(MIN_ROWS * ROW_HEIGHT + FRAME);
         list.setPrefHeight(PREFERRED_ROWS * ROW_HEIGHT + FRAME);
         Tips.install(messages, list, MessageKey.STRUCTURE_SEGMENTS_HINT);
-        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> preview(now));
+        list.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> picked(now));
         note.setId("structure-segments-state");
         note.getStyleClass().add("muted");
         note.setWrapText(true);
@@ -126,31 +136,55 @@ final class StructureSegmentsPane extends VBox {
         return new StackPane(list, note);
     }
 
-    private VBox reading() {
-        meta.setId("structure-preview-meta");
-        meta.getStyleClass().add("muted");
-        meta.setWrapText(true);
-        text.getStyleClass().add("structure-preview-flow");
-        final ScrollPane scroll = new ScrollPane(text);
-        scroll.setId("structure-preview");
-        scroll.getStyleClass().add("structure-preview");
-        scroll.setFitToWidth(true);
-        scroll.setPrefViewportHeight(PREVIEW_HEIGHT);
-        scroll.setMinHeight(PREVIEW_HEIGHT);
-        Tips.install(messages, scroll, MessageKey.STRUCTURE_PREVIEW_HINT);
-        return new VBox(SPACING, meta, scroll);
+    // A row the list drops while it is filled again is no choice of the person's, so the picked segment and its text
+    // stay until the new listing says whether it still holds that segment.
+    private void picked(final @Nullable StructureSegmentRow row) {
+        if (isRelisting && row == null) {
+            return;
+        }
+        if (!isRelisting) {
+            pickedId = row == null ? null : row.preview().segmentId();
+        }
+        reading.show(row);
     }
 
     private void show(final StructureSegments state) {
         log.debug("segment browser shows {}", state.getClass().getSimpleName());
         isLoaded = state instanceof StructureSegments.Loaded;
-        switch (state) {
-            case StructureSegments.Idle _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_PICK);
-            case StructureSegments.Loading _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_LOADING);
-            case StructureSegments.Failed _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_FAILED);
-            case StructureSegments.Loaded loaded -> loaded(loaded);
+        isRelisting = true;
+        try {
+            switch (state) {
+                case StructureSegments.Idle _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_PICK);
+                case StructureSegments.Loading _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_LOADING);
+                case StructureSegments.Failed _ -> unlisted(MessageKey.STRUCTURE_SEGMENTS_FAILED);
+                case StructureSegments.Loaded loaded -> loaded(loaded);
+            }
+            if (!(state instanceof StructureSegments.Loading)) {
+                restorePick();
+            }
+        } finally {
+            isRelisting = false;
         }
-        preview(null);
+    }
+
+    // A listing asked again (a brief save, the checks) keeps the picked segment when it still lists it.
+    private void restorePick() {
+        final String wanted = pickedId;
+        final StructureSegmentRow again = wanted == null
+                ? null
+                : visible.stream()
+                        .filter(row -> row.preview().segmentId().equals(wanted))
+                        .findFirst()
+                        .orElse(null);
+        log.debug("the picked segment {} is {}", wanted, again == null ? "no longer listed" : "listed again");
+        if (again == null) {
+            pickedId = null;
+            list.getSelectionModel().clearSelection();
+            reading.show(null);
+            return;
+        }
+        list.getSelectionModel().select(again);
+        list.scrollTo(again);
     }
 
     private void unlisted(final MessageKey why) {
@@ -174,6 +208,7 @@ final class StructureSegmentsPane extends VBox {
         kinds.setValue(present.contains(chosen) ? chosen : null);
         header.setText(
                 messages.get(MessageKey.STRUCTURE_SEGMENTS_HEADER, loaded.rows().size(), loaded.chunks()));
+        Tips.install(messages, header, MessageKey.TRANSLATING_STRIP_DONE_TIP);
         search.setDisable(false);
         kinds.setDisable(false);
         refilter();
@@ -190,34 +225,17 @@ final class StructureSegmentsPane extends VBox {
         shown.setText(messages.get(MessageKey.STRUCTURE_SEGMENTS_SHOWN, visible.size(), backing.size()));
         if (backing.isEmpty()) {
             message(MessageKey.STRUCTURE_SEGMENTS_NONE);
+        } else if (visible.isEmpty()) {
+            final String wanted =
+                    !needle.isBlank() || kind == null ? needle.strip() : messages.get(StructureKindLabels.of(kind));
+            message(MessageKey.STRUCTURE_SEGMENTS_NO_MATCH, wanted);
         } else {
-            message(visible.isEmpty() ? MessageKey.STRUCTURE_SEGMENTS_NO_MATCH : null);
+            message(null);
         }
     }
 
-    private void message(final @Nullable MessageKey key) {
+    private void message(final @Nullable MessageKey key, final Object... args) {
         note.setVisible(key != null);
-        note.setText(key == null ? "" : messages.get(key));
-    }
-
-    private void preview(final @Nullable StructureSegmentRow row) {
-        if (row == null) {
-            meta.setText(messages.get(MessageKey.STRUCTURE_PREVIEW_EMPTY));
-            text.show("", List.of());
-            return;
-        }
-        final SegmentPreview preview = row.preview();
-        final String chunk = preview.chunkIndex() > 0
-                ? messages.get(MessageKey.STRUCTURE_PREVIEW_CHUNK, preview.chunkIndex(), preview.chunkCount())
-                : messages.get(MessageKey.STRUCTURE_PREVIEW_UNCHUNKED);
-        final String caption = messages.get(
-                MessageKey.STRUCTURE_PREVIEW_META,
-                preview.locator(),
-                messages.get(StructureKindLabels.of(preview.kind())),
-                preview.tokenEstimate(),
-                chunk);
-        meta.setText(
-                preview.oversized() ? caption + " · " + messages.get(MessageKey.STRUCTURE_PREVIEW_OVERSIZED) : caption);
-        text.show(preview.maskedSource(), List.of());
+        note.setText(key == null ? "" : messages.get(key, args));
     }
 }

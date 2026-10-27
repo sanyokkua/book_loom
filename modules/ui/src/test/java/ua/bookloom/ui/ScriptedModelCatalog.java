@@ -3,7 +3,9 @@ package ua.bookloom.ui;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -14,6 +16,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
+import ua.bookloom.api.llm.ProviderConfig;
 
 /**
  * A hand-written {@link ModelCatalog} that answers with what the test scripted (a list, an error, or a thrown
@@ -32,7 +35,9 @@ public final class ScriptedModelCatalog implements ModelCatalog {
     private final Deque<CountDownLatch> pendingHolds = new ConcurrentLinkedDeque<>();
     private final Deque<CountDownLatch> unreleased = new ConcurrentLinkedDeque<>();
     private final List<String> providerIds = new CopyOnWriteArrayList<>();
+    private final List<ProviderConfig> drafts = new CopyOnWriteArrayList<>();
     private final AtomicInteger calls = new AtomicInteger();
+    private final Map<String, Result<List<ModelInfo>>> perProvider = new ConcurrentHashMap<>();
 
     private ScriptedModelCatalog(final @Nullable Result<List<ModelInfo>> answer) {
         this.answer = answer;
@@ -79,6 +84,16 @@ public final class ScriptedModelCatalog implements ModelCatalog {
         answer = Result.err(error);
     }
 
+    /** From now on answers a listing of {@code providerId} with {@code ids}, whatever the general script is. */
+    public void respondFor(final String providerId, final String... ids) {
+        perProvider.put(providerId, listOf(ids));
+    }
+
+    /** From now on answers a listing of {@code providerId} with {@code error}, whatever the general script is. */
+    public void failFor(final String providerId, final AppError error) {
+        perProvider.put(providerId, Result.err(error));
+    }
+
     /** Makes the next call not yet made block inside {@code listModels} until a {@link #release()} reaches it. */
     public void hold() {
         final CountDownLatch latch = new CountDownLatch(1);
@@ -101,11 +116,22 @@ public final class ScriptedModelCatalog implements ModelCatalog {
         final CountDownLatch held = pendingHolds.pollFirst();
         providerIds.add(providerId);
         calls.incrementAndGet();
+        final Result<List<ModelInfo>> own = perProvider.get(providerId);
         awaitHold(held);
+        if (own != null) {
+            return own;
+        }
         if (thrown != null) {
             throw thrown;
         }
         return Objects.requireNonNull(scripted, "a catalogue that does not throw must have an answer");
+    }
+
+    /** Records the description (and its id with the other calls) and answers as the id form does. */
+    @Override
+    public Result<List<ModelInfo>> listModels(final ProviderConfig draft) {
+        drafts.add(draft);
+        return listModels(draft.id());
     }
 
     private static void awaitHold(final @Nullable CountDownLatch held) {
@@ -140,6 +166,11 @@ public final class ScriptedModelCatalog implements ModelCatalog {
 
     public int callCount() {
         return calls.get();
+    }
+
+    /** Every description that was listed without being saved, oldest first. */
+    public List<ProviderConfig> drafts() {
+        return List.copyOf(drafts);
     }
 
     /** The provider id of every call, oldest first. */

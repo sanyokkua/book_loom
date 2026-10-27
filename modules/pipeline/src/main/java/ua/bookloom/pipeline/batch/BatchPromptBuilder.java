@@ -122,7 +122,8 @@ public final class BatchPromptBuilder {
         final OutputLimit sized = OutputLimit.forBatch(
                 items.stream().map(BatchItem::masked).toList(), frame.sourceLanguage(), frame.targetLanguage());
         final OutputLimit limit = notes ? withNotes(sized, items.size()) : sized;
-        final ChatRequest request = ChatRequests.build(format.promptName(), messages, limit, lowerTemperature);
+        final ChatRequest request =
+                ChatRequests.build(format.promptName(), messages, limit, lowerTemperature, frame.requestDefaults());
         log.debug("Batch request items={} notes={} cap={}", items.size(), notes, limit.capTokens());
         return notes ? withNotesSchema(request) : request;
     }

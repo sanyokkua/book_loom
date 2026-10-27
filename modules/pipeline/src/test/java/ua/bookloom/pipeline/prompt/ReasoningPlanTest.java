@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.LoggerFactory;
+import ua.bookloom.api.llm.ReasoningLevel;
 
 /**
  * Which named calls ask the model to think (15i.X2): none, as today, until {@code BOOKLOOM_REASONING} (else the
@@ -140,5 +141,105 @@ class ReasoningPlanTest {
     @Test
     void current_nothingSet_isOffForADraft() {
         assertThat(ReasoningPlan.current().isOn(PromptName.DRAFT)).isFalse();
+    }
+
+    // Low is a level a plan can name for a call, beside on and off.
+    @ParameterizedTest
+    @CsvSource({
+        "REVIEWER=low,REVIEWER,LOW",
+        "REVIEWER=LOW,REVIEWER,LOW",
+        "REVIEWER=low,DRAFT,OFF",
+        "REVIEWER=on,REVIEWER,ON"
+    })
+    void resolve_namedLevel_isCarriedByThatCallAlone(
+            final String env, final PromptName name, final ReasoningLevel expected) {
+        assertThat(ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, env), null)
+                        .levelFor(name))
+                .isEqualTo(expected);
+    }
+
+    // A bare level sets the level of every call that is not named.
+    @ParameterizedTest
+    @CsvSource({"low,LOW", "on,ON", "off,OFF", " Low ,LOW"})
+    void resolve_bareToken_setsTheLevelOfEveryCall(final String env, final ReasoningLevel expected) {
+        final ReasoningPlan plan = ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, env), null);
+
+        assertThat(plan.levelFor(PromptName.DRAFT)).isEqualTo(expected);
+        assertThat(plan.levelFor(PromptName.SUMMARY)).isEqualTo(expected);
+    }
+
+    @Test
+    void resolve_bareLowWithANamedOff_namedCallWins() {
+        final ReasoningPlan plan = ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, "low,REVIEWER=off"), null);
+
+        assertThat(plan.levelFor(PromptName.REVIEWER)).isEqualTo(ReasoningLevel.OFF);
+        assertThat(plan.levelFor(PromptName.DRAFT)).isEqualTo(ReasoningLevel.LOW);
+    }
+
+    // IF a later entry names the same call, THEN the last one wins.
+    @Test
+    void resolve_lastEntryForACall_wins() {
+        final ReasoningPlan plan =
+                ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, "REVIEWER=on,REVIEWER=low"), null);
+
+        assertThat(plan.levelFor(PromptName.REVIEWER)).isEqualTo(ReasoningLevel.LOW);
+    }
+
+    // The batch draft is one call in three formats: naming the JSON arm gives its level to the other two.
+    @Test
+    void levelFor_batchJsonNamedLow_coversTheOtherBatchFormats() {
+        final ReasoningPlan plan = ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, "DRAFT_BATCH_JSON=low"), null);
+
+        assertThat(plan.levelFor(PromptName.DRAFT_BATCH_MARKERS)).isEqualTo(ReasoningLevel.LOW);
+        assertThat(plan.levelFor(PromptName.DRAFT_BATCH_DUAL)).isEqualTo(ReasoningLevel.LOW);
+    }
+
+    // The token reads back to the same plan, so two reports of one plan look alike.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "low|low",
+                "on|on",
+                "off|off",
+                "REVIEWER=low|REVIEWER=low",
+                "TERM_READING=on,REVIEWER=low|REVIEWER=low,TERM_READING=on"
+            })
+    void token_levels_roundTripsThroughResolve(final String env, final String expectedToken) {
+        final ReasoningPlan plan = ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, env), null);
+
+        assertThat(plan.token()).isEqualTo(expectedToken);
+        assertThat(ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, plan.token()), null))
+                .isEqualTo(plan);
+    }
+
+    // IF a value is none of on, off or low, THEN the entry is ignored with one WARN that names the accepted forms.
+    @Test
+    void resolve_unknownValue_isWarnedWithTheAcceptedForms() {
+        ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, "REVIEWER=high"), null);
+
+        assertThat(warnings.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .singleElement()
+                .satisfies(event -> assertThat(event.getFormattedMessage()).contains("REVIEWER=high", "low"));
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            nullValues = "null",
+            value = {"low|null|true", "null|on|true", "null|null|false", "'  '|null|false", "null|' '|false"})
+    void isSet_envOrProperty_isTrueWhenEitherIsNonBlank(
+            final String env, final String property, final boolean expected) {
+        final Map<String, String> environment = env == null ? Map.of() : Map.of(ReasoningPlan.ENV_NAME, env);
+
+        assertThat(ReasoningPlan.isSet(environment, property)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReasoningLevel.class)
+    void stored_level_givesEveryCallThatLevel(final ReasoningLevel level) {
+        assertThat(ReasoningPlan.stored(level).levelFor(PromptName.DRAFT)).isEqualTo(level);
+        assertThat(ReasoningPlan.stored(level).levelFor(PromptName.REVIEWER)).isEqualTo(level);
     }
 }

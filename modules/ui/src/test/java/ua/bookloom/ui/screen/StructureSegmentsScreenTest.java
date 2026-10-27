@@ -14,6 +14,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Region;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
@@ -31,6 +32,12 @@ import ua.bookloom.ui.state.StructureSegmentRow;
  * chunk badges, picking a row shows its whole text, the filters narrow the list, and the rows have one fixed height.
  */
 class StructureSegmentsScreenTest extends StructureScreenTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final double ROW_HEIGHT = 34;
     private static final String LONG_TEXT =
@@ -133,7 +140,7 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
                         List.of("ch1 · p02", "Paragraph", LONG_TEXT, "1/2"),
                         List.of("ch1 · p03", "Paragraph", "2", "2/2"),
                         List.of("ch1 · p04", "Paragraph", "Bold words here", "2/2"));
-        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 chunks (planned)");
+        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 groups (planned)");
     }
 
     // IF picking another chapter kept the old rows, THEN the list would not follow the tree.
@@ -157,7 +164,7 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> plainOf("structure-preview-text")))
                 .isEqualTo(LONG_TEXT);
-        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · chunk 1 of 2");
+        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · group 1 of 2");
     }
 
     // IF a placeholder token were shown raw, THEN the preview would show markup instead of the book's words.
@@ -235,10 +242,44 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
     void filter_matchesNothing_saysSo() throws TimeoutException {
         openChapterOne();
 
-        filterText("zzz");
+        filterText("xyz");
         awaitFx(() -> segmentRows().isEmpty());
 
-        assertThat(labelText("structure-segments-state")).isEqualTo("No segment matches the filter.");
+        assertThat(labelText("structure-segments-state")).isEqualTo("Nothing matches 'xyz'.");
+    }
+
+    // The place is searchable too, so a person who knows "ch1 · p03" can jump to it.
+    @Test
+    void filter_text_findsTheRowByItsPlace() throws TimeoutException {
+        openChapterOne();
+
+        filterText("ch1 · p03");
+        awaitFx(() -> segmentRows().size() == 1);
+
+        assertThat(segmentRows().get(0).get(0)).isEqualTo("ch1 · p03");
+    }
+
+    // IF clearing the search left the list narrowed, THEN the rest of the chapter would look deleted.
+    @Test
+    void filter_textCleared_restoresEveryRowAndTheCount() throws TimeoutException {
+        openChapterOne();
+        filterText("STORMY");
+        awaitFx(() -> segmentRows().size() == 1);
+
+        filterText("");
+        awaitFx(() -> segmentRows().size() == 4);
+
+        assertThat(labelText("structure-segments-shown")).isEqualTo("Showing 4 of 4");
+    }
+
+    @Test
+    void filter_kindHeading_countsTheShownAgainstTheChapter() throws TimeoutException {
+        openChapterOne();
+
+        onFx(() -> kinds().getSelectionModel().select(SegmentKind.HEADING));
+        awaitFx(() -> segmentRows().size() == 1);
+
+        assertThat(labelText("structure-segments-shown")).isEqualTo("Showing 1 of 4");
     }
 
     // IF rows had their own heights, THEN scrolling a long chapter would measure every row it passes.
@@ -273,9 +314,9 @@ class StructureSegmentsScreenTest extends StructureScreenTestBase {
     void controls_search_kind_list_andPreview_explainThemselves() throws TimeoutException {
         openChapterOne();
 
-        for (final String id : List.of("structure-segments-search", "structure-segments-kind", "structure-segments")) {
-            assertThat(TooltipProbe.tipText(required(id))).as(id).isNotBlank();
-        }
+        assertThat(List.of("structure-segments-search", "structure-segments-kind", "structure-segments"))
+                .allSatisfy(id ->
+                        assertThat(TooltipProbe.tipText(required(id))).as(id).isNotBlank());
     }
 
     @SuppressWarnings("unchecked")

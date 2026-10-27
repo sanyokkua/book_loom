@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.CallLimits;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ProviderConfig;
 
@@ -20,9 +21,6 @@ import ua.bookloom.api.llm.ProviderConfig;
 public final class RequestTimeouts {
 
     private static final long MILLIS_PER_EXPECTED_TOKEN = 500;
-    private static final Duration MAX_CHAT_TIMEOUT = Duration.ofMinutes(10);
-    private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(90);
-    private static final Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
     // A streaming reply that sends nothing for this long has stalled, however long the whole call may take.
     private static final Duration STREAM_IDLE_TIMEOUT = Duration.ofSeconds(60);
 
@@ -69,7 +67,7 @@ public final class RequestTimeouts {
             return null;
         }
         return switch (request.callKind()) {
-            case REVIEW -> REVIEW_TIMEOUT;
+            case REVIEW -> CallLimits.REVIEW_TIMEOUT;
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,
@@ -79,7 +77,7 @@ public final class RequestTimeouts {
                     BOOK_KNOWLEDGE,
                     BRIEF_SYNTHESIS,
                     TERM_READING,
-                    TERM_CHOICE -> HELPER_TIMEOUT;
+                    TERM_CHOICE -> CallLimits.HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION -> null;
         };
     }
@@ -89,7 +87,8 @@ public final class RequestTimeouts {
             return config;
         }
         final Duration scaled = Duration.ofMillis(expectedOutputTokens * MILLIS_PER_EXPECTED_TOKEN);
-        final Duration capped = scaled.compareTo(MAX_CHAT_TIMEOUT) > 0 ? MAX_CHAT_TIMEOUT : scaled;
+        final Duration capped =
+                scaled.compareTo(CallLimits.MAX_CHAT_TIMEOUT) > 0 ? CallLimits.MAX_CHAT_TIMEOUT : scaled;
         final Duration effective = capped.compareTo(config.requestTimeout()) > 0 ? capped : config.requestTimeout();
         return config.withRequestTimeout(effective);
     }

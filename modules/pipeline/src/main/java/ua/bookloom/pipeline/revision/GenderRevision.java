@@ -56,12 +56,17 @@ final class GenderRevision {
         final Map<String, List<Deferral>> bySegment = genderDeferrals(open);
         log.debug("Revising gender deferrals project={} segments={}", inputs.projectId(), bySegment.size());
         calls.planned(ModelCalls.Stage.GENDER_RETRY, bySegment.size());
+        int left = bySegment.size();
         for (final Map.Entry<String, List<Deferral>> segment : bySegment.entrySet()) {
+            if (EarlyStop.isRequested(calls, "Gender revision", left)) {
+                return Result.ok(true);
+            }
             final Result<Boolean> revised =
                     reviseSegment(inputs, segment.getKey(), segment.getValue(), open, calls, tally);
             if (revised.isErr()) {
-                return revised;
+                return EarlyStop.isStop(revised, calls, "Gender revision") ? Result.ok(true) : revised;
             }
+            left--;
         }
         return Result.ok(true);
     }

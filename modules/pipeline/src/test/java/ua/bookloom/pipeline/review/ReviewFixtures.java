@@ -12,7 +12,6 @@ import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
@@ -35,7 +34,8 @@ import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.ProjectServices;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -43,6 +43,7 @@ import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /**
  * A real book imported through {@code ProjectServiceImpl} over the in-memory stores, with the review desk's parts
@@ -90,6 +91,11 @@ public final class ReviewFixtures {
 
         /** The retry over the same stores, deciding with {@code mode}'s threshold. */
         public RetryDraft retryDraft(final ReviewMode mode) {
+            return retryDraft(() -> mode);
+        }
+
+        /** The retry over the same stores, asking {@code mode} for the review mode at each retry. */
+        public RetryDraft retryDraft(final com.google.inject.Provider<ReviewMode> mode) {
             return new RetryDraft(
                     documents,
                     openProjects,
@@ -101,7 +107,8 @@ public final class ReviewFixtures {
                     Guice.createInjector().getInstance(QualityLoop.class),
                     splitter,
                     mode,
-                    java.time.Clock.systemUTC());
+                    java.time.Clock.systemUTC(),
+                    RequestDefaultsSource.environmentOnly());
         }
 
         /** The audit over the same stores, with no word validator. */
@@ -111,7 +118,8 @@ public final class ReviewFixtures {
 
         /** The port over the real parts and the same stores. */
         public ReviewDeskImpl reviewDesk(final ReviewMode mode) {
-            return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments, audits(segments));
+            return new ReviewDeskImpl(
+                    actions, queries, retryDraft(mode), projects, segments, audits(segments), openProjects);
         }
     }
 
@@ -286,16 +294,15 @@ public final class ReviewFixtures {
     }
 
     private static Desk open(final Path book, final BookBrief brief) {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final Injector injector = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule());
         final DocumentPort documents = injector.getInstance(DocumentPort.class);
         final OpenProjects openProjects = injector.getInstance(OpenProjects.class);
         final ProjectRepository projects = injector.getInstance(ProjectRepository.class);
         final SegmentRepository segments = injector.getInstance(SegmentRepository.class);
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
-        final ProjectServiceImpl service = new ProjectServiceImpl(
-                injector.getInstance(BookInspector.class), documents, projects, segments, openProjects);
+        final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
         final ImportedBook imported =
-                Objects.requireNonNull(service.importBook(book).data(), "imported book");
+                Objects.requireNonNull(service.create(book).data(), "imported book");
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
         service.updateBrief(id, brief);
         return new Desk(
@@ -312,5 +319,14 @@ public final class ReviewFixtures {
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(LexiconRepository.class),
                 injector.getInstance(SummaryRepository.class));
+    }
+
+    private static ProjectServiceImpl service(
+            final Injector injector,
+            final DocumentPort documents,
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final OpenProjects openProjects) {
+        return ProjectServices.service(injector, documents, projects, segments, openProjects);
     }
 }

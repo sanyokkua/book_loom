@@ -16,7 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The deterministic name scan: which capitalised words and runs it proposes, and in what order. */
 class FrequencyScanTest {
@@ -192,7 +192,7 @@ class FrequencyScanTest {
     void newTerms_pluralAlias_isHeldByTheProposedEntry() {
         final List<String> lines = new ArrayList<>(copies("We saw Ember at the door.", 6));
         lines.addAll(copies("We saw the Embers at the door.", 3));
-        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
         final BookSlice book = GlossaryTestSegments.of(lines);
 

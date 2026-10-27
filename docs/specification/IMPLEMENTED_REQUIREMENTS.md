@@ -62,7 +62,7 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 | FR-MODEL-02 | implemented | `add-ui-translation-workspace` | `llm-provider` | Also cited by `settings`. |
 | FR-MODEL-03 | implemented | `add-ui-translation-workspace` | `settings` | Choose from the list or name a model the list lacks. |
 | FR-MODEL-04 | partial | `add-ui-translation-workspace` | `settings` | The chosen model is not remembered beyond the session. |
-| FR-UI-06 | partial | `add-ui-translation-workspace` | `localization` | The language follows the operating system. The in-app switch and the persisted `ui.language` setting are deferred to local storage. Also cited by `settings`. |
+| FR-UI-06 | implemented | `add-ui-translation-workspace` | `localization` | Settings › Appearance stores `ui.language`; it is read first at the next launch and applies after a restart (Restart now). Also cited by `settings`. |
 | FR-UI-08 | implemented | `add-ui-translation-workspace` | `localization` | Also cited by `translation-pipeline` (activity-log messages). |
 | FR-I18N-1 | implemented | `add-ui-translation-workspace` | `localization` | |
 | FR-I18N-2 | implemented | `add-ui-translation-workspace` | `localization` | |
@@ -84,7 +84,7 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 | FR-NOTIF-6a | implemented | `add-ui-translation-workspace` | `translation-pipeline` | Activity-log entry kinds. |
 | FR-NOTIF-6b | implemented | `add-ui-translation-workspace` | `translation-pipeline` | Activity-log status roles. |
 | FR-RESUME-03 | implemented | `add-ui-translation-workspace` | `resume` | Pause and resume from the screen; also cited by `translation-pipeline`. |
-| FR-RESUME-05 | partial | `add-ui-translation-workspace` | `resume` | Stop is terminal and writes nothing; resuming a stopped run arrives with storage. Also cited by `translation-pipeline`. |
+| FR-RESUME-05 | implemented | `add-ui-translation-workspace` | `resume` | Stop is terminal; its decisions are kept in the project's database and a new run starts at the first pending segment, also after a restart (`RestartContinueE2eTest`). Also cited by `translation-pipeline`. |
 | FR-EXPORT-01 | implemented | `add-ui-translation-workspace` | `export` | The screen reports the finished file and shows it in the system file manager. |
 | FR-EXPORT-04 | implemented | `add-ui-translation-workspace` | `export` | The path is chosen on the Book Brief before the run starts; the export screen reports the file. |
 | FR-EXPORT-05 | shown-disabled | `add-ui-translation-workspace` | `export` | Auxiliary offering drawn on the export screen, unavailable. |
@@ -107,10 +107,7 @@ capabilities it introduced (`app-shell`, `book-brief`, `book-import`, `localizat
 
 These were left out on purpose and are ordered in `docs/implementation_plan/CHANGE_BACKLOG.md`:
 
-- The in-app language switch and the persisted `ui.language` setting (FR-UI-06 stays partial until then).
 - Source-language detection (the import screen shows the declared language only).
-- Resuming a run across a restart, and resuming a stopped run (FR-RESUME-05 stays partial); both need saved progress from
-  local storage.
 - Side files: the glossary, the bilingual copy and the quality report (FR-EXPORT-05, FR-EXPORT-06 stay shown-disabled).
 - Adding and editing a provider (the settings screen offers the two built-in local providers only).
 
@@ -221,9 +218,9 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-QA-04 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `document-round-trip`. |
 | FR-QA-05 | implemented | `complete-translation-workflow` | `quality-gates` |  |
 | FR-QA-07 | implemented | `complete-translation-workflow` | `quality-gates` |  |
-| FR-RESUME-02 | implemented | `complete-translation-workflow` | `resume` |  |
+| FR-RESUME-02 | implemented | `complete-translation-workflow` | `resume` | Also after a restart over SQLite; a stored running or paused run is shown as interrupted (`RestartContinueE2eTest`). |
 | FR-RESUME-03 | implemented | `complete-translation-workflow` | `resume` | Also cited by `translation-pipeline`. |
-| FR-RESUME-05 | partial | `complete-translation-workflow` | `resume` | A stopped run resumes within the session, from its first pending segment; resuming after a restart arrives with SQLite. Also cited by `translation-pipeline`. |
+| FR-RESUME-05 | implemented | `complete-translation-workflow` | `resume` | A stopped run resumes from its first pending segment, also after a restart over SQLite (`RestartContinueE2eTest`). Also cited by `translation-pipeline`. |
 | FR-REVIEW-01 | implemented | `complete-translation-workflow` | `review-queue` | Also cited by `resume`, `translation-pipeline`. |
 | FR-REVIEW-02 | implemented | `complete-translation-workflow` | `quality-gates` |  |
 | FR-REVIEW-03 | implemented | `complete-translation-workflow` | `review-queue` |  |
@@ -241,7 +238,10 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-REVIEW-X1 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-REVIEW-X2 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
-| FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` |  |
+| FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Generation: quality table, Thinking, Sampling and the fixed time limits (finalize 7.3). |
+| FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` | Theme and technical details stored; language after a restart (finalize 7.3). |
+| FR-SETTINGS-05 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Automation: when to stop and ask (next run start), default quality for new books, review desk, last-check default, keep awake, reopen last project (finalize 7.4). |
+| FR-SETTINGS-06 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Storage & logs: database folder and size, Open folder, Make a backup…, log folder, detailed-log switch (after a restart), Open log folder, diagnostic bundle (finalize 7.4). |
 | FR-THEME-10 | implemented | `complete-translation-workflow` | `notifications` |  |
 | FR-THEME-4 | implemented | `complete-translation-workflow` | `settings` |  |
 | FR-TRANS-05 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
@@ -249,7 +249,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-UI-03 | implemented | `complete-translation-workflow` | `app-shell` |  |
 | FR-UI-04 | implemented | `complete-translation-workflow` | `app-shell` |  |
 | FR-UI-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
-| NFR-PRIV-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Book text, prompts and replies are logged at TRACE only. Also cited by `app-shell`. |
+| NFR-PRIV-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Book text, prompts and replies are logged at TRACE only. Also cited by `app-shell`. The detailed log is switched on by Settings (marker `detailed-log.on`) or `BOOKLOOM_TRACE_FILE`; a backup is written only to a file the person picks and holds no key (finalize 7.4). |
 | NFR-PRIV-06 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | NFR-PRIV-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 
@@ -283,3 +283,37 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
   (`docs/proposals/2026-10-16-translation-pipeline-redesign.md`).
 - Numeral masking and an automatic model pre-scan of names (decided against, D-7); parallel cloud lanes (local inference
   is single-flight).
+
+## Requirements implemented by `finalize-ui-and-persistence`
+
+The Projects screen, the full Settings, SQLite storage, continue after a restart, the first-launch look and the words in English and Ukrainian. Rows for FR-SETTINGS-03, -05 and -06 stand in the table above. The `local-storage` capability is new: its spec is `openspec/specs/local-storage/spec.md`; the change itself is archived in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`.
+
+| Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |
+|---|---|---|---|---|
+| FR-THEME-4 | implemented | `finalize-ui-and-persistence` | `settings` | Accent fixed; the theme choice is stored (Settings › Appearance). |
+| FR-PROV-01 | implemented | `finalize-ui-and-persistence` | `settings` | Two local providers offered from first launch; one silent look at the two local addresses on the very first launch (ADR-0044). |
+| FR-PROV-04 | implemented | `finalize-ui-and-persistence` | `settings` | Providers are stored in SQLite and survive a restart (was partial). |
+| FR-MODEL-04 | implemented | `finalize-ui-and-persistence` | `settings` | The chosen model and its per-model settings are stored (was partial). |
+| FR-EXPORT-04 | implemented | `finalize-ui-and-persistence` | `export` | Export screen with the Save as path, early write, tiles from the project and a replace question. |
+| FR-REVIEW-05 | implemented | `finalize-ui-and-persistence` | `review-queue` | Review desk as an extra-large dialog with row markers, one main button and More; protected formatting marks in the editor. |
+| FR-UI-06 | implemented | `finalize-ui-and-persistence` | `localization` | Language stored as `ui.language`, applied after a restart with Restart now. |
+| FR-UI-15 | implemented | `finalize-ui-and-persistence` | `app-shell` | Projects screen grouped by book, with open, continue, rename, remove and translate-into-another-language. |
+| FR-PERSIST-01 | implemented | `finalize-ui-and-persistence` | `local-storage` | Projects, segments, glossary and translation memory in SQLite (WAL) from one schema file. |
+| FR-PERSIST-02 | implemented | `finalize-ui-and-persistence` | `local-storage` | A chunk's decisions and run record are one transaction. |
+| FR-PERSIST-03 | implemented | `finalize-ui-and-persistence` | `local-storage` | Database `bookloom.db` under the per-OS data folder. |
+| FR-PERSIST-04 | implemented | `finalize-ui-and-persistence` | `local-storage` | Single-instance lock held before the database opens. |
+| FR-PERSIST-05 | implemented | `finalize-ui-and-persistence` | `local-storage` | Secrets stay references; the database holds none. |
+| FR-PERSIST-06 | implemented | `finalize-ui-and-persistence` | `local-storage` | Development builds use the separate `-Dev` folders. |
+| FR-PERSIST-07 | implemented | `finalize-ui-and-persistence` | `local-storage` | Settings KV serialised with `Locale.ROOT`. |
+| FR-PERSIST-08 | implemented | `finalize-ui-and-persistence` | `local-storage` | `busy_timeout` and pragmas per connection; one writer (`WriteExecutor`). |
+| FR-PERSIST-09 | implemented | `finalize-ui-and-persistence` | `local-storage` | The provider sits in the project's document, so deleting a provider keeps projects. |
+| FR-PERSIST-10 | implemented | `finalize-ui-and-persistence` | `local-storage` | A file that cannot be opened is set aside as `bookloom.db.old-<time>`. |
+| FR-PERSIST-11 | implemented | `finalize-ui-and-persistence` | `local-storage` | A changed schema number or record-shape fingerprint sets the file aside (ADR-0043). |
+| FR-SETTINGS-01 | implemented | `finalize-ui-and-persistence` | `settings` | Settings, providers and per-model settings in their own SQLite stores. |
+| FR-SETTINGS-02 | implemented | `finalize-ui-and-persistence` | `settings` | Providers and Models tabs live. |
+| FR-SETTINGS-04 | implemented | `finalize-ui-and-persistence` | `settings` | Theme and technical details stored; language applies after a restart. |
+| FR-SETTINGS-07 | implemented | `finalize-ui-and-persistence` | `settings` | Every setting validated against its range. |
+| FR-SETTINGS-08 | implemented | `finalize-ui-and-persistence` | `settings` | Providers and Models change nothing until Save; pinned footer and leave guard. |
+| FR-RESUME-02 | implemented | `finalize-ui-and-persistence` | `resume` | Reopen the last project at launch; a run left running or paused shows as interrupted and continues at its first pending segment. |
+| FR-RESUME-03 | implemented | `finalize-ui-and-persistence` | `resume` | Pause and resume of a running job; reopen-last-project switch in Settings › Automation. |
+| FR-RESUME-05 | implemented | `finalize-ui-and-persistence` | `resume` | Stop is terminal; a new run starts at the first pending segment, also after a restart. |

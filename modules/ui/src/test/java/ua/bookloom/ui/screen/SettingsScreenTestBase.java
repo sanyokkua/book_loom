@@ -3,13 +3,18 @@ package ua.bookloom.ui.screen;
 import com.google.inject.Injector;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import org.testfx.util.WaitForAsyncUtils;
@@ -20,12 +25,15 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.ProviderReports;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -40,12 +48,23 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
     /** Lists no models until a test scripts it; script it before {@link #openSettings()}, which asks it. */
     final ScriptedModelCatalog catalog = ScriptedModelCatalog.idle();
 
+    /** The registry behind the window; counts the saves that reached it and the calls made on the FX thread. */
+    final FakeProviderConfigs configs = new FakeProviderConfigs();
+
     @Override
     protected final Injector createInjector(final Locale locale) {
-        return UiTestInjector.builder(locale)
+        final UiTestInjector.Builder builder = UiTestInjector.builder(locale)
                 .verifier(verifier)
                 .catalog(catalog)
-                .build();
+                .configs(configs)
+                .environment(Set.of("OFFICE_KEY", "HOME_API_KEY"));
+        customize(builder);
+        return builder.build();
+    }
+
+    /** Lets a test class add its own collaborators (a clipboard, a project service) to the graph. */
+    void customize(final UiTestInjector.Builder builder) {
+        // the plain graph is what most settings tests want
     }
 
     void openSettings() {
@@ -65,8 +84,54 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
         return (Label) required("settings-model-refusal");
     }
 
+    ProviderForm form() {
+        return injector.getInstance(ProviderForm.class);
+    }
+
+    Button button(final String id) {
+        return (Button) required(id);
+    }
+
+    TextField field(final String id) {
+        return (TextField) required(id);
+    }
+
+    TitledPane fold() {
+        return (TitledPane) required("settings-connection");
+    }
+
+    /** Whether the node with this id is visible and takes part in layout; read on the FX thread. */
+    boolean isShown(final String id) {
+        return ThemeTestSupport.onFx(() -> {
+            final Node node = scene.getRoot().lookup("#" + id);
+            return node != null && node.isVisible() && node.isManaged();
+        });
+    }
+
+    String text(final String id) {
+        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+    }
+
+    /** Types into a form field the way the control's own listener sees it: the text changes on the FX thread. */
+    void setField(final String id, final String text) {
+        onFx(() -> field(id).setText(text));
+    }
+
+    /** Presses Save and waits until storage has answered and the list has been read again. */
+    void save() throws TimeoutException {
+        onFx(() -> button("settings-form-save").fire());
+        awaitFx(() -> !form().saving().get());
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Opens the connection details, so the controls in them can be focused and typed into. */
+    void openFold() {
+        onFx(() -> form().openFoldAt(ProviderForm.Spot.MODEL));
+    }
+
     /** Types {@code text} into the model entry with real key events, the way a person would, without committing it. */
     void typeIntoModelEntry(final String text) {
+        openFold();
         interact(() -> modelCombo().getEditor().requestFocus());
         write(text);
         WaitForAsyncUtils.waitForFxEvents();
@@ -103,12 +168,13 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
         return (TabPane) required("settings-tabs");
     }
 
-    Pane chips() {
-        return (Pane) required("settings-chips");
+    Pane checksGrid() {
+        return (Pane) required("settings-checks-grid");
     }
 
-    Labeled chip(final String stage) {
-        return (Labeled) required("chip-" + stage);
+    /** The sentence a stage's result row reads. */
+    Labeled result(final String stage) {
+        return (Labeled) required("check-result-" + stage);
     }
 
     static AppError discoveryFailed() {
@@ -136,13 +202,15 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
     void checkWithReport(final Result<VerificationReport> report) throws TimeoutException {
         verifier.respondWith(report);
         onFx(() -> {
-            viewModel().model().set(MODEL);
+            viewModel().draftModel().set(MODEL);
             viewModel().tests().run(ProviderTest.INFERENCE);
         });
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> ThemeTestSupport.onFx(() -> chips().getChildren().size()) == 3);
-        onFx(() -> {});
+        awaitFx(() -> !viewModel().tests().checking().get()
+                && viewModel().tests().stages().size() == 3);
+    }
+
+    /** A report in which all three stages passed and each kept the request it sent. */
+    static Result<VerificationReport> allPassedWithExchanges() {
+        return ProviderReports.allPassedWithExchanges();
     }
 }

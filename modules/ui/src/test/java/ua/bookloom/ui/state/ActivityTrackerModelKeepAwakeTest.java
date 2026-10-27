@@ -37,7 +37,7 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
     };
 
     private ActivityTracker tracker() {
-        return onFx(() -> new ActivityTracker(mirror, keepAwake, clock));
+        return onFx(() -> new ActivityTracker(mirror, keepAwake, new KeepAwakeGate(), clock));
     }
 
     // IF the lock were taken only for the run, THEN a ten-minute names pass would let the machine sleep mid-scan.

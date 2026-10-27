@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.concurrent.TimeoutException;
 import javafx.geometry.Bounds;
-import javafx.scene.Node;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -43,24 +41,5 @@ class ImportScreenScrollTest extends ImportScreenTestBase {
 
         assertThat(titleBar.getMinY()).isZero();
         assertThat(ThemeTestSupport.onFx(shellRoot::getHeight)).isLessThanOrEqualTo(scene.getHeight());
-    }
-
-    // IF the screen were not the scroll container itself, THEN a person in a short window could never reach the
-    // Continue control below the fold.
-    @Test
-    void screen_fullCard_scrollsVerticallyWithNoHorizontalBar() throws TimeoutException {
-        openFullCard();
-
-        final Node screen = required("import-screen");
-        assertThat(screen).isInstanceOf(ScrollPane.class);
-        final ScrollPane pane = (ScrollPane) screen;
-        final double contentHeight =
-                ThemeTestSupport.onFx(() -> pane.getContent().getLayoutBounds().getHeight());
-        final double viewportHeight =
-                ThemeTestSupport.onFx(() -> pane.getViewportBounds().getHeight());
-
-        assertThat(contentHeight).isGreaterThan(viewportHeight);
-        assertThat(pane.getHbarPolicy()).isEqualTo(ScrollPane.ScrollBarPolicy.NEVER);
-        assertThat(pane.isFitToWidth()).isTrue();
     }
 }

@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -95,6 +96,7 @@ final class GlossaryModelRuns {
     private final RunProgress runProgress;
     private @Nullable Future<?> running;
     private ActivityTracker.@Nullable Handle handle;
+    private @Nullable ActionSteps steps;
     private long ticket;
     // The ticket of an automatic pass that was stopped, whose late answer is still shown (see lateAfterStop).
     private long stoppedPass = NO_TICKET;
@@ -219,6 +221,7 @@ final class GlossaryModelRuns {
         running = null;
         stoppedPass = operation == ChangeOperation.AUTO_NAMES ? ticket : NO_TICKET;
         ticket++;
+        steps = null;
         endActivity();
         busy.set(false);
         line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.NAMES_STYLE_MODEL_STOPPED));
@@ -264,6 +267,9 @@ final class GlossaryModelRuns {
         stoppedPass = NO_TICKET;
         reset(which);
         handle = screen.activities().begin(what, this::stop);
+        steps = what == ActivityKind.NAMES_PASS
+                ? null
+                : ActionSteps.begin(handle, screen.messages().get(what.label()));
         runProgress.begin(new CallFeed(handle, screen.activities()::now));
         busy.set(true);
         screen.notice().set(null);
@@ -306,9 +312,10 @@ final class GlossaryModelRuns {
             return;
         }
         running = null;
-        endActivity();
-        busy.set(false);
         final AppError failure = answer.error();
+        finishSteps(failure == null);
+        screen.changes().ended(endActivity());
+        busy.set(false);
         log.info("model {} ended ok={} requests={}", what, failure == null, runProgress.requests());
         if (!project.equals(screen.project().get()) || (failure != null && failure.code() == ErrorCode.cancelled)) {
             log.debug(
@@ -320,7 +327,7 @@ final class GlossaryModelRuns {
         }
         if (failure != null) {
             log.warn("the model {} failed with {}", what, failure.code());
-            line(GlossaryNotice.Level.ERROR, failure.message());
+            line(GlossaryNotice.Level.ERROR, ErrorWords.message(screen.messages(), failure));
             answers.reloadTerms(operation, termsBefore, false);
             return;
         }
@@ -360,12 +367,28 @@ final class GlossaryModelRuns {
         runProgress.accept(event, handle);
     }
 
-    private void endActivity() {
+    private void finishSteps(final boolean ok) {
+        final ActionSteps announced = steps;
+        steps = null;
+        if (announced == null) {
+            return;
+        }
+        if (ok) {
+            announced.written(runProgress.requests() > 0);
+        } else {
+            announced.failed();
+        }
+    }
+
+    // What the activity showed is read before it goes, for the results of the operation.
+    private RunEnd endActivity() {
         final ActivityTracker.Handle registered = handle;
         handle = null;
+        final RunEnd shown = RunEnd.of(screen.activities(), registered);
         if (registered != null) {
             registered.end();
         }
+        return shown;
     }
 
     private void line(final GlossaryNotice.Level level, final String text) {

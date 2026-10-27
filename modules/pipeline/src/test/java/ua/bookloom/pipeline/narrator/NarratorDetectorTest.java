@@ -13,7 +13,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.NarratorHint;
@@ -164,10 +163,47 @@ class NarratorDetectorTest {
     }
 
     @ParameterizedTest
-    @NullSource
     @ValueSource(strings = {"es", "xx", "pl"})
     void detect_languageWithoutPronounData_hasNoAnswer(final String language) {
         assertThat(NarratorDetector.detect(List.of(FIRST_PERSON), language)).isEmpty();
+    }
+
+    // IF a book with Auto as its source and no declared language were left unjudged, THEN Start would never ask who
+    // narrates a first-person story; the text is read with every language that names its first-person pronoun.
+    @Test
+    void detect_unknownLanguageEnglishToldAsI_isFirstPerson() {
+        final NarratorHint hint = NarratorDetector.detect(List.of(FIRST_PERSON, FIRST_PERSON), null)
+                .orElseThrow();
+
+        assertThat(hint.person()).isEqualTo(Person.FIRST);
+        assertThat(hint.chapters()).containsExactly(1, 2);
+    }
+
+    @Test
+    void detect_unknownLanguageUkrainianToldAsI_isFirstPerson() {
+        final List<String> first = List.of(
+                "Я повернувся додому пізно ввечері. Я не озирався.",
+                "Вулиця була порожня, і я рахував ліхтарі, коли проходив повз них.",
+                "Я залишив листа на столі. Я знав, що пошкодую про це.",
+                "Коли я дійшов до брами, я зупинився й довго слухав.");
+
+        assertThat(NarratorDetector.detect(List.of(first), null).orElseThrow().person())
+                .isEqualTo(Person.FIRST);
+    }
+
+    @Test
+    void detect_unknownLanguageThirdPersonSpeakingI_isThirdPerson() {
+        final NarratorHint hint = NarratorDetector.detect(List.of(THIRD_PERSON, THIRD_PERSON_SPEAKING_I), null)
+                .orElseThrow();
+
+        assertThat(hint.person()).isEqualTo(Person.THIRD);
+        assertThat(hint.firstPersonShare()).isZero();
+    }
+
+    @Test
+    void detect_unknownLanguageNothingToJudge_hasNoAnswer() {
+        assertThat(NarratorDetector.detect(List.of(List.of("I ran. I hid.")), null))
+                .isEmpty();
     }
 
     @Test

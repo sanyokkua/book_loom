@@ -42,6 +42,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
@@ -183,14 +184,6 @@ class OpenAiCompatibleClientTest {
                 """);
 
         assertChatError(messageOnlyRequest(), ErrorCode.emptyCompletion);
-    }
-
-    @ParameterizedTest
-    @MethodSource("malformedChatBodies")
-    void chat_malformedResponse_returnsInternal(String body) {
-        stubChatStatus(200, body);
-
-        assertChatError(messageOnlyRequest(), ErrorCode.internal);
     }
 
     @ParameterizedTest
@@ -360,17 +353,7 @@ class OpenAiCompatibleClientTest {
                         new ChatMessage(ChatRole.ASSISTANT, "prior")),
                 0.2,
                 new ResponseFormat("draft", SCHEMA),
-                false);
-    }
-
-    private static Stream<String> malformedChatBodies() {
-        return Stream.of(
-                "not-json",
-                "<html>proxy error</html>",
-                "null",
-                "{}",
-                "{\"choices\":[]}",
-                "{\"choices\":[{\"message\":{}}]}");
+                ReasoningLevel.OFF);
     }
 
     private static Stream<String> invalidSchemas() {

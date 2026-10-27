@@ -35,7 +35,7 @@ a locally-run LLM. Use this skill to find the right place fast and load the righ
 | `:document` | EPUB/FB2/MD/TXT parse -> skeleton+segments, masking, reassembly, round-trip; impl `DocumentPort` | `ua.bookloom.document` |
 | `:llm` | `ChatModel`+`ChatModelFactory`, `ProviderConfig`+`ProviderKind` (`:api`, `ua.bookloom.api.llm`); the internal per-dialect `ProviderClient`+`ProviderClientFactory` seam (Ollama-native, OpenAI-compatible), model discovery (`ModelCatalog`), inference, `InferenceGate`, retry, HTTP->`AppError`, verification (`ProviderVerifier`) | `ua.bookloom.llm` |
 | `:pipeline` | translation engine — packages `prompt`, `chunk`, `dial`, `qa`, `judge`, `heal`, `project`: prompt templates, chunk packing, the quality dial's parameters, deterministic QA checks + refusal gate + confidence, per-chunk judge, self-heal (directed fix, reflect→improve, polish), the stored-project service; impl `TranslationEngine` | `ua.bookloom.pipeline` |
-| `:persistence` | in-memory repository adapters (`ua.bookloom.persistence.memory`, ADR-0034) behind the `:api` storage ports (project/segment/glossary/TM/summary/deferral/run/checkpoint) — nothing survives a restart today; SQLite (Flyway, JDBI, WAL + per-connection pragmas, single-writer), settings KV, and secret refs are the planned adapter | `ua.bookloom.persistence` |
+| `:persistence` | in-memory repository adapters (`ua.bookloom.persistence.memory`, ADR-0034) behind the `:api` storage ports (project/segment/glossary/TM/summary/deferral/run/checkpoint) for the command line and tests; the window binds SQLite adapters (ADR-0043: JDBI, WAL + per-connection pragmas, single-writer, JSON documents, settings KV, env-var-name secret refs; Flyway only from the first release) | `ua.bookloom.persistence` |
 | `:ui` | JavaFX FXML views + controllers, viewmodels, state mirror, theming, i18n | `ua.bookloom.ui` |
 | `:app` | `Launcher` (paths-first bootstrap + single-instance `bookloom.lock`, acquired pre-injector with `:util`; second launch = "already running" dialog + exit), `Application`, Guice composition root, two-phase init | `ua.bookloom.app` |
 
@@ -86,7 +86,7 @@ sweep); and `./gradlew liveLocal | promptEval | visual` (local-only tagged sets,
 FX-free core (only `:ui`/`:app` touch JavaFX) · skeleton never semantically regenerated —
 translate text nodes only; round-trip is structure-and-text-preserving canonical-equal, not
 canonical-equal round trip (DD-43) · offline (the only outbound calls are user-triggered provider
-communication — inference, model discovery, verification — to the configured provider) ·
+communication — inference, model discovery, verification — to the configured provider, plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered) ·
 credentials-as-reference (never store the secret) · single-flight `InferenceGate` ·
 records-first · token-only theming · `Result`/`AppError` envelope everywhere · every
 requirement has a covering test whose name and comment say what it proves ·

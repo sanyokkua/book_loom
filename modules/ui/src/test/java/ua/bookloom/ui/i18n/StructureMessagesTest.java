@@ -18,8 +18,8 @@ class StructureMessagesTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "1|1 segment exceeds the chunk budget — it will be split by sentence and re-joined.",
-                "2|2 segments exceed the chunk budget — they will be split by sentence and re-joined.",
+                "1|1 segment exceeds the group budget — it will be split by sentence and re-joined.",
+                "2|2 segments exceed the group budget — they will be split by sentence and re-joined.",
             })
     void oversized_english_selectsTheFormOfTheCount(final int count, final String expected) {
         assertThat(messagesFor("en").get(MessageKey.STRUCTURE_CHECK_OVERSIZED, count))
@@ -31,9 +31,9 @@ class StructureMessagesTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "1|1 сегмент перевищує бюджет чанка — його буде розбито за реченнями й зібрано назад.",
-                "3|3 сегменти перевищують бюджет чанка — їх буде розбито за реченнями й зібрано назад.",
-                "5|5 сегментів перевищують бюджет чанка — їх буде розбито за реченнями й зібрано назад.",
+                "1|1 сегмент перевищує бюджет блоку — його буде розбито за реченнями й зібрано назад.",
+                "3|3 сегменти перевищують бюджет блоку — їх буде розбито за реченнями й зібрано назад.",
+                "5|5 сегментів перевищують бюджет блоку — їх буде розбито за реченнями й зібрано назад.",
             })
     void oversized_ukrainian_selectsOneFewAndManyForms(final int count, final String expected) {
         assertThat(messagesFor("uk").get(MessageKey.STRUCTURE_CHECK_OVERSIZED, count))

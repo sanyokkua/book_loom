@@ -51,7 +51,7 @@ class BookExporterValidationTest {
             throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.\n\nThree.");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = tempDir.resolve(".Book.uk.md");
+        final Path temporary = tempDir.resolve(".bookloom-0-Book.uk.md");
         final Document decided = snapshot(documents, source);
         final CountMismatchPort port = new CountMismatchPort(documents, temporary::equals);
 
@@ -73,7 +73,7 @@ class BookExporterValidationTest {
     void export_temporaryReopenFails_propagatesErrorReleasesSourceAndCleansTemporary() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Hello.");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = tempDir.resolve(".Book.uk.md");
+        final Path temporary = tempDir.resolve(".bookloom-0-Book.uk.md");
         final Document decided = snapshot(documents, source);
         final AppError reopenFailure = error(ErrorCode.validation, null);
         final TemporaryOpenFailurePort port = new TemporaryOpenFailurePort(documents, temporary::equals, reopenFailure);
@@ -95,7 +95,7 @@ class BookExporterValidationTest {
     void export_temporaryReopenAndSourceCloseFail_preservesReopenError() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Hello.");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = tempDir.resolve(".Book.uk.md");
+        final Path temporary = tempDir.resolve(".bookloom-0-Book.uk.md");
         final Document decided = snapshot(documents, source);
         final AppError reopenFailure = error(ErrorCode.validation, null);
         final TemporaryOpenFailurePort reopenPort =
@@ -112,12 +112,13 @@ class BookExporterValidationTest {
         assertThat(Files.exists(temporary)).isFalse();
     }
 
-    // A source-open port failure is propagated unchanged and a stale non-colliding temporary entry is removed.
+    // A source-open port failure is propagated unchanged; a hidden file of the old temporary name is the person's and
+    // stays, while the temporary this export created is removed.
     @Test
-    void export_sourceOpenFails_preservesPortErrorAndCleansTemporary() throws Exception {
+    void export_sourceOpenFails_preservesPortErrorKeepsAnUnrelatedHiddenFileAndCleansItsTemporary() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Hello.");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = Files.writeString(tempDir.resolve(".Book.uk.md"), "STALE TEMPORARY");
+        final Path hidden = Files.writeString(tempDir.resolve(".Book.uk.md"), "SOMEONE'S HIDDEN FILE");
         final Document decided = snapshot(documents, source);
         final AppError openFailure = error(ErrorCode.validation, null);
 
@@ -126,7 +127,8 @@ class BookExporterValidationTest {
 
         assertThat(result.error()).isSameAs(openFailure);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(temporary)).isFalse();
+        assertThat(Files.readString(hidden)).isEqualTo("SOMEONE'S HIDDEN FILE");
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // A changed source is detected by its content hash before any temporary or destination write.
@@ -143,7 +145,7 @@ class BookExporterValidationTest {
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
         assertThat(port.writtenDocuments()).isEmpty();
         assertThat(port.openedDocuments()).singleElement().satisfies(document -> {
             assertThat(port.closedDocuments()).containsExactly(document);
@@ -151,9 +153,9 @@ class BookExporterValidationTest {
         });
     }
 
-    // A missing destination folder lets the real writer classify the failure and leaves no output behind.
+    // IF a missing folder read as an unexpected defect, THEN the person would not learn to create it or choose another.
     @Test
-    void export_destinationDirectoryDeleted_propagatesWriteErrorAndLeavesNothing() {
+    void export_destinationDirectoryDeleted_isAFolderMissingFailureAndLeavesNothing() {
         final Path sourceDir = tempDir.resolve("source");
         final Path destinationDir = tempDir.resolve("destination");
         assertThat(sourceDir.toFile().mkdir()).isTrue();
@@ -167,14 +169,11 @@ class BookExporterValidationTest {
         final Result<Path> result =
                 new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
-        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(errorOf(result).details()).isEqualTo("reason=folder-missing, folder=destination");
         assertThat(errorOf(result).cause()).isNotNull();
         assertThat(Files.exists(destination)).isFalse();
-        assertThat(Files.exists(destinationDir.resolve(".Book.uk.md"))).isFalse();
-        assertThat(port.openedDocuments()).singleElement().satisfies(document -> {
-            assertThat(port.closedDocuments()).containsExactly(document);
-            assertThat(documents.close(document).data()).isFalse();
-        });
+        assertThat(port.openedDocuments()).isEmpty();
     }
 
     // Cancellation observes both books already closed; the same accepted EPUB snapshot then retries without mutation.
@@ -225,7 +224,7 @@ class BookExporterValidationTest {
             throws Exception {
         assertThat(errorOf(cancelled).code()).isEqualTo(ErrorCode.cancelled);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.epub"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.epub"))).isFalse();
         assertThat(port.openedDocuments()).extracting(Document::id).doesNotContain(decided.id());
         assertThat(port.writtenDocuments())
                 .singleElement()
@@ -255,7 +254,7 @@ class BookExporterValidationTest {
         assertThat(zipEntry(destination, "OEBPS/content.opf"))
                 .contains("<dc:language>uk</dc:language>")
                 .doesNotContain("<dc:language>en</dc:language>");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.epub"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.epub"))).isFalse();
     }
 
     private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {

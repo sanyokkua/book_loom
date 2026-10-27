@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
@@ -24,6 +25,9 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
 
     private static final long WAIT_SECONDS = 10;
 
+    /** One check of a description that is not saved: the description, the model asked about and the depth. */
+    public record DraftCall(ProviderConfig config, String modelId, VerificationPolicy policy) {}
+
     private volatile @Nullable Result<VerificationReport> answer;
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
@@ -32,6 +36,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     private final List<ModelSelection> selections = new CopyOnWriteArrayList<>();
     private final List<VerificationPolicy> policies = new CopyOnWriteArrayList<>();
     private final List<String> connectionCalls = new CopyOnWriteArrayList<>();
+    private final List<DraftCall> drafts = new CopyOnWriteArrayList<>();
     private final AtomicInteger calls = new AtomicInteger();
 
     private ScriptedProviderVerifier(final @Nullable Result<VerificationReport> answer) {
@@ -89,6 +94,19 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     public Result<VerificationReport> verify(final ModelSelection selection, final VerificationPolicy policy) {
         final CountDownLatch held = gate;
         selections.add(selection);
+        policies.add(policy);
+        calls.incrementAndGet();
+        entered.countDown();
+        return answer(held);
+    }
+
+    /** Records the description (and, like {@code verify}, the selection and policy) and answers as {@code verify} does. */
+    @Override
+    public Result<VerificationReport> verify(
+            final ProviderConfig draft, final String modelId, final VerificationPolicy policy) {
+        final CountDownLatch held = gate;
+        drafts.add(new DraftCall(draft, modelId, policy));
+        selections.add(new ModelSelection(draft.id(), modelId));
         policies.add(policy);
         calls.incrementAndGet();
         entered.countDown();
@@ -162,6 +180,11 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     /** The provider ids of every connection-only call, kept apart from {@link #selections()}. */
     public List<String> connectionCalls() {
         return List.copyOf(connectionCalls);
+    }
+
+    /** Every check of a description that was not saved, oldest first. */
+    public List<DraftCall> drafts() {
+        return List.copyOf(drafts);
     }
 
     public List<VerificationPolicy> policies() {

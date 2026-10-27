@@ -99,7 +99,7 @@ Path resolution is a hard prerequisite for logging and persistence, so it runs f
 4. Acquire the single-instance lock (`dataDir/bookloom.lock`) — fail fast before touching the DB.
 5. Initialize logging: publish the log dir (e.g. set the `LOG_DIR` property or configure Logback programmatically)
    **before the first `LoggerFactory.getLogger(...)` call**, then start the rolling file appender.
-6. Open SQLite (`dataDir/bookloom.db`, WAL) and run Flyway.
+6. Open SQLite (`dataDir/bookloom.db`, WAL) and create the schema (Flyway migrations arrive with the first release, ADR-0043).
 7. Launch the JavaFX UI.
 
 No class-level static logger in the bootstrap path may fire before step 5, or Logback pins to a wrong/default path.

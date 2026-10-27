@@ -45,6 +45,8 @@ class TaggedLogFollowTest extends TranslatingScreenTestBase {
         mirror().publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
         showTranslating();
+        publish(ua.bookloom.ui.state.RunState.RUNNING);
+        openActivityLog();
         publishLines(0, LINES);
     }
 

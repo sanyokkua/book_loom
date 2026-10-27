@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -98,7 +99,7 @@ class SetupAssistantSynthesisRequestTest {
         assertThat(request.temperature()).isEqualTo(0.0);
         assertThat(request.expectedOutputTokens()).isEqualTo(160);
         assertThat(request.maxOutputTokens()).isEqualTo(320);
-        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
     }
 
     // IF the synthesis call were not announced, THEN the busy card would show the windows and then nothing.

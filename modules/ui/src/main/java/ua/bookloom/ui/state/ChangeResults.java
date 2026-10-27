@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -66,6 +67,9 @@ public final class ChangeResults {
     private final List<String> untargeted;
     private final Map<Long, Reversal> reversals = new HashMap<>();
     private final LiveCalls calls;
+    private final StepLog steps;
+    private final Duration elapsed;
+    private final boolean endedHidden;
     private final ObservableSet<Long> reverted = FXCollections.observableSet();
     // One view for every caller: a listener on a view built per call would be dropped with it.
     private final ObservableSet<Long> revertedView = FXCollections.unmodifiableObservableSet(reverted);
@@ -101,6 +105,33 @@ public final class ChangeResults {
             final List<Item> items,
             final LiveCalls calls,
             final List<String> untargeted) {
+        this(operation, stopped, items, calls, untargeted, StepLog.EMPTY, Duration.ZERO, false);
+    }
+
+    /**
+     * Creates the results of an operation with the steps it announced and the time it took.
+     *
+     * @param operation what ran
+     * @param stopped whether the person stopped it
+     * @param items the rows with their reversals, in the order the dialog lists them
+     * @param calls the model calls the operation made
+     * @param untargeted the terms still without a target, listed for the person to give; never null
+     * @param steps the steps the operation announced, for the Steps tab
+     * @param elapsed how long it ran by the activity tracker's clock, pauses included
+     * @param endedHidden whether its dialog was in the background when it ended, so its results open only on request
+     */
+    public ChangeResults(
+            final ChangeOperation operation,
+            final boolean stopped,
+            final List<Item> items,
+            final LiveCalls calls,
+            final List<String> untargeted,
+            final StepLog steps,
+            final Duration elapsed,
+            final boolean endedHidden) {
+        this.steps = Objects.requireNonNull(steps, "steps");
+        this.elapsed = Objects.requireNonNull(elapsed, "elapsed");
+        this.endedHidden = endedHidden;
         this.untargeted = List.copyOf(Objects.requireNonNull(untargeted, "untargeted"));
         this.operation = Objects.requireNonNull(operation, "operation");
         this.stopped = stopped;
@@ -165,6 +196,33 @@ public final class ChangeResults {
      */
     public LiveCalls calls() {
         return calls;
+    }
+
+    /**
+     * The steps the operation announced.
+     *
+     * @return the log; empty for an operation that announced none
+     */
+    public StepLog steps() {
+        return steps;
+    }
+
+    /**
+     * How long the operation ran.
+     *
+     * @return the time by the tracker's clock; zero when unknown
+     */
+    public Duration elapsed() {
+        return elapsed;
+    }
+
+    /**
+     * Whether the operation's dialog was in the background when it ended.
+     *
+     * @return {@code true} when its results open only on request, {@code false} when they open at once
+     */
+    public boolean endedHidden() {
+        return endedHidden;
     }
 
     /**

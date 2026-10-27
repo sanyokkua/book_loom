@@ -1,11 +1,11 @@
 package ua.bookloom.ui.state;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import javafx.application.Platform;
@@ -25,19 +25,21 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.ErrorWords;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.notify.Toasts;
 
 /**
- * Runs the three provider tests for whatever provider and model the settings view model has selected, and holds the
- * findings of the last one.
+ * Runs the three provider tests against what the Providers form holds — the description as typed, saved or not — and
+ * holds the findings of the last one. Nothing is registered or stored for a test, except the seconds per segment a
+ * passing inference test of a saved provider measured.
  *
  * <p>A test is a plain submission to the background executor, not a JavaFX {@code Task}: the verifier reports failure
  * by <em>returning</em> it, so {@code Task.setOnFailed} would never fire (D12 of the workspace design). Everything that
@@ -45,19 +47,22 @@ import ua.bookloom.ui.notify.Toasts;
  *
  * <p>A test is registered with the {@link ActivityTracker} while it runs — the inference test as model work that no
  * other model work may overlap, the two light tests as provider checks that may run during a run — and is cancelled,
- * its request interrupted, when the provider or the model changes or the title bar's Stop is pressed.
+ * its request interrupted, when anything the server would see differently changes (a name does not) or the title bar's
+ * Stop is pressed.
  */
 @Slf4j
 public final class ProviderTestRunner {
 
     private final ProviderVerifier verifier;
-    private final Toasts toasts;
     private final ErrorPresenter errors;
+    private final Messages messages;
     private final ExecutorService executor;
-    private final ReadOnlyStringProperty providerId;
-    private final ReadOnlyStringProperty model;
+    private final ReadOnlyObjectProperty<Optional<TestSubject>> subject;
+    private final ModelSpeedRecorder speeds;
+    private final StructuredAnswers structured;
     private final ReadOnlyBooleanWrapper checking = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper checkRefusal = new ReadOnlyStringWrapper("");
+    private final ReadOnlyObjectWrapper<@Nullable ProviderTest> running = new ReadOnlyObjectWrapper<>();
     private final Map<ProviderTest, BooleanBinding> availability = new EnumMap<>(ProviderTest.class);
     private final ObservableList<StageChip> stages = FXCollections.observableArrayList();
     private final ObservableList<StageChip> stagesView = FXCollections.unmodifiableObservableList(stages);
@@ -77,39 +82,46 @@ public final class ProviderTestRunner {
      * Starts idle, and drops whatever is in flight or on show when the provider or the model changes.
      *
      * @param verifier the port a test is run through
-     * @param toasts where a fully passed test is announced
      * @param errors where a refusal of the whole test is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
-     * @param providerId the selected provider's id; read when a test is asked for, observed for changes
-     * @param model the chosen model text, blank while none is chosen; observed for changes
+     * @param subject what a test is run against: the description in the form, saved or not, and the model typed
+     *     for it; empty while the form holds something the rules refuse. Observed for changes
      * @param activities the work under way, which decides whether the inference test may start
+     * @param speeds where a speed measured by a passing inference test of a saved provider is kept
+     * @param structured where whether the model answered in the structured form is kept for the session
+     * @param messages the catalogue a refusal shown in place is worded from
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
-            final Toasts toasts,
             final ErrorPresenter errors,
             final ExecutorService executor,
-            final ReadOnlyStringProperty providerId,
-            final ReadOnlyStringProperty model,
-            final ActivityTracker activities) {
+            final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
+            final ActivityTracker activities,
+            final ModelSpeedRecorder speeds,
+            final StructuredAnswers structured,
+            final Messages messages) {
+        this.messages = Objects.requireNonNull(messages, "messages");
         this.verifier = Objects.requireNonNull(verifier, "verifier");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
-        this.providerId = Objects.requireNonNull(providerId, "providerId");
-        this.model = Objects.requireNonNull(model, "model");
+        this.subject = Objects.requireNonNull(subject, "subject");
         this.activities = Objects.requireNonNull(activities, "activities");
+        this.speeds = Objects.requireNonNull(speeds, "speeds");
+        this.structured = Objects.requireNonNull(structured, "structured");
         this.inferenceBlocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
         for (final ProviderTest test : ProviderTest.values()) {
             availability.put(
                     test,
-                    Bindings.createBooleanBinding(
-                            () -> canStart(test), this.providerId, this.model, checking, inferenceBlocker));
+                    Bindings.createBooleanBinding(() -> canStart(test), this.subject, checking, inferenceBlocker));
         }
         inferenceBlocker.addListener(observed -> refreshBlocked());
         checking.addListener(observed -> refreshBlocked());
-        this.providerId.addListener((observed, was, now) -> invalidate("the provider changed"));
-        this.model.addListener((observed, was, now) -> invalidate("the model changed"));
+        checking.addListener((observed, was, now) -> {
+            if (!now) {
+                running.set(null);
+            }
+        });
+        this.subject.addListener((observed, was, now) -> onSubjectChanged(was, now));
     }
 
     /**
@@ -122,8 +134,17 @@ public final class ProviderTestRunner {
     }
 
     /**
+     * The test whose report has not arrived yet.
+     *
+     * @return a read-only property holding {@code null} while no test is running
+     */
+    public ReadOnlyObjectProperty<@Nullable ProviderTest> running() {
+        return running.getReadOnlyProperty();
+    }
+
+    /**
      * Whether a test may be started now: none is running, a provider is selected, and a model is chosen when the test
-     * asks about one.
+     * needs one.
      *
      * @param test the test to ask about
      * @return a value that follows the model, the provider and the in-progress mark
@@ -162,37 +183,57 @@ public final class ProviderTestRunner {
     }
 
     /**
-     * Starts a test against the selected provider (and the chosen model, for a test that asks about one). Does
-     * nothing while a test is running or a needed choice is missing. Returns at once; the report arrives on the FX
+     * Starts a test against the form's description (and its model, for a test that asks about one). Does nothing
+     * while a test is running, the form holds something the rules refuse, or a needed choice is missing. Returns at once; the report arrives on the FX
      * thread. FX thread only.
      *
      * @param test which test to run
+     * @return {@code true} if the test started, {@code false} if it was refused
      */
-    public void run(final ProviderTest test) {
+    public boolean run(final ProviderTest test) {
         Objects.requireNonNull(test, "test");
-        final String chosenModel = model.get().strip();
-        log.debug("provider test {} pressed: provider '{}', model '{}'", test, providerId.get(), chosenModel);
+        log.debug(
+                "provider test {} pressed: subject present {}",
+                test,
+                subject.get().isPresent());
         if (!canStart(test)) {
             log.debug(
                     "provider test {} refused: running {}, a model is needed {}",
                     test,
                     checking.get(),
                     test.needsModel());
-            return;
+            return false;
         }
-        log.info("provider test starting: {} on provider {}", test, providerId.get());
+        final TestSubject target = subject.get().orElseThrow();
+        log.info(
+                "provider test starting: {} on provider {}",
+                test,
+                target.config().id());
         stages.clear();
         checkRefusal.set("");
         checkEpoch++;
+        running.set(test);
         checking.set(true);
         handle = activities.begin(kindOf(test), () -> invalidate("stopped by the person"));
-        submit(test, providerId.get(), chosenModel, checkEpoch);
+        submit(test, target, checkEpoch);
+        return true;
+    }
+
+    // A name is only a label: results stay for it. Anything the server would see differently makes them stale.
+    private void onSubjectChanged(final Optional<TestSubject> was, final Optional<TestSubject> now) {
+        final Optional<TestSubject.Key> before = was.map(TestSubject::key);
+        if (before.equals(now.map(TestSubject::key))) {
+            log.trace("the test subject changed in its name only: results stay");
+        } else {
+            invalidate("the provider or the model changed");
+        }
     }
 
     private boolean canStart(final ProviderTest test) {
+        final Optional<TestSubject> target = subject.get();
         return !checking.get()
-                && !providerId.get().isEmpty()
-                && (!test.needsModel() || !model.get().isBlank())
+                && target.isPresent()
+                && (!test.needsModel() || !target.get().model().isBlank())
                 && activities.conflictFor(kindOf(test)).isEmpty();
     }
 
@@ -228,32 +269,31 @@ public final class ProviderTestRunner {
         }
     }
 
-    private void submit(final ProviderTest test, final String provider, final String chosenModel, final long epoch) {
+    private void submit(final ProviderTest test, final TestSubject target, final long epoch) {
         try {
-            inFlight = executor.submit(() -> verifyOffThread(test, provider, chosenModel, epoch));
+            inFlight = executor.submit(() -> verifyOffThread(test, target, epoch));
         } catch (RuntimeException rejected) {
             log.error("the provider test could not be submitted", rejected);
-            publish(test, epoch, Result.err(internalError(rejected)));
+            publish(test, target, epoch, Result.err(internalError(rejected)));
         }
     }
 
-    private void verifyOffThread(
-            final ProviderTest test, final String provider, final String chosenModel, final long epoch) {
+    private void verifyOffThread(final ProviderTest test, final TestSubject target, final long epoch) {
         log.debug(
                 "running provider test {} for {} on {}",
                 test,
-                provider,
+                target.config().id(),
                 Thread.currentThread().getName());
-        final Result<VerificationReport> result = verifyGuarded(test, provider, chosenModel);
-        Platform.runLater(() -> publish(test, epoch, result));
+        final Result<VerificationReport> result = verifyGuarded(test, target);
+        Platform.runLater(() -> publish(test, target, epoch, result));
     }
 
-    private Result<VerificationReport> verifyGuarded(
-            final ProviderTest test, final String provider, final String chosenModel) {
+    private Result<VerificationReport> verifyGuarded(final ProviderTest test, final TestSubject target) {
         try {
-            return test == ProviderTest.CONNECTION
-                    ? verifier.verifyConnection(provider)
-                    : verifier.verify(new ModelSelection(provider, chosenModel), test.policy());
+            // The connection test is about the server alone; the others ask about the model whenever one is chosen.
+            final String chosen =
+                    test == ProviderTest.CONNECTION ? "" : target.model().strip();
+            return verifier.verify(target.config(), chosen, test.policy());
         } catch (Throwable thrown) {
             log.error("the verifier threw instead of returning a result", thrown);
             return Result.err(internalError(thrown));
@@ -261,15 +301,14 @@ public final class ProviderTestRunner {
     }
 
     private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The provider test stopped because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The provider test stopped because of an unexpected error.", cause);
     }
 
-    private void publish(final ProviderTest test, final long epoch, final Result<VerificationReport> result) {
+    private void publish(
+            final ProviderTest test,
+            final TestSubject target,
+            final long epoch,
+            final Result<VerificationReport> result) {
         if (epoch != checkEpoch) {
             log.debug("report of test {} discarded: the current one is {}", epoch, checkEpoch);
             return;
@@ -279,7 +318,7 @@ public final class ProviderTestRunner {
             if (refusal != null) {
                 refuse(refusal);
             } else {
-                show(test, Objects.requireNonNull(result.data()));
+                show(test, target, Objects.requireNonNull(result.data()));
             }
         } finally {
             settle();
@@ -300,51 +339,51 @@ public final class ProviderTestRunner {
     private void refuse(final AppError refusal) {
         log.debug("the test was refused as a whole with {}", refusal.code());
         if (refusal.code() == ErrorCode.validation) {
-            checkRefusal.set(refusal.message());
+            checkRefusal.set(ErrorWords.message(messages, refusal));
         } else {
             errors.present(refusal);
         }
     }
 
-    private void show(final ProviderTest test, final VerificationReport report) {
+    private void show(final ProviderTest test, final TestSubject target, final VerificationReport report) {
+        log.debug("showing the report of test {} on {}", test, target.config().id());
         final Map<VerificationStage, StageOutcome> reported = new EnumMap<>(VerificationStage.class);
         report.stages().forEach(outcome -> reported.putIfAbsent(outcome.stage(), outcome));
         final List<StageChip> chips = Arrays.stream(VerificationStage.values())
                 .filter(stage -> stage.compareTo(test.lastStage()) <= 0)
-                .map(stage -> chipOf(stage, reported.get(stage)))
+                .map(stage -> TestChips.of(stage, reported.get(stage)))
                 .toList();
-        chips.forEach(ProviderTestRunner::logStage);
+        chips.forEach(TestChips::log);
         stages.setAll(chips);
-        if (chips.stream().allMatch(ProviderTestRunner::isPass)) {
+        keepSpeed(test, target, chips);
+        if (chips.stream().allMatch(TestChips::isPass)) {
             log.info("provider test {} passed", test);
-            toasts.success(MessageKey.TOAST_PROVIDER_PASSED);
         } else {
             log.info("provider test {} did not pass", test);
         }
     }
 
-    private static StageChip chipOf(final VerificationStage stage, final @Nullable StageOutcome outcome) {
-        return outcome == null
-                ? new StageChip(stage, StageStatus.SKIPPED, null, null)
-                : new StageChip(
-                        stage, outcome.status(), outcome.error(), outcome.note(), outcome.elapsed(), outcome.count());
-    }
-
-    private static boolean isPass(final StageChip chip) {
-        return chip.status() == StageStatus.PASSED || chip.status() == StageStatus.SOFT_PASS;
-    }
-
-    private static void logStage(final StageChip chip) {
-        final Duration elapsed = chip.elapsed();
-        log.info(
-                "stage {}: {} in {} ms, {} model(s)",
-                chip.stage(),
-                chip.status(),
-                elapsed == null ? "?" : elapsed.toMillis(),
-                chip.count() == null ? "-" : chip.count());
-        final AppError error = chip.error();
-        if (chip.status() == StageStatus.FAILED) {
-            log.warn("stage {} failed with {}", chip.stage(), error == null ? "no error code" : error.code());
+    // Only a saved provider has a row to keep a speed on, and only the inference test measures one.
+    private void keepSpeed(final ProviderTest test, final TestSubject target, final List<StageChip> chips) {
+        final String model = target.model().strip();
+        final Optional<StageChip> inference = chips.stream()
+                .filter(chip -> chip.stage() == VerificationStage.INFERENCE && chip.status() == StageStatus.PASSED)
+                .findFirst();
+        final boolean keep = test == ProviderTest.INFERENCE && target.stored() && !model.isEmpty();
+        log.debug(
+                "speed of {} kept {}: needs the inference test {}, a saved provider as saved {}, a model {}, a pass {}",
+                target.config().id(),
+                keep && inference.isPresent(),
+                test == ProviderTest.INFERENCE,
+                target.stored(),
+                !model.isEmpty(),
+                inference.isPresent());
+        if (keep && inference.isPresent() && inference.get().elapsed() != null) {
+            speeds.record(target.config().id(), model, inference.get().elapsed(), MeasuredFrom.TEST);
+        }
+        final VerificationExchange exchange = inference.map(StageChip::exchange).orElse(null);
+        if (keep && exchange != null) {
+            structured.record(target.config().id(), model, exchange.structured());
         }
     }
 }

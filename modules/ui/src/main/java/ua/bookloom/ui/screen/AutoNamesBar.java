@@ -2,11 +2,13 @@ package ua.bookloom.ui.screen;
 
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
@@ -16,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -25,7 +28,7 @@ import ua.bookloom.ui.state.RunMode;
 /**
  * The one button above both cards of Names &amp; style that prepares the names and the recurring terms in one pass,
  * with "Confirm suggested genders" beside it, and the plan's estimate for the brief's dial under it. While it runs the
- * shared busy card shows the progress, and that card's Cancel is the pass's Stop; the pass changes nothing when
+ * shared progress dialog shows the progress, and that dialog's Cancel is the pass's Stop; the pass changes nothing when
  * stopped. The estimate is asked of the port again when a change of the dial has been saved, since the port reads the
  * stored brief; until then the line is blank, because the minutes it held were computed for the previous dial. The
  * view models outlive this view, so what listens to them does so weakly, with the strong reference held by the
@@ -39,32 +42,49 @@ import ua.bookloom.ui.state.RunMode;
 final class AutoNamesBar {
 
     private static final double SPACING = 4;
+    private static final double CARD_SPACING = 12;
     private static final String LISTENERS_KEY = "names-style-auto-listeners";
 
-    static VBox build(final Messages messages, final NamesStyleViewModel names, final BookBriefViewModel brief) {
+    static HBox build(
+            final Messages messages,
+            final NamesStyleViewModel names,
+            final BookBriefViewModel brief,
+            final ObservableBooleanValue frozen) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(names, "names");
         Objects.requireNonNull(brief, "brief");
-        final Button auto = button(messages, names);
+        Objects.requireNonNull(frozen, "frozen");
+        final Button auto = button(messages, names, frozen);
+        final Label title = new Label(messages.get(MessageKey.NAMES_STYLE_AUTO));
+        title.getStyleClass().add("card-title");
+        title.setWrapText(true);
+        title.setMinHeight(Region.USE_PREF_SIZE);
+        final Label about = new Label(messages.get(MessageKey.NAMES_STYLE_AUTO_ABOUT));
+        about.getStyleClass().add("muted");
+        about.setWrapText(true);
         final Label subtitle = new Label();
         subtitle.setId("names-style-auto-subtitle");
+        subtitle.setWrapText(true);
+        subtitle.setMinHeight(Region.USE_PREF_SIZE);
         subtitle.getStyleClass().add("muted");
         follow(messages, names, brief, subtitle);
-        final HBox buttons = new HBox(SPACING, auto, confirmGenders(messages, names));
-        buttons.setAlignment(Pos.CENTER_LEFT);
-        final VBox bar = new VBox(SPACING, buttons, subtitle);
+        final VBox texts = new VBox(SPACING, title, about, subtitle);
+        HBox.setHgrow(texts, Priority.ALWAYS);
+        final HBox bar = new HBox(CARD_SPACING, texts, auto, confirmGenders(messages, names, frozen));
         bar.setId("names-style-auto-bar");
+        bar.getStyleClass().addAll("card", "card-warm");
         bar.setAlignment(Pos.CENTER_LEFT);
         return bar;
     }
 
-    private static Button button(final Messages messages, final NamesStyleViewModel names) {
+    private static Button button(
+            final Messages messages, final NamesStyleViewModel names, final ObservableBooleanValue frozen) {
         final Button auto = Tips.install(
                 messages, new Button(messages.get(MessageKey.NAMES_STYLE_AUTO)), MessageKey.NAMES_STYLE_AUTO_TIP);
         auto.setId("names-style-auto");
-        auto.getStyleClass().add("btn-secondary");
+        auto.getStyleClass().add("btn-primary");
         auto.setMinWidth(Region.USE_PREF_SIZE);
-        auto.disableProperty().bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
+        ModelActionBar.explainWhenBlocked(messages, auto, MessageKey.NAMES_STYLE_AUTO_TIP, names, frozen);
         auto.setOnAction(event -> {
             log.debug("names-style-auto pressed");
             names.autoPrepare();
@@ -73,7 +93,8 @@ final class AutoNamesBar {
     }
 
     // Shown only while a character's gender is a suggestion; off while a model action could replace what it confirms.
-    private static Button confirmGenders(final Messages messages, final NamesStyleViewModel names) {
+    private static Button confirmGenders(
+            final Messages messages, final NamesStyleViewModel names, final ObservableBooleanValue frozen) {
         final Button confirm = Tips.install(
                 messages,
                 new Button(messages.get(MessageKey.NAMES_STYLE_CONFIRM_GENDERS)),
@@ -81,9 +102,8 @@ final class AutoNamesBar {
         confirm.setId("names-style-confirm-genders");
         confirm.getStyleClass().add("btn-ghost");
         confirm.setMinWidth(Region.USE_PREF_SIZE);
-        confirm.disableProperty().bind(names.busy());
-        confirm.visibleProperty().bind(names.suggestedGenderCount().greaterThan(0));
-        confirm.managedProperty().bind(confirm.visibleProperty());
+        confirm.disableProperty().bind(names.busy().or(frozen));
+        Visibility.bind(confirm, names.suggestedGenderCount().greaterThan(0));
         confirm.setOnAction(event -> {
             log.debug("names-style-confirm-genders pressed");
             names.confirmGenders();

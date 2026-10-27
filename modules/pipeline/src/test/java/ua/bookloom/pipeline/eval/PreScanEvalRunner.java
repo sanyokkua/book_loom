@@ -13,7 +13,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.eval.StageCases.Expect;
 import ua.bookloom.pipeline.eval.StageCases.PreScanCase;
 import ua.bookloom.pipeline.glossary.PreScan;
@@ -50,7 +50,7 @@ final class PreScanEvalRunner {
 
     private StageRow one(final PreScanCase scanCase) {
         final GlossaryRepository glossary =
-                Guice.createInjector(new PersistenceModule()).getInstance(GlossaryRepository.class);
+                Guice.createInjector(new InMemoryPersistenceModule()).getInstance(GlossaryRepository.class);
         final SuggestTargets suggest = new SuggestTargets(TEMPLATES, MAPPER);
         final PreScan scan =
                 new PreScan(TEMPLATES, MAPPER, glossary, new TermReview(TEMPLATES, MAPPER, glossary, suggest), suggest);

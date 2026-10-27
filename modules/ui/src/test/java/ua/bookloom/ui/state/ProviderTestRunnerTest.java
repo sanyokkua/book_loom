@@ -4,40 +4,60 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ScriptedProviderVerifier;
-import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 
 /** The three provider tests: what each asks, when each is available, and the findings each report becomes. */
 class ProviderTestRunnerTest extends SettingsViewModelTestBase {
 
-    private final StringProperty provider = new SimpleStringProperty("ollama");
-    private final StringProperty model = new SimpleStringProperty("");
+    private static final ProviderConfig OLLAMA = new ProviderConfig(
+            "ollama",
+            ProviderKind.OLLAMA,
+            URI.create("http://localhost:11434"),
+            ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+            ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
+
+    private final ObjectProperty<Optional<TestSubject>> subject =
+            new SimpleObjectProperty<>(Optional.of(new TestSubject(OLLAMA, "", "Ollama", true)));
 
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
-        return onFx(() -> new ProviderTestRunner(verifier, toasts, errors, executor, provider, model, activities));
+        return onFx(() -> new ProviderTestRunner(
+                verifier,
+                errors,
+                executor,
+                subject,
+                activities,
+                new ModelSpeedRecorder(modelSettings, speeds, executor),
+                new StructuredAnswers(),
+                new Messages(() -> Locale.ENGLISH)));
     }
 
     private void setModel(final String text) {
         onFx(() -> {
-            model.set(text);
+            subject.set(Optional.of(new TestSubject(OLLAMA, text, "Ollama", true)));
             return null;
         });
     }
@@ -63,19 +83,34 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         return onFx(() -> runner.available(test).get());
     }
 
-    // IF the connection test waited for a model, THEN nobody could ask whether anything is listening before choosing.
+    // IF the connection or models test waited for a model (LAN-6), THEN nobody could ask what is listening, or list
+    // its models, before choosing one; only the inference test needs a model.
     @Test
-    void available_noModel_onlyTheConnectionTestIsAvailableAndChoosingEnablesTheRest() {
+    void available_noModel_connectionAndModelsAreAvailableAndChoosingEnablesInference() {
         final ProviderTestRunner runner = runner(ScriptedProviderVerifier.idle());
 
         assertThat(available(runner, ProviderTest.CONNECTION)).isTrue();
-        assertThat(available(runner, ProviderTest.MODELS)).isFalse();
+        assertThat(available(runner, ProviderTest.MODELS)).isTrue();
         assertThat(available(runner, ProviderTest.INFERENCE)).isFalse();
 
         setModel("gemma3:12b");
 
-        assertThat(available(runner, ProviderTest.MODELS)).isTrue();
         assertThat(available(runner, ProviderTest.INFERENCE)).isTrue();
+    }
+
+    @Test
+    void run_modelsWithNoModel_asksForTheListWithABlankModel() {
+        final ScriptedProviderVerifier verifier =
+                ScriptedProviderVerifier.returning(Result.ok(new VerificationReport(List.of(
+                        measured(VerificationStage.CONNECTION, StageStatus.PASSED, 41, null),
+                        measured(VerificationStage.MODELS, StageStatus.PASSED, 5, 3)))));
+        final ProviderTestRunner runner = runner(verifier);
+
+        run(runner, ProviderTest.MODELS);
+
+        assertThat(verifier.drafts())
+                .extracting(ScriptedProviderVerifier.DraftCall::modelId, ScriptedProviderVerifier.DraftCall::policy)
+                .containsExactly(tuple("", VerificationPolicy.CONNECTION_AND_MODELS));
     }
 
     // IF Test connection went through verify, THEN it would need a model and would ask about one.
@@ -87,8 +122,10 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
 
         run(runner, ProviderTest.CONNECTION);
 
-        assertThat(verifier.connectionCalls()).containsExactly("ollama");
-        assertThat(verifier.selections()).isEmpty();
+        assertThat(verifier.drafts())
+                .extracting(ScriptedProviderVerifier.DraftCall::modelId, ScriptedProviderVerifier.DraftCall::policy)
+                .containsExactly(tuple("", VerificationPolicy.CONNECTION));
+        assertThat(verifier.connectionCalls()).isEmpty();
         assertThat(chips(runner))
                 .extracting(StageChip::stage, StageChip::status, StageChip::elapsed)
                 .containsExactly(tuple(VerificationStage.CONNECTION, StageStatus.PASSED, Duration.ofMillis(41)));
@@ -108,7 +145,9 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         run(runner, ProviderTest.MODELS);
 
         assertThat(verifier.policies()).containsExactly(VerificationPolicy.CONNECTION_AND_MODELS);
-        assertThat(verifier.selections()).containsExactly(new ModelSelection("ollama", "gemma3:12b"));
+        assertThat(verifier.drafts())
+                .extracting(draft -> draft.config().id(), ScriptedProviderVerifier.DraftCall::modelId)
+                .containsExactly(tuple("ollama", "gemma3:12b"));
         assertThat(verifier.connectionCalls()).isEmpty();
         assertThat(chips(runner))
                 .extracting(StageChip::stage, StageChip::count)
@@ -133,12 +172,11 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                         tuple(VerificationStage.MODELS, StageStatus.SKIPPED),
                         tuple(VerificationStage.INFERENCE, StageStatus.SKIPPED));
         assertThat(chips(runner).getFirst().error()).isSameAs(unreachable);
-        assertThat(toasts.raised()).isEmpty();
     }
 
     // IF a fully passing run raised no success notice or more than one, THEN the person would miss it or be nagged.
     @Test
-    void run_inferenceAllPass_reportsThreeMeasuredValuesAndOneSuccessToast() {
+    void run_inferenceAllPass_reportsThreeMeasuredValues() {
         final ProviderTestRunner runner =
                 runner(ScriptedProviderVerifier.returning(Result.ok(new VerificationReport(List.of(
                         measured(VerificationStage.CONNECTION, StageStatus.PASSED, 41, null),
@@ -154,8 +192,6 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                         tuple(Duration.ofMillis(41), null),
                         tuple(Duration.ofMillis(5), 3),
                         tuple(Duration.ofMillis(1200), null));
-        assertThat(toasts.raised()).hasSize(1);
-        assertThat(toasts.raised().getFirst().key()).isEqualTo(MessageKey.TOAST_PROVIDER_PASSED);
     }
 
     // IF an unreadable listing stopped the run or counted as a failure, THEN a server with no listing endpoint, which
@@ -233,19 +269,41 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(chips(runner)).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
         assertThat(onFx(() -> runner.checking().get())).isFalse();
     }
 
-    // IF a model test ran with no model chosen, THEN the verifier would be asked about nothing.
+    // IF the inference test ran with no model chosen, THEN the verifier would be asked to run nothing.
     @Test
-    void run_modelsWithNoModel_doesNothing() {
+    void run_inferenceWithNoModel_doesNothing() {
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.idle();
         final ProviderTestRunner runner = runner(verifier);
 
-        run(runner, ProviderTest.MODELS);
+        run(runner, ProviderTest.INFERENCE);
 
         assertThat(verifier.callCount()).isZero();
         assertThat(onFx(() -> runner.checking().get())).isFalse();
+    }
+
+    // IF the exchange of a stage were dropped on the way to the chip, THEN the test dialog would have nothing to show.
+    @Test
+    void run_stageWithAnExchange_theChipCarriesIt() {
+        final VerificationExchange exchange = new VerificationExchange(
+                "POST", "http://localhost:11434/api/chat", "{}", "ok", 200, 120L, 31.5, true, "");
+        final ProviderTestRunner runner =
+                runner(ScriptedProviderVerifier.returning(Result.ok(new VerificationReport(List.of(
+                        measured(VerificationStage.CONNECTION, StageStatus.PASSED, 41, null),
+                        new StageOutcome(
+                                VerificationStage.INFERENCE,
+                                StageStatus.PASSED,
+                                null,
+                                null,
+                                Duration.ofMillis(900),
+                                null,
+                                exchange))))));
+        setModel("gemma3:12b");
+
+        run(runner, ProviderTest.INFERENCE);
+
+        assertThat(chips(runner)).extracting(StageChip::exchange).containsExactly(null, null, exchange);
     }
 }

@@ -9,6 +9,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
@@ -17,12 +18,16 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * What the settings view model tests share: the hand-written fakes for the registry, the verifier, the toasts and the
@@ -38,7 +43,15 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     RecordingToasts toasts;
     RecordingErrorPresenter errors;
     ExecutorService executor;
+    final FakeProviderConfigs configs = new FakeProviderConfigs();
+    final MemorySettings settings = new MemorySettings();
     final ActivityTracker activities = new ActivityTracker(new StateMirror());
+    final ScriptedModelSettings modelSettings = new ScriptedModelSettings();
+    final ModelSpeeds speeds = new ModelSpeeds();
+    final MemorySettings detailSettings = new MemorySettings();
+    final TechnicalDetails technical = new TechnicalDetails(detailSettings, Runnable::run, Runnable::run);
+    private @Nullable SettingsViewModel formOwner;
+    private @Nullable ProviderForm formOfOwner;
 
     @Override
     public final void start(final Stage stage) {
@@ -91,20 +104,76 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     void startCheck(final SettingsViewModel viewModel) {
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
     }
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
-        return onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
+        return viewModel(verifier, new StructuredAnswers());
+    }
+
+    SettingsViewModel viewModel(final ScriptedProviderVerifier verifier, final StructuredAnswers structured) {
+        final SettingsViewModel built = onFx(() -> new SettingsViewModel(
+                configs,
+                verifier,
+                newModelListing(),
+                errors,
+                executor,
+                activities,
+                settings,
+                EnglishMessages.create(),
+                new ModelSpeedRecorder(modelSettings, speeds, executor),
+                structured));
+        awaitProvidersLoaded();
+        form(built);
+        return built;
+    }
+
+    /** The one Providers form over a view model; the view model's test subject follows it, as in the window. */
+    ProviderForm form(final SettingsViewModel viewModel) {
+        ProviderForm form = formOfOwner;
+        if (formOwner != viewModel || form == null) {
+            form = onFx(() -> new ProviderForm(
+                    viewModel,
+                    configs,
+                    modelSettings,
+                    settings,
+                    name -> "OFFICE_KEY".equals(name),
+                    technical,
+                    executor));
+            formOwner = viewModel;
+            formOfOwner = form;
+        }
+        return form;
+    }
+
+    /** The provider read is the first task the pool runs; wait for it so a test counts only its own checks. */
+    private void awaitProvidersLoaded() {
+        try {
+            awaitLoadTask();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(interrupted);
+        }
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void awaitLoadTask() throws InterruptedException {
+        if (executor instanceof CountingPool pool) {
+            pool.awaitFinished(1);
+        }
     }
 
     /** A listing over whatever {@link #catalog} the test scripted before calling this. */
     ModelListing newModelListing() {
-        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities));
+        return newModelListing(EnglishMessages.create());
+    }
+
+    /** As {@link #newModelListing()}, worded from {@code messages}. */
+    ModelListing newModelListing(final Messages messages) {
+        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities, messages));
     }
 
     /** A view model over the idle verifier and whatever {@link #catalog} the test scripted before calling this. */
@@ -131,7 +200,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
 
     void checkWithModel(final SettingsViewModel viewModel) {
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });

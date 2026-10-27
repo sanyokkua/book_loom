@@ -1,12 +1,11 @@
 package ua.bookloom.ui.screen;
 
-import javafx.geometry.Pos;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -15,8 +14,8 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ChangeMarks;
 import ua.bookloom.ui.state.RecurringTerms;
+import ua.bookloom.ui.state.RecurringUsage;
 
 /**
  * The cells of the recurring-terms table, one control each, filled from the row they show. A cell is reused for other
@@ -28,8 +27,6 @@ import ua.bookloom.ui.state.RecurringTerms;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class RecurringTermsCells {
-
-    private static final double ROW_SPACING = 8;
 
     /** A cell holding one control that is filled from the row it shows. */
     abstract static class RowCell<N extends Node> extends TableCell<LexiconEntry, LexiconEntry> {
@@ -59,28 +56,22 @@ final class RecurringTermsCells {
         }
     }
 
-    /** The source term. */
-    static final class TermCell extends RowCell<HBox> {
+    /** The source term; a changed row is marked by the table's row edge, so nothing else shares the cell. */
+    static final class TermCell extends RowCell<Label> {
 
-        private final Label term = new Label();
-        private final Label changed;
-        private final ChangeMarks.Side marks;
+        TermCell() {
+            super(withFullText(new Label()));
+            control().getStyleClass().add("glossary-term");
+        }
 
-        TermCell(final Messages messages, final ChangeMarks.Side marks) {
-            super(new HBox(ROW_SPACING));
-            this.marks = marks;
-            changed = ChangedMarks.chip(messages);
-            term.getStyleClass().add("glossary-term");
-            control().setAlignment(Pos.CENTER_LEFT);
-            control().getChildren().addAll(term, changed);
+        // The cell may cut a long term; its whole text is the hover.
+        private static Label withFullText(final Label term) {
+            return Tips.installLive(term, term.textProperty());
         }
 
         @Override
-        void show(final HBox shown, final LexiconEntry entry) {
-            term.setText(entry.term());
-            final boolean marked = marks.isMarked(LexiconEntry.keyOf(entry.term()));
-            changed.setVisible(marked);
-            changed.setManaged(marked);
+        void show(final Label shown, final LexiconEntry entry) {
+            shown.setText(entry.term());
         }
     }
 
@@ -91,9 +82,10 @@ final class RecurringTermsCells {
         private @Nullable String syncedTerm;
         private String syncedText = "";
 
-        RenderingCell(final Messages messages, final RecurringTerms recurring) {
+        RenderingCell(final Messages messages, final RecurringTerms recurring, final ObservableBooleanValue frozen) {
             super(Tips.installOnHover(messages, new TextField(), MessageKey.RECURRING_COLUMN_TARGET_TIP));
             this.recurring = recurring;
+            control().disableProperty().bind(frozen);
             control().setPromptText(messages.get(MessageKey.NAMES_STYLE_NO_TARGET));
             control().setOnAction(event -> commit());
             control().focusedProperty().addListener((observed, was, now) -> {
@@ -120,15 +112,41 @@ final class RecurringTermsCells {
         }
     }
 
+    /** How often the book writes the term: the count in words, or nothing while it has not been counted. */
+    static final class UsedCell extends RowCell<Label> {
+
+        private final Messages messages;
+        private final RecurringUsage usage;
+
+        UsedCell(final Messages messages, final RecurringUsage usage) {
+            super(fullText(new Label()));
+            this.messages = messages;
+            this.usage = usage;
+            control().getStyleClass().add("recurring-used");
+        }
+
+        // The count is short, but the hover says it again for a cell cut narrow.
+        private static Label fullText(final Label used) {
+            return Tips.installLive(used, used.textProperty());
+        }
+
+        @Override
+        void show(final Label shown, final LexiconEntry entry) {
+            final Integer count = usage.counts().get(LexiconEntry.keyOf(entry.term()));
+            shown.setText(count == null ? "" : messages.get(MessageKey.NAMES_STYLE_RECURRING_USED, count));
+        }
+    }
+
     /** The row's action that moves it to the glossary. */
     static final class PromoteCell extends RowCell<Button> {
 
-        PromoteCell(final Messages messages, final RecurringTerms recurring) {
+        PromoteCell(final Messages messages, final RecurringTerms recurring, final ObservableBooleanValue frozen) {
             super(Tips.installOnHover(
                     messages,
                     new Button(messages.get(MessageKey.RECURRING_PROMOTE)),
                     MessageKey.RECURRING_PROMOTE_TIP));
             control().getStyleClass().add("btn-ghost");
+            control().disableProperty().bind(frozen);
             control().setMinWidth(Region.USE_PREF_SIZE);
             control().setOnAction(event -> {
                 final LexiconEntry shown = getItem();
@@ -147,9 +165,10 @@ final class RecurringTermsCells {
     /** The row's action that removes it, in the table's last column. */
     static final class RemoveCell extends RowCell<Button> {
 
-        RemoveCell(final Messages messages, final RecurringTerms recurring) {
+        RemoveCell(final Messages messages, final RecurringTerms recurring, final ObservableBooleanValue frozen) {
             super(Tips.installOnHover(messages, new Button("✕"), MessageKey.RECURRING_REMOVE_TIP));
             control().getStyleClass().addAll("btn-ghost", "glossary-remove");
+            control().disableProperty().bind(frozen);
             control().setAccessibleText(messages.get(MessageKey.RECURRING_REMOVE));
             control().setOnAction(event -> {
                 final LexiconEntry shown = getItem();

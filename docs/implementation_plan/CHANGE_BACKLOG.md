@@ -22,7 +22,10 @@ of their planned slot. It consumed most of the Stage C and Stage D rows below in
 took and what it left), and closed D5, D7, D8, D17 and D19 and part of D18 in `#decision-debt`. The groups of work that
 were not planned up front (15a–15j) are written down in its `additional-work.md`, with their IDs unchanged. The
 translation pipeline is redesigned by a separate proposal, `docs/proposals/2026-10-16-translation-pipeline-redesign.md`,
-the next change `redesign-translation-pipeline`; SQLite persistence follows it.
+the change after `finalize-ui-and-persistence`. **Done:** `finalize-ui-and-persistence`
+(`openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`, proposed 2026-10-20, archived 2026-10-27) finished the UI to the 2026-10-19 mockup, added the
+Projects screen and the full Settings, and keeps state and settings in SQLite (ADR-0043); every task, the final gate, the hand run and the owner's checks included, is done, and its specs are folded into
+`openspec/specs/`. **Next:** `redesign-translation-pipeline`, after the owner's review.
 
 ## where-this-stands {#where-this-stands}
 
@@ -575,7 +578,7 @@ also the largest stage by some distance: **twelve changes, and all three stub mo
 
 | # | Change | Capability |
 |---|---|---|
-| 8 | `add-local-storage` | `local-storage` **NEW** — repository ports and in-memory adapters landed with `complete-translation-workflow` (ADR-0034); the SQLite adapter, settings KV and Flyway remain |
+| 8 | `add-local-storage` | `local-storage` **NEW** — repository ports and in-memory adapters landed with `complete-translation-workflow` (ADR-0034); the SQLite adapter and settings KV remain (Flyway from the first release; until then one schema file and no migrations, ADR-0043) |
 | 9 | `add-resume-checkpoints` | `resume` MOD — in-session resume and the in-memory `CheckpointPort` were consumed by `complete-translation-workflow`; resume across a restart remains with SQLite |
 | 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** — consumed in reduced form by `add-real-llm-clients`; persistence and provider editing remain |
 | 11 | `add-inference-gate-and-response-contract` | `inference` MOD — consumed in reduced form by `add-real-llm-clients`; repair and interactive gate behavior remain |

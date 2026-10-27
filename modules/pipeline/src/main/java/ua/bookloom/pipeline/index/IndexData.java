@@ -10,7 +10,6 @@ import org.jspecify.annotations.Nullable;
  *
  * @param infos what is known of each segment, by ordinal
  * @param texts each segment's masked text, by ordinal, for the running text a scan reads
- * @param reads each segment's masked text read into words and sentences, by ordinal, so no later question reads it again
  * @param facts what a scan needs of a segment besides its text, by ordinal
  * @param spans each segment's unit span, by ordinal
  * @param ordinalById the ordinal of each segment id
@@ -24,7 +23,6 @@ import org.jspecify.annotations.Nullable;
 record IndexData(
         List<SegmentInfo> infos,
         List<String> texts,
-        List<Occurrences.Read> reads,
         List<SegmentFacts> facts,
         List<UnitSpan> spans,
         Map<String, Integer> ordinalById,
@@ -32,4 +30,17 @@ record IndexData(
         Map<String, List<Posting>> postings,
         Map<String, WordStats> stats,
         @Nullable String language,
-        Character.@Nullable UnicodeScript majorityScript) {}
+        Character.@Nullable UnicodeScript majorityScript) {
+
+    /**
+     * Reads one segment into its words and sentences again. Not kept from the build: every word of a book as an object
+     * costs many times the book's size, so a large book would not fit in memory.
+     *
+     * @param ordinal the segment's ordinal
+     * @return the read; never null
+     * @throws IndexOutOfBoundsException if the ordinal is outside the book
+     */
+    Occurrences.Read read(final int ordinal) {
+        return Occurrences.read(texts.get(ordinal));
+    }
+}

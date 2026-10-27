@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,12 +11,14 @@ import java.util.concurrent.TimeoutException;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.ImportState;
 
 /**
  * The drop zone of the import screen, read from the real scene: the full box while no book is open, and one line with
@@ -66,20 +70,20 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         assertThat(isCompact()).isFalse();
         assertThat(isOneLine()).isFalse();
-        assertThat(textOf("import-dropzone")).contains("Drag a book here").contains("Browse files…");
+        assertThat(textOf("import-dropzone")).contains("Drag a book here").contains("Browse files...");
         assertThat(isShown("import-browse")).isTrue();
     }
 
     // IF the full box stayed once a book is open, THEN the book's structure would start below the fold.
     @Test
-    void dropzone_bookOpen_isOneLineAboveTheBookDetails() throws TimeoutException {
+    void dropzone_bookOpen_isOneLineAboveTheVerdict() throws TimeoutException {
         openFactsBook();
 
         assertThat(isCompact()).isTrue();
         assertThat(required("import-dropzone").getStyleClass()).contains("dropzone");
         assertThat(isOneLine()).isTrue();
         assertThat(boundsOf("import-dropzone").getMaxY())
-                .isLessThanOrEqualTo(boundsOf("import-card").getMinY());
+                .isLessThanOrEqualTo(boundsOf("import-verdict").getMinY());
     }
 
     // IF compacting the box hid or disabled the one way to pick another book, THEN a person could not change books.
@@ -89,7 +93,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         assertThat(isShown("import-browse")).isTrue();
         assertThat(button("import-browse").isDisable()).isFalse();
-        assertThat(button("import-browse").getText()).isEqualTo("Browse files…");
+        assertThat(button("import-browse").getText()).isEqualTo("Browse files...");
         assertThat(required("import-dropzone").getOnDragOver()).isNotNull();
         assertThat(required("import-dropzone").getOnDragDropped()).isNotNull();
     }
@@ -99,7 +103,7 @@ class ImportDropzoneTest extends ImportBookTestBase {
     void dropzone_bookCancelled_returnsToTheFullBox() throws TimeoutException {
         openFactsBook();
 
-        onFx(() -> viewModel().cancel());
+        onFx(() -> viewModel().cancel(true));
 
         assertThat(isCompact()).isFalse();
         assertThat(isOneLine()).isFalse();
@@ -116,7 +120,23 @@ class ImportDropzoneTest extends ImportBookTestBase {
 
         openBook(source);
 
-        assertThat(isShown("import-refusal")).isTrue();
+        assertThat(isShown("import-verdict")).isTrue();
         assertThat(isCompact()).isFalse();
+    }
+
+    // IF a dropped folder were handed to the reader, THEN the person would wait for a refusal that does not say why.
+    @Test
+    void openDropped_aFolder_saysSoAtOnceAndOpensNothing() throws IOException {
+        final Path folder = Files.createDirectory(dir.resolve("Books"));
+        openImport();
+
+        onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(folder)));
+
+        assertThat(projects.imports()).isEmpty();
+        assertThat(state()).isEqualTo(new ImportState.Idle());
+        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookupAll(".toast-text").stream()
+                        .map(text -> ((Label) text).getText())
+                        .toList()))
+                .contains("Drop one book file: EPUB, FB2, Markdown or TXT.");
     }
 }

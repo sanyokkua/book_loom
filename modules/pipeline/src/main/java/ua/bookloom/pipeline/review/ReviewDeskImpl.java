@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
@@ -23,6 +24,8 @@ import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.AuditRecorder;
+import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.project.OriginalTitles;
 
 /**
  * The review panel's one seam: every action and read is delegated to its part, and whatever escapes a part is caught
@@ -42,6 +45,7 @@ public final class ReviewDeskImpl implements ReviewDesk {
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final AuditRecorder audits;
+    private final OpenProjects openProjects;
 
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
@@ -141,6 +145,22 @@ public final class ReviewDeskImpl implements ReviewDesk {
         Objects.requireNonNull(projectId, "projectId");
         log.debug("audit project={} part=AuditRecorder", projectId);
         return guarded("audit", null, () -> audits.run(projectId));
+    }
+
+    @Override
+    public Result<OriginalTitle> originalTitle(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        log.debug("originalTitle project={}", projectId);
+        return guarded(
+                "originalTitle",
+                null,
+                () -> projectOf(projectId).flatMap(project -> {
+                    final var document = openProjects.get(projectId);
+                    return document == null
+                            ? Result.<OriginalTitle>err(AppError.of(
+                                    ErrorCode.validation, "Book not open", "This project's book is not open."))
+                            : Result.ok(OriginalTitles.of(document, project));
+                }));
     }
 
     private Result<SegmentRecord> recordOf(final String projectId, final String segmentId) {

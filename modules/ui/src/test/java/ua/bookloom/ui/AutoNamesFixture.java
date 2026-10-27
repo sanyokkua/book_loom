@@ -29,6 +29,14 @@ public final class AutoNamesFixture {
     public static final LexiconEntry TABLE = LexiconEntry.of(PROJECT, "table");
     public static final LexiconEntry PENTACLE = LexiconEntry.of(PROJECT, "pentacle");
 
+    /**
+     * A character of the fixture project, as the conformance glossary lists them: with the two longest gender labels,
+     * a suggested female and a person the book gives no evidence for, among them.
+     */
+    public static GlossaryEntry character(final String id, final String term, final Gender gender) {
+        return new GlossaryEntry(id, PROJECT, term, null, TermType.CHARACTER, gender, false);
+    }
+
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
         return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
     }

@@ -6,14 +6,16 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
@@ -118,8 +120,7 @@ public final class BatchDrafter {
      * @param context the non-null read-only context shown with the items
      * @param items the non-null items, at least one, with unique ids
      * @param segmentIds the non-null segments the items stand for, in the items' order, which the call announces
-     * @return the reply read per id — not readable when the model answered nothing usable — or the error the call
-     *     answered, which the run routes
+     * @return the reply read per id (not readable when nothing usable came), or the error the call answered
      */
     public Result<BatchReply> draft(
             final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
@@ -129,6 +130,11 @@ public final class BatchDrafter {
                 segmentIds,
                 items.stream().map(item -> DisplayText.of(item.masked())).toList(),
                 null);
+    }
+
+    /** The prompt parts a batch of these items is sent as, in the order they are sent; never null. */
+    public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
+        return prompts.sectionsFor(context, items);
     }
 
     /**
@@ -173,14 +179,39 @@ public final class BatchDrafter {
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
                 : parser.parse(response.content(), items, sourceLanguage, targetLanguage, prompts.format());
+        calls.parsed(segmentIds, callItems(ids, segmentIds, reply));
         return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
+    }
+
+    /**
+     * Reads a reply as the items a call row shows: the expected ids in order, then any extra id. A gate refusal made
+     * later by the caller is not an item status, so it is not shown here.
+     */
+    private static List<CallItem> callItems(
+            final List<String> ids, final List<String> segmentIds, final BatchReply reply) {
+        final List<CallItem> expected = new ArrayList<>();
+        final List<CallItem> extra = new ArrayList<>();
+        for (final ItemOutcome outcome : reply.outcomes()) {
+            final int index = ids.indexOf(outcome.id());
+            final String target = outcome.target().isBlank() ? null : outcome.target();
+            final CallItem item = new CallItem(
+                    outcome.id(),
+                    index < 0 || index >= segmentIds.size() ? null : segmentIds.get(index),
+                    target,
+                    CallItemStatus.valueOf(outcome.status().name()),
+                    outcome.problems().stream().map(ItemProblem::name).toList());
+            (outcome.status() == ItemStatus.EXTRA ? extra : expected).add(item);
+        }
+        expected.addAll(extra);
+        return expected;
     }
 
     /**
      * Asks once more for the ids a readable reply left out, when it left out {@value #MIN_MISSING_TO_REASK} or more:
      * only those items go, with the same context, so the model has fewer to number and the rest of the reply is kept.
      * One id left out is not worth a call of its own, since its single-segment draft costs the same. A failed or
-     * unreadable second call changes nothing, so those ids fall back one by one as before.
+     * unreadable second call changes nothing, so those ids fall back one by one as before. Each call shows its own
+     * items: the first call keeps the missing ones marked, the second shows only the ids it was asked.
      *
      * @param context the non-null context the first call showed
      * @param items the non-null items of the first call
@@ -214,42 +245,15 @@ public final class BatchDrafter {
             }
         }
         log.info("Batch reply left out {} of {} ids; asking for those only", at.size(), items.size());
+        final String key = "reask:" + segmentIds.get(at.getFirst());
+        calls.steps().added(StepKind.RE_ASK, "re-ask", key, segmentIds.get(at.getFirst()));
         final Result<BatchReply> second = draft(
                 context,
                 at.stream().map(items::get).toList(),
                 at.stream().map(segmentIds::get).toList(),
                 at.stream().map(sources::get).toList(),
                 position);
-        return merged(first, second);
-    }
-
-    // A stopped re-ask ends the attempt; a failed or unreadable one leaves the missing ids to their single drafts.
-    private static Result<BatchReply> merged(final BatchReply first, final Result<BatchReply> second) {
-        final AppError failure = second.error();
-        if (failure != null && failure.code() == ErrorCode.cancelled) {
-            log.info("The re-ask for the missing ids was stopped code={}; no single draft follows", failure.code());
-            return Result.err(failure);
-        }
-        final BatchReply again = second.data();
-        if (again == null || !again.readable()) {
-            log.warn(
-                    "The re-ask for the missing ids brought nothing code={}; they fall back one by one",
-                    failure == null ? "unreadable" : failure.code());
-            return Result.ok(first);
-        }
-        return Result.ok(withAnswers(first, again));
-    }
-
-    private static BatchReply withAnswers(final BatchReply first, final BatchReply again) {
-        final List<ItemOutcome> merged = first.outcomes().stream()
-                .map(outcome -> outcome.status() == ItemStatus.MISSING
-                        ? again.outcome(outcome.id())
-                                .filter(second -> second.status() != ItemStatus.EXTRA)
-                                .orElse(outcome)
-                        : outcome)
-                .toList();
-        log.debug("Re-ask answered ids={}", again.acceptedIds());
-        return new BatchReply(true, merged, first.cut());
+        return ReAskMerge.merge(first, second, calls.steps(), key);
     }
 
     /**

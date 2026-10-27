@@ -30,6 +30,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -71,6 +72,24 @@ class OpenAiCompatibleClientReasoningTest {
         assertThat(response).isEqualTo(new ChatResponse("{\"target\":\"Вага\"}", FinishReason.STOP));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(128)));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
+    }
+
+    // Low thinks too, so it gets the same room as On, keeps asking for Low on the repeat, and a spent cap is repeated
+    // once.
+    @Test
+    void chat_lowLevelSpentTheCapReasoning_repeatsOnceStillAskingForLowWithTheRaisedCap() {
+        stubChatSequence(reasoningOnly("reasoning"), """
+                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"ok","reasoning":"Thinking..."},"finish_reason":"stop"}]}
+                """);
+
+        final ChatResponse response = sendChat(cappedRequest(ReasoningLevel.LOW, 128, 8192));
+
+        assertThat(response).isEqualTo(new ChatResponse("ok", FinishReason.STOP));
+        server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(1152)));
+        server.verify(
+                2,
+                postRequestedFor(urlEqualTo(CHAT_PATH))
+                        .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo("low"))));
     }
 
     @Test
@@ -124,11 +143,15 @@ class OpenAiCompatibleClientReasoningTest {
     }
 
     private static ChatRequest cappedRequest(int maxOutputTokens, int contextWindow) {
+        return cappedRequest(ReasoningLevel.OFF, maxOutputTokens, contextWindow);
+    }
+
+    private static ChatRequest cappedRequest(ReasoningLevel level, int maxOutputTokens, int contextWindow) {
         return new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                 null,
                 null,
-                false,
+                level,
                 contextWindow,
                 null,
                 maxOutputTokens,

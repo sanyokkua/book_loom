@@ -7,6 +7,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -86,6 +89,14 @@ class ActivityGuardsTest extends ReviewViewModelTestBase {
     void providerTests_whileTheRunTranslates_holdInferenceAndKeepConnection() {
         buildViewModel();
         chooseModel(MODEL);
+        onFx(() -> new ProviderForm(
+                settings,
+                new FakeProviderConfigs(),
+                new ScriptedModelSettings(),
+                new MemorySettings(),
+                name -> false,
+                new TechnicalDetails(new MemorySettings(), Runnable::run, Runnable::run),
+                new DirectExecutor()));
 
         setRunState(RunState.RUNNING);
 

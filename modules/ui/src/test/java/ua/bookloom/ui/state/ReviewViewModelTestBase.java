@@ -118,6 +118,9 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
         return new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0, 0);
     }
 
+    /** The display language's catalogue; a test that reads Ukrainian replaces it before {@link #buildReview()}. */
+    protected Messages messages = new Messages(() -> Locale.ENGLISH);
+
     /** Opens the book, scripts three flagged segments and builds the view model; call once. */
     protected void buildReview() {
         buildReview(new DirectExecutor());
@@ -137,9 +140,9 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
     }
 
     protected ReviewViewModel newReviewViewModel(final ExecutorService deskExecutor) {
-        final ReviewRetry retry =
-                new ReviewRetry(desk, models, mirror, settings, new Messages(() -> Locale.ENGLISH), activities);
-        return new ReviewViewModel(desk, mirror, current, reviewMode, toasts, errors, retry, deskExecutor);
+        final ReviewRetry retry = new ReviewRetry(desk, models, mirror, settings, messages, activities);
+        return new ReviewViewModel(
+                desk, mirror, current, () -> reviewMode, toasts, errors, retry, deskExecutor, messages);
     }
 
     protected void open() {

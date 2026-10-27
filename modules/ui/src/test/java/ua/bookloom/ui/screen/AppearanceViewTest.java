@@ -2,40 +2,61 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.inject.Injector;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
-import javafx.scene.control.Label;
-import javafx.scene.control.Slider;
+import javafx.scene.control.Labeled;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.layout.Region;
 import org.controlsfx.control.SegmentedButton;
+import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.settings.AppSetting;
+import ua.bookloom.api.settings.ThemeSetting;
+import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.RecordingAppRestart;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.LanguageChoice;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.theme.ThemeMode;
 
 /**
  * The appearance area of the settings screen as the application builds it: the light / dark / system selector, the
- * fixed accent beside it, and what must not be there. The shell's operating system always reports the light scheme, so
- * "system" resolves to light. Expected colours are the published catalogue values, written out by hand.
+ * language choice with its restart, the technical-details switch, and what must not be there. The shell's operating
+ * system always reports the light scheme, so "system" resolves to light.
  */
 class AppearanceViewTest extends ShellTestBase {
 
-    private static final String COGNAC = "#a58075";
+    private static final long WAIT_SECONDS = 10;
+
+    private final MemorySettings store = new MemorySettings();
+    private final RecordingAppRestart restart = new RecordingAppRestart();
+    private final Locale osLocale = Locale.ENGLISH;
+    private boolean restartFails;
+
+    @Override
+    protected Injector createInjector(final Locale locale) {
+        return UiTestInjector.builder(locale)
+                .settings(store)
+                .restart(restartFails ? new RecordingAppRestart(Result.ok(false)) : restart)
+                .osLocale(osLocale)
+                .build();
+    }
 
     private void showAppearance() {
         onFx(() -> shell.activate(ViewNames.SETTINGS));
@@ -51,14 +72,6 @@ class AppearanceViewTest extends ShellTestBase {
         return (ToggleButton) required(id);
     }
 
-    private static Stream<Node> descendantsOf(final Node root) {
-        return root instanceof Parent parent
-                ? Stream.concat(
-                        Stream.of(root),
-                        parent.getChildrenUnmodifiable().stream().flatMap(AppearanceViewTest::descendantsOf))
-                : Stream.of(root);
-    }
-
     // IF the selector were missing an option, or offered them in another order or under other names, THEN a person
     // could not reach a theme the specification promises, or would meet a different vocabulary than the reference.
     @Test
@@ -69,7 +82,7 @@ class AppearanceViewTest extends ShellTestBase {
                 .isInstanceOf(SegmentedButton.class);
         assertThat(List.of(toggle("appearance-light"), toggle("appearance-dark"), toggle("appearance-system")))
                 .extracting(ToggleButton::getText)
-                .containsExactly("Light", "Dark", "Match system");
+                .containsExactly("Light", "Dark", "Match the computer");
         assertThat(((SegmentedButton) required("settings-appearance-host").lookup(".segmented-button")).getButtons())
                 .extracting(Node::getId)
                 .containsExactly("appearance-light", "appearance-dark", "appearance-system");
@@ -162,68 +175,226 @@ class AppearanceViewTest extends ShellTestBase {
         assertThat(toggle("appearance-light").isSelected()).isFalse();
     }
 
-    // IF the accent row were missing a part, or worded differently, THEN it would not read as the deliberate
-    // fixed-in-this-version value the reference shows.
-    @Test
-    void accentRow_appearanceShown_showsSwatchNameAndFixedTag() {
-        showAppearance();
-        final Node row = required("appearance-accent-row");
-
-        assertThat(required("appearance-accent-swatch"))
-                .isInstanceOf(Region.class)
-                .isNotInstanceOf(Control.class);
-        assertThat(((Label) required("appearance-accent-value")).getText()).isEqualTo("Cognac #a58075");
-        assertThat(((Label) required("appearance-accent-fixed")).getText()).isEqualTo("fixed");
-        assertThat(descendantsOf(row))
-                .contains(
-                        required("appearance-accent-swatch"),
-                        required("appearance-accent-value"),
-                        required("appearance-accent-fixed"));
+    private void awaitStored(final AppSetting<?> setting, final boolean present) throws TimeoutException {
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS, TimeUnit.SECONDS, () -> store.stored(setting).isPresent() == present);
     }
 
-    // IF the swatch painted another colour in either block, THEN the accent would not be the Cognac the value beside
-    // it names.
-    @ParameterizedTest
-    @EnumSource(
-            value = ThemeMode.class,
-            names = {"LIGHT", "DARK"})
-    void accentSwatch_underEachBlock_paintsCognac(final ThemeMode block) {
-        showAppearance();
-        onFx(() -> themeController.setMode(block));
-
-        final Region swatch = (Region) required("appearance-accent-swatch");
-
-        assertThat(swatch.getBackground())
-                .as("the swatch must paint a background")
-                .isNotNull();
-        ThemeTestSupport.assertSameColour(
-                swatch.getBackground().getFills().get(0).getFill(), COGNAC, "accent swatch under " + block);
+    private void awaitDarkStored() throws TimeoutException {
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> store.stored(AppSetting.THEME)
+                        .filter(ThemeSetting.DARK::equals)
+                        .isPresent());
     }
 
-    // IF any control that edits the accent sat in the accent row, THEN it would offer a choice this version does not
-    // have, when the value is read-only rather than disabled.
-    @Test
-    void accentRow_appearanceShown_holdsNoInputControl() {
-        showAppearance();
-
-        assertThat(descendantsOf(required("appearance-accent-row")))
-                .noneMatch(node -> node instanceof TextInputControl
-                        || node instanceof ComboBox
-                        || node instanceof ChoiceBox
-                        || node instanceof ColorPicker
-                        || node instanceof ToggleButton
-                        || node instanceof Slider);
+    @SuppressWarnings("unchecked")
+    private ComboBox<LanguageChoice> languageBox() {
+        return (ComboBox<LanguageChoice>) required("appearance-language");
     }
 
-    // IF a language control appeared here, THEN it would offer a choice `localization` says only the operating
-    // system makes; a combo or choice box anywhere in the area would be the usual shape of one.
-    @Test
-    void appearanceArea_shown_hasNoLanguageControl() {
-        showAppearance();
-        final Node host = required("settings-appearance-host");
+    private void pickLanguage(final LanguageChoice choice) {
+        onFx(() -> languageBox().getSelectionModel().select(choice));
+    }
 
-        assertThat(descendantsOf(host)).noneMatch(node -> node instanceof ComboBox || node instanceof ChoiceBox);
-        assertThat(textsUnder(host))
-                .noneMatch(text -> text.toLowerCase(Locale.ROOT).contains("language"));
+    private boolean shown(final String id) {
+        final Node node = scene.getRoot().lookup("#" + id);
+        return node != null && node.isVisible() && node.isManaged();
+    }
+
+    private String textOf(final String id) {
+        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+    }
+
+    // IF the accent row stayed, THEN a person would meet a colour "choice" that this version does not offer.
+    @Test
+    void appearance_opened_hasNoAccentRow() {
+        showAppearance();
+
+        assertThat(scene.getRoot().lookup("#appearance-accent-row")).isNull();
+        assertThat(textsUnder(required("settings-appearance-host")))
+                .noneMatch(text -> text.toLowerCase(Locale.ROOT).contains("accent"));
+    }
+
+    // IF the tab did not say its changes apply at once, THEN a person would look for a Save button that is not there.
+    @Test
+    void appearance_opened_saysChangesApplyAtOnce() {
+        showAppearance();
+
+        assertThat(textOf("appearance-instant")).isEqualTo("\u2713 Changes apply at once.");
+    }
+
+    // IF a chosen theme repainted but was not stored, THEN the next launch would open in the old theme.
+    @Test
+    void theme_darkChosen_darkAtOnceAndStoredDark() throws TimeoutException {
+        showAppearance();
+
+        onFx(() -> toggle("appearance-dark").fire());
+
+        ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, "bg"), "#283237", "bg");
+        awaitDarkStored();
+        assertThat(store.stored(AppSetting.THEME)).contains(ThemeSetting.DARK);
+    }
+
+    // IF the title-bar toggle did not store the theme, THEN the two ways of choosing one would not agree on restart.
+    @Test
+    void titleBarToggle_used_storedDark() throws TimeoutException {
+        showAppearance();
+
+        onFx(themeController::toggle);
+
+        awaitDarkStored();
+        assertThat(store.stored(AppSetting.THEME)).contains(ThemeSetting.DARK);
+    }
+
+    // IF a language change repainted the window now, THEN it would mix two languages on one screen; it applies after a
+    // restart, and the screen must say so and offer the restart.
+    @Test
+    void language_ukChosenInEnglishWindow_staysEnglishNoteAndRestartNowShown() {
+        showAppearance();
+        assertThat(shown("appearance-restart")).isFalse();
+
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        assertThat(textOf("appearance-language-note")).isEqualTo("Applies after BookLoom restarts.");
+        assertThat(shown("appearance-restart")).isTrue();
+        assertThat(textOf("appearance-restart")).isEqualTo("Restart now");
+        assertThat(textOf("appearance-instant")).isEqualTo("\u2713 Changes apply at once.");
+    }
+
+    // IF Restart now showed for the language already on screen, THEN it would restart for nothing.
+    @Test
+    void language_englishInEnglishWindow_restartNowHidden() {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        pickLanguage(LanguageChoice.ENGLISH);
+
+        assertThat(shown("appearance-restart")).isFalse();
+    }
+
+    // IF following the computer kept a stored language, THEN the computer's language could never win again.
+    @Test
+    void language_systemChosen_storedRemoved() throws TimeoutException {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+        awaitStored(AppSetting.LANGUAGE, true);
+
+        pickLanguage(LanguageChoice.SYSTEM);
+
+        awaitStored(AppSetting.LANGUAGE, false);
+    }
+
+    // IF the follow-the-computer option did not name the language it would give, THEN a person could not tell it from
+    // the other two.
+    @Test
+    void language_systemOption_namesComputerLanguage() {
+        showAppearance();
+
+        final String label = ThemeTestSupport.onFx(() -> {
+            final ComboBox<LanguageChoice> box = languageBox();
+            return box.getConverter().toString(LanguageChoice.SYSTEM);
+        });
+
+        assertThat(label).isEqualTo("Match the computer (English)");
+    }
+
+    // IF Restart now ran before the choice was stored, THEN the new copy would open in the old language.
+    @Test
+    void restartNow_clicked_restartCalledAfterWrite() throws TimeoutException {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
+        assertThat(store.stored(AppSetting.LANGUAGE)).contains("uk");
+    }
+
+    @Test
+    void restartNow_clickedTwice_restartCalledOnce() throws TimeoutException {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(restart.calls()).isEqualTo(1);
+        assertThat(ThemeTestSupport.onFx(() -> required("appearance-restart").isDisabled()))
+                .isTrue();
+        assertThat(textOf("appearance-restart")).isEqualTo("Restarting...");
+    }
+
+    @Test
+    void theme_storeRefuses_saveErrorShownAndThemeHolds() throws TimeoutException {
+        store.failPuts();
+        showAppearance();
+
+        onFx(() -> toggle("appearance-dark").fire());
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(() -> shown("appearance-save-error")));
+        assertThat(ThemeTestSupport.onFx(themeController::mode)).isEqualTo(ThemeMode.DARK);
+    }
+
+    // IF a restart skipped the quit question, THEN a running translation would be killed without a word.
+    @Test
+    void restartNow_runUnderWay_asksQuitAndRestartsOnlyAfterConfirm() throws TimeoutException {
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+        onFx(() -> injector.getInstance(StateMirror.class).publishRunState(RunState.RUNNING));
+
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+
+        assertThat(scene.getRoot().lookup("#confirm-card")).isNotNull();
+        assertThat(restart.calls()).isZero();
+        onFx(() -> ((Button) required("confirm-yes")).fire());
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
+    }
+
+    // IF a restart that could not start were silent, THEN the person would wait for a window that never comes.
+    @Test
+    void restartNow_restartFails_errorShown() throws TimeoutException {
+        restartFails = true;
+        useLocale(Locale.ENGLISH);
+        showAppearance();
+        pickLanguage(LanguageChoice.UKRAINIAN);
+
+        onFx(() -> ((Button) required("appearance-restart")).fire());
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(() -> shown("appearance-restart-error")));
+        assertThat(textOf("appearance-restart-error"))
+                .isEqualTo("BookLoom could not start again by itself. Close it and open it again.");
+    }
+
+    // IF the switch did not store, THEN technical details would be off again after the next launch.
+    @Test
+    void technical_switchedOn_storedTrue() throws TimeoutException {
+        showAppearance();
+
+        onFx(() -> ((ToggleSwitch) required("appearance-technical")).setSelected(true));
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> store.stored(AppSetting.TECHNICAL_DETAILS).isPresent());
+        assertThat(store.stored(AppSetting.TECHNICAL_DETAILS)).contains(true);
+    }
+
+    // IF the switch ignored the stored value, THEN it would show off while every screen shows technical names.
+    @Test
+    void technical_storedOn_switchOnWhenOpened() throws TimeoutException {
+        store.put(AppSetting.TECHNICAL_DETAILS, true);
+        useLocale(Locale.ENGLISH);
+        showAppearance();
+
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("appearance-technical")).isSelected()));
     }
 }

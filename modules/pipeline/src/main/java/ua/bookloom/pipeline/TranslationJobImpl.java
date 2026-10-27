@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -29,12 +28,12 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.IdSource;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.lexicon.Lexicon;
@@ -45,6 +44,8 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
+import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.ChunkRunner;
@@ -62,6 +63,7 @@ import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.RunSteps;
 import ua.bookloom.pipeline.run.RunStores;
+import ua.bookloom.pipeline.run.RunWindow;
 import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.WorkList;
 
@@ -84,7 +86,7 @@ final class TranslationJobImpl implements TranslationJob {
     // Used from the job thread only, like every event it is handed.
     private final RunSummaryLogger runSummary;
     private final AtomicBoolean skipRequested = new AtomicBoolean();
-    private final String jobId = UUID.randomUUID().toString();
+    private final String jobId;
     private final RunRecorder recorder;
     // Used from the job thread only.
     private final PendingCommit pending;
@@ -95,40 +97,11 @@ final class TranslationJobImpl implements TranslationJob {
     private final RunTicks ticks;
     private final int batchSize;
     private final WordValidator words;
-
-    TranslationJobImpl(
-            final DocumentPort documents,
-            final RunRequest request,
-            final ChatModel model,
-            final ObjectMapper mapper,
-            final PromptTemplates templates,
-            final RunStores stores,
-            final QualityLoop qualityLoop,
-            final SentenceSplitter splitter,
-            final ConsistencyPass revision,
-            final Clock clock) {
-        this(
-                documents,
-                request,
-                model,
-                mapper,
-                templates,
-                stores,
-                qualityLoop,
-                splitter,
-                revision,
-                clock,
-                RecoveryTimer.REAL,
-                RunTicks.DAEMON,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none());
-    }
+    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
-     * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
-     * or a stall on a scripted clock, and that drafts in batches from the given first size;
-     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants. The
-     * quality checks ask {@code words} about doubtful words.
+     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its
+     * requests use the reasoning level and sampling mode the source reads when the run starts.
      */
     TranslationJobImpl(
             final DocumentPort documents,
@@ -141,10 +114,14 @@ final class TranslationJobImpl implements TranslationJob {
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
             final Clock clock,
+            final IdSource idSource,
             final RecoveryTimer timer,
             final RunTicks ticks,
             final int batchSize,
-            final WordValidator words) {
+            final WordValidator words,
+            final RequestDefaultsSource requestDefaultsSource) {
+        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
+        this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
         this.words = Objects.requireNonNull(words, "words");
         this.batchSize = batchSize;
         this.documents = Objects.requireNonNull(documents, "documents");
@@ -159,8 +136,8 @@ final class TranslationJobImpl implements TranslationJob {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.control = new JobControl(request.mode().pausePoints());
         this.runSummary = new RunSummaryLogger(clock);
-        this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.modelName());
-        this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
+        this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.model());
+        this.pending = new PendingCommit(stores.checkpoint(), request.projectId(), recorder);
         this.startedAt = clock.instant();
         this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
         this.watchdog = new StallWatchdog(control, clock);
@@ -289,21 +266,26 @@ final class TranslationJobImpl implements TranslationJob {
 
     private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
         final BookBrief brief = run.project().brief();
-        final int window = ContextBudget.windowFor(request.detectedContext(), null);
-        log.debug("Run window={} detected={}", window, request.detectedContext());
+        final RunWindow runWindow = new RunWindow(request.detectedContext(), model::contextWindowOverride);
         final CallFrame frame = CallFrame.forRun(
-                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
+                brief,
+                styleSheet,
+                run.document(),
+                run.index().majorityScript().orElse(null),
+                words,
+                requestDefaultsSource.current());
         final ModelCalls calls = new JobModelCalls(
-                onSent -> new CancellableChatModel(model, control, onSent, watchdog),
-                this::emit,
-                clock,
-                frame.targetLanguage(),
-                window,
-                SegmentLocators.of(run.document()));
-        final RunSettings settings = RunSettings.forRun(request, brief, frame, window);
+                        onSent -> new CancellableChatModel(model, control, onSent, watchdog),
+                        this::emit,
+                        clock,
+                        frame.targetLanguage(),
+                        runWindow::current,
+                        SegmentLocators.of(run.document()))
+                .withSteps(StepAnnouncer.over(this::emit));
+        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(
-                chunkRunner(run, settings, sinks, calls),
+                chunkRunner(run, settings, runWindow, sinks, calls),
                 revision,
                 settings,
                 sinks,
@@ -312,7 +294,11 @@ final class TranslationJobImpl implements TranslationJob {
     }
 
     private ChunkRunner chunkRunner(
-            final RunStart.Started run, final RunSettings settings, final RunSinks sinks, final ModelCalls calls) {
+            final RunStart.Started run,
+            final RunSettings settings,
+            final RunWindow runWindow,
+            final RunSinks sinks,
+            final ModelCalls calls) {
         final GateFunction gate = GateFunction.of(documents, run.document().format());
         final SegmentTranslator translator = new SegmentTranslator(
                 gate,
@@ -332,6 +318,7 @@ final class TranslationJobImpl implements TranslationJob {
         return new ChunkRunner(
                 new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
                 settings,
+                runWindow,
                 stores,
                 sinks,
                 run.index(),
@@ -361,11 +348,6 @@ final class TranslationJobImpl implements TranslationJob {
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
         recorder.ended(report.end());
         control.finish(report.end());
-        if (report.end() == JobState.FAILED) {
-            log.warn(
-                    "Translation job ended failed code={}",
-                    Objects.requireNonNull(report.error(), "error").code());
-        }
         emit(new Finished(report));
         JobLifecycleLogger.ended(
                 report, Duration.between(startedAt, clock.instant()).toMillis());

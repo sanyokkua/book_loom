@@ -23,10 +23,13 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.TextMatch;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.BriefLock;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * The Languages card: two searchable boxes over the same list, the source one led by Auto, where the brief names no
@@ -48,7 +51,10 @@ final class BriefLanguagesCard {
     // True while a value from the view model is written into a box, so it is not handed back as a person's choice.
     private boolean applying;
 
-    BriefLanguagesCard(final BookBriefViewModel viewModel, final Messages messages, final LanguageNames names) {
+    BriefLanguagesCard(final BriefParts parts) {
+        final BookBriefViewModel viewModel = parts.viewModel();
+        final Messages messages = parts.messages();
+        final LanguageNames names = parts.names();
         final Locale locale = messages.locale();
         final List<String> tags = names.list(locale);
         this.source = Tips.install(
@@ -57,11 +63,24 @@ final class BriefLanguagesCard {
                 MessageKey.BRIEF_SOURCE_LABEL_TIP);
         this.target = Tips.install(
                 messages,
-                box("brief-target", tags, tag -> names.nameOf(tag, locale), text -> names.parse(text, locale)),
+                box(
+                        "brief-target",
+                        tags,
+                        tag -> names.listName(tag, locale),
+                        tag -> names.searchText(tag, locale),
+                        text -> names.parse(text, locale)),
                 MessageKey.BRIEF_TARGET_LABEL_TIP);
         source.committedProperty().addListener((observed, was, now) -> pickedSource(now, viewModel));
         target.committedProperty().addListener((observed, was, now) -> picked(now, viewModel::setTargetLanguage));
-        this.node = BriefCards.card(
+        this.node = card(parts);
+        source.disableProperty().bind(parts.lock().languagesLocked());
+        target.disableProperty().bind(parts.lock().languagesLocked());
+    }
+
+    private Node card(final BriefParts parts) {
+        final Messages messages = parts.messages();
+        final BookBriefViewModel viewModel = parts.viewModel();
+        return BriefCards.card(
                 "brief-languages-card",
                 messages,
                 MessageKey.BRIEF_CARD_LANGUAGES,
@@ -69,17 +88,27 @@ final class BriefLanguagesCard {
                         FIELD_SPACING,
                         BriefCards.field(messages, MessageKey.BRIEF_SOURCE_LABEL, source),
                         undeclared(messages, viewModel),
-                        proposal(viewModel, messages, names)),
+                        proposal(viewModel, messages, parts.names())),
                 new VBox(
                         FIELD_SPACING,
                         BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target),
                         required(messages, target),
                         untested(messages, viewModel)),
-                sameLanguage(messages, viewModel));
+                sameLanguage(messages, viewModel),
+                locked(messages, parts.lock()),
+                new BriefProjectLine(messages, parts.project()).node());
+    }
+
+    // Once translating has started the pair is fixed; the hint names the way to another language.
+    private static Label locked(final Messages messages, final BriefLock lock) {
+        final Label hint =
+                Visibility.bind(BriefCards.hint(messages, MessageKey.BRIEF_LANGUAGES_LOCKED), lock.languagesLocked());
+        hint.setId("brief-languages-locked");
+        return hint;
     }
 
     private static Label undeclared(final Messages messages, final BookBriefViewModel viewModel) {
-        final Label undeclared = BriefCards.shownWhile(
+        final Label undeclared = Visibility.bind(
                 BriefCards.hint(messages, MessageKey.BRIEF_SOURCE_UNDECLARED), viewModel.sourceUndeclared());
         undeclared.setId("brief-source-undeclared");
         return undeclared;
@@ -103,7 +132,7 @@ final class BriefLanguagesCard {
         final HBox row = new HBox(PROPOSAL_SPACING, text, use);
         row.setId("brief-source-proposal");
         row.setAlignment(Pos.CENTER_LEFT);
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 row,
                 Bindings.createBooleanBinding(
                         () -> proposed.get() != null
@@ -125,10 +154,10 @@ final class BriefLanguagesCard {
     }
 
     private static Banner sameLanguage(final Messages messages, final BookBriefViewModel viewModel) {
-        return BriefCards.shownWhile(
+        return Visibility.bind(
                 new Banner(
                         "brief-languages-same",
-                        Banner.Role.WARN,
+                        Tone.WARN,
                         ImportViews.WARNING_GLYPH,
                         "",
                         messages.get(MessageKey.BRIEF_LANGUAGES_SAME)),
@@ -137,7 +166,7 @@ final class BriefLanguagesCard {
 
     // Nothing can be translated without a target, so an empty one says so under the box until one is chosen.
     private static Label required(final Messages messages, final SearchableCombo<String> target) {
-        final Label required = BriefCards.shownWhile(
+        final Label required = Visibility.bind(
                 BriefCards.hint(messages, MessageKey.BRIEF_TARGET_REQUIRED),
                 target.committedProperty().isNull());
         required.setId("brief-target-required");
@@ -148,7 +177,7 @@ final class BriefLanguagesCard {
     // A language with no tested rules still translates, with the general rules; the note says so instead of leaving a
     // person to wonder why its quotes or gender come out worse than Ukrainian's.
     private static Label untested(final Messages messages, final BookBriefViewModel viewModel) {
-        final Label untested = BriefCards.shownWhile(
+        final Label untested = Visibility.bind(
                 BriefCards.hint(messages, MessageKey.BRIEF_TARGET_UNTESTED), viewModel.targetUntested());
         untested.setId("brief-target-untested");
         return Tips.install(messages, untested, MessageKey.BRIEF_TARGET_UNTESTED_TIP);
@@ -207,7 +236,8 @@ final class BriefLanguagesCard {
         return box(
                 "brief-source",
                 items,
-                tag -> AUTO.equals(tag) ? autoName : names.nameOf(tag, locale),
+                tag -> AUTO.equals(tag) ? autoName : names.listName(tag, locale),
+                tag -> AUTO.equals(tag) ? autoName : names.searchText(tag, locale),
                 text -> isAuto(text, autoName, autoWord) ? Optional.of(AUTO) : names.parse(text, locale));
     }
 
@@ -220,8 +250,9 @@ final class BriefLanguagesCard {
             final String id,
             final List<String> tags,
             final Function<String, String> name,
+            final Function<String, String> searchText,
             final Function<String, Optional<String>> parse) {
-        final SearchableCombo<String> box = SearchableCombo.parsed(tags, name, parse);
+        final SearchableCombo<String> box = SearchableCombo.parsed(tags, name, searchText, parse);
         box.setId(id);
         box.setMaxWidth(Double.MAX_VALUE);
         return box;

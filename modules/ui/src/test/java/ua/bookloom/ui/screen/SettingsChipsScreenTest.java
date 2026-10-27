@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
@@ -38,8 +39,8 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
             value = {
                 "PASSED    | chip-ok      | ✓ Connection: Passed",
                 "SOFT_PASS | chip-warn    | ! Connection: Passed with a note",
-                "FAILED    | chip-err     | ✕ Connection: unreachable",
-                "SKIPPED   | chip-neutral | – Connection: Not attempted",
+                "FAILED    | chip-err     | ✕ Ollama does not answer",
+                "SKIPPED   | chip-neutral | – Connection: not attempted",
             })
     void chips_fourStatuses_renderDistinctly(final StageStatus status, final String styleClass, final String text)
             throws TimeoutException {
@@ -47,7 +48,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
         checkWithReport(firstStageOnly(status));
 
-        final Labeled connection = chip("CONNECTION");
+        final Labeled connection = result("CONNECTION");
         assertThat(connection.getStyleClass()).contains("chip", styleClass);
         assertThat(connection.getStyleClass())
                 .filteredOn(name -> name.startsWith("chip-"))
@@ -63,15 +64,18 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
-        assertThat(chips().getChildren())
+        assertThat(checksGrid().lookupAll(".check-result"))
                 .extracting(Node::getId)
-                .containsExactly("chip-row-CONNECTION", "chip-row-MODELS", "chip-row-INFERENCE");
-        assertThat(chips().getChildren())
-                .extracting(child -> ((Labeled) child.lookup(".chip")).getText())
-                .containsExactly("✕ Connection: unreachable", "– Models: Not attempted", "– Inference: Not attempted");
+                .containsExactly("check-result-CONNECTION", "check-result-MODELS", "check-result-INFERENCE");
+        assertThat(ThemeTestSupport.onFx(() -> List.of(
+                        result("CONNECTION").getText(),
+                        result("MODELS").getText(),
+                        result("INFERENCE").getText())))
+                .containsExactly("✕ Ollama does not answer", "– Models: not attempted", "– Inference: not attempted");
     }
 
-    // IF a passed stage said only "passed", THEN a 1.2-second model and a 40-second one would look the same.
+    // IF a passed stage said only "passed", THEN a 1.2-second model and a 40-second one would look the same; each
+    // result is a sentence that names what was measured.
     @Test
     void chips_allThreePassedWithMeasurements_showTheMeasuredValues() throws TimeoutException {
         openSettings();
@@ -83,24 +87,60 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
                 new StageOutcome(
                         VerificationStage.INFERENCE, StageStatus.PASSED, null, null, Duration.ofMillis(1200), null)))));
 
-        assertThat(chips().getChildren())
-                .extracting(child -> ((Labeled) child.lookup(".chip")).getText())
-                .containsExactly("✓ reachable 41 ms", "✓ 3 models", "✓ inference 1.2 s");
+        assertThat(ThemeTestSupport.onFx(() -> List.of(
+                        result("CONNECTION").getText(),
+                        result("MODELS").getText(),
+                        result("INFERENCE").getText())))
+                .containsExactly(
+                        "✓ Ollama answers (41 ms)",
+                        "✓ 3 models found — the chosen one is there",
+                        "✓ The model replied in 1.2 s");
     }
 
     // IF a failed stage's reason lived only in a tooltip, THEN a person who cannot hover would see a red chip and
-    // never learn why.
+    // never learn why. Ollama on this computer that does not answer is closed, so the reason says to open it.
     @Test
-    void chipDetail_failedStage_showsTheErrorMessageVisibly() throws TimeoutException {
+    void chipDetail_failedStageOfLocalOllama_showsThatTheAppIsNotOpenVisibly() throws TimeoutException {
         openSettings();
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
         final Label detail = detail("CONNECTION");
-        assertThat(detail.getText()).isEqualTo("The server did not answer.");
+        assertThat(detail.getText()).isEqualTo("Ollama is not open. Open the app, then test again.");
         assertThat(detail.getStyleClass()).contains("hint");
         assertThat(detail.isVisible()).isTrue();
-        assertThat(chip("CONNECTION").getParent()).isSameAs(required("chip-row-CONNECTION"));
+        assertThat(result("CONNECTION").getParent())
+                .isSameAs(detail("CONNECTION").getParent());
+    }
+
+    // IF the failure's own English words were shown, THEN a Ukrainian screen would explain a failed stage in English.
+    @Test
+    void chipDetail_failedStageOfLocalOllamaInUkrainian_saysThatTheAppIsNotOpenInUkrainian() throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        openSettings();
+
+        checkWithReport(firstStageOnly(StageStatus.FAILED));
+
+        assertThat(detail("CONNECTION").getText())
+                .isEqualTo("Ollama не відкрито. Відкрийте застосунок і перевірте ще раз.");
+    }
+
+    // IF the refusal kept its English words, THEN a Ukrainian screen would refuse a check in English.
+    @Test
+    void checkRefusal_validationRefusalInUkrainian_isWordedInUkrainian() throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        openSettings();
+        final Label refusal = (Label) required("settings-check-refusal");
+        verifier.respondWith(Result.err(AppError.of(ErrorCode.validation, "Unknown provider", "No such provider.")));
+
+        onFx(() -> {
+            viewModel().draftModel().set(MODEL);
+            viewModel().tests().run(ProviderTest.INFERENCE);
+        });
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(refusal::isVisible));
+
+        assertThat(refusal.getText())
+                .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
     }
 
     // IF a soft pass showed the discovery error's message instead of the note, THEN the real verifier's report, which
@@ -121,7 +161,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
         checkWithReport(firstStageOnly(StageStatus.PASSED));
 
-        assertThat(chips().lookupAll(".hint")).isEmpty();
+        assertThat(checksGrid().lookup("#chip-detail-CONNECTION")).isNull();
     }
 
     // IF a refusal the person can fix were not visible in place, THEN pressing Check would appear to do nothing.
@@ -134,7 +174,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
         verifier.respondWith(Result.err(AppError.of(ErrorCode.validation, "Unknown provider", "No such provider.")));
 
         onFx(() -> {
-            viewModel().model().set(MODEL);
+            viewModel().draftModel().set(MODEL);
             viewModel().tests().run(ProviderTest.INFERENCE);
         });
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(refusal::isVisible));
@@ -142,16 +182,20 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
         assertThat(refusal.getText()).isEqualTo("No such provider.");
         assertThat(refusal.isManaged()).isTrue();
         assertThat(refusal.getStyleClass()).contains("hint");
-        onFx(() -> viewModel().model().set("another-model"));
+        onFx(() -> viewModel().draftModel().set("another-model"));
         assertThat(refusal.isVisible()).isFalse();
     }
 
-    // IF chips were drawn before any check ran, THEN the screen would report a verdict nobody asked for.
+    // IF a row claimed a verdict before any check ran, THEN the screen would report something nobody asked for.
     @Test
-    void chips_beforeAnyCheck_noChips() {
+    void results_beforeAnyCheck_everyRowSaysNotTestedYet() {
         openSettings();
 
-        assertThat(chips().getChildren()).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> List.of(
+                        result("CONNECTION").getText(),
+                        result("MODELS").getText(),
+                        result("INFERENCE").getText())))
+                .containsExactly("Not tested yet", "Not tested yet", "Not tested yet");
     }
 
     // IF a failed stage were not painted with the error background role, THEN it would not match the reference
@@ -162,9 +206,61 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
         checkWithReport(firstStageOnly(StageStatus.FAILED));
 
-        final Region failed = (Region) chip("CONNECTION");
+        final Region failed = (Region) result("CONNECTION");
         assertThat(failed.getBackground()).isNotNull();
         ThemeTestSupport.assertSameColour(
                 failed.getBackground().getFills().get(0).getFill(), "#f7e4df", "failed chip background");
+    }
+
+    // IF the checks stayed available on a form the rules refuse, THEN a click would call an address nobody can read;
+    // the screen says what to fix instead.
+    @Test
+    void checksBlocked_formHoldsABadNumber_buttonsOffAndTheLineSaysWhy() {
+        openSettings();
+        final Label blocked = (Label) required("settings-checks-blocked");
+        assertThat(blocked.isVisible()).isFalse();
+
+        onFx(() -> form().edit(draft -> draft.withRequestSeconds("many")));
+
+        assertThat(ThemeTestSupport.onFx(blocked::isVisible)).isTrue();
+        assertThat(blocked.getText()).isEqualTo("Fix the marked fields to run a test.");
+        assertThat(ThemeTestSupport.onFx(
+                        () -> button("settings-test-connection").isDisabled()))
+                .isTrue();
+    }
+
+    // IF the checks still described the saved provider, THEN the hint would promise what the buttons no longer do.
+    @Test
+    void checksHint_saysTheyUseTheFormAsTyped() {
+        openSettings();
+
+        assertThat(text("settings-checks-hint"))
+                .isEqualTo("They use the values in this form, saved or not, and change nothing.");
+        assertThat(ThemeTestSupport.onFx(() -> scene.getRoot().lookup("#settings-checks-unsaved")))
+                .isNull();
+    }
+
+    // IF the model note were hidden while adding, THEN a new provider's tests would be off with no word why.
+    @Test
+    void needsModelNote_whileAdding_isShownToo() {
+        openSettings();
+
+        onFx(() -> button("settings-provider-add").fire());
+
+        assertThat(ThemeTestSupport.onFx(
+                        () -> required("settings-check-needs-model").isVisible()))
+                .isTrue();
+    }
+
+    // IF a rename left the old name in the sentence, THEN "Ollama does not answer" would name a provider that is gone;
+    // the results themselves stay, since a name changes nothing the server sees.
+    @Test
+    void results_providerRenamed_keepTheFindingWithTheNewName() throws TimeoutException {
+        openSettings();
+        checkWithReport(firstStageOnly(StageStatus.FAILED));
+
+        onFx(() -> form().edit(draft -> draft.withName("Home")));
+
+        assertThat(ThemeTestSupport.onFx(() -> result("CONNECTION").getText())).isEqualTo("✕ Home does not answer");
     }
 }

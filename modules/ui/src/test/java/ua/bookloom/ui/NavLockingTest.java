@@ -9,9 +9,13 @@ import javafx.scene.control.Label;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
 
 /** The navigation column shows a locked step as locked, says why on hover and still answers a click. */
 class NavLockingTest extends ShellTestBase {
@@ -29,29 +33,29 @@ class NavLockingTest extends ShellTestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"nav-book-brief", "nav-names-style", "nav-translating", "nav-export"})
-    void navigation_noBook_lockedEntriesCarryTheStyleAndSayOpenABookFirst(final String id) {
-        // IF the column did not follow the lock, THEN every step would look available with no book open.
+    @ValueSource(strings = {"nav-import", "nav-book-brief", "nav-names-style", "nav-translating", "nav-export"})
+    void navigation_noProject_lockedEntriesCarryTheStyleAndSayStepsUnlockWhenAProjectIsOpen(final String id) {
+        // IF the column did not follow the lock, THEN every step would look available with no project open.
         final Button entry = (Button) required(id);
 
         assertThat(entry.getStyleClass()).contains(LOCKED);
         assertThat(entry.isDisabled()).isFalse();
-        assertThat(TooltipProbe.tipText(entry)).isEqualTo("Open a book first");
+        assertThat(TooltipProbe.tipText(entry)).isEqualTo("Steps unlock when a project is open");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"nav-import", "nav-settings"})
-    void navigation_noBook_importAndSettingsAreNotLocked(final String id) {
+    @ValueSource(strings = {"nav-projects", "nav-settings"})
+    void navigation_noProject_projectsAndSettingsAreNotLocked(final String id) {
         final Button entry = (Button) required(id);
 
         assertThat(entry.getStyleClass()).doesNotContain(LOCKED);
         assertThat(TooltipProbe.tipText(entry))
-                .isNotEqualTo("Open a book first")
+                .isNotEqualTo("Steps unlock when a project is open")
                 .isNotBlank();
     }
 
     @Test
-    void navigation_noBook_clickingALockedEntryChangesNothing() {
+    void navigation_noProject_clickingALockedEntryChangesNothing() {
         onFx(() -> ((Button) required("nav-translating")).fire());
 
         assertThat(navigator.currentView().get()).isNull();
@@ -81,7 +85,8 @@ class NavLockingTest extends ShellTestBase {
     void navigation_underUkrainian_theReasonIsInUkrainian() {
         useLocale(Locale.forLanguageTag("uk"));
 
-        assertThat(TooltipProbe.tipText(required("nav-export"))).isEqualTo("Спершу відкрийте книгу");
+        assertThat(TooltipProbe.tipText(required("nav-export")))
+                .isEqualTo("Кроки стануть доступні, коли відкрито проєкт");
     }
 
     private void show(final ViewNames view) {
@@ -120,5 +125,23 @@ class NavLockingTest extends ShellTestBase {
 
         press("names-style-back");
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+    }
+
+    // IF the run's state locked a step, THEN a person could not reach Settings to fix an unreachable program, or Import
+    // while a run waits; the run-state table locks model actions, never navigation (the no-project lock is a separate
+    // rule).
+    @ParameterizedTest
+    @EnumSource(RunState.class)
+    void navigation_everyRunState_locksNoStep(final RunState state) {
+        openBook("en", "uk");
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+
+        onFx(() -> {
+            mirror.publishRunStarted("Frankenstein.epub", null);
+            mirror.publishRunState(state);
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(scene.getRoot().lookupAll("." + LOCKED)).isEmpty();
     }
 }

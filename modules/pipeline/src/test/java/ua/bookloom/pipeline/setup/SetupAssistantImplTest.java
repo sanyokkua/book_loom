@@ -3,6 +3,8 @@ package ua.bookloom.pipeline.setup;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +89,12 @@ class SetupAssistantImplTest {
     // IF the model's lower-case second word were kept, THEN the file would name the book «Скляна гавань» while the book
     // says «Скляна Гавань».
     @Test
-    void suggestFileName_bookHasATranslatedTitle_isShownIt_andTheNameSpellsTitleAndAuthorAsTheBookDoes() {
+    void suggestFileName_bookHasATranslatedTitle_isShownIt_andTheNameSpellsTitleAndAuthorAsTheBookDoes()
+            throws IOException {
+        // An EPUB, whose details hold the title: a Markdown book has no details title (its front matter is the title).
+        desk = ReviewFixtures.epubWithMatter(
+                Files.createDirectory(tempDir.resolve("epub")), List.of(), List.of(List.of(LONG_PARAGRAPH)), List.of());
+        assistant = assistantOver(desk);
         translated(Map.of("aux:title", "Скляна Гавань", "aux:creator:0", "Мартін Ешбі"));
         model.answer(reply("{\"target\":\"мартін ешбі. скляна гавань. 1986\"}"));
 
@@ -110,6 +117,37 @@ class SetupAssistantImplTest {
                         .name())
                 .isEqualTo("Мартін Ешбі. Скляна гавань. 1986");
         assertThat(userMessage()).doesNotContain("Translated title");
+    }
+
+    // IF a Markdown book's front-matter title were not read, THEN its translated title would not reach the file name
+    // and
+    // the model's lower-case spelling would stand.
+    @Test
+    void suggestFileName_markdownFrontMatterTitleTranslated_isShownItAndTheNameSpellsItAsTheBookDoes()
+            throws IOException {
+        final Path folder = Files.createDirectory(tempDir.resolve("notes"));
+        desk = ReviewFixtures.markdown(
+                folder, "---\ntitle: Field Notes\n---\n\n# Chapter One\n\n" + LONG_PARAGRAPH + "\n");
+        assistant = assistantOver(desk);
+        translated(Map.of("aux:fm:title", "Польові Нотатки"));
+        model.answer(reply("{\"target\":\"польові нотатки. 2024\"}"));
+
+        final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
+
+        assertThat(result.error()).isNull();
+        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Польові Нотатки. 2024", false));
+        assertThat(userMessage()).contains("Translated title (use exactly as written): Польові Нотатки");
+    }
+
+    private static SetupAssistantImpl assistantOver(final Desk over) {
+        return new SetupAssistantImpl(
+                over.projects(),
+                over.segments(),
+                over.glossary(),
+                over.openProjects(),
+                new PromptTemplates(),
+                new ObjectMapper(),
+                java.time.Clock.systemUTC());
     }
 
     private void translated(final Map<String, String> targetsById) {

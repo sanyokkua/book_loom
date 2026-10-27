@@ -8,7 +8,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
+import ua.bookloom.api.AppRestart;
+import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.settings.ReviewModeChoice;
+import ua.bookloom.app.bootstrap.ResolvedTraceFile;
+import ua.bookloom.app.bootstrap.ReviewModeSource;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
 import ua.bookloom.ui.DiagnosticLog;
@@ -33,14 +38,17 @@ import ua.bookloom.util.paths.AppPaths;
 public final class AppModule extends AbstractModule {
 
     private final StartupContext startup;
+    private final EnvironmentVariables environment;
 
     /**
      * Creates the module over state the launcher already resolved.
      *
      * @param startup the resolved paths and environment, from the pre-injector launcher
+     * @param environment the one variable lookup, shared with the request headers
      */
-    public AppModule(StartupContext startup) {
+    AppModule(StartupContext startup, EnvironmentVariables environment) {
         this.startup = Objects.requireNonNull(startup, "startup");
+        this.environment = Objects.requireNonNull(environment, "environment");
     }
 
     @Override
@@ -50,15 +58,42 @@ public final class AppModule extends AbstractModule {
         bind(AppPaths.class).toInstance(startup.paths());
         bind(AppEnvironment.class).toInstance(startup.environment());
         bind(StartupContext.class).toInstance(startup);
-        // The mode is chosen once at launch and never re-read, so the review desk and the window see the same answer.
-        bind(ReviewMode.class).toInstance(startup.reviewMode().mode());
         // The one read of the build version: the launcher's startup line and the About dialog must report the same
         // string, and `:ui` cannot see this module's reader, so the value crosses the edge as a binding.
         bind(String.class).annotatedWith(BuildVersion.class).toInstance(AppVersion.current());
         // The same session instance the detailed log's header reads, so what the window records is what a rotated
         // file names; and the log settings the launcher resolved before logging existed, for the About dialog.
         bind(SessionInfo.class).toInstance(startup.session());
-        bind(DiagnosticLog.class).toInstance(new DiagnosticLog(startup.paths().logDir(), startup.detailedLog()));
+        bind(EnvironmentVariables.class).toInstance(environment);
+        bind(AppRestart.class).to(NoOpAppRestart.class).in(Singleton.class);
+        bind(DiagnosticLog.class).toInstance(diagnosticLog());
+        bind(ReviewModeChoice.class).to(ReviewModeSource.class);
+    }
+
+    private DiagnosticLog diagnosticLog() {
+        final String decidedBy =
+                switch (startup.detailedLogSource()) {
+                    case ENVIRONMENT -> "BOOKLOOM_TRACE_FILE";
+                    case PROPERTY -> "bookloom.trace.file";
+                    case MARKER, DEFAULT -> null;
+                };
+        return new DiagnosticLog(
+                startup.paths().logDir(),
+                startup.detailedLog(),
+                startup.paths().dataDir().resolve(AppPaths.DETAILED_LOG_MARKER),
+                decidedBy,
+                startup.detailedLog() && startup.detailedLogSource() == ResolvedTraceFile.Source.DEFAULT);
+    }
+
+    /**
+     * The review mode a run starts with, read at each request so a change in Settings reaches the next run.
+     *
+     * @param source the launch flag, else the stored choice
+     * @return the mode now; deliberately unscoped, so a {@code Provider<ReviewMode>} asks again each time
+     */
+    @Provides
+    ReviewMode reviewMode(final ReviewModeSource source) {
+        return source.current();
     }
 
     /**

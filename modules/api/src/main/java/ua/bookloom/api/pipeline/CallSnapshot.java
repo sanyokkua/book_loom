@@ -33,6 +33,7 @@ import ua.bookloom.api.llm.TokenUsage;
  * @param timeout how long the current attempt may wait, or null when the model sets no bound of its own
  * @param usage the reply's token usage, reported or estimated, or null until it is answered
  * @param outcomes what became of the call's segments, in the order it was noted
+ * @param items what the reply held for each expected id of a batch call, once parsed; empty for any other call
  */
 public record CallSnapshot(
         long callId,
@@ -50,7 +51,8 @@ public record CallSnapshot(
         int maxAttempts,
         @Nullable Duration timeout,
         @Nullable TokenUsage usage,
-        List<SegmentOutcomeNote> outcomes) {
+        List<SegmentOutcomeNote> outcomes,
+        List<CallItem> items) {
 
     /** Rejects a missing part or an impossible attempt, and copies the lists. */
     public CallSnapshot {
@@ -66,6 +68,7 @@ public record CallSnapshot(
         Objects.requireNonNull(startedAt, "startedAt");
         Objects.requireNonNull(elapsed, "elapsed");
         outcomes = List.copyOf(Objects.requireNonNull(outcomes, "outcomes"));
+        items = List.copyOf(Objects.requireNonNull(items, "items"));
         if (attempt < 1 || maxAttempts < attempt) {
             throw new IllegalArgumentException("attempt " + attempt + " of " + maxAttempts);
         }
@@ -113,6 +116,7 @@ public record CallSnapshot(
                 maxAttempts,
                 timeout,
                 null,
+                List.of(),
                 List.of());
     }
 
@@ -139,7 +143,8 @@ public record CallSnapshot(
                 maxAttempts,
                 timeout,
                 usage,
-                outcomes);
+                outcomes,
+                items);
     }
 
     /**
@@ -168,7 +173,8 @@ public record CallSnapshot(
                 max,
                 bound,
                 null,
-                outcomes);
+                outcomes,
+                items);
     }
 
     /**
@@ -197,7 +203,8 @@ public record CallSnapshot(
                 maxAttempts,
                 timeout,
                 tokens,
-                outcomes);
+                outcomes,
+                items);
     }
 
     /**
@@ -228,7 +235,8 @@ public record CallSnapshot(
                 maxAttempts,
                 timeout,
                 null,
-                outcomes);
+                outcomes,
+                items);
     }
 
     /**
@@ -256,6 +264,34 @@ public record CallSnapshot(
                 maxAttempts,
                 timeout,
                 usage,
-                more);
+                more,
+                items);
+    }
+
+    /**
+     * The same call with what its parsed reply held for each item.
+     *
+     * @param parsed the non-null items, replacing any set before
+     * @return the call that holds them
+     */
+    public CallSnapshot withItems(final List<CallItem> parsed) {
+        return new CallSnapshot(
+                callId,
+                kind,
+                label,
+                position,
+                segments,
+                sections,
+                sent,
+                reply,
+                state,
+                startedAt,
+                elapsed,
+                attempt,
+                maxAttempts,
+                timeout,
+                usage,
+                outcomes,
+                parsed);
     }
 }

@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.UnaryOperator;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -9,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 
 /**
  * Saves the brief through the project service on the background executor, one save at a time and in order.
@@ -27,12 +28,14 @@ final class BriefSaver {
 
     private final ProjectService projects;
     private final ExecutorService executor;
+    private final BriefSaveOutcomes outcomes;
     private final ReadOnlyBooleanWrapper saving = new ReadOnlyBooleanWrapper(false);
     private @Nullable Save waiting;
 
-    BriefSaver(final ProjectService projects, final ExecutorService executor) {
+    BriefSaver(final ProjectService projects, final ExecutorService executor, final BriefSaveOutcomes outcomes) {
         this.projects = projects;
         this.executor = executor;
+        this.outcomes = outcomes;
     }
 
     ReadOnlyBooleanProperty saving() {
@@ -61,25 +64,40 @@ final class BriefSaver {
     }
 
     private void saveOffThread(final Save save) {
+        @Nullable Result<ProjectChange> answer = null;
         try {
-            logResult(projects.updateBrief(save.projectId(), save.brief()));
+            answer = projects.updateBrief(save.projectId(), save.brief());
         } catch (RuntimeException thrown) {
             log.error("saving the brief of project {} threw instead of returning a result", save.projectId(), thrown);
-        } finally {
-            Platform.runLater(this::saved);
         }
+        final @Nullable Result<ProjectChange> answered = answer;
+        Platform.runLater(() -> saved(save, answered));
     }
 
-    private static void logResult(final Result<Project> saved) {
-        final AppError error = saved.error();
-        if (error == null) {
-            log.debug("the brief was saved");
-        } else {
+    // What the service answered, once, and the fix a refusal asks of the save that waited behind it.
+    private UnaryOperator<BookBrief> logResult(final Save save, final @Nullable Result<ProjectChange> saved) {
+        final @Nullable AppError error = saved == null ? null : saved.error();
+        final @Nullable ProjectChange change = saved == null ? null : saved.data();
+        if (saved == null) {
+            return waiting -> waiting;
+        }
+        if (error != null) {
             log.warn("the brief was not saved: code {}", error.code());
+        } else if (change instanceof ProjectChange.Saved) {
+            log.debug("the brief was saved");
+            outcomes.stored(save.projectId(), save.brief());
+        } else if (change != null) {
+            log.warn(
+                    "the brief of project {} was refused: {}",
+                    save.projectId(),
+                    change.getClass().getSimpleName());
+            return outcomes.refused(save.projectId(), save.brief(), change);
         }
+        return waiting -> waiting;
     }
 
-    private void saved() {
+    private void saved(final Save save, final @Nullable Result<ProjectChange> answer) {
+        final UnaryOperator<BookBrief> fix = logResult(save, answer);
         final Save next = waiting;
         waiting = null;
         if (next == null) {
@@ -87,6 +105,6 @@ final class BriefSaver {
             return;
         }
         log.debug("sending the brief that waited");
-        send(next);
+        send(new Save(next.projectId(), fix.apply(next.brief())));
     }
 }

@@ -28,6 +28,7 @@ import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -46,6 +47,27 @@ public final class GlossaryModelScans {
     private final SuggestTargets suggestTargets;
     private final LexiconReading lexiconReading;
     private final Clock clock;
+    private final RequestDefaultsSource requestDefaultsSource;
+
+    /** Scans whose requests use the defaults the environment alone gives (the command line, tests). */
+    public GlossaryModelScans(
+            final ProjectRepository projects,
+            final OpenProjects openProjects,
+            final PreScan preScan,
+            final TermReview termReview,
+            final SuggestTargets suggestTargets,
+            final LexiconReading lexiconReading,
+            final Clock clock) {
+        this(
+                projects,
+                openProjects,
+                preScan,
+                termReview,
+                suggestTargets,
+                lexiconReading,
+                clock,
+                RequestDefaultsSource.environmentOnly());
+    }
 
     /** What a model action of the glossary runs on. */
     record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
@@ -196,7 +218,7 @@ public final class GlossaryModelScans {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before scanning for names."));
         }
-        final CallFrame frame = CallFrame.forBook(brief, document, index);
+        final CallFrame frame = CallFrame.forBook(brief, document, index, requestDefaultsSource.current());
         log.debug(
                 "Glossary model action project={} source={} analysis={} target={}",
                 projectId,

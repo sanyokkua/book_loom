@@ -16,6 +16,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.CallAttempt;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
@@ -86,17 +87,37 @@ final class CallSnapshots {
         }
     }
 
+    /** Puts the parsed items of a batch reply on the draft call that was sent. */
+    void parsed(final List<String> segmentIds, final List<CallItem> items) {
+        Objects.requireNonNull(segmentIds, "segmentIds");
+        Objects.requireNonNull(items, "items");
+        final Long callId = segmentIds.isEmpty() ? null : draftedBy.get(segmentIds.getFirst());
+        final CallSnapshot call = callId == null ? null : shown.get(callId);
+        if (call == null) {
+            log.debug("Items parsed with no draft call shown segmentIds={} callId={}", segmentIds.size(), callId);
+        }
+        if (log.isTraceEnabled()) {
+            log.trace(
+                    "Items parsed targets={}",
+                    items.stream().map(CallItem::target).toList());
+        }
+        if (call != null && call.kind() == CallKind.DRAFT) {
+            publish(call.withItems(items));
+        }
+    }
+
     private void publish(final CallSnapshot snapshot) {
         shown.put(snapshot.callId(), snapshot);
         log.debug(
-                "Sending CallSnapshotUpdated callId={} kind={} state={} attempt={} segments={} sections={} outcomes={}",
+                "Sending CallSnapshotUpdated callId={} kind={} state={} attempt={} segments={} sections={} outcomes={} items={}",
                 snapshot.callId(),
                 snapshot.kind(),
                 snapshot.state(),
                 snapshot.attempt(),
                 snapshot.segments().size(),
                 snapshot.sections().size(),
-                snapshot.outcomes().size());
+                snapshot.outcomes().size(),
+                snapshot.items().size());
         if (log.isTraceEnabled()) {
             log.trace("Call snapshot callId={} reply={}", snapshot.callId(), snapshot.reply());
         }

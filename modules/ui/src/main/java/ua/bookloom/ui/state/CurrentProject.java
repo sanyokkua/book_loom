@@ -7,6 +7,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NarratorHint;
 
 /**
  * The one book the window has open, as a stored project.
@@ -27,6 +28,8 @@ public final class CurrentProject {
 
     private final ReadOnlyObjectWrapper<@Nullable BookBrief> brief = new ReadOnlyObjectWrapper<>();
 
+    private final ReadOnlyObjectWrapper<@Nullable NarratorHint> narratorHint = new ReadOnlyObjectWrapper<>();
+
     /**
      * The open book.
      *
@@ -46,6 +49,26 @@ public final class CurrentProject {
         return brief.getReadOnlyProperty();
     }
 
+    /**
+     * What the open book's text says about who narrates it. A property of its own, like the brief, because a book that
+     * declares no language is judged only once the person has chosen the source, long after it was opened.
+     *
+     * @return a read-only property holding {@code null} while no book is open or its text has not been judged yet
+     */
+    public ReadOnlyObjectProperty<@Nullable NarratorHint> narratorHint() {
+        return narratorHint.getReadOnlyProperty();
+    }
+
+    void replaceNarratorHint(final NarratorHint detected) {
+        Objects.requireNonNull(detected, "detected");
+        if (book.get() == null) {
+            log.debug("the narrator hint is not replaced: no book is open");
+            return;
+        }
+        log.debug("the narrator hint of the open book is now {}", detected.person());
+        narratorHint.set(detected);
+    }
+
     void replaceBrief(final BookBrief changed) {
         Objects.requireNonNull(changed, "changed");
         if (book.get() == null) {
@@ -60,12 +83,16 @@ public final class CurrentProject {
         log.debug("the current project is now {}", opened.projectId());
         log.trace("the current project's source is {}", opened.source());
         brief.set(opened.brief());
+        // Cleared first and set after the book, so a listener on the hint never pairs one book's hint with another.
+        narratorHint.set(null);
         book.set(opened);
+        narratorHint.set(opened.narratorHint());
     }
 
     void clear() {
         log.debug("no current project");
         book.set(null);
         brief.set(null);
+        narratorHint.set(null);
     }
 }

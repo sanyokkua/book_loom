@@ -2,6 +2,7 @@ package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -135,4 +136,13 @@ public interface LexiconService {
      * @return the written file's path
      */
     Result<Path> exportCsv(String projectId, Path destination);
+
+    /**
+     * Counts how often the book uses each recurring term, from the book index.
+     *
+     * @param projectId the non-null project id; its book must be open
+     * @return the use count per term, keyed by {@link LexiconEntry#keyOf} of the term; a {@code validation} error when
+     *     no book is open for the project
+     */
+    Result<Map<String, Integer>> usage(String projectId);
 }

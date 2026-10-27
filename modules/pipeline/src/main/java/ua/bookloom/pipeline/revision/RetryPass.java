@@ -90,16 +90,31 @@ final class RetryPass {
                 .toList();
         log.info("Retry of doubted segments started project={} eligible={}", inputs.projectId(), eligible.size());
         calls.planned(ModelCalls.Stage.RETRY_DOUBTED, eligible.size());
+        final Result<Boolean> ran = retryAll(inputs, eligible, fingerprints, calls, tally);
+        log.info("Retry of doubted segments ended project={} tried={}", inputs.projectId(), eligible.size());
+        return ran;
+    }
+
+    private Result<Boolean> retryAll(
+            final PassInputs inputs,
+            final List<SegmentRecord> eligible,
+            final Map<String, String> fingerprints,
+            final ModelCalls calls,
+            final PassTally tally) {
         for (int done = 0; done < eligible.size(); done++) {
+            if (EarlyStop.isRequested(calls, "Retry of doubted segments", eligible.size() - done)) {
+                return Result.ok(true);
+            }
             final SegmentRecord record = eligible.get(done);
             final Result<Attempt> one = retryOne(inputs, record, calls, tally);
             if (one.isErr()) {
-                return Result.err(Objects.requireNonNull(one.error(), "error"));
+                return EarlyStop.isStop(one, calls, "Retry of doubted segments")
+                        ? Result.ok(true)
+                        : Result.err(Objects.requireNonNull(one.error(), "error"));
             }
             rememberIfKept(inputs, record, fingerprints.get(record.segmentId()), Objects.requireNonNull(one.data()));
             calls.advanced(ModelCalls.Stage.RETRY_DOUBTED, done + 1);
         }
-        log.info("Retry of doubted segments ended project={} tried={}", inputs.projectId(), eligible.size());
         return Result.ok(true);
     }
 

@@ -8,12 +8,14 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Resolves a {@link MessageKey} and its arguments to display text.
  *
- * <p>The locale is read once: a language that changed mid-run would leave half a screen in each. ICU
+ * <p>The locale is read once, at first use: a language that changed mid-run would leave half a screen in each. ICU
  * {@code MessageFormat} rather than {@link java.text.MessageFormat} because only ICU has {@code plural}, which
  * Ukrainian needs in four forms; English is the fallback bundle because it is the base language every key is first
  * written in.
@@ -22,27 +24,60 @@ import lombok.extern.slf4j.Slf4j;
 @Singleton
 public final class Messages {
 
+    /**
+     * The one ellipsis the interface writes, in the bundles and in code: three full stops. The single ellipsis
+     * character (U+2026) of the macOS system font drew its third dot faint and small at the interface's text sizes,
+     * so "Change…" read as "Change.."; three separate full stops are three whole glyphs.
+     */
+    public static final String ELLIPSIS = "...";
+
     private static final String BASE_NAME = "ua.bookloom.ui.i18n.messages";
 
-    private final Locale locale;
-    private final ResourceBundle active;
-    private final ResourceBundle english;
+    private final LocaleProvider localeProvider;
+    private final ReentrantLock decision = new ReentrantLock();
+    private volatile @Nullable Resolved resolved;
 
     /**
-     * Resolves the display locale and loads its catalogue and the English one.
+     * Keeps the provider; the language is decided at the first use, not here, because the injector builds this class
+     * before startup has read the stored language choice.
      *
      * @param localeProvider where the display locale comes from
      */
     @Inject
     public Messages(final LocaleProvider localeProvider) {
-        Objects.requireNonNull(localeProvider, "localeProvider");
-        this.locale = localeProvider.displayLocale();
-        this.active = ResourceBundle.getBundle(BASE_NAME, locale);
-        this.english = ResourceBundle.getBundle(BASE_NAME, Locale.ENGLISH);
+        this.localeProvider = Objects.requireNonNull(localeProvider, "localeProvider");
+    }
+
+    /** The language and the two catalogues, decided together once and then never changed. */
+    private record Resolved(Locale locale, ResourceBundle active, ResourceBundle english) {}
+
+    private Resolved resolved() {
+        final Resolved done = resolved;
+        if (done != null) {
+            return done;
+        }
+        decision.lock();
+        try {
+            if (resolved == null) {
+                resolved = decide();
+            }
+            return Objects.requireNonNull(resolved, "resolved");
+        } finally {
+            decision.unlock();
+        }
+    }
+
+    private Resolved decide() {
+        final Locale locale = localeProvider.displayLocale();
+        final Resolved decided = new Resolved(
+                locale,
+                ResourceBundle.getBundle(BASE_NAME, locale),
+                ResourceBundle.getBundle(BASE_NAME, Locale.ENGLISH));
         log.info(
                 "display locale {} chosen by {}",
                 locale,
                 localeProvider.getClass().getSimpleName());
+        return decided;
     }
 
     /**
@@ -59,7 +94,8 @@ public final class Messages {
         Objects.requireNonNull(args, "args");
         // No line per resolution: the activity list resolves every visible row on every event, and two lines each
         // drowned the log; the two branches worth a line are the missing key and the invalid pattern below.
-        return format(key, patternFor(key), args);
+        final Resolved now = resolved();
+        return format(now.locale(), key, patternFor(now, key), args);
     }
 
     /**
@@ -84,7 +120,7 @@ public final class Messages {
      * @return the locale every message is rendered for
      */
     public Locale locale() {
-        return locale;
+        return resolved().locale();
     }
 
     /**
@@ -94,28 +130,28 @@ public final class Messages {
      * @return the bundle for the display locale, falling back to English through the standard bundle chain
      */
     public ResourceBundle bundle() {
-        return active;
+        return resolved().active();
     }
 
-    private String patternFor(final MessageKey key) {
+    private String patternFor(final Resolved now, final MessageKey key) {
         try {
-            return active.getString(key.key());
+            return now.active().getString(key.key());
         } catch (MissingResourceException missingInActive) {
-            log.debug("{} is missing for {}, resolving it for the English catalogue", key.key(), locale);
-            return englishPatternFor(key);
+            log.debug("{} is missing for {}, resolving it for the English catalogue", key.key(), now.locale());
+            return englishPatternFor(now, key);
         }
     }
 
-    private String englishPatternFor(final MessageKey key) {
+    private String englishPatternFor(final Resolved now, final MessageKey key) {
         try {
-            return english.getString(key.key());
+            return now.english().getString(key.key());
         } catch (MissingResourceException missingEverywhere) {
             log.warn("{} is in no catalogue, displaying the raw key", key.key());
             return key.key();
         }
     }
 
-    private String format(final MessageKey key, final String pattern, final Object[] args) {
+    private String format(final Locale locale, final MessageKey key, final String pattern, final Object[] args) {
         try {
             return new MessageFormat(pattern, ULocale.forLocale(locale)).format(args);
         } catch (IllegalArgumentException e) {

@@ -59,7 +59,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         useCountingPool();
         final SettingsViewModel viewModel = viewModel(verifier);
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
@@ -120,7 +120,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         checkWithModel(viewModel);
 
         onFx(() -> {
-            viewModel.model().set("another-model");
+            viewModel.draftModel().set("another-model");
             return null;
         });
 
@@ -138,9 +138,9 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         verifier.awaitEntered();
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
-            viewModel.selectProvider("ollama");
-            viewModel.model().set(MODEL);
+            viewModel.editProvider("lmstudio");
+            viewModel.editProvider("ollama");
+            viewModel.draftModel().set(MODEL);
             return null;
         });
         verifier.release();
@@ -156,7 +156,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
     // IF the selection still looked busy after the provider changed mid-check, THEN a person could not check the new
     // provider until the old server answered.
     @Test
-    void selectProvider_midCheck_clearsCheckingAtOnceAndAvailabilityFollowsModel() throws InterruptedException {
+    void editProvider_midCheck_clearsCheckingAtOnceAndAvailabilityFollowsModel() throws InterruptedException {
         final ScriptedProviderVerifier verifier = ScriptedProviderVerifier.gated(allPassed());
         useCountingPool();
         final SettingsViewModel viewModel = viewModel(verifier);
@@ -165,7 +165,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         assertThat(onFx(() -> viewModel.tests().checking().get())).isTrue();
 
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
+            viewModel.editProvider("lmstudio");
             return null;
         });
 
@@ -174,7 +174,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
                         viewModel.tests().available(ProviderTest.INFERENCE).get()))
                 .isFalse();
         onFx(() -> {
-            viewModel.model().set(MODEL);
+            viewModel.draftModel().set(MODEL);
             return null;
         });
         assertThat(onFx(() ->
@@ -193,7 +193,7 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         verifier.awaitEntered();
 
         onFx(() -> {
-            viewModel.model().set("another-model");
+            viewModel.draftModel().set("another-model");
             return null;
         });
 
@@ -215,8 +215,8 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
         verifier.awaitEntered();
         verifier.hold();
         onFx(() -> {
-            viewModel.selectProvider("lmstudio");
-            viewModel.model().set(MODEL);
+            viewModel.editProvider("lmstudio");
+            viewModel.draftModel().set(MODEL);
             viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
@@ -236,6 +236,6 @@ class SettingsViewModelCheckLifecycleTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> viewModel.tests().checking().get())).isFalse();
         assertThat(stagesOf(viewModel)).hasSize(3);
-        assertThat(toasts.raised()).hasSize(1);
+        assertThat(toasts.raised()).isEmpty();
     }
 }

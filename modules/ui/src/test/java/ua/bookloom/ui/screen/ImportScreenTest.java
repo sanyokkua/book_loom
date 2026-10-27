@@ -21,7 +21,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
+import ua.bookloom.ui.dialog.RecordingOpenAnotherBookPrompt;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -73,7 +73,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     // IF a state's parts were shown before anything was chosen, THEN the person would see a card, a progress bar, a
     // refusal or a warning about nothing.
     @ParameterizedTest
-    @ValueSource(strings = {"import-card", "import-refusal", "import-mismatch", "import-progress"})
+    @ValueSource(strings = {"import-card", "import-verdict", "import-about", "import-verdict-bar"})
     void screen_nothingChosenYet_doesNotShowTheOtherStatesParts(final String id) {
         openImport();
 
@@ -89,7 +89,7 @@ class ImportScreenTest extends ImportScreenTestBase {
         assertThat(isShown("import-dropzone")).isTrue();
         assertThat(required("import-dropzone").getOnDragOver()).isNotNull();
         assertThat(required("import-dropzone").getOnDragDropped()).isNotNull();
-        assertThat(button("import-browse").getText()).isEqualTo("Browse files…");
+        assertThat(button("import-browse").getText()).isEqualTo("Browse files...");
         assertThat(button("import-browse").isDisable()).isFalse();
     }
 
@@ -99,7 +99,7 @@ class ImportScreenTest extends ImportScreenTestBase {
         openImport();
 
         assertThat(optional("import-continue")).isNull();
-        assertThat(optional("import-choose-another")).isNull();
+        assertThat(optional("import-verdict-choose")).isNull();
         assertThat(idsStartingWith("import-row-")).isEmpty();
     }
 
@@ -113,6 +113,7 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         openBook(source);
 
+        openFold();
         assertThat(isShown("import-card")).isTrue();
         assertThat(idsStartingWith("import-row-"))
                 .containsExactlyInAnyOrder(
@@ -124,9 +125,9 @@ class ImportScreenTest extends ImportScreenTestBase {
                         "import-row-drm");
         assertThat(optional("import-continue")).isNotNull();
         assertThat(button("import-continue").isDisable()).isFalse();
-        assertThat(isShown("import-refusal")).isFalse();
-        assertThat(isShown("import-mismatch")).isFalse();
-        assertThat(isShown("import-progress")).isFalse();
+        assertThat(textOf("import-verdict-text")).startsWith("BookLoom can translate this book");
+        assertThat(optional("import-verdict-choose")).isNull();
+        assertThat(optional("import-verdict-bar")).isNull();
     }
 
     // IF a row reported the wrong value, THEN the person would see a different book from the one they opened.
@@ -138,7 +139,7 @@ class ImportScreenTest extends ImportScreenTestBase {
                 "format | EPUB 2.0",
                 "titleAuthor | Frankenstein · Mary Shelley",
                 "declaredLang | English (en)",
-                "chapters | 11 · ~78,000 words",
+                "chapters | 11 · about 78,200 words",
                 "drm | none"
             })
     void card_enBookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {
@@ -177,8 +178,7 @@ class ImportScreenTest extends ImportScreenTestBase {
         openBook(source);
 
         assertThat(textOf("import-row-declaredLang")).contains(expected);
-        assertThat(isShown("import-mismatch")).isFalse();
-        assertThat(isShown("import-unrecognized")).isFalse();
+        assertThat(textOf("import-verdict-text")).startsWith("BookLoom can translate this book");
     }
 
     // IF a book with a cover drew the placeholder, or one without drew a picture, THEN the card would misreport the
@@ -204,15 +204,23 @@ class ImportScreenTest extends ImportScreenTestBase {
         openBook(source);
 
         assertThat(optional("import-cover")).isNull();
-        assertThat(required("import-cover-placeholder").getStyleClass()).contains("cover-placeholder");
+        assertThat(required("import-cover-none").getStyleClass()).contains("cover-placeholder");
     }
 
-    // IF a book of 1,499 or 640 words were shown with another figure, THEN the approximate size would mislead.
+    // IF a book of 1,499 or 640 words were shown with another figure, THEN the approximate size would mislead; the
+    // rounding itself is owned by WordCount, so this only pins that the chapters row uses it.
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
-            value = {"640|~640", "999|~999", "1000|~1,000", "1499|~1,000", "1500|~2,000", "78214|~78,000"})
-    void card_wordFigure_isExactBelowAThousandAndRoundedToTheNearestThousandFromThere(
+            value = {
+                "640|640",
+                "999|999",
+                "1000|about 1,000",
+                "1499|about 1,500",
+                "1500|about 1,500",
+                "78214|about 78,200"
+            })
+    void card_wordFigure_isExactBelowAThousandAndRoundedToTheNearestHundredFromThere(
             final int words, final String expected) throws TimeoutException {
         final Path source = dir.resolve("book.epub");
         projects.on(
@@ -260,7 +268,7 @@ class ImportScreenTest extends ImportScreenTestBase {
                         presentRows.stream().map(row -> "import-row-" + row).toList())
                 .doesNotContainAnyElementsOf(
                         absentRows.stream().map(row -> "import-row-" + row).toList());
-        assertThat(isShown("import-refusal")).isFalse();
+        assertThat(textOf("import-verdict-text")).startsWith("BookLoom can translate this book");
         assertThat(optional("import-continue")).isNotNull();
     }
 
@@ -306,9 +314,9 @@ class ImportScreenTest extends ImportScreenTestBase {
         assertThat(state()).isInstanceOf(ImportState.Detected.class);
     }
 
-    // IF a drop on the import screen skipped the guard, THEN a paused translation would be thrown away unasked.
+    // IF a drop on the import screen skipped the guard, THEN a second book would replace the open project unasked.
     @Test
-    void openDropped_runIsPaused_asksTheQuestionAndImportsNothingYet() throws TimeoutException {
+    void openDropped_projectOpenAndRunPaused_asksTheQuestionAndImportsNothingYet() throws TimeoutException {
         final Path first = dir.resolve("Frankenstein.epub");
         final Path second = dir.resolve("Dracula.epub");
         projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
@@ -323,7 +331,7 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         assertThat(prompt.asked())
                 .containsExactly(
-                        new RecordingReplaceRunPrompt.Asked("Frankenstein.epub", "Dracula.epub", RunState.PAUSED));
+                        new RecordingOpenAnotherBookPrompt.Asked("Frankenstein.epub", "Dracula.epub", RunState.PAUSED));
         assertThat(projects.imports()).containsExactly(first);
     }
 
@@ -339,6 +347,7 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         openImport();
 
+        openFold();
         assertThat(isShown("import-card")).isTrue();
         assertThat(textOf("import-row-file")).contains("Frankenstein.epub");
     }

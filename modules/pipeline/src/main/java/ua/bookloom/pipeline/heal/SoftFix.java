@@ -57,6 +57,18 @@ final class SoftFix {
                 settings.dial().repairRounds(),
                 null,
                 fixable.getFirst().kind()));
+        final RoundOutcome result = softFixOf(outcome, accepted, fixable);
+        if (result instanceof RoundOutcome.Evaluated fixed && clears(fixed.qa())) {
+            log.debug("Soft fix adopted segment={}", segmentId);
+            return asDecided(segmentId, adopted(accepted, fixed));
+        }
+        log.debug("Soft fix discarded, the accepted text stays segment={}", segmentId);
+        return asDecided(segmentId, accepted);
+    }
+
+    private RoundOutcome softFixOf(
+            final DraftOutcome.Drafted outcome, final Accepted accepted, final List<QaFinding> fixable) {
+        final String stepKey = RepairSteps.begin(calls, outcome.segment().id(), RepairSteps.SOFT_SUFFIX, "soft-fix");
         final RoundOutcome result = evaluator.classify(
                 outcome,
                 directedFix.fix(
@@ -66,12 +78,14 @@ final class SoftFix {
                         accepted.maskedText(),
                         fixable,
                         calls));
-        if (result instanceof RoundOutcome.Evaluated fixed && clears(fixed.qa())) {
-            log.debug("Soft fix adopted segment={}", segmentId);
-            return asDecided(segmentId, adopted(accepted, fixed));
-        }
-        log.debug("Soft fix discarded, the accepted text stays segment={}", segmentId);
-        return asDecided(segmentId, accepted);
+        // A soft fix is never retried, so a failed call ends its step here instead of leaving it open.
+        RepairSteps.end(
+                calls,
+                stepKey,
+                result instanceof RoundOutcome.StepError stepError
+                        ? new RoundOutcome.FlagNow(stepError.error())
+                        : result);
+        return result;
     }
 
     private boolean worthAFix(final DraftOutcome.Drafted outcome) {

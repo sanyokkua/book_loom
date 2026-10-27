@@ -1,6 +1,6 @@
 # ADR-0009 — Persist state in SQLite (WAL) with Flyway migrations and JDBI access
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** accepted; amended by ADR-0043 (no Flyway migrations before the first release; state kept as JSON documents) **Date:** 2026-07-17 **Deciders:** architect
 
 ## Context and problem statement
 

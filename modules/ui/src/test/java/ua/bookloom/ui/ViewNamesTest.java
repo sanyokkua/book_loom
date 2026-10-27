@@ -82,14 +82,21 @@ class ViewNamesTest extends FxTestBase {
                 .isNotNull();
     }
 
-    // IF an inert constant carried a resource, THEN activating it could reach a view the specification says is absent.
+    // IF the projects constant pointed at a misspelt path, THEN navigating to it would load nothing.
+    @Test
+    void resource_projects_isItsFxmlFileAndTheConstantIsAvailable() {
+        assertThat(ViewNames.PROJECTS.resource()).hasValue("/ua/bookloom/ui/screen/projects.fxml");
+        assertThat(ViewNames.PROJECTS.isAvailable()).isTrue();
+        assertThat(ViewNames.class.getResource("/ua/bookloom/ui/screen/projects.fxml"))
+                .isNotNull();
+    }
+
+    // IF a constant had no resource, THEN its navigation entry would open nothing; every screen exists now.
     @ParameterizedTest
-    @EnumSource(
-            value = ViewNames.class,
-            names = {"PROJECTS"})
-    void resource_inertConstant_isAbsentAndTheConstantIsUnavailable(final ViewNames view) {
-        assertThat(view.resource()).isEmpty();
-        assertThat(view.isAvailable()).isFalse();
+    @EnumSource(ViewNames.class)
+    void isAvailable_everyConstant_isTrue(final ViewNames view) {
+        assertThat(view.isAvailable()).isTrue();
+        assertThat(view.resource()).isPresent();
     }
 
     // IF a constant were mapped to a neighbour's key, THEN its navigation label and breadcrumb would name the wrong

@@ -134,4 +134,54 @@ class LiveCallStateTest {
                         .target())
                 .isEqualTo("Чернетка");
     }
+
+    // IF the call history grew without a bound, THEN a long run would hold every prompt it ever sent.
+    @Test
+    void snapshot_120Calls_keepTheLast50OldestFirst() {
+        java.util.stream.LongStream.rangeClosed(1, 120).forEach(id -> state.snapshot(waiting(id)));
+
+        final List<Long> ids =
+                state.view(START).recent().stream().map(CallSnapshot::callId).toList();
+
+        assertThat(ids).hasSize(50).startsWith(71L).endsWith(120L);
+    }
+
+    // IF an update of a call added a second copy, THEN All calls would list a call twice.
+    @Test
+    void snapshot_sameCallAgain_replacesItInTheHistory() {
+        state.snapshot(waiting(1));
+        state.snapshot(waiting(2));
+
+        state.snapshot(waiting(1).answered("one", null, Duration.ofSeconds(2)));
+
+        final List<CallSnapshot> recent = state.view(START).recent();
+        assertThat(recent).extracting(CallSnapshot::callId).containsExactly(1L, 2L);
+        assertThat(recent.get(0).reply()).isEqualTo("one");
+    }
+
+    // IF the history list were rebuilt on every tick, THEN every published view would differ and the screen would
+    // refresh once a second for nothing.
+    @Test
+    void view_twoTicksWithNoSnapshotBetween_shareOneHistoryList() {
+        state.snapshot(waiting(1));
+
+        assertThat(state.view(START).recent())
+                .isSameAs(state.view(START.plusSeconds(1)).recent());
+    }
+
+    // IF a summary refresh did not raise the version, THEN the scene summary line would never read the new text.
+    @Test
+    void memory_summaryUpdate_setsTheSummaryVersion() {
+        state.memory(new ua.bookloom.api.pipeline.MemoryUpdated(ua.bookloom.api.pipeline.MemoryKind.SUMMARY, "3"));
+
+        assertThat(state.view(START).summaryVersion()).isEqualTo(3);
+    }
+
+    // IF a glossary change moved the summary version, THEN the card would re-read a summary that did not change.
+    @Test
+    void memory_glossaryUpdate_leavesTheSummaryVersion() {
+        state.memory(new ua.bookloom.api.pipeline.MemoryUpdated(ua.bookloom.api.pipeline.MemoryKind.GLOSSARY, "+2"));
+
+        assertThat(state.view(START).summaryVersion()).isZero();
+    }
 }

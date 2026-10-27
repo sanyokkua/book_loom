@@ -109,7 +109,7 @@ final class LexiconFiles {
                 case UNCHANGED -> log.debug("Lexicon import line {} changes nothing", row.line());
             }
         }
-        return Result.ok(new GlossaryImportReport(imported, parsed.malformedLines(), refused));
+        return Result.ok(new GlossaryImportReport(imported, parsed.malformedLines(), refused, 0, parsed.problems()));
     }
 
     private Result<Outcome> applyRow(

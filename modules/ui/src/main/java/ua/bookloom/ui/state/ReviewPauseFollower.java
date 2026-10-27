@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Set;
@@ -27,7 +28,7 @@ public final class ReviewPauseFollower {
     private final StateMirror mirror;
     private final ReviewViewModel review;
     private final TranslatingViewModel translating;
-    private final ReviewMode reviewMode;
+    private final Provider<ReviewMode> reviewMode;
     private final ReadOnlyBooleanWrapper pausedForReview = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper acceptContinues = new ReadOnlyBooleanWrapper();
 
@@ -37,14 +38,14 @@ public final class ReviewPauseFollower {
      * @param mirror the run's state, whose review section names the paused segment and announces decisions
      * @param review the panel's view model, which selects the paused segment
      * @param translating the run's controls, whose resume continues the run
-     * @param reviewMode the mode of this launch; Manual words Accept as Accept &amp; continue
+     * @param reviewMode the mode a run keeps or the next would use; Manual words Accept as Accept &amp; continue
      */
     @Inject
     public ReviewPauseFollower(
             final StateMirror mirror,
             final ReviewViewModel review,
             final TranslatingViewModel translating,
-            final ReviewMode reviewMode) {
+            final Provider<ReviewMode> reviewMode) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.review = Objects.requireNonNull(review, "review");
         this.translating = Objects.requireNonNull(translating, "translating");
@@ -74,11 +75,15 @@ public final class ReviewPauseFollower {
 
     private void follow(final @Nullable String segmentId) {
         pausedForReview.set(segmentId != null);
-        acceptContinues.set(segmentId != null && reviewMode == ReviewMode.MANUAL);
-        if (segmentId != null) {
-            log.debug("review pause at segment {} in {} mode: selecting it", segmentId, reviewMode);
-            review.select(segmentId);
+        if (segmentId == null) {
+            acceptContinues.set(false);
+            return;
         }
+        // Asked only once a pause exists: a run published its mode, so the provider (a stored read) is not reached.
+        final ReviewMode mode = RunModes.current(mirror, reviewMode);
+        acceptContinues.set(mode == ReviewMode.MANUAL);
+        log.debug("review pause at segment {} in {} mode: selecting it", segmentId, mode);
+        review.select(segmentId);
     }
 
     private void continueAfter(final ReviewSection.@Nullable Decision decision) {

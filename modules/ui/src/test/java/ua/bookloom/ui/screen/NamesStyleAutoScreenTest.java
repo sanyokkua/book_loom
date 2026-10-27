@@ -22,8 +22,8 @@ import ua.bookloom.ui.state.BookBriefViewModel;
 
 /**
  * "Prepare names automatically" on Names &amp; style (15i.U6): the button above both cards and the estimate under it,
- * the run on the shared busy card with its Cancel, the other model actions waiting, and a stop or a failure that
- * changes nothing. The port is a recording fake; the window and the busy card are real.
+ * the run in the shared progress dialog with its Cancel, the other model actions waiting, and a stop or a failure that
+ * changes nothing. The port is a recording fake; the window and the progress dialog are real.
  */
 class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
@@ -145,8 +145,8 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         assertThat(namesPass.awaitStarted()).isTrue();
         awaitFx(this::isBusyCardShown);
-        assertThat(labelText("busy-title")).isEqualTo("Preparing names");
-        assertThat(button("busy-cancel").isDisabled()).isFalse();
+        assertThat(labelText("progress-title")).isEqualTo("Prepare names automatically");
+        assertThat(button("progress-cancel").isDisabled()).isFalse();
     }
 
     // IF a second model action could start beside the pass, THEN two requests would queue in the one inference gate.
@@ -193,7 +193,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
         assertThat(namesPass.awaitStarted()).isTrue();
         awaitFx(this::isBusyCardShown);
 
-        onFx(() -> button("busy-cancel").fire());
+        onFx(() -> button("progress-cancel").fire());
 
         assertThat(namesPass.awaitCancelled()).isTrue();
         awaitFx(() -> isCardShown("results-card"));

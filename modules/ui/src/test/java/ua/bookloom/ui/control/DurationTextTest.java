@@ -31,6 +31,26 @@ class DurationTextTest {
         assertThat(DurationText.format(messages, Duration.ofSeconds(seconds))).isEqualTo(expected);
     }
 
+    // IF the rounded time left were worded like a plain duration, THEN it would not say it is a guess.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "en|1200|about 20 min",
+                "en|60|about 1 min",
+                "en|7200|about 2 h",
+                "en|6000|about 1 h 40 min",
+                "uk|1200|близько 20 хв",
+                "uk|7200|близько 2 год",
+                "uk|6000|близько 1 год 40 хв"
+            })
+    void about_roundedTimeLeft_readsAsAnApproximationInTheDisplayLanguage(
+            final String tag, final long seconds, final String expected) {
+        final Messages messages = new Messages(() -> Locale.forLanguageTag(tag));
+
+        assertThat(DurationText.about(messages, Duration.ofSeconds(seconds))).isEqualTo(expected);
+    }
+
     // IF the waiting clock were reformatted, THEN the banner that already shows it would change.
     @ParameterizedTest
     @CsvSource({"0,0:00", "7,0:07", "75,1:15", "3725,62:05"})

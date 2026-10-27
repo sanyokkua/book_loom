@@ -51,6 +51,17 @@ class TipsTest extends FxTestBase {
         assertThat(TooltipProbe.tipText(button)).isNotBlank().doesNotContain("namesStyle.add.tip");
     }
 
+    // IF a cell's own tooltip were built apart from Tips, THEN its row text would flash after the default delay.
+    @Test
+    void tooltip_cellTooltip_sharesTheDelayAndTheBoundedWidth() {
+        final Tooltip tooltip = ThemeTestSupport.onFx(() -> Tips.tooltip("Row text"));
+
+        assertThat(tooltip.getText()).isEqualTo("Row text");
+        assertThat(tooltip.getShowDelay()).isEqualTo(Duration.millis(400));
+        assertThat(tooltip.isWrapText()).isTrue();
+        assertThat(tooltip.getMaxWidth()).isEqualTo(320);
+    }
+
     // IF two languages shared one tip text, THEN the Ukrainian catalogue would be an untranslated copy.
     @Test
     void install_sameKey_differsBetweenEnglishAndUkrainian() {

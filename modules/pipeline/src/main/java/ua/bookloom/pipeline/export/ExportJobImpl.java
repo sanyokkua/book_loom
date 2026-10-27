@@ -1,8 +1,5 @@
 package ua.bookloom.pipeline.export;
 
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -50,6 +47,8 @@ final class ExportJobImpl implements ExportJob {
     private final @Nullable ExportCalls calls;
     private final ExportProgressListener progress;
     private final AtomicBoolean cancelled = new AtomicBoolean();
+    private final AtomicBoolean stopEarly = new AtomicBoolean();
+    private final AtomicBoolean writing = new AtomicBoolean();
 
     ExportJobImpl(
             final ExportRequest request,
@@ -59,7 +58,7 @@ final class ExportJobImpl implements ExportJob {
         this.request = Objects.requireNonNull(request, "request");
         this.parts = Objects.requireNonNull(parts, "parts");
         this.progress = Objects.requireNonNull(progress, "progress");
-        this.calls = calls == null ? null : new ExportCalls(calls, cancelled, progress);
+        this.calls = calls == null ? null : new ExportCalls(calls, cancelled, stopEarly, progress);
     }
 
     @Override
@@ -91,6 +90,22 @@ final class ExportJobImpl implements ExportJob {
         }
     }
 
+    @Override
+    public void writeNow() {
+        final ExportCalls inFlight = calls;
+        if (inFlight == null || writing.get()) {
+            log.warn(
+                    "export write-now ignored project={} pass={} writing={}",
+                    request.projectId(),
+                    inFlight != null,
+                    writing.get());
+            return;
+        }
+        log.info("export write now requested project={}", request.projectId());
+        stopEarly.set(true);
+        inFlight.interrupt();
+    }
+
     private Result<ExportReport> write() {
         progress.onProgress(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         final Result<Project> found = findProject();
@@ -99,7 +114,7 @@ final class ExportJobImpl implements ExportJob {
         }
         final Project project = Objects.requireNonNull(found.data(), "project");
         final Document opened = parts.openProjects().get(project.id());
-        final AppError refusal = refusal(project, opened);
+        final AppError refusal = new ExportPreflight(request, chosenSideFiles()).refusal(project, opened);
         if (refusal != null) {
             return Result.err(refusal);
         }
@@ -110,71 +125,6 @@ final class ExportJobImpl implements ExportJob {
         return consistencyPass(project)
                 .flatMap(pass -> summaryOf(project, pass.orElse(null))
                         .flatMap(summary -> writeStored(project, book, pass.orElse(null), summary)));
-    }
-
-    private @Nullable AppError refusal(final Project project, @Nullable final Document opened) {
-        final String targetLanguage = project.brief().targetLanguage();
-        log.debug("export check=target-language value={}", targetLanguage);
-        if (targetLanguage == null) {
-            return refused("target-language", "No target language is chosen", "Choose the target language first.");
-        }
-        log.debug("export check=book-open outcome={}", opened == null ? "closed" : "open");
-        if (opened == null) {
-            return refused(
-                    "book-open", "This project is not open", "No open project has this id; open the book again.");
-        }
-        if (isRefusedOccupied(request.destination())) {
-            return refused(
-                    "destination-exists",
-                    "This destination already exists",
-                    "Allow replacing it, or choose another file.");
-        }
-        return occupiedSideFile(project.source(), opened);
-    }
-
-    private @Nullable AppError occupiedSideFile(final Path source, final Document opened) {
-        for (final SideFile sideFile : chosenSideFiles()) {
-            final Path path = sideFile.pathBeside(request.destination(), opened.format());
-            if (isBookItself(path, source)) {
-                return refused(
-                        "side-file-is-book",
-                        "A side file would replace a book",
-                        path.getFileName() + " is the source book or the translated book. Choose another file.");
-            }
-            if (isRefusedOccupied(path)) {
-                return refused(
-                        "side-file-exists",
-                        "A side file already exists",
-                        path.getFileName() + " already exists. Allow replacing it, or choose another file.");
-            }
-        }
-        return null;
-    }
-
-    // The same alias test the book's own temporary file gets: one normalized path, the same existing file, or one link
-    // target — so neither a name clash nor a symbolic link lets a side file land on a book.
-    private boolean isBookItself(final Path sideFile, final Path source) {
-        final Path normalized = sideFile.toAbsolutePath().normalize();
-        final boolean isSource =
-                ExportPathAliases.aliases(normalized, source.toAbsolutePath().normalize());
-        final boolean isDestination = ExportPathAliases.aliases(
-                normalized, request.destination().toAbsolutePath().normalize());
-        log.debug(
-                "export check=side-file-is-book path={} isSource={} isDestination={}",
-                sideFile,
-                isSource,
-                isDestination);
-        return isSource || isDestination;
-    }
-
-    private boolean isRefusedOccupied(final Path path) {
-        final boolean occupied = Files.exists(path, LinkOption.NOFOLLOW_LINKS);
-        log.debug(
-                "export check=path-free path={} outcome={} overwrite={}",
-                path,
-                occupied ? "occupied" : "free",
-                request.overwrite());
-        return occupied && !request.overwrite();
     }
 
     private Result<Optional<ConsistencyReport>> consistencyPass(final Project project) {
@@ -266,6 +216,7 @@ final class ExportJobImpl implements ExportJob {
         if (isCancelledBefore("write")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
+        writing.set(true);
         progress.onProgress(new ExportProgress(ExportProgress.Step.WRITING, 0, 1));
         final Result<BookExporter.Exported> written =
                 new BookExporter(parts.documents(), parts.moves()).exportReporting(plan, targets, cancelled::get);
@@ -363,11 +314,6 @@ final class ExportJobImpl implements ExportJob {
                 report.sideFiles(),
                 report.consistency(),
                 report.sourceFallbacks());
-    }
-
-    private static AppError refused(final String check, final String title, final String message) {
-        log.warn("Refused export check={} code={}", check, ErrorCode.validation);
-        return AppError.of(ErrorCode.validation, title, message);
     }
 
     static AppError unknownProject(final String projectId) {

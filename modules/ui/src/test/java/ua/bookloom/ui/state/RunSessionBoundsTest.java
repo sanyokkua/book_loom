@@ -83,7 +83,7 @@ class RunSessionBoundsTest extends LiveSessionTestBase {
     }
 
     private static LogEntry line(final int index) {
-        return new LogEntry(LogKind.MODEL_CALL, List.of("draft", " · s-" + index, "0", "1", "0:01"));
+        return new LogEntry(LogKind.MEMORY, List.of("memory", "s-" + index));
     }
 
     private static List<FlaggedRow> rows(final int count) {

@@ -178,11 +178,7 @@ final class ReviewResolver {
                     refused.size());
             return Result.ok(unresolved(edited, findings, evidence, 0, refused.size()));
         }
-        announceFix(outcome, evidence);
-        final RoundOutcome result = evaluator.classify(
-                outcome,
-                directedFix.fix(
-                        outcome.segment(), settings.frame(), outcome.maskedSource(), edited.text(), evidence, calls));
+        final RoundOutcome result = directedFixOf(outcome, edited, evidence);
         if (result instanceof RoundOutcome.StepError stepError) {
             return Result.err(stepError.error());
         }
@@ -197,6 +193,18 @@ final class ReviewResolver {
                 outcome.segment().id(),
                 refused.size());
         return Result.ok(unresolved(edited, findings, evidence, 1, refused.size()));
+    }
+
+    private RoundOutcome directedFixOf(
+            final DraftOutcome.Drafted outcome, final Edited edited, final List<QaFinding> evidence) {
+        announceFix(outcome, evidence);
+        final String stepKey = RepairSteps.begin(calls, outcome.segment().id(), RepairSteps.FIX_SUFFIX, "directed-fix");
+        final RoundOutcome result = evaluator.classify(
+                outcome,
+                directedFix.fix(
+                        outcome.segment(), settings.frame(), outcome.maskedSource(), edited.text(), evidence, calls));
+        RepairSteps.end(calls, stepKey, result);
+        return result;
     }
 
     private static Resolution adopted(

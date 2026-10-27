@@ -22,7 +22,7 @@ import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 
@@ -314,7 +314,7 @@ class NameTriageTest {
     void newTerms_caseVariant_isHeldByTheProposedEntryAsAnAlias() {
         final List<String> lines = new ArrayList<>(copies("The label read KESSEL OPTIK on the case.", 5));
         lines.addAll(copies("The label read Kessel Optik on the case.", 3));
-        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
         final BookIndex index = BookIndex.of(IndexTestBooks.oneUnit(lines.toArray(String[]::new)));
 

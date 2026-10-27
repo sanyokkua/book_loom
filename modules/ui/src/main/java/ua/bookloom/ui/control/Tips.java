@@ -2,11 +2,14 @@ package ua.bookloom.ui.control;
 
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.InvalidationListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
@@ -33,6 +36,8 @@ public final class Tips {
     private static final Duration SHOW_DURATION = Duration.seconds(30);
     private static final double MAX_WIDTH = 320;
     private static final String PENDING_KEY = "bookloom.tips.pending";
+    private static final String TITLE_CLASS = "title";
+    private static final String TITLE_TIP_KEY = "bookloom.tips.title";
 
     /**
      * Attaches the explanation {@code tip} names to {@code node}.
@@ -59,16 +64,75 @@ public final class Tips {
     public static <N extends Node> N install(final N node, final String text) {
         Objects.requireNonNull(node, "node");
         Objects.requireNonNull(text, "text");
-        final Tooltip tooltip = new Tooltip(text);
-        tooltip.setShowDelay(SHOW_DELAY);
-        tooltip.setShowDuration(SHOW_DURATION);
-        tooltip.setWrapText(true);
-        tooltip.setMaxWidth(MAX_WIDTH);
+        final Tooltip tooltip = tooltip(text);
         if (node instanceof Control control) {
             control.setTooltip(tooltip);
             control.setAccessibleHelp(text);
         } else {
             Tooltip.install(node, tooltip);
+        }
+        return node;
+    }
+
+    /**
+     * A tooltip that shows like every other explanation, for a list cell that hands one tooltip to each row it shows
+     * and takes it away from an empty row, which {@link #install(Node, String)} cannot do.
+     *
+     * @param text the explanation, possibly empty when each row sets its own
+     * @return a new tooltip with the shared delay, duration and width
+     */
+    public static Tooltip tooltip(final String text) {
+        final Tooltip tooltip = new Tooltip(Objects.requireNonNull(text, "text"));
+        tooltip.setShowDelay(SHOW_DELAY);
+        tooltip.setShowDuration(SHOW_DURATION);
+        tooltip.setWrapText(true);
+        tooltip.setMaxWidth(MAX_WIDTH);
+        return tooltip;
+    }
+
+    /**
+     * Attaches the explanation of a fold to its title bar only. A tip on the whole pane opens wherever the pointer
+     * rests in the open content and stands over the fields the person is filling in (re-test G2-3); the content's
+     * own controls explain themselves. The pane carries the text as its accessible help.
+     *
+     * @param messages the catalogue the text is drawn from
+     * @param pane the fold; its title bar exists once its skin does, so the tip follows a new skin
+     * @param tip the catalogue entry holding the explanation
+     * @param <P> the fold's type, returned unchanged so a call can wrap a construction
+     * @return {@code pane}
+     */
+    public static <P extends TitledPane> P installOnTitle(final Messages messages, final P pane, final MessageKey tip) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(pane, "pane");
+        final String text = messages.get(tip);
+        final Tooltip tooltip = tooltip(text);
+        pane.setAccessibleHelp(text);
+        pane.getProperties().put(TITLE_TIP_KEY, tooltip);
+        final InvalidationListener attach = observed -> pane.getChildrenUnmodifiable().stream()
+                .filter(child -> child.getStyleClass().contains(TITLE_CLASS))
+                .forEach(title -> Tooltip.install(title, tooltip));
+        pane.skinProperty().addListener(attach);
+        attach.invalidated(pane.skinProperty());
+        return pane;
+    }
+
+    /**
+     * Attaches an explanation whose text changes while the node lives, such as the steps a bar has counted: one tooltip
+     * follows the value, so a change builds no new popup.
+     *
+     * @param node the control or container the pointer hovers; a second call replaces the first tip
+     * @param text the explanation now and later; never blank
+     * @param <N> the node's type, returned unchanged
+     * @return {@code node}
+     */
+    public static <N extends Node> N installLive(final N node, final ObservableValue<String> text) {
+        Objects.requireNonNull(text, "text");
+        install(node, text.getValue());
+        final Object installed = node instanceof Control control
+                ? control.getTooltip()
+                : node.getProperties().get(Tooltip.class.getName());
+        if (installed instanceof Tooltip tooltip) {
+            tooltip.textProperty().bind(text);
         }
         return node;
     }
@@ -97,15 +161,45 @@ public final class Tips {
             @Override
             public void handle(final MouseEvent event) {
                 node.removeEventHandler(MouseEvent.MOUSE_ENTERED, this);
-                node.getProperties().remove(PENDING_KEY);
-                install(node, text);
+                final Object pending = node.getProperties().remove(PENDING_KEY);
+                install(node, pending instanceof String reworded ? reworded : text);
             }
         });
         return node;
     }
 
     /**
-     * The explanation a node shows on hover, attached already or waiting for the pointer's first visit.
+     * Changes the explanation of a node given one by {@link #installOnHover}, waiting or attached, without building a
+     * popup: a table cell reused for another row explains that row's value.
+     *
+     * @param node the node explained on hover
+     * @param text the non-blank explanation now
+     */
+    public static void rewordOnHover(final Node node, final String text) {
+        Objects.requireNonNull(node, "node");
+        Objects.requireNonNull(text, "text");
+        if (node instanceof Control control) {
+            control.setAccessibleHelp(text);
+        }
+        if (node.getProperties().containsKey(PENDING_KEY)) {
+            node.getProperties().put(PENDING_KEY, text);
+            return;
+        }
+        if (node.getProperties().get(TITLE_TIP_KEY) instanceof Tooltip title) {
+            title.setText(text);
+            return;
+        }
+        final Object installed = node instanceof Control control && control.getTooltip() != null
+                ? control.getTooltip()
+                : node.getProperties().get(Tooltip.class.getName());
+        if (installed instanceof Tooltip tooltip) {
+            tooltip.setText(text);
+        }
+    }
+
+    /**
+     * The explanation a node shows on hover, attached already (a fold's, to its title bar) or waiting for the pointer's
+     * first visit.
      *
      * @param node the node asked about
      * @return the text if the node has an explanation, or empty if it has none
@@ -114,6 +208,9 @@ public final class Tips {
         Objects.requireNonNull(node, "node");
         if (node.getProperties().get(PENDING_KEY) instanceof String pending) {
             return Optional.of(pending);
+        }
+        if (node.getProperties().get(TITLE_TIP_KEY) instanceof Tooltip title) {
+            return Optional.of(title.getText());
         }
         final Object installed = node instanceof Control control && control.getTooltip() != null
                 ? control.getTooltip()

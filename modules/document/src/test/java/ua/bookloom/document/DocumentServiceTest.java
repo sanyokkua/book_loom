@@ -201,12 +201,11 @@ class DocumentServiceTest {
         assertThat(errorOf(written).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // an unrelated failure (a destination whose parent directory does not exist) during an
-    // FB2 write whose every segment carries well-formed target text is still classified ErrorCode.internal, and
-    // no exception propagates out of the port method — proving the fix narrows classification rather than
-    // reclassifying every write failure as validation.
+    // a destination whose parent directory does not exist, during an FB2 write whose every segment carries
+    // well-formed target text, is a missing folder the person can fix — ErrorCode.validation naming only the folder —
+    // not a malformed fragment and not a defect, and no exception propagates out of the port method.
     @Test
-    void write_fb2WellFormedTargetsToMissingParentDirectory_returnsInternalErrorWithNoException() {
+    void write_fb2WellFormedTargetsToMissingParentDirectory_returnsFolderMissingWithNoException() {
         final DocumentService service = newService();
         final Document opened = openFb2Fixture(service);
         final Document withWellFormedTargets = withEverySegmentTargetSetToItsSourceText(opened);
@@ -218,7 +217,8 @@ class DocumentServiceTest {
 
         final Result<Path> result = Objects.requireNonNull(written.get(), "written");
         assertThat(result.isErr()).isTrue();
-        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(errorOf(result).details()).isEqualTo("reason=folder-missing, folder=does-not-exist");
     }
 
     // WHEN a TXT book is released twice, THEN the first release reports that it was open and the second reports

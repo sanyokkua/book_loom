@@ -6,6 +6,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +21,10 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedSetupAssistant;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /** The Book Brief hands the suggestion the context window its chosen model really has, so the passages fit it (15i.B3). */
 class BookBriefViewModelDetectedContextTest extends ExportViewModelTestBase {
@@ -50,13 +54,21 @@ class BookBriefViewModelDetectedContextTest extends ExportViewModelTestBase {
                 projects,
                 new DirectExecutor(),
                 tag -> true,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, detection)));
+                new SetupHelper(
+                        assistant,
+                        models,
+                        settings,
+                        new DirectExecutor(),
+                        activities,
+                        detection,
+                        hiddenWork(activities))));
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {
             brief.styleSuggestion().ask();
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private ModelCapabilities reporting(final Result<ContextLength> answer) {
@@ -95,5 +107,9 @@ class BookBriefViewModelDetectedContextTest extends ExportViewModelTestBase {
         assertThat(assistant.detectedContexts()).singleElement().isNull();
         assertThat(onFx(() -> brief.styleSuggestion().outcome().get().kind()))
                 .isEqualTo(StyleSuggestionOutcome.Kind.DONE);
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

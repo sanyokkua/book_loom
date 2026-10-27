@@ -9,23 +9,25 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.glossary.CsvRecords;
@@ -50,7 +52,10 @@ class LexiconCsvTest {
 
     private static Injector injector() {
         return Guice.createInjector(
-                new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule());
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                new PipelineModule(),
+                new ReviewModeTestModule());
     }
 
     @BeforeEach
@@ -120,7 +125,8 @@ class LexiconCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(2), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(1, List.of(2), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(lexicon.all(PROJECT).data()).extracting(LexiconEntry::term).containsExactly("master");
     }
 
@@ -226,13 +232,21 @@ class LexiconCsvTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"master,пан,extra", "master", ",пан", "\"master,пан"})
-    void importCsv_rowWithTheWrongFieldCountNoTermOrAnOpenQuote_isMalformed(final String row) throws IOException {
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "'master,пан,extra'|FIELD_COUNT",
+                "master|FIELD_COUNT",
+                "',пан'|NO_TERM",
+                "'\"master,пан'|OPEN_QUOTE"
+            })
+    void importCsv_rowWithTheWrongFieldCountNoTermOrAnOpenQuote_isMalformedNamingWhy(
+            final String row, final CsvProblem problem) throws IOException {
         final Path file = write(HEADER, row);
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(0, List.of(2), List.of()));
+        assertThat(report.data()).isEqualTo(new GlossaryImportReport(0, List.of(2), List.of(), 0, Set.of(problem)));
         assertThat(lexicon.all(PROJECT).data()).isEmpty();
     }
 

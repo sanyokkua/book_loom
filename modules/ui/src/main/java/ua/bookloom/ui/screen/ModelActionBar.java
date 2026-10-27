@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 import lombok.AccessLevel;
@@ -77,6 +79,7 @@ final class ModelActionBar {
      * @param words the captions and hover explanations of the three actions
      * @param actions what the three actions do
      * @param names the screen's state, whose stop ends whichever action runs
+     * @param frozen whether the screen is read-only, which turns the three actions off
      * @return the four buttons
      */
     static Bar build(
@@ -84,7 +87,8 @@ final class ModelActionBar {
             final String card,
             final Words words,
             final Actions actions,
-            final NamesStyleViewModel names) {
+            final NamesStyleViewModel names,
+            final ObservableBooleanValue frozen) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(card, "card");
         final Button scan = button(messages, card + "-scan", words.scan(), words.scanTip(), actions.scan());
@@ -93,13 +97,34 @@ final class ModelActionBar {
                 button(messages, card + "-translate", words.translate(), words.translateTip(), actions.translate());
         final Button stop =
                 button(messages, card + "-stop", MessageKey.BAR_STOP, MessageKey.BAR_STOP_TIP, names::stopModel);
-        for (final Button model : new Button[] {scan, review, translate}) {
-            model.disableProperty()
-                    .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
-        }
+        explainWhenBlocked(messages, scan, words.scanTip(), names, frozen);
+        explainWhenBlocked(messages, review, words.reviewTip(), names, frozen);
+        explainWhenBlocked(messages, translate, words.translateTip(), names, frozen);
         stop.visibleProperty().bind(names.busy());
         stop.managedProperty().bind(names.busy());
         return new Bar(scan, review, translate, stop);
+    }
+
+    /**
+     * Disables a model action while the screen's own work or other model work runs and, for the latter, makes its hover
+     * say why ("Pause the translation first — BookLoom sends one model request at a time"). The visible line under the
+     * table says it too, as a disabled button shows no tooltip on every platform.
+     */
+    static void explainWhenBlocked(
+            final Messages messages,
+            final Button model,
+            final MessageKey tip,
+            final NamesStyleViewModel names,
+            final ObservableBooleanValue frozen) {
+        model.disableProperty()
+                .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()).or(frozen));
+        Tips.installLive(
+                model,
+                Bindings.createStringBinding(
+                        () -> names.modelBlockedReason().get().isEmpty()
+                                ? messages.get(tip)
+                                : names.modelBlockedReason().get(),
+                        names.modelBlockedReason()));
     }
 
     private static Button button(

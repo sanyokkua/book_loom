@@ -48,7 +48,11 @@ class NamesStyleViewModelTest extends FxTestBase {
     void setUpViewModel() {
         glossary = new ScriptedGlossaryService();
         models = ScriptedChatModelFactory.ok();
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
+        useViewModelIn(Locale.ENGLISH);
+    }
+
+    private void useViewModelIn(final Locale locale) {
+        final Injector injector = UiTestInjector.create(locale);
         settings = injector.getInstance(SettingsViewModel.class);
         final Messages messages = injector.getInstance(Messages.class);
         final AtomicInteger next = new AtomicInteger();
@@ -96,11 +100,6 @@ class NamesStyleViewModelTest extends FxTestBase {
 
     private String noticeText() {
         return onFx(() -> vm.notice().get() == null ? "" : vm.notice().get().text());
-    }
-
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
     }
 
     // IF an empty glossary were not scanned when the screen opens, THEN a person would face a blank table.
@@ -212,8 +211,44 @@ class NamesStyleViewModelTest extends FxTestBase {
 
         run(vm::modelScan);
 
-        assertThat(noticeText()).isEqualTo("Choose a model in the provider settings to run the model scan.");
+        assertThat(noticeText()).isEqualTo("Choose a model in the AI model settings to run the model scan.");
         assertThat(glossary.calls()).containsExactly("entries(p1)");
+    }
+
+    // IF the failure kept the service's English words, THEN a Ukrainian screen would report a failed import in English.
+    @Test
+    void importCsv_failsInUkrainian_reportsTheFailureInUkrainian() {
+        useViewModelIn(Locale.forLanguageTag("uk"));
+        showWith(hale());
+        glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Glossary file unreadable", "Unreadable.")));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
+    }
+
+    // IF a term on two rows went unreported, THEN the person would not know one of the rows was set aside.
+    @Test
+    void importCsv_termOnTwoRows_reportsTheDuplicate() {
+        showWith(hale());
+        glossary.willAnswer(Result.ok(new GlossaryImportReport(1, List.of(), List.of(), 1)));
+        glossary.willAnswer(Result.ok(List.of(hale())));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Imported 1 row. 1 row was replaced by a later row of the same term.");
+    }
+
+    // IF an empty or header-only file said only "Imported 0 rows.", THEN the person would not know why nothing came in.
+    @Test
+    void importCsv_fileWithNoRows_saysTheFileHoldsNone() {
+        showWith(hale());
+        glossary.willAnswer(Result.ok(new GlossaryImportReport(0, List.of(), List.of(), 0)));
+        glossary.willAnswer(Result.ok(List.of(hale())));
+
+        run(() -> vm.importCsv(Path.of("names.csv")));
+
+        assertThat(noticeText()).isEqualTo("Imported 0 rows. The file holds no rows to import.");
     }
 
     // IF a bad line dropped the good ones, or went unreported, THEN an import would lose names silently.
@@ -226,7 +261,7 @@ class NamesStyleViewModelTest extends FxTestBase {
         run(() -> vm.importCsv(Path.of("names.csv")));
 
         assertThat(noticeText())
-                .isEqualTo("Imported 2 rows. Malformed line: 3. Refused line (locked with no target): 5.");
+                .isEqualTo("Imported 2 rows. 1 line could not be read: 3. Refused line (locked with no target): 5.");
         assertThat(rows()).containsExactly(hale(), chapter());
     }
 

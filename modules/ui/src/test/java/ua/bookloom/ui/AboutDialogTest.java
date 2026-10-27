@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.FileChooserPort;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ThemeMode;
 
@@ -109,12 +109,6 @@ class AboutDialogTest extends ShellTestBase {
     }
 
     /** Fires a Tab press at whatever owns focus, as the keyboard would, and lets the pulse settle. */
-    private void pressTab() {
-        onFx(() -> Event.fireEvent(
-                scene.getFocusOwner(),
-                new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false)));
-    }
-
     @Test
     void about_beforeItIsUsed_showsNoCardAndNoScrim() {
         // IF the scrim were up with no dialog, THEN the window would be dimmed for nothing.
@@ -204,9 +198,9 @@ class AboutDialogTest extends ShellTestBase {
         // IF Tab could leave the card, THEN focus would reach a navigation button hidden behind the dimmed window.
         openAbout();
 
-        pressTab();
-        pressTab();
-        pressTab();
+        onFx(this::pressTab);
+        onFx(this::pressTab);
+        onFx(this::pressTab);
 
         final Node owner = scene.getFocusOwner();
         assertThat(owner).isNotNull();
@@ -228,7 +222,7 @@ class AboutDialogTest extends ShellTestBase {
     }
 
     private void pressTab(final int times) {
-        IntStream.range(0, times).forEach(press -> pressTab());
+        IntStream.range(0, times).forEach(press -> onFx(this::pressTab));
     }
 
     private static List<Node> ancestorsOf(final Node node) {
@@ -261,14 +255,14 @@ class AboutDialogTest extends ShellTestBase {
         ThemeTestSupport.assertSameColour(stroke, border, "about card border under " + mode);
     }
     // IF the card did not say whether the detailed log is written, THEN a person asked for "the log" could not tell
-    // whether there is one, nor how to switch it on in an installed app.
+    // whether there is one, nor where to switch it on in an installed app.
     @Test
-    void about_detailedLogOff_saysSoAndHowToSwitchItOn() {
+    void about_detailedLogOff_saysSoAndPointsAtTheSettingsSwitch() {
         openAbout();
 
         assertThat(((Label) required("about-log-state")).getText())
-                .startsWith("Detailed log: off.")
-                .contains("BOOKLOOM_TRACE_FILE=1");
+                .isEqualTo("Detailed log: off. Switch it on in Settings › Storage & logs; it applies after BookLoom"
+                        + " restarts.");
     }
 
     // IF the card hid what the detailed log holds, THEN a person could share book text without knowing it.
@@ -301,7 +295,7 @@ class AboutDialogTest extends ShellTestBase {
 
         onFx(() -> ((Button) required("about-save-bundle")).fire());
 
-        assertThat(((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).initials())
+        assertThat(((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).initials())
                 .singleElement()
                 .satisfies(initial -> assertThat(initial.getFileName().toString())
                         .matches("bookloom-diagnostics-\\d{8}-\\d{6}\\.zip"));

@@ -40,11 +40,13 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.ClosedPorts;
-import ua.bookloom.llm.InMemoryProviderConfigs;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Exercises the verifier's measured stage durations, models count, and the two shorter cumulative policies. */
 class ProviderVerifierPolicyTest {
@@ -59,12 +61,12 @@ class ProviderVerifierPolicyTest {
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
-    private InMemoryProviderConfigs configs;
+    private FakeProviderConfigs configs;
 
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
     }
 
     @AfterEach
@@ -158,7 +160,7 @@ class ProviderVerifierPolicyTest {
     void verify_connectionAndModelsPolicy_stopsAtFailedConnection() throws IOException {
         final ProviderConfig config = new ProviderConfig(
                 "ollama", ProviderKind.OLLAMA, closedEndpoint(), Duration.ofSeconds(2), Duration.ofSeconds(2));
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
 
         final VerificationReport report = report(verifier(scriptedNanoTime(0L, 0L))
                 .verify(new ModelSelection("ollama", MODEL_ID), VerificationPolicy.CONNECTION_AND_MODELS));
@@ -213,7 +215,7 @@ class ProviderVerifierPolicyTest {
     private void registerProvider(String id, ProviderKind kind, String pathSuffix) {
         final ProviderConfig config = new ProviderConfig(
                 id, kind, URI.create(server.baseUrl() + pathSuffix), Duration.ofSeconds(2), Duration.ofSeconds(3));
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
     }
 
     private ProviderVerifier verifier(LongSupplier nanoTime) {
@@ -225,6 +227,7 @@ class ProviderVerifierPolicyTest {
             @Override
             protected void configure() {
                 bind(ProviderConfigs.class).toInstance(configs);
+                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
                 bind(InferenceGate.class).toInstance(new InferenceGate());
                 bind(RetryPolicy.class).toInstance(new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}));
                 bind(LongSupplier.class).toInstance(nanoTime);

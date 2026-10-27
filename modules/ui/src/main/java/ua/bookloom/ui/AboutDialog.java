@@ -1,15 +1,16 @@
 package ua.bookloom.ui;
 
+import com.google.inject.Inject;
 import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -20,10 +21,11 @@ import ua.bookloom.ui.state.DiagnosticActions;
  * (header, body, footer), and the diagnostic log — whether the detailed one is on, where the logs are, and the actions
  * that open, copy and bundle them for a report.
  *
- * <p>A {@link DialogPane} placed in the {@link ModalHost} rather than a {@code Dialog} in its own window: the pane is
+ * <p>A {@link javafx.scene.control.DialogPane} placed in the {@link ModalHost} rather than a {@code Dialog} in its own window: the pane is
  * the control the reference's dialog maps to, and staying inside the scene keeps the stylesheet and the active theme
  * block, which a second window would not inherit.
  */
+@Slf4j
 final class AboutDialog {
 
     static final String CARD_ID = "about-card";
@@ -36,7 +38,7 @@ final class AboutDialog {
     private final Messages messages;
     private final String version;
     private final DiagnosticActions diagnostics;
-    private final Runnable onClose;
+    private final ModalHost modalHost;
 
     /**
      * Prepares the card's content.
@@ -44,17 +46,24 @@ final class AboutDialog {
      * @param messages the catalogue every word is drawn from
      * @param version the build version to report; {@code dev} in a build carrying no release version
      * @param diagnostics the log settings and what the diagnostic actions do
-     * @param onClose what the Close button does
+     * @param modalHost the overlay the card is shown in and Close hides
      */
+    @Inject
     AboutDialog(
             final Messages messages,
-            final String version,
+            final @BuildVersion String version,
             final DiagnosticActions diagnostics,
-            final Runnable onClose) {
+            final ModalHost modalHost) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.version = Objects.requireNonNull(version, "version");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
-        this.onClose = Objects.requireNonNull(onClose, "onClose");
+        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+    }
+
+    /** Shows a fresh card in the modal host. */
+    void open() {
+        log.debug("opening the About dialog");
+        modalHost.show(card(), true);
     }
 
     /**
@@ -63,46 +72,38 @@ final class AboutDialog {
      * @return the card's root node, ready for {@link ModalHost#show(Node, boolean)}
      */
     Node card() {
-        final DialogPane card = new ModalCard();
+        final ModalCard card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        card.setHeader(header());
+        card.header(
+                ModalCard.title(messages.get(MessageKey.SHELL_TITLE)),
+                ModalCard.subtitle(messages.get(MessageKey.ABOUT_SUBTITLE, version)));
         card.setContent(body());
-        card.getButtonTypes().add(ButtonType.CLOSE);
-        final Button close = (Button) card.lookupButton(ButtonType.CLOSE);
-        close.setId(CLOSE_ID);
-        Tips.install(messages, close, MessageKey.COMMON_CLOSE_TIP);
-        close.setText(messages.get(MessageKey.COMMON_CLOSE));
-        close.getStyleClass().add("btn-primary");
-        close.setOnAction(event -> onClose.run());
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.COMMON_CLOSE),
+                                ButtonBar.ButtonData.CANCEL_CLOSE,
+                                CLOSE_ID,
+                                "btn-primary"),
+                        MessageKey.COMMON_CLOSE_TIP)
+                .setOnAction(event -> modalHost.hide());
         return card;
     }
 
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.SHELL_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(messages.get(MessageKey.ABOUT_SUBTITLE, version));
-        subtitle.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().add("dialog-h");
-        return header;
-    }
-
     private Node body() {
-        final Label description = text(messages.get(MessageKey.ABOUT_DESCRIPTION), "dialog-text");
+        final Label description = Wrapped.label(messages.get(MessageKey.ABOUT_DESCRIPTION), "dialog-text");
         return new VBox(description, diagnosticSection());
     }
 
     // The state is stated plainly, with the one way to change it, because nothing in the window can change it yet.
     private Node diagnosticSection() {
-        final Label heading = text(messages.get(MessageKey.ABOUT_LOG_HEADING), "dialog-title");
+        final Label heading = Wrapped.label(messages.get(MessageKey.ABOUT_LOG_HEADING), "dialog-title");
         final boolean detailed = diagnostics.diagnosticLog().detailed();
-        final Label state =
-                text(messages.get(detailed ? MessageKey.ABOUT_LOG_ON : MessageKey.ABOUT_LOG_OFF), "dialog-text");
+        final Label state = Wrapped.label(
+                messages.get(detailed ? MessageKey.ABOUT_LOG_ON : MessageKey.ABOUT_LOG_OFF), "dialog-text");
         state.setId(LOG_STATE_ID);
-        final Label privacy = text(messages.get(MessageKey.ABOUT_LOG_PRIVACY), "hint");
-        final Label folder = text(
+        final Label privacy = Wrapped.label(messages.get(MessageKey.ABOUT_LOG_PRIVACY), "hint");
+        final Label folder = Wrapped.label(
                 messages.get(
                         MessageKey.ABOUT_LOG_FOLDER,
                         diagnostics.diagnosticLog().directory().toString()),
@@ -140,12 +141,5 @@ final class AboutDialog {
         Tips.install(messages, button, tip);
         button.setOnAction(event -> onPress.run());
         return button;
-    }
-
-    private static Label text(final String value, final String styleClass) {
-        final Label label = new Label(value);
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
     }
 }

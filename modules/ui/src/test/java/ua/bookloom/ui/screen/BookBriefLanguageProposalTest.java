@@ -43,7 +43,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
                         Gender.UNKNOWN,
                         Map.of(),
                         tag)));
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> briefModel().styleSuggestion().outcome().get().kind() == StyleSuggestionOutcome.Kind.DONE);
     }
 
@@ -66,7 +66,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
         assertThat(((Label) required("brief-source-proposal-text")).getText()).isEqualTo("Looks like English");
         assertThat(button("brief-source-use").getText()).isEqualTo("Use it");
         assertThat(brief().sourceLanguage()).isNull();
-        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Auto — the model identifies it");
+        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Find out from the text");
     }
 
     // IF "Use it" did not set the source, THEN the proposal would be a label the person had to retype.
@@ -115,7 +115,7 @@ class BookBriefLanguageProposalTest extends BookBriefScreenTestBase {
                 .answersBrief(Result.ok(new BriefSuggestion(
                         null, Register.NEUTRAL, null, null, NarratorPerson.UNSPECIFIED, Gender.UNKNOWN)));
 
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-suggest-outcome"));
 
         assertThat(isShown("brief-source-proposal")).isFalse();

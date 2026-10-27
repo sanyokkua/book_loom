@@ -101,7 +101,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setTargetLanguage("uk"));
 
         assertThat(brief().sourceLanguage()).isNull();
-        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Auto — the model identifies it");
+        assertThat(box("brief-source").getEditor().getText()).isEqualTo("Find out from the text");
         assertThat(isShown("brief-source-undeclared")).isTrue();
         assertThat(button("brief-continue").isDisabled()).isFalse();
 
@@ -272,7 +272,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                                         new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on, man"), 2, 2),
                                 BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.UNCERTAIN, List.of(), 1, 2)))));
 
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-evidence-register"));
 
         assertThat(((Label) required("brief-evidence-register")).getText())
@@ -301,7 +301,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                         Map.of(
                                 BriefField.REGISTER,
                                 new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of("Hold on, man"), 2, 2)))));
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-evidence-register"));
 
         onFx(() -> briefModel().setRegister(Register.FORMAL_LITERARY));
@@ -328,7 +328,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                                 new FieldEvidence(
                                         FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2)))));
 
-        onFx(() -> button("brief-suggest-style").fire());
+        fillInAndApply();
         awaitFx(() -> isShown("brief-tone-narrator-gender-suggested"));
 
         assertThat(((Label) required("brief-tone-narrator-gender-suggested")).getText())

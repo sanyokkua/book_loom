@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
 
 /**
@@ -17,6 +18,7 @@ import ua.bookloom.api.llm.VerificationStage;
  * @param note a short qualifier such as "model list unavailable", or {@code null} when there is none
  * @param elapsed how long the stage took, or {@code null} when it was not measured
  * @param count how many models a listing held, or {@code null} when the stage counts nothing
+ * @param exchange the request and reply the stage exchanged, for the test dialog, or {@code null} when none was kept
  */
 public record StageChip(
         VerificationStage stage,
@@ -24,7 +26,8 @@ public record StageChip(
         @Nullable AppError error,
         @Nullable String note,
         @Nullable Duration elapsed,
-        @Nullable Integer count) {
+        @Nullable Integer count,
+        @Nullable VerificationExchange exchange) {
 
     /** Rejects a chip that names no stage or no status. */
     public StageChip {
@@ -45,6 +48,26 @@ public record StageChip(
             final StageStatus status,
             final @Nullable AppError error,
             final @Nullable String note) {
-        this(stage, status, error, note, null, null);
+        this(stage, status, error, note, null, null, null);
+    }
+
+    /**
+     * A chip with measured values and no exchange.
+     *
+     * @param stage which finding this is
+     * @param status its outcome
+     * @param error the failure behind it, or {@code null}
+     * @param note a short qualifier, or {@code null}
+     * @param elapsed how long the stage took, or {@code null}
+     * @param count how many models a listing held, or {@code null}
+     */
+    public StageChip(
+            final VerificationStage stage,
+            final StageStatus status,
+            final @Nullable AppError error,
+            final @Nullable String note,
+            final @Nullable Duration elapsed,
+            final @Nullable Integer count) {
+        this(stage, status, error, note, elapsed, count, null);
     }
 }

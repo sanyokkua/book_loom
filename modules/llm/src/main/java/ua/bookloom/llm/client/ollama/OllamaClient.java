@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -30,11 +29,12 @@ import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
+import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
+import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Speaks Ollama's native chat dialect so request fields and provider errors retain their intended meaning. */
 @Slf4j
@@ -50,10 +50,6 @@ public final class OllamaClient implements ProviderClient {
     /** Lines a streamed reply may add past that, for the final part and the envelope around a short cap. */
     private static final int RUNAWAY_MARGIN_LINES = 64;
 
-    private static final String THINKING_FIELD = "\"thinking\":\"";
-    private static final String EMPTY_THINKING_FIELD = "\"thinking\":\"\"";
-    private static final String EMPTY_CONTENT_FIELD = "\"content\":\"\"";
-
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
@@ -65,7 +61,7 @@ public final class OllamaClient implements ProviderClient {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.replies = new OllamaReplyReader(
-                config, mapper, (modelId, cause) -> unexpectedError("read chat response", modelId, cause));
+                config, mapper, (modelId, cause) -> UnreadableReply.error(config, modelId, cause));
     }
 
     @Override
@@ -91,7 +87,8 @@ public final class OllamaClient implements ProviderClient {
                 config.id(),
                 config.baseUrl().getHost());
         try {
-            final ProviderCallResult<HttpReply> call = get(TAGS_PATH, CallPurpose.DISCOVERY, null);
+            final ProviderCallResult<HttpReply> call =
+                    get(EndpointPaths.modelsPath(config, TAGS_PATH), CallPurpose.DISCOVERY, null);
             final Result<HttpReply> result = call.result();
             if (result.isErr()) {
                 return new ProviderCallResult<>(
@@ -126,8 +123,36 @@ public final class OllamaClient implements ProviderClient {
     }
 
     @Override
+    public String requestBody(String modelId, ChatRequest request) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        try {
+            final Result<ParsedFormat> parsed = parseFormat(request.responseFormat(), modelId);
+            if (parsed.isErr()) {
+                return "";
+            }
+            final Result<String> body = serializeRequest(
+                    modelId,
+                    request,
+                    Objects.requireNonNull(parsed.data(), "parsed format").schema());
+            return body.isErr() ? "" : Objects.requireNonNull(body.data(), "body");
+        } catch (RuntimeException failure) {
+            log.warn(
+                    "the request body of model {} could not be written: {}",
+                    modelId,
+                    failure.getClass().getSimpleName());
+            return "";
+        }
+    }
+
+    @Override
     public Optional<Integer> contextLength(String modelId) {
         return new ContextLengthProbe(exchange, mapper).ollama(config, modelId);
+    }
+
+    @Override
+    public Optional<Integer> loadedContextLength(String modelId) {
+        return new ContextLengthProbe(exchange, mapper).ollamaLoaded(config, modelId);
     }
 
     @Override
@@ -196,7 +221,7 @@ public final class OllamaClient implements ProviderClient {
         final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
                 request.temperature(),
                 request.contextWindow(),
-                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
+                OllamaReasoning.withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled()),
                 request.seed(),
                 request.samplingOrNone().topP(),
                 request.samplingOrNone().topK(),
@@ -204,40 +229,16 @@ public final class OllamaClient implements ProviderClient {
                 request.samplingOrNone().repeatPenalty());
         try {
             final OllamaChatRequest payload = new OllamaChatRequest(
-                    modelId, messages, true, options, schema, thinkControl(modelId, request.reasoningEnabled()));
+                    modelId,
+                    messages,
+                    true,
+                    options,
+                    schema,
+                    OllamaReasoning.thinkControl(modelId, request.reasoningEnabled()));
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(unexpectedError("serialize chat request", modelId, failure));
         }
-    }
-
-    /**
-     * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
-     * reasoning, so "reasoning off" is asked of it as its lowest level.
-     */
-    static @Nullable Object thinkControl(final String modelId, final @Nullable Boolean reasoningEnabled) {
-        if (Boolean.FALSE.equals(reasoningEnabled)
-                && modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
-            return "low";
-        }
-        return reasoningEnabled;
-    }
-
-    /**
-     * The cap the server is given: a call that thinks needs room for it on any model, and a gpt-oss model reasons even
-     * at its lowest level, so it gets the room whether or not thinking was asked for (once, never twice).
-     */
-    static @Nullable Integer withReasoningHeadroom(
-            final String modelId, final @Nullable Integer cap, final @Nullable Boolean reasoningEnabled) {
-        if (!needsReasoningRoom(modelId, reasoningEnabled)) {
-            return cap;
-        }
-        return ReasoningHeadroom.raise(cap);
-    }
-
-    private static boolean needsReasoningRoom(final String modelId, final @Nullable Boolean reasoningEnabled) {
-        return Boolean.TRUE.equals(reasoningEnabled)
-                || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss");
     }
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
@@ -258,7 +259,7 @@ public final class OllamaClient implements ProviderClient {
      */
     static long maxLines(String modelId, ChatRequest request) {
         final @Nullable Integer cap =
-                withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
+                OllamaReasoning.withReasoningHeadroom(modelId, request.maxOutputTokens(), request.reasoningEnabled());
         final @Nullable Integer bound = cap != null ? cap : request.contextWindow();
         final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;
         log.debug(
@@ -270,20 +271,6 @@ public final class OllamaClient implements ProviderClient {
         return lines;
     }
 
-    /**
-     * A thinking call streams its reasoning as lines with an empty {@code content}; they are the room the server was
-     * given, not the answer running away, so only the other lines count against the bound.
-     */
-    private static Predicate<String> countedLines(ChatRequest request) {
-        return Boolean.TRUE.equals(request.reasoningEnabled()) ? line -> !isThinkingLine(line) : line -> true;
-    }
-
-    private static boolean isThinkingLine(String line) {
-        return line.contains(THINKING_FIELD)
-                && !line.contains(EMPTY_THINKING_FIELD)
-                && line.contains(EMPTY_CONTENT_FIELD);
-    }
-
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
         final Result<HttpReply> response = exchange.postStreamed(
@@ -292,15 +279,14 @@ public final class OllamaClient implements ProviderClient {
                 body,
                 RequestTimeouts.streamIdle(config),
                 maxLines(modelId, request),
-                countedLines(request));
+                ThinkingLines.counted(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final Result<HttpReply> mapped = HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId);
         return ProviderCallResult.fromHttpReply(
-                HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
-                reply,
-                CapabilityRejections.from(reply, request));
+                mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
     }
 
     private Result<List<ModelInfo>> readModels(String body) {

@@ -90,6 +90,7 @@ public final class QualityLoop {
         Objects.requireNonNull(reason, "reason");
         log.warn("Deciding a chunk without its reviewer chunkSize={} code={}", outcomes.size(), reason.code());
         final EvaluatedDrafts drafts = evaluateDrafts(outcomes, settings, Objects.requireNonNull(gate, "gate"));
+        new CheckSteps(calls.steps(), outcomes, settings.dial().reviewPasses()).abandoned();
         return new ChunkDecider(
                 drafts.outcomes(), drafts.qa(), ReviewVerdict.unavailable(reason), healer(settings, gate, calls));
     }
@@ -148,21 +149,35 @@ public final class QualityLoop {
         }
         final List<ReviewedPair> pairs = qualifyingPairs(outcomes, initialQa);
         logReviewInput(outcomes, initialQa, pairs);
+        final CheckSteps checks =
+                new CheckSteps(calls.steps(), outcomes, settings.dial().reviewPasses());
         if (pairs.isEmpty()) {
+            checks.skipFrom(1);
             return new ReviewOutcome(null, null);
         }
+        checks.started(1);
         final Result<ReviewVerdict> first = review(pairs, settings, ReviewPass.FIRST, calls);
-        if (first.isErr() || settings.dial().reviewPasses() < 2) {
+        if (first.isErr()) {
             return outcomeOf(first);
         }
+        checks.done(1);
         final ReviewVerdict firstVerdict = Objects.requireNonNull(first.data());
-        if (!firstVerdict.readable()) {
+        if (settings.dial().reviewPasses() < 2 || !firstVerdict.readable()) {
+            checks.skipFrom(2);
             return outcomeOf(first);
         }
+        checks.started(2);
         final Result<ReviewVerdict> second = review(pairs, settings, ReviewPass.SECOND, calls);
-        return second.isErr()
-                ? outcomeOf(second)
-                : new ReviewOutcome(firstVerdict.followedBy(Objects.requireNonNull(second.data())), null);
+        return secondOutcome(firstVerdict, second, checks);
+    }
+
+    private static ReviewOutcome secondOutcome(
+            final ReviewVerdict firstVerdict, final Result<ReviewVerdict> second, final CheckSteps checks) {
+        if (second.isErr()) {
+            return outcomeOf(second);
+        }
+        checks.done(2);
+        return new ReviewOutcome(firstVerdict.followedBy(Objects.requireNonNull(second.data())), null);
     }
 
     private static ReviewOutcome outcomeOf(final Result<ReviewVerdict> reviewed) {

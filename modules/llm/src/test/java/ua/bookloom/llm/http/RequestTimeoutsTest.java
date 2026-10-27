@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.CallLimits;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
@@ -60,6 +61,21 @@ class RequestTimeoutsTest {
                 config(Duration.ofSeconds(configuredSeconds)), request(CallKind.REVIEW, expectedOutputTokens));
 
         assertThat(judged.requestTimeout()).isEqualTo(Duration.ofSeconds(90));
+    }
+
+    // The window shows CallLimits, so the client must read its bounds from there and nowhere else.
+    @Test
+    void forChat_reviewAndHelper_useCallLimits() {
+        final ProviderConfig base = config(Duration.ofMinutes(3));
+
+        assertThat(RequestTimeouts.forChat(base, request(CallKind.REVIEW, null)).requestTimeout())
+                .isEqualTo(CallLimits.REVIEW_TIMEOUT);
+        assertThat(RequestTimeouts.forChat(base, request(CallKind.SUMMARY, null))
+                        .requestTimeout())
+                .isEqualTo(CallLimits.HELPER_TIMEOUT);
+        assertThat(RequestTimeouts.forChat(base, request(CallKind.DRAFT, 100_000))
+                        .requestTimeout())
+                .isEqualTo(CallLimits.MAX_CHAT_TIMEOUT);
     }
 
     @ParameterizedTest

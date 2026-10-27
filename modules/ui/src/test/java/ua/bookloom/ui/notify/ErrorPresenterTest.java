@@ -2,9 +2,11 @@ package ua.bookloom.ui.notify;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.inject.Injector;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -16,11 +18,13 @@ import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.ui.ShellTestBase;
+import ua.bookloom.ui.UiTestInjector;
 
 /**
  * The blocking error dialog as the person meets it: what it says, what it folds away, what it offers, and what it
@@ -32,6 +36,13 @@ class ErrorPresenterTest extends ShellTestBase {
     private static final String MESSAGE = "The provider gave up after several attempts.";
     private static final String DETAILS = "attempt 3 of 3; model gemma3:12b";
     private static final String CAUSE_TEXT = "Connection refused: localhost/127.0.0.1:11434";
+
+    private final List<String> copied = new CopyOnWriteArrayList<>();
+
+    @Override
+    protected Injector createInjector(final Locale locale) {
+        return UiTestInjector.builder(locale).clipboard(copied::add).build();
+    }
 
     private static AppError timeoutWithDetails() {
         return AppError.of(ErrorCode.timeout, TITLE, MESSAGE, DETAILS, null);
@@ -264,7 +275,7 @@ class ErrorPresenterTest extends ShellTestBase {
     }
 
     // IF the dialog's own words came from anywhere but the catalogue, THEN the Ukrainian display would be half
-    // English; the failure's own title stays as the failure gave it.
+    // English; the failure's title and message are the catalogue's words for its code.
     @Test
     void present_underUkrainian_drawsItsOwnWordsFromTheUkrainianCatalogue() {
         useLocale(Locale.of("uk"));
@@ -275,6 +286,55 @@ class ErrorPresenterTest extends ShellTestBase {
         assertThat(toggleText()).isEqualTo("Показати подробиці");
         assertThat(buttonText("error-retry")).isEqualTo("Повторити");
         assertThat(buttonText("error-dismiss")).isEqualTo("Закрити");
-        assertThat(textOf("error-title")).isEqualTo("Translation failed");
+        assertThat(textOf("error-title")).isEqualTo("Модель ШІ не відповіла вчасно");
+        assertThat(textOf("error-message")).isEqualTo("Відповідь не надійшла вчасно. Спробуйте ще раз за хвилину.");
+    }
+
+    // IF a failure built in English below the interface were shown as built, THEN a Ukrainian display would show an
+    // English title and message for every failure.
+    @ParameterizedTest
+    @EnumSource(ErrorCode.class)
+    void present_underUkrainian_showsNoEnglishTitleOrMessageForAnyCode(final ErrorCode code) {
+        useLocale(Locale.of("uk"));
+
+        present(AppError.of(code, TITLE, MESSAGE, DETAILS, null));
+        required("error-card");
+
+        assertThat(textOf("error-title")).isNotBlank().doesNotContainPattern("[A-Za-z]");
+        assertThat(textOf("error-message")).isNotBlank().doesNotContainPattern("[A-Za-z]");
+    }
+
+    // IF Copy details copied anything beyond the details field, THEN a cause or a secret could reach a report.
+    @Test
+    void copyDetails_clicked_copiesTheSafeDetailsOnly() {
+        present(AppError.of(ErrorCode.unreachable, TITLE, MESSAGE, DETAILS, new ConnectException(CAUSE_TEXT)));
+
+        onFx(() -> ((Button) required("error-details-copy")).fire());
+
+        assertThat(copied).containsExactly("attempt 3 of 3; model gemma3:12b");
+        assertThat(buttonText("error-details-copy")).isEqualTo("Copy details");
+    }
+
+    // IF Copy details were offered with no details, THEN it would copy nothing.
+    @Test
+    void present_withoutDetails_offersNoCopyButton() {
+        present(AppError.of(ErrorCode.timeout, TITLE, MESSAGE));
+        required("error-card");
+
+        assertThat(isPresent("error-details-copy")).isFalse();
+    }
+
+    // IF "Show technical details" did not reach the failure card, THEN the person who asked for codes would open it by
+    // hand.
+    @Test
+    void present_technicalDetailsOn_opensTheDetailsAndLabelsTheToggleHide() {
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.TechnicalDetails.class)
+                .property()
+                .set(true));
+
+        present(timeoutWithDetails());
+
+        assertThat(isPresent("error-details")).isTrue();
+        assertThat(toggleText()).isEqualTo("Hide details");
     }
 }

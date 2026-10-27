@@ -15,17 +15,16 @@ import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.RunState;
 
 /**
- * A run left overnight that waits for its provider says so everywhere a person looks in the morning: the banner with
- * the countdown, the attempt and when the outage began, the title bar's state and its connection chip, and the controls
- * to try at once, skip the segment, hold the run or stop it.
+ * A run left overnight that waits for its AI program says so everywhere a person looks in the morning (README "Run
+ * states": Waiting for the AI model, Stopped trying, Model missing): the banner with the countdown and its actions, the
+ * title bar's state and its red chip, and the toolbar's Pause that stops the trying.
  */
 class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
 
     private static final String RETRY = "translating-retry-now";
     private static final String SKIP = "translating-skip-segment";
-    private static final String STOP_RUN = "translating-stop-run";
     private static final String SETTINGS = "translating-open-settings";
-    private static final String STAY = "translating-stay-paused";
+    private static final String CHOOSE_MODEL = "translating-choose-model";
     private static final AppError UNREACHABLE = AppError.of(
             ErrorCode.unreachable, "Model server unreachable", "Nothing is listening.", "endpointHost=localhost", null);
 
@@ -42,6 +41,7 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
 
     private void waitForProvider(
             final AppError error, final RecoveryWaiting.Status status, final int attempt, final long secondsLeft) {
+        chooseModel();
         mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
         mirror().publishRunState(RunState.PAUSED);
@@ -58,35 +58,49 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
     }
 
     private List<String> shownActions() {
-        return List.of(RETRY, SKIP, SETTINGS, STAY, STOP_RUN).stream()
+        return List.of(RETRY, SKIP, SETTINGS, CHOOSE_MODEL).stream()
                 .filter(this::isShown)
                 .toList();
     }
 
     // IF the waiting run looked like any other paused error, THEN in the morning it would read as stuck.
     @Test
-    void banner_waitingForTheProvider_namesTheCountdownAttemptAndOutageStartWithItsActions() {
+    void banner_waitingForTheProgram_namesItAndTheNextTryWithItsThreeActions() {
         showTranslating();
 
         waitForProvider(RecoveryWaiting.Status.WAITING, 6, 252);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("Waiting for the provider");
+        assertThat(labelText("translating-banner-title")).isEqualTo("BookLoom cannot reach Ollama");
         assertThat(labelText("translating-banner-text"))
-                .contains("Next try in 4:12 · attempt 6 · down since 02:14 · last check: unreachable")
-                .contains("resumes by itself");
+                .isEqualTo("Is the Ollama app open? BookLoom tries again by itself in 4:12.");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-warn");
-        assertThat(shownActions()).containsExactly(RETRY, SKIP, STOP_RUN);
-        assertThat(enabledControls()).containsExactly("translating-pause", "translating-resume", "translating-stop");
-        assertThat(button("translating-resume").getText()).isEqualTo("Retry now");
+        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS);
+        assertThat(enabledControls()).containsExactly("translating-pause", "translating-stop");
+        assertThat(button("translating-pause").getText()).isEqualTo("Pause");
     }
 
     @Test
-    void titleBar_waitingForTheProvider_saysSoAndTheChipSaysRetrying() {
+    void titleBar_waitingForTheProgram_saysSoAndTheChipCannotReachIt() {
         waitForProvider(RecoveryWaiting.Status.WAITING, 6, 252);
 
-        assertThat(labelText("shell-run-state")).isEqualTo("Waiting for the provider · next try in 4:12");
-        assertThat(button("shell-run-connection").getText()).isEqualTo("● Provider unreachable · retrying");
-        assertThat(required("shell-run-connection").getStyleClass()).contains("conn-unsteady");
+        assertThat(labelText("shell-run-state")).isEqualTo("Waiting for Ollama");
+        assertThat(button("shell-run-connection").getText()).isEqualTo("Cannot reach Ollama");
+        assertThat(required("shell-run-connection").getStyleClass()).contains("state-failed");
+        assertThat(button("shell-run-control").getText()).isEqualTo("Pause");
+    }
+
+    // IF Pause did not stop the trying, THEN a person who wants the program closed overnight could not hold the run.
+    @Test
+    void pause_pressedWhileWaiting_asksTheRunnerToHoldTheRun() throws Exception {
+        readyToStart();
+        showTranslating();
+        onFx(() -> button("translating-start").fire());
+        job.awaitRunStarted();
+        waitForProvider(RecoveryWaiting.Status.WAITING, 1, 12);
+
+        onFx(() -> button("translating-pause").fire());
+
+        assertThat(job.calls()).contains("pause");
     }
 
     // IF a run past the twelve-hour limit still read as retrying, THEN the person would wait for a retry that never
@@ -97,26 +111,26 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
 
         waitForProvider(RecoveryWaiting.Status.GAVE_UP, 77, 0);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("The provider has been down for over 12 hours");
-        assertThat(labelText("translating-banner-text")).contains("Down since 02:14 · 77 tries");
+        assertThat(labelText("translating-banner-title"))
+                .isEqualTo("Ollama has not answered for 12 hours — BookLoom stopped trying by itself.");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
-        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS, STAY);
-        assertThat(button("translating-resume").getText()).isEqualTo("Resume");
-        assertThat(labelText("shell-run-state")).isEqualTo("Provider error");
+        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS);
+        assertThat(button("translating-resume").getText()).isEqualTo("Try again now");
+        assertThat(labelText("shell-run-state")).isEqualTo("Paused at 78 %");
+        assertThat(button("shell-run-connection").getText()).isEqualTo("Ollama: no answer for 12 h");
     }
 
-    // IF a model nobody loads read like a provider outage, THEN the person would wait for a server that is already up.
+    // IF a model nobody loads read like a program outage, THEN the person would wait for a program that is already up.
     @Test
-    void banner_unloadedModelGaveUp_asksThePersonToLoadItAndResume() {
+    void banner_unloadedModelGaveUp_namesTheModelAndOffersAnother() {
         showTranslating();
 
         waitForProvider(UNLOADED, RecoveryWaiting.Status.GAVE_UP, 6, 0);
 
-        assertThat(labelText("translating-banner-title")).isEqualTo("The model is not available");
-        assertThat(labelText("translating-banner-text"))
-                .contains("load it in the provider at localhost:1234 and press Resume")
-                .contains("6 tries since 02:14");
+        assertThat(labelText("translating-banner-title"))
+                .isEqualTo("The AI model gemma3:12b is not available — check that it is installed.");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
-        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS, STAY);
+        assertThat(shownActions()).containsExactly(CHOOSE_MODEL);
+        assertThat(button("shell-run-connection").getText()).isEqualTo("Model missing");
     }
 }

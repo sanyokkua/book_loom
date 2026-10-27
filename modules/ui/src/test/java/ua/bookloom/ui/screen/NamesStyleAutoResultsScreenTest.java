@@ -26,8 +26,7 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
         final List<String> texts = textsUnder(required("results-card"));
         assertThat(texts)
                 .contains(
-                        "Automatic names — results",
-                        "Added (2) · Removed (2) · Changed (1)",
+                        "Prepare names automatically — results",
                         "Names (3)",
                         "Recurring terms (2)",
                         "Mid",
@@ -35,6 +34,7 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
                         "Well",
                         "pentacle",
                         "table");
+        assertThat(labelText("progress-subtitle")).startsWith("2 added · 2 removed · 1 changed");
         assertThat(texts.indexOf("Names (3)")).isLessThan(texts.indexOf("Mid"));
         assertThat(texts.indexOf("Mid")).isLessThan(texts.indexOf("Recurring terms (2)"));
         assertThat(texts.indexOf("Recurring terms (2)")).isLessThan(texts.indexOf("pentacle"));

@@ -67,9 +67,9 @@ class TranslationRunnerLogTest extends RunnerTestBase {
         job.emit(decided("s-8", SegmentStatus.FLAGGED, progress(0, 1, 4)));
         deliverAndTick();
 
-        assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(1);
-        assertThat(onFx(() -> mirror.accepted().get())).isZero();
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(5);
+        assertThat(onFx(() -> mirror.figures().get().flagged())).isEqualTo(1);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(5);
         job.finish(Result.ok(cancelledReport()));
         awaitState(RunState.STOPPED);
     }
@@ -82,7 +82,7 @@ class TranslationRunnerLogTest extends RunnerTestBase {
         onFx(() -> {
             mirror.runState()
                     .addListener((o, before, after) -> stateWithAccepted.add(
-                            after + ":" + mirror.accepted().get()));
+                            after + ":" + mirror.figures().get().accepted()));
             return null;
         });
         startJob();

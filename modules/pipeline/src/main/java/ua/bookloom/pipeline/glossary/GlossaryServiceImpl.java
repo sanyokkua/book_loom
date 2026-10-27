@@ -1,9 +1,6 @@
 package ua.bookloom.pipeline.glossary;
 
 import com.google.inject.Inject;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +47,9 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
 public final class GlossaryServiceImpl implements GlossaryService {
 
     static final String LOCKED_NEEDS_TARGET = "A locked term needs a target.";
+
+    /** How many line numbers an import's warning names; the count says how many there were. */
+    private static final int LOGGED_LINES = 20;
 
     private final GlossaryRepository glossary;
     private final SegmentRepository segments;
@@ -271,96 +271,52 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     private Result<GlossaryImportReport> readAndImport(final String projectId, final Path source) {
-        final String text;
-        try {
-            text = Files.readString(source, StandardCharsets.UTF_8);
-        } catch (IOException cause) {
-            log.warn("Glossary import project={} path={} failed: file unreadable", projectId, source, cause);
-            return Result.err(AppError.of(
-                    ErrorCode.validation,
-                    "Glossary file unreadable",
-                    "The glossary file could not be read.",
-                    null,
-                    cause));
-        }
-        log.debug("Glossary import project={} path={} chars={}", projectId, source, text.length());
-        final GlossaryCsv.Parsed parsed = GlossaryCsv.parse(text);
-        final Result<GlossaryImportReport> report = applyRows(projectId, parsed);
+        final Result<GlossaryImportReport> report = new GlossaryCsvFiles(
+                        glossary, rows -> rowsImport(projectId).apply(projectId, rows))
+                .importFrom(projectId, source);
         if (report.isOk()) {
             logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
         }
         return report;
     }
 
-    private Result<GlossaryImportReport> applyRows(final String projectId, final GlossaryCsv.Parsed parsed) {
-        final List<Integer> refused = new ArrayList<>();
-        int imported = 0;
-        for (final GlossaryCsv.Row row : parsed.rows()) {
-            final Result<Boolean> applied = applyRow(projectId, row);
-            if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
-            }
-            if (Boolean.TRUE.equals(applied.data())) {
-                imported++;
-            } else {
-                refused.add(row.line());
-            }
-        }
-        return Result.ok(new GlossaryImportReport(imported, parsed.malformedLines(), refused));
-    }
-
     private static void logImport(final String projectId, final Path source, final GlossaryImportReport report) {
-        report.malformedLines().forEach(line -> log.warn("Glossary import path={} line {} is malformed", source, line));
-        report.refusedLines()
-                .forEach(line ->
-                        log.warn("Glossary import path={} line {} refused: {}", source, line, LOCKED_NEEDS_TARGET));
+        // One line per kind, not per row: a file of 5,000 bad rows must not write 5,000 warnings.
+        if (!report.malformedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} malformed={} problems={} lines={}",
+                    source,
+                    report.malformedLines().size(),
+                    report.problems(),
+                    report.malformedLines().stream().limit(LOGGED_LINES).toList());
+        }
+        if (!report.refusedLines().isEmpty()) {
+            log.warn(
+                    "Glossary import path={} refused={} ({}) lines={}",
+                    source,
+                    report.refusedLines().size(),
+                    LOCKED_NEEDS_TARGET,
+                    report.refusedLines().stream().limit(LOGGED_LINES).toList());
+        }
         log.info(
-                "Glossary imported project={} path={} imported={} malformed={} refused={}",
+                "Glossary imported project={} path={} imported={} malformed={} refused={} duplicates={}",
                 projectId,
                 source,
                 report.imported(),
                 report.malformedLines().size(),
-                report.refusedLines().size());
+                report.refusedLines().size(),
+                report.duplicates());
     }
 
-    private Result<Boolean> applyRow(final String projectId, final GlossaryCsv.Row row) {
-        if (row.locked() && isBlank(row.target())) {
-            return Result.ok(Boolean.FALSE);
-        }
-        final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(projectId, row.term());
-        if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
-        }
-        final Optional<GlossaryEntry> existing = Objects.requireNonNull(held.data(), "held");
-        final Result<GlossaryEntry> stored = existing.isPresent()
-                ? updateEntry(GlossaryCsv.replaced(existing.get(), row))
-                : addEntry(new GlossaryEntry(
-                        GlossaryIds.of(projectId, row.term()),
-                        projectId,
-                        row.term(),
-                        row.target(),
-                        row.type(),
-                        row.gender(),
-                        row.locked()));
-        return stored.map(entry -> Boolean.TRUE);
+    private GlossaryRowsImport rowsImport(final String projectId) {
+        final Document document = openProjects.get(projectId);
+        final String language = document == null ? null : languageOf(briefOf(projectId), document);
+        return new GlossaryRowsImport(glossary, segments, deferrals, language);
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {
-        final Result<List<GlossaryEntry>> held = glossary.all(projectId);
-        if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
-        }
-        final List<GlossaryEntry> entries = Objects.requireNonNull(held.data(), "held");
-        try {
-            Files.writeString(destination, GlossaryCsv.format(entries), StandardCharsets.UTF_8);
-        } catch (IOException cause) {
-            final AppError error = AppError.of(
-                    ErrorCode.internal, "Glossary not saved", "The glossary file could not be written.", null, cause);
-            log.error("Glossary export project={} path={} failed code={}", projectId, destination, error.code(), cause);
-            return Result.err(error);
-        }
-        log.info("Glossary exported project={} path={} entries={}", projectId, destination, entries.size());
-        return Result.ok(destination);
+        return new GlossaryCsvFiles(glossary, rows -> rowsImport(projectId).apply(projectId, rows))
+                .exportTo(projectId, destination);
     }
 
     private static boolean isLockedWithoutTarget(final GlossaryEntry entry) {

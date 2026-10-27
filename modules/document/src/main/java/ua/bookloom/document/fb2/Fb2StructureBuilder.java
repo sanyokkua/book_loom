@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.AttributeAnchor;
@@ -29,6 +30,7 @@ import ua.bookloom.api.document.Unit;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class Fb2StructureBuilder {
 
@@ -75,42 +77,74 @@ final class Fb2StructureBuilder {
         return byId;
     }
 
+    // The main body is one unit, so each node names it and the position of its first segment: a section's segments
+    // run on from there, its subsections included, which is how a picked section lists its own segments only.
     private static List<StructureNode> mainBodyNodes(Element body, Unit unit) {
-        final IdentityHashMap<Element, Integer> sectionCounts = new IdentityHashMap<>();
-        int leadingCount = 0;
-        for (final Segment segment : unit.segments()) {
-            final Element leaf = resolveLeaf(body, segment.anchor());
-            final List<Element> chain = sectionChainOf(leaf, body);
-            if (chain.isEmpty()) {
-                leadingCount++;
-            } else {
-                for (final Element section : chain) {
-                    sectionCounts.merge(section, 1, Integer::sum);
-                }
-            }
-        }
+        final Sections sections = sectionsOf(body, unit);
         final List<StructureNode> nodes = new ArrayList<>();
-        if (leadingCount > 0) {
-            nodes.add(new StructureNode("", null, leadingCount, List.of()));
+        if (sections.leadingCount() > 0) {
+            nodes.add(new StructureNode("", unit.id(), sections.leadingCount(), List.of(), sections.leadingFirst()));
         }
         for (final Element top : childrenNamed(body, SECTION_ELEMENT)) {
-            nodes.add(buildSectionNode(top, sectionCounts));
+            nodes.add(buildSectionNode(top, sections));
         }
         return nodes;
     }
 
-    private static StructureNode buildSectionNode(Element section, IdentityHashMap<Element, Integer> counts) {
+    private static Sections sectionsOf(Element body, Unit unit) {
+        final IdentityHashMap<Element, Integer> counts = new IdentityHashMap<>();
+        final IdentityHashMap<Element, Integer> firsts = new IdentityHashMap<>();
+        int leadingCount = 0;
+        int leadingFirst = 0;
+        final List<Segment> segments = unit.segments();
+        for (int index = 0; index < segments.size(); index++) {
+            final List<Element> chain =
+                    sectionChainOf(resolveLeaf(body, segments.get(index).anchor()), body);
+            if (chain.isEmpty()) {
+                leadingFirst = leadingCount == 0 ? index : leadingFirst;
+                leadingCount++;
+            }
+            for (final Element section : chain) {
+                counts.merge(section, 1, Integer::sum);
+                firsts.putIfAbsent(section, index);
+            }
+        }
+        log.debug(
+                "fb2 main body unit {}: {} segment(s), {} leading from {}, {} section(s) holding text",
+                unit.id(),
+                segments.size(),
+                leadingCount,
+                leadingFirst,
+                firsts.size());
+        return new Sections(unit.id(), counts, firsts, leadingCount, leadingFirst);
+    }
+
+    private static StructureNode buildSectionNode(Element section, Sections sections) {
         final List<StructureNode> children = childrenNamed(section, SECTION_ELEMENT).stream()
-                .map(child -> buildSectionNode(child, counts))
+                .map(child -> buildSectionNode(child, sections))
                 .toList();
-        return new StructureNode(titleTextOf(section), null, counts.getOrDefault(section, 0), children);
+        // A section holding no segment has no first one; it then stands for no part of the unit.
+        final @Nullable Integer first = sections.firsts().get(section);
+        return new StructureNode(
+                titleTextOf(section),
+                first == null ? null : sections.unitId(),
+                sections.counts().getOrDefault(section, 0),
+                children,
+                first);
     }
 
     private static StructureNode namedBodyNode(Element body, Unit unit, String name) {
         final String title = titleTextOf(body);
         return new StructureNode(
-                title.isEmpty() ? name : title, null, unit.segments().size(), List.of());
+                title.isEmpty() ? name : title, unit.id(), unit.segments().size(), List.of());
     }
+
+    private record Sections(
+            String unitId,
+            IdentityHashMap<Element, Integer> counts,
+            IdentityHashMap<Element, Integer> firsts,
+            int leadingCount,
+            int leadingFirst) {}
 
     /**
      * A {@code title} element's text: FB2 always wraps a title's lines in {@code p} children, and JDOM's own

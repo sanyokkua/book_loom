@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Proves the model catalog against a configured, real local Ollama service. */
 @Tag("liveLocal")
@@ -24,7 +25,7 @@ class ModelCatalogLiveTest {
     // A real Ollama must report at least one installed model through the catalog.
     @Test
     void listModels_realOllama_returnsNonEmptyList() {
-        final InMemoryProviderConfigs configs = new InMemoryProviderConfigs();
+        final FakeProviderConfigs configs = new FakeProviderConfigs();
         final ProviderConfig config = new ProviderConfig(
                 "ollama",
                 ProviderKind.OLLAMA,
@@ -32,7 +33,7 @@ class ModelCatalogLiveTest {
                         Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_OLLAMA_URL"), "BOOKLOOM_LIVE_OLLAMA_URL")),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
         final ModelCatalogService catalog = new ModelCatalogService(
                 configs,
                 new ProviderClientFactory(

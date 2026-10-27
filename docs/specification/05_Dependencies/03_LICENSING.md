@@ -49,7 +49,7 @@ This license gate checks *license compliance* only. There is no known-vulnerabil
 | Dependency                          | License                                                                   |
 |-------------------------------------|-----------------------------------------------------------------------------|
 | sqlite-jdbc (org.xerial)            | Apache-2.0                                                                |
-| Flyway (flyway-core)                | Apache-2.0                                                                |
+| Flyway (flyway-core), from the first release | Apache-2.0                                                     |
 | JDBI 3                              | Apache-2.0                                                                |
 | JDOM2                               | BSD-style (JDOM License, Apache-like)                                     |
 | dom4j (if used instead of JDOM2)    | BSD-style                                                                 |

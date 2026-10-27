@@ -41,19 +41,6 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         return injector.getInstance(Messages.class).get(MessageKey.valueOf(constant));
     }
 
-    // IF the lead were a single vague sentence, THEN a person would not know what to do with the table.
-    @Test
-    void subtitle_shown_leadsWithTheScanAndNumbersTheThreeThingsToDo() throws Exception {
-        showWithOneTerm();
-
-        assertThat(labelText("names-style-subtitle"))
-                .startsWith("The scan lists the names and terms it found in the book.")
-                .contains("1. Write the spelling you want in Target.")
-                .contains("2. Set Type and Gender")
-                .contains("3. Switch Locked on")
-                .contains("Optional");
-    }
-
     // IF a button carried another control's words, THEN hovering it would explain the wrong action.
     @ParameterizedTest
     @CsvSource({
@@ -67,8 +54,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         "names-style-import,NAMES_STYLE_IMPORT_TIP",
         "names-style-export,NAMES_STYLE_EXPORT_TIP",
         "names-style-back,NAMES_STYLE_BACK_TIP",
-        "names-style-start,NAMES_STYLE_START_TIP",
-        "names-style-banner,NAMES_STYLE_SKIP_TIP"
+        "names-style-start,NAMES_STYLE_START_TIP"
     })
     void screen_shown_eachActionExplainsItself(final String id, final String tip) throws Exception {
         showWithOneTerm();
@@ -105,8 +91,13 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         assertThat(TooltipProbe.tipText(root.lookup(".text-field")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_TARGET_TIP"));
         assertThat(choices).hasSize(2).allMatch(node -> node instanceof Label);
-        assertThat(TooltipProbe.tipText(choices.get(0))).isEqualTo(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
-        assertThat(TooltipProbe.tipText(choices.get(1))).isEqualTo(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
+        // A value a narrow column cuts short is named whole before the column's explanation.
+        assertThat(TooltipProbe.tipText(choices.get(0)))
+                .startsWith(((Label) choices.get(0)).getText() + " — ")
+                .endsWith(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
+        assertThat(TooltipProbe.tipText(choices.get(1)))
+                .startsWith(((Label) choices.get(1)).getText() + " — ")
+                .endsWith(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
         assertThat(root.lookup(".toggle-switch")).isInstanceOf(ToggleSwitch.class);
         assertThat(TooltipProbe.tipText(root.lookup(".toggle-switch")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_LOCKED_TIP"));

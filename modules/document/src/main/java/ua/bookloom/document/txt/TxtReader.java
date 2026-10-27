@@ -59,7 +59,7 @@ public final class TxtReader {
         // Scanning starts past any byte-order mark, so the mark sits outside every span and is copied through on
         // export rather than being part of a paragraph a translation could replace.
         final List<ByteSpanAnchor> paragraphs =
-                visibleOnly(ParagraphScanner.scan(fileBytes, resolution.bomLength()), fileBytes, charset);
+                visibleOnly(ParagraphScanner.scan(fileBytes, resolution.bomLength(), charset), fileBytes, charset);
         final List<Segment> segments = segmentsOf(paragraphs, fileBytes, charset, sourceName);
 
         final String documentId = UUID.randomUUID().toString();

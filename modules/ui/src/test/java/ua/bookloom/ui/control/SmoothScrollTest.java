@@ -79,6 +79,9 @@ class SmoothScrollTest extends FxTestBase {
         final HBox glided = SmoothScroll.install(new HBox(pane, list, outer));
         stage.setScene(new Scene(new HBox(glided, nativeList), 600, VIEW_HEIGHT));
         stage.show();
+        // The framework shares one stage between test classes, and a window a shell test left wider and taller would
+        // give these panes a taller viewport than the jump distances below are measured for.
+        stage.sizeToScene();
     }
 
     @AfterEach

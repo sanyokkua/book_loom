@@ -1,6 +1,8 @@
 package ua.bookloom.pipeline.project;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -9,9 +11,11 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentLocator;
@@ -122,5 +126,24 @@ final class UnitChunks {
 
     private static boolean isKeptAsSource(final Unit unit, final Segment segment, final Set<SegmentKind> kept) {
         return unit.isAuxiliary() && kept.contains(segment.kind());
+    }
+
+    static BookPlan plan(final String projectId, final Document document, final BookBrief brief) {
+        final Map<String, Integer> perUnit = new LinkedHashMap<>();
+        final List<String> oversized = new ArrayList<>();
+        for (final Unit unit : document.units()) {
+            final List<Chunk> chunks = UnitChunks.pack(unit, brief);
+            perUnit.put(unit.id(), chunks.size());
+            chunks.stream()
+                    .filter(Chunk::oversized)
+                    .forEach(chunk -> oversized.add(chunk.segments().get(0).id()));
+        }
+        log.debug(
+                "plan project={} chunks={} oversized={} keptKinds={}",
+                projectId,
+                perUnit.values().stream().mapToInt(Integer::intValue).sum(),
+                oversized.size(),
+                brief.alsoTranslate().keptKinds());
+        return new BookPlan(perUnit, oversized);
     }
 }

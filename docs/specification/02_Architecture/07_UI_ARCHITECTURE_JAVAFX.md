@@ -1,13 +1,21 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-10-19
 **Cross-references:** `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
 `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
-`docs/specification/mockups/ui-mockup.html`
+`docs/specification/mockups/ui-mockup.html`, `docs/specification/mockups/README.md`
 
 # UI Architecture — JavaFX
 
+> **Building a screen from the mockup?** Read `docs/specification/mockups/README.md`, section "For AI agents: building
+> the JavaFX UI from this mockup": the mockup is HTML and is never copied; render it in a browser, capture the app in
+> the same state and size, compare the screenshots, and never port mockup-only elements (the "Mockup reference" group,
+> the demo bars, requirement badges, mockup-only buttons, sample figures).
+
 `:ui` (with `:app`) is the only module that `requires javafx.*`. It presents an MVVM front-end over the FX-free core,
 driven by an observable state mirror. The mockup at `docs/specification/mockups/ui-mockup.html` is the visual reference
-(pattern P6): every screen, state, and dialog below maps to it. Binding acceptance is scoped — **structure, tokens, and
+(pattern P6) and `docs/specification/mockups/README.md` is its behaviour reference (global patterns G1-G12, layout rules
+L1-L10, words): every screen, state, and dialog below maps to them. Items marked **planned** are the next change's
+(UI finalization + SQLite, `docs/proposals/2026-10-19-ui-finalization-and-persistence.md`) and do not exist in the code
+yet. Binding acceptance is scoped — **structure, tokens, and
 geometry gated in CI; pixel fidelity nightly** (`04_Build_and_Release/06_TESTING_STRATEGY.md`).
 
 ## bootstrap {#bootstrap}
@@ -35,12 +43,12 @@ Three layers inside `:ui`:
   mirror.
 
 **Shell chrome exception.** The View layer is FXML + a controller for every screen. The shell chrome — title bar,
-navigation column, content host, modal host and toast host (`AppShellView`) — and the dialog cards shown in its modal
-host (the About card, the error-with-details dialog) are built in code. The chrome's navigation entries are generated
-from the `ViewNames` enum, and a dialog card is short static content assembled with the shell and shown in the shell's
-own host, so an FXML file for either would be an empty container or a controller with no state of its own. The chrome
-still observes properties (the navigator's current view and content, the theme block, the run status) rather than
-owning state, and no screen is built this way.
+navigation column, content host, the dialog layers (`ModalHost`, `BusyHost`) and toast host (`AppShellView`) — and the
+dialog cards shown in them (the About card, the error-with-details dialog) are built in code. The chrome's navigation
+entries are generated from the `ViewNames` enum, and a dialog card is short static content assembled with the shell and
+shown in the shell's own host, so an FXML file for either would be an empty container or a controller with no state of
+its own. The chrome still observes properties (the navigator's current view and content, the theme block, the run
+status) rather than owning state, and no screen is built this way.
 
 ## observable-state-mirror {#state-mirror}
 
@@ -80,7 +88,9 @@ testable.
   segments the call is about (`CallSegment(id, locator, displaySource)`) and the prompt's filled parts in the order
   they were sent (`PromptSection(slot, heading, origin SYSTEM|USER, lines)`, the system style sheet first). Only the
   run's described calls are shown — the drafts (single and batch, with their repairs), the reviewer, the directed fix
-  and the backward revision and consistency calls; the name scans and the summary are not.
+  and the backward revision and consistency calls; the name scans and the summary are not. **Planned:** `CallSnapshot`
+  also carries the parsed batch items (id → target, item status) so the reply view can show a per-item grid
+  (`mockups/README.md`, G5).
 - `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
   enters, for the log.
 - `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
@@ -89,8 +99,8 @@ testable.
   glossary entry (label `+n`), on each memory reuse (labelled with the segment's locator), and on each summary
   refresh (labelled with its version).
 - `Paused` names the segment the run paused on — for a pause on a provider error, the segment whose step failed (a
-  chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what Retry
-  now and Skip segment will do.
+  chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what "Try
+  again now" and "Skip these n segments" will do (`mockups/README.md`, Run states).
 
 The count snapshot is `JobProgress(JobStage stage, int section, int sections, int chunk, int chunks, int
 autoAccepted, int repairedAccepted, int accepted, int flagged, int pending)`, where `JobStage` is `PREP | TRANSLATE |
@@ -116,22 +126,25 @@ count within the current section's chunking. `pending` leaves out segments kept 
 | `progressFraction`    | decided segments over the total, `0.0` when the total is zero                                                   |
 | `tokensPerSecond`     | derived from the recent drafts' `ModelCallFinished` usage                                                       |
 | `timeLeft`, `elapsed` | the run's estimated time left and time spent                                                                    |
-| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds, for the "Model calls (live)" panel; published at most once per cadence tick, and only when it changed |
+| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds; the chunk's rows (`LiveRow`, worked out by `ChunkRows` from `SegmentStarted`, the call snapshots and their `FELL_BACK` notes, `SegmentDrafted` and `SegmentDecided`, the run's rows kept as history across chunks, at most 500, the oldest dropped first; their marker is `RowMarker.of(row, runRow)`), the last 50 calls oldest first for "All calls…" (one list kept until a call changes), and the rolling summary's version from `MemoryUpdated(SUMMARY)`; published at most once per cadence tick, and only when it changed |
 | `reviewQueue`         | the flagged (and, on the "All segments" filter, kept-as-source) segments the review panel lists                 |
 | `waitingSeconds`      | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)                         |
 | `providerErrorNotice` | the failure's error code, while the run is auto-paused on a provider error                                      |
-| `failure`             | the run's `AppError`, when it ended on one                                                                       |
+| `failure`             | the run's `AppError`, when it ended on one                                                                      |
 | `report`              | the run's `JobReport`, when it returned one                                                                      |
 | `activityLog`         | unmodifiable `ObservableList<LogEntry>` of the newest 500 entries, each tagged `ok`/`fix`/`mem`/`sum`/`retry`/`err`/`info` |
 
-Counts are locale-formatted for display (`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
+Counts are locale-formatted for display (`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`). Time left and the
+progress bar are specified to count all the work of the operation — steps, not segments (`mockups/README.md`, G10);
+`state/ProgressLedger` is built (finalize 5.4): it replaced the segment percentage in `RunFigures` and `RunClock`'s
+last-20-segments window, and the mirror's `progress()` property carries its figures.
 
 **The publishers** (each wraps `Platform.runLater`, so engine threads call plain methods): `publishRunStarted()`,
 `publishRunState(RunState)`, `publishWaitingSeconds(int)`, `publishProgress(JobProgress)`,
 `publishLivePanel(SegmentStarted, SegmentDrafted?)`, `publishLogEntries(List<LogEntry>)` and
 `publishOutcome(RunState, JobReport, AppError)`. A per-run `RunSession` receives the engine events on the engine's
-thread and coalesces them into **one publish per 100 ms tick**, so a fast job never floods the FX queue.
-`TranslationRunner` treats the `Result<JobReport>` the job **returns** as authoritative for the terminal state — a
+thread and coalesces them into **one publish per 100 ms tick** (about ten a second), so a fast job never floods the FX
+queue. `TranslationRunner` treats the `Result<JobReport>` the job **returns** as authoritative for the terminal state — a
 run refused before it starts emits no `Finished` event — and publishes it last, so a late tick cannot overwrite it.
 Toasts and banners are surfaced by the notification components, not the mirror
 (`11_NOTIFICATIONS_AND_ERRORS.md`).
@@ -142,12 +155,36 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
 ## navigation {#navigation}
 
 - **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`,
-  `NAMES_STYLE`, `TRANSLATING`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. Only
-  `PROJECTS` carries none in this build: it is the one inert entry, and `Navigator.nextAvailableStep` skips it. The
-  review panel is reached from inside `TRANSLATING`, not through its own `ViewNames` constant.
+  `NAMES_STYLE`, `TRANSLATING`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. The five
+  workflow steps are Import (which holds the book's structure), Book Brief, Names & style, Translating and Export
+  (`mockups/README.md`, G7). Only `PROJECTS` carries none in this build: it is the one inert entry, and
+  `Navigator.nextAvailableStep` skips it; its screen is **planned**. The review panel is reached from inside
+  `TRANSLATING`, not through its own `ViewNames` constant (**planned:** review becomes a dialog opened from
+  `TRANSLATING`). **Planned:** without an open project the five steps are locked with a tooltip, and Projects and
+  Settings stay available (`StepAvailability` gains a "no project" rule, G6).
 - A `Navigator` (`@Singleton`) swaps the root content region by `ViewNames`, using the controller factory to construct
   the target view. Back/forward and deep-linking to a screen state (e.g. Import → language-mismatch) are driven by view
   state, not separate FXML.
+
+## layout {#layout}
+
+The window minimum is 960x640 (`AppShellView`). JavaFX has no media queries, so the mockup's width rules are Java
+(`mockups/README.md`, L1-L10).
+
+- **Built:** `AppShellView.showContent` applies `minHeight = USE_PREF_SIZE` to every screen; `TwoColumns` lets each
+  region decide its own two-column switch from its own width; a screen's actions are mounted in `#shell-actions`
+  through `StepFooter`.
+- **Planned:**
+  - A `LayoutClass` helper: a width listener on the content host that sets the pseudo-classes `compact` (< 1040 px),
+    `regular` (1040-1439) and `wide` (>= 1440) with 16 px hysteresis, and does not log (L1). The classes drive CSS only.
+  - A `fills-viewport` style class that opts a screen out of the `USE_PREF_SIZE` minimum so it grows to the window
+    height — Translating (the live panel), Import (the text browser) and Names & style (the two tables) (L5).
+  - A `VBox #shell-banners` in `AppShellView`, above the scrolling content, that holds the run banners and the
+    hidden-work banner on every screen while they apply (L3).
+  - An `Overrun` helper on `Labeled`: one-line text is cut with an ellipsis and gets a tooltip only when it is cut
+    (L8).
+  - A `LayoutFitTest` that checks the title bar, toolbar, dialog footers and narrow segmented controls at 960x640 and
+    1920x1080, in `en` and `uk` (L10; it absorbed the former `TitleBarFitTest`).
 
 ## theming {#theming}
 
@@ -161,7 +198,8 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
   be a second source of colour and a resolution order to reason about, and would compete with the role-lookup
   conformance check, which reads a role off `.root` (FR-THEME-5;
   `openspec/changes/archive/2026-09-26-add-ui-translation-workspace/design.md`, D7).
-- The **accent is fixed to Cognac** in v1 (not user-selectable — `09_THEMING.md` FR-THEME-4).
+- The **accent is fixed to Cognac** in v1 (not user-selectable — `09_THEMING.md` FR-THEME-4); Settings has no Accent
+  row (`mockups/README.md`, G8).
 - Controls reference role tokens (`-color-primary`, `-color-surface`, …), never hard-coded hex. Switching theme swaps
   the value block only, not the roles.
 
@@ -173,42 +211,117 @@ Every mockup widget maps to a real JavaFX/ControlsFX control:
 |-------------------------------------|---------------------------------------|
 | segmented pickers                | `SegmentedButton` / `ToggleGroup` |
 | side-by-side panes               | two `TextArea`                    |
-| tables (glossary, flagged queue) | `TableView` (virtualized)         |
+| list \| detail splits            | `SplitPane` with divider positions and minimum sizes |
+| editable tables (glossary, recurring terms) | `TableView` (virtualized, fixed row height) |
+| read-only grids in dialogs       | bordered `GridPane`               |
 | chapter/structure tree           | `TreeView`                        |
+| prompt sections                  | `TitledPane`                      |
+| formatting marks                 | detail panes: `TextFlow` chips; editors: `TextArea` + `TextFormatter` |
+| state markers                    | `Label` + Ikonli icon + word      |
 | toggles                          | `ToggleSwitch` (ControlsFX)       |
 | tabbed settings                  | `TabPane`                         |
-| dialogs                          | `Dialog` / `Alert`                |
-| toasts                           | Native token-styled nodes         |
-| icons                            | Ikonli                            |
+| dialogs                          | `ModalCard` on `ModalHost`; progress dialogs on the work layer (`BusyHost`) |
+| toasts                           | `ToastStack` + `ToastAction` (native token-styled nodes) |
+| ticking figures                  | `FigureLabel` (no re-layout per tick) |
+| width classes                    | `LayoutClass` pseudo-classes (**planned**) |
+| icons                            | Ikonli (Feather)                  |
+
+**Two kinds of table** (`mockups/README.md`, G9). Editable or sortable lists (Glossary, Recurring terms) are `TableView`s
+with every column resizable (`CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN`), grid lines, a header that stays visible and
+**fixed row heights** so long lists stay virtualized. Read-only grids in dialogs (findings, reply items, breakdowns,
+Previous \| Translated) are bordered `GridPane`s that are not resizable; their text wraps.
+
+**Formatting marks.** In detail panes `⟦gN⟧` are `TextFlow` chips; in one-line rows the marks are left out and the full
+text with marks is the tooltip, because a `TextFlow` cannot be cut with an ellipsis; in editors they are protected
+marks. **Planned:** the protected editor is a `TextArea` with a `TextFormatter` that adjusts a change to whole marks and
+lets whole-text loads through (undo and redo skip the filter, which is safe because every change it recorded covered
+whole marks). **RichTextFX is not added**; no new library is needed.
+
+**State markers** are an Ikonli Feather icon plus a word, one colour per meaning (G11); the mockup's half-circle and flag
+glyphs are placeholders because common Windows and Linux fonts lack them.
 
 ## screens {#screens}
 
 Enumerated against the mockup (each is a P6 visual-reference acceptance target); the per-screen detail and what this
 build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 
-- **Projects** (+ empty state) — project list, new/import entry. Inert in this build (no screen yet).
+- **Projects** (+ empty state) — project list, new/import entry. Inert in this build (no screen yet); **planned** with
+  the persistence change.
 - **Import** — states: idle, opening, detected, `language-mismatch` (an EPUB's own language declarations disagree, or
   the book declares a language the application does not recognize), refused (DRM and unsupported, each with the typed
   error code). Detected-file card with file, format and version, title/author, declared language, chapter/word
-  counts, image/font counts, and DRM status, plus a cover thumbnail or a neutral placeholder.
+  counts, image/font counts, and DRM status, plus a cover thumbnail or a neutral placeholder. It also holds the book's
+  structure: a nested, titled tree (resource path, position, segment count per node), the statistics card, the
+  background round-trip/resource-id checks and the oversized-segment warning. There is no separate Structure step
+  (`mockups/README.md`, G7).
 - **Book Brief** — source and target language, both editable and searchable over the same 34 languages; every card
   live (Tone & style, Translation policies, Also translate, Quality vs speed). No destination card — the save path
   lives on Export.
-- **Structure** — a nested, titled tree (resource path, position, segment count per node), the statistics card, the
-  background round-trip/resource-id checks, the oversized-segment warning, Back and Continue.
-- **Names & Style (glossary)** — glossary `TableView`, lock (target-only), add/model-scan/CSV import/export,
-  `Start translation`. Live in this build.
+- **Names & Style (glossary)** — two equal cards, the Glossary and the Recurring terms, each a `TermTableCard`
+  (`TableView`; search, + Add, Scan, Review, Translate, Import, Export; lock (target-only)), and `Start translation`.
+  Live in this build.
 - **Translating** — states: `idle`, `running`, `paused`, `stopped` (resumable — it re-enters at the first pending
   segment), `provider error` (auto-paused), `completed`, `failed`. The dashboard (`#jobprogress`) shows the progress
   line, time left, tokens per second, the four count tiles, the two-block live call panel (current and previous call), and the tagged activity log. The
-  review panel lives inside this screen (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`).
+  review desk is an `xl` dialog on `ModalHost` opened from this screen (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`;
+  `ReviewDeskCard`, opened by the eager `ReviewDeskLauncher`).
+  The run-state table in `mockups/README.md` (Run states) is the mapping the conformance test should check.
 - **Export** — chooses the destination and exports: save path with overwrite, format, the three side-file boxes, the
   final consistency-pass switch, the carried-over checks, the accepted/flagged/pending/kept-as-source counts, and
   `Export book` (unavailable while a run of the project is translating). The export-complete dialog is the only
   success notice.
-- **Settings** — `TabPane`: Providers / Models / Generation / Appearance / Automation / Storage & logs.
+- **Settings** — `TabPane`: Providers / Models / Generation / Appearance / Automation / Storage & logs. Only Providers is
+  live in this build; the other tabs are **planned** (their contents are in `mockups/README.md`, Settings).
 
 ## dialogs-and-notifications {#dialogs-notifications}
+
+### Two dialog layers {#dialog-layers}
+
+Dialogs live in the window, never in a second OS window except the native file choosers (`mockups/README.md`, G1).
+
+- **Built today:** `ModalHost` shows one `dialog/ModalCard` over a scrim with a focus trap, Escape (for a card that may
+  be closed) and focus return; `BusyHost` is the work layer and shows `control/ProgressDialog` for model work (the
+  busy card and `control/ModelCallsWindow` are gone, finalize 5.3); Enter, Escape and Tab are answered by one
+  `CardKeys` on both layers.
+- **Planned (G1, G4):**
+  - **`BusyHost` becomes the work layer** and holds the progress dialogs of model work; **`ModalHost`, above it,** holds
+    everything else (questions, confirmations, errors, the review desk, the tests, forms). A question opened during work
+    ("Cancel the export?") appears above the progress dialog, which keeps its state underneath. The busy card and
+    `#busy-show-calls` go.
+  - **`control/ModelCallsWindow` is removed** (nothing in the design needs a second `Stage`); "All calls" becomes a
+    progress dialog.
+  - **One card per layer.** `ModalHost` gains a small **`showWhenFree`** queue: a dialog the person did not ask for (the
+    review desk opening at the end of a run) waits until no dialog is open and no work is visible.
+  - **Enter/Esc policy** in `ModalHost`'s key filter: Enter (or Ctrl/Cmd+Enter in a text area) runs the footer's default
+    button; Esc closes a dialog, *hides* long work on a progress dialog, asks first before losing an export, and closes
+    short work; a card also carries `returnTo` and ask-first. Only About closes on a click outside.
+  - **`ModalCard` size variants:** `.dialog` 480 px, `.wide` 720 px, and `.xl` min(1180, 92 % of the window) wide with a
+    **fixed** min(820, 90 %) height so the footer never moves; a fixed header and footer with a `ScrollPane` body.
+
+### Progress dialog {#progress-dialog}
+
+**Planned (G4, G10):** one pattern for model work — filling in the brief, the names pass and the Scan / Review /
+Translate actions, suggesting a file name, the export's last check and the list of the translation's model calls.
+
+- `control/ProgressDialog` is a card on the work layer, driven by a **`ProgressDialogModel`** (steps, figures, selection,
+  follow, mode) that holds no scene-graph references. It is fed by the state package's `CallFeed` /
+  `ActivityTracker.Handle.calls(...)` plus a **step source** per task: the brief (`book-knowledge`, K x
+  `brief-suggestion`, `brief-synthesis`), the names pass (the `NamesPassImpl` stages) and the export
+  (`ExportProgress.Step`).
+- **Follow current step** is turned off only by a person's click or key, never by a selection the code makes.
+- **Continue in background** applies to long work only (the names pass, the export pass); it collapses the dialog into the
+  existing `ActivityChip` in the title bar, makes the screen it writes to read-only behind a banner in `#shell-banners`,
+  and ends with a toast offering "Review the results".
+- Clocks and figures tick in their own layout roots (**`FigureLabel`**, built), so a tick never re-lays out the dialog.
+  Engine publications stay coalesced (the `RunSession` publishes at most once per 100 ms tick, `#state-mirror`), and a
+  long item list (the consistency pass can list thousands) is a virtualized list of small row records with the detail
+  looked up by segment id and full prompts kept only for the last 50 calls.
+- **Prompt and reply views:** `control/PromptContextPane` and `control/ReplyPane` were replaced (finalize 5.2) by a
+  **`PromptView`** (a card per message role, a `TitledPane` per `PromptSection` shaped by its slot, the messages as sent in
+  a collapsed raw block with Copy) and a **`ReplyView`** that shows a batch reply as an
+  Id \| Segment \| Translation returned \| Result grid (G5) over a raw-reply block with Copy. They appear in Detailed views only (G12).
+
+### Dialogs and toasts {#dialog-list}
 
 - **Dialogs:** welcome, add/edit provider (with the Test connection/models/inference trio →
   `04_LLM_INTEGRATION.md#three-stage-verification`), the two **provider-binding** prompts (bound provider/model
@@ -216,8 +329,12 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
   `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-provider-binding`), add glossary term, retry-with-note,
   confirm-delete, unsaved-changes, error-with-details (expandable technical detail), export-complete (shipped in
   this build — the export's only success notice, `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-export-complete`),
-  about.
-- **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`; banners `info/warn/err`;
+  about. Retry with a note is **planned** to become an inline panel inside the review desk rather than a second dialog
+  (G1).
+- **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`, bottom-right, at most 4,
+  success and info 5 s, warning, error and any with an action 12 s (G2), raised only on the named occasions
+  (`ToastOccasion`); while a dialog or visible
+  work is open its feedback is a line in its own footer, not a toast; banners `info/warn/err`;
   empty states per screen. Errors surface as a dialog (with expandable typed `AppError.details`) plus a toast, per
   `09_ERROR_HANDLING.md#ui-surfacing`.
 
@@ -226,14 +343,15 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 Short transitions ease a change in; none carries meaning on its own (NFR-A11Y-09), and every duration lives in
 `ua.bookloom.ui.control.Motion`: **120 ms** (`QUICK`) for a screen's content fading in on a switch and the current
 navigation step settling; **160 ms** (`STANDARD`) for a dialog card fading and growing in (scale 0.96 → 1) over its
-fading scrim, a banner appearing or changing role, a toast sliding in and out and the busy card; **200 ms** (`SLOW`)
+fading scrim, a banner appearing or changing role, a toast sliding in and out and the busy card (a progress dialog on the
+work layer will use the same card motion); **200 ms** (`SLOW`)
 for a progress bar gliding to its new fraction (a reset or an indeterminate value is shown at once) and the switch's
 sliding thumb (ControlsFX). Closing is immediate. Motion is reduced — every transition skipped and the final state set at
 once — when `BOOKLOOM_REDUCE_MOTION` / `-Dbookloom.reduceMotion` says so (`1`/`true`/`yes` on, `0`/`false`/`no` off),
 otherwise when the operating system asks (`Platform.Preferences#isReducedMotion`); the shell root then carries
 `reduce-motion`, which stills the switch thumb in CSS. The test tasks set the property, so TestFX reads final states; a
-test of a transition turns it off for its own duration. Nothing animates inside a cell's `updateItem` or a
-`layoutChildren`, and nothing logs per frame.
+test of a transition turns it off for its own duration. Settings has no reduced-motion switch. Nothing animates inside a
+cell's `updateItem` or a `layoutChildren`, and nothing logs per frame.
 
 ## i18n {#i18n}
 
@@ -244,3 +362,14 @@ concatenated into layout; all labels are addressed through a **typed message-key
 and plural/gender-sensitive strings render via **ICU4J `MessageFormat`** (DD-48). The OS locale used for first-start
 detection is read through an **injectable `Locale` provider** so the rule is unit-testable. Details in
 `01_Product/10_I18N_AND_ACCESSIBILITY.md`.
+
+## tests-that-change {#tests-that-change}
+
+**Planned** with the UI finalization change (`mockups/README.md`, JavaFX implementability):
+
+- **Retired:** `ModelCallsWindowTest`, `BusyHostCallsWindowTest`, most of `ChangeResultsDialogTest` and `BusyHostTest`.
+- **Rewritten:** the live call panel, `PromptContextPane` / `ContextSection`, `ReviewPanel`, Import layout, term-table,
+  `RunFigures` / `RunClock`, toast and Settings tests.
+- **New:** `ModalCard` sizes; `ModalHost` key and queue rules; progress-dialog follow and hide; the step ledger and
+  estimate; the protected editor; per-item batch rows; `LayoutFitTest`; contrast for links and the selected segment
+  bar (`ContrastTest`); the run-state table mapping.

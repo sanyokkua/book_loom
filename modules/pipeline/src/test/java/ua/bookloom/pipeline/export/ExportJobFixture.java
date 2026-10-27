@@ -40,7 +40,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -57,7 +57,7 @@ final class ExportJobFixture {
     private final Injector injector = Guice.createInjector(
             new DocumentModule(),
             new LlmModule(),
-            new PersistenceModule(),
+            new InMemoryPersistenceModule(),
             new PipelineModule(),
             new ReviewModeTestModule());
 
@@ -116,7 +116,7 @@ final class ExportJobFixture {
 
     String importBook(final Path source, final String sourceLanguage, final AlsoTranslate alsoTranslate) {
         final ProjectService service = injector.getInstance(ProjectService.class);
-        final String id = Objects.requireNonNull(ok(service.importBook(source)).projectId(), "project id");
+        final String id = Objects.requireNonNull(ok(service.create(source)).projectId(), "project id");
         ok(service.updateBrief(id, brief(sourceLanguage, alsoTranslate)));
         return id;
     }

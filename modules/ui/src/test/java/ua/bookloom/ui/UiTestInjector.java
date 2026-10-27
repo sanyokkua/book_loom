@@ -6,22 +6,26 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import javafx.beans.property.ReadOnlyObjectWrapper;
+import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.Result;
+import ua.bookloom.api.AppRestart;
+import ua.bookloom.api.EnvironmentVariables;
 import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.StorageInfo;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -30,20 +34,26 @@ import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
-import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
-import ua.bookloom.ui.i18n.LocaleProvider;
-import ua.bookloom.ui.i18n.MessageKey;
-import ua.bookloom.ui.state.CsvFileChooser;
-import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.api.settings.GenerationOverrides;
+import ua.bookloom.api.settings.ReviewModeChoice;
+import ua.bookloom.ui.dialog.ContinuePrompt;
+import ua.bookloom.ui.dialog.FindBookPrompt;
+import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
+import ua.bookloom.ui.dialog.RenamePrompt;
+import ua.bookloom.ui.dialog.SamePairPrompt;
+import ua.bookloom.ui.dialog.SwitchProviderPrompt;
+import ua.bookloom.ui.dialog.TextClipboard;
+import ua.bookloom.ui.dialog.TranslateIntoPrompt;
+import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.FileRevealer;
-import ua.bookloom.ui.state.StepLocks;
-import ua.bookloom.ui.theme.ColorSchemeProvider;
+import ua.bookloom.ui.state.ProjectActions;
+import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.theme.ThemeBlock;
 
 /**
- * Builds the real {@link UiModule} graph with only the operating system's language, colour scheme and the build
+ * Builds the real {@link UiModule} graph with only the operating system's language, colour scheme, restart and the build
  * version replaced by fixed values, so a navigation or shell test exercises the production bindings instead of a
  * hand-assembled copy of them and never depends on the machine it runs on.
  */
@@ -53,40 +63,21 @@ import ua.bookloom.ui.theme.ThemeBlock;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UiTestInjector {
 
-    /** A provider that never says what window its model has, so a run sizes against its default. */
-    private static final ModelCapabilities UNKNOWN_CONTEXT =
-            (providerId, modelId) -> Result.ok(ContextLength.unknown());
-
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
+
+    /** The moment every graph's clock stands at, so "today" and "yesterday" on a project row never depend on the day. */
+    public static final Instant NOW = Instant.parse("2026-10-22T12:00:00Z");
 
     /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
     public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
 
-    // Two, so that a held provider check and a held model listing never block each other.
-    private static final int BACKGROUND_THREADS = 2;
-
-    /**
-     * Creates an injector over {@link UiModule} whose display locale is fixed, whose operating system always reports
-     * the light scheme, whose build version is {@value #DEV_VERSION}, whose {@link BackgroundExecutor} is two daemon
-     * threads, and whose every port is the idle test fake.
-     *
-     * @param locale the language every message renders in
-     * @return a fresh injector; never shares singletons with another call
-     */
+    /** A fresh injector over {@link UiModule} in this language, every port an idle test fake. */
     public static Injector create(final Locale locale) {
         return builder(locale).build();
     }
 
-    /**
-     * Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake: the two built-in
-     * provider presets, a verifier nobody is expected to ask, a catalogue that lists no models, a project service that
-     * answers every import with an error, an export service nobody is expected to ask, a model factory that hands out
-     * a model and an engine that refuses every job.
-     *
-     * @param locale the language every message renders in
-     * @return the builder
-     */
+    /** Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake. */
     public static Builder builder(final Locale locale) {
         return new Builder(Objects.requireNonNull(locale, "locale"));
     }
@@ -95,6 +86,7 @@ public final class UiTestInjector {
     public static final class Builder {
 
         private final Locale locale;
+        private final LaunchPorts launch = new LaunchPorts();
         private ProviderConfigs configs = new FakeProviderConfigs();
         private ProviderVerifier verifier = ScriptedProviderVerifier.idle();
         private ModelCatalog catalog = ScriptedModelCatalog.idle();
@@ -107,10 +99,16 @@ public final class UiTestInjector {
         private ScriptedLexiconService lexicon = new ScriptedLexiconService();
         private ScriptedNamesPass namesPass = new ScriptedNamesPass();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
-        private ReviewMode reviewMode = ReviewMode.UNATTENDED;
-        private @Nullable ReplaceRunPrompt prompt;
+        private Supplier<ReviewMode> reviewMode = () -> ReviewMode.UNATTENDED;
+        private final ReplacementQuestions replacements = new ReplacementQuestions();
+        private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
-        private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
+        private SettingsRepository settings = new MemorySettings();
+        private FileRevealer revealer = new RecordingFileRevealer();
+        private @Nullable ProjectActions projectActions;
+        private Set<String> environment = Set.of();
+        private ModelSettingsRepository modelSettings = new ScriptedModelSettings();
+        private ModelCapabilities capabilities = UiTestBindings.UNKNOWN_CONTEXT;
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -190,133 +188,203 @@ public final class UiTestInjector {
 
         /** The review mode the graph was launched with. */
         public Builder reviewMode(final ReviewMode value) {
+            Objects.requireNonNull(value, "reviewMode");
+            reviewMode = () -> value;
+            return this;
+        }
+
+        /** Asks the mode again each time the graph reads it, as the window does at each run start. */
+        public Builder reviewModeProvider(final Supplier<ReviewMode> value) {
             reviewMode = Objects.requireNonNull(value, "reviewMode");
+            return this;
+        }
+
+        /** What the graph's {@link StorageInfo} is. */
+        public Builder storage(final StorageInfo value) {
+            launch.storage(Objects.requireNonNull(value, "storage"));
+            return this;
+        }
+
+        /** What the graph's {@link ReviewModeChoice} is. */
+        public Builder reviewModeChoice(final ReviewModeChoice value) {
+            launch.reviewModeChoice(Objects.requireNonNull(value, "reviewModeChoice"));
+            return this;
+        }
+
+        /** What the graph's {@link SettingsRepository} is, so the test can read what the window stored. */
+        public Builder settings(final SettingsRepository value) {
+            settings = Objects.requireNonNull(value, "settings");
+            return this;
+        }
+
+        /** What the graph's {@link FileRevealer} is, so the test can read what the window asked to show. */
+        public Builder revealer(final FileRevealer value) {
+            revealer = Objects.requireNonNull(value, "revealer");
+            return this;
+        }
+
+        /** Replaces the Projects screen's rename, remove, translate-into and find-book actions with this recording one. */
+        public Builder projectActions(final ProjectActions value) {
+            projectActions = Objects.requireNonNull(value, "projectActions");
+            return this;
+        }
+
+        /** The measured speeds the graph's estimate reads. */
+        public Builder modelSettings(final ModelSettingsRepository value) {
+            modelSettings = Objects.requireNonNull(value, "modelSettings");
+            return this;
+        }
+
+        /** The environment variables that count as set, so a credential's status can be shown without the real environment. */
+        public Builder environment(final Set<String> value) {
+            environment = Set.copyOf(Objects.requireNonNull(value, "environment"));
             return this;
         }
 
         /** Where the graph says its logs are, and whether the detailed log is on. */
         public Builder diagnosticLog(final DiagnosticLog value) {
-            diagnosticLog = Objects.requireNonNull(value, "diagnosticLog");
+            launch.diagnosticLog(Objects.requireNonNull(value, "diagnosticLog"));
             return this;
         }
 
-        /** Replaces the real replace-run card with this question, so the test can read what was asked. */
-        public Builder prompt(final ReplaceRunPrompt value) {
-            prompt = Objects.requireNonNull(value, "prompt");
+        /** Replaces the real "Open another book?" card with this question, so the test can read what was asked. */
+        public Builder prompt(final OpenAnotherBookPrompt value) {
+            replacements.prompt = Objects.requireNonNull(value, "prompt");
             return this;
         }
 
-        /**
-         * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
-         * first opening a book and choosing languages; only a test of the gating itself asks for it.
-         */
+        /** Replaces the real continue questions with this fake, so the test can read what was asked and answer it. */
+        public Builder continuePrompt(final ContinuePrompt value) {
+            replacements.continuePrompt = Objects.requireNonNull(value, "continuePrompt");
+            return this;
+        }
+
+        /** Replaces the real "which model" question of the first-launch look with this fake. */
+        public Builder modelPickPrompt(final ModelPickPrompt value) {
+            replacements.modelPickPrompt = Objects.requireNonNull(value, "modelPickPrompt");
+            return this;
+        }
+
+        public Builder switchProviderPrompt(final SwitchProviderPrompt value) {
+            replacements.switchProviderPrompt = Objects.requireNonNull(value, "switchProviderPrompt");
+            return this;
+        }
+
+        public Builder clipboard(final TextClipboard value) {
+            replacements.clipboard = Objects.requireNonNull(value, "clipboard");
+            return this;
+        }
+
+        /** Replaces the real Rename card with this fake. */
+        public Builder renamePrompt(final RenamePrompt value) {
+            replacements.renamePrompt = Objects.requireNonNull(value, "renamePrompt");
+            return this;
+        }
+
+        /** Replaces the real Same language pair card with this fake. */
+        public Builder samePairPrompt(final SamePairPrompt value) {
+            replacements.samePairPrompt = Objects.requireNonNull(value, "samePairPrompt");
+            return this;
+        }
+
+        /** Replaces the real Translate into another language card with this fake. */
+        public Builder translateIntoPrompt(final TranslateIntoPrompt value) {
+            replacements.translateIntoPrompt = Objects.requireNonNull(value, "translateIntoPrompt");
+            return this;
+        }
+
+        /** Replaces the real Find the book card with this fake. */
+        public Builder findBookPrompt(final FindBookPrompt value) {
+            replacements.findBookPrompt = Objects.requireNonNull(value, "findBookPrompt");
+            return this;
+        }
+
+        /** Replaces what opens a row's project after a dialog (the real one navigates) with this fake. */
+        public Builder rowOpener(final RowOpener value) {
+            replacements.rowOpener = Objects.requireNonNull(value, "rowOpener");
+            return this;
+        }
+
+        /** Replaces the modal error presenter with this fake, so the test can read what was shown. */
+        public Builder errorPresenter(final ErrorPresenter value) {
+            replacements.errorPresenter = Objects.requireNonNull(value, "errorPresenter");
+            return this;
+        }
+
+        /** Replaces the daemon pool behind {@code @BackgroundExecutor}, e.g. with a calling-thread executor. */
+        public Builder backgroundExecutor(final ExecutorService value) {
+            backgroundExecutor = Objects.requireNonNull(value, "backgroundExecutor");
+            return this;
+        }
+
+        /** What the graph's {@link ModelCapabilities} is, so the test can script what the program says about a model. */
+        public Builder capabilities(final ModelCapabilities value) {
+            capabilities = Objects.requireNonNull(value, "capabilities");
+            return this;
+        }
+
+        /** What the graph's {@link AppRestart} is, so the test can read whether and when a restart was asked. */
+        public Builder restart(final AppRestart value) {
+            launch.restart(Objects.requireNonNull(value, "restart"));
+            return this;
+        }
+
+        /** What the graph says overrides a Generation setting for this launch. */
+        public Builder overrides(final GenerationOverrides value) {
+            launch.overrides(Objects.requireNonNull(value, "overrides"));
+            return this;
+        }
+
+        /** The operating system's language; by default the display language, so no restart is ever needed. */
+        public Builder osLocale(final Locale value) {
+            launch.osLocale(Objects.requireNonNull(value, "osLocale"));
+            return this;
+        }
+
+        /** What the operating system reports as its colour scheme; by default light. */
+        public Builder colorScheme(final Optional<ThemeBlock> value) {
+            launch.colorScheme(Objects.requireNonNull(value, "colorScheme"));
+            return this;
+        }
+
+        /** Keeps the real step gating; by default every step is open so a screen test needs no book. */
         public Builder gated() {
             gated = true;
             return this;
         }
 
-        /**
-         * Makes the graph.
-         *
-         * @return a fresh injector; never shares singletons with another call
-         */
+        /** Makes the graph: a fresh injector that shares no singleton with another call. */
         public Injector build() {
             final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
                     .with(
                             new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
-                            scriptedPorts(prompt),
+                            new ScriptedPorts(),
+                            replacements.module(),
                             open));
         }
 
-        private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
-            return new AbstractModule() {
-                @Override
-                protected void configure() {
-                    bind(LocaleProvider.class).toInstance(() -> locale);
-                    bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
-                    bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                    bind(DiagnosticLog.class).toInstance(diagnosticLog);
-                    bind(ExecutorService.class)
-                            .annotatedWith(BackgroundExecutor.class)
-                            .toInstance(daemonExecutor());
-                    bind(ProviderConfigs.class).toInstance(configs);
-                    bind(ProviderVerifier.class).toInstance(verifier);
-                    bind(ModelCatalog.class).toInstance(catalog);
-                    bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
-                    bind(ChatModelFactory.class).toInstance(models);
-                    bind(TranslationEngine.class).toInstance(engine);
-                    bind(ProjectService.class).toInstance(projects);
-                    bind(LanguageSupport.class).toInstance(languages);
-                    bind(ExportService.class).toInstance(exports);
-                    install(new ExportExtrasModule());
-                    if (replacement != null) {
-                        bind(ReplaceRunPrompt.class).toInstance(replacement);
-                    }
+        private final class ScriptedPorts extends AbstractModule {
+
+            @Override
+            protected void configure() {
+                install(launch.module(locale));
+                UiTestBindings.bindExecutors(binder(), backgroundExecutor);
+                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, NOW);
+                bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
+                bind(ProviderVerifier.class).toInstance(verifier);
+                bind(ModelCatalog.class).toInstance(catalog);
+                bind(ModelCapabilities.class).toInstance(capabilities);
+                bind(ChatModelFactory.class).toInstance(models);
+                bind(TranslationEngine.class).toInstance(engine);
+                bind(ProjectService.class).toInstance(projects);
+                bind(LanguageSupport.class).toInstance(languages);
+                bind(ExportService.class).toInstance(exports);
+                install(new ExportExtrasModule(revealer));
+                if (projectActions != null) {
+                    bind(ProjectActions.class).toInstance(projectActions);
                 }
-            };
+            }
         }
-    }
-
-    /** Every workflow step open, whatever the book and its languages. */
-    private static final class OpenStepsModule extends AbstractModule {
-
-        @Override
-        protected void configure() {
-            bind(StepLocks.class)
-                    .toInstance(step -> new ReadOnlyObjectWrapper<@Nullable MessageKey>().getReadOnlyProperty());
-        }
-    }
-
-    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the choosers. */
-    private static final class ExportExtrasModule extends AbstractModule {
-
-        @Override
-        protected void configure() {
-            bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
-            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
-            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
-            bind(CsvFileChooser.class).toInstance(new RecordingCsvChooser());
-        }
-    }
-
-    /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
-    private static final class ReviewPortsModule extends AbstractModule {
-
-        private final GlossaryService glossary;
-        private final LexiconService lexicon;
-        private final NamesPass namesPass;
-        private final ReviewDesk desk;
-        private final ReviewMode reviewMode;
-
-        ReviewPortsModule(
-                final GlossaryService glossary,
-                final LexiconService lexicon,
-                final NamesPass namesPass,
-                final ReviewDesk desk,
-                final ReviewMode reviewMode) {
-            this.glossary = glossary;
-            this.lexicon = lexicon;
-            this.namesPass = namesPass;
-            this.desk = desk;
-            this.reviewMode = reviewMode;
-        }
-
-        @Override
-        protected void configure() {
-            bind(GlossaryService.class).toInstance(glossary);
-            bind(LexiconService.class).toInstance(lexicon);
-            bind(NamesPass.class).toInstance(namesPass);
-            bind(ReviewDesk.class).toInstance(desk);
-            bind(ReviewMode.class).toInstance(reviewMode);
-        }
-    }
-
-    private static ExecutorService daemonExecutor() {
-        return Executors.newFixedThreadPool(BACKGROUND_THREADS, task -> {
-            final Thread thread = new Thread(task, "ui-test-background");
-            thread.setDaemon(true);
-            return thread;
-        });
     }
 }

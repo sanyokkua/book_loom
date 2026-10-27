@@ -33,6 +33,7 @@ import ua.bookloom.app.bootstrap.LoggingBootstrap;
 import ua.bookloom.app.bootstrap.ResolvedLogLevel;
 import ua.bookloom.app.bootstrap.ResolvedTraceFile;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -130,7 +131,7 @@ class TraceRedactionTest {
                 logDir,
                 false,
                 new ResolvedLogLevel(Level.INFO, ResolvedLogLevel.Source.DEFAULT, null),
-                new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null),
+                new ResolvedTraceFile(true, ResolvedTraceFile.Source.ENVIRONMENT, null),
                 () -> "# header");
         final Path source = Files.writeString(tempDir.resolve("Book.md"), BOOK_TEXT + " *old* door.\n");
         final StartupContext startup = new StartupContext(
@@ -142,7 +143,7 @@ class TraceRedactionTest {
                         java.util.stream.Stream.of(source.toString()), providerArguments.stream())
                 .toList();
 
-        Guice.createInjector(new CoreModules(startup))
+        Guice.createInjector(new CoreModules(startup, new InMemoryPersistenceModule()))
                 .getInstance(TranslateCommand.class)
                 .run(arguments, new PrintStream(console, true, StandardCharsets.UTF_8));
 

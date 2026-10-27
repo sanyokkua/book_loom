@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -43,8 +44,13 @@ class AppVersionLogTest {
     @TempDir
     private Path dataDir;
 
+    private @Nullable BookLoomApplication booted;
+
     @AfterEach
     void restoreLogging() throws Exception {
+        if (booted != null) {
+            FxToolkit.cleanupApplication(booted);
+        }
         FxToolkit.cleanupStages();
         if (LoggerFactory.getILoggerFactory() instanceof LoggerContext context) {
             context.stop();
@@ -78,12 +84,13 @@ class AppVersionLogTest {
         FxToolkit.registerPrimaryStage();
 
         final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        booted = app;
         final AppShellView shell = app.injector().getInstance(AppShellView.class);
         final Navigator navigator = app.injector().getInstance(Navigator.class);
-        onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
-        onFx(() -> shell.activate(ViewNames.TRANSLATING));
         onFx(() -> navigator.navigate(ViewNames.SETTINGS));
-        onFx(() -> shell.activate(ViewNames.IMPORT));
+        onFx(() -> navigator.navigate(ViewNames.PROJECTS));
+        onFx(navigator::openImportEmpty);
+        onFx(() -> shell.activate(ViewNames.SETTINGS));
 
         assertThat(logLines(logDir.resolve("bookloom.log")))
                 .filteredOn(line -> VERSION_FIELD.matcher(line).find())

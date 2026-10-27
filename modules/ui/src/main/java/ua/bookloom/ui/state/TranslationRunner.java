@@ -3,14 +3,15 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.ReviewDesk;
@@ -31,6 +32,8 @@ import ua.bookloom.ui.BackgroundExecutor;
 @Singleton
 public final class TranslationRunner {
 
+    private static final double MILLIS_PER_SECOND = 1000.0;
+
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
     private record ActiveRun(TranslationJob job, RunSession session, RunContext context) {}
 
@@ -39,6 +42,7 @@ public final class TranslationRunner {
     private final TickSource ticks;
     private final ReviewDesk desk;
     private final Clock clock;
+    private final RunSpeedSink speeds;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
     /**
@@ -47,11 +51,21 @@ public final class TranslationRunner {
      * @param mirror the mirror every run publishes into
      * @param executor the daemon executor a job runs on, never the FX thread
      * @param desk the review desk the run reads its flagged queue and kept-as-source count from
+     * @param speeds where the speed a run measured on its model is kept when the run ends
      */
     @Inject
     public TranslationRunner(
-            final StateMirror mirror, @BackgroundExecutor final ExecutorService executor, final ReviewDesk desk) {
-        this(mirror, executor, new FixedRateTicks(), desk);
+            final StateMirror mirror,
+            @BackgroundExecutor final ExecutorService executor,
+            final ReviewDesk desk,
+            final ModelSpeedRecorder speeds) {
+        this(
+                mirror,
+                executor,
+                new FixedRateTicks(),
+                desk,
+                Clock.system(ZoneId.systemDefault()),
+                RunSpeedSink.storingIn(speeds));
     }
 
     TranslationRunner(
@@ -66,11 +80,22 @@ public final class TranslationRunner {
             final TickSource ticks,
             final ReviewDesk desk,
             final Clock clock) {
+        this(mirror, executor, ticks, desk, clock, RunSpeedSink.NONE);
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ReviewDesk desk,
+            final Clock clock,
+            final RunSpeedSink speeds) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
         this.desk = Objects.requireNonNull(desk, "desk");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.speeds = Objects.requireNonNull(speeds, "speeds");
     }
 
     /**
@@ -99,11 +124,24 @@ public final class TranslationRunner {
                 context.selection().providerId(),
                 context.selection().modelId());
         try {
-            mirror.publishRunStarted(context.fileName(), new RunMode(context.dial(), context.reviewMode()));
+            mirror.publishRunStarted(
+                    context.projectId(), context.fileName(), new RunMode(context.dial(), context.reviewMode()));
             return launch(run);
         } catch (Throwable cause) {
             return abandon(run, cause);
         }
+    }
+
+    /**
+     * The provider the active run translates with, running or paused.
+     *
+     * @return the provider's id if a run is active, or empty if none is
+     */
+    public Optional<String> activeProviderId() {
+        final ActiveRun run = active.get();
+        return run == null
+                ? Optional.empty()
+                : Optional.of(run.context().selection().providerId());
     }
 
     /** Publishes that a pause is pending, then asks the job to pause; the paused state waits for the engine. */
@@ -196,8 +234,28 @@ public final class TranslationRunner {
     private void publishTerminal(final ActiveRun run, final Result<JobReport> result) {
         try {
             run.session().finish(result, () -> release(run));
+            keepSpeed(run);
         } finally {
             release(run);
+        }
+    }
+
+    // The mean time of this run's own drafts replaces the stored speed; a run that drafted nothing says nothing.
+    private void keepSpeed(final ActiveRun run) {
+        try {
+            final Double seconds = run.session().draftSecondsPerSegment();
+            if (seconds == null) {
+                log.debug("run ended with no timed draft: the model's stored speed is left as it is");
+                return;
+            }
+            final Duration perSegment = Duration.ofMillis(Math.round(seconds * MILLIS_PER_SECOND));
+            log.info(
+                    "run speed {} s per segment kept for {}",
+                    seconds,
+                    run.context().selection());
+            speeds.measured(run.context().selection(), perSegment);
+        } catch (RuntimeException failure) {
+            log.warn("the run's speed could not be kept; the run end is unaffected", failure);
         }
     }
 
@@ -206,19 +264,13 @@ public final class TranslationRunner {
             return job.run();
         } catch (Throwable thrown) {
             log.error("the job threw instead of returning a result", thrown);
-            return Result.err(AppError.of(
-                    ErrorCode.internal,
-                    "Unexpected error",
-                    "The run stopped because of an unexpected error.",
-                    null,
-                    thrown));
+            return Result.err(AppErrors.unexpected("The run stopped because of an unexpected error.", thrown));
         }
     }
 
     private boolean abandon(final ActiveRun run, final Throwable cause) {
         log.error("the run could not be started", cause);
-        final AppError error =
-                AppError.of(ErrorCode.internal, "Unexpected error", "The run could not be started.", null, cause);
+        final AppError error = AppErrors.unexpected("The run could not be started.", cause);
         try {
             run.session().finish(Result.err(error), () -> release(run));
         } catch (RuntimeException failure) {

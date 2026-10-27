@@ -4,7 +4,8 @@ import java.util.Objects;
 import ua.bookloom.api.pipeline.JobProgress;
 
 /**
- * The figures a run shows, derived from an engine snapshot.
+ * The segment counts a run shows, derived from an engine snapshot. The share of work is not here: it counts every step and
+ * lives in {@link ProgressLedger}.
  *
  * <p>The snapshot carries neither a total nor a field called remaining, so both are derived here, once. The section
  * and chunk positions are carried for display only and feed no count: moving to a later chapter must not move the bar.
@@ -34,8 +35,6 @@ public record RunFigures(
         int chunk,
         int chunks,
         int keptVerbatim) {
-
-    private static final int PERCENT = 100;
 
     /** The figures of a run that has not counted anything. */
     public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0);
@@ -94,15 +93,5 @@ public record RunFigures(
      */
     public int accepted() {
         return autoAccepted + repaired + keptVerbatim;
-    }
-
-    /**
-     * The decided share as a whole percent, the one figure the title bar and the progress card both show. It is rounded
-     * down, so 100% means every segment is decided and two places reading the same figures never differ by a point.
-     *
-     * @return the percent from 0 to 100; zero when the total is zero
-     */
-    public int percent() {
-        return total == 0 ? 0 : (int) ((long) (total - remaining) * PERCENT / total);
     }
 }

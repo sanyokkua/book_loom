@@ -27,7 +27,8 @@ class ReviewNextTest {
 
     // IF a decided segment stayed on show, THEN the person would keep reading a segment that has left the list; a
     // decision moves on to the next one after it, wraps to the first when it was last, and leaves nothing when none is
-    // left; Skip follows the desk; Revert and Retry stay.
+    // left; Skip follows the desk; Revert and Retry stay; Leave for later moves to the next one after it and the row
+    // stays listed.
     @ParameterizedTest
     @CsvSource({
         "accept,b,b,a c,c",
@@ -37,7 +38,9 @@ class ReviewNextTest {
         "accept,b,b,a b c,c",
         "skip,a,c,a b c,c",
         "revert,b,b,a b c,b",
-        "retry,b,b,a c,b"
+        "retry,b,b,a c,b",
+        "later,a,a,a b c,b",
+        "later,b,b,a b c,c"
     })
     void after_action_choosesTheSegmentToShow(
             final String action,

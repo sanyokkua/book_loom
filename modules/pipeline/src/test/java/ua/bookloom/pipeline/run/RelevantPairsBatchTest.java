@@ -22,7 +22,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchDrafter;
@@ -57,9 +57,9 @@ class RelevantPairsBatchTest {
     private static final TmLookup NO_MEMORY = new TmLookup(null, List.of(), List.of());
     private static final int ROOMY_WINDOW = 16_384;
     private static final GlossaryRepository GLOSSARY =
-            Guice.createInjector(new PersistenceModule()).getInstance(GlossaryRepository.class);
+            Guice.createInjector(new InMemoryPersistenceModule()).getInstance(GlossaryRepository.class);
     private static final LexiconRepository LEXICON =
-            Guice.createInjector(new PersistenceModule()).getInstance(LexiconRepository.class);
+            Guice.createInjector(new InMemoryPersistenceModule()).getInstance(LexiconRepository.class);
 
     // About 150 estimated source tokens each (600 letters at four a token, with the estimator's margin).
     private static final String LONG_A = "Ann kept the brass key in the drawer by the window. ".repeat(12);

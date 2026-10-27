@@ -1,15 +1,18 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.IntStream;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -32,6 +35,15 @@ public final class GlossaryCsv {
     private static final String RECORD_END = "\r\n";
     private static final int FIELD_COUNT = 5;
     private static final char BYTE_ORDER_MARK = '﻿';
+    private static final List<String> COLUMNS = List.of(HEADER.split(","));
+    private static final int TERM = 0;
+    private static final int TARGET = 1;
+    private static final int TYPE = 2;
+    private static final int GENDER = 3;
+    private static final int LOCKED = 4;
+    private static final int[] POSITIONAL = {TERM, TARGET, TYPE, GENDER, LOCKED};
+    private static final String FORMULA_STARTS = "=+-@\t\r";
+    private static final char NEUTRALISER = '\'';
 
     /**
      * One well-formed row of a file.
@@ -51,8 +63,12 @@ public final class GlossaryCsv {
      * @param rows the well-formed rows in file order
      * @param malformedLines the lines of the rows that lack five fields, hold an unknown type, gender or locked value,
      *     have no term, or hold a quote that never closes
+     * @param headerRefused whether the first line is a header that does not name the five columns once each, in which
+     *     case no row is read
+     * @param problems why the malformed lines could not be read, each cause once
      */
-    public record Parsed(List<Row> rows, List<Integer> malformedLines) {}
+    public record Parsed(
+            List<Row> rows, List<Integer> malformedLines, boolean headerRefused, Set<CsvProblem> problems) {}
 
     /**
      * Writes entries as CSV text, each record ended by CRLF as RFC 4180 has it.
@@ -64,9 +80,9 @@ public final class GlossaryCsv {
         Objects.requireNonNull(entries, "entries");
         final StringBuilder csv = new StringBuilder(HEADER).append(RECORD_END);
         for (final GlossaryEntry entry : entries) {
-            csv.append(CsvRecords.quoted(entry.term()))
+            csv.append(CsvRecords.quoted(neutralised(entry.term())))
                     .append(',')
-                    .append(CsvRecords.quoted(entry.target() == null ? "" : entry.target()))
+                    .append(CsvRecords.quoted(neutralised(entry.target() == null ? "" : entry.target())))
                     .append(',')
                     .append(entry.type().name().toLowerCase(Locale.ROOT))
                     .append(',')
@@ -89,49 +105,111 @@ public final class GlossaryCsv {
     public static Parsed parse(final String text) {
         Objects.requireNonNull(text, "text");
         final String body = !text.isEmpty() && text.charAt(0) == BYTE_ORDER_MARK ? text.substring(1) : text;
-        final List<Row> rows = new ArrayList<>();
-        final List<Integer> malformed = new ArrayList<>();
         final List<CsvRecord> records = CsvRecords.read(body).stream()
                 .filter(record -> !record.isBlankLine())
                 .toList();
         final boolean headed = !records.isEmpty() && isHeader(records.getFirst());
+        final Optional<int[]> order = headed ? columnsOf(records.getFirst()) : Optional.of(POSITIONAL);
+        log.debug("Glossary CSV header present={} usable={}", headed, order.isPresent());
+        if (order.isEmpty()) {
+            log.warn("Glossary CSV refused: its header does not name the five columns once each");
+            return new Parsed(List.of(), List.of(), true, Set.of());
+        }
+        final List<Row> rows = new ArrayList<>();
+        final List<Integer> malformed = new ArrayList<>();
+        final Set<CsvProblem> problems = EnumSet.noneOf(CsvProblem.class);
         for (final CsvRecord record : records.stream().skip(headed ? 1 : 0).toList()) {
-            final Optional<Row> row = rowOf(record);
-            row.ifPresentOrElse(rows::add, () -> malformed.add(record.line()));
+            final Set<CsvProblem> found = problemsOf(record, order.get());
+            if (found.isEmpty()) {
+                rows.add(rowOf(record, order.get()));
+            } else {
+                malformed.add(record.line());
+                problems.addAll(found);
+            }
         }
-        log.debug("Glossary CSV parsed: {} rows, {} malformed", rows.size(), malformed.size());
-        return new Parsed(List.copyOf(rows), List.copyOf(malformed));
+        log.debug("Glossary CSV parsed: {} rows, {} malformed, problems {}", rows.size(), malformed.size(), problems);
+        return new Parsed(List.copyOf(rows), List.copyOf(malformed), false, Set.copyOf(problems));
     }
 
+    // A header is any first line that names both the term and the target column, in whatever order; a data row never
+    // holds those two words, so a file without a header still reads its first line as a row.
     private static boolean isHeader(final CsvRecord record) {
-        final List<String> expected = List.of(HEADER.split(","));
-        final List<String> fields = record.fields();
-        return fields.size() == expected.size()
-                && IntStream.range(0, FIELD_COUNT)
-                        .allMatch(index -> fields.get(index).strip().equalsIgnoreCase(expected.get(index)));
+        final List<String> names =
+                record.fields().stream().map(GlossaryCsv::columnName).toList();
+        return names.contains(COLUMNS.get(TERM)) && names.contains(COLUMNS.get(TARGET));
     }
 
-    private static Optional<Row> rowOf(final CsvRecord record) {
+    /** Where each column sits in a row, in {@link #COLUMNS} order; empty when a column is missing, unknown or doubled. */
+    private static Optional<int[]> columnsOf(final CsvRecord header) {
+        final List<String> names =
+                header.fields().stream().map(GlossaryCsv::columnName).toList();
+        final int[] order = new int[FIELD_COUNT];
+        for (int column = 0; column < FIELD_COUNT; column++) {
+            order[column] = names.indexOf(COLUMNS.get(column));
+        }
+        final boolean exact = names.size() == FIELD_COUNT
+                && Arrays.stream(order).noneMatch(index -> index < 0)
+                && Set.copyOf(names).size() == FIELD_COUNT;
+        log.trace("Glossary CSV header columns {} read as order {}", names, Arrays.toString(order));
+        return exact ? Optional.of(order) : Optional.empty();
+    }
+
+    private static String columnName(final String field) {
+        return field.strip().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Keeps a spreadsheet from reading a cell as a formula: a value that starts with {@code =}, {@code +}, {@code -},
+     * {@code @}, a tab or a carriage return is written after a single quote, which {@link #restored} takes off again.
+     */
+    static String neutralised(final String value) {
+        return !value.isEmpty() && FORMULA_STARTS.indexOf(value.charAt(0)) >= 0 ? NEUTRALISER + value : value;
+    }
+
+    /** Takes off the quote {@link #neutralised} put before a formula-like value; any other value is kept as it is. */
+    static String restored(final String value) {
+        final boolean wrapped =
+                value.length() > 1 && value.charAt(0) == NEUTRALISER && FORMULA_STARTS.indexOf(value.charAt(1)) >= 0;
+        return wrapped ? value.substring(1) : value;
+    }
+
+    // Every cause a row has, so one bad file is explained in one pass: a row typed "person" with the gender "she"
+    // names both.
+    private static Set<CsvProblem> problemsOf(final CsvRecord record, final int[] order) {
         final List<String> fields = record.fields();
-        if (!record.terminated()
-                || fields.size() != FIELD_COUNT
-                || fields.getFirst().isBlank()) {
-            return Optional.empty();
+        if (!record.terminated()) {
+            return Set.of(CsvProblem.OPEN_QUOTE);
         }
-        final Optional<TermType> type = constant(TermType.class, fields.get(2));
-        final Optional<Gender> gender = constant(Gender.class, fields.get(3));
-        final Optional<Boolean> locked = bool(fields.get(4));
-        if (type.isEmpty() || gender.isEmpty() || locked.isEmpty()) {
-            return Optional.empty();
+        if (fields.size() != FIELD_COUNT) {
+            return Set.of(CsvProblem.FIELD_COUNT);
         }
-        final String target = fields.get(1);
-        return Optional.of(new Row(
+        final Set<CsvProblem> found = EnumSet.noneOf(CsvProblem.class);
+        if (restored(fields.get(order[TERM]).strip()).isEmpty()) {
+            found.add(CsvProblem.NO_TERM);
+        }
+        if (constant(TermType.class, fields.get(order[TYPE])).isEmpty()) {
+            found.add(CsvProblem.UNKNOWN_TYPE);
+        }
+        if (constant(Gender.class, fields.get(order[GENDER])).isEmpty()) {
+            found.add(CsvProblem.UNKNOWN_GENDER);
+        }
+        if (bool(fields.get(order[LOCKED])).isEmpty()) {
+            found.add(CsvProblem.UNKNOWN_LOCKED);
+        }
+        return found;
+    }
+
+    // Reads a row problemsOf found nothing wrong with.
+    private static Row rowOf(final CsvRecord record, final int[] order) {
+        final List<String> fields = record.fields();
+        final String target = restored(fields.get(order[TARGET]).strip());
+        return new Row(
                 record.line(),
-                fields.getFirst(),
+                restored(fields.get(order[TERM]).strip()),
                 target.isEmpty() ? null : target,
-                type.get(),
-                gender.get(),
-                locked.get()));
+                constant(TermType.class, fields.get(order[TYPE])).orElseThrow(),
+                constant(Gender.class, fields.get(order[GENDER])).orElseThrow(),
+                bool(fields.get(order[LOCKED])).orElseThrow());
     }
 
     private static <E extends Enum<E>> Optional<E> constant(final Class<E> type, final String name) {

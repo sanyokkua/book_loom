@@ -7,12 +7,12 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
-import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
@@ -32,6 +32,8 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 
 /**
  * Everything one run knows between the job thread and the mirror: the newest snapshot, the queued log lines, and
@@ -50,6 +52,7 @@ final class RunSession implements JobListener {
     private final LiveCallState liveCalls = new LiveCallState();
     private final ThroughputMeter throughputMeter = new ThroughputMeter();
     private final RunClock runClock;
+    private final RunLedger progress;
     private final ActivityLogFeed feed = new ActivityLogFeed();
     private final ReviewDeskReads deskReads;
     private final CallTracker calls;
@@ -80,6 +83,7 @@ final class RunSession implements JobListener {
         Objects.requireNonNull(context, "context");
         this.calls = new CallTracker(mirror, clock, feed);
         this.runClock = new RunClock(clock.instant());
+        this.progress = new RunLedger(runClock);
         this.deskReads = new ReviewDeskReads(desk, executor, mirror.live(), context.projectId());
     }
 
@@ -203,7 +207,7 @@ final class RunSession implements JobListener {
         Objects.requireNonNull(release, "release");
         final RunOutcomes.Outcome outcome = RunOutcomes.outcomeOf(result);
         RunOutcomes.logEnded(outcome, lastSeen.get());
-        publishSourceKept();
+        deskReads.publishSourceKept();
         publishLock.lock();
         try {
             terminal = true;
@@ -221,6 +225,17 @@ final class RunSession implements JobListener {
         }
     }
 
+    // The seconds per timed draft of this run, or null when no draft was timed.
+    @Nullable
+    Double draftSecondsPerSegment() {
+        publishLock.lock();
+        try {
+            return progress.draftSecondsPerSegment();
+        } finally {
+            publishLock.unlock();
+        }
+    }
+
     private void dispatch(final JobEvent event) {
         switch (event) {
             case SegmentDecided decided -> onSegment(decided);
@@ -228,8 +243,12 @@ final class RunSession implements JobListener {
             case Paused paused -> onPaused(paused);
             case Resumed resumed -> onResumed(resumed);
             case ModelCallStarted started -> onModelCall(started);
-            case SegmentStarted started -> onSegmentStarted(started);
-            case SegmentDrafted drafted -> onSegmentDrafted(drafted);
+            case SegmentStarted started ->
+                locked(() -> {
+                    feed.segmentStarted(started);
+                    liveCalls.started(started);
+                });
+            case SegmentDrafted drafted -> locked(() -> liveCalls.drafted(drafted));
             case ModelCallFinished finished -> onModelCallFinished(finished);
             case MemoryUpdated updated -> onMemory(updated);
             case ContextAssembled assembled ->
@@ -239,6 +258,9 @@ final class RunSession implements JobListener {
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
             case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
+            case StepsPlanned planned -> locked(() -> progress.planned(planned));
+            case StepChanged changed -> onStep(changed);
+            case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
         }
     }
 
@@ -263,21 +285,15 @@ final class RunSession implements JobListener {
             calls.clearWait("a segment was decided");
             feed.decided(decided).ifPresent(this::queue);
             liveCalls.decided(decided);
-            if (RunClock.isTimed(decided)) {
-                runClock.decided(clock.instant());
-            }
         });
         if (decided.status() == SegmentStatus.FLAGGED) {
             deskReads.refreshFlaggedQueue();
         }
     }
 
-    private void onSegmentStarted(final SegmentStarted started) {
-        locked(() -> feed.segmentStarted(started));
-    }
-
-    private void onSegmentDrafted(final SegmentDrafted drafted) {
-        locked(() -> liveCalls.drafted(drafted));
+    private void onStep(final StepChanged changed) {
+        log.trace("{} step {} is {}", changed.kind(), changed.index(), changed.state());
+        locked(() -> progress.changed(changed, clock.instant()));
     }
 
     private void onModelCallFinished(final ModelCallFinished finished) {
@@ -289,7 +305,10 @@ final class RunSession implements JobListener {
 
     private void onMemory(final MemoryUpdated updated) {
         log.debug("memory updated: {}", updated.kind());
-        locked(() -> queue(feed.memory(updated)));
+        locked(() -> {
+            liveCalls.memory(updated);
+            queue(feed.memory(updated));
+        });
     }
 
     private void onStage(final StageStarted started) {
@@ -364,21 +383,14 @@ final class RunSession implements JobListener {
             mirror.live().publishCalls(calls);
         }
         final JobProgress seen = lastSeen.get();
-        final Throughput figures = throughputMeter.snapshot(
-                runClock.timeLeft(seen == null ? 0 : seen.pending()), runClock.elapsed(clock.instant()));
+        final ProgressFigures.Figures steps = progress.read(seen, clock.instant());
+        if (seen != null && progress.isNew(steps)) {
+            mirror.live().publishSteps(steps);
+        }
+        final Throughput figures = throughputMeter.snapshot(steps.left(), runClock.elapsed(clock.instant()));
         if (!figures.equals(shownThroughput)) {
             shownThroughput = figures;
             mirror.live().publishThroughput(figures);
         }
-    }
-
-    // A run ends off the FX thread; the one exception is a start that failed on the caller's own thread, which has no
-    // decisions to count and must not read the desk there.
-    private void publishSourceKept() {
-        if (Platform.isFxApplicationThread()) {
-            log.debug("kept-as-source count not read: the run ended on the FX thread");
-            return;
-        }
-        deskReads.publishSourceKept();
     }
 }

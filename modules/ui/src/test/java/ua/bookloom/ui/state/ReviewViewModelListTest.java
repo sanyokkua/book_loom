@@ -88,38 +88,6 @@ class ReviewViewModelListTest extends ReviewViewModelTestBase {
         assertThat(onFx(() -> review.rows().get(0).badge())).isNull();
     }
 
-    @Test
-    void allSegmentsOffered_unattendedRunCompleted_isOffered() {
-        reviewMode = ReviewMode.UNATTENDED;
-        buildReview();
-
-        setRunState(RunState.COMPLETED);
-
-        assertThat(onFx(() -> review.allSegmentsOffered().get())).isTrue();
-    }
-
-    @Test
-    void allSegmentsOffered_assistedRunCompleted_isNotOffered() {
-        reviewMode = ReviewMode.ASSISTED;
-        buildReview();
-
-        setRunState(RunState.COMPLETED);
-
-        assertThat(onFx(() -> review.allSegmentsOffered().get())).isFalse();
-    }
-
-    @Test
-    void selectFilter_allSegmentsWhileRunning_isRefused() {
-        reviewMode = ReviewMode.UNATTENDED;
-        buildReview();
-        setRunState(RunState.RUNNING);
-
-        press(() -> review.selectFilter(ReviewFilter.ALL_SEGMENTS));
-
-        assertThat(onFx(() -> review.filter().get())).isEqualTo(ReviewFilter.ALL_FLAGGED);
-        assertThat(desk.calls()).doesNotContain("queue(" + projectId + ", ALL_SEGMENTS)");
-    }
-
     // The mirror clears its queue when a run starts, so the count must come from the desk, not from the mirror.
     @Test
     void open_desk_readsFlaggedCountFromTheDesk() {

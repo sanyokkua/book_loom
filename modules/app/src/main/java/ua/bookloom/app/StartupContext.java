@@ -3,6 +3,7 @@ package ua.bookloom.app;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import ua.bookloom.app.bootstrap.ResolvedReviewMode;
+import ua.bookloom.app.bootstrap.ResolvedTraceFile;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
@@ -23,16 +24,20 @@ import ua.bookloom.util.paths.AppPaths;
  *
  * @param paths the resolved, created data and log directories
  * @param environment whether this is a development or a packaged production run
- * @param reviewMode how much of a run a person confirms, chosen by the launch flag
+ * @param reviewMode how much of a run a person confirms, the launch flag, which wins over the stored choice only when it was set
  * @param detailedLog whether the detailed diagnostic log ({@code bookloom-trace.log}) is being written
  * @param session the session facts the detailed log's header reads; the same instance the window updates
+ * @param detailedLogSource what decided the detailed log: a launch variable or property, the Settings marker, or the default
+ * @param pendingRestart where a restart leaves the command of the next copy, which the launcher starts once this process has shut down
  */
 public record StartupContext(
         AppPaths paths,
         AppEnvironment environment,
         ResolvedReviewMode reviewMode,
         boolean detailedLog,
-        SessionInfo session) {
+        SessionInfo session,
+        PendingRestart pendingRestart,
+        ResolvedTraceFile.Source detailedLogSource) {
 
     private static final AtomicReference<StartupContext> PENDING = new AtomicReference<>();
 
@@ -42,6 +47,46 @@ public record StartupContext(
         Objects.requireNonNull(environment, "environment");
         Objects.requireNonNull(reviewMode, "reviewMode");
         Objects.requireNonNull(session, "session");
+        Objects.requireNonNull(pendingRestart, "pendingRestart");
+        Objects.requireNonNull(detailedLogSource, "detailedLogSource");
+    }
+
+    /**
+     * Builds a context whose detailed-log decision came from the default.
+     *
+     * @param paths the resolved, created data and log directories
+     * @param environment whether this is a development or a packaged production run
+     * @param reviewMode how much of a run a person confirms
+     * @param detailedLog whether the detailed diagnostic log is being written
+     * @param session the session facts the detailed log's header reads
+     * @param pendingRestart where a restart leaves the command of the next copy
+     */
+    public StartupContext(
+            AppPaths paths,
+            AppEnvironment environment,
+            ResolvedReviewMode reviewMode,
+            boolean detailedLog,
+            SessionInfo session,
+            PendingRestart pendingRestart) {
+        this(paths, environment, reviewMode, detailedLog, session, pendingRestart, ResolvedTraceFile.Source.DEFAULT);
+    }
+
+    /**
+     * Builds a context with a fresh restart holder, as the tests use it.
+     *
+     * @param paths the resolved, created data and log directories
+     * @param environment whether this is a development or a packaged production run
+     * @param reviewMode how much of a run a person confirms
+     * @param detailedLog whether the detailed diagnostic log is being written
+     * @param session the session facts the detailed log's header reads
+     */
+    public StartupContext(
+            AppPaths paths,
+            AppEnvironment environment,
+            ResolvedReviewMode reviewMode,
+            boolean detailedLog,
+            SessionInfo session) {
+        this(paths, environment, reviewMode, detailedLog, session, new PendingRestart());
     }
 
     /**

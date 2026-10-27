@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,10 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedSetupAssistant;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The language the model proposes for an Auto source: held for the screen to offer, never written into the brief
@@ -42,7 +46,14 @@ class BookBriefViewModelLanguageProposalTest extends ExportViewModelTestBase {
                 projects,
                 new DirectExecutor(),
                 tag -> true,
-                new SetupHelper(assistant, models, settings, new DirectExecutor(), activities, capabilities)));
+                new SetupHelper(
+                        assistant,
+                        models,
+                        settings,
+                        new DirectExecutor(),
+                        activities,
+                        capabilities,
+                        hiddenWork(activities))));
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {
             settings.model().set("gemma3:12b");
@@ -62,12 +73,14 @@ class BookBriefViewModelLanguageProposalTest extends ExportViewModelTestBase {
                 languageProposal)));
     }
 
+    // The proposal is kept only on Apply, so the test presses Apply as the dialog's button does.
     private void suggest() {
         onFx(() -> {
             brief.styleSuggestion().ask();
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+        SuggestionApplies.applyPending(brief);
     }
 
     private @Nullable String proposal() {
@@ -122,5 +135,9 @@ class BookBriefViewModelLanguageProposalTest extends ExportViewModelTestBase {
         openWith(null);
 
         assertThat(proposal()).isNull();
+    }
+
+    private static HiddenWork hiddenWork(final ActivityTracker tracker) {
+        return new HiddenWork(tracker, new RecordingToasts(), new Messages((LocaleProvider) () -> Locale.ENGLISH));
     }
 }

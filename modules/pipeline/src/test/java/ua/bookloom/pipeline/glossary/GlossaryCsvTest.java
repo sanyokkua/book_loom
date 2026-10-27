@@ -9,15 +9,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
@@ -25,7 +29,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The glossary file: what is written, what an import updates, adds, skips and reports. */
 class GlossaryCsvTest {
@@ -41,7 +45,7 @@ class GlossaryCsvTest {
     void setUp() {
         service = Guice.createInjector(
                         new DocumentModule(),
-                        new PersistenceModule(),
+                        new InMemoryPersistenceModule(),
                         binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
                 .getInstance(GlossaryServiceImpl.class);
     }
@@ -74,12 +78,42 @@ class GlossaryCsvTest {
         assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n");
     }
 
+    // IF a missing folder read as a defect, THEN the person would not learn to create it or choose another.
     @Test
-    void exportCsv_unwritableDestination_answersInternal() {
+    void exportCsv_missingFolder_answersAFolderMissingValidation() {
         final Result<Path> failed =
                 service.exportCsv(PROJECT, dir.resolve("missing").resolve("glossary.csv"));
 
-        assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
+        assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(failed.error()).extracting(AppError::details).isEqualTo("reason=folder-missing, folder=missing");
+    }
+
+    // IF the file were written in place, THEN a failure part-way would leave a half glossary where a whole one was.
+    @Test
+    void exportCsv_overAnOldFile_replacesItWholeAndLeavesNoHiddenFile() throws IOException {
+        final Path file = Files.writeString(dir.resolve("glossary.csv"), "old");
+
+        service.exportCsv(PROJECT, file);
+
+        assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n");
+        try (var names = Files.list(dir)) {
+            assertThat(names.map(path -> path.getFileName().toString())).containsExactly("glossary.csv");
+        }
+    }
+
+    // IF a spreadsheet read a term as a formula, THEN opening the export could run it; a quote in front keeps it text.
+    @Test
+    void exportCsv_formulaLikeTerm_isWrittenAfterAQuoteAndImportsBackUnchanged() throws IOException {
+        service.add(new GlossaryEntry("p1:sum", PROJECT, "=SUM(A1)", "@home", TermType.OTHER, Gender.UNKNOWN, false));
+        final Path file = dir.resolve("glossary.csv");
+
+        service.exportCsv(PROJECT, file);
+        service.importCsv("p2", file);
+
+        assertThat(Files.readString(file)).isEqualTo(HEADER + "\r\n'=SUM(A1),'@home,other,unknown,false\r\n");
+        assertThat(service.entries("p2").data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::target)
+                .containsExactly(tuple("=SUM(A1)", "@home"));
     }
 
     @Test
@@ -98,7 +132,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(2, List.of(3), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(2, List.of(3), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale", "Moreau");
@@ -110,7 +145,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(2), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(1, List.of(2), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -185,21 +221,31 @@ class GlossaryCsvTest {
                 .containsExactly(tuple("Milton", null, TermType.PLACE));
     }
 
+    // IF a malformed row said only its line, THEN a file of 5,000 rows typed "person" would read as 5,000 riddles
+    // (G1-4); the report names what was wrong, once per kind.
     @ParameterizedTest
-    @ValueSource(
-            strings = {
-                "Hale,Гейл,person,male,true",
-                "Hale,Гейл,character,robot,true",
-                "Hale,Гейл,character,male,yes",
-                "Hale,Гейл,character,male,true,extra",
-                ",Гейл,character,male,true"
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "'Hale,Гейл,person,male,true'|UNKNOWN_TYPE",
+                "'Hale,Гейл,character,robot,true'|UNKNOWN_GENDER",
+                "'Hale,Гейл,character,male,yes'|UNKNOWN_LOCKED",
+                "'Hale,Гейл,character,male,true,extra'|FIELD_COUNT",
+                "',Гейл,character,male,true'|NO_TERM",
+                "'Hale,Гейл,person,she,true'|UNKNOWN_TYPE,UNKNOWN_GENDER"
             })
-    void importCsv_rowWithAnUnknownValueOrWrongFieldCount_isMalformed(final String row) throws IOException {
+    void importCsv_rowWithAnUnknownValueOrWrongFieldCount_isMalformedNamingWhy(final String row, final String problems)
+            throws IOException {
         final Path file = write(HEADER, row);
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(0, List.of(2), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of(), 0, problemsOf(problems)));
+    }
+
+    private static Set<CsvProblem> problemsOf(final String names) {
+        return Arrays.stream(names.split(",")).map(CsvProblem::valueOf).collect(Collectors.toSet());
     }
 
     @Test
@@ -209,7 +255,8 @@ class GlossaryCsvTest {
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
 
-        assertThat(report.data()).isEqualTo(new GlossaryImportReport(2, List.of(4), List.of()));
+        assertThat(report.data())
+                .isEqualTo(new GlossaryImportReport(2, List.of(4), List.of(), 0, Set.of(CsvProblem.FIELD_COUNT)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale\nSr", "Moreau");
@@ -231,7 +278,7 @@ class GlossaryCsvTest {
         final Path file = write(HEADER, "\"Hale,Гейл,character,male,true");
 
         assertThat(service.importCsv(PROJECT, file).data())
-                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of()));
+                .isEqualTo(new GlossaryImportReport(0, List.of(2), List.of(), 0, Set.of(CsvProblem.OPEN_QUOTE)));
     }
 
     @Test
@@ -241,14 +288,16 @@ class GlossaryCsvTest {
         assertThat(failed.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
     }
 
+    // IF a file in another encoding read as "unreadable", THEN the person would not know to save it as UTF-8.
     @Test
-    void importCsv_fileThatIsNotUtf8_answersValidation() throws IOException {
+    void importCsv_fileThatIsNotUtf8_answersValidationNamingTheEncoding() throws IOException {
         final Path file = dir.resolve("glossary.csv");
         Files.write(file, new byte[] {(byte) 0xC3, (byte) 0x28});
 
-        assertThat(service.importCsv(PROJECT, file).error())
-                .extracting(AppError::code)
-                .isEqualTo(ErrorCode.validation);
+        final AppError error = service.importCsv(PROJECT, file).error();
+
+        assertThat(error).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(error).extracting(AppError::details).isEqualTo("reason=not-utf8");
     }
 
     @Test

@@ -72,6 +72,38 @@ public final class LanguageNames {
     }
 
     /**
+     * Names a language as an entry of a list, where it stands alone: ICU writes a Ukrainian name in lower case
+     * ("українська"), as it reads inside a sentence, so a list entry gets its first letter capitalised.
+     *
+     * @param tag a normalized language tag, catalogued or not
+     * @param locale the language the name is written in
+     * @return {@link #nameOf} with its first letter capitalised; never null
+     */
+    public String listName(final String tag, final Locale locale) {
+        final String name = nameOf(tag, locale);
+        if (name.isEmpty()) {
+            return name;
+        }
+        final int first = name.codePointAt(0);
+        return new StringBuilder(name.length())
+                .appendCodePoint(Character.toTitleCase(first))
+                .append(name, Character.charCount(first), name.length())
+                .toString();
+    }
+
+    /**
+     * The words a language list matches typed text against: the list name, the English name and the tag, so a
+     * person can find a language in either interface language or by its code.
+     *
+     * @param tag a normalized language tag, catalogued or not
+     * @param locale the interface language
+     * @return the three, one per line; never null
+     */
+    public String searchText(final String tag, final Locale locale) {
+        return String.join("\n", listName(tag, locale), nameOf(tag, Locale.ENGLISH), tag);
+    }
+
+    /**
      * Turns a typed name or tag into a tag.
      *
      * @param text what the person typed; a name in the interface language or in English, or a tag such as {@code la}

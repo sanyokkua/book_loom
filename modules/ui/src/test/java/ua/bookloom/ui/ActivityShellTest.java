@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
@@ -15,8 +14,9 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 
 /**
- * The window's side of the activity tracker: the title-bar chip names other model work and stops it, and leaving the
- * screen of a glossary scan asks whether to stop it or let it run on, and a scan keeps the window from navigating.
+ * The window's side of the activity tracker: the title-bar chip names other model work and stops it, leaving the
+ * screen of a glossary scan asks whether to stop it or let it run on, a scan or the brief's suggestion keeps the window
+ * from navigating, and leaving the names pass's screen asks "Model work is running".
  */
 class ActivityShellTest extends ShellTestBase {
 
@@ -29,11 +29,6 @@ class ActivityShellTest extends ShellTestBase {
         return Objects.requireNonNull(handle.get(), "handle");
     }
 
-    private boolean isShown(final String id) {
-        final Node node = scene.getRoot().lookup("#" + id);
-        return node != null && node.isVisible() && node.getScene() != null;
-    }
-
     // IF other model work were not named in the title bar, THEN a scan running behind another screen would be
     // invisible, and nothing would say why Start translation is held.
     @Test
@@ -42,7 +37,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(() -> scan.requests(2));
 
-        assertThat(isShown("shell-activity")).isTrue();
+        assertThat(isVisibleInScene("shell-activity")).isTrue();
         assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Name scan · 2 requests");
         assertThat(TooltipProbe.tipText(required("shell-activity-stop"))).isNotBlank();
     }
@@ -64,7 +59,7 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(scan::end);
 
-        assertThat(isShown("shell-activity")).isFalse();
+        assertThat(isVisibleInScene("shell-activity")).isFalse();
     }
 
     private boolean askLeaving(final AtomicBoolean left) {
@@ -83,7 +78,7 @@ class ActivityShellTest extends ShellTestBase {
         final AtomicBoolean left = new AtomicBoolean();
 
         final boolean admitted = askLeaving(left);
-        final boolean asked = isShown("leave-card");
+        final boolean asked = isVisibleInScene("leave-card");
         final String keepTip = TooltipProbe.tipText(required("leave-keep"));
         onFx(() -> ((Button) required("leave-stop")).fire());
 
@@ -126,7 +121,75 @@ class ActivityShellTest extends ShellTestBase {
 
         onFx(() -> shell.activate(ViewNames.IMPORT));
 
-        assertThat(isShown("leave-card")).isFalse();
+        assertThat(isVisibleInScene("leave-card")).isFalse();
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
+    }
+
+    private ActivityTracker.Handle beginNamesPass() {
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        onFx(() -> handle.set(injector.getInstance(ActivityTracker.class)
+                .begin(ActivityKind.NAMES_PASS, () -> stopped.add("names"))));
+        return Objects.requireNonNull(handle.get(), "handle");
+    }
+
+    private boolean isNamesPassHidden() {
+        return injector.getInstance(ActivityTracker.class).running().stream()
+                .anyMatch(activity -> activity.kind() == ActivityKind.NAMES_PASS && activity.isHidden());
+    }
+
+    // IF leaving the pass's screen were silent, THEN the pass would write into a screen nobody sees.
+    @Test
+    void navigate_whileNamesPassShown_asksModelWorkIsRunningAndStays() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        assertThat(isVisibleInScene("work-card")).isTrue();
+        assertThat(textsUnder(required("work-card")))
+                .contains("Model work is running", "Stay", "Continue in background");
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
+        assertThat(TooltipProbe.tipText(required("work-background"))).isNotBlank();
+    }
+
+    @Test
+    void stay_chosen_keepsTheScreenAndTheWorkInView() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        onFx(() -> ((Button) required("work-stay")).fire());
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
+        assertThat(isNamesPassHidden()).isFalse();
+        assertThat(stopped).isEmpty();
+    }
+
+    // IF Continue in background did not hide the pass, THEN the person would land on Export behind its dialog.
+    @Test
+    void continueInBackground_chosen_opensExportAndHidesWork() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginNamesPass();
+        onFx(() -> shell.activate(ViewNames.EXPORT));
+
+        onFx(() -> ((Button) required("work-background")).fire());
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.EXPORT);
+        assertThat(isNamesPassHidden()).isTrue();
+        assertThat(stopped).isEmpty();
+        assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Preparing names · 0 %");
+    }
+
+    // IF short work let the person leave, THEN the brief's suggestion would land on a screen nobody looks at.
+    @Test
+    void navigate_whileBriefRuns_isRefusedWithoutDialog() {
+        onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
+        onFx(() -> injector.getInstance(ActivityTracker.class).begin(ActivityKind.SUGGEST_STYLE, null));
+
+        onFx(() -> shell.activate(ViewNames.IMPORT));
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+        assertThat(isVisibleInScene("work-card")).isFalse();
+        assertThat(isVisibleInScene("leave-card")).isFalse();
     }
 }

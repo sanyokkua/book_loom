@@ -3,6 +3,7 @@ package ua.bookloom.ui;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -33,6 +34,8 @@ public final class ScriptedLexiconService implements LexiconService {
     private final List<LexiconEntry> modelFinds = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> importFinds = new CopyOnWriteArrayList<>();
     private final List<String> reviewDrops = new CopyOnWriteArrayList<>();
+    private final List<Boolean> usageOnFx = new CopyOnWriteArrayList<>();
+    private volatile Map<String, Integer> usage = Map.of();
     private volatile @Nullable AppError modelScanFailure;
 
     /** Puts entries in the list the service holds. */
@@ -44,6 +47,16 @@ public final class ScriptedLexiconService implements LexiconService {
     public void replaceHeld(final LexiconEntry... entries) {
         held.clear();
         held.addAll(List.of(entries));
+    }
+
+    /** Sets the counts {@code usage} answers with, by {@link LexiconEntry#keyOf}, as the book's index would give them. */
+    public void usageIs(final Map<String, Integer> counts) {
+        usage = Map.copyOf(counts);
+    }
+
+    /** For every {@code usage} call, in order, whether it ran on the FX Application Thread. */
+    public List<Boolean> usageOnFx() {
+        return List.copyOf(usageOnFx);
     }
 
     /** Names what the next scan adds. */
@@ -185,6 +198,13 @@ public final class ScriptedLexiconService implements LexiconService {
     public Result<Boolean> remove(final String projectId, final String term) {
         calls.add("remove(" + term + ")");
         return Result.ok(held.remove(find(term)));
+    }
+
+    @Override
+    public Result<Map<String, Integer>> usage(final String projectId) {
+        calls.add("usage()");
+        usageOnFx.add(javafx.application.Platform.isFxApplicationThread());
+        return Result.ok(usage);
     }
 
     @Override

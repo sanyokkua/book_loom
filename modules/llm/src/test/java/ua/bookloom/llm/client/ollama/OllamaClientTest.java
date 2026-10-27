@@ -166,14 +166,6 @@ class OllamaClientTest {
     }
 
     @ParameterizedTest
-    @MethodSource("malformedChatBodies")
-    void chat_malformedResponse_returnsInternal(String body) {
-        stubChat(body);
-
-        assertChatError(messageOnlyRequest(), ErrorCode.internal);
-    }
-
-    @ParameterizedTest
     @MethodSource("invalidSchemas")
     void chat_invalidSchema_returnsValidationWithoutSendingRequest(String schema) {
         final ChatRequest request = new ChatRequest(
@@ -346,10 +338,6 @@ class OllamaClientTest {
                         new ChatMessage(ChatRole.ASSISTANT, "prior")),
                 0.2,
                 new ResponseFormat("draft", SCHEMA));
-    }
-
-    private static Stream<String> malformedChatBodies() {
-        return Stream.of("not-json", "null", "{}", "{\"message\":{}}", "{\"message\":{\"content\":null}}");
     }
 
     private static Stream<String> invalidSchemas() {

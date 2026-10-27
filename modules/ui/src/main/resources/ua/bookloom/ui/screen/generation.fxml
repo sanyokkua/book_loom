@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import org.controlsfx.control.SegmentedButton?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.GenerationController" id="settings-generation-host" spacing="10">
+    <padding>
+        <Insets top="14"/>
+    </padding>
+    <Label id="generation-instant" styleClass="hint" wrapText="true" text="%settings.generation.instant"/>
+    <Label fx:id="running" id="generation-running" styleClass="banner, banner-info, banner-text" wrapText="true"
+           text="%settings.generation.running"/>
+    <Label fx:id="saveError" id="generation-save-error" styleClass="hint-warn" wrapText="true"
+           text="%settings.generation.saveFailed"/>
+    <VBox fx:id="columns" id="generation-columns"/>
+    <fx:define>
+        <VBox fx:id="qualityCard" id="generation-quality-card" styleClass="card" spacing="10">
+            <HBox spacing="8" alignment="BASELINE_LEFT">
+                <Label styleClass="card-title" text="%settings.generation.quality.title"/>
+                <Label styleClass="hint" text="%settings.generation.quality.sub"/>
+            </HBox>
+            <VBox fx:id="qualityBody" id="generation-quality-body"/>
+        </VBox>
+        <VBox fx:id="right" id="generation-right" spacing="10">
+            <VBox id="generation-thinking-card" styleClass="card" spacing="6">
+                <Label styleClass="card-title" text="%settings.generation.thinking"/>
+                <SegmentedButton fx:id="thinking" id="generation-thinking" maxWidth="-Infinity">
+                    <buttons>
+                        <ToggleButton fx:id="thinkingOff" id="generation-thinking-off"
+                                      text="%settings.generation.thinking.off"/>
+                        <ToggleButton fx:id="thinkingLow" id="generation-thinking-low"
+                                      text="%settings.generation.thinking.low"/>
+                        <ToggleButton fx:id="thinkingOn" id="generation-thinking-on"
+                                      text="%settings.generation.thinking.on"/>
+                    </buttons>
+                </SegmentedButton>
+                <Label id="generation-thinking-hint" styleClass="hint" wrapText="true"
+                       text="%settings.generation.thinking.hint"/>
+                <Label fx:id="thinkingTech" id="generation-thinking-tech" styleClass="tech-note"
+                       text="%settings.generation.thinking.tech"/>
+                <Label fx:id="thinkingOverride" id="generation-thinking-override" styleClass="hint-warn"
+                       wrapText="true"/>
+            </VBox>
+            <VBox id="generation-sampling-card" styleClass="card" spacing="6">
+                <Label styleClass="card-title" text="%settings.generation.sampling"/>
+                <SegmentedButton fx:id="sampling" id="generation-sampling" maxWidth="-Infinity">
+                    <buttons>
+                        <ToggleButton fx:id="samplingDefaults" id="generation-sampling-defaults"
+                                      text="%settings.generation.sampling.defaults"/>
+                        <ToggleButton fx:id="samplingTuned" id="generation-sampling-tuned"
+                                      text="%settings.generation.sampling.tuned"/>
+                    </buttons>
+                </SegmentedButton>
+                <Label id="generation-sampling-hint" styleClass="hint" wrapText="true"
+                       text="%settings.generation.sampling.hint"/>
+                <Label fx:id="samplingOverride" id="generation-sampling-override" styleClass="hint-warn"
+                       wrapText="true"/>
+            </VBox>
+            <VBox fx:id="limits" id="generation-limits" styleClass="card" spacing="2">
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label styleClass="card-title" text="%settings.generation.limits"/>
+                    <Label styleClass="tag-note" text="%settings.generation.limits.fixed"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </fx:define>
+</VBox>

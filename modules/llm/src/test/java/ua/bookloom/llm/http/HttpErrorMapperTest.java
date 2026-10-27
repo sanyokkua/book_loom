@@ -199,6 +199,7 @@ class HttpErrorMapperTest {
                 chatStatus(500, PRIVATE_BODY, ErrorCode.upstream),
                 chatStatus(599, PRIVATE_BODY, ErrorCode.upstream),
                 chatStatus(400, "{\"error\":\"invalid request " + PRIVATE_BODY + "\"}", ErrorCode.validation),
+                chatStatus(422, "{\"error\":\"unknown field top_p " + PRIVATE_BODY + "\"}", ErrorCode.validation),
                 chatStatus(302, PRIVATE_BODY, ErrorCode.internal));
     }
 

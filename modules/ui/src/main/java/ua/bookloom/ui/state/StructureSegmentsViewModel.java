@@ -37,7 +37,7 @@ public final class StructureSegmentsViewModel {
             new ReadOnlyObjectWrapper<>(new StructureSegments.Idle());
     private long generation;
     private @Nullable String shownProject;
-    private List<String> shownUnits = List.of();
+    private List<UnitPart> shownParts = List.of();
     private @Nullable BookBrief shownBrief;
 
     /**
@@ -63,25 +63,25 @@ public final class StructureSegmentsViewModel {
     }
 
     /**
-     * Lists the segments of some units, replacing any earlier listing.
+     * Lists the segments of some parts of units, replacing any earlier listing.
      *
      * @param projectId the stored project
-     * @param unitIds the units to list in reading order; none leaves the list idle
+     * @param parts the parts to list in reading order; none leaves the list idle
      */
-    public void show(final String projectId, final List<String> unitIds) {
+    public void show(final String projectId, final List<UnitPart> parts) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(unitIds, "unitIds");
+        Objects.requireNonNull(parts, "parts");
         final long ticket = ++generation;
         shownProject = projectId;
-        shownUnits = List.copyOf(unitIds);
+        shownParts = List.copyOf(parts);
         shownBrief = null;
-        log.debug("listing the segments of project {} units {} (run {})", projectId, unitIds, ticket);
-        if (unitIds.isEmpty()) {
+        log.debug("listing the segments of project {} parts {} (run {})", projectId, parts, ticket);
+        if (parts.isEmpty()) {
             state.set(new StructureSegments.Idle());
             return;
         }
         state.set(new StructureSegments.Loading());
-        final List<String> units = shownUnits;
+        final List<UnitPart> units = shownParts;
         try {
             executor.execute(() -> {
                 final StructureSegments found = load(projectId, units);
@@ -94,36 +94,36 @@ public final class StructureSegmentsViewModel {
     }
 
     /**
-     * Lists the segments of some units unless exactly these, under this brief, are on show or on their way. A screen
+     * Lists the segments of some parts unless exactly these, under this brief, are on show or on their way. A screen
      * that is built again for the same book calls this, so that returning to it does not read the units again; a
      * listing made by any other call, or under another brief, is asked for again.
      *
      * @param projectId the stored project
-     * @param unitIds the units to list in reading order; none leaves the list idle
+     * @param parts the parts to list in reading order; none leaves the list idle
      * @param brief the brief as it stands now, which decides the chunks, or {@code null} when none is known
      */
-    public void showUnlessShown(final String projectId, final List<String> unitIds, final @Nullable BookBrief brief) {
+    public void showUnlessShown(final String projectId, final List<UnitPart> parts, final @Nullable BookBrief brief) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(unitIds, "unitIds");
+        Objects.requireNonNull(parts, "parts");
         final StructureSegments now = state.get();
         final boolean answered = now instanceof StructureSegments.Loaded || now instanceof StructureSegments.Loading;
         if (answered
                 && projectId.equals(shownProject)
-                && unitIds.equals(shownUnits)
+                && parts.equals(shownParts)
                 && Objects.equals(brief, shownBrief)) {
-            log.debug("the segments of project {} units {} are already on show", projectId, unitIds);
+            log.debug("the segments of project {} parts {} are already on show", projectId, parts);
             return;
         }
-        show(projectId, unitIds);
+        show(projectId, parts);
         shownBrief = brief;
     }
 
     /** Asks again for what is on show, as the brief it follows has changed. */
     public void refresh() {
         final String project = shownProject;
-        if (project != null && !shownUnits.isEmpty()) {
+        if (project != null && !shownParts.isEmpty()) {
             log.debug("the brief changed; listing the segments of project {} again", project);
-            show(project, shownUnits);
+            show(project, shownParts);
         }
     }
 
@@ -131,7 +131,7 @@ public final class StructureSegmentsViewModel {
     public void clear() {
         generation++;
         shownProject = null;
-        shownUnits = List.of();
+        shownParts = List.of();
         shownBrief = null;
         state.set(new StructureSegments.Idle());
     }
@@ -144,18 +144,20 @@ public final class StructureSegmentsViewModel {
         state.set(found);
     }
 
-    private StructureSegments load(final String projectId, final List<String> unitIds) {
+    private StructureSegments load(final String projectId, final List<UnitPart> parts) {
         final List<StructureSegmentRow> rows = new ArrayList<>();
         int chunks = 0;
         try {
-            for (final String unitId : unitIds) {
-                final Result<List<SegmentPreview>> answer = projects.segments(projectId, unitId);
+            for (final UnitPart part : parts) {
+                final Result<List<SegmentPreview>> answer = projects.segments(projectId, part.unitId());
                 final AppError failure = answer.error();
                 if (failure != null) {
-                    log.warn("the segments of unit {} failed with {}", unitId, failure.code());
+                    log.warn("the segments of unit {} failed with {}", part.unitId(), failure.code());
                     return new StructureSegments.Failed(failure.code());
                 }
-                chunks += append(rows, Objects.requireNonNull(answer.data(), "data"));
+                final List<SegmentPreview> all = Objects.requireNonNull(answer.data(), "data");
+                log.debug("unit {} holds {} segment(s); listing {}", part.unitId(), all.size(), part);
+                chunks += append(rows, part.of(all));
             }
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning the segments", thrown);
@@ -165,14 +167,15 @@ public final class StructureSegmentsViewModel {
         return new StructureSegments.Loaded(rows, chunks);
     }
 
-    private static int append(final List<StructureSegmentRow> rows, final List<SegmentPreview> unit) {
+    // The planned chunks counted are those the listed segments fall in, so a chapter of a one-unit book counts its own.
+    private static int append(final List<StructureSegmentRow> rows, final List<SegmentPreview> part) {
         int previous = 0;
         int chunks = 0;
-        for (final SegmentPreview preview : unit) {
+        for (final SegmentPreview preview : part) {
             final boolean start = preview.chunkIndex() > 0 && preview.chunkIndex() != previous;
             rows.add(new StructureSegmentRow(preview, start));
+            chunks += start ? 1 : 0;
             previous = preview.chunkIndex();
-            chunks = Math.max(chunks, preview.chunkCount());
         }
         return chunks;
     }

@@ -15,7 +15,6 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
 import ua.bookloom.ui.state.RunState;
-import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.WaitingCall;
 
 /**
@@ -43,7 +42,10 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
     }
 
     private void showATallRunningDashboard() {
+        chooseModel();
         showTranslating();
+        resizeScene(960, 640);
+        mirror().publishRunStarted("Frankenstein.epub", null);
         publish(RunState.RUNNING);
         mirror().live()
                 .publishCalls(LiveCallFixtures.calls(
@@ -66,40 +68,38 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
                 Duration.ofSeconds(61),
                 true);
         mirror().live().publishWaitingCall(call);
-        mirror().publishWaitingSeconds(61);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void modelAnswers() {
         mirror().live().publishWaitingCall(null);
-        mirror().publishWaitingSeconds(StateMirror.NOT_WAITING);
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {});
     }
 
-    // IF the focused Skip segment button vanished with the banner and the page followed the focus elsewhere, THEN the
-    // person reading the middle of the page would be thrown to another part of it.
+    // IF the stuck call's banner, pinned above the page, moved the page when it cleared, THEN the person reading the
+    // middle of the page would be thrown to another part of it.
     @Test
-    void stuckBannerClears_focusOnItsSkipButton_pageKeepsItsPosition() {
+    void stuckBannerClears_pageKeepsItsPosition() {
         showATallRunningDashboard();
         stuckOnAJudge();
-        onFx(() -> button("translating-skip-segment").requestFocus());
         onFx(() -> content().setVvalue(0.5));
         final double before = offset();
         assertThat(before).as("the page must be scrolled away from its top").isGreaterThan(50);
 
         modelAnswers();
 
-        assertThat(isShown("translating-skip-segment")).isFalse();
+        assertThat(optional("translating-banner")).isNull();
         assertThat(offset()).isCloseTo(before, within(PIXEL));
     }
 
-    // The same for any focused control that goes away below the viewport, here the log's errors-only chip while the
-    // person reads the top of the page: the next focusable control, the log list, must not pull the page down.
+    // The same for any focused control that goes away, here the log tab's Problems only choice while the person reads
+    // the top of the page: the next focusable control, the log list, must not pull the page down.
     @Test
     void focusedNodeBelowTheViewportHidden_pageStaysAtTheTop() {
         showATallRunningDashboard();
-        final Node focused = required("translating-log-errors-only");
+        openActivityLog();
+        final Node focused = required("translating-log-problems");
         onFx(focused::requestFocus);
         onFx(() -> content().setVvalue(0.0));
         final double before = offset();

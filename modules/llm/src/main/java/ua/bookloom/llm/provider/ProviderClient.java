@@ -22,6 +22,18 @@ public interface ProviderClient {
     ProviderCallResult<ChatResponse> chat(String modelId, ChatRequest request);
 
     /**
+     * The JSON body {@link #chat} puts on the wire for {@code request}, for the Settings test dialog. It is the body
+     * before any refused setting is dropped, and holds no header or credential.
+     *
+     * @param modelId the model the call is bound to; never null
+     * @param request the call; never null
+     * @return the serialized body, or an empty string when this client cannot show one
+     */
+    default String requestBody(String modelId, ChatRequest request) {
+        return "";
+    }
+
+    /**
      * How long {@link #chat} waits for the reply to {@code request}, so a caller can show the bound it waits against.
      *
      * @param request the call about to be sent
@@ -38,6 +50,16 @@ public interface ProviderClient {
      * @return the context length in tokens, or empty when the provider cannot or does not say
      */
     default Optional<Integer> contextLength(String modelId) {
+        return Optional.empty();
+    }
+
+    /**
+     * Asks the provider for the context a model is loaded with right now; never fails the caller.
+     *
+     * @param modelId the model to ask about; never null
+     * @return the loaded context length in tokens, or empty when unknown, not loaded, or this dialect cannot say
+     */
+    default Optional<Integer> loadedContextLength(String modelId) {
         return Optional.empty();
     }
 

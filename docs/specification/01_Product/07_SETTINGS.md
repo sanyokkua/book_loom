@@ -1,139 +1,198 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:ui`, `:persistence`), QA **Last
-Updated:** 2026-09-27 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+Updated:** 2026-10-19 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`, `docs/specification/01_Product/09_THEMING.md`,
-`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`, `docs/specification/mockups/README.md` (Settings,
+decisions 6-7, H1)
 
 # Settings
 
-This document specifies every setting, its default, and its validation range. Settings are persisted in the typed KV
-store (DD-20, seam F7) and surfaced in the Settings screen's tabs. It realizes `FR-SETTINGS-*`. Every setting is
+This document specifies every setting, its default, and its validation range. Settings are to be persisted in the typed
+KV store (DD-20, seam F7) and surfaced in the Settings screen's tabs. It realizes `FR-SETTINGS-*`. Every setting is
 validated against its range and invalid input is rejected (FR-SETTINGS-07).
+
+**Status of persistence.** Built (finalize group 3 and 7): in the window every setting below is kept in SQLite
+(`bookloom.db`, ADR-0043) and survives a restart; the command line keeps nothing (ADR-0034). The detailed-log switch is
+the one exception: logging starts before the database opens, so it is a marker file (`detailed-log.on`) in the data
+folder. Rows marked *built* describe the code today.
 
 ## settings-tabs {#settings-tabs}
 
-The Settings screen has six tabs (`TabPane`): Providers, Models, Generation, Appearance, Automation, Storage & logs.
+The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
+(`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
+model you choose here." All six are built: Providers (form, checks, test dialog), Models, Generation, Appearance,
+Automation and Storage & logs.
+
+**How changes are saved (H1, planned).**
+
+- **Providers** and **Models** save explicitly through a pinned form footer: "Unsaved changes" marker, Cancel, Save.
+  Leaving them with changes (another provider, another tab, navigation, closing the window) asks: Keep editing ·
+  Discard · Save (FR-SETTINGS-V1 applies on Save).
+- **Generation, Appearance, Automation, Storage & logs** apply at once and say when: "Changes apply at once", "to the
+  segments not translated yet", or "after BookLoom restarts".
+- **Credentials are never saved**, only the name of an environment variable (FR-PROV-05;
+  `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#secrets-never-stored`). A key field shows only "set" / "not set".
 
 ## providers-tab {#providers-tab}
 
+*Planned — UI finalization + SQLite.* Today the list is two read-only presets and the tab runs the three tests.
+
+The tab is a list | form split that stays side by side at every width. The detail has a header (the provider's name,
+"current" or **Use this one**, **Delete…** with a confirmation), a **summary card** ("Your AI model: Ollama · gemma4:e4b
+— ready · Answers in about 1 second · 7 models available", with Test and Change model), and a **Connection details**
+fold around the unchanged GoText-style form. The fold opens by itself when there is a problem, for a new provider, or
+with Show technical details. Test results are in plain words with a **Details** link to the test dialog (request line,
+body, status, time, first token, speed, response).
+
 | Setting                    | Type         | Default                  | Validation                                                    | Requirement             |
 |----------------------------|--------------|--------------------------|-----------------------------------------------------------------|-------------------------|
-| Provider list              | list         | empty                    | at least one to run a translation                             | FR-PROV-01              |
+| Provider list              | list         | two presets (Ollama, LM Studio-style OpenAI-compatible) | at least one to run a translation; add, edit, delete | FR-PROV-01              |
 | Current provider           | reference    | none                     | must reference an existing, verified provider                 | FR-PROV-04              |
-| Provider endpoint          | string (URL) | per preset               | valid URL; scheme http/https                                  | FR-PROV-03              |
-| Auth scheme                | enum         | none                     | none / bearer / custom-header                                 | FR-PROV-03              |
-| Credential reference       | string       | none                     | env-var name or keychain key (resolution planned); never a secret value | FR-PROV-05              |
-| Effective context (tokens) | integer      | 8192 (fixed in this build) | not editable in this build; a per-provider value with its own validation range arrives with the Generation settings (future work) | FR-PROV-03, FR-INFER-02 |
+| Name                       | string       | per preset               | non-empty                                                     | FR-PROV-03              |
+| Kind                       | enum         | per preset               | Ollama native / OpenAI-compatible                             | FR-PROV-03              |
+| Provider endpoint (Address) | string (URL) | per preset              | valid URL; scheme http/https; a warning when an OpenAI-compatible URL lacks `/v1` | FR-PROV-03 |
+| Models endpoint / Inference endpoint | string (path) | provider default | optional overrides; the inference one is disabled for Ollama | FR-PROV-03 |
+| Connect and request timeouts | integer (seconds) | per preset      | positive                                                      | FR-PROV-03              |
+| Sign-in (auth scheme)      | enum         | none                     | none / bearer token / API-key header (with its header name)   | FR-PROV-03              |
+| Credential reference       | string       | none                     | **name of an environment variable**; never a secret value; shown "set" / "not set"; checked before a call; OS keychain is a later option | FR-PROV-05 |
+| Custom headers             | list (name, value) | empty              | values may be `${env:NAME}` references, never literal secrets | FR-PROV-03              |
+| Custom models              | list         | empty                    | extra model ids offered in the model list                     | FR-MODEL-02             |
 
-**This build sends a fixed effective context of 8192 tokens** to Ollama's `num_ctx`; an OpenAI-compatible server
-receives no context-size field (FR-MODEL-07, DD-44). The **effective context (tokens)** field, populated from discovery
-or entered manually and used as the ceiling the chunk budget is clamped against, is not built in this version — it
-arrives with the Generation tab's per-provider resolution.
+The effective context is **not** a provider setting: it is resolved per model (see `#models-tab` and
+`#generation-tab`).
 
 ## models-tab {#models-tab}
 
-| Setting                       | Type    | Default          | Validation                                                                                            | Requirement                           |
-|-------------------------------|---------|------------------|-----------------------------------------------------------------------------------------------------------|---------------------------------------|
-| Translator model              | string  | first discovered | non-empty; from live discovery or manual model-ID entry                                               | FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 |
-| Judge/helper model            | string  | translator model | non-empty when judge enabled; discovery or manual entry                                               | FR-MODEL-03                           |
-| Manual model-ID entry         | string  | —                | always available; the only source when the provider has no discovery (`supportsModelDiscovery`=false) | FR-MODEL-02, DD-38                    |
-| Per-provider remembered model | derived | last used        | —                                                                                                       | FR-MODEL-04                           |
+*Built (finalize 7.2)* (mockups/README.md, decision 6). The Models tab is a **list of models across
+providers** (with ↻ Refresh) and a form for the picked one. **Each model keeps its own settings, all optional — off
+means BookLoom picks the value per task.** The tab also shows what was found out from the program: how much the model
+can read at once (and, for Ollama only, how much is loaded now — read from `/api/ps`) and whether it gave a structured
+answer in this session's last inference test (else "not checked yet"). While Use context window is off, the field shows the
+loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint. Save is
+an update that keeps a refusal recorded meanwhile; **Send again** acts at once and leaves unsaved typing alone; changing
+model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollama?".
 
+| Setting                       | Type    | Default          | Validation                                                                                            | Requirement                           |
+|-------------------------------|---------|------------------|-------------------------------------------------------------------------------------------------------|---------------------------------------|
+| Model (per provider)          | string  | first discovered | non-empty; from live discovery or manual model-ID entry                                               | FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 |
+| Manual model-ID entry         | string  | —                | always available; the only source when the provider has no discovery (`supportsModelDiscovery`=false) | FR-MODEL-02, DD-38                    |
+| Temperature                   | choice + decimal | Let BookLoom choose (per-task defaults of `ChatRequests`) | Let BookLoom choose · My value (0.0 – 2.0, one value for every request) · Don't send (omitted from the request, for models that refuse it); mockups/README.md S6 | FR-SETTINGS-03, DD-36                 |
+| Use context window            | integer (tokens) | off; filled in from what is loaded (`ModelCapabilities.contextLength`), shown as "detected" | positive; sent as `num_ctx` on Ollama | FR-SETTINGS-03, FR-INFER-02 |
+| Limit answer length           | integer (tokens) | off (computed per request by `OutputLimit`) | positive when on                                                         | FR-SETTINGS-03                        |
+| Answer-length field (advanced) | enum   | `max_tokens`     | `max_tokens` / `max_completion_tokens`; disabled for Ollama                                           | FR-SETTINGS-03                        |
+| Per-provider remembered model | derived | last used        | —                                                                                                     | FR-MODEL-04                           |
+
+There is **no separate judge or helper model**: the reviewer and every other call use the project's one chosen model.
 These provider + model choices are the **defaults for new projects**; each project keeps its own binding thereafter
 (`04_LLM_PROVIDERS_AND_MODELS.md#per-project-binding`, DD-31).
 
 ## generation-tab {#generation-tab}
 
-| Setting                            | Type             | Default              | Validation range                                                                             | Requirement                 |
-|--------------------------------------|------------------|-----------------------|------------------------------------------------------------------------------------------------|-----------------------------|
-| num_ctx                            | integer (tokens) | 8192 (fixed in this build) | not user-editable in this build; the 512 – 131072 range and the 32768 default apply once the Generation tab's per-provider resolution is built (future work) | FR-SETTINGS-03, FR-INFER-02 |
-| Temperature                        | decimal          | 0.2                  | 0.0 – 2.0                                                                                    | FR-SETTINGS-03, DD-36       |
-| Chunk budget (cap)                 | integer (tokens) | 1200                 | fixed at 1200 in this build; the 256 – 8192 editable range arrives with the Generation tab | FR-ALGO-02, FR-SETTINGS-03  |
-| Preceding blocks                   | integer          | dial-driven (1/2/3)  | not user-editable in this build; set by the quality dial (Fast/Balanced/Max) alone            | FR-ALGO-08                  |
-| Manual τ override (advanced)       | decimal          | not offered in this build | 0.0 – 1.0, once built                                                                    | FR-REVIEW-02, DD-45         |
-| Manual τ_judge override (advanced) | decimal          | not offered in this build | 0.0 – 1.0, once built                                                                    | FR-REVIEW-02, DD-45         |
-| Repair budget N                    | integer          | dial-driven (1/2/3)  | not user-editable in this build; set by the quality dial alone                               | FR-ALGO-C12                 |
+*Built.* The tab says "✓ Changes apply at once, to the segments not translated yet." A run reads the settings once when it
+starts, so while one is running (running, pausing, paused or stopping) a note says it keeps the settings it started with
+and the change reaches its segments not translated yet when it starts or continues again. The tab carries only knobs the
+code has: no judge model and no τ override. Left: the quality grid; right: Thinking, Sampling and Time limits.
 
-**This build sends a fixed effective context of 8192 tokens** to Ollama's `num_ctx` for every run (FR-MODEL-07,
-DD-44); an OpenAI-compatible server receives no context-size field. There is **no per-provider effective context in
-this build** — the 32768 default and the provider-permitting validation range above apply once the Generation tab and
-its per-provider resolution (Ollama `num_ctx`/`/api/show` → discovery → a manual field → default) are built, as
-`#providers-tab` describes. **Temperature is kept low for fidelity.** The default 0.2 favours deterministic,
-low-hallucination translation; per-phase guidance (draft ~0.2, judge/QA ~0.0–0.2, repair/reflect may go slightly
-higher) is in `05_TRANSLATION_ALGORITHM.md#generation-parameters` and `12_PROMPT_CATALOG.md`. Users may raise it
-knowingly; the retry dialog also offers a one-off "lower temperature for this retry" (DD-36).
+| Setting                  | Type          | Default                | Validation / meaning                                                                 | Requirement  |
+|--------------------------|---------------|------------------------|---------------------------------------------------------------------------------------|--------------|
+| What the quality choice does | read-only grid of labels | —       | the Fast / Balanced / Max rows, read through `DialProfiles` from the pipeline's own `DialParameters` (see below) | FR-ALGO-C12  |
+| Thinking before answering | enum         | Off                    | Off / Low / On, read at each run start (`RequestDefaultsSource`); `BOOKLOOM_REASONING`, when set, replaces it; the tab then names the variable and keeps the choice for launches without it | FR-SETTINGS-03 |
+| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom, read at each run start; `BOOKLOOM_SAMPLING`, when set to a known mode, replaces it; the tab names it the same way | FR-SETTINGS-03 |
+| Time limits              | read-only     | `CallLimits`           | fixed: a check 90 s, names / brief / file name 120 s, translating segments by length up to 10 min, up to 3 tries (a slow answer is asked again once, shorter); the HTTP client reads the same constants | FR-SETTINGS-03 |
+
+**Context window (built).** Every call is sized against a fixed effective context of **16,384 tokens**
+(`TokenBudget.EFFECTIVE_CONTEXT`), sent to Ollama's `num_ctx`; an OpenAI-compatible server receives no context-size
+field (FR-MODEL-07, DD-44). The detected window is used only for budgeting. A per-model override that replaces it is the
+Models tab's **Use context window**.
+
+**Temperature** is a constant per call kind today (`ChatRequests`), low for fidelity: draft ~0.2, QA ~0.0–0.2, repair
+slightly higher (`05_TRANSLATION_ALGORITHM.md#generation-parameters`, `12_PROMPT_CATALOG.md`). The Models tab's **Use
+temperature** choice (S6) keeps those defaults (Let BookLoom choose), replaces them with one value (My value), or leaves the parameter out entirely (Don't send) for models that refuse it — some newer OpenAI and Anthropic models do; a model that refuses any optional setting is handled by the refused-settings rule (mockups/README.md, "Refused settings (S6)"), which drops it, repeats the request once and remembers it per provider + model; the retry dialog also offers a one-off "lower
+temperature for this retry" (DD-36).
+
+**What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
+user-editable per knob:
+
+| Dial     | Preceding targets | Repair rounds N | Reviewer reads per chunk | Backward revision | Model-written summary | Chunk cap (segments) |
+|----------|-------------------|-----------------|--------------------------|-------------------|-----------------------|----------------------|
+| Fast     | 1                 | 1               | 0 (no reviewer)          | off               | off                   | 8                    |
+| Balanced | 2                 | 2               | 1                        | off               | off                   | 8                    |
+| Max      | 3                 | 3               | 2                        | on                | on                    | 2                    |
+
+Manual review mode caps a chunk at 1 segment. The chunk's token ceiling is `TokenBudget.MAX_CHUNK_TOKENS` = **2000**
+source tokens (`05_TRANSLATION_ALGORITHM.md#token-budget`).
 
 **τ ownership (DD-45).** The **trust threshold τ is owned by the review-mode dial** (Unattended 0.60 / Assisted 0.75 /
-Manual 0.85), not the quality dial. The **quality dial (Fast/Balanced/Max) owns only mechanics** — chunk budget,
-preceding-block count, repair budget N, judge on/off, and backward-revision on/off (FR-ALGO-11) — and does **not** set
-τ. **Neither a manual τ override nor a manual mechanics override is offered in this build**; the Manual τ/τ_judge
-override rows above are the reference target for when Settings persistence and this advanced override are built.
+Manual 0.85), not the quality dial. **No manual τ or τ_judge override is offered**, now or in the planned Generation
+tab.
 
 **Repair budget N = QA re-entry rounds.** N is the number of times a segment that fails QA is fed back for a directed
-repair before it is flagged (FR-ALGO-C12), set by the quality dial alone in this build (1 / 2 / 3 on Fast / Balanced /
-Max). **N = 0 means flag-on-first-failure** — no repair attempt is made; a segment that fails its first QA pass is
-flagged immediately.
+repair before it is flagged (FR-ALGO-C12), set by the quality dial alone (the table above). **N = 0 means
+flag-on-first-failure**; a review retry runs with N = 0 (`DialParameters.withoutRepairRounds`).
 
-**Chunk budget is a fixed constant in this build.** `chunkBudget = min(8192 − reservedHeadroom, 1200)`
-(`05_TRANSLATION_ALGORITHM.md#token-budget`), where reserved headroom accounts for the system prompt, preceding
-context, and target room. The user-editable cap over a per-provider effective context arrives with the Generation tab.
-
-**Token-budget constants (fixed in v1).** Token counts use a deterministic characters ÷ K heuristic (no shipped
-tokenizer): the per-script **K table** and a **safety margin of `0.15`** are documented constants
-(`05_TRANSLATION_ALGORITHM.md#chunking`), not user settings. The **rolling-summary window K** used by the context memory
-is likewise a constant, **default 20**. These are recorded here for traceability; they are not exposed as editable
-settings.
+**Token-budget constants (fixed).** Token counts use a deterministic characters ÷ K heuristic (no shipped tokenizer):
+the per-script **K table** and a **safety margin of `0.15`** are documented constants
+(`05_TRANSLATION_ALGORITHM.md#chunking`), not user settings. The **rolling-summary window K** is likewise a constant,
+**default 20**. These are recorded here for traceability; they are not editable settings.
 
 ## appearance-tab {#appearance-tab}
 
-| Setting       | Type              | Default                  | Validation                                                                              | Requirement           |
-|---------------|-------------------|--------------------------|-----------------------------------------------------------------------------------------|-----------------------|
-| Theme         | enum              | system                   | light / dark / system (JavaFX 26 reads OS `prefers-color-scheme`)                       | FR-SETTINGS-04, DD-22 |
-| Accent        | fixed (read-only) | Cognac                   | not selectable in v1 (Cognac only, FR-THEME-4)                                          | FR-SETTINGS-04        |
-| Language (UI) | enum              | OS locale on first start | English / Ukrainian; persisted as `ui.language`; applied on change (restart acceptable). **Deferred:** not offered in this build — see below | FR-UI-06, DD-34       |
+| Setting                 | Type    | Default                  | Validation                                                                              | Requirement           | Status |
+|-------------------------|---------|--------------------------|-----------------------------------------------------------------------------------------|-----------------------|--------|
+| Theme                   | enum    | system                   | light / dark / "Match the computer" (JavaFX 26 reads OS `prefers-color-scheme`); stored as `ui.theme` the moment it is chosen, from the tab or the title-bar toggle | FR-SETTINGS-04, DD-22 | built |
+| Language of the app (UI) | enum   | OS locale on first start | Match the computer (naming its language) / English / Ukrainian; persisted as `ui.language`, and choosing "Match the computer" removes it; **applies after BookLoom restarts** ("Applies after BookLoom restarts."). **Restart now** shows only while the choice differs from the language on screen, asks the quit question first when work is under way, and says so when no new copy could start. The new copy starts only after this one has closed its files: command built, window exits, shutdown closes the database, the lock is released, then the child starts | FR-UI-06, DD-34 | built |
+| Show technical details  | boolean | off                      | on / off; every Simple / Detailed view (live panel, progress dialogs, review desk) opens in Detailed, the Settings folds open, and the technical lines show (rule codes in the review desk, debug lines in the log, the technical line on Import) (`mockups/README.md`, G12); stored as `ui.technicalDetails` | FR-SETTINGS-04 | built |
 
 **Theme control is tri-state here** (light / dark / system). The **toolbar theme control is a 2-state light↔dark
 quick-toggle only**; the tri-state selector including `system` lives in this tab
 (`08_UI_SCREENS_AND_STATES.md#shell-and-navigation`).
 
-**The Language (UI) row is deferred.** The Appearance screen has no language control and nothing persists `ui.language`,
-because persisting it needs local storage, which does not exist yet. Until then the interface language follows the
-operating system's locale (Ukrainian OS → Ukrainian, otherwise English); the row stays here as the target behaviour.
+**The language switch needs a restart** because a live switch would rebuild every view. A stored `ui.language` is read
+first; with none stored the interface language follows the operating system's locale (Ukrainian OS → Ukrainian,
+otherwise English). The tab says "✓ Changes apply at once." for the theme and the switch, and the language line says
+when it takes effect.
 
-**Accent is fixed to Cognac** in v1 and shown read-only; it is not a selectable enum (see `09_THEMING.md` FR-THEME-4).
-**Density is deferred to a later version** and is not offered in v1 Appearance — no spacing/density tokens exist in the
-token catalogue (`09_THEMING.md#token-catalog`), so a compact mode would have nothing to switch.
+**There is no Accent row and no Reduce motion row.** The accent is fixed (Cognac only, `09_THEMING.md` FR-THEME-4) and
+is not shown as a setting; reduced motion follows the operating system (or `BOOKLOOM_REDUCE_MOTION`). **Density is
+deferred**: no spacing/density tokens exist in the token catalogue (`09_THEMING.md#token-catalog`).
 
 ## automation-tab {#automation-tab}
 
-This is the authoritative Automation list. There is **no "desktop notification on finish" toggle and no "single instance
-only" toggle** in v1: there is no OS-notification feature (`11_NOTIFICATIONS_AND_ERRORS.md`), and single-instance is
-**always on** and not user-configurable (enforced by the single-instance lock in the lifecycle spec).
+*Built (finalize 7.4)* (these rows apply at once, and the review mode reaches the next run that starts). This is the authoritative Automation list. There is
+**no "desktop notification on finish" toggle and no "single instance only" toggle**: there is no OS-notification
+feature (`11_NOTIFICATIONS_AND_ERRORS.md`), and single-instance is **always on** and not user-configurable (the
+single-instance lock in the lifecycle spec).
 
 | Setting                        | Type    | Default    | Validation                                          | Requirement  |
 |--------------------------------|---------|------------|------------------------------------------------------|--------------|
-| Default review mode            | enum    | Unattended | Unattended / Assisted / Manual; in this build the value comes from `BOOKLOOM_REVIEW_MODE` (or the system property `bookloom.review.mode`), resolved once at launch, until Settings persist the choice | FR-REVIEW-01 |
-| Default quality dial           | enum    | Balanced   | Fast / Balanced / Max                               | FR-BRIEF-08  |
-| Foreign-passage policy default | enum    | keep-as-is | keep-as-is / translate / translate+note (3 options) | FR-BRIEF-04  |
-| Final consistency pass default | boolean | off        | on / off                                            | FR-EXPORT-06 |
-| Resume-on-launch               | boolean | on         | on / off                                            | FR-RESUME-03 |
+| When to stop and ask you (default review mode) | enum | Never — translate unattended | Never — translate unattended / When something needs review / After every segment (`ReviewMode` UNATTENDED / ASSISTED / MANUAL); stored as `run.reviewMode` and read when a run starts. `BOOKLOOM_REVIEW_MODE` (or the system property `bookloom.review.mode`, launch values `unattended` / `assisted` / `manual`), when set, decides instead and the tab names it. The long phrases are this tab's; every other screen says Unattended / Assisted / Manual | FR-REVIEW-01 |
+| Default quality                | enum    | Balanced   | Fast / Balanced / Max; a book takes it when it is first stored as a project, then keeps its own in the Book Brief | FR-BRIEF-08  |
+| Open the review desk when a translation finishes with segments to review | boolean | on | on / off          | FR-REVIEW-01 |
+| Run the last check before saving by default (final consistency pass) | boolean | not written until chosen: the Export screen follows the book's quality (on at Max); once the value is written the stored value wins | on / off; the tab shows "Not chosen yet" until the switch is changed once | FR-EXPORT-06 |
+| Keep the computer awake        | boolean | on         | on / off, applied at once: off releases the hold of a run already going; the lid note: closing a laptop lid still puts it to sleep, and translating goes on by itself after sleep | FR-RESUME-03 |
+| Reopen the last project (resume on launch) | boolean | on | on / off                                 | FR-RESUME-03 |
 
 ## storage-and-logs-tab {#storage-and-logs-tab}
 
+*Built (finalize 7.4)* (paths are shown short with the full path as a tooltip).
+
 | Setting              | Type                     | Default             | Validation                  | Requirement    |
 |----------------------|--------------------------|---------------------|------------------------------|----------------|
-| Data directory       | path (read-only display) | per-OS app data dir | must exist and be writable  | FR-PERSIST-03  |
-| Log directory        | path (read-only display) | per-OS log dir      | must exist and be writable  | DD-23          |
-| Log level            | enum                     | INFO (DEBUG in a development run) | ERROR / WARN / INFO / DEBUG / TRACE | FR-SETTINGS-06 |
-| Open data/log folder | action                   | —                   | —                           | FR-SETTINGS-06 |
+| Your projects: saved in, size | path and size (read-only display) | per-OS app data dir | the size is the database with its write-ahead file, with the project count; "saved as it goes"; "In memory only" when nothing is kept | FR-PERSIST-03 |
+| Open data folder / Make a backup… | action       | —                   | Open data folder opens the folder of `bookloom.db` (About opens only the log folder); the backup is a `VACUUM INTO` copy to a new file the person picks, holds no key, and never replaces an existing file (`validation`) | FR-PERSIST-03  |
+| Delete all data…     | action                   | —                   | asks first (Cancel default, Make a backup first); stops a running or paused translation, deletes only `bookloom.db` and its `-wal`/`-shm` files, then restarts on a fresh database with the first-launch defaults; book files, exports and logs stay; a failure keeps the data and names the data folder | FR-PERSIST-03 |
+| Logs: folder         | path (read-only display) | per-OS log dir      | must exist and be writable; the last 10 launches are kept | DD-23 |
+| Detailed diagnostic log | boolean               | off in an installed app, on in a development run | on / off, applies after BookLoom restarts (the marker file `detailed-log.on`); `BOOKLOOM_TRACE_FILE` / `bookloom.trace.file`, when set, decides and the tab names it; a development run writes it whatever the switch says and the tab says so | FR-SETTINGS-06 |
+| Open log folder / Save a diagnostic bundle… | action | —                | —                            | FR-SETTINGS-06 |
 
-`BOOKLOOM_LOG_LEVEL`, or else the system property `bookloom.log.level`, overrides the log level for one run, and is the
-only way to set it until this tab exists. `TRACE` is the only level that writes book text, prompts and model replies to
-the log (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#secrets-never-stored`).
+The log level is a launch variable, not a setting: it has no row on this tab. `BOOKLOOM_LOG_LEVEL`, or else the system property `bookloom.log.level`, sets it for one run
+(`.claude/rules/logging.md`; default INFO for an installed app, TRACE for a development run). `TRACE` is the only level
+that writes book text, prompts and model replies to the log
+(`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#secrets-never-stored`).
 
 ## validation-behaviour {#validation-behaviour}
 
 | ID             | Requirement                                                                                                             |
 |----------------|-----------------------------------------------------------------------------------------------------------------------|
 | FR-SETTINGS-V1 | Any setting entered outside its range is rejected with an inline validation message; the prior valid value is retained. |
-| FR-SETTINGS-V2 | Settings persist to the typed KV store and reload on next launch.                                                       |
+| FR-SETTINGS-V2 | Settings persist to the typed KV store and reload on next launch (*planned — UI finalization + SQLite*; secrets are stored as references only). |
 | FR-SETTINGS-V3 | A UI-language change takes effect only after an application restart (see `10_I18N_AND_ACCESSIBILITY.md`).               |

@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextArea;
@@ -148,6 +149,34 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(brief().audience()).isEqualTo("General adult readers");
     }
 
+    // IF a free-text field took any length, THEN a pasted page would be sent with every call of the run.
+    @Test
+    void audienceAndVoice_longerThanTheirLimits_keepOnlyTheLimits() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> ((TextField) required("brief-tone-audience")).setText("a".repeat(600)));
+        onFx(() -> ((TextArea) required("brief-tone-voice")).setText("v".repeat(600)));
+
+        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText()))
+                .hasSize(200);
+        assertThat(brief().audience()).hasSize(200);
+        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText()))
+                .hasSize(500);
+        assertThat(brief().voiceEra()).hasSize(500);
+    }
+
+    // IF the genre box took any length, THEN a typed paragraph would become the genre every call names.
+    @Test
+    void genre_typedLongerThanItsLimit_keepsOnlyTheLimit() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> ((ComboBox<?>) required("brief-tone-genre")).getEditor().setText("g".repeat(300)));
+
+        assertThat(ThemeTestSupport.onFx(() ->
+                        ((ComboBox<?>) required("brief-tone-genre")).getEditor().getText()))
+                .hasSize(100);
+    }
+
     // IF the narrator choice did not reach the brief, THEN the gender check would never know who narrates.
     @Test
     void narrator_firstPersonFemaleChosen_reachesTheBriefAndEnablesTheGenderChoice() throws TimeoutException {
@@ -155,7 +184,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(required("brief-tone-narrator-gender").isDisabled()).isTrue();
 
         onFx(() -> segmented("brief-tone-narrator").getButtons().get(1).setSelected(true));
-        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(2).setSelected(true));
+        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(1).setSelected(true));
 
         assertThat(brief().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
         assertThat(required("brief-tone-narrator-gender").isDisabled()).isFalse();
@@ -171,7 +200,21 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setNarratorGender(Gender.MALE));
 
         assertThat(selectedStates("brief-tone-narrator")).containsExactly(false, true, false);
-        assertThat(selectedStates("brief-tone-narrator-gender")).containsExactly(false, true, false);
+        assertThat(selectedStates("brief-tone-narrator-gender")).containsExactly(false, false, true);
+    }
+
+    // IF the line under the switched-off gender still described the stored gender, THEN a person would read that the
+    // narrator's verbs are checked while nothing checks them (W4-D3).
+    @Test
+    void narratorGender_storyNotToldAsI_helpSaysWhyTheChoiceIsOff() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
+        onFx(() -> briefModel().setNarratorGender(Gender.MALE));
+
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.UNSPECIFIED));
+
+        assertThat(((Label) required("brief-tone-narrator-gender-help")).getText())
+                .isEqualTo("Only for a story told as “I”: the narrator's gender is not used for this book.");
     }
 
     // IF a narrator choice had no explanation, THEN a person could not tell what the check does with it.
@@ -215,12 +258,12 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void qualityHint_dialMovedToMax_followsTheDial() throws TimeoutException {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Balanced: chunks of up to 8 segments · AI reviewer on · backward-consistency pass off");
+                .isEqualTo("Balanced: groups of up to 8 segments · AI reviewer on · backward-consistency pass off");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on");
+                .isEqualTo("Max: groups of up to 2 segments · AI reviewer on · backward-consistency pass on");
     }
 
     // IF the model row named another model than the run uses, THEN the person would trust the wrong one; and
@@ -251,7 +294,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     }
 
     // IF a Ukrainian label were cut short, THEN a choice could not be read; the reference rendering was seen to read
-    // "Транслітерув…" at this width.
+    // "Транслітерув..." at this width.
     @ParameterizedTest
     @ValueSource(
             strings = {

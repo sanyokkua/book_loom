@@ -12,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 
@@ -38,6 +39,26 @@ public final class ModelCatalogService implements ModelCatalog {
         }
         logOutcome(providerId, result);
         return result;
+    }
+
+    @Override
+    public Result<List<ModelInfo>> listModels(ProviderConfig draft) {
+        Objects.requireNonNull(draft, "draft");
+        log.debug("Listing models of an unsaved description providerId={} kind={}", draft.id(), draft.kind());
+        try {
+            final ProviderConfigRules.Check check = ProviderConfigRules.check(draft);
+            if (!check.isValid()) {
+                final AppError refusal = check.errors().get(0);
+                log.warn("Draft model listing refused providerId={} code={}", draft.id(), refusal.code());
+                return Result.err(refusal);
+            }
+            final Result<List<ModelInfo>> result =
+                    clients.createUncached(draft).listModels().result();
+            logOutcome(draft.id(), result);
+            return result;
+        } catch (Throwable cause) {
+            return Result.err(internalError(draft.id(), cause));
+        }
     }
 
     private Result<List<ModelInfo>> discover(String providerId) {

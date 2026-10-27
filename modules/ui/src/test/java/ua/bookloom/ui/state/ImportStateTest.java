@@ -41,10 +41,7 @@ class ImportStateTest {
     }
 
     static Stream<Arguments> unsupported() {
-        return Stream.of(
-                Arguments.of("book.pdf", "PDF"),
-                Arguments.of("report.docx", "DOCX"),
-                Arguments.of("mystery.bin", "Unknown"));
+        return Stream.of(Arguments.of("book.pdf", "PDF"), Arguments.of("report.docx", "DOCX"));
     }
 
     @Test
@@ -120,5 +117,27 @@ class ImportStateTest {
                 .isInstanceOfSatisfying(
                         ImportState.Refused.class,
                         refused -> assertThat(refused.error().code()).isEqualTo(ErrorCode.validation));
+    }
+
+    // IF an unknown type reached the state as a word, THEN the verdict line would print "Unknown" as if it were a type.
+    @Test
+    void of_unsupportedVerdictOfAnUnknownType_carriesNoType() {
+        assertThat(ImportStates.of("notes.xyz", BookFixtures.refused(InspectionVerdict.UNSUPPORTED, "Unknown")))
+                .isEqualTo(new ImportState.Unsupported("notes.xyz", null));
+    }
+
+    // IF a damaged file showed as unsupported, THEN the person would be told an EPUB is not an EPUB.
+    @Test
+    void of_damagedVerdict_isRefusedWithValidation() {
+        assertThat(ImportStates.of("corrupt.epub", BookFixtures.refused(InspectionVerdict.DAMAGED, "EPUB")))
+                .isInstanceOfSatisfying(
+                        ImportState.Refused.class,
+                        refused -> assertThat(refused.error().code()).isEqualTo(ErrorCode.validation));
+    }
+
+    @Test
+    void of_noTextVerdict_isNoText() {
+        assertThat(ImportStates.of("empty.txt", BookFixtures.refused(InspectionVerdict.NO_TEXT, "TXT")))
+                .isEqualTo(new ImportState.NoText("empty.txt"));
     }
 }

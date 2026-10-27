@@ -25,8 +25,11 @@ Prompts already know how to say "the language of this segment (infer it from its
   readers), so a reader cannot take the prompt's answer by mistake.
 - With no analysis language the code uses generic rules and assumes no language: the stop-word and title lists are the
   union of every bundled list; no pronoun table is read, so the code produces no gender evidence; no first-name list
-  seeds a gender; no plural endings fold a name into its neighbour; the English contraction rule is off; the narrator
-  detector gives no hint (the person is asked once at Start). Target-side checks are unchanged.
+  seeds a gender; no plural endings fold a name into its neighbour; the English contraction rule is off. The narrator
+  detector alone reads the text with every language whose first-person pronoun it knows (`I`, `ich`, `je`, `я`; never
+  shown, chosen or sent), and the reading with the most "I" is its hint, so Start asks who narrates a first-person
+  book under Auto too (amended in `finalize-ui-and-persistence`, retest G2-1: a hint of none had read as third person
+  and the question never came). Target-side checks are unchanged.
 - A foreign run the book marks is kept verbatim under Auto only when it is written in a script other than the one the
   book is mostly written in, counted by code from the letters. A foreign passage in the same script is left to the
   prompt's foreign-passage rule.

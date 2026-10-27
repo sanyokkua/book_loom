@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -42,22 +44,91 @@ final class ClusterGender {
             @Nullable final String languageTag) {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(chosen, "chosen");
+        return propagateAll(glossary, chosen.projectId(), List.of(new EntryChange(before, chosen)), languageTag);
+    }
+
+    /**
+     * As {@link #propagate} for many entries stored at once, in their order: the glossary is read once, and only the
+     * spellings that change are written, each in its own atomic step so a change made meanwhile is not overwritten. A
+     * spelling the person's gender already reached keeps it, so the first choice of a person wins over a later one, as
+     * one call after another would leave it.
+     *
+     * @param glossary the glossary to read and update
+     * @param projectId the project
+     * @param changes the entries as held before and as stored after, in the order they were made
+     * @param languageTag the source language's tag, or null when it is not known
+     * @return how many other entries changed, or the repository's error
+     */
+    static Result<Integer> propagateAll(
+            final GlossaryRepository glossary,
+            final String projectId,
+            final List<EntryChange> changes,
+            @Nullable final String languageTag) {
+        final List<GlossaryEntry> choices = changes.stream()
+                .filter(ClusterGender::isChoice)
+                .map(EntryChange::after)
+                .toList();
+        log.debug(
+                "Cluster gender project={}: {} of {} entries are a person's gender choice",
+                projectId,
+                choices.size(),
+                changes.size());
+        if (choices.isEmpty()) {
+            return Result.ok(0);
+        }
+        return glossary.all(projectId).flatMap(held -> {
+            final NameClusters clusters = NameClusters.of(held, null, languageTag);
+            final Map<String, GlossaryEntry> current = new LinkedHashMap<>();
+            held.forEach(entry -> current.put(entry.id(), entry));
+            final Map<String, GlossaryEntry> receivers = new LinkedHashMap<>();
+            choices.forEach(chosen -> share(clusters, current, receivers, chosen));
+            return writeAll(glossary, projectId, List.copyOf(receivers.values()));
+        });
+    }
+
+    private static boolean isChoice(final EntryChange change) {
+        final GlossaryEntry chosen = change.after();
+        final GlossaryEntry before = change.before();
         final boolean choice = chosen.gender() != Gender.UNKNOWN
                 && chosen.genderOrigin() == GenderOrigin.PERSON
                 && (before == null
                         || before.gender() != chosen.gender()
                         || before.genderOrigin() != GenderOrigin.PERSON);
         log.debug("Cluster gender: entry {} is a person's gender choice: {}", chosen.id(), choice);
-        if (!choice) {
-            return Result.ok(0);
+        return choice;
+    }
+
+    // Each receiver is written with the gender it was given, applied to the entry as held at that instant.
+    private static Result<Integer> writeAll(
+            final GlossaryRepository glossary, final String projectId, final List<GlossaryEntry> receivers) {
+        for (final GlossaryEntry receiver : receivers) {
+            final Result<Optional<GlossaryEntry>> stored =
+                    glossary.update(projectId, receiver.term(), held -> asPerson(held, receiver.gender()));
+            if (stored.isErr()) {
+                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+            }
         }
-        return glossary.all(chosen.projectId()).flatMap(held -> {
-            final List<GlossaryEntry> others = NameClusters.of(held, null, languageTag).membersOf(chosen).stream()
-                    .filter(member -> !member.id().equals(chosen.id()))
-                    .filter(member -> member.genderOrigin() != GenderOrigin.PERSON)
-                    .toList();
-            return write(glossary, chosen.projectId(), others, current -> asPerson(current, chosen.gender()));
-        });
+        return Result.ok(receivers.size());
+    }
+
+    // The other spellings of the chosen one's person that no person's gender holds yet take the chosen gender.
+    private static void share(
+            final NameClusters clusters,
+            final Map<String, GlossaryEntry> current,
+            final Map<String, GlossaryEntry> receivers,
+            final GlossaryEntry chosen) {
+        for (final GlossaryEntry member : clusters.membersOf(chosen)) {
+            final GlossaryEntry now = current.get(member.id());
+            if (member.id().equals(chosen.id()) || now == null || now.genderOrigin() == GenderOrigin.PERSON) {
+                continue;
+            }
+            final GlossaryEntry changed = asPerson(now, chosen.gender());
+            if (changed.equals(now)) {
+                continue;
+            }
+            current.put(changed.id(), changed);
+            receivers.put(changed.id(), changed);
+        }
     }
 
     /**

@@ -3,27 +3,32 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Predicate;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
+import ua.bookloom.ui.notify.ToastOccasion;
+import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.util.hash.HashUtil;
 
 /**
- * What a chosen file passes through before {@link ImportViewModel#open} sees it: one translation exists per
- * application run, so importing another book while the current run can still continue asks first, and only a
- * confirmed answer stops the run and lets the import replace it.
+ * What a chosen file passes through before {@link ImportViewModel#open} sees it.
  *
- * <p>A file whose stored project already holds decided segments is asked about once more ("continue the earlier
- * translation or start over"), because importing it again resets them. The wait for a stopping run and the lookup of
- * that count never block the FX thread: the first watches the mirror's run state and carries on from the change that
- * ends it, the second runs on the background executor. FX thread only.
+ * <p>While a project is open the person is asked first ("Open another book?"), whatever its run is doing, because the
+ * answer decides whether that project is kept. Only once the question is answered, or when no project is open, is the
+ * file's content looked up among the stored projects: a book that is already stored is named, never imported again,
+ * because importing resets a stored project's segments. A run that is still going is stopped and waited for before
+ * either answer carries on, since one translation exists per application run; it can be continued from Projects
+ * later. Neither the wait nor the lookup blocks the FX thread: the first follows the mirror's run state, the second
+ * runs on the background executor. FX thread only.
  */
 @Slf4j
 @Singleton
@@ -33,21 +38,23 @@ public final class ImportGuard {
     private final TranslationRunner runner;
     private final ImportViewModel imports;
     private final CurrentProject current;
-    private final ReplaceRunPrompt prompt;
+    private final OpenAnotherBookPrompt prompt;
     private final ProjectService projects;
     private final ExecutorService executor;
+    private final Toasts toasts;
     private boolean checking;
 
     /**
      * Wires the guard to the run it protects and the import it gates.
      *
-     * @param mirror where the run's state and file name are read and cleared
+     * @param mirror where the run's state is read and cleared
      * @param runner what stops a run that is still going
-     * @param imports where the file is finally opened, and the open book released
-     * @param current the open book, named in the log when its run is discarded
+     * @param imports where the file is finally opened
+     * @param current the open book, which the question names
      * @param prompt the question put to the person
-     * @param projects what is asked how many segments a file's stored project has decided
-     * @param executor the daemon executor that question runs on, never the FX thread
+     * @param projects what is asked for the stored projects, to name the open one and to find a book already stored
+     * @param executor the daemon executor those lookups run on, never the FX thread
+     * @param toasts where a file that could not be checked is announced
      */
     @Inject
     public ImportGuard(
@@ -55,9 +62,10 @@ public final class ImportGuard {
             final TranslationRunner runner,
             final ImportViewModel imports,
             final CurrentProject current,
-            final ReplaceRunPrompt prompt,
+            final OpenAnotherBookPrompt prompt,
             final ProjectService projects,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final Toasts toasts) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.imports = Objects.requireNonNull(imports, "imports");
@@ -65,166 +73,202 @@ public final class ImportGuard {
         this.prompt = Objects.requireNonNull(prompt, "prompt");
         this.projects = Objects.requireNonNull(projects, "projects");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
     }
 
     /**
-     * Opens {@code source} when no run can continue and its stored project holds no decided segments, otherwise asks
-     * first. FX thread only.
+     * Asks first when a project is open, otherwise checks whether the book is already stored and opens it. FX thread
+     * only.
      *
      * @param source the file the person chose
      */
     public void requestImport(final Path source) {
         Objects.requireNonNull(source, "source");
         final RunState state = mirror.runState().get();
-        log.debug("import of {} requested while the run is {}", source, state);
-        switch (state) {
-            case IDLE -> {
-                log.debug("no run exists: nothing to clear");
-                openChecked(source, () -> {});
-            }
-            case COMPLETED, FAILED -> {
-                log.debug("the run is over: it is cleared when the import goes ahead");
-                openChecked(source, mirror::publishRunCleared);
-            }
-            case RUNNING, PAUSING, PAUSED, STOPPING, STOPPED -> ask(source, state);
+        final OpenedBook book = current.book().get();
+        log.debug("import of {} requested: project open {}, run {}", fileNameOf(source), book != null, state);
+        if (book == null) {
+            log.debug("no project is open: {} is checked against the stored projects", fileNameOf(source));
+            final boolean isOver = state == RunState.COMPLETED || state == RunState.FAILED;
+            openChecked(source, null, isOver ? mirror::publishRunCleared : () -> {});
+            return;
+        }
+        log.debug("project {} is open: asking before {} is opened", book.projectId(), fileNameOf(source));
+        ask(source, book, state);
+    }
+
+    private void ask(final Path source, final OpenedBook book, final RunState state) {
+        try {
+            executor.execute(() -> {
+                final String name = projectName(book);
+                Platform.runLater(() -> asked(source, book, state, name));
+            });
+        } catch (RuntimeException rejected) {
+            log.warn("the open project's name could not be looked up: using its file name", rejected);
+            asked(source, book, state, fileNameOf(book.source()));
         }
     }
 
-    // The stored project is asked off the FX thread; the run is cleared only when the import goes ahead.
-    private void openChecked(final Path source, final Runnable clearRun) {
+    // The stored project's own display name; the file's name when it cannot be found.
+    private String projectName(final OpenedBook book) {
+        try {
+            final List<ProjectSummary> all = projects.list().data();
+            if (all != null) {
+                return all.stream()
+                        .filter(summary -> summary.project().id().equals(book.projectId()))
+                        .map(summary -> summary.project().name())
+                        .findFirst()
+                        .orElse(fileNameOf(book.source()));
+            }
+        } catch (Throwable thrown) {
+            log.warn("the project service threw while naming the open project", thrown);
+        }
+        return fileNameOf(book.source());
+    }
+
+    private void asked(final Path source, final OpenedBook book, final RunState state, final String name) {
+        log.debug("asking about opening {} beside {} (run {})", fileNameOf(source), book.projectId(), state);
+        prompt.ask(name, fileNameOf(source), state, () -> openNew(source, book, state), () -> replace(source, book));
+    }
+
+    private void openNew(final Path source, final OpenedBook book, final RunState state) {
+        log.info("open-another answered: open as a new project, beside project {}", book.projectId());
+        final Runnable proceed = () -> {
+            prompt.dismiss();
+            openChecked(source, null, this::clearEndedRun);
+        };
+        switch (state) {
+            case RUNNING -> whenReady(RunState::isIdleOrEnded, true, proceed);
+            case PAUSING, STOPPING -> whenReady(now -> now == RunState.IDLE || now.isSettled(), false, proceed);
+            case IDLE, PAUSED, STOPPED, COMPLETED, FAILED -> proceed.run();
+        }
+    }
+
+    // A run that has ended belongs to the project left behind, so the new one does not show it; a paused run stays.
+    private void clearEndedRun() {
+        final RunState state = mirror.runState().get();
+        final boolean ended = state.hasEnded();
+        log.debug("the run of the project left behind is {}: cleared {}", state, ended);
+        if (ended) {
+            mirror.publishRunCleared();
+        }
+    }
+
+    private void replace(final Path source, final OpenedBook book) {
+        log.info("open-another answered: replace project {}", book.projectId());
+        final Runnable proceed = () -> {
+            prompt.dismiss();
+            openChecked(source, book.projectId(), mirror::publishRunCleared);
+        };
+        if (mirror.runState().get().isIdleOrEnded()) {
+            proceed.run();
+        } else {
+            whenReady(RunState::isIdleOrEnded, true, proceed);
+        }
+    }
+
+    // Carries on from the first state that satisfies done; the run is told to stop first when cancel is set.
+    private void whenReady(final Predicate<RunState> done, final boolean cancel, final Runnable then) {
+        final boolean waits = !done.test(mirror.runState().get());
+        log.debug("open-another waits for the run {}, cancelling {}", waits, cancel);
+        RunWaits.when(mirror, done, then);
+        if (waits && cancel) {
+            runner.cancel();
+        }
+    }
+
+    // The file is read and looked up off the FX thread; the run is cleared only when the import goes ahead. A project
+    // that is about to be replaced does not count as a duplicate, any other stored copy does: creating over it would
+    // reset its segments.
+    private void openChecked(final Path source, final @Nullable String replacedId, final Runnable clearRun) {
         if (checking) {
             log.warn("import of {} dropped: another file is still being checked", fileNameOf(source));
             return;
         }
         checking = true;
         try {
-            executor.execute(() -> lookUp(source, clearRun));
+            executor.execute(() -> lookUp(source, replacedId, clearRun));
         } catch (RuntimeException rejected) {
-            log.warn("the earlier work of {} could not be looked up: opening without asking", fileNameOf(source));
+            log.warn("{} could not be looked up: opening without checking", fileNameOf(source), rejected);
             checking = false;
             clearRun.run();
-            imports.open(source);
+            proceed(source, replacedId);
         }
     }
 
-    private void lookUp(final Path source, final Runnable clearRun) {
+    private void proceed(final Path source, final @Nullable String replacedId) {
+        if (replacedId == null) {
+            imports.open(source);
+        } else {
+            imports.openReplacing(source, replacedId);
+        }
+    }
+
+    // Whatever the check meets, even an Error, the answer goes back to the FX thread, which clears the busy flag: a
+    // check that never answered would drop every later import.
+    private void lookUp(final Path source, final @Nullable String replacedId, final Runnable clearRun) {
         log.debug(
-                "looking up the decided segments of {} on {}",
+                "looking up {} on {}",
                 fileNameOf(source),
                 Thread.currentThread().getName());
-        final int decided = decidedOf(source);
-        Platform.runLater(() -> answered(source, decided, clearRun));
-    }
-
-    // A failed lookup never stops a book from opening: it counts as nothing decided.
-    private int decidedOf(final Path source) {
+        @Nullable List<ProjectSummary> found = null;
         try {
-            final Result<Integer> counted = projects.decidedSegments(source);
-            final Integer count = counted.data();
-            if (count == null) {
-                log.debug("the decided segments of {} could not be counted: {}", fileNameOf(source), counted.error());
-                return 0;
+            found = matchesOf(source);
+        } catch (Throwable failed) {
+            log.warn("{} could not be checked against the stored projects: opening it anyway", fileNameOf(source));
+            log.debug("the check failed", failed);
+        } finally {
+            final @Nullable List<ProjectSummary> answered = found;
+            Platform.runLater(() -> checked(source, replacedId, answered, clearRun));
+        }
+    }
+
+    // The stored copies of the file other than the one being replaced; null when the file could not be checked, which
+    // never stops a book from opening.
+    private @Nullable List<ProjectSummary> matchesOf(final Path source) {
+        try {
+            final String hash = HashUtil.sha256HexOfFile(source);
+            final Result<List<ProjectSummary>> listed = projects.list();
+            final List<ProjectSummary> all = listed.data();
+            if (all == null) {
+                log.warn("the stored projects could not be listed for {}: {}", fileNameOf(source), listed.error());
+                return null;
             }
-            return count;
-        } catch (Throwable thrown) {
-            log.warn("the project service threw while counting the decided segments", thrown);
-            return 0;
+            return EarlierProjects.matching(all, hash);
+        } catch (RuntimeException failed) {
+            log.warn("{} could not be checked against the stored projects: opening it anyway", fileNameOf(source));
+            log.debug("the check failed", failed);
+            return null;
         }
     }
 
-    private void answered(final Path source, final int decided, final Runnable clearRun) {
+    private void checked(
+            final Path source,
+            final @Nullable String replacedId,
+            final @Nullable List<ProjectSummary> matches,
+            final Runnable clearRun) {
         checking = false;
-        if (decided <= 0) {
-            log.debug("{} has no decided segments: opening without a question", fileNameOf(source));
+        if (matches == null) {
+            log.debug("{} was not checked: the person is told and it is opened", fileNameOf(source));
+            toasts.raise(ToastOccasion.IMPORT_UNCHECKED, fileNameOf(source));
+        }
+        final List<ProjectSummary> found = matches == null
+                ? List.of()
+                : matches.stream()
+                        .filter(summary -> !summary.project().id().equals(replacedId))
+                        .toList();
+        if (found.isEmpty()) {
+            log.debug("{} matches no stored project: opening it", fileNameOf(source));
             clearRun.run();
-            imports.open(source);
+            proceed(source, replacedId);
             return;
         }
-        log.debug("{} has {} decided segment(s): asking whether to continue", fileNameOf(source), decided);
-        prompt.askEarlierWork(
-                fileNameOf(source),
-                decided,
-                () -> {
-                    log.info("the earlier translation of {} is continued", fileNameOf(source));
-                    clearRun.run();
-                    imports.continueWith(source);
-                },
-                () -> {
-                    log.info("the earlier translation of {} is discarded: starting over", fileNameOf(source));
-                    clearRun.run();
-                    imports.open(source);
-                });
-    }
-
-    private void ask(final Path source, final RunState state) {
-        final String runFile = Objects.requireNonNullElse(mirror.runFileName().get(), "");
-        log.debug("asking before replacing the {} run of {}", state, runFile);
-        prompt.ask(runFile, fileNameOf(source), state, () -> confirmed(source));
-    }
-
-    private void confirmed(final Path source) {
-        final RunState state = mirror.runState().get();
-        if (hasEnded(state)) {
-            log.debug("replacement confirmed with the run {}: nothing to stop", state);
-            prompt.dismiss();
-            replace(source);
-            return;
-        }
-        log.debug("replacement confirmed with the run {}: stopping it", state);
-        final EndWatcher watcher = new EndWatcher(source);
-        mirror.runState().addListener(watcher);
-        runner.cancel();
-        watcher.changed(mirror.runState(), state, mirror.runState().get());
-    }
-
-    private void replace(final Path source) {
-        openChecked(source, () -> discardRun(source));
-    }
-
-    private void discardRun(final Path source) {
-        final OpenedBook book = current.book().get();
-        log.info(
-                "run of {} discarded for an import: project {}, new file {}",
-                mirror.runFileName().get(),
-                book == null ? null : book.projectId(),
-                fileNameOf(source));
-        mirror.publishRunCleared();
-        imports.cancel();
-    }
-
-    private static boolean hasEnded(final RunState state) {
-        return switch (state) {
-            case IDLE, STOPPED, COMPLETED, FAILED -> true;
-            case RUNNING, PAUSING, PAUSED, STOPPING -> false;
-        };
+        log.info("{} is already stored as {} project(s)", fileNameOf(source), found.size());
+        imports.showAlready(source, found);
     }
 
     private static String fileNameOf(final Path source) {
         final Path name = source.getFileName();
         return name == null ? source.toString() : name.toString();
-    }
-
-    /** Carries on with the replacement from the first state change that ends the run, then stops watching. */
-    private final class EndWatcher implements ChangeListener<@Nullable RunState> {
-
-        private final Path source;
-
-        EndWatcher(final Path source) {
-            this.source = source;
-        }
-
-        @Override
-        public void changed(
-                final ObservableValue<? extends @Nullable RunState> observed,
-                final @Nullable RunState was,
-                final @Nullable RunState now) {
-            if (now == null || !hasEnded(now)) {
-                return;
-            }
-            mirror.runState().removeListener(this);
-            log.debug("the run ended as {}: replacing it", now);
-            prompt.dismiss();
-            replace(source);
-        }
     }
 }

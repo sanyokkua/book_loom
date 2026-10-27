@@ -113,6 +113,12 @@ public abstract class FxTestBase extends FxRobot implements ApplicationFixture {
         return this;
     }
 
+    /** {@link #interact(Runnable)}, then TestFX's {@code waitForFxEvents()}, for work the action hands on to a queue. */
+    protected final void run(final Runnable action) {
+        interact(action);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
     /**
      * TestFX's own {@code interact}: the action, then {@code waitForFxEvents()} with its fixed sleeps. Only for a test
      * whose input pacing is part of what it measures (a wheel spun at a hand's speed), so its timing stays what it was

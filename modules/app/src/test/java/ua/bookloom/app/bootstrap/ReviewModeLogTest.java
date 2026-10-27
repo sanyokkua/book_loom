@@ -42,8 +42,8 @@ class ReviewModeLogTest {
     // WHEN the flag was a typo, THEN exactly one WARN line names it and one INFO line says Unattended was used.
     @Test
     void logReviewMode_rejectedValue_writesOneWarnNamingItAndOneInfoWithTheMode() throws IOException {
-        final List<String> lines =
-                logAfter(new ResolvedReviewMode(ReviewMode.UNATTENDED, ResolvedReviewMode.Source.DEFAULT, "strict"));
+        final List<String> lines = logAfter(
+                new ResolvedReviewMode(ReviewMode.UNATTENDED, ResolvedReviewMode.Source.ENVIRONMENT, "strict"));
 
         assertThat(lines)
                 .filteredOn(line -> line.contains("WARN"))

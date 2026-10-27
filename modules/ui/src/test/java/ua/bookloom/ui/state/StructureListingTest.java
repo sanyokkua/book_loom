@@ -82,7 +82,7 @@ class StructureListingTest {
 
     // IF a grouping node listed nothing, THEN picking a part would show an empty list although its chapters have text.
     @Test
-    void unitsOf_groupingNodeWithoutAUnit_listsItsDescendantsUnitsOnceInOrder() {
+    void partsOf_groupingNodeWithoutAUnit_listsItsDescendantsUnitsOnceInOrder() {
         final StructureNode part = new StructureNode(
                 "Part I",
                 null,
@@ -93,15 +93,25 @@ class StructureListingTest {
                                 "Chapter 2", "u2", 4, List.of(new StructureNode("Scene", "u2", null, List.of()))),
                         new StructureNode("Notes", null, null, List.of())));
 
-        assertThat(StructureListing.unitsOf(part)).containsExactly("u1", "u2");
+        assertThat(StructureListing.partsOf(part)).containsExactly(UnitPart.whole("u1"), UnitPart.whole("u2"));
     }
 
     // IF a chapter with a unit also listed its children's units, THEN a picked chapter would show other chapters' text.
     @Test
-    void unitsOf_nodeWithItsOwnUnit_listsOnlyThatUnit() {
+    void partsOf_nodeWithItsOwnUnit_listsOnlyThatUnit() {
         final StructureNode chapter =
                 new StructureNode("Chapter", "u1", 3, List.of(new StructureNode("Section", "u9", null, List.of())));
 
-        assertThat(StructureListing.unitsOf(chapter)).containsExactly("u1");
+        assertThat(StructureListing.partsOf(chapter)).containsExactly(UnitPart.whole("u1"));
+    }
+
+    // IF a Markdown or FB2 chapter, which shares the book's one unit, listed the whole unit or nothing, THEN picking a
+    // chapter would show other chapters' segments, or none at all.
+    @Test
+    void partsOf_chapterOfASingleUnitBook_listsItsRunOfThatUnit() {
+        final StructureNode chapter = new StructureNode(
+                "Chapter 2", "book.md", 4, List.of(new StructureNode("Scene", "book.md", 2, List.of(), 7)), 5);
+
+        assertThat(StructureListing.partsOf(chapter)).containsExactly(new UnitPart("book.md", 5, 4));
     }
 }

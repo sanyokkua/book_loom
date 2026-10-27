@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import org.testfx.api.FxToolkit;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
@@ -40,9 +42,14 @@ class ResolveAllTest {
         System.setProperty(PROPERTY, "true");
     }
 
+    private @Nullable BookLoomApplication booted;
+
     @AfterEach
     void cleanup() throws Exception {
         System.clearProperty(PROPERTY);
+        if (booted != null) {
+            FxToolkit.cleanupApplication(booted);
+        }
         FxToolkit.cleanupStages();
     }
 
@@ -57,12 +64,13 @@ class ResolveAllTest {
     private BookLoomApplication boot() throws Exception {
         StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
-        return (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        booted = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
+        return booted;
     }
 
     private static ResolveAll.Outcome onFx(final Injector injector, final ResolveAll.Navigation navigation)
             throws Exception {
-        return WaitForAsyncUtils.asyncFx(() -> ResolveAll.check(injector, navigation, ViewNames.IMPORT))
+        return WaitForAsyncUtils.asyncFx(() -> ResolveAll.check(injector, navigation, ViewNames.PROJECTS))
                 .get();
     }
 
@@ -82,7 +90,7 @@ class ResolveAllTest {
         assertThat(outcome.loadedViews()).containsExactlyElementsOf(AVAILABLE);
         assertThat(outcome.resolvedPorts())
                 .contains("ReviewDesk", "ExportService", "GlossaryService", "ProjectService", "TranslationEngine");
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.PROJECTS);
     }
 
     @Test
@@ -90,7 +98,8 @@ class ResolveAllTest {
         FxToolkit.registerPrimaryStage();
         final Injector injector = Guice.createInjector(
                 Stage.DEVELOPMENT,
-                Modules.override(new CoreModules(startup()), new UiModule()).with(new ThrowingReviewDesk()));
+                Modules.override(new CoreModules(startup(), new InMemoryPersistenceModule()), new UiModule())
+                        .with(new ThrowingReviewDesk()));
 
         final ResolveAll.Outcome outcome = ResolveAll.resolvePorts(injector);
 
@@ -102,14 +111,11 @@ class ResolveAllTest {
     @Test
     void check_exportScreenMissing_namesExportAsFailed() throws Exception {
         final Injector injector = boot().injector();
-        final Navigator real = injector.getInstance(Navigator.class);
-        final ResolveAll.Navigation noExport = view -> {
-            if (view == ViewNames.EXPORT) {
-                return Optional.ofNullable(real.currentView().get());
-            }
-            real.navigate(view);
-            return Optional.ofNullable(real.currentView().get());
-        };
+        final Navigator navigator = injector.getInstance(Navigator.class);
+        final ResolveAll.Navigation real = ResolveAll.navigation(navigator);
+        final ResolveAll.Navigation noExport = view -> view == ViewNames.EXPORT
+                ? Optional.ofNullable(navigator.currentView().get())
+                : real.show(view);
 
         final ResolveAll.Outcome outcome = onFx(injector, noExport);
 

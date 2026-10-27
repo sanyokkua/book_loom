@@ -20,7 +20,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** The recurring-term scan: titles and dual-use words are proposed, names, function words and rare words are not. */
 class KeyTermScanTest {
@@ -100,7 +100,7 @@ class KeyTermScanTest {
 
     @Test
     void newTerms_termsTheGlossaryOrTheLexiconHold_areLeftOut() {
-        final Injector injector = Guice.createInjector(new PersistenceModule());
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
         final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
         glossary.add(new GlossaryEntry("p1:imp", "p1", "Imp", "біс", TermType.TERM, Gender.UNKNOWN, false));

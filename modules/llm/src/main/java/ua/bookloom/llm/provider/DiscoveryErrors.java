@@ -17,13 +17,12 @@ public final class DiscoveryErrors {
      */
     public static boolean preserve(ErrorCode code) {
         return switch (code) {
-            case auth, unreachable, timeout, cancelled -> true;
+            case auth, unreachable, timeout, cancelled, missingCredential -> true;
             case rateLimited,
                     modelNotFound,
                     modelUnavailable,
                     discoveryFailed,
                     upstream,
-                    missingCredential,
                     contextWindow,
                     emptyCompletion,
                     validation,

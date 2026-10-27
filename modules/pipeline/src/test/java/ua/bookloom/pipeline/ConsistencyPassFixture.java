@@ -11,6 +11,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 
@@ -46,7 +47,8 @@ final class ConsistencyPassFixture {
                 new ObjectMapper(),
                 Guice.createInjector().getInstance(QualityLoop.class),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                ReviewMode.UNATTENDED,
-                java.time.Clock.systemUTC());
+                () -> ReviewMode.UNATTENDED,
+                java.time.Clock.systemUTC(),
+                RequestDefaultsSource.environmentOnly());
     }
 }

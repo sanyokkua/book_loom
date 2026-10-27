@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -60,7 +61,8 @@ public final class BookExporter {
      * @param plan where to read the source, where to publish and in which languages
      * @param decided the book whose segments carry the decisions to write, with each written target's masked form
      * @param cancellationRequested read once, after the check and before the publication move
-     * @return the published path, or a typed failure that leaves the destination and any temporary file untouched
+     * @return the published path, or a typed failure that leaves the destination untouched and removes only the
+     *     temporary file this export created
      */
     Result<Path> export(
             final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
@@ -97,41 +99,16 @@ public final class BookExporter {
 
     private Result<Exported> beginExport(
             final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
-        final Path temporary = temporaryPath(plan.destination());
-        log.debug("Export temporary path is {}", temporary);
-        final Result<Boolean> collision = hasTemporaryCollision(plan, temporary);
-        if (collision.isErr()) {
-            return Result.err(errorOf(collision));
-        }
-        if (Boolean.TRUE.equals(collision.data())) {
-            log.warn("Refused export because temporary path {} aliases source or destination", temporary);
-            return Result.err(collisionError());
-        }
-        return new Attempt(plan, decided, cancellationRequested, temporary).run();
-    }
-
-    private Result<Boolean> hasTemporaryCollision(final ExportPlan plan, final Path temporary) {
+        final Path temporary;
         try {
-            final boolean collision = Files.isSymbolicLink(temporary)
-                    || ExportPathAliases.aliases(temporary, plan.source())
-                    || ExportPathAliases.aliases(temporary, plan.destination());
-            log.debug("Export temporary collision check for {} returned {}", temporary, collision);
-            return Result.ok(collision);
-        } catch (Throwable cause) {
-            return Result.err(unexpectedError("check the export temporary path", cause));
+            temporary = Publication.reserveTemporary(plan.destination());
+        } catch (UncheckedIOException failure) {
+            final IOException cause = Objects.requireNonNull(failure.getCause(), "reservation failure cause");
+            return Result.err(Publication.fixableWriteError(plan.destination(), cause)
+                    .orElseGet(() -> unexpectedError("reserve the export temporary file", cause)));
         }
-    }
-
-    private static Path temporaryPath(final Path destination) {
-        final Path fileName = Objects.requireNonNull(destination.getFileName(), "destination file name");
-        return destination.resolveSibling("." + fileName);
-    }
-
-    private static AppError collisionError() {
-        return AppError.of(
-                ErrorCode.validation,
-                "This export path is unsafe",
-                "The temporary export path refers to the source or destination, so the book was left untouched.");
+        log.debug("Export temporary path is {}", temporary);
+        return new Attempt(plan, decided, cancellationRequested, temporary).run();
     }
 
     private static AppError errorOf(final Result<?> result) {
@@ -248,7 +225,8 @@ public final class BookExporter {
                 log.debug("Temporary export {} removed by publication move", temporary);
                 return Result.ok(new Exported(plan.destination(), fallbacks));
             } catch (UncheckedIOException failure) {
-                return failAfterClose(moveError(Objects.requireNonNull(failure.getCause(), "move failure cause")));
+                return failAfterClose(
+                        moveError(plan.destination(), Objects.requireNonNull(failure.getCause(), "cause")));
             }
         }
 
@@ -329,7 +307,11 @@ public final class BookExporter {
         return result.isOk() ? "ok" : "error " + errorOf(result).code();
     }
 
-    private static AppError moveError(final IOException cause) {
+    private static AppError moveError(final Path destination, final IOException cause) {
+        final Optional<AppError> fixable = Publication.fixableWriteError(destination, cause);
+        if (fixable.isPresent()) {
+            return fixable.get();
+        }
         if (cause instanceof FileAlreadyExistsException) {
             log.warn("Refused export because destination appeared before publication");
             return AppError.of(

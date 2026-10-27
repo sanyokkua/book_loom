@@ -21,13 +21,17 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The owner says whether it wants a droppable part shown through {@link #want}; the row shows it only while it also
  * fits. The row asks its parent for room for every wanted part, so a window made wider again brings the hidden parts
- * back. Nothing is logged here: the row is laid out on every pulse that changes a text in it.
+ * back. Parts named by {@link #dropBelow} also leave whenever the area the row sits in is of a narrower class
+ * ({@link LayoutClass}), whatever room the row itself has, so a title bar gives way the same at the same window size.
+ * Nothing is logged here: the row is laid out on every pulse that changes a text in it.
  */
 public final class PriorityRow extends HBox {
 
     private final List<Node> dropOrder = new ArrayList<>();
     private final Map<Node, Boolean> wanted = new HashMap<>();
     private final Set<Node> dropped = new HashSet<>();
+    private final Map<Node, LayoutClass.Width> widthLimits = new HashMap<>();
+    private final Set<Node> narrowed = new HashSet<>();
     private final List<List<Node>> foldStages = new ArrayList<>();
     private @Nullable Node foldMenu;
     private boolean folded;
@@ -44,6 +48,40 @@ public final class PriorityRow extends HBox {
      */
     public PriorityRow(final double spacing) {
         super(spacing);
+        LayoutClass.follow(this, this::followClass);
+    }
+
+    /**
+     * Names parts that leave whenever the area the row sits in is narrower than {@code shownFrom}, whatever room the
+     * row has.
+     *
+     * @param shownFrom the narrowest area class in which the parts may show
+     * @param parts children of this row, wanted until the owner says otherwise through {@link #want}
+     */
+    public void dropBelow(final LayoutClass.Width shownFrom, final Node... parts) {
+        Objects.requireNonNull(shownFrom, "shownFrom");
+        for (final Node part : parts) {
+            widthLimits.put(part, shownFrom);
+            wanted.putIfAbsent(part, part.isVisible());
+        }
+    }
+
+    // The row's own width need not change when the area's class does, so a crossed class asks for a layout itself.
+    private void followClass() {
+        if (!narrowedNow().equals(narrowed)) {
+            requestLayout();
+        }
+    }
+
+    private Set<Node> narrowedNow() {
+        final LayoutClass.Width area = LayoutClass.of(this);
+        final Set<Node> now = new HashSet<>();
+        widthLimits.forEach((part, shownFrom) -> {
+            if (area.isBelow(shownFrom)) {
+                now.add(part);
+            }
+        });
+        return now;
     }
 
     /**
@@ -134,12 +172,19 @@ public final class PriorityRow extends HBox {
 
     @Override
     protected void layoutChildren() {
+        final Set<Node> narrowNow = narrowedNow();
+        final boolean narrowChanged = !narrowNow.equals(narrowed);
+        if (narrowChanged) {
+            narrowed.clear();
+            narrowed.addAll(narrowNow);
+        }
         final Plan plan = plan(getWidth() - snappedLeftInset() - snappedRightInset());
-        if (!plan.hidden().equals(dropped) || plan.folded() != folded) {
+        if (narrowChanged || !plan.hidden().equals(dropped) || plan.folded() != folded) {
             dropped.clear();
             dropped.addAll(plan.hidden());
             folded = plan.folded();
             dropOrder.forEach(this::apply);
+            widthLimits.keySet().forEach(this::apply);
             foldStages.forEach(stage -> stage.forEach(this::apply));
             if (foldMenu != null) {
                 apply(foldMenu);
@@ -194,13 +239,18 @@ public final class PriorityRow extends HBox {
     }
 
     private boolean isWanted(final Node part) {
+        final LayoutClass.Width shownFrom = widthLimits.get(part);
+        if (shownFrom != null && LayoutClass.of(this).isBelow(shownFrom)) {
+            return false;
+        }
         final Boolean wish = wanted.get(part);
         return wish == null ? part.isManaged() : wish;
     }
 
     private void apply(final Node part) {
-        final boolean show =
-                part.equals(foldMenu) ? folded : Boolean.TRUE.equals(wanted.get(part)) && !dropped.contains(part);
+        final boolean show = part.equals(foldMenu)
+                ? folded
+                : Boolean.TRUE.equals(wanted.get(part)) && !dropped.contains(part) && !narrowed.contains(part);
         part.setVisible(show);
         part.setManaged(show);
     }

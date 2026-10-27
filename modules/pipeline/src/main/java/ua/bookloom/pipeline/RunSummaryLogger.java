@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
@@ -31,6 +32,8 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.pipeline.reviewer.EditOutcome;
 
 /**
@@ -102,8 +105,15 @@ final class RunSummaryLogger {
                     RoundStarted _,
                     RecoveryWaiting _,
                     BatchStarted _,
-                    CallSnapshotUpdated _ -> {}
+                    CallSnapshotUpdated _,
+                    StepsPlanned _,
+                    StepChanged _,
+                    BriefSampleRead _ -> {}
         }
+        writeWhenDue();
+    }
+
+    private void writeWhenDue() {
         final Instant now = clock.instant();
         final Instant last = lastLine;
         if (last == null) {

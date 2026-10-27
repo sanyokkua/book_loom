@@ -20,6 +20,10 @@ import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.ProjectActions;
+import ua.bookloom.ui.state.ProjectActionsImpl;
+import ua.bookloom.ui.state.ProjectOpener;
+import ua.bookloom.ui.state.RowOpener;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -55,6 +59,23 @@ class UiModuleTest extends ShellTestBase {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
 
         assertThat(injector.getInstance(port)).isNotNull().isSameAs(injector.getInstance(port));
+    }
+
+    // IF ProjectActions and ProjectOpener each injected the other, THEN the injector would fail with a cycle; the
+    // RowOpener seam is what breaks it.
+    @Test
+    void projectActions_realGraph_isTheDialogBackedOneAndBuildsWithoutACycle() {
+        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
+
+        assertThat(injector.getInstance(ProjectActions.class)).isInstanceOf(ProjectActionsImpl.class);
+        assertThat(injector.getInstance(ProjectOpener.class)).isNotNull();
+    }
+
+    @Test
+    void rowOpener_realGraph_isTheProjectOpener() {
+        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
+
+        assertThat(injector.getInstance(RowOpener.class)).isSameAs(injector.getInstance(ProjectOpener.class));
     }
 
     // WHEN a test builds the graph, THEN the review mode is the Unattended default no run pauses for.

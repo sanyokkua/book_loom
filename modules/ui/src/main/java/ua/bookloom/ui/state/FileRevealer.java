@@ -21,4 +21,13 @@ public interface FileRevealer {
      * @param file the written book
      */
     void open(Path file);
+
+    /**
+     * Whether {@code file} is where it is said to be, asked before showing a file that may have been moved since it was
+     * stored. Touches the disk, so never on the FX thread.
+     *
+     * @param file the file
+     * @return {@code true} if a file is there, {@code false} otherwise
+     */
+    boolean isPresent(Path file);
 }

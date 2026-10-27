@@ -98,7 +98,7 @@ class BookBriefNarratorNoticeTest extends BookBriefScreenTestBase {
     void notice_genderChosen_goesAway() throws TimeoutException {
         openWith(BookFixtures.firstPersonHint());
 
-        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(1).setSelected(true));
+        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(2).setSelected(true));
 
         assertThat(brief().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
         assertThat(isShown(NOTICE)).isFalse();

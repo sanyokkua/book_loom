@@ -10,6 +10,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.ui.i18n.ErrorWords;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The glossary's CSV import and export as the names and style screen runs them: on the background calls, each answer
@@ -20,6 +22,7 @@ import ua.bookloom.api.project.GlossaryEntry;
  * @param rows the screen's rows, which an import replaces
  * @param notice the line the screen reports in place
  * @param summary the wording of an import's or export's result
+ * @param messages the catalogue a failure is worded from
  */
 @Slf4j
 record GlossaryFiles(
@@ -27,7 +30,8 @@ record GlossaryFiles(
         GlossaryCalls calls,
         ObservableList<GlossaryEntry> rows,
         ObjectProperty<@Nullable GlossaryNotice> notice,
-        ImportSummary summary) {
+        ImportSummary summary,
+        Messages messages) {
 
     void importCsv(final String project, final Path source, final Consumer<Runnable> whileCurrent) {
         log.debug("importing glossary csv {} into project {}", source, project);
@@ -63,6 +67,6 @@ record GlossaryFiles(
 
     private void fail(final String what, final AppError failure) {
         log.warn("the glossary {} failed with {}", what, failure.code());
-        notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, failure.message()));
+        notice.set(new GlossaryNotice(GlossaryNotice.Level.ERROR, ErrorWords.message(messages, failure)));
     }
 }

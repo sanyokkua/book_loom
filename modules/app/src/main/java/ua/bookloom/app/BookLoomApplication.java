@@ -1,16 +1,21 @@
 package ua.bookloom.app;
 
+import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.spi.Message;
 import com.google.inject.util.Modules;
-import java.util.Arrays;
+import java.time.Clock;
+import java.time.ZoneId;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -18,13 +23,21 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.app.bootstrap.ReviewModeSource;
+import ua.bookloom.app.bootstrap.StartupFailureDialog;
+import ua.bookloom.persistence.SqlitePersistenceModule;
+import ua.bookloom.persistence.StorageOpenException;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.OpenStepsModule;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.StartupMessages;
+import ua.bookloom.ui.StoredPreferences;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.WindowLaunch;
 
 /**
  * The JavaFX application: everything after the launcher, and the only place an injector is constructed.
@@ -45,34 +58,104 @@ public final class BookLoomApplication extends Application {
     private static final double INITIAL_WIDTH = 1024;
     private static final double INITIAL_HEIGHT = 700;
     private static final String JAVAFX_VERSION_PROPERTY = "javafx.runtime.version";
+    private static final int EXIT_STORAGE_FAILED = 1;
 
     private final AppLifecycle lifecycle = new AppLifecycle();
+    private final BiConsumer<AppError, Integer> startupFailure;
 
     private @Nullable Injector injector;
+    private @Nullable Stage window;
 
     /** Constructed reflectively by the JavaFX launcher, which is why {@link StartupContext} exists. */
     public BookLoomApplication() {
-        // Nothing here: init() runs before start() and is the supported place for real work.
+        this(StartupFailureDialog::showOnRunningToolkitAndExit);
+    }
+
+    /**
+     * For a test that watches where a startup failure goes instead of letting the process exit.
+     *
+     * @param startupFailure shows the failure and ends the process; a test's recorder returns instead
+     */
+    BookLoomApplication(final BiConsumer<AppError, Integer> startupFailure) {
+        this.startupFailure = Objects.requireNonNull(startupFailure, "startupFailure");
     }
 
     @Override
     public void init() {
         final StartupContext startup = StartupContext.take();
-
-        injector = ResolveAll.isEnabled()
-                ? smokeBuild(Platform::runLater, () -> smokeInjector(startup))
-                : developmentInjector(startup);
-
-        lifecycle.phaseOne(injector);
-        lifecycle.phaseTwo(injector);
+        final Injector built = buildAndOpen(startup);
+        injector = built;
+        // init() is not the FX thread: this read seeds the stored review mode the FX-thread readers (ready card) see.
+        log.debug(
+                "seeded review mode {}",
+                built.getInstance(ReviewModeSource.class).current());
+        seedPreferences(built);
         log.info("injector built and two-phase init complete");
         // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
-        injector.getInstance(SessionInfo.class)
+        built.getInstance(SessionInfo.class)
                 .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
     }
 
+    // A database that cannot be opened stops the start with its own message; any other failure stays a crash. The
+    // database opens while the injector is built (an eager singleton reads the providers), not only in phase two, so
+    // both sit inside the one catch.
+    private Injector buildAndOpen(final StartupContext startup) {
+        try {
+            final Injector built = ResolveAll.isEnabled()
+                    ? smokeBuild(Platform::runLater, () -> smokeInjector(startup))
+                    : developmentInjector(startup);
+            lifecycle.phaseOne(built);
+            lifecycle.phaseTwo(built);
+            return built;
+        } catch (RuntimeException e) {
+            final AppError storage = storageFailure(e).orElseThrow(() -> e);
+            log.error("startup stopped: the database could not be opened, code={}", storage.code());
+            startupFailure.accept(
+                    StartupMessages.storageFailure(storage, startup.paths().dataDir(), Locale.getDefault()),
+                    EXIT_STORAGE_FAILED);
+            throw e;
+        }
+    }
+
+    // Guice reports a failure while it builds the graph as a CreationException whose messages hold the causes.
+    static Optional<AppError> storageFailure(final Throwable thrown) {
+        final Optional<AppError> direct = StorageOpenException.errorIn(thrown);
+        if (direct.isPresent() || !(thrown instanceof CreationException creation)) {
+            return direct;
+        }
+        return creation.getErrorMessages().stream()
+                .map(Message::getCause)
+                .filter(Objects::nonNull)
+                .map(StorageOpenException::errorIn)
+                .flatMap(Optional::stream)
+                .findFirst();
+    }
+
+    /**
+     * Reads the stored language and theme once, off the FX thread, before any window is built. {@code Messages}
+     * decides its language at first use, so this must run before {@code start()} and before the first message is
+     * resolved.
+     *
+     * @param injector the built injector, with phase two done
+     */
+    static void seedPreferences(final Injector injector) {
+        injector.getInstance(StoredPreferences.class).load();
+        log.debug("seeded the stored language and theme");
+    }
+
+    /** The window keeps its work in the database file of the data folder; the command line never does. */
+    static Module windowPersistence(final StartupContext startup) {
+        return new SqlitePersistenceModule(startup.paths().databaseFile(), Clock.system(ZoneId.systemDefault()));
+    }
+
+    /** The shared graph with the window's own bindings laid over it: the real keep-awake and the real restart. */
+    static Module windowCore(final StartupContext startup) {
+        return Modules.override(new CoreModules(startup, windowPersistence(startup)))
+                .with(new DesktopModule());
+    }
+
     private static Injector developmentInjector(final StartupContext startup) {
-        return Guice.createInjector(new CoreModules(startup), new UiModule(), new DesktopModule());
+        return Guice.createInjector(windowCore(startup), new UiModule());
     }
 
     /**
@@ -102,8 +185,7 @@ public final class BookLoomApplication extends Application {
     private static Injector smokeInjector(final StartupContext startup) {
         log.info("resolve-all smoke: building the injector in the production stage");
         final Module ui = Modules.override(new UiModule()).with(new OpenStepsModule());
-        return Guice.createInjector(
-                com.google.inject.Stage.PRODUCTION, new CoreModules(startup), ui, new DesktopModule());
+        return Guice.createInjector(com.google.inject.Stage.PRODUCTION, windowCore(startup), ui);
     }
 
     @Override
@@ -124,6 +206,7 @@ public final class BookLoomApplication extends Application {
 
         stage.setTitle(TITLE);
         shell.applyWindowLimits(stage);
+        placeWindow(stage);
         // Closing with work under way asks first; stage.close() is not a close request, so confirming does not loop.
         final ExitGuard exitGuard = injector().getInstance(ExitGuard.class);
         stage.setOnCloseRequest(event -> {
@@ -138,12 +221,44 @@ public final class BookLoomApplication extends Application {
                 injector().getInstance(Navigator.class).currentView().get());
         if (ResolveAll.isEnabled() && initial.isPresent()) {
             ResolveAll.run(injector(), injector().getInstance(Navigator.class), initial.get());
+        } else {
+            final WindowLaunch launch = injector().getInstance(WindowLaunch.class);
+            launch.announceStorageSetAside();
+            launch.openLastProject();
+            launch.lookForLocalModel();
         }
     }
 
-    /** The first entry with a screen, so the window never opens on an empty screen area while any screen exists. */
+    /** Projects, the way into the workflow: with no project open every numbered step is locked. */
     private static Optional<ViewNames> initialView() {
-        return Arrays.stream(ViewNames.values()).filter(ViewNames::isAvailable).findFirst();
+        return Optional.of(ViewNames.PROJECTS);
+    }
+
+    @Override
+    public void stop() {
+        log.info("window closing, releasing resources");
+        keepWindowForRestart();
+        lifecycle.close();
+    }
+
+    // Set by the copy that closed for "Restart now"; an ordinary launch has none and opens at the default size.
+    private void placeWindow(final Stage stage) {
+        WindowPlacement.parse(System.getenv(WindowPlacement.ENVIRONMENT))
+                .ifPresent(placement -> WindowPlacement.apply(stage, placement));
+        window = stage;
+    }
+
+    private void keepWindowForRestart() {
+        final Stage shown = window;
+        if (shown == null || injector == null) {
+            return;
+        }
+        final PendingRestart restart =
+                injector.getInstance(StartupContext.class).pendingRestart();
+        if (restart.requested().isPresent()) {
+            log.debug("restart asked: the window's place and size go to the next copy");
+            restart.keepWindow(WindowPlacement.of(shown));
+        }
     }
 
     /**

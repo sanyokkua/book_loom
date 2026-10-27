@@ -18,7 +18,7 @@ One `AbstractModule` per Gradle module, co-located with the implementation it bi
 |--------------------------------------|----------------------------------------------------------------------|
 | `DocumentModule` (`:document`)       | `DocumentPort → DocumentService`                                     |
 | `LlmModule` (`:llm`)                 | **built:** `ChatModelFactory → ChatModelFactoryImpl` (resolves the offline `pseudo` provider and every registered real one), `ProviderClientFactory` and `InferenceGate` (singletons), `ProviderVerifier`, `ModelCatalog`, `ProviderConfigs`; still to come: credential resolution |
-| `PersistenceModule` (`:persistence`) | repository ports → JDBI DAOs, `Jdbi`, `DataSource`                   |
+| `SqlitePersistenceModule` / `InMemoryPersistenceModule` (`:persistence`) | repository ports → JDBI DAOs over one `SqliteDatabase` (window) / in-memory adapters (command line, tests) |
 | `PipelineModule` (`:pipeline`)       | **built:** `TranslationEngine → TranslationEngineImpl`; still to come: assemblers, QA          |
 | `UiModule` (`:ui`)                   | viewmodels, `Navigator`, state mirror, controllers via factory       |
 | `AppModule` (`:app`)                 | `ExecutorService` (daemon), virtual-thread executor, config, wiring  |
@@ -28,9 +28,9 @@ infrastructure (gate, executors, mirror, DAOs); no field/setter injection; no st
 
 **`ua.bookloom.app.CoreModules`** (`:app`, built by `add-translation-engine-and-cli`) is the Guice module the desktop
 app and the command line **share**, so the two entry points never wire different graphs: it installs `AppModule`,
-`DocumentModule`, `LlmModule`, `PersistenceModule` and `PipelineModule`. `BookLoomApplication.init` builds its
-injector from `CoreModules` plus `UiModule`; `bootstrap.TranslateLauncher` (the `./gradlew :app:translate` entry
-point) builds its injector from `CoreModules` alone — it never starts JavaFX.
+`DocumentModule`, `LlmModule`, the persistence module handed to its constructor and `PipelineModule`.
+`BookLoomApplication.init` builds its injector from `CoreModules(startup, SqlitePersistenceModule)` plus `UiModule`; `bootstrap.TranslateLauncher` (the `./gradlew :app:translate` entry
+point) builds its injector from `CoreModules(startup, InMemoryPersistenceModule)` alone, so it never creates `bookloom.db` — it never starts JavaFX.
 
 ## composition-root {#composition-root}
 
@@ -39,7 +39,7 @@ point) builds its injector from `CoreModules` alone — it never starts JavaFX.
 ```java
 Injector injector = Guice.createInjector(
     new AppModule(startup),
-    new PersistenceModule(),
+    new SqlitePersistenceModule(paths.databaseFile(), clock),  // InMemoryPersistenceModule on the command line
     new LlmModule(),
     new DocumentModule(),
     new PipelineModule(),
@@ -60,16 +60,16 @@ Startup separates **construction** from **resource opening** so the object graph
   and SQLite needs the data dir, so it runs first.
 - **Phase 1 — construct services.** Create the injector; instantiate singletons (logging, settings, gate, executors,
   engine, viewmodels). No DB is open yet; repositories hold an unopened handle. This is pure and fast.
-- **Phase 2 — open resources + backfill.** Open the SQLite DataSource, run Flyway migrations, then **backfill** the
+- **Phase 2 — open resources + backfill.** Open the SQLite DataSource, create the schema from the schema file (Flyway migrations arrive with the first release, ADR-0043), then **backfill** the
   repositories with the live `Jdbi`/connection. Load persisted settings and the `current_provider` **new-project
   default** (it seeds a freshly-created project's binding and is never consulted at resume,
   `06_DATA_MODEL_SQLITE.md#app_state`). Only after Phase 2 is the app ready to accept work.
 
 Splitting the phases keeps DI wiring side-effect-free (safe to construct in tests without a DB) and gives a single,
-ordered place where migrations run before any DAO is used. **Migrations run to completion inside Phase 2, before any
-`TranslationJob` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel a migration
-(see [graceful-shutdown](#graceful-shutdown)). A failed migration rolls back completely and surfaces as a typed startup
-error (`06_DATA_MODEL_SQLITE.md#corruption-and-recovery`).
+ordered place where the schema is created before any DAO is used. **Schema creation (and, from the first release, migrations) runs to completion inside Phase 2, before any
+`TranslationJob` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel it
+(see [graceful-shutdown](#graceful-shutdown)). A database that cannot be opened is renamed aside and a fresh one created, with one WARN line
+(`06_DATA_MODEL_SQLITE.md#corruption-and-recovery`, ADR-0043).
 
 ## eager-singletons {#eager-singletons}
 
@@ -79,7 +79,10 @@ before the first scene is assembled. "Eager" here means only that the *binding/s
 does **not** mean persisted values are readable then. The settings **repository is not backfilled until Phase 2**, so
 **theme and language reads are valid only post-Phase-2**; any read before then has no DB behind it. Consequently the
 **first scene is built after Phase 2**, and if no `ui.language` row exists yet it falls back to the **OS locale**
-(DD-34, via the injectable `Locale` provider). The gate, executors, and state mirror are ordinary singletons created on
+(DD-34, via the injectable `Locale` provider). `Messages` decides its language lazily, on first use, so it may be built
+before Phase 2; `StoredPreferences.load()` runs in `init()` right after Phase 2 (off the FX thread) and seeds the stored
+language and theme (and the keep-awake choice, into `KeepAwakeGate`) before the window's first `get`. A seed that arrives after the decision is logged and applies from the
+next launch. The resolve-all smoke builds the production stage, which constructs the settings forms and the title-bar chip (and so decides the language from the OS locale) before `init()` can seed; it is a throwaway run. **Restart** is a hand-off through `PendingRestart`: the window exits, `stop()` closes the database, `Launcher` closes the lock, and only then starts the new copy. The gate, executors, and state mirror are ordinary singletons created on
 first use during Phase 1.
 
 ## logging-bootstrap-order {#logging-bootstrap-order}
@@ -117,8 +120,8 @@ production instance hold distinct locks and can run at once.
    on expiry, stop waiting and let the daemon threads die with the JVM).
 4. Release the single-instance lock.
 
-`stop()` can only cancel work a `TranslationJob` is running; **migrations complete during Phase 2 before any
-`TranslationJob` exists**, so `stop()` never interrupts a migration (`two-phase-init`). Because accepted segments are already durable, an
+`stop()` can only cancel work a `TranslationJob` is running; **schema creation completes during Phase 2 before any
+`TranslationJob` exists**, so `stop()` never interrupts it (`two-phase-init`). Because accepted segments are already durable, an
 abrupt kill is also safe — graceful shutdown just avoids losing the last in-flight chunk and leaves WAL in a clean
 state; on OS crash / power loss at most the last in-flight commit is lost, never earlier accepted work
 (`06_DATA_MODEL_SQLITE.md#storage-conventions`, ADR-0009).

@@ -138,7 +138,7 @@ JPACKAGE_ARGS=(
 # module path in the image's app/mods. `--add-modules=ALL-MODULE-PATH` at launch resolves the modules nothing
 # `requires` by name: Guava (guice's dependency, an explicit module an automatic module does not pull in) and the
 # other jars the root module reaches only reflectively.
-RUNTIME_MODULES="java.base,java.compiler,java.desktop,java.logging,java.naming,java.net.http,java.prefs,java.scripting,java.sql,java.xml,\
+RUNTIME_MODULES="java.base,java.compiler,java.desktop,java.logging,java.naming,java.net.http,java.prefs,java.scripting,java.sql,java.sql.rowset,java.xml,\
 jdk.charsets,jdk.crypto.ec,jdk.jfr,jdk.localedata,jdk.unsupported"
 
 build_runtime() {

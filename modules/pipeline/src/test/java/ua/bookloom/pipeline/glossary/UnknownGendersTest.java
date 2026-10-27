@@ -19,7 +19,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** The characters Start asks about: unknown gender, named often enough, most mentioned first. */
@@ -32,7 +32,7 @@ class UnknownGendersTest {
     void setUp() {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)));
         service = injector.getInstance(GlossaryServiceImpl.class);
         openProjects = injector.getInstance(OpenProjects.class);

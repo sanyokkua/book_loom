@@ -16,6 +16,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
@@ -35,6 +36,8 @@ import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.pipeline.StepChanged;
+import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.pipeline.CallKindTotals;
 
@@ -114,7 +117,10 @@ final class UnattendedRun {
                     ContextAssembled _,
                     RoundStarted _,
                     BatchStarted _,
-                    CallSnapshotUpdated _ -> {}
+                    CallSnapshotUpdated _,
+                    StepsPlanned _,
+                    StepChanged _,
+                    BriefSampleRead _ -> {}
         }
     }
 

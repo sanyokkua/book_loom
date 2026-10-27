@@ -1548,7 +1548,7 @@ the blocker set ends the repair there ("Keep the best candidate through the repa
 The application SHALL record for every decided segment its confidence and each finding with the check or the reviewer
 that raised it, its type, its severity and a short note, SHALL record every edit it applied as a low finding raised by
 `reviewer-edit` that carries the quote and its replacement, and SHALL keep the findings of a FLAGGED segment for the
-review panel and for any later retry.
+review desk and for any later retry.
 
 **Source**: FR-QA-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`), `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`. In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed and what it put there.
 

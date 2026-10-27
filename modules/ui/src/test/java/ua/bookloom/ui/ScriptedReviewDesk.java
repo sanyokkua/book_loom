@@ -15,11 +15,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.api.project.SegmentRecord;
 
 /**
@@ -34,7 +36,9 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
     private final Map<String, SegmentView> views = new ConcurrentHashMap<>();
     private volatile @Nullable Result<List<SegmentView>> queueView;
+    private final Map<ReviewFilter, List<SegmentView>> queuesByFilter = new ConcurrentHashMap<>();
     private volatile @Nullable Result<ReviewCounts> countsView;
+    private volatile @Nullable OriginalTitle originalTitleView;
     private volatile @Nullable CountDownLatch acceptGate;
     private final CountDownLatch acceptEntered = new CountDownLatch(1);
     private volatile @Nullable CountDownLatch retryGate;
@@ -50,12 +54,22 @@ public final class ScriptedReviewDesk implements ReviewDesk {
         queueView = Result.ok(List.copyOf(views));
     }
 
+    /** Makes every {@code queue} call for this filter answer these views; it wins over the all-filters answer. */
+    public void willAnswerQueue(final ReviewFilter filter, final List<SegmentView> views) {
+        queuesByFilter.put(filter, List.copyOf(views));
+    }
+
     /**
      * Makes {@code segment} answer this view for its id, and every action on that id answer a record of it when
      * nothing was queued; a later call for the same id replaces the view.
      */
     public void willAnswerSegment(final SegmentView view) {
         views.put(view.segmentId(), view);
+    }
+
+    /** Makes every {@code originalTitle} call answer this title, whatever else was queued. */
+    public void willAnswerOriginalTitle(final OriginalTitle title) {
+        originalTitleView = title;
     }
 
     /** Makes every {@code counts} call answer these counts, whatever else was queued. */
@@ -153,7 +167,8 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
-        final Result<List<SegmentView>> view = queueView;
+        final List<SegmentView> forFilter = queuesByFilter.get(filter);
+        final Result<List<SegmentView>> view = forFilter != null ? Result.ok(forFilter) : queueView;
         if (view != null) {
             calls.add("queue(" + projectId + ", " + filter + ")");
             return view;
@@ -169,6 +184,22 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             return Result.ok(view);
         }
         return answer("segment(" + projectId + ", " + segmentId + ")");
+    }
+
+    // A title not scripted is the scripted aux:title segment's source from the book's details, if one was scripted.
+    @Override
+    public Result<OriginalTitle> originalTitle(final String projectId) {
+        final OriginalTitle scripted = originalTitleView;
+        final SegmentView details = views.get("aux:title");
+        if (scripted != null) {
+            calls.add("originalTitle(" + projectId + ")");
+            return Result.ok(scripted);
+        }
+        if (details != null) {
+            calls.add("originalTitle(" + projectId + ")");
+            return Result.ok(new OriginalTitle(details.displaySource(), TitleOrigin.DETAILS, "aux:title"));
+        }
+        return answer("originalTitle(" + projectId + ")");
     }
 
     @Override

@@ -16,6 +16,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
@@ -78,17 +79,43 @@ final class NeighbourRevision {
                 .toList();
         logStarted(inputs, byId, scope, checked.size());
         calls.planned(ModelCalls.Stage.NEIGHBOUR_CHECK, checked.size());
-        for (final int at : checked) {
-            final Result<Boolean> done = checkOne(inputs, order, at, byId, calls, tally);
-            if (done.isErr()) {
-                return done;
-            }
-        }
+        final Result<Boolean> ran = checkAll(inputs, checked, byId, calls, tally);
         log.info(
-                "Neighbour check ended project={} checked={} skippedAsRemembered={}",
+                "Neighbour check ended project={} checked={} skippedAsRemembered={} notReread={}",
                 inputs.projectId(),
                 checked.size(),
-                tally.rememberedCount());
+                tally.rememberedCount(),
+                tally.notRereadCount());
+        return ran;
+    }
+
+    private Result<Boolean> checkAll(
+            final PassInputs inputs,
+            final List<Integer> checked,
+            final Map<String, SegmentRecord> byId,
+            final ModelCalls calls,
+            final PassTally tally) {
+        for (int next = 0; next < checked.size(); next++) {
+            final int left = checked.size() - next;
+            if (EarlyStop.isRequested(calls, "Neighbour check", left)) {
+                tally.notReread(left);
+                return Result.ok(true);
+            }
+            final Result<Boolean> done = checkOne(inputs, inputs.order(), checked.get(next), byId, calls, tally);
+            if (done.isErr()) {
+                return stoppedOrFailed(done, calls, tally, left);
+            }
+        }
+        return Result.ok(true);
+    }
+
+    // The paragraph whose call the early stop interrupted was not reread either, so it counts with the rest.
+    private static Result<Boolean> stoppedOrFailed(
+            final Result<Boolean> failed, final ModelCalls calls, final PassTally tally, final int left) {
+        if (!EarlyStop.isStop(failed, calls, "Neighbour check")) {
+            return failed;
+        }
+        tally.notReread(left);
         return Result.ok(true);
     }
 
@@ -154,23 +181,38 @@ final class NeighbourRevision {
         if (record == null || source == null || masked == null) {
             return Result.ok(false);
         }
-        final Map<String, String> user = NeighbourPrompt.slots(
-                inputs, source, masked, neighbour(inputs, order, at - 1, byId), neighbour(inputs, order, at + 1, byId));
+        final NeighbourPrompt.@Nullable Neighbour before = neighbour(inputs, order, at - 1, byId);
+        final NeighbourPrompt.@Nullable Neighbour after = neighbour(inputs, order, at + 1, byId);
+        final Map<String, String> user = NeighbourPrompt.slots(inputs, source, masked, before, after);
+        final ExportProgress.Neighbours around = NeighbourPrompt.Neighbour.around(before, source, after);
+        return ask(inputs, source, user, new Checked(record, masked, around), calls, tally);
+    }
+
+    private Result<Boolean> ask(
+            final PassInputs inputs,
+            final Segment source,
+            final Map<String, String> user,
+            final Checked item,
+            final ModelCalls calls,
+            final PassTally tally) {
+        final SegmentRecord record = item.record();
+        final String id = record.segmentId();
         final RevisionGuards.Mode mode = guardMode(record);
         final String fingerprint = ParagraphFingerprint.of(inputs, user, mode);
         if (checked.has(inputs.projectId(), id, fingerprint)) {
             log.debug("Neighbour check segmentId={} skipped: checked before in this state", id);
             tally.neighbourRemembered();
-            return Result.ok(false);
+            return unchanged(calls, record, "remembered", item.around());
         }
         log.debug("Neighbour check segmentId={} status={} guards={}", id, record.status(), mode);
-        final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(inputs, source, masked, user, mode, calls);
+        final Result<RevisionAnswer> answered =
+                call.checkAgainstNeighbours(inputs, source, item.masked(), user, mode, calls);
         if (answered.isErr()) {
-            return skipped(id, Objects.requireNonNull(answered.error(), "error"), tally);
+            return skipped(record, Objects.requireNonNull(answered.error(), "error"), tally, calls, item.around());
         }
         final RevisionAnswer answer = Objects.requireNonNull(answered.data(), "answered");
-        rememberIfSettled(inputs.projectId(), id, fingerprint, masked, answer);
-        return settle(inputs, record, masked, answer, tally);
+        rememberIfSettled(inputs.projectId(), id, fingerprint, item.masked(), answer);
+        return settle(inputs, item, answer, tally, calls);
     }
 
     // A paragraph left as it was, or whose change was refused for what it broke, is not asked again until something it
@@ -195,13 +237,33 @@ final class NeighbourRevision {
 
     // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the book's
     // export; only the person's stop ends it.
-    private static Result<Boolean> skipped(final String id, final AppError error, final PassTally tally) {
+    private static Result<Boolean> skipped(
+            final SegmentRecord record,
+            final AppError error,
+            final PassTally tally,
+            final ModelCalls calls,
+            final ExportProgress.@Nullable Neighbours around) {
         if (error.code() == ErrorCode.cancelled) {
             return Result.err(error);
         }
-        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
+        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", record.segmentId(), error.code());
         tally.skipped();
+        return unchanged(calls, record, "skipped", around);
+    }
+
+    // Shows the paragraph as it was, with no new text, for an item the pass went over without changing it.
+    private static Result<Boolean> unchanged(
+            final ModelCalls calls,
+            final SegmentRecord record,
+            final String verdict,
+            final ExportProgress.@Nullable Neighbours around) {
+        calls.reread(record.segmentId(), shownBefore(record), null, verdict, around);
         return Result.ok(false);
+    }
+
+    private static String shownBefore(final SegmentRecord record) {
+        final String target = record.machineTarget();
+        return target != null ? target : Objects.requireNonNullElse(record.maskedMachineTarget(), "");
     }
 
     // A flagged paragraph's text failed a check, often a lost sentence or quote mark: its fix may add one back.
@@ -218,37 +280,47 @@ final class NeighbourRevision {
         return NeighbourPrompt.Neighbour.of(inputs.source(id).orElse(null), byId.get(id));
     }
 
+    /**
+     * The paragraph a check answered for.
+     *
+     * @param record its stored record when the call was made
+     * @param masked its stored target, masked
+     * @param around the paragraphs around it, as the reread item shows them
+     */
+    private record Checked(SegmentRecord record, String masked, ExportProgress.@Nullable Neighbours around) {}
+
     private Result<Boolean> settle(
             final PassInputs inputs,
-            final SegmentRecord record,
-            final String masked,
+            final Checked item,
             final RevisionAnswer answer,
-            final PassTally tally) {
+            final PassTally tally,
+            final ModelCalls calls) {
+        final SegmentRecord record = item.record();
         final String id = record.segmentId();
         return switch (answer) {
             case RevisionAnswer.Unchanged unchanged -> {
                 log.debug("Neighbour check segmentId={} answered unchanged", id);
                 tally.neighbourUnchanged();
-                yield Result.ok(false);
+                yield unchanged(calls, record, "unchanged", item.around());
             }
             case RevisionAnswer.Refused refused -> {
                 log.debug("Neighbour check segmentId={} refused rule={}", id, refused.reason());
                 tally.refused(refused.reason());
-                yield Result.ok(false);
+                yield unchanged(calls, record, "refused:" + refused.reason(), item.around());
             }
             case RevisionAnswer.Revised revised
-            when revised.restored().maskedForm().equals(masked) -> {
+            when revised.restored().maskedForm().equals(item.masked()) -> {
                 log.debug("Neighbour check segmentId={} found nothing to change", id);
                 tally.neighbourUnchanged();
-                yield Result.ok(false);
+                yield unchanged(calls, record, "unchanged", item.around());
             }
             case RevisionAnswer.Revised revised
-            when isRewriteTooLarge(record, masked, revised) -> {
+            when isRewriteTooLarge(record, item.masked(), revised) -> {
                 log.debug("Neighbour check segmentId={} refused rule={}", id, RevisionGuards.REWRITE_CAP_RULE);
                 tally.refused(RevisionGuards.REWRITE_CAP_RULE);
-                yield Result.ok(false);
+                yield unchanged(calls, record, "refused:" + RevisionGuards.REWRITE_CAP_RULE, item.around());
             }
-            case RevisionAnswer.Revised revised -> storeFix(inputs, record, masked, revised.restored(), tally);
+            case RevisionAnswer.Revised revised -> storeFix(inputs, item, revised.restored(), tally, calls);
         };
     }
 
@@ -261,19 +333,31 @@ final class NeighbourRevision {
 
     private Result<Boolean> storeFix(
             final PassInputs inputs,
-            final SegmentRecord record,
-            final String masked,
+            final Checked item,
             final GateResult.Restored restored,
-            final PassTally tally) {
+            final PassTally tally,
+            final ModelCalls calls) {
+        final SegmentRecord record = item.record();
         final String id = record.segmentId();
         return writer.store(record, restored, List.of(), RevisionWriter.Change.NEIGHBOUR)
                 .map(how -> {
                     log.debug("Neighbour check segmentId={} stored={}", id, how);
-                    log.trace("Neighbour check segmentId={} before={} after={}", id, masked, restored.maskedForm());
-                    if (how == RevisionWriter.Stored.MACHINE_TARGET) {
+                    log.trace(
+                            "Neighbour check segmentId={} before={} after={}",
+                            id,
+                            item.masked(),
+                            restored.maskedForm());
+                    final boolean fixed = how == RevisionWriter.Stored.MACHINE_TARGET;
+                    if (fixed) {
                         tally.neighbourFixed(id, inputs.locator(id));
                     }
-                    return how == RevisionWriter.Stored.MACHINE_TARGET;
+                    calls.reread(
+                            id,
+                            shownBefore(record),
+                            fixed ? restored.restored() : null,
+                            fixed ? "fixed" : "skipped",
+                            item.around());
+                    return fixed;
                 });
     }
 }

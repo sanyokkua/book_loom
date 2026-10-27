@@ -267,7 +267,7 @@ public final class BookIndex {
      */
     public List<Occurrences.Read> reads(final List<Integer> ordinals) {
         Objects.requireNonNull(ordinals, "ordinals");
-        return ordinals.stream().map(data.reads()::get).toList();
+        return ordinals.stream().map(data::read).toList();
     }
 
     /**

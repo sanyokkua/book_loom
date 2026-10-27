@@ -35,7 +35,7 @@ import ua.bookloom.util.paths.AppPaths;
 class LoggingBootstrapTest {
 
     private static final ResolvedTraceFile TRACE_ON =
-            new ResolvedTraceFile(true, ResolvedLogLevel.Source.ENVIRONMENT, null);
+            new ResolvedTraceFile(true, ResolvedTraceFile.Source.ENVIRONMENT, null);
     private static final Map<String, String> PROPERTIES = Map.of(
             "os.name", "Mac OS X",
             "os.version", "15.1",
@@ -288,7 +288,7 @@ class LoggingBootstrapTest {
     @Test
     void configure_traceFileOff_writesNoTraceFile() throws IOException {
         final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
-        final ResolvedTraceFile off = new ResolvedTraceFile(false, ResolvedLogLevel.Source.DEFAULT, null);
+        final ResolvedTraceFile off = new ResolvedTraceFile(false, ResolvedTraceFile.Source.DEFAULT, null);
         LoggingBootstrap.configure(logDir, false, resolved(Level.DEBUG), off, () -> "# header");
 
         LoggerFactory.getLogger("ua.bookloom.test").trace("trace canary");

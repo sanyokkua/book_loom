@@ -1,6 +1,7 @@
 package ua.bookloom.api.llm;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 
@@ -36,5 +37,14 @@ public interface ChatModel {
             attempts.failed(only, error.code());
         }
         return result;
+    }
+
+    /**
+     * The context window the person set for this model, which replaces the one detected from the program.
+     *
+     * @return the stored window in tokens, or null when none is set
+     */
+    default @Nullable Integer contextWindowOverride() {
+        return null;
     }
 }

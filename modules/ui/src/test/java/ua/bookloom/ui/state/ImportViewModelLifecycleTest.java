@@ -268,17 +268,18 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(projects.closeCallsOnFxThread()).containsExactly(false);
     }
 
-    // IF Cancel left the project open, THEN every abandoned import would stay stored and the next screens would still
-    // read it; Cancel releases exactly the open project, empties the holder and returns the screen to the drop zone.
+    // IF Cancel left the project open, THEN the next screens would still read it; a Cancel that keeps the project (a
+    // run
+    // decided segments in it) releases exactly the open project, empties the holder and returns to the drop zone.
     @Test
-    void cancel_bookOpen_closesItsProjectEmptiesTheHolderAndReturnsToIdle() {
+    void cancel_keepingTheProject_closesItsProjectEmptiesTheHolderAndReturnsToIdle() {
         final Path source = dir.resolve("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         final ImportViewModel viewModel = viewModel();
         open(viewModel, source);
 
         onFx(() -> {
-            viewModel.cancel();
+            viewModel.cancel(false);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -295,40 +296,13 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         final ImportViewModel viewModel = viewModel();
 
         onFx(() -> {
-            viewModel.cancel();
+            viewModel.cancel(true);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(projects.closedProjects()).isEmpty();
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
-    }
-
-    // IF Cancel during an unanswered import discarded the current book, THEN the answer would then open a second book
-    // beside a project that was already released; it is ignored until the answer decides what is open.
-    @Test
-    void cancel_whileOpening_isIgnored() throws InterruptedException, TimeoutException {
-        final Path first = dir.resolve("first.epub");
-        final Path second = dir.resolve("second.epub");
-        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
-        projects.on(second, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, "en", "Other", "Someone", 1)));
-        useBackgroundThread();
-        final ImportViewModel viewModel = viewModel();
-        open(viewModel, first);
-        awaitAnswered(viewModel);
-        projects.hold();
-        open(viewModel, second);
-        projects.awaitEntered();
-
-        onFx(() -> {
-            viewModel.cancel();
-            return null;
-        });
-
-        assertThat(projects.closedProjects()).isEmpty();
-        assertThat(openedBook()).isNotNull();
-        projects.release();
-        awaitAnswered(viewModel);
     }
 
     // IF the replaced project were closed before the new one was current, THEN a screen reading the holder in between

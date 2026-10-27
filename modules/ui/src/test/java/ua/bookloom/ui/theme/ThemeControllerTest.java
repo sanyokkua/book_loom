@@ -12,7 +12,11 @@ import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.settings.AppSetting;
+import ua.bookloom.api.settings.ThemeSetting;
 import ua.bookloom.ui.FxTestBase;
+import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.SettingWriter;
 import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.ThemeTestSupport;
 
@@ -84,7 +88,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF the operating system reports dark when the scene is attached, THEN the app background is the dark #283237.
     @Test
     void attach_providerReportsDark_backgroundResolvesToDarkBlock() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.DARK));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.DARK));
 
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
@@ -94,7 +98,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF the operating system reports no preference, THEN the light block applies and bg is #f4f1ea.
     @Test
     void attach_providerReportsNoPreference_backgroundResolvesToLightBlock() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
 
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
@@ -104,7 +108,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF nothing was chosen, THEN the mode is to follow the operating system.
     @Test
     void mode_afterAttachWithNoChoice_isSystem() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.DARK));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.DARK));
 
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
@@ -114,7 +118,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF the theme goes to dark and back to light, THEN the same 41 role names resolve in each block but bg differs.
     @Test
     void setMode_darkThenLight_resolvesSameRoleNamesWithDifferentValues() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
         ThemeTestSupport.onFx(() -> attachTo(controller));
         final Set<String> lightRoles = resolvedRoleNames();
         final Paint lightBg = ThemeTestSupport.resolveRole(scene, "bg");
@@ -134,7 +138,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF the mode is set to follow the system while the operating system reports light, THEN the light block applies.
     @Test
     void setMode_systemWhileProviderReportsLight_appliesLightBlock() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
         ThemeTestSupport.onFx(() -> attachTo(controller));
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
 
@@ -147,7 +151,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF a person picks dark while following the system, THEN the mode is DARK (no longer following the system).
     @Test
     void setMode_darkWhileSystem_modeBecomesDark() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
@@ -160,7 +164,7 @@ class ThemeControllerTest extends FxTestBase {
     @Test
     void setMode_darkThenProviderChangesToLight_darkBlockStays() {
         final FakeColorSchemeProvider provider = new FakeColorSchemeProvider(ThemeBlock.DARK);
-        final ThemeController controller = new ThemeController(provider);
+        final ThemeController controller = controllerOver(provider);
         ThemeTestSupport.onFx(() -> attachTo(controller));
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
 
@@ -173,7 +177,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF the title-bar control is used while the light block is in force, THEN dark applies and the mode is DARK.
     @Test
     void toggle_fromLight_givesDarkBlockAndExplicitDarkMode() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> toggle(controller));
@@ -187,7 +191,7 @@ class ThemeControllerTest extends FxTestBase {
     // control changed it.
     @Test
     void modeProperty_followsSetMode() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
         ThemeTestSupport.onFx(() -> attachTo(controller));
         assertThat(ThemeTestSupport.onFx(() -> controller.modeProperty().get())).isEqualTo(ThemeMode.SYSTEM);
 
@@ -202,7 +206,7 @@ class ThemeControllerTest extends FxTestBase {
     // would not move with it.
     @Test
     void modeProperty_followsToggle() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> toggle(controller));
@@ -215,7 +219,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF a listener on the observable mode were not told of a change, THEN a view bound to it would never repaint.
     @Test
     void modeProperty_listenerAdded_isToldOfEachChangeInOrder() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
         ThemeTestSupport.onFx(() -> attachTo(controller));
         final List<ThemeMode> seen = new ArrayList<>();
         ThemeTestSupport.onFx(() -> {
@@ -232,7 +236,7 @@ class ThemeControllerTest extends FxTestBase {
     // IF a scene is attached twice, THEN the theme stylesheet is listed exactly once.
     @Test
     void attach_calledTwice_addsStylesheetOnce() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
 
         ThemeTestSupport.onFx(() -> attachTo(controller));
         ThemeTestSupport.onFx(() -> attachTo(controller));
@@ -243,13 +247,118 @@ class ThemeControllerTest extends FxTestBase {
     // IF the theme is switched, THEN no inline style is written to the root: only the style class changes.
     @Test
     void setMode_switching_leavesRootInlineStyleEmpty() {
-        final ThemeController controller = new ThemeController(new FakeColorSchemeProvider(null));
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(null));
         ThemeTestSupport.onFx(() -> attachTo(controller));
 
         ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
 
         assertThat(scene.getRoot().getStyle()).isEmpty();
         assertThat(scene.getRoot().getStyleClass()).contains(Theme.DARK_STYLE_CLASS);
+    }
+
+    @Test
+    void setMode_dark_storesDark() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
+
+        assertThat(settings.get(AppSetting.THEME).data()).contains(ThemeSetting.DARK);
+    }
+
+    @Test
+    void toggle_fromLight_storesDark() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.onFx(() -> toggle(controller));
+
+        assertThat(settings.get(AppSetting.THEME).data()).contains(ThemeSetting.DARK);
+    }
+
+    // The stored mode is applied when the window first shows, and that is no new choice, so nothing is written.
+    @Test
+    void attach_seededDarkOsLight_darkBlockAndNothingWritten() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        controller.seed(ThemeMode.DARK);
+
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, "bg"), DARK_BG, "bg");
+        assertThat(ThemeTestSupport.onFx(controller::mode)).isEqualTo(ThemeMode.DARK);
+        assertThat(settings.all().data()).isEmpty();
+    }
+
+    @Test
+    void attach_seededSystemOsDark_darkBlock() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.DARK));
+        controller.seed(ThemeMode.SYSTEM);
+
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, "bg"), DARK_BG, "bg");
+    }
+
+    // Writes may be picked up by different threads in any order; the last choice must still be the stored one.
+    @Test
+    void setMode_twiceWritesRunNewestFirst_lastChoiceStays() {
+        final List<Runnable> held = new ArrayList<>();
+        final ThemeController controller = new ThemeController(
+                new FakeColorSchemeProvider(null), new SettingWriter(settings, held::add, Runnable::run));
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
+        ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.LIGHT));
+        runNewestFirst(held);
+
+        assertThat(settings.get(AppSetting.THEME).data()).contains(ThemeSetting.LIGHT);
+    }
+
+    @Test
+    void saveFailed_storeRefuses_isTrueAndTheModeHolds() {
+        final ThemeController controller = new ThemeController(
+                new FakeColorSchemeProvider(null),
+                new SettingWriter(new MemorySettings().failPuts(), Runnable::run, Runnable::run));
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.DARK));
+
+        assertThat(ThemeTestSupport.onFx(() -> controller.saveFailedProperty().get()))
+                .isTrue();
+        assertThat(ThemeTestSupport.onFx(controller::mode)).isEqualTo(ThemeMode.DARK);
+    }
+
+    @Test
+    void seed_afterAttach_ignored() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        controller.seed(ThemeMode.DARK);
+
+        assertThat(ThemeTestSupport.onFx(controller::mode)).isEqualTo(ThemeMode.SYSTEM);
+    }
+
+    @Test
+    void seed_afterAPersonChose_ignored() {
+        final ThemeController controller = controllerOver(new FakeColorSchemeProvider(ThemeBlock.LIGHT));
+        ThemeTestSupport.onFx(() -> switchTo(controller, ThemeMode.LIGHT));
+        controller.seed(ThemeMode.DARK);
+
+        ThemeTestSupport.onFx(() -> attachTo(controller));
+
+        assertThat(ThemeTestSupport.onFx(controller::mode)).isEqualTo(ThemeMode.LIGHT);
+    }
+
+    private final MemorySettings settings = new MemorySettings();
+
+    private ThemeController controllerOver(final ColorSchemeProvider provider) {
+        return new ThemeController(provider, new SettingWriter(settings, Runnable::run, Runnable::run));
+    }
+
+    private static void runNewestFirst(final List<Runnable> held) {
+        while (!held.isEmpty()) {
+            held.remove(held.size() - 1).run();
+        }
     }
 
     private Set<String> resolvedRoleNames() {

@@ -40,9 +40,13 @@ public interface ProviderVerifier {
     Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy);
 }
 public record ProviderConfig(
-    String id, ProviderKind kind, URI baseUrl, Duration connectTimeout, Duration requestTimeout
+    String id, ProviderKind kind, URI baseUrl, Duration connectTimeout, Duration requestTimeout,
+    String displayName, ProviderAuth auth, String apiKeyHeader, String credentialRef,
+    String modelsPath, String chatPath, Map<String, String> headers, List<String> customModels
 ) {}
 ```
+
+(shown without nullability; the five-argument form builds a provider with no sign-in.) `HttpExchange` builds each request's headers from it through `RequestHeaders`: the JSON headers, the extra headers with `${env:NAME}` resolved, then the sign-in header last. Both clients choose their model-list and chat path through `EndpointPaths`.
 
 The per-dialect `ProviderClient` is an internal `:llm` interface, not a public port. It supplies `probe()`,
 `listModels()`, `chat(modelId, request)` and `kind()` to the factory and verifier. `probe()` is a lightweight
@@ -59,11 +63,11 @@ the pipeline stays dialect-agnostic:
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
   `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
   call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
-  provides them. It deliberately sends no `think`, `num_ctx`, `keep_alive`, or `/api/show` request in this change.
+  provides them. It sends `think` (`false`, `"low"` or `true`) only when the request carries a reasoning level, and deliberately sends no `num_ctx`, `keep_alive`, or `/api/show` request in this change.
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
-  `response_format` only when requested, and `reasoning_effort:"none"` when the request disables reasoning (Ollama's
+  `response_format` only when requested, and `reasoning_effort` (`none`, `low` or `medium`) when the request carries a reasoning level (Ollama's
   and LM Studio's `/v1` both honour it). A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
   is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
 
@@ -209,8 +213,7 @@ structured-output rejection is currently surfaced through the normal HTTP mappin
 
 ## credentials-as-reference {#credentials-as-reference}
 
-Credential resolution is planned, not built; authentication is deferred. The future Bearer path will hold an environment-variable name as a credential reference,
-resolve it immediately before a request and never persist or log the secret; keychain support is not part of that path.
+A credential is held as an environment-variable name. `RequestHeaders` resolves it, and every `${env:NAME}` in an extra header, immediately before each request, in `HttpExchange` for plain and streamed calls alike, through the lookup function `LlmModule` is given: `:app`'s `SystemEnvironmentVariables` (process environment, then the OS store of the user's variables — `launchctl getenv`, the registry user and machine environment, `environment.d` and `/etc/environment` — read at call time with a 2-second cache), the same instance that answers the Providers form's "set / not set". `:llm` holds no operating-system code; installed alone it reads the process environment. A variable that is unset or blank refuses the call as `missingCredential` naming the variable, before any request is sent; a resolved value is never logged, never placed in an `AppError`, and shown only masked in a verification exchange. Keychain support is not built.
 
 ## three-stage-verification {#three-stage-verification}
 
@@ -219,7 +222,7 @@ The built `ProviderVerifier` verifies a selected provider/model pair in three or
 
 1. **Connection** — the dedicated `probe()` reaches the configured base URL (`/api/version` for Ollama and `/models`
    for OpenAI-compatible providers). It proves reachability independently of listing, so Connection and Models are
-   genuinely separable stages. Authentication is not yet part of this client configuration.
+   genuinely separable stages. Every stage sends the description's sign-in headers. An unsaved description is verified through `ProviderVerifier.verify(ProviderConfig, model, policy)` on an uncached client and listed through `ModelCatalog.listModels(ProviderConfig)`; neither registers anything.
 2. **Models** — a non-empty list must contain the selected model; absence is `modelUnavailable`. A discovery failure
    or empty list is a soft pass, allowing inference to establish availability for a manually entered model.
 3. **Inference** — a minimal `chat` round-trip against the chosen model returns non-empty content; proves the model

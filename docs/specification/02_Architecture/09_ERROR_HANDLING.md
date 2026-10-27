@@ -76,7 +76,9 @@ public enum ErrorCode {
   (`06_DATA_MODEL_SQLITE.md#resume-support`, `05_RELIABILITY_AND_RESUME.md`, DD-31); it is not silently substituted.
 - **A DRM-protected or otherwise unsupported import is an inspection verdict carried as data, not a distinct
   `ErrorCode`.** Inspecting a book (`ADR-0039`) answers with a `BookInspection` whose `verdict` names the refusal
-  reason (for example `DRM_PROTECTED`, naming the scheme) as ordinary data — a refusing verdict is a normal, successful
+  reason (for example `DRM_PROTECTED`, naming the scheme; `DAMAGED` for a file whose content is not the format its
+  name promises; `UNSUPPORTED` for any other type) as ordinary data; the import adds `NO_TEXT`, after opening, for a
+  book whose body holds no word, and stores no project for it — a refusing verdict is a normal, successful
   answer from the inspector, never a thrown failure. The `ErrorCode` enum stays at its **fifteen constants** (`ADR-0022`):
   actually **opening** a book whose inspection refused it still fails with `validation`, the same code any other
   invalid input uses; inspection only moves *how the reason is discovered and displayed* earlier and off the exception
@@ -85,7 +87,12 @@ public enum ErrorCode {
 ## safe-details-allowlist {#safe-details-allowlist}
 
 `AppError.details` is populated only from an **allowlist** of safe fields — HTTP status, endpoint host (not full URL
-with tokens), model name, timeout value, attempt count, QA finding names. It **never** contains: credentials, resolved
+with tokens), model name, timeout value, attempt count, QA finding names, a failure reason and a folder's own name.
+The **failure reason** is a fixed token (`FailureReason`: `folder-missing`, `access-denied`, `read-only`, `disk-full`,
+`not-utf8`, `csv-header`), rendered first as `reason=<token>`, for a failure whose code alone cannot say what to fix: the
+services word failures in English, and the window words a failure in another display language by its reason when it
+has one, else by its code. A write that fails for a missing folder, a refused permission, a read-only place or a full
+disk is `validation` with that reason and the folder's last name only (never its path). It **never** contains: credentials, resolved
 secret values, `Authorization` headers, full request/response bodies, or file contents. A helper builds `details` from
 typed inputs, not from string-concatenating arbitrary exception messages, so secrets cannot leak into the UI or logs
 (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`).
@@ -96,6 +103,9 @@ typed inputs, not from string-concatenating arbitrary exception messages, so sec
   `Result.err(AppError(internal, …, cause))`. Unhandled exceptions never cross a module edge.
 - Known failures are converted to their specific `ErrorCode` at the point they are recognized (HTTP mapping in `:llm`,
   SQL errors in `:persistence`, parse errors in `:document`, QA hard-gate in `:pipeline` → `validation`).
+- A refused setting is not an error: an HTTP 400 or 422 that names an optional setting the request sent
+  (`temperature`, `top_p`, `max_tokens`, `num_ctx`, ...) is repeated without it and remembered (FR-INFER-09e), and never
+  surfaces. Only one that names nothing sent is `validation`; 422 maps like 400.
 - Logging happens once, at the boundary that first constructs the `AppError`, with the `cause`; downstream layers do not
   re-log.
 
@@ -117,11 +127,17 @@ separate `Result`. A **cancelled** run is not itself an error: `TranslationJob.r
 destination exists without overwrite) is instead returned as `Result.err(AppError)` directly, before any report is
 built.
 
+An export whose last check the person ended early ("Write the file now") is a **partial pass, not a failure**: the
+model call in flight answers `cancelled`, which the pass reads as the stop, keeps every fix already stored, writes the
+book and reports the paragraphs it never reached as `ConsistencyChecks.notReread`.
+
 ## ui-surfacing {#ui-surfacing}
 
 - A failed `Result` reaching `:ui` produces: (1) a **toast** (`err`) with `title`, and (2) for actionable/hard failures
   an **error dialog** with `message` and an **expandable technical details** panel bound to `AppError.details` (never
-  `cause` raw).
+  `cause` raw). `title` and `message` are written in English where the failure is recognised; a display language other
+  than English shows the catalogue's words for the `ErrorCode` instead (`ua.bookloom.ui.i18n.ErrorWords`), and
+  `details` stay as given.
 - `retryable` errors offer a Retry action; `cancelled` is shown as an info state, not an error; `busy` is shown as a
   soft "model in use, try again" toast. A review-desk retry answers `busy` whenever the project's own run record
   (`06_DATA_MODEL_SQLITE.md`) reads `RUNNING` — read once, compared, and refused with no model call; the gate that

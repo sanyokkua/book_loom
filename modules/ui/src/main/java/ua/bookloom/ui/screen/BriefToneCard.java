@@ -8,6 +8,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -17,6 +19,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
@@ -25,12 +28,16 @@ import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.TabMovesFocus;
+import ua.bookloom.ui.control.TextLimit;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.GenreLabels;
+import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StyleSuggestionOutcome;
 
 /**
@@ -46,6 +53,11 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 final class BriefToneCard {
 
     private static final int VOICE_ROWS = 2;
+    // Every model call carries these three, so each is capped at what a genre, an audience or a note on the voice
+    // needs.
+    private static final int GENRE_MAX = 100;
+    private static final int AUDIENCE_MAX = 200;
+    private static final int VOICE_MAX = 500;
     private static final double FIELD_SPACING = 6;
 
     private final Messages messages;
@@ -62,7 +74,8 @@ final class BriefToneCard {
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.
     private boolean applying;
 
-    BriefToneCard(final BookBriefViewModel viewModel, final Messages messages) {
+    BriefToneCard(
+            final BookBriefViewModel viewModel, final Messages messages, final ObservableValue<RunStateView> runRow) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.evidence = evidenceRows(messages);
@@ -78,7 +91,7 @@ final class BriefToneCard {
                 "brief-tone-card",
                 messages,
                 MessageKey.BRIEF_CARD_TONE,
-                suggestion(viewModel, messages),
+                suggestion(viewModel, messages, Objects.requireNonNull(runRow, "runRow")),
                 field(MessageKey.BRIEF_TONE_GENRE, genre, BriefField.GENRE),
                 field(MessageKey.BRIEF_TONE_REGISTER, register.withHelp(), BriefField.REGISTER),
                 field(MessageKey.BRIEF_TONE_VOICE, voice, BriefField.VOICE),
@@ -105,7 +118,7 @@ final class BriefToneCard {
         genderSuggested.setId("brief-tone-narrator-gender-suggested");
         genderSuggested.getStyleClass().add("hint");
         Tips.install(messages, genderSuggested, MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED_TIP);
-        BriefEvidenceRow.shownIf(genderSuggested, false);
+        Visibility.show(genderSuggested, false);
     }
 
     // The gender the model proved reads "Male (suggested)" until the person changes it.
@@ -117,7 +130,7 @@ final class BriefToneCard {
                     brief.narrator().gender(),
                     suggested);
         }
-        BriefEvidenceRow.shownIf(genderSuggested, suggested);
+        Visibility.show(genderSuggested, suggested);
         if (suggested) {
             final MessageKey gender = brief.narrator().gender() == Gender.MALE
                     ? MessageKey.BRIEF_NARRATOR_GENDER_MALE
@@ -149,7 +162,7 @@ final class BriefToneCard {
     // A field shows the suggestion's evidence only while it holds what the suggestion wrote into it.
     private void showEvidence(final @Nullable BookBrief brief) {
         if (brief == null) {
-            BriefEvidenceRow.shownIf(genderSuggested, false);
+            Visibility.show(genderSuggested, false);
         } else {
             showGenderSuggested(brief);
         }
@@ -180,15 +193,24 @@ final class BriefToneCard {
     }
 
     // The model reads the opening of the book and fills these fields; the person reviews them before going on.
-    private static Node suggestion(final BookBriefViewModel viewModel, final Messages messages) {
+    // While a translation is at work the model is busy with it, so the suggestion waits and says why.
+    private static Node suggestion(
+            final BookBriefViewModel viewModel, final Messages messages, final ObservableValue<RunStateView> runRow) {
         if (!viewModel.styleSuggestion().isOffered()) {
             return new VBox();
         }
         final Button suggest = new Button(messages.get(MessageKey.BRIEF_SUGGEST));
         suggest.setId("brief-suggest-style");
         suggest.getStyleClass().add("btn-secondary");
-        Tips.install(messages, suggest, MessageKey.BRIEF_SUGGEST_TIP);
-        suggest.disableProperty().bind(viewModel.styleSuggestion().suggesting());
+        final BooleanBinding atWork =
+                Bindings.createBooleanBinding(() -> runRow.getValue().isAtWork(), runRow);
+        Tips.installLive(
+                suggest,
+                Bindings.createStringBinding(
+                        () -> messages.get(
+                                atWork.get() ? MessageKey.MODEL_BLOCKED_PAUSE_FIRST : MessageKey.BRIEF_SUGGEST_TIP),
+                        atWork));
+        suggest.disableProperty().bind(viewModel.styleSuggestion().suggesting().or(atWork));
         suggest.setOnAction(event -> viewModel.styleSuggestion().ask());
         final Label outcome = new Label();
         outcome.setId("brief-suggest-outcome");
@@ -198,17 +220,34 @@ final class BriefToneCard {
                 .bind(Bindings.createStringBinding(
                         () -> outcomeText(viewModel.styleSuggestion().outcome().get(), messages),
                         viewModel.styleSuggestion().outcome()));
-        BriefCards.shownWhile(outcome, outcome.textProperty().isNotEmpty());
-        return new VBox(FIELD_SPACING, suggest, outcome);
+        Visibility.bind(outcome, outcome.textProperty().isNotEmpty());
+        return new VBox(FIELD_SPACING, suggest, blockedReason(atWork, messages), outcome);
     }
 
-    private static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {
+    // A disabled button shows no tooltip, so the reason it is off is a visible line under it.
+    private static Label blockedReason(final BooleanBinding atWork, final Messages messages) {
+        final Label reason = new Label();
+        reason.setId("brief-suggest-reason");
+        reason.getStyleClass().add("hint");
+        reason.setWrapText(true);
+        reason.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> atWork.get() ? messages.get(MessageKey.MODEL_BLOCKED_PAUSE_FIRST) : "", atWork));
+        Visibility.bind(reason, atWork);
+        return reason;
+    }
+
+    static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {
         return switch (outcome.kind()) {
             case NONE -> "";
             case DONE -> messages.get(MessageKey.BRIEF_SUGGEST_DONE);
+            case STOPPED -> messages.get(MessageKey.BRIEF_SUGGEST_STOPPED);
             case NO_MODEL -> messages.get(MessageKey.BRIEF_SUGGEST_NO_MODEL);
             case BUSY -> messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_STYLE.label()));
-            case FAILED -> outcome.message();
+            case FAILED -> {
+                final AppError failure = Objects.requireNonNull(outcome.failure(), "failure");
+                yield ErrorWords.message(messages, failure);
+            }
         };
     }
 
@@ -216,8 +255,7 @@ final class BriefToneCard {
         final Label notice = BriefCards.hint(messages, MessageKey.BRIEF_NARRATOR_NOTICE);
         notice.setId("brief-tone-narrator-notice");
         Tips.install(messages, notice, MessageKey.BRIEF_NARRATOR_NOTICE_TIP);
-        notice.visibleProperty().bind(viewModel.narratorNotice());
-        notice.managedProperty().bind(notice.visibleProperty());
+        Visibility.bind(notice, viewModel.narratorNotice());
         return notice;
     }
 
@@ -255,11 +293,11 @@ final class BriefToneCard {
                                 MessageKey.BRIEF_NARRATOR_GENDER_UNKNOWN,
                                 MessageKey.BRIEF_HELP_GENDER_UNKNOWN),
                         new BriefChoice.Option<>(
-                                Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE, MessageKey.BRIEF_HELP_GENDER_MALE),
-                        new BriefChoice.Option<>(
                                 Gender.FEMALE,
                                 MessageKey.BRIEF_NARRATOR_GENDER_FEMALE,
-                                MessageKey.BRIEF_HELP_GENDER_FEMALE)),
+                                MessageKey.BRIEF_HELP_GENDER_FEMALE),
+                        new BriefChoice.Option<>(
+                                Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE, MessageKey.BRIEF_HELP_GENDER_MALE)),
                 viewModel::setNarratorGender);
         Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_GENDER_TIP);
         return choice;
@@ -267,6 +305,7 @@ final class BriefToneCard {
 
     private void configureInputs(final BookBriefViewModel viewModel) {
         voice.setId("brief-tone-voice");
+        TextLimit.of(voice, VOICE_MAX);
         Tips.install(messages, voice, MessageKey.BRIEF_TONE_VOICE_TIP);
         voice.getStyleClass().add("brief-input");
         voice.setPromptText(messages.get(MessageKey.BRIEF_TONE_VOICE_PROMPT));
@@ -274,6 +313,7 @@ final class BriefToneCard {
         voice.setWrapText(true);
         voice.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setVoiceEra));
         audience.setId("brief-tone-audience");
+        TextLimit.of(audience, AUDIENCE_MAX);
         Tips.install(messages, audience, MessageKey.BRIEF_TONE_AUDIENCE_TIP);
         audience.setPromptText(messages.get(MessageKey.BRIEF_TONE_AUDIENCE_PROMPT));
         audience.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setAudience));
@@ -283,6 +323,7 @@ final class BriefToneCard {
         final SearchableCombo<String> box = SearchableCombo.freeText(
                 Arrays.stream(Genre.values()).map(this::genreName).toList(), Function.identity(), Function.identity());
         box.setId("brief-tone-genre");
+        TextLimit.of(box.getEditor(), GENRE_MAX);
         Tips.install(messages, box, MessageKey.BRIEF_TONE_GENRE_TIP);
         box.setPromptText(messages.get(MessageKey.BRIEF_TONE_GENRE_PROMPT));
         box.setMaxWidth(Double.MAX_VALUE);
@@ -305,7 +346,12 @@ final class BriefToneCard {
             register.show(brief.register());
             narrator.show(brief.narrator().person());
             narratorGender.show(brief.narrator().gender());
-            narratorGender.node().setDisable(brief.narrator().person() != NarratorPerson.FIRST);
+            final boolean genderOff = brief.narrator().person() != NarratorPerson.FIRST;
+            narratorGender.node().setDisable(genderOff);
+            if (genderOff) {
+                // The stored gender is kept on purpose, but nothing reads it, so the line under it says why it is off.
+                narratorGender.explain(messages.get(MessageKey.BRIEF_HELP_GENDER_OFF));
+            }
             showText(voice, brief.voiceEra());
             showText(audience, brief.audience());
             showEvidence(brief);

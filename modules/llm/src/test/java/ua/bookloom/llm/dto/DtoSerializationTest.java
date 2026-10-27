@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Serialization contracts for the provider-wire DTOs and their shared mapper. */
 class DtoSerializationTest {
@@ -218,7 +219,7 @@ class DtoSerializationTest {
     // The module shares one mapper configured to tolerate fields a provider adds later.
     @Test
     void objectMapper_fromLlmModule_isSingletonAndIgnoresUnknownFields() {
-        final Injector injector = Guice.createInjector(new LlmModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new LlmTestStorageModule());
         final ObjectMapper first = injector.getInstance(ObjectMapper.class);
 
         assertThat(first).isSameAs(injector.getInstance(ObjectMapper.class));
@@ -227,6 +228,6 @@ class DtoSerializationTest {
     }
 
     private static ObjectMapper mapper() {
-        return Guice.createInjector(new LlmModule()).getInstance(ObjectMapper.class);
+        return Guice.createInjector(new LlmModule(), new LlmTestStorageModule()).getInstance(ObjectMapper.class);
     }
 }

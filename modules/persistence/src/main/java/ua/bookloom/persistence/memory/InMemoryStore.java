@@ -14,6 +14,7 @@ import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
@@ -32,7 +33,7 @@ import ua.bookloom.util.text.GlossaryKeys;
  * its own; only a multi-record read (first-pending, counts, flagged, by-unit, all) and a multi-record write
  * (loading a project's segments, committing a chunk) take this lock, for reading and writing respectively.
  *
- * <p>{@code @Singleton} is declared on the class itself, rather than bound in {@code PersistenceModule}, because
+ * <p>{@code @Singleton} is declared on the class itself, rather than bound in {@code InMemoryPersistenceModule}, because
  * this class is package-private to {@code .memory} and so cannot be named from the {@code ua.bookloom.persistence}
  * package the module lives in; Guice's implicit (JIT) binding still honours a class-level scope annotation.
  */
@@ -46,12 +47,17 @@ final class InMemoryStore {
     private final Map<String, Map<String, TmEntry>> tmByProject = new ConcurrentHashMap<>();
     private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, RunRecord>> runsByProject = new ConcurrentHashMap<>();
+    private final Map<String, ExportRecord> exportByProject = new ConcurrentHashMap<>();
+    private final Map<String, RunRecord> latestRunByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
+    }
+
+    Map<String, ExportRecord> exports() {
+        return exportByProject;
     }
 
     Map<String, Project> projects() {
@@ -94,10 +100,25 @@ final class InMemoryStore {
     }
 
     /**
-     * Returns the run table for a project, keyed by run id, creating an empty one on first use.
+     * Keeps a project's run started last, by the SQLite adapter's rule: the offered record replaces the held one when
+     * it is the same run or was started no earlier, and is otherwise dropped.
+     *
+     * @return the record held afterwards
      */
-    Map<String, RunRecord> runs(final String projectId) {
-        return runsByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    RunRecord keepRun(final RunRecord run) {
+        return latestRunByProject.merge(
+                run.projectId(),
+                run,
+                (held, offered) -> held.runId().equals(offered.runId())
+                                || !offered.startedAt().isBefore(held.startedAt())
+                        ? offered
+                        : held);
+    }
+
+    /** The project's run started last, or {@code null} when it has none. */
+    @Nullable
+    RunRecord latestRun(final String projectId) {
+        return latestRunByProject.get(projectId);
     }
 
     /**
@@ -114,6 +135,22 @@ final class InMemoryStore {
      */
     Set<String> lexiconRemoved(final String projectId) {
         return lexiconRemovedByProject.computeIfAbsent(projectId, id -> ConcurrentHashMap.newKeySet());
+    }
+
+    /**
+     * Forgets everything kept under a project id, as the SQLite schema's cascade does when a project is deleted. The
+     * caller holds the write lock.
+     */
+    void forget(final String projectId) {
+        segmentsByProject.remove(projectId);
+        glossaryByProject.remove(projectId);
+        tmByProject.remove(projectId);
+        summaryByProject.remove(projectId);
+        deferralsByProject.remove(projectId);
+        exportByProject.remove(projectId);
+        latestRunByProject.remove(projectId);
+        lexiconByProject.remove(projectId);
+        lexiconRemovedByProject.remove(projectId);
     }
 
     /**

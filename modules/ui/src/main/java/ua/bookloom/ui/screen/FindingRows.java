@@ -3,9 +3,7 @@ package ua.bookloom.ui.screen;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import ua.bookloom.api.project.AppliedEdit;
@@ -16,12 +14,11 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.FindingBadge;
 
 /**
- * Draws one finding of the review panel's list: a check's or the reviewer's note with its kind badge, or an edit the
- * reviewer made as the words it removed beside the words it put there. It owns no state and logs nothing.
+ * Draws one finding of the review desk's "What may be wrong": one label naming its kind, severity and who raised it,
+ * then in plain words what may be wrong, or an edit the reviewer made as the words it removed beside the words it put
+ * there. It owns no state and logs nothing.
  */
 final class FindingRows {
-
-    private static final double SPACING = 10;
 
     private final Messages messages;
 
@@ -29,8 +26,15 @@ final class FindingRows {
         this.messages = Objects.requireNonNull(messages, "messages");
     }
 
-    VBox of(final QaFinding finding) {
-        return AppliedEdit.from(finding).map(this::editRow).orElseGet(() -> plainRow(finding));
+    /**
+     * The row of one finding.
+     *
+     * @param finding the finding
+     * @param technical whether the technical-details switch is on, which adds the rule's kind and own words
+     * @return a new row
+     */
+    VBox of(final QaFinding finding, final boolean technical) {
+        return AppliedEdit.from(finding).map(this::editRow).orElseGet(() -> plainRow(finding, technical));
     }
 
     // An edit the reviewer made and the app verified, as the words it removed beside the words it put there.
@@ -63,30 +67,28 @@ final class FindingRows {
         return line;
     }
 
-    private Label badgeChip(final FindingBadge badge) {
-        final Label chip = new Label(messages.get(badge.label()));
-        chip.setId("review-finding-badge");
-        chip.getStyleClass().addAll("chip", "chip-warn");
-        return chip;
+    // One label (kind word · severity · who raised it), the plain why, and the rule's own words only on request.
+    private VBox plainRow(final QaFinding finding, final boolean technical) {
+        final FindingBadge badge = FindingBadge.of(List.of(finding), null).orElse(FindingBadge.LOW_SCORE);
+        final Label label = new Label(messages.get(
+                MessageKey.REVIEW_FINDING_LABEL,
+                messages.get(badge.label()),
+                finding.severity().name().toLowerCase(Locale.ROOT),
+                messages.get(MessageKey.REVIEW_RAISER, finding.raisedBy().replace('-', '_'))));
+        label.getStyleClass().add("finding-kind");
+        final Label why = wrapped(messages.get(MessageKey.REVIEW_WHY_LINE, messages.get(badge.why())), "finding-note");
+        final VBox row = new VBox(2, label, why);
+        if (technical) {
+            row.getChildren().add(wrapped(finding.kind() + " · " + finding.note(), "muted"));
+        }
+        return row;
     }
 
-    private VBox plainRow(final QaFinding finding) {
-        final Label kind = new Label(messages.get(
-                MessageKey.REVIEW_FINDING_KIND,
-                finding.kind(),
-                finding.severity().name().toLowerCase(Locale.ROOT)));
-        kind.getStyleClass().add("finding-kind");
-        final HBox head = new HBox(SPACING / 2, kind);
-        head.setAlignment(Pos.CENTER_LEFT);
-        FindingBadge.of(List.of(finding), null)
-                .filter(badge -> badge != FindingBadge.LOW_SCORE)
-                .ifPresent(badge -> head.getChildren().add(badgeChip(badge)));
-        final Label note = new Label(finding.note());
-        note.getStyleClass().add("finding-note");
-        note.setWrapText(true);
-        note.setMinHeight(Region.USE_PREF_SIZE);
-        final Label source = new Label(messages.get(MessageKey.REVIEW_RAISED_BY, finding.raisedBy()));
-        source.getStyleClass().add("muted");
-        return new VBox(2, head, note, source);
+    private static Label wrapped(final String text, final String style) {
+        final Label label = new Label(text);
+        label.getStyleClass().add(style);
+        label.setWrapText(true);
+        label.setMinHeight(Region.USE_PREF_SIZE);
+        return label;
     }
 }

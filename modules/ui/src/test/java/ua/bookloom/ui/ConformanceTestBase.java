@@ -16,10 +16,10 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
-import ua.bookloom.ui.dialog.ChangeResultsDialog;
+import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
+import ua.bookloom.ui.dialog.OpenAnotherBookPrompt;
+import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOperation;
@@ -29,6 +29,7 @@ import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.LiveCalls;
+import ua.bookloom.ui.state.ResultsView;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -42,6 +43,9 @@ import ua.bookloom.ui.theme.ThemeController;
  */
 abstract class ConformanceTestBase extends ShellTestBase {
 
+    // A long stored project name (pair and quality appended), so the open-another question is fitted with one.
+    private static final String LONG_PROJECT_NAME = "Earth Gravity · EN → UK · 26b Max";
+
     private static @Nullable Showing lastShown;
 
     private final ScriptedProjectService projects = new ScriptedProjectService();
@@ -54,6 +58,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
     private record Showing(
             Class<?> owner,
             Screen screen,
+            Locale locale,
             Injector injector,
             AppShellView shell,
             Navigator navigator,
@@ -88,8 +93,17 @@ abstract class ConformanceTestBase extends ShellTestBase {
     }
 
     protected final void show(final Screen screen) throws TimeoutException {
+        show(screen, Locale.ENGLISH);
+    }
+
+    /** Shows the screen in another display language; the shell the previous case left is reused only for the same one. */
+    protected final void show(final Screen screen, final Locale locale) throws TimeoutException {
         final Showing previous = lastShown;
-        if (adopted && previous != null && previous.screen().equals(screen) && screen.overlay() == Overlay.NONE) {
+        if (adopted
+                && previous != null
+                && previous.screen().equals(screen)
+                && previous.locale().equals(locale)
+                && screen.overlay() == Overlay.NONE) {
             return;
         }
         if (adopted) {
@@ -97,8 +111,11 @@ abstract class ConformanceTestBase extends ShellTestBase {
             interact(() -> super.start(primary));
         }
         lastShown = null;
+        if (!Locale.ENGLISH.equals(locale)) {
+            useLocale(locale);
+        }
         prepare(screen);
-        lastShown = new Showing(getClass(), screen, injector, shell, navigator, themeController, scene);
+        lastShown = new Showing(getClass(), screen, locale, injector, shell, navigator, themeController, scene);
     }
 
     private void prepare(final Screen screen) throws TimeoutException {
@@ -116,18 +133,25 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 onFx(() -> injector.getInstance(ErrorPresenter.class)
                         .present(AppError.of(
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
-            case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
+            case REVIEW_DESK -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
-            case RESULTS ->
-                onFx(() -> injector.getInstance(ChangeResultsDialog.class).show(sampleResults(), () -> {}));
-            case RETRY ->
-                onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
+            case RESULTS -> onFx(this::showSampleResults);
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
+            case DELETE_PROVIDER -> new SettingsPreparations(injector).askToDelete();
+            case UNSAVED_PROVIDER -> new SettingsPreparations(injector).askAboutUnsaved();
+            case TEST_DIALOG -> new SettingsPreparations(injector).openTheTestDialog();
+            case SWITCH_PROVIDER -> new SettingsPreparations(injector).askAboutSwitching();
             case REPLACE_RUN ->
-                onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
-                        .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));
+                onFx(() -> injector.getInstance(OpenAnotherBookPrompt.class)
+                        .ask(LONG_PROJECT_NAME, "Dracula.epub", RunState.RUNNING, () -> {}, () -> {}));
         }
+    }
+
+    private void showSampleResults() {
+        final ModalHost host = injector.getInstance(ModalHost.class);
+        final ResultsView view = new ResultsView(sampleResults(), () -> {}, host::hide);
+        host.show(ProgressDialog.results(view, injector.getInstance(Messages.class)), false);
     }
 
     // A review that removed one name, rewrote another and gave a reason, so the Why column is checked too.

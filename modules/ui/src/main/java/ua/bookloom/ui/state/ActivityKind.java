@@ -15,39 +15,40 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum ActivityKind {
 
     /** A translation run while it is translating (running, pausing or stopping), not while it waits paused. */
-    TRANSLATION(MessageKey.ACTIVITY_TRANSLATION, true, false, ViewNames.TRANSLATING, false, true),
+    TRANSLATION(MessageKey.ACTIVITY_TRANSLATION, true, false, ViewNames.TRANSLATING, false, true, false),
     /** The glossary's model scan for names; abandoned work if the person leaves Names &amp; style. */
-    GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE, true, true),
+    GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The glossary's model review of its rows; abandoned work if the person leaves Names &amp; style. */
-    GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true),
+    GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The glossary's translate-only action; abandoned work if the person leaves Names &amp; style. */
-    GLOSSARY_TRANSLATE(MessageKey.ACTIVITY_GLOSSARY_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true),
+    GLOSSARY_TRANSLATE(MessageKey.ACTIVITY_GLOSSARY_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The recurring terms' scan (the text first, then the model); abandoned work if the person leaves the screen. */
-    TERM_SCAN(MessageKey.ACTIVITY_TERM_SCAN, true, true, ViewNames.NAMES_STYLE, true, true),
+    TERM_SCAN(MessageKey.ACTIVITY_TERM_SCAN, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The recurring terms' model review; abandoned work if the person leaves Names &amp; style. */
-    TERM_REVIEW(MessageKey.ACTIVITY_TERM_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true),
+    TERM_REVIEW(MessageKey.ACTIVITY_TERM_REVIEW, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The model's suggestion of a rendering for each recurring term; abandoned work if the person leaves the screen. */
-    TERM_TRANSLATE(MessageKey.ACTIVITY_TERM_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true),
+    TERM_TRANSLATE(MessageKey.ACTIVITY_TERM_TRANSLATE, true, true, ViewNames.NAMES_STYLE, true, true, false),
     /** The autonomous names pass over both tables of Names &amp; style; abandoned work if the person leaves the screen. */
-    NAMES_PASS(MessageKey.ACTIVITY_NAMES_PASS, true, true, ViewNames.NAMES_STYLE, true, true),
+    NAMES_PASS(MessageKey.ACTIVITY_NAMES_PASS, true, true, ViewNames.NAMES_STYLE, true, true, true),
     /** One segment re-translated from the review panel. */
-    REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true, true),
+    REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true, true, false),
     /** The provider test that asks the chosen model for a short answer. */
-    PROVIDER_INFERENCE_TEST(MessageKey.ACTIVITY_PROVIDER_INFERENCE_TEST, true, true, ViewNames.SETTINGS, true, true),
+    PROVIDER_INFERENCE_TEST(
+            MessageKey.ACTIVITY_PROVIDER_INFERENCE_TEST, true, true, ViewNames.SETTINGS, true, true, false),
     /** The provider tests that ask only whether the server answers and lists the model. */
-    PROVIDER_CHECK(MessageKey.ACTIVITY_PROVIDER_CHECK, false, false, ViewNames.SETTINGS, false, false),
+    PROVIDER_CHECK(MessageKey.ACTIVITY_PROVIDER_CHECK, false, false, ViewNames.SETTINGS, false, false, false),
     /** Reading the provider's model list for the settings. */
-    MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS, false, false),
+    MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS, false, false, false),
     /** Writing the translated book, whose consistency pass may ask the model. */
-    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT, true, true),
+    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT, true, true, true),
     /** The model's proposal of the translated book's file name. */
-    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT, true, true),
+    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT, true, true, false),
     /** The model's proposal of the Book Brief's tone and style. */
-    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF, true, true),
+    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF, true, true, false),
     /** Opening a book and inspecting it, before the import screen has anything to show. */
-    IMPORT(MessageKey.ACTIVITY_IMPORT, false, false, ViewNames.IMPORT, true, false),
+    IMPORT(MessageKey.ACTIVITY_IMPORT, false, false, ViewNames.IMPORT, true, false, false),
     /** The work between pressing Start and the first segment: style sheet, name scan, chunking. */
-    RUN_PREPARATION(MessageKey.ACTIVITY_RUN_PREPARATION, false, false, ViewNames.TRANSLATING, true, true);
+    RUN_PREPARATION(MessageKey.ACTIVITY_RUN_PREPARATION, false, false, ViewNames.TRANSLATING, true, true, false);
 
     private final MessageKey label;
     private final boolean exclusive;
@@ -55,6 +56,7 @@ public enum ActivityKind {
     private final ViewNames home;
     private final boolean blocking;
     private final boolean callingModel;
+    private final boolean hideable;
 
     ActivityKind(
             final MessageKey label,
@@ -62,13 +64,25 @@ public enum ActivityKind {
             final boolean leaveSensitive,
             final ViewNames home,
             final boolean blocking,
-            final boolean callingModel) {
+            final boolean callingModel,
+            final boolean hideable) {
         this.label = label;
         this.exclusive = exclusive;
         this.leaveSensitive = leaveSensitive;
         this.home = home;
         this.blocking = blocking;
         this.callingModel = callingModel;
+        this.hideable = hideable;
+    }
+
+    /**
+     * Whether its progress dialog may be put in the background with "Continue in background": only long work, which
+     * a person should not have to watch for minutes. Short work ends before anyone could want to hide it.
+     *
+     * @return {@code true} for the names pass and the export, {@code false} otherwise
+     */
+    public boolean isHideable() {
+        return hideable;
     }
 
     /**

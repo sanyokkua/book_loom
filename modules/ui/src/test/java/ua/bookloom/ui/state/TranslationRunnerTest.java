@@ -87,7 +87,7 @@ class TranslationRunnerTest extends RunnerTestBase {
 
         assertThat(accepted).isTrue();
         assertThat(state()).isEqualTo(RunState.RUNNING);
-        assertThat(onFx(() -> mirror.accepted().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
         assertThat(onFx(() -> mirror.report().get())).isNull();
         assertThat(logEntries()).isEmpty();
         next.finish(Result.ok(cancelledReport()));
@@ -104,15 +104,15 @@ class TranslationRunnerTest extends RunnerTestBase {
         job.drain();
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
         assertThat(logEntries()).isEmpty();
 
         ticks.fire();
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(1);
-        assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(4);
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(5);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(1);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isEqualTo(4);
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(5);
         assertThat(logEntries()).containsExactly(log(LogKind.ACCEPTED, "s-1"));
         job.finish(Result.ok(cancelledReport()));
         awaitState(RunState.STOPPED);
@@ -132,10 +132,10 @@ class TranslationRunnerTest extends RunnerTestBase {
         assertThat(acceptedChanges.get()).isBetween(TICKS, TICKS + 1);
         assertThat(remainingChanges.get()).isBetween(TICKS, TICKS + 1);
         assertThat(flaggedChanges.get()).isZero();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(5000);
-        assertThat(onFx(() -> mirror.remaining().get())).isZero();
-        assertThat(onFx(() -> mirror.total().get())).isEqualTo(5000);
-        assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(1.0);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(5000);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(5000);
+        assertThat(onFx(() -> mirror.live().progress().get().fraction())).isEqualTo(1.0);
     }
 
     private void emitTenBatchesWithATickAfterEach() {

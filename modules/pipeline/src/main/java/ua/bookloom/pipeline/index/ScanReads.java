@@ -71,8 +71,7 @@ final class ScanReads {
             final String masked = data.texts().get(ordinal);
             final String text = withoutTitleLines(withoutForeignRuns(masked, facts, source));
             if (!text.isBlank()) {
-                // Nothing was cut: the read made at the build is the very same one.
-                reads.put(ordinal, text.equals(masked) ? data.reads().get(ordinal) : Occurrences.read(text));
+                reads.put(ordinal, Occurrences.read(text));
             }
         }
         log.debug(
@@ -93,7 +92,7 @@ final class ScanReads {
         if (info.auxiliary() || info.role() != UnitRole.BODY || !RUNNING_TEXT.contains(info.kind())) {
             return false;
         }
-        final String line = lineAt(data.reads().get(mention.ordinal()).text(), mention.start());
+        final String line = lineAt(data.read(mention.ordinal()).text(), mention.start());
         return !JunkRules.isPrintingNote(line) && !isTitleLine(line);
     }
 

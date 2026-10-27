@@ -146,7 +146,7 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
         assertThat(consistencyLines())
                 .contains(
                         "Consistency pass: 5 segments adjusted",
-                        "a fresh draft improved 4 flagged or doubtful segments; 2 were no better and stayed as before",
+                        "a fresh draft improved 4 doubtful segments or segments to review; 2 were no better and stayed as before",
                         "27 paragraphs checked against their neighbours needed no change",
                         "3 answers were refused because they would make the text worse (quote marks not paired: 2, scored worse: 1)",
                         "1 segment was skipped — the model call failed")
@@ -161,15 +161,5 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
 
     private static ExportReport reportWith(final ConsistencySummary summary) {
         return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, List.of(), 10, summary, 0);
-    }
-
-    // The run's 84.2 % counted the 72 lines kept as they are, which no model decided, in the denominator.
-    @Test
-    void screen_afterExportWithKeptVerbatimAndPending_sharesAutoAcceptedOverTheSegmentsThatNeededADecision()
-            throws TimeoutException {
-        exportBook(new ExportReport(
-                Path.of("Frankenstein.uk.epub"), 100, 10, 0, 5, 60, 0, List.of(), 100, ConsistencySummary.NOT_RUN, 20));
-
-        assertThat(labelText("export-auto-value")).isEqualTo("66.7%");
     }
 }

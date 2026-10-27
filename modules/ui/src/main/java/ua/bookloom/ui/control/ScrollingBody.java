@@ -1,7 +1,6 @@
 package ua.bookloom.ui.control;
 
 import javafx.geometry.Orientation;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
 
 /**
@@ -13,15 +12,12 @@ import javafx.scene.layout.Region;
  * instead, so the rows above pass it the width it is laid out at, and measures its content at that width; its
  * minimum is that height, so no parent can squeeze it.
  */
-final class ScrollingBody extends ScrollPane {
+final class ScrollingBody extends ScrollHost {
 
     static final double BODY_MAX = 320;
 
     ScrollingBody(final Region content) {
         super(content);
-        setFitToWidth(true);
-        setHbarPolicy(ScrollBarPolicy.NEVER);
-        setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
         setMinHeight(Region.USE_PREF_SIZE);
         setMaxHeight(Region.USE_PREF_SIZE);
         setFocusTraversable(false);

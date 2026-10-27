@@ -73,10 +73,15 @@ final class TranslateCommandTestFakes {
         private final List<ProviderConfig> registered = new ArrayList<>();
 
         @Override
-        public Result<ProviderConfig> register(ProviderConfig config) {
+        public Result<ProviderConfig> save(ProviderConfig config) {
             registered.add(config);
             known.put(config.id(), config);
             return Result.ok(config);
+        }
+
+        @Override
+        public Result<Boolean> delete(String id) {
+            return Result.ok(known.remove(id) != null);
         }
 
         @Override

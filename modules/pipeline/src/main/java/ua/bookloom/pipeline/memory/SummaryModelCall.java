@@ -47,7 +47,8 @@ final class SummaryModelCall {
     Result<Optional<String>> summarize(
             final String previousSummary, final String chapterSource, final String chapterTarget) {
         final List<ChatMessage> messages = messagesFor(previousSummary, chapterSource, chapterTarget);
-        final ChatRequest request = ChatRequests.build(PromptName.SUMMARY, messages, OutputLimit.forSummary(), false);
+        final ChatRequest request = ChatRequests.build(
+                PromptName.SUMMARY, messages, OutputLimit.forSummary(), false, frame.requestDefaults());
         log.trace("Summary call messages {}", messages);
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.SUMMARY, List.of(), request, CallDescriptor.whole(PromptName.SUMMARY));

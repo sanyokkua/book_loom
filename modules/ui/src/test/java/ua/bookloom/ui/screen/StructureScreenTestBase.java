@@ -17,6 +17,7 @@ import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.TechnicalDetails;
 
 /**
  * What the tests of the import screen's structure parts share, on top of the import screen's scripted port and lookups:
@@ -29,6 +30,11 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
         projects.on(source, Result.ok(imported));
         openImport();
         openBook(source);
+    }
+
+    /** Sets Show technical details, which decides whether the checks, tokens and groups are shown in full. */
+    void technicalDetails(final boolean on) {
+        onFx(() -> injector.getInstance(TechnicalDetails.class).property().set(on));
     }
 
     /** The tree the screen draws its rows in. */

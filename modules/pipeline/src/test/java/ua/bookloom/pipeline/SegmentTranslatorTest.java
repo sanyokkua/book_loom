@@ -25,6 +25,7 @@ import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
@@ -96,7 +97,7 @@ class SegmentTranslatorTest {
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.temperature()).isEqualTo(0.2);
             assertThat(request.responseFormat()).isEqualTo(new ResponseFormat("draft", DraftSchema.SCHEMA));
-            assertThat(request.reasoningEnabled()).isFalse();
+            assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
         });
     }
 

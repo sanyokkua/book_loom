@@ -4,11 +4,8 @@ import java.util.Objects;
 import java.util.function.Function;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -79,10 +76,11 @@ public final class AddTermDialog {
      * @return the card's root node, ready for {@code ModalHost.show}
      */
     public Node card() {
-        final DialogPane card = new ModalCard();
+        final ModalCard card = new ModalCard(ModalCard.Size.WIDE);
         card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        card.setHeader(header());
+        card.header(
+                ModalCard.title(messages.get(MessageKey.DIALOG_ADD_TERM_TITLE)),
+                ModalCard.subtitle(messages.get(MessageKey.DIALOG_ADD_TERM_SUBTITLE)));
         addTips();
         card.setContent(new VBox(
                 ROW_SPACING,
@@ -95,8 +93,28 @@ public final class AddTermDialog {
                 lock,
                 message));
         buttons(card);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
+    }
+
+    private void buttons(final ModalCard card) {
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.DIALOG_ADD_TERM_CANCEL),
+                                ButtonBar.ButtonData.CANCEL_CLOSE,
+                                "add-term-cancel",
+                                "btn-ghost"),
+                        MessageKey.DIALOG_ADD_TERM_CANCEL_TIP)
+                .setOnAction(event -> onClose.run());
+        Tips.install(
+                        messages,
+                        card.button(
+                                messages.get(MessageKey.DIALOG_ADD_TERM_CONFIRM),
+                                ButtonBar.ButtonData.OK_DONE,
+                                "add-term-confirm",
+                                "btn-primary"),
+                        MessageKey.DIALOG_ADD_TERM_CONFIRM_TIP)
+                .setOnAction(event -> confirm());
     }
 
     private void addTips() {
@@ -123,34 +141,6 @@ public final class AddTermDialog {
         message.setText(reason);
         message.setVisible(true);
         message.setManaged(true);
-    }
-
-    private Node header() {
-        final Label title = new Label(messages.get(MessageKey.DIALOG_ADD_TERM_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final Label subtitle = new Label(messages.get(MessageKey.DIALOG_ADD_TERM_SUBTITLE));
-        subtitle.getStyleClass().add("dialog-sub");
-        final VBox header = new VBox(title, subtitle);
-        header.getStyleClass().add("dialog-h");
-        return header;
-    }
-
-    private void buttons(final DialogPane card) {
-        final ButtonType cancelType =
-                new ButtonType(messages.get(MessageKey.DIALOG_ADD_TERM_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType addType =
-                new ButtonType(messages.get(MessageKey.DIALOG_ADD_TERM_CONFIRM), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(cancelType, addType);
-        final Button cancel = (Button) card.lookupButton(cancelType);
-        cancel.setId("add-term-cancel");
-        Tips.install(messages, cancel, MessageKey.DIALOG_ADD_TERM_CANCEL_TIP);
-        cancel.getStyleClass().add("btn-ghost");
-        cancel.setOnAction(event -> onClose.run());
-        final Button add = (Button) card.lookupButton(addType);
-        add.setId("add-term-confirm");
-        Tips.install(messages, add, MessageKey.DIALOG_ADD_TERM_CONFIRM_TIP);
-        add.getStyleClass().add("btn-primary");
-        add.setOnAction(event -> confirm());
     }
 
     private static TextField field(final String id) {

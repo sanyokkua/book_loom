@@ -72,7 +72,7 @@ map of every module is `docs/implementation_plan/01_MODULE_INVENTORY.md`.
 `ReviewMode` resolved at launch, a background pool and a virtual-thread IO executor), `DocumentModule` (`DocumentPort`,
 `BookInspector`, `SentenceSplitter`), `LlmModule` (`ChatModelFactory`, `ProviderVerifier`, `ModelCatalog`,
 `ProviderConfigs` with the offline `pseudo` provider and the in-memory `ollama`/`lmstudio` presets),
-`PersistenceModule` (every repository port to its in-memory adapter, singletons over one `InMemoryStore`) and
+`CoreModules` takes the storage module as an argument: `InMemoryPersistenceModule` (every repository port to its in-memory adapter, singletons over one `InMemoryStore`; the command line) or `SqlitePersistenceModule` (the same ports to the SQLite adapters over one `SqliteDatabase`; the window) and
 `PipelineModule` (`TranslationEngine`, `ProjectService`, `ExportService`, `GlossaryService`, `LexiconService`,
 `NamesPass`, `ReviewDesk`, `SetupAssistant`, the prompt templates and the bundled language rules). The desktop app adds
 `UiModule` and `DesktopModule` (the operating system's keep-awake); `./gradlew :app:translate` installs `CoreModules`
@@ -191,8 +191,8 @@ writes what the project has decided, leaving the rest in the source, so a stoppe
   `LexiconRepository`, `TmRepository`, `SummaryRepository`, `DeferralRepository`, `RunRepository` and
   `CheckpointPort.commit(ChunkCommit)`, which makes a chunk's records, memory entries, deferrals and new names visible
   all together or not at all. `RepositoryContractTest` proves each port against its in-memory adapter.
-- Service ports in `ua.bookloom.api.pipeline`: `ProjectService` (import, continue, brief update, plan, segment
-  previews, round-trip check), `GlossaryService` and `LexiconService` (tables, scans, model review, CSV),
+- Service ports in `ua.bookloom.api.pipeline`: `ProjectService` (list, create, open, brief update, rename, remove,
+  translate into another language, relocate the book file, plan, segment previews, round-trip check), `GlossaryService` and `LexiconService` (tables, scans, model review, CSV),
   `NamesPass` (the autonomous names pass with Undo), `SetupAssistant` (suggested brief, file name, narrator recheck),
   `ReviewDesk` (the review actions and queries), `ExportService`.
 
@@ -319,7 +319,7 @@ is empty by design; the order is enforced). `start` shows a 1024×700 `Scene` (m
   Book Brief, Names & style, Translating, Export and Settings — FXML plus a thin controller; the structure tree lives
   on Import, review lives inside Translating), `.control` (the shared controls: searchable choice box, step footer,
   banner, stat tile, the two-column layout, the term-table card, smooth scrolling), `.dialog` (the confirmation and
-  input cards: replace-run, leave, narrator, character genders, retry with a note, export complete, change results),
+  input cards: open-another-book, leave, narrator, character genders, retry with a note, export complete, change results),
   `.state` (`StateMirror`, `RunSession`, `TranslationRunner`, `RunStarter`, `CurrentProject` and the view models),
   `.i18n` (`en`/`uk` bundles, typed `MessageKey`, a locale chosen by the OS — no in-app switch), `.notify` (error
   dialog, toasts) and `.theme` (token-only light and dark). **Projects** is the one inert navigation entry. Six workflow
@@ -378,9 +378,9 @@ during a run, package into a native image on macOS, Windows and Linux; and, thro
 with the workflow screens in §5, in English or Ukrainian (chosen by the OS), in a light or dark token-only theme that
 holds WCAG AA.
 
-**Cannot yet:** persist anything across a restart (no resume, no remembered theme, provider or brief — SQLite is the
-next adapter), open the Projects entry, switch the interface language in the app, translate through a cloud provider's
-parallel lanes (local inference is single-flight), or use the Settings tabs Models, Generation, Automation and Storage.
+**Cannot yet:** translate through a cloud provider's parallel lanes (local inference is single-flight). Projects,
+settings, providers, briefs and runs are kept in SQLite across a restart (ADR-0043), the interface language is switched
+in Settings › Appearance (applied after a restart), and every Settings tab is live.
 
 **Text outside the body** — the navigation, metadata and alt text the auxiliary unit carries (§4.9, ADR-0041) is
 translated when the brief's "Also translate" switches ask for it; a switched-off kind stays in the source language.

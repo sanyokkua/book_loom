@@ -20,12 +20,12 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -47,11 +47,14 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.RunStores;
 
 /** Shared real-document and controlled-model setup for job acceptance tests. */
@@ -74,7 +77,8 @@ final class TranslationJobTestSupport {
 
     /** Imports through the injector's own document port, wrapped by {@code decorate} for the job. */
     static TestProject project(final UnaryOperator<DocumentPort> decorate, final Path book, final BookBrief brief) {
-        return project(Guice.createInjector(new DocumentModule(), new PersistenceModule()), decorate, book, brief);
+        return project(
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule()), decorate, book, brief);
     }
 
     /** Imports through the given injector, so a test can reach other services over the same stores. */
@@ -94,13 +98,9 @@ final class TranslationJobTestSupport {
                 injector.getInstance(TmRepository.class),
                 injector.getInstance(SummaryRepository.class),
                 injector.getInstance(LexiconRepository.class));
-        final ProjectServiceImpl service = new ProjectServiceImpl(
-                injector.getInstance(BookInspector.class),
-                documents,
-                stores.projects(),
-                stores.segments(),
-                stores.openProjects());
-        final Result<ImportedBook> importResult = service.importBook(book);
+        final ProjectServiceImpl service = ProjectServices.service(
+                injector, documents, stores.projects(), stores.segments(), stores.openProjects());
+        final Result<ImportedBook> importResult = service.create(book);
         final ImportedBook imported =
                 Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
@@ -193,20 +193,7 @@ final class TranslationJobTestSupport {
     }
 
     static BookBrief withTarget(final BookBrief brief, final String targetLanguage) {
-        return new BookBrief(
-                brief.sourceLanguage(),
-                targetLanguage,
-                brief.genre(),
-                brief.register(),
-                brief.voiceEra(),
-                brief.audience(),
-                brief.names(),
-                brief.foreignPassages(),
-                brief.footnotes(),
-                brief.units(),
-                brief.balance(),
-                brief.alsoTranslate(),
-                brief.dial());
+        return brief.withLanguages(brief.sourceLanguage(), targetLanguage);
     }
 
     /** The model id every test job is started with, which its run record keeps. */
@@ -229,7 +216,7 @@ final class TranslationJobTestSupport {
             final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
                 project.documents(),
-                new RunRequest(projectId, mode, null, MODEL_NAME),
+                new RunRequest(projectId, mode, null, MODEL_NAME, new ModelSelection("scripted-provider", MODEL_NAME)),
                 model,
                 new ObjectMapper(),
                 new PromptTemplates(),
@@ -237,7 +224,13 @@ final class TranslationJobTestSupport {
                 qualityLoop(),
                 SPLITTER,
                 ConsistencyPassFixture.over(project),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                new UuidIdSource(),
+                RecoveryTimer.REAL,
+                RunTicks.DAEMON,
+                BatchDrafter.NO_BATCHING,
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */

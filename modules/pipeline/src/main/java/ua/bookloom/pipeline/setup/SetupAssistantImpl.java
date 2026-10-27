@@ -30,12 +30,16 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.project.OriginalTitles;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -62,6 +66,28 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final Clock clock;
+
+    private final RequestDefaultsSource requestDefaultsSource;
+
+    /** A setup assistant whose requests use the defaults the environment alone gives (the command line, tests). */
+    public SetupAssistantImpl(
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final GlossaryRepository glossary,
+            final OpenProjects openProjects,
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final Clock clock) {
+        this(
+                projects,
+                segments,
+                glossary,
+                openProjects,
+                templates,
+                mapper,
+                clock,
+                RequestDefaultsSource.environmentOnly());
+    }
 
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
@@ -100,7 +126,11 @@ public final class SetupAssistantImpl implements SetupAssistant {
         try {
             return opened(projectId)
                     .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
-                            .suggest(book, detectedContext, calls(model, progress, book)));
+                            .suggest(
+                                    book,
+                                    detectedContext,
+                                    model.contextWindowOverride(),
+                                    calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         }
@@ -115,6 +145,29 @@ public final class SetupAssistantImpl implements SetupAssistant {
         } catch (Throwable cause) {
             return failed("narrator re-check", cause);
         }
+    }
+
+    @Override
+    public Result<NarratorHint> detectNarrator(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        log.debug("Narrator detection requested project={}", projectId);
+        try {
+            return opened(projectId).map(SetupAssistantImpl::detected);
+        } catch (Throwable cause) {
+            return failed("narrator detection", cause);
+        }
+    }
+
+    private static NarratorHint detected(final SetupBook book) {
+        final NarratorHint hint = NarratorDetector.detect(book.document(), book.languageOf())
+                .orElse(new NarratorHint(NarratorHint.Person.THIRD, 0, List.of(), 0));
+        log.info(
+                "Narrator detected for the start check project={} language={} person={} judged={}",
+                book.project().id(),
+                book.languageOf(),
+                hint.person(),
+                hint.judgedChapters());
+        return hint;
     }
 
     private static Narrator rechecked(final SetupBook book, final List<GlossaryEntry> people) {
@@ -151,7 +204,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                     "Nothing to suggest",
                     "The project must be stored, name a target language and have its book open."));
         }
-        return Result.ok(new SetupBook(project, document, target, openProjects.index(projectId)));
+        return Result.ok(new SetupBook(
+                project, document, target, openProjects.index(projectId), requestDefaultsSource.current()));
     }
 
     private Result<FileNameSuggestion> askName(final SetupBook book, final ModelCalls calls) {
@@ -160,8 +214,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         user.put("fileName", stem);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        final FileNameTargets targets =
-                FileNameTargets.of(segments, book.project().id());
+        final FileNameTargets targets = FileNameTargets.of(
+                segments,
+                book.project().id(),
+                OriginalTitles.of(book.document(), book.project()).segmentId());
         Optional.ofNullable(targets.title()).ifPresent(title -> user.put("titleTarget", title));
         Optional.ofNullable(targets.author()).ifPresent(author -> user.put("authorTarget", author));
         return askFileName(book, user, calls)

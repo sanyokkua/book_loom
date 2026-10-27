@@ -14,13 +14,14 @@ import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
- * Applies one chunk's decided segments, TM entries, deferrals and glossary additions all together, under the
+ * Applies one chunk's decided segments, TM entries, deferrals, glossary additions and run record all together, under the
  * store's write lock, so a multi-record read can never observe half a chunk (ADR-0034, {@code design.md} D2).
  */
 @Slf4j
@@ -95,6 +96,16 @@ public final class InMemoryCheckpoint implements CheckpointPort {
         for (final Deferral deferral : commit.deferrals()) {
             deferrals.putIfAbsent(
                     InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
+        }
+        final RunRecord run = commit.run();
+        if (run != null) {
+            final RunRecord held = store.keepRun(run);
+            log.debug(
+                    "Commit run projectId={} runId={} state={} kept={}",
+                    commit.projectId(),
+                    run.runId(),
+                    run.state(),
+                    held.equals(run));
         }
     }
 

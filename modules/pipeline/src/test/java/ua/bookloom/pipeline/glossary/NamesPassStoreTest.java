@@ -22,7 +22,7 @@ import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * How the names pass writes what it decided (15i review): a rendering it changes and locks over segments already
@@ -35,7 +35,7 @@ class NamesPassStoreTest {
     static final class FailingGlossary implements GlossaryRepository {
 
         private final GlossaryRepository delegate =
-                Guice.createInjector(new PersistenceModule()).getInstance(GlossaryRepository.class);
+                Guice.createInjector(new InMemoryPersistenceModule()).getInstance(GlossaryRepository.class);
         private boolean armed;
 
         void arm() {

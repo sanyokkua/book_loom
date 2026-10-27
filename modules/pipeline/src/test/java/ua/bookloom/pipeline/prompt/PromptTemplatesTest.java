@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 
@@ -194,7 +194,10 @@ class PromptTemplatesTest {
     @Test
     void injector_pipelineModule_loadsEveryTemplate() {
         final var injector = Guice.createInjector(
-                new PipelineModule(), new ReviewModeTestModule(), new DocumentModule(), new PersistenceModule());
+                new PipelineModule(),
+                new ReviewModeTestModule(),
+                new DocumentModule(),
+                new InMemoryPersistenceModule());
 
         assertThat(injector.getInstance(PromptTemplates.class)).isNotNull();
     }

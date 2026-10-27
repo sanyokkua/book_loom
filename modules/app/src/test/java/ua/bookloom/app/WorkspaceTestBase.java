@@ -10,7 +10,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.util.Modules;
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -36,18 +36,17 @@ import org.slf4j.LoggerFactory;
 import org.testfx.api.FxToolkit;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
-import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -88,6 +87,7 @@ abstract class WorkspaceTestBase {
 
     protected Injector injector;
     protected AppShellView shell;
+    private @Nullable AppLifecycle lifecycle;
     private final ListAppender<ILoggingEvent> pauseLog = new ListAppender<>();
 
     /** Boots the injector for {@code mode} and shows the window on the Import screen. */
@@ -103,19 +103,85 @@ abstract class WorkspaceTestBase {
                 AppPaths.of(dataDir, logDir),
                 AppEnvironment.DEV,
                 ReviewModeResolver.resolve(name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? flag : null, name -> null));
-        final Stage stage = FxToolkit.registerPrimaryStage();
+        // The toolkit first: building the graph already hands work to the FX thread.
+        FxToolkit.registerPrimaryStage();
         // Built here, not through BookLoomApplication.init(): that hard-codes its modules, and this test needs to
-        // replace one. It therefore skips AppLifecycle's two phases, which hold nothing yet; when persistence fills
-        // phase two this test must run it too.
-        injector = Guice.createInjector(
-                Modules.override(new CoreModules(startup), new UiModule()).with(new PseudoOnlyModule(), extra));
+        // replace one. It therefore skips AppLifecycle's two phases, which open nothing over the in-memory adapters.
+        showWindow(Guice.createInjector(
+                Modules.override(new CoreModules(startup, new InMemoryPersistenceModule()), new UiModule())
+                        .with(new PseudoOnlyModule(), extra)));
+    }
+
+    /**
+     * Boots the window the way the desktop app does: the SQLite database in {@link #dataDir}, the real provider
+     * registry, both lifecycle phases. A second call is a restart over the same file.
+     */
+    protected void startStoredWindow() throws Exception {
+        startStoredWindow(false);
+    }
+
+    /**
+     * As {@link #startStoredWindow()}; with {@code pseudo} the store also holds the pseudo provider a run can use, and
+     * the window has read it.
+     */
+    protected void startStoredWindow(final boolean pseudo) throws Exception {
+        startStoredWindow(pseudo, new AbstractModule() {});
+    }
+
+    /** As {@link #startStoredWindow(boolean)}, with {@code extra} replacing bindings of the graph as well. */
+    protected void startStoredWindow(final boolean pseudo, final com.google.inject.Module extra) throws Exception {
+        closeStoredWindow();
+        final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
+        // Assisted, so a run pauses on the pseudo model's first flagged segment as in startWorkspace.
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(dataDir, logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(
+                        name -> "BOOKLOOM_REVIEW_MODE".equals(name) ? "assisted" : null, name -> null));
+        FxToolkit.registerPrimaryStage();
+        final Injector built = Guice.createInjector(Modules.override(
+                        new CoreModules(startup, BookLoomApplication.windowPersistence(startup)), new UiModule())
+                .with(extra));
+        lifecycle = new AppLifecycle();
+        lifecycle.phaseOne(built);
+        lifecycle.phaseTwo(built);
+        if (pseudo) {
+            assertThat(built.getInstance(ProviderConfigs.class)
+                            .save(PseudoOnlyModule.PSEUDO)
+                            .isOk())
+                    .isTrue();
+        }
+        BookLoomApplication.seedPreferences(built);
+        showWindow(built);
+        if (pseudo) {
+            // As the first-launch look does: the rows are read again and the provider is made current.
+            final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
+            onFx(settings::reloadProviders);
+            waitUntil(() -> !settings.providers().isEmpty());
+            onFx(() -> settings.adopt(new ModelSelection(PseudoOnlyModule.PSEUDO.id(), "uppercase")));
+        }
+    }
+
+    // Stops the stored window's work and closes its database, as BookLoomApplication.stop() does.
+    private void closeStoredWindow() throws Exception {
+        if (lifecycle != null) {
+            FxToolkit.cleanupStages();
+            shutDown(injector);
+            lifecycle.close();
+            lifecycle = null;
+        }
+    }
+
+    private void showWindow(final Injector built) throws Exception {
+        final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
+        injector = built;
         shell = injector.getInstance(AppShellView.class);
         watchPauses();
         onFx(() -> {
             final Scene scene = shell.createScene(WINDOW_WIDTH, WINDOW_HEIGHT);
             stage.setScene(scene);
             stage.show();
-            shell.activate(ViewNames.IMPORT);
+            injector.getInstance(Navigator.class).openImportEmpty();
         });
     }
 
@@ -125,6 +191,7 @@ abstract class WorkspaceTestBase {
         pauseLog.stop();
         FxToolkit.cleanupStages();
         shutDown(injector);
+        closeStoredWindow();
     }
 
     /**
@@ -157,6 +224,25 @@ abstract class WorkspaceTestBase {
         logger.addAppender(pauseLog);
     }
 
+    /** {@return the project of a short TXT whose run Assisted paused, in a stored window built with {@code extra}} */
+    protected String pausedRun(final com.google.inject.Module extra) throws Exception {
+        // Long enough for the pseudo model's capitals to be flagged, so Assisted pauses on the first segment.
+        final Path book = Files.writeString(
+                booksDir.resolve("Curtain.txt"),
+                "It was a dark night.\n\nThe rain fell on the old house.\n\nNobody came to the door.\n",
+                StandardCharsets.UTF_8);
+        startStoredWindow(true, extra);
+        openBook(book, 3);
+        chooseBrief("uk", booksDir.resolve("Curtain.uk.txt"));
+        chooseModel();
+        onFx(() -> shell.activate(ViewNames.TRANSLATING));
+        startRun();
+        waitUntil(() -> injector.getInstance(StateMirror.class).runState().get() == RunState.PAUSED);
+        final OpenedBook open = Objects.requireNonNull(
+                onFx(() -> injector.getInstance(CurrentProject.class).book().get()));
+        return open.projectId();
+    }
+
     protected void openBook(final Path book, final int segments) throws Exception {
         onFx(() -> injector.getInstance(ImportViewModel.class).open(book));
         waitUntil(() -> injector.getInstance(CurrentProject.class).book().get() != null);
@@ -183,7 +269,10 @@ abstract class WorkspaceTestBase {
         assertThat(onFx(() -> exports.destination().get())).isEqualTo(proposed.toString());
     }
 
-    protected void chooseModel() {
+    // The registry is read on the background executor; a model typed before its rows arrive belongs to no provider.
+    protected void chooseModel() throws Exception {
+        waitUntil(
+                () -> !injector.getInstance(SettingsViewModel.class).providers().isEmpty());
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("uppercase"));
         assertThat(onFx(() -> injector.getInstance(SettingsViewModel.class).selection()))
                 .contains(new ModelSelection("pseudo", "uppercase"));
@@ -214,10 +303,17 @@ abstract class WorkspaceTestBase {
      */
     protected void exportBook(final Path written) throws Exception {
         onFx(() -> shell.activate(ViewNames.EXPORT));
-        assertThat(exportText("#export-save-to")).isEqualTo(written.toString());
+        // Save as reads as a short path ending in the file name; the full path is the destination itself.
+        assertThat(exportText("#export-save-to")).endsWith(written.getFileName().toString());
+        assertThat(onFx(() -> injector.getInstance(ExportViewModel.class)
+                        .destination()
+                        .get()))
+                .isEqualTo(written.toString());
         waitUntil(() ->
                 injector.getInstance(ExportViewModel.class).exportAvailable().get());
         final int toastsBefore = onFx(() -> toastCount());
+        // A card left open (the review desk a run opened) would hold the complete card back until it is closed.
+        onFx(() -> injector.getInstance(ua.bookloom.ui.ModalHost.class).hide());
         onFx(() -> ((Button) exportNode("#export-run")).fire());
         waitUntil(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
         WaitForAsyncUtils.waitForFxEvents();
@@ -297,41 +393,5 @@ abstract class WorkspaceTestBase {
 
     protected static void waitUntil(final Supplier<Boolean> condition) throws Exception {
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> onFx(condition::get));
-    }
-
-    /** The one substitution: the provider registry lists only {@code pseudo}, so the settings viewmodel selects it. */
-    private static final class PseudoOnlyModule extends AbstractModule {
-        @Override
-        protected void configure() {
-            bind(ProviderConfigs.class).toInstance(new PseudoOnlyProviderConfigs());
-        }
-    }
-
-    /** A registry of exactly one provider, {@code pseudo}; its address is never contacted. */
-    private static final class PseudoOnlyProviderConfigs implements ProviderConfigs {
-
-        private final ProviderConfig pseudo = new ProviderConfig(
-                "pseudo",
-                ProviderKind.OLLAMA,
-                URI.create("http://localhost:1"),
-                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
-
-        @Override
-        public Result<ProviderConfig> register(final ProviderConfig config) {
-            Objects.requireNonNull(config, "config");
-            return Result.err(AppError.of(ErrorCode.validation, "Not supported", "This registry is fixed."));
-        }
-
-        @Override
-        public Optional<ProviderConfig> find(final String id) {
-            Objects.requireNonNull(id, "id");
-            return all().stream().filter(config -> config.id().equals(id)).findFirst();
-        }
-
-        @Override
-        public List<ProviderConfig> all() {
-            return List.of(pseudo);
-        }
     }
 }

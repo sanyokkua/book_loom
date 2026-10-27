@@ -11,19 +11,20 @@ import java.util.function.DoubleSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLimits;
 
 /** Calculates bounded exponential backoff and honours valid HTTP {@code Retry-After} advice. */
 @Slf4j
 public final class RetryPolicy {
 
     /** Maximum number of provider requests for one logical chat. */
-    public static final int MAX_ATTEMPTS = 3;
+    public static final int MAX_ATTEMPTS = CallLimits.MAX_ATTEMPTS;
 
     /**
      * Maximum number of those requests that may end in a timeout: a call that timed out twice is stuck, and a third
      * wait of the same length only delays the pause or flag that follows.
      */
-    public static final int MAX_TIMEOUT_ATTEMPTS = 2;
+    public static final int MAX_TIMEOUT_ATTEMPTS = CallLimits.MAX_TIMEOUT_ATTEMPTS;
 
     private static final long BASE_DELAY_MILLIS = 500;
     private static final long MAX_BACKOFF_MILLIS = 8_000;

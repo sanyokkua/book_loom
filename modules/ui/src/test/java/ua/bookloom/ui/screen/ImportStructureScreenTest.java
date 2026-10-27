@@ -4,13 +4,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.StructureSegmentsViewModel;
 
 /**
  * The reading-order tree and the segment browser on the import screen, with the ids of the structure screen they
  * replaced: picking a part in the tree lists its segments, picking a segment shows its text below the list.
  */
 class ImportStructureScreenTest extends ImportBookTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     // IF the tree were missing or out of order on Import, THEN the book's structure could not be checked there.
     @Test
@@ -32,7 +41,17 @@ class ImportStructureScreenTest extends ImportBookTestBase {
                         List.of("ch1 · p02", "Paragraph", LONG_TEXT, "1/2"),
                         List.of("ch1 · p03", "Paragraph", "Second paragraph.", "2/2"),
                         List.of("ch1 · p04", "Paragraph", "Third paragraph.", "2/2"));
-        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 chunks (planned)");
+        assertThat(labelText("structure-segments-header")).isEqualTo("4 segments · 2 groups (planned)");
+    }
+
+    // IF the segment list's count carried no explanation, THEN "4 segments" would not say what a segment is.
+    @Test
+    void segments_header_explainsWhatASegmentIs() throws TimeoutException {
+        openFactsBook();
+        awaitFx(() -> segmentRows().size() == 4);
+
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("structure-segments-header")))
+                .isEqualTo("A segment is a paragraph, heading or caption — one piece of the book's text.");
     }
 
     // IF picking another part kept the old rows, THEN the list would not follow the tree.
@@ -48,19 +67,35 @@ class ImportStructureScreenTest extends ImportBookTestBase {
         assertThat(projects.segmentCalls()).containsExactly("p1/unit-0", "p1/unit-1");
     }
 
-    // IF the picked segment's text were not shown whole below the list, THEN a person could not read what the model is
+    // IF the picked segment's text were not shown whole in its own pane, THEN a person could not read what the model is
     // given.
     @Test
-    void preview_segmentPicked_showsItsWholeTextBelowTheList() throws TimeoutException {
+    void preview_segmentPicked_showsItsWholeTextInTheTextPane() throws TimeoutException {
         openFactsBook();
         awaitFx(() -> segmentRows().size() == 4);
 
         pickSegment(1);
 
         assertThat(previewText()).isEqualTo(LONG_TEXT);
-        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · chunk 1 of 2");
-        assertThat(boundsOf("structure-preview").getMinY())
-                .isGreaterThanOrEqualTo(boundsOf("structure-segments").getMaxY());
+        assertThat(labelText("structure-preview-meta")).isEqualTo("ch1 · p02 · Paragraph · 5 tokens · group 1 of 2");
+        assertThat(isInside("structure-preview", "structure-text-card")).isTrue();
+        assertThat(isInside("structure-preview", "structure-segments-card")).isFalse();
+    }
+
+    // IF listing the chapter again (a brief save, which re-plans the chunks) blanked the text pane, THEN the picked
+    // segment's text would vanish by itself while its row stays in the list.
+    @Test
+    void preview_listingAskedAgainAfterAPick_keepsTheRowAndItsText() throws TimeoutException {
+        openFactsBook();
+        awaitFx(() -> segmentRows().size() == 4);
+        pickSegment(1);
+
+        onFx(() -> injector.getInstance(StructureSegmentsViewModel.class).refresh());
+        awaitFx(() -> projects.segmentCalls().size() == 2 && segmentRows().size() == 4);
+
+        assertThat(previewText()).isEqualTo(LONG_TEXT);
+        assertThat(ThemeTestSupport.onFx(() -> segmentList().getSelectionModel().getSelectedIndex()))
+                .isEqualTo(1);
     }
 
     // IF the search narrowed nothing on Import, THEN the browser would be reused in name only.

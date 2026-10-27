@@ -19,6 +19,7 @@ import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
 
@@ -37,6 +38,7 @@ public final class PendingCommit {
 
     private final CheckpointPort checkpoint;
     private final String projectId;
+    private final @Nullable RunRecorder run;
     private final List<SegmentRecord> decided = new ArrayList<>();
     private final Map<String, TmEntry> memoryEntries = new HashMap<>();
     private final Map<String, Deferral> deferrals = new LinkedHashMap<>();
@@ -50,8 +52,21 @@ public final class PendingCommit {
      * @param projectId the non-null id of the project the run decides
      */
     public PendingCommit(final CheckpointPort checkpoint, final String projectId) {
+        this(checkpoint, projectId, null);
+    }
+
+    /**
+     * Creates the pending set of one run whose record each commit carries, so the run's counts are stored in the same
+     * step as the decisions they count.
+     *
+     * @param checkpoint the non-null port decisions are committed through
+     * @param projectId the non-null id of the project the run decides
+     * @param run the recorder whose current record each commit carries, or null for none
+     */
+    public PendingCommit(final CheckpointPort checkpoint, final String projectId, @Nullable final RunRecorder run) {
         this.checkpoint = Objects.requireNonNull(checkpoint, "checkpoint");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
+        this.run = run;
     }
 
     /**
@@ -129,8 +144,10 @@ public final class PendingCommit {
         if (due.isEmpty() && dueDeferrals.isEmpty() && additions.isEmpty()) {
             return Result.ok(0);
         }
+        final RunRecord current = run == null ? null : run.current();
+        log.debug("Flush carries run={}", current == null ? null : current.runId());
         final Result<Integer> result =
-                checkpoint.commit(new ChunkCommit(projectId, due, dueEntries, additions, dueDeferrals));
+                checkpoint.commit(new ChunkCommit(projectId, due, dueEntries, additions, dueDeferrals, current));
         if (result.isOk()) {
             due.forEach(record -> committed.add(record.segmentId()));
         }

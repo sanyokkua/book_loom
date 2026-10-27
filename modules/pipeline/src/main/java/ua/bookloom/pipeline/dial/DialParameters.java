@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.dial;
 
 import java.util.Objects;
+import ua.bookloom.api.pipeline.DialProfile;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 
@@ -21,7 +22,8 @@ public record DialParameters(
         int reviewPasses,
         boolean backwardRevision,
         boolean llmSummary,
-        int chunkCap) {
+        int chunkCap)
+        implements DialProfile {
 
     private static final int MANUAL_CHUNK_CAP = 1;
 

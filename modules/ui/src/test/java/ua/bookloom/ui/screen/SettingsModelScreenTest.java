@@ -59,7 +59,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> modelCombo().getSelectionModel().select("qwen3:8b"));
 
-        assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("qwen3:8b");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
@@ -72,7 +72,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         typeIntoModelEntry("mistral-small:24b");
 
-        assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("mistral-small:24b");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
@@ -93,7 +93,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         openSettingsSettled();
         typeIntoModelEntry("gemma3:12b");
 
-        onFx(() -> viewModel().selectProvider("lmstudio"));
+        onFx(() -> viewModel().editProvider("lmstudio"));
 
         assertThat(modelCombo().getEditor().getText()).isEmpty();
         assertThat(((Button) required("settings-test-inference")).isDisable()).isTrue();
@@ -172,7 +172,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         awaitFx(() -> modelCombo().getItems().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
-        assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("mistral-small:24b");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
@@ -192,7 +192,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         awaitFx(() -> modelCombo().getItems().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
-        assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("mistral-small:24b");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
     }
 
     // IF a refusal a person can fix were not said beside the control, THEN they would get no reason for an empty list;

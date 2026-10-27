@@ -10,6 +10,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
@@ -41,7 +42,7 @@ final class BookOpener {
      */
     Result<Opened> open(TranslateArguments arguments) {
         Objects.requireNonNull(arguments, "arguments");
-        final Result<ImportedBook> imported = projects.importBook(arguments.source());
+        final Result<ImportedBook> imported = projects.create(arguments.source());
         if (imported.isErr()) {
             return Result.err(Objects.requireNonNull(imported.error()));
         }
@@ -62,7 +63,7 @@ final class BookOpener {
     }
 
     private Result<Opened> save(String projectId, BookBrief brief) {
-        final Result<?> saved = projects.updateBrief(projectId, brief);
+        final Result<ProjectChange> saved = projects.updateBrief(projectId, brief);
         log.debug(
                 "translate command brief saved={} source={} target={} dial={} names={}",
                 saved.isOk(),
@@ -70,9 +71,17 @@ final class BookOpener {
                 brief.targetLanguage(),
                 brief.dial(),
                 brief.names());
-        return saved.isErr()
-                ? Result.err(Objects.requireNonNull(saved.error()))
-                : Result.ok(new Opened(projectId, brief));
+        if (saved.isErr()) {
+            return Result.err(Objects.requireNonNull(saved.error()));
+        }
+        if (!(saved.data() instanceof ProjectChange.Saved)) {
+            log.warn("translate command brief not saved project={}: the name or pair clashes", projectId);
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "The brief was not saved",
+                    "Another project of this book has the same name or pair."));
+        }
+        return Result.ok(new Opened(projectId, brief));
     }
 
     // Absent --from keeps what the import preselected; `--from auto` forces Auto even for a book that declares a
@@ -115,6 +124,17 @@ final class BookOpener {
                         "This book is protected",
                         "This book is protected and cannot be translated. Its content is encrypted, so there is"
                                 + " nothing to translate.");
+            case NO_TEXT ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This book has no text to translate",
+                        "This book has no text to translate. Its body holds no words.");
+            case DAMAGED ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This file could not be opened",
+                        "This file could not be read as a book — its content is not the format its name"
+                                + " promises, so the file may be damaged.");
             case UNSUPPORTED, READABLE ->
                 AppError.of(
                         ErrorCode.validation,

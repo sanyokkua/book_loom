@@ -71,23 +71,22 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
         assertThat(renderingOf("господар")).isNotNull();
     }
 
-    // The note once said only that the model reports renderings; the book also learns them from the translated text.
+    // IF the note still explained the mechanism, THEN the card would read as internals, not as what it is for.
     @Test
-    void card_note_saysRenderingsAreAlsoLearnedFromTheTextAndAnAmbiguousTermStaysBlank() throws Exception {
+    void card_note_isThePurposeLine() throws Exception {
         showCard(IMP);
 
         assertThat(labelText("recurring-note"))
-                .contains("also learned from the translated text")
-                .contains("A term the book renders several ways stays blank");
+                .isEqualTo("Words the book repeats — kept the same all through the book."
+                        + " Learned while translating, or set here.");
     }
 
-    // The Used column is gone (15i.U5): a learned rendering shows only as the term's Target.
+    // A learned rendering shows as the term's Translation, in the field.
     @Test
-    void card_termWithALearnedRendering_showsItAsTheTargetAndNoUsedText() throws Exception {
+    void card_termWithALearnedRendering_showsItAsTheTranslation() throws Exception {
         showCard(IMP.withLearned(new LexiconEntry.Learned("біс", 5, 6)));
 
         assertThat(renderingOf("біс")).isNotNull();
-        assertThat(inTable(".muted").map(node -> ((Label) node).getText())).isEmpty();
     }
 
     @Test

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,7 +76,7 @@ class StructureSegmentsViewModelTest extends FxTestBase {
 
     private void show(final StructureSegmentsViewModel viewModel, final String... units) {
         onFx(() -> {
-            viewModel.show("p1", List.of(units));
+            viewModel.show("p1", Arrays.stream(units).map(UnitPart::whole).toList());
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -183,9 +184,29 @@ class StructureSegmentsViewModelTest extends FxTestBase {
         assertThat(projects.segmentCalls()).containsExactly("p1/u1", "p1/u1");
     }
 
+    // IF a chapter of a one-unit book (Markdown, FB2) listed the whole unit, THEN it would show other chapters'
+    // segments.
+    @Test
+    void show_aPartOfAUnit_listsOnlyThatRunAndCountsItsOwnChunks() throws TimeoutException {
+        projects.onSegments(
+                "book.md",
+                Result.ok(List.of(preview("a", 1, 3), preview("b", 1, 3), preview("c", 2, 3), preview("d", 3, 3))));
+        final StructureSegmentsViewModel viewModel = viewModel();
+
+        onFx(() -> {
+            viewModel.show("p1", List.of(new UnitPart("book.md", 1, 2)));
+            return null;
+        });
+        awaitLoaded(viewModel);
+
+        final StructureSegments.Loaded loaded = (StructureSegments.Loaded) stateOf(viewModel);
+        assertThat(loaded.rows()).extracting(row -> row.preview().segmentId()).containsExactly("b", "c");
+        assertThat(loaded.chunks()).isEqualTo(2);
+    }
+
     private void showUnlessShown(final StructureSegmentsViewModel viewModel, final BookBrief brief, final String unit) {
         onFx(() -> {
-            viewModel.showUnlessShown("p1", List.of(unit), brief);
+            viewModel.showUnlessShown("p1", List.of(UnitPart.whole(unit)), brief);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();

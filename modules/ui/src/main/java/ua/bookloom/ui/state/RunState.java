@@ -35,6 +35,15 @@ public enum RunState {
     }
 
     /**
+     * Whether no run is at work, so another book can be opened or the project deleted.
+     *
+     * @return {@code true} before any run and once it ended, {@code false} otherwise
+     */
+    public boolean isIdleOrEnded() {
+        return this == IDLE || hasEnded();
+    }
+
+    /**
      * Whether the run has stored everything it decided, so the review desk's count is complete.
      *
      * @return {@code true} when paused or ended, {@code false} while it decides or before any run

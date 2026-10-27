@@ -6,8 +6,10 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.ui.state.Tone;
 
 /**
  * A message strip: a glyph, a title and a text, in one of four roles, with room for extra detail and one optional
@@ -20,34 +22,13 @@ import javafx.scene.layout.VBox;
 public final class Banner extends HBox {
 
     private static final double TEXT_SPACING = 3;
-
-    /** The look of a banner: the style class that paints it. */
-    public enum Role {
-        /** Neutral information. */
-        INFO("banner-info"),
-        /** Success. */
-        OK("banner-ok"),
-        /** Something needs attention. */
-        WARN("banner-warn"),
-        /** A failure. */
-        ERR("banner-err");
-
-        private final String styleClass;
-
-        Role(final String styleClass) {
-            this.styleClass = styleClass;
-        }
-
-        String styleClass() {
-            return styleClass;
-        }
-    }
+    private static final String FAMILY = "banner";
 
     private final Label icon = new Label();
-    private final Label title = wrapped("banner-title");
-    private final Label text = wrapped("banner-text");
+    private final Label title = Wrapped.label("", "banner-title");
+    private final Label text = Wrapped.label("", "banner-text");
     private final VBox column = new VBox(TEXT_SPACING, title, text);
-    private Role role;
+    private Tone role;
 
     /**
      * Builds the banner.
@@ -58,7 +39,7 @@ public final class Banner extends HBox {
      * @param title the bold first line
      * @param text the second line
      */
-    public Banner(final String id, final Role role, final String glyph, final String title, final String text) {
+    public Banner(final String id, final Tone role, final String glyph, final String title, final String text) {
         Objects.requireNonNull(id, "id");
         this.role = Objects.requireNonNull(role, "role");
         icon.getStyleClass().add("banner-icon");
@@ -68,7 +49,10 @@ public final class Banner extends HBox {
         this.title.setId(id + "-title");
         this.text.setId(id + "-text");
         setAlignment(Pos.TOP_LEFT);
-        getStyleClass().addAll("banner", role.styleClass());
+        getStyleClass().addAll("banner", role.styleClass(FAMILY));
+        // The words take the width the banner has and wrap in it, so a long line grows the banner instead of being cut.
+        HBox.setHgrow(column, Priority.ALWAYS);
+        column.setMinWidth(0);
         getChildren().addAll(icon, column);
         setGlyph(glyph);
         setTitle(title);
@@ -86,11 +70,11 @@ public final class Banner extends HBox {
      *
      * @param newRole the role to paint
      */
-    public void setRole(final Role newRole) {
+    public void setRole(final Tone newRole) {
         Objects.requireNonNull(newRole, "newRole");
         final boolean changed = newRole != role;
-        getStyleClass().remove(role.styleClass());
-        getStyleClass().add(newRole.styleClass());
+        getStyleClass().remove(role.styleClass(FAMILY));
+        getStyleClass().add(newRole.styleClass(FAMILY));
         role = newRole;
         if (changed && getScene() != null && isVisible()) {
             Motion.settle(this);
@@ -118,12 +102,14 @@ public final class Banner extends HBox {
     }
 
     /**
-     * Replaces the second line.
+     * Replaces the second line; a blank one takes no room.
      *
      * @param value the new text
      */
     public void setText(final String value) {
         text.setText(Objects.requireNonNull(value, "value"));
+        text.setVisible(!value.isBlank());
+        text.setManaged(!value.isBlank());
     }
 
     /**
@@ -141,7 +127,7 @@ public final class Banner extends HBox {
      * @param id the button's node id
      * @param label the visible, already translated text
      * @param action what pressing it does
-     * @return the button, shown; the caller may hide it with {@link #setActionShown(Button, boolean)}
+     * @return the button, shown; the caller may hide it with {@link Visibility#show(javafx.scene.Node, boolean)}
      */
     public Button addAction(final String id, final String label, final Runnable action) {
         Objects.requireNonNull(action, "action");
@@ -154,20 +140,22 @@ public final class Banner extends HBox {
     }
 
     /**
-     * Shows or hides an action button so that a hidden one takes no room.
+     * Adds an action button at the banner's right edge, level with its first line.
      *
-     * @param button a button returned by {@link #addAction}
-     * @param shown whether it is visible and takes space
+     * @param id the button's node id
+     * @param label the visible, already translated text
+     * @param action what pressing it does
+     * @return the button, shown
      */
-    public static void setActionShown(final Button button, final boolean shown) {
-        button.setVisible(shown);
-        button.setManaged(shown);
-    }
-
-    private static Label wrapped(final String styleClass) {
-        final Label label = new Label();
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
-        return label;
+    public Button addTrailingAction(final String id, final String label, final Runnable action) {
+        Objects.requireNonNull(action, "action");
+        final Button button = new Button(Objects.requireNonNull(label, "label"));
+        button.setId(Objects.requireNonNull(id, "id"));
+        button.getStyleClass().add("btn-secondary");
+        button.setMinWidth(Region.USE_PREF_SIZE);
+        button.setOnAction(event -> action.run());
+        HBox.setHgrow(column, Priority.ALWAYS);
+        getChildren().add(button);
+        return button;
     }
 }

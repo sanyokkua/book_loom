@@ -4,13 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -24,6 +22,8 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
+import ua.bookloom.ui.dialog.SystemTextClipboard;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -52,15 +52,15 @@ public final class ContextSection extends CopyablePane {
      * @param messages the catalogue the headings are worded from
      */
     public ContextSection(final String id, final Messages messages) {
-        this(id, messages, CopyablePane::toClipboard);
+        this(id, messages, new SystemTextClipboard());
     }
 
-    ContextSection(final String id, final Messages messages, final Consumer<String> clipboard) {
+    ContextSection(final String id, final Messages messages, final TextClipboard clipboard) {
         this(id, messages, clipboard, new VBox(SECTION_SPACING));
     }
 
     private ContextSection(
-            final String id, final Messages messages, final Consumer<String> clipboard, final VBox sections) {
+            final String id, final Messages messages, final TextClipboard clipboard, final VBox sections) {
         super(
                 id,
                 messages,
@@ -217,7 +217,7 @@ public final class ContextSection extends CopyablePane {
         lock.getStyleClass().add("context-lock");
         final String locked = messages().get(MessageKey.LIVE_CONTEXT_LOCKED);
         lock.setAccessibleText(locked);
-        Tooltip.install(lock, new Tooltip(locked));
+        Tips.install(lock, locked);
         final HBox cell = new HBox(SPACING, label, lock);
         cell.setAlignment(Pos.CENTER_LEFT);
         return cell;

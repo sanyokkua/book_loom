@@ -8,29 +8,29 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
- * Which review actions are offered: a segment is selected, no run is translating and no retry is in flight; and
- * whether the All segments browse is offered. Kept apart from {@link ReviewViewModel} so that class stays a readable
+ * Which review actions are offered: a segment is selected, no run is translating and no retry is in flight. Kept apart from {@link ReviewViewModel} so that class stays a readable
  * size. FX thread only.
  */
 @Slf4j
 final class ReviewAvailability {
 
     private final StateMirror mirror;
-    private final ReviewMode reviewMode;
     private final ReadOnlyBooleanWrapper actions = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper accept = new ReadOnlyBooleanWrapper();
-    private final ReadOnlyBooleanWrapper allSegments = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyBooleanWrapper translating = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> lockReason = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> acceptNote = new ReadOnlyObjectWrapper<>();
 
-    ReviewAvailability(final StateMirror mirror, final ReviewMode reviewMode) {
+    /** Watches the run's mode and the retry flag, calling {@code refresh} when either changes. */
+    ReviewAvailability(final StateMirror mirror, final Runnable refresh) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
+        Objects.requireNonNull(refresh, "refresh");
+        mirror.runMode().addListener((observed, was, now) -> refresh.run());
+        mirror.review().retryInFlight().addListener((observed, was, now) -> refresh.run());
     }
 
     ReadOnlyBooleanProperty actions() {
@@ -41,8 +41,9 @@ final class ReviewAvailability {
         return accept.getReadOnlyProperty();
     }
 
-    ReadOnlyBooleanProperty allSegments() {
-        return allSegments.getReadOnlyProperty();
+    /** Whether a run translates now, which makes the desk read-only and offers Pause. */
+    ReadOnlyBooleanProperty translating() {
+        return translating.getReadOnlyProperty();
     }
 
     /** Why a selected segment can only be read, shown beside its actions; {@code null} when they are offered. */
@@ -72,12 +73,12 @@ final class ReviewAvailability {
         final boolean hasTarget = segment != null && hasTarget(segment);
         accept.set(offered && !dirty && decidable && hasTarget);
         acceptNote.set(offered && decidable && !hasTarget ? noTargetNote(segment) : null);
-        allSegments.set(reviewMode == ReviewMode.UNATTENDED && mirror.runState().get() == RunState.COMPLETED);
+        translating.set(isTranslating());
         log.debug(
-                "review availability: actions {}, accept {}, all segments {}, locked by {}",
+                "review availability: actions {}, accept {}, translating {}, locked by {}",
                 offered,
                 accept.get(),
-                allSegments.get(),
+                translating.get(),
                 lockReason.get());
     }
 

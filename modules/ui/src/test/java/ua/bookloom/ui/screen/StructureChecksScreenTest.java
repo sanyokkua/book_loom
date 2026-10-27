@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -30,6 +31,12 @@ import ua.bookloom.ui.ViewNames;
  * check ever holds back Continue.
  */
 class StructureChecksScreenTest extends StructureScreenTestBase {
+
+    // These cases read the technical lines (round trip, identifiers, tokens, groups), shown only when asked for.
+    @BeforeEach
+    void showTechnicalLines() {
+        technicalDetails(true);
+    }
 
     private static final RoundTripReport FAITHFUL = new RoundTripReport(true, true, List.of(), 1240, 1240);
 
@@ -73,8 +80,9 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         showChecked(FAITHFUL, plan());
 
         assertThat(labelText("structure-run-total"))
-                .isEqualTo("1,240 segments in the book text + 31 other texts (titles, alt texts, contents, metadata)"
-                        + " = 1,271 to translate");
+                .isEqualTo(
+                        "1,240 segments in the book text + 31 other texts (titles, picture descriptions, contents, book details)"
+                                + " = 1,271 to translate");
     }
 
     // IF the line showed when the run translates only the book text, THEN it would repeat the total in other words.
@@ -160,7 +168,7 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         showChecked(FAITHFUL, plan("s-42"));
 
         assertThat(labelText("structure-chunk-warning-text"))
-                .isEqualTo("1 segment exceeds the chunk budget — it will be split by sentence and re-joined.");
+                .isEqualTo("1 segment exceeds the group budget — it will be split by sentence and re-joined.");
     }
 
     // IF a warning appeared with nothing oversized, THEN the person would worry about a book that is fine.

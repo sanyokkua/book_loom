@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.review;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +55,7 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.OutcomeRecords;
 import ua.bookloom.pipeline.typography.TypographyGate;
@@ -80,8 +82,9 @@ public final class RetryDraft {
     private final ObjectMapper mapper;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
-    private final ReviewMode mode;
+    private final Provider<ReviewMode> mode;
     private final Clock clock;
+    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
      * Drafts one segment again.
@@ -225,7 +228,8 @@ public final class RetryDraft {
             return refuse(ErrorCode.validation, record.segmentId(), "The brief names no language to translate into.");
         }
         final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
-        final CallFrame frame = RetryFrames.of(brief, snapshot, document, openProjects.index(record.projectId()));
+        final CallFrame frame = RetryFrames.of(
+                brief, snapshot, document, openProjects.index(record.projectId()), requestDefaultsSource.current());
         return FollowingTarget.of(segments, record)
                 .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
     }
@@ -253,7 +257,7 @@ public final class RetryDraft {
                 new DraftReplyParser(mapper));
         return translator
                 .translateSplit(segment, context, mask, splitter, budgetOf(plan), instruction, lowerTemperature)
-                .flatMap(drafted -> decide(plan, drafted, gate, calls));
+                .flatMap(drafted -> decide(plan, drafted, gate, calls, mode.get()));
     }
 
     // The run drafts a segment alone above its chunk budget in sentence-aligned pieces; a retry computes that budget
@@ -267,13 +271,17 @@ public final class RetryDraft {
     }
 
     // The run's own quality loop with no repair round: the same evaluation, the same one-pair reviewer (labelled s1)
-    // when
-    // the brief's dial enables it, and the same acceptance rule.
+    // when the brief's dial enables it, and the same acceptance rule. The mode is asked once per retry, so a change in
+    // Settings reaches the next retry and one retry never mixes two.
     private Result<SegmentOutcome> decide(
-            final RetryPlan plan, final DraftOutcome drafted, final GateFunction gate, final ModelCalls calls) {
+            final RetryPlan plan,
+            final DraftOutcome drafted,
+            final GateFunction gate,
+            final ModelCalls calls,
+            final ReviewMode current) {
         final BookBrief brief = plan.brief();
         final LoopSettings settings = new LoopSettings(
-                mode,
+                current,
                 DialParameters.of(brief.dial()).withoutRepairRounds(),
                 plan.frame(),
                 brief.names(),

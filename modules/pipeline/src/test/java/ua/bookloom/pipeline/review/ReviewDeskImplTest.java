@@ -31,9 +31,11 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.OriginalTitle;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.TitleOrigin;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.SegmentRecord;
@@ -267,7 +269,8 @@ class ReviewDeskImplTest {
                 desk.retryDraft(ReviewMode.ASSISTED),
                 desk.projects(),
                 throwing(failure),
-                desk.audits(desk.segments()));
+                desk.audits(desk.segments()),
+                desk.openProjects());
 
         final Result<ReviewCounts> result = port.counts(desk.projectId());
 
@@ -291,7 +294,8 @@ class ReviewDeskImplTest {
                 desk.retryDraft(ReviewMode.ASSISTED),
                 desk.projects(),
                 desk.segments(),
-                desk.audits(desk.segments()));
+                desk.audits(desk.segments()),
+                desk.openProjects());
 
         final Result<SegmentRecord> result = port.accept(desk.projectId(), FLAGGED_ID);
 
@@ -338,5 +342,32 @@ class ReviewDeskImplTest {
 
     private static AppError error(final Result<?> result) {
         return Objects.requireNonNull(result.error(), () -> "expected an error but got " + result.data());
+    }
+
+    // IF the port did not answer from the open book, THEN the Export card could not show where the title came from.
+    @Test
+    void originalTitle_markdownBookWithAFirstHeading_isTheHeadingWithItsOrigin() {
+        final Desk desk = ReviewFixtures.markdown(
+                tempDir, "# Field Notes\n\nThe rain had not stopped for three days, and the city was grey.\n");
+
+        final Result<OriginalTitle> result =
+                desk.reviewDesk(ReviewMode.ASSISTED).originalTitle(desk.projectId());
+
+        assertThat(result.error()).isNull();
+        assertThat(result.data())
+                .extracting(OriginalTitle::text, OriginalTitle::origin)
+                .containsExactly("Field Notes", TitleOrigin.FIRST_HEADING);
+    }
+
+    // IF a book that is not open answered with a guess, THEN the card would show a title nobody read.
+    @Test
+    void originalTitle_bookNotOpen_isValidationError() {
+        final Desk desk = ReviewFixtures.markdown(tempDir, "One.\n");
+        desk.openProjects().remove(desk.projectId());
+
+        final Result<OriginalTitle> result =
+                desk.reviewDesk(ReviewMode.ASSISTED).originalTitle(desk.projectId());
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
     }
 }

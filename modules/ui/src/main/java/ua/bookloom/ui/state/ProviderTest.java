@@ -8,8 +8,11 @@ public enum ProviderTest {
     /** Asks whether the server answers at all; needs no model, so it can be asked before one is chosen. */
     CONNECTION(VerificationPolicy.CONNECTION, VerificationStage.CONNECTION, false),
 
-    /** Also asks whether the server's model list can be read and holds the chosen model. */
-    MODELS(VerificationPolicy.CONNECTION_AND_MODELS, VerificationStage.MODELS, true),
+    /**
+     * Also asks whether the server's model list can be read and, once a model is chosen, whether it holds it; needs no
+     * model, so a new provider's models can be listed first.
+     */
+    MODELS(VerificationPolicy.CONNECTION_AND_MODELS, VerificationStage.MODELS, false),
 
     /** Also asks whether the chosen model returns a usable answer to a short request. */
     INFERENCE(VerificationPolicy.FULL, VerificationStage.INFERENCE, true);
@@ -43,9 +46,9 @@ public enum ProviderTest {
     }
 
     /**
-     * Whether the test is asked about a particular model.
+     * Whether the test cannot run until a model is chosen.
      *
-     * @return {@code false} only for the connection test
+     * @return {@code true} only for the inference test
      */
     public boolean needsModel() {
         return needsModel;

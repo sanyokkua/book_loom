@@ -3,6 +3,8 @@ package ua.bookloom.pipeline;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.time.Clock;
+import java.time.ZoneId;
+import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
@@ -12,7 +14,10 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.api.project.IdSource;
+import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.dial.DialParameterProfiles;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.NamesPassImpl;
@@ -20,6 +25,7 @@ import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
 import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 
@@ -34,7 +40,7 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
  * an {@code @Inject} constructor, so Guice builds them for the engine, which hands the quality loop to every run. The
  * deterministic checks in {@code qa} are static functions.
  *
- * <p>{@code ReviewMode} is deliberately not bound here: the composition root chooses it once at launch, and a binding
+ * <p>{@code ReviewMode} is deliberately not bound here: the composition root provides it afresh for each run, and a binding
  * here would clash with it. An injector built from this module alone must bind it too.
  */
 public final class PipelineModule extends AbstractModule {
@@ -48,6 +54,9 @@ public final class PipelineModule extends AbstractModule {
     protected void configure() {
         bind(PromptTemplates.class).asEagerSingleton();
         bind(LanguageSupport.class).toInstance(LanguageRules.bundled());
+        bind(DialProfiles.class).to(DialParameterProfiles.class);
+        bind(GenerationOverrides.class).to(RequestDefaultsSource.class);
+        bind(IdSource.class).to(UuidIdSource.class);
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
         bind(ProjectService.class).to(ProjectServiceImpl.class);
@@ -62,7 +71,8 @@ public final class PipelineModule extends AbstractModule {
 
     @Provides
     Clock clock() {
-        return Clock.systemUTC();
+        // Instants do not care about the zone; the window words "today" and "yesterday" by the person's calendar days.
+        return Clock.system(ZoneId.systemDefault());
     }
 
     @Provides

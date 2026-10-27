@@ -15,6 +15,7 @@ import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -98,7 +99,8 @@ final class SegmentEvents {
                 snapshot.summary(),
                 snapshot.styleSheet(),
                 snapshot.lexicon(),
-                snapshot.characters());
+                snapshot.characters(),
+                displaySections(snapshot.sentSections()));
         log.debug(
                 "Sending ContextAssembled segmentId={} preceding={} summary={} names={} tmHits={} lexicon={}"
                         + " characters={}",
@@ -110,6 +112,19 @@ final class SegmentEvents {
                 shown.lexicon().size(),
                 shown.characters().size());
         emit.accept(new ContextAssembled(segmentId, shown));
+    }
+
+    private static @Nullable List<PromptSection> displaySections(@Nullable final List<PromptSection> sections) {
+        if (sections == null) {
+            return null;
+        }
+        return sections.stream()
+                .map(section -> new PromptSection(
+                        section.slot(),
+                        section.heading(),
+                        section.origin(),
+                        section.lines().stream().map(DisplayText::of).toList()))
+                .toList();
     }
 
     /**

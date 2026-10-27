@@ -26,6 +26,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -86,7 +87,7 @@ class TranslateCommandLiveTest {
 
                 The *third* marked paragraph.
                 """);
-        final Injector injector = Guice.createInjector(new CoreModules(startup()));
+        final Injector injector = Guice.createInjector(new CoreModules(startup(), new InMemoryPersistenceModule()));
         final Path destination = tempDir.resolve("Book.uk.md");
         final CommandRun run = runCommand(injector, source, provider, model, baseUrl.apply(endpoint));
 

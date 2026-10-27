@@ -12,7 +12,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * What Settings → Providers tells the person about the model they chose and the server it runs on, from the model's
- * name and the provider's kind alone: a pure function, so it never calls a server and is the same on every screen.
+ * name and the provider's server alone: a pure function, so it never calls a server and is the same on every screen.
  */
 // Checkstyle reads the source before Lombok adds the private constructor (see HashUtil).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -27,6 +27,52 @@ public final class ModelAdvice {
             new Rule("gemma4e4b", new Note(Level.MINIMUM, MessageKey.SETTINGS_ADVICE_GEMMA_E4B)),
             new Rule("gemma4e2b", new Note(Level.WARNING, MessageKey.SETTINGS_ADVICE_GEMMA_E2B)),
             new Rule("gptoss", new Note(Level.WARNING, MessageKey.SETTINGS_ADVICE_GPT_OSS)));
+
+    private static final String LM_STUDIO_PORT = ":1234";
+    private static final String LM_STUDIO_WORD = "lmstudio";
+
+    /** The server a provider row points at, as far as its notes go. */
+    public enum Server {
+        /** Ollama's native API. */
+        OLLAMA,
+        /** LM Studio's OpenAI-compatible server: slower here, unstreamed, more control codes. */
+        LM_STUDIO,
+        /** Any other OpenAI-compatible server, about which nothing was measured. */
+        OTHER_OPENAI_COMPATIBLE;
+
+        /**
+         * Tells the server from a provider row.
+         *
+         * @param row the provider; LM Studio is an OpenAI-compatible one on LM Studio's port 1234 or named so
+         * @return the server; never null
+         */
+        public static Server of(final ProviderRow row) {
+            Objects.requireNonNull(row, "row");
+            return of(row.kind(), row.id(), row.displayName(), row.hostPort());
+        }
+
+        /**
+         * Tells the server from a provider's parts, for a description that is not a listed row (a form under test).
+         *
+         * @param kind the provider's protocol
+         * @param id the provider's id
+         * @param displayName the name it is shown by
+         * @param hostPort the endpoint's host and port without scheme or path
+         * @return the server; never null
+         */
+        public static Server of(
+                final ProviderKind kind, final String id, final String displayName, final String hostPort) {
+            Objects.requireNonNull(kind, "kind");
+            if (kind == ProviderKind.OLLAMA) {
+                return OLLAMA;
+            }
+            final boolean lmStudio = hostPort.endsWith(LM_STUDIO_PORT)
+                    || compact(id).contains(LM_STUDIO_WORD)
+                    || compact(displayName).contains(LM_STUDIO_WORD);
+            log.debug("provider '{}' at {} is LM Studio: {}", id, hostPort, lmStudio);
+            return lmStudio ? LM_STUDIO : OTHER_OPENAI_COMPATIBLE;
+        }
+    }
 
     /** How strongly a note speaks. */
     public enum Level {
@@ -51,12 +97,12 @@ public final class ModelAdvice {
     /**
      * The notes for a chosen model on a provider, model notes first, then the server's.
      *
-     * @param kind the selected provider's kind
+     * @param server the selected provider's server
      * @param modelId the model text as chosen, any letter case; blank for none
      * @return the notes in the order they are shown; never null, empty for an unknown model on a server with no note
      */
-    public static List<Note> notesFor(final ProviderKind kind, final String modelId) {
-        Objects.requireNonNull(kind, "kind");
+    public static List<Note> notesFor(final Server server, final String modelId) {
+        Objects.requireNonNull(server, "server");
         Objects.requireNonNull(modelId, "modelId");
         final String compact = compact(modelId);
         final List<Note> notes = new ArrayList<>();
@@ -64,10 +110,11 @@ public final class ModelAdvice {
                 .filter(rule -> compact.contains(rule.needle()))
                 .findFirst()
                 .ifPresent(rule -> notes.add(rule.note()));
-        if (kind == ProviderKind.OPENAI_COMPATIBLE) {
+        // Only LM Studio was measured; a generic OpenAI-compatible server gets no claim about its speed.
+        if (server == Server.LM_STUDIO) {
             notes.add(new Note(Level.INFO, MessageKey.SETTINGS_ADVICE_LM_STUDIO));
         }
-        log.debug("advice for {} model '{}': {} note(s)", kind, modelId, notes.size());
+        log.debug("advice for {} model '{}': {} note(s)", server, modelId, notes.size());
         return List.copyOf(notes);
     }
 

@@ -44,8 +44,13 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.provider.RefusalMemory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Verifies provider-neutral model resolution while preserving the pseudo model's behavior. */
 class ChatModelFactoryImplTest {
@@ -61,7 +66,7 @@ class ChatModelFactoryImplTest {
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
     }
 
     @AfterEach
@@ -258,7 +263,7 @@ class ChatModelFactoryImplTest {
     // Guice shares the registry, client factory, gate, and retry policy across all model resolutions.
     @Test
     void configure_llmModuleResolvesSharedServicesAndChatModelFactory() {
-        final Injector injector = Guice.createInjector(new LlmModule());
+        final Injector injector = Guice.createInjector(new LlmModule(), new LlmTestStorageModule());
 
         assertThat(injector.getInstance(ChatModelFactory.class)).isInstanceOf(ChatModelFactoryImpl.class);
         assertThat(injector.getInstance(ProviderConfigs.class)).isSameAs(injector.getInstance(ProviderConfigs.class));
@@ -273,11 +278,19 @@ class ChatModelFactoryImplTest {
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retries = new RetryPolicy(
                 Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC), () -> 0.5, ignored -> {});
-        return new ChatModelFactoryImpl(configs, clients, new InferenceGate(), retries, new LlmModule().objectMapper());
+        final ModelSettingsCache cache = new ModelSettingsCache(new FakeModelSettingsRepository());
+        return new ChatModelFactoryImpl(
+                configs,
+                clients,
+                new InferenceGate(),
+                retries,
+                new LlmModule().objectMapper(),
+                cache,
+                new RefusalMemory(cache));
     }
 
     private void register(ProviderConfig config) {
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
     }
 
     private ChatModel pseudoModel() {

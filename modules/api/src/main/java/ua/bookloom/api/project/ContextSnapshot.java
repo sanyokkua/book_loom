@@ -3,6 +3,7 @@ package ua.bookloom.api.project;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.PromptSection;
 
 /**
  * The texts a draft's context saw, held so a retry replays exactly with no repository lookup — even after the
@@ -15,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  * @param styleSheet the style sheet text the draft saw
  * @param lexicon the established recurring-term renderings the draft was asked to keep consistent
  * @param characters the character gender sheet the draft saw, one line per character present
+ * @param sentSections the prompt parts a batch draft was really sent, or null when the segment was drafted alone
  */
 public record ContextSnapshot(
         List<String> precedingTargets,
@@ -23,7 +25,8 @@ public record ContextSnapshot(
         @Nullable String summary,
         String styleSheet,
         List<SnapshotRendering> lexicon,
-        List<String> characters) {
+        List<String> characters,
+        @Nullable List<PromptSection> sentSections) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies the lists, so a caller-held
@@ -41,6 +44,19 @@ public record ContextSnapshot(
         tmHits = List.copyOf(tmHits);
         lexicon = List.copyOf(lexicon);
         characters = List.copyOf(characters);
+        sentSections = sentSections == null ? null : List.copyOf(sentSections);
+    }
+
+    /** A snapshot of a draft that was sent no batch prompt of its own. */
+    public ContextSnapshot(
+            final List<String> precedingTargets,
+            final List<SnapshotTerm> glossary,
+            final List<SnapshotTmHit> tmHits,
+            @Nullable final String summary,
+            final String styleSheet,
+            final List<SnapshotRendering> lexicon,
+            final List<String> characters) {
+        this(precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, characters, null);
     }
 
     /** A snapshot of a draft that was shown no character sheet. */
@@ -62,5 +78,16 @@ public record ContextSnapshot(
             @Nullable final String summary,
             final String styleSheet) {
         this(precedingTargets, glossary, tmHits, summary, styleSheet, List.of());
+    }
+
+    /**
+     * Returns this snapshot with the prompt parts a batch really sent, every other component unchanged.
+     *
+     * @param sections the parts the batch call sent, or null for a segment drafted alone
+     * @return a copy holding {@code sections}
+     */
+    public ContextSnapshot withSent(@Nullable final List<PromptSection> sections) {
+        return new ContextSnapshot(
+                precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, characters, sections);
     }
 }

@@ -27,8 +27,8 @@ public final class ImportStates {
      *
      * @param fileName the name of the imported file, without its directory
      * @param imported the answer; a readable book carries its format, and a project when it was stored
-     * @return {@link ImportState.Detected} for a stored book, {@link ImportState.DrmBlocked} or
-     *     {@link ImportState.Unsupported} for the verdicts that refuse it, and {@link ImportState.Refused} for a
+     * @return {@link ImportState.Detected} for a stored book, {@link ImportState.DrmBlocked},
+     *     {@link ImportState.Unsupported} or {@link ImportState.NoText} for the verdicts that refuse it, and {@link ImportState.Refused} for a
      *     readable book that no project was created for; never null
      */
     public static ImportState of(final String fileName, final ImportedBook imported) {
@@ -43,9 +43,24 @@ public final class ImportStates {
                 imported.projectId() != null);
         return switch (inspection.verdict()) {
             case DRM_PROTECTED -> new ImportState.DrmBlocked(fileName, inspection.encryptionScheme());
-            case UNSUPPORTED -> new ImportState.Unsupported(fileName, inspection.detectedType());
+            case UNSUPPORTED -> new ImportState.Unsupported(fileName, knownTypeOrNull(inspection.detectedType()));
+            case DAMAGED ->
+                new ImportState.Refused(
+                        fileName,
+                        AppError.of(
+                                ErrorCode.validation,
+                                "This file could not be read",
+                                "Its content is not the format its name promises; the file may be damaged."));
+            case NO_TEXT -> new ImportState.NoText(fileName);
             case READABLE -> imported.projectId() == null ? notStored(fileName) : detected(fileName, imported);
         };
+    }
+
+    // "Unknown" is the inspection's word for no known type; the line says the format is not read instead of naming it.
+    private static @Nullable String knownTypeOrNull(final String detectedType) {
+        final boolean unknown = BookInspection.UNKNOWN_TYPE.equals(detectedType);
+        log.debug("the refused file's type is known: {}", !unknown);
+        return unknown ? null : detectedType;
     }
 
     private static ImportState notStored(final String fileName) {

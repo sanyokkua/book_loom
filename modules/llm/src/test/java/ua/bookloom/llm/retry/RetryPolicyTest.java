@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLimits;
 
 /** Pins retry eligibility, deterministic jitter, server advice, and interruption behavior. */
 class RetryPolicyTest {
@@ -18,6 +19,12 @@ class RetryPolicyTest {
     @AfterEach
     void clearInterrupt() {
         Thread.interrupted();
+    }
+
+    @Test
+    void maxAttempts_isCallLimits() {
+        assertThat(RetryPolicy.MAX_ATTEMPTS).isEqualTo(CallLimits.MAX_ATTEMPTS);
+        assertThat(RetryPolicy.MAX_TIMEOUT_ATTEMPTS).isEqualTo(CallLimits.MAX_TIMEOUT_ATTEMPTS);
     }
 
     @Test

@@ -41,8 +41,8 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
         assertThat(states).containsExactly(RunState.RUNNING, RunState.COMPLETED);
         assertThat(onFx(() -> mirror.report().get())).isSameAs(report);
         assertThat(onFx(() -> mirror.failure().get())).isNull();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(2);
-        assertThat(onFx(() -> mirror.remaining().get())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(2);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
         assertThat(logEntries())
                 .containsExactly(
                         log(LogKind.MILESTONE, "stageStarted"),
@@ -78,7 +78,7 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
         assertThat(states).containsExactly(RunState.RUNNING, RunState.STOPPED);
         assertThat(onFx(() -> mirror.failure().get())).isNull();
         assertThat(onFx(() -> mirror.report().get())).isSameAs(report);
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(3);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(3);
         assertThat(logEntries()).doesNotContain(log(LogKind.MILESTONE, "finished"));
     }
 
@@ -95,7 +95,7 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
         assertThat(states).containsExactly(RunState.RUNNING, RunState.STOPPED);
         assertThat(onFx(() -> mirror.failure().get())).isNull();
         assertThat(onFx(() -> mirror.report().get())).isNull();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(3);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(3);
     }
 
     // IF the outcome came from the Finished event, THEN a run refused before it started (which sends none) would sit
@@ -143,9 +143,9 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
 
         assertThat(states).containsExactly(RunState.RUNNING, RunState.FAILED);
         assertThat(onFx(() -> mirror.failure().get())).isSameAs(failure);
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(10);
-        assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(3);
-        assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(7);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(10);
+        assertThat(onFx(() -> mirror.figures().get().flagged())).isEqualTo(3);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isEqualTo(7);
     }
 
     static Stream<Arguments> throwingEnds() {

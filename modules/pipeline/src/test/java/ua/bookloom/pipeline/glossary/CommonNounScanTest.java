@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The name scan's reading of how a book writes a capitalised word (15i.N5 junk, 15i.N8 lost names): a word written
@@ -120,7 +120,7 @@ class CommonNounScanTest {
     }
 
     private static List<GlossaryEntry> entries(final List<String> lines) {
-        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        final GlossaryRepository glossary = Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule())
                 .getInstance(GlossaryRepository.class);
         final BookSlice book = GlossaryTestSegments.of(lines);
         return Objects.requireNonNull(

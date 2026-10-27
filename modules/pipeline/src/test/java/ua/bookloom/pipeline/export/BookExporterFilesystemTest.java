@@ -10,6 +10,7 @@ import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.sourceOrder;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -22,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
@@ -73,7 +75,7 @@ class BookExporterFilesystemTest {
     void export_ordinaryMoveFailure_returnsInternalWithCauseAndCleansTemporary() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "NEW TRANSLATION");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = tempDir.resolve(".Book.uk.md");
+        final Path temporary = tempDir.resolve(".bookloom-0-Book.uk.md");
         final Document decided = snapshot(documents, source);
         final IOException moveFailure = new IOException("scripted move failure");
         final ScriptedMoveOperation moves =
@@ -101,7 +103,7 @@ class BookExporterFilesystemTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(errorOf(result).cause()).isInstanceOf(FileAlreadyExistsException.class);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // With overwrite on a validated temporary book atomically replaces the previous destination.
@@ -116,7 +118,7 @@ class BookExporterFilesystemTest {
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(destination)).isEqualTo("NEW TRANSLATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // A destination appearing at publication time is still a validation conflict when overwrite is disabled.
@@ -132,7 +134,7 @@ class BookExporterFilesystemTest {
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("LATE DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
         assertThat(lateConflict.optionCalls()).containsExactly(List.of());
     }
 
@@ -152,7 +154,7 @@ class BookExporterFilesystemTest {
         assertThat(result.error()).isSameAs(first);
         assertThat(port.closedDocuments()).hasSize(2);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // A lone source or temporary close error blocks publication while the other close is still attempted.
@@ -174,7 +176,7 @@ class BookExporterFilesystemTest {
                 .allSatisfy(
                         document -> assertThat(documents.close(document).data()).isFalse());
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // Result.ok(false) still means close succeeded and does not prevent publication.
@@ -207,7 +209,7 @@ class BookExporterFilesystemTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(result).cause()).isSameAs(failure);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     // A write error stays primary when source close and deletion of a non-empty temporary directory also fail.
@@ -215,7 +217,7 @@ class BookExporterFilesystemTest {
     void export_writeCloseAndCleanupFail_preservesWriteError() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "NEW TRANSLATION");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
-        final Path temporary = tempDir.resolve(".Book.uk.md");
+        final Path temporary = tempDir.resolve(".bookloom-0-Book.uk.md");
         assertThat(Files.createDirectory(temporary)).isEqualTo(temporary);
         assertThat(Files.writeString(temporary.resolve("kept.txt"), "kept")).exists();
         final Document decided = snapshot(documents, source);
@@ -233,57 +235,56 @@ class BookExporterFilesystemTest {
         assertThat(temporary.resolve("kept.txt")).exists();
     }
 
-    // A temporary path equal to the source is rejected before either source or destination bytes are touched.
+    // IF the temporary took a name that already stands beside the book, THEN a hidden source of that name would be
+    // written over; the reserved name is new, so the source stays as it was.
     @Test
-    void export_temporaryPathEqualsSource_returnsValidationWithoutTouchingEitherBook() throws Exception {
+    void export_sourceNamedLikeTheOldTemporary_publishesAndLeavesTheSourceAlone() throws Exception {
         final Path source = TestBooks.markdown(tempDir.resolve(".Book.md"), "SOURCE BYTES");
         final Path destination = Files.writeString(tempDir.resolve("Book.md"), "DESTINATION BYTES");
         final Document decided = snapshot(documents, source);
-        final BookExporterTestSupport.RecordingDocumentPort port =
-                new BookExporterTestSupport.RecordingDocumentPort(documents);
 
-        final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
-        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
-        assertThat(Files.readString(destination)).isEqualTo("DESTINATION BYTES");
-        assertThat(port.writtenDocuments()).isEmpty();
-        assertThat(port.writeDestinations()).isEmpty();
     }
 
-    // A temporary symlink to the destination is rejected before it can be followed, replaced, or cleaned up.
+    // IF a link standing at a temporary name were followed, replaced or deleted, THEN the export could write into or
+    // remove a file it never created.
     @Test
-    void export_temporaryPathAliasesDestination_returnsValidationWithoutTouchingEitherBook() throws Exception {
-        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "SOURCE BYTES");
+    void export_linkAtTheTemporaryName_isSkippedAndKept() throws Exception {
+        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "NEW TRANSLATION");
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "DESTINATION BYTES");
-        final Path temporary = Files.createSymbolicLink(tempDir.resolve(".Book.uk.md"), destination.getFileName());
+        final Path link =
+                Files.createSymbolicLink(tempDir.resolve(".bookloom-0-Book.uk.md"), destination.getFileName());
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result = new BookExporter(documents)
                 .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
-        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
-        assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
-        assertThat(Files.readString(destination)).isEqualTo("DESTINATION BYTES");
-        assertThat(Files.isSymbolicLink(temporary)).isTrue();
+        assertThat(result.data()).isEqualTo(destination);
+        assertThat(Files.readString(destination)).isEqualTo("NEW TRANSLATION");
+        assertThat(Files.isSymbolicLink(link)).isTrue();
+        assertThat(Files.exists(tempDir.resolve(".bookloom-1-Book.uk.md"))).isFalse();
     }
 
-    // A dangling temporary symlink to a destination is still occupied and refused before a writer can create it.
+    // IF a refused permission at publication read as a defect, THEN the person would not know to choose another folder.
     @Test
-    void export_danglingTemporarySymlinkToDestination_returnsValidationWithoutCreatingDestination() throws Exception {
-        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "SOURCE BYTES");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final Path temporary = Files.createSymbolicLink(tempDir.resolve(".Book.uk.md"), destination.getFileName());
+    void export_moveRefusedPermission_isAnAccessDeniedFailure() throws Exception {
+        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "NEW TRANSLATION");
+        final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
         final Document decided = snapshot(documents, source);
+        final ScriptedMoveOperation moves = new ScriptedMoveOperation()
+                .answer(Result.err(error(ErrorCode.internal, new AccessDeniedException(destination.toString()))));
 
-        final Result<Path> result = new BookExporter(documents)
+        final Result<Path> result = new BookExporter(documents, moves)
                 .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
-        assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
-        assertThat(Files.exists(destination)).isFalse();
-        assertThat(Files.isSymbolicLink(temporary)).isTrue();
+        assertThat(FailureReason.in(errorOf(result).details())).contains(FailureReason.ACCESS_DENIED);
+        assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
+        assertThat(Files.exists(tempDir.resolve(".bookloom-0-Book.uk.md"))).isFalse();
     }
 
     private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {

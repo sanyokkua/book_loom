@@ -28,8 +28,9 @@ context: |
   ## Stack
 
   Java 25 (LTS) - JavaFX 26 - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
-  + dependency locking - Guice DI (constructor injection only) - SQLite (sqlite-jdbc, WAL) + Flyway
-  (additive `V{ver}__desc.sql` migrations) + JDBI 3 (no ORM) - JDOM2/dom4j + jsoup + `java.util.zip`
+  + dependency locking - Guice DI (constructor injection only) - SQLite (sqlite-jdbc, WAL) + JDBI 3
+  fluent API (no ORM; JSON documents in a few tables, one schema file and no migrations before the first release, Flyway
+  additive `V{ver}__desc.sql` migrations from the first release, ADR-0043) - JDOM2/dom4j + jsoup + `java.util.zip`
   (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - ICU4J for
   segmentation and charset detection - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
   Error Prone/NullAway (JSpecify `@NullMarked`) + Checkstyle + SpotBugs/FindSecBugs + ArchUnit - Lefthook -
@@ -71,7 +72,7 @@ context: |
     services may use `@RequiredArgsConstructor`/`@Slf4j`/`@Builder` (DD-05, ADR-0014). `Optional` as a
     return type only. `Objects.requireNonNull` at public boundaries. No checked exceptions in application
     code. No `synchronized` in new code.
-  - **Credentials are a reference, never a secret.** Persist an env-var name or an OS-keychain reference;
+  - **Credentials are a reference, never a secret.** Persist an env-var name (an OS-keychain reference is allowed later, not built);
     resolve just before the call; never store or log the secret.
   - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`) blocks and guards all inference —
     real runs and diagnostics alike; no call is ever refused by it. The one `busy` outcome in this system
@@ -82,17 +83,23 @@ context: |
     attached at Scene level; never `node.setStyle(...)`.
   - **Offline.** No background, scheduled, or unsolicited network call; no telemetry. The only outbound
     traffic ever is user-triggered provider communication (inference, model discovery, verification) with
-    the configured provider. All assets are bundled.
+    the configured provider, plus one exception (ADR-0044): on the very first launch only (a fresh
+    database counts), after the window is shown, one silent model listing of exactly
+    http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other
+    address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop
+    window only, only :llm holds HTTP code; every later check is user-triggered. All assets are bundled.
   - **Acceptance model.** The review-mode dial (Unattended/Assisted/Manual) is the sole owner of the trust
     threshold tau; the quality dial (Fast/Balanced/Max) owns mechanics only. Accept = hard gates pass AND
     confidence >= tau AND (judge off OR judge score >= tau_judge) (DD-45).
   - **UI thread discipline.** Scene graph only on the JavaFX Application Thread; long work in `Task`/
     `Service` on an injected daemon executor; `Platform.runLater` (via the singleton state mirror) to
     bridge; virtual threads for I/O fan-out.
-  - **Persistence.** Today, every `:api` repository port (`ua.bookloom.api.persistence`) is bound to an
-    in-memory adapter (ADR-0034) — nothing survives a restart. SQLite (WAL) via JDBI, Flyway additive
-    migrations, a generic typed KV settings table, and atomic per-chunk commits (process-crash-safe and
-    forced-quit-safe; NOT power-loss-proof, DD-20) are the planned SQLite adapter. The single-instance lock
+  - **Persistence.** Every `:api` repository port (`ua.bookloom.api.persistence`) has an
+    in-memory adapter (ADR-0034, kept for the command line and the tests) and, for the window, a SQLite adapter
+    (ADR-0043): WAL via JDBI's fluent API, state as JSON documents in a few tables, a generic typed KV settings
+    table, one schema file with no migrations before the first release (a database with another `user_version`
+    is renamed aside and a fresh one created; Flyway additive migrations arrive with the first release), and
+    atomic per-chunk commits (process-crash-safe and forced-quit-safe; NOT power-loss-proof, DD-20). The single-instance lock
     `bookloom.lock` is acquired pre-injector by `:app`/`:util`, never by `:persistence`.
   - **Paths first.** A `:util` resolver picks the per-OS data/log dirs and runs BEFORE logging and SQLite
     (DD-39, ADR-0015).
@@ -229,7 +236,7 @@ rules:
     - Name the test type explicitly where the change implies one - WireMock at the HTTP seam for BOTH
       dialects (Ollama-native `/api/*` and OpenAI-compatible `/v1/*`) on provider work; a canonical-equal
       golden round-trip per format on document work; headless TestFX widget + screen/state +
-      mockup-conformance on `:ui` work; real temp SQLite + Flyway on persistence work; EN/UK bundle parity
+      mockup-conformance on `:ui` work; temp SQLite with the schema applied on persistence work; EN/UK bundle parity
       on i18n work; a `liveLocal`-tagged case on provider work.
     - "Do not add tasks that reintroduce retired machinery: no `trace`/`traceCheck` Gradle task, no
       `docs/traceability.yaml`, no story file, no `Proves:` marker, no `// Covers:` marker, no
@@ -247,8 +254,8 @@ operations:
       - Run `./gradlew spotlessApply` before the gate; the pre-commit hook does the same.
       - "Add the test types the change implies (provider -> WireMock for both dialects; document -> golden
         canonical-equal round trip; pipeline -> e2e against a stub provider; `:ui` -> TestFX widget +
-        screen/state + mockup conformance; i18n -> EN/UK bundle parity; persistence -> real temp SQLite +
-        Flyway)."
+        screen/state + mockup conformance; i18n -> EN/UK bundle parity; persistence -> temp SQLite with the
+        schema applied)."
       - Provider-related changes additionally add or update a `liveLocal`-tagged, env-gated test that skips
         cleanly when no local endpoint is configured. It never runs in CI.
       - ArchUnit boundary tests must be green - FX-free core, dependency direction, ports-not-concretes,
@@ -257,9 +264,14 @@ operations:
       - "`:ui` changes must match `docs/specification/mockups/ui-mockup.html` for each named screen, state,
         and theme, asserted structurally and by looked-up palette token."
       - The offline invariant must hold - no new background, scheduled, or unsolicited network call, and no
-        telemetry. The only egress is user-triggered provider communication with the configured provider.
-      - No secret may be persisted, logged, or placed in an `AppError`. Credentials stay env-var or keychain
-        references resolved at call time.
+        telemetry. The only egress is user-triggered provider communication with the configured provider,
+        plus one exception (ADR-0044), on the very first launch only (a fresh database counts), after the
+        window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and
+        http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing
+        answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code;
+        every later check is user-triggered.
+      - No secret may be persisted, logged, or placed in an `AppError`. Credentials stay env-var names (keychain
+        references allowed later, not built) resolved at call time.
       - Update `docs/implementation_plan/01_MODULE_INVENTORY.md` if the change adds a module or package.
       - Cite any ADR the change relies on and make sure it exists under `docs/adr/` with status `accepted`.
         A decision that is costly to reverse means a new ADR; a spec clause the code legitimately outgrew

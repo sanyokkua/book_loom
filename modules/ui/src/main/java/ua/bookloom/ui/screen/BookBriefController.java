@@ -13,9 +13,14 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.BriefEstimate;
+import ua.bookloom.ui.state.BriefLock;
+import ua.bookloom.ui.state.BriefProject;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.TranslatingViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
@@ -36,6 +41,11 @@ public final class BookBriefController {
     private final LanguageNames names;
     private final SettingsViewModel settings;
     private final WorkflowProgress progress;
+    private final RunStateSource runs;
+    private final BriefLock lock;
+    private final BriefProject stored;
+    private final BriefEstimate estimate;
+    private final TranslatingViewModel translating;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
     @FXML
@@ -51,6 +61,11 @@ public final class BookBriefController {
      * @param names how the language boxes name and recognise languages
      * @param settings where the model row reads the chosen model from
      * @param progress where Continue records that the brief step is done
+     * @param runs the run-state row, whose translation at work holds Fill in from the book
+     * @param lock whether the brief is read-only and its languages locked
+     * @param stored the open project's stored name and size
+     * @param estimate the time estimate under the quality choice
+     * @param translating the run controls the read-only banner's Pause uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -62,7 +77,12 @@ public final class BookBriefController {
             final Navigator navigator,
             final LanguageNames names,
             final SettingsViewModel settings,
-            final WorkflowProgress progress) {
+            final WorkflowProgress progress,
+            final RunStateSource runs,
+            final BriefLock lock,
+            final BriefProject stored,
+            final BriefEstimate estimate,
+            final TranslatingViewModel translating) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -70,6 +90,11 @@ public final class BookBriefController {
         this.names = Objects.requireNonNull(names, "names");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.progress = Objects.requireNonNull(progress, "progress");
+        this.runs = Objects.requireNonNull(runs, "runs");
+        this.lock = Objects.requireNonNull(lock, "lock");
+        this.stored = Objects.requireNonNull(stored, "stored");
+        this.estimate = Objects.requireNonNull(estimate, "estimate");
+        this.translating = Objects.requireNonNull(translating, "translating");
     }
 
     @FXML
@@ -84,7 +109,19 @@ public final class BookBriefController {
     private void show(final boolean bookOpen) {
         log.debug("showing the {}", bookOpen ? "brief" : "no-book state");
         final Node content = bookOpen
-                ? new BriefView(viewModel, messages, navigator, names, settings, progress).root()
+                ? new BriefView(new BriefParts(
+                                viewModel,
+                                messages,
+                                navigator,
+                                names,
+                                settings,
+                                progress,
+                                runs,
+                                lock,
+                                stored,
+                                estimate,
+                                translating))
+                        .root()
                 : NoBookView.build(messages, navigator);
         stateHost.getChildren().setAll(content);
     }

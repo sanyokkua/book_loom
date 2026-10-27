@@ -11,8 +11,8 @@ import ua.bookloom.api.pipeline.ReviewMode;
 /**
  * Purely resolves the review mode from injected environment and property lookups.
  *
- * <p>Settings are not saved yet, so the careful modes arrive by a launch flag. A value that names no mode never
- * silently changes how a run behaves: it falls back to Unattended and travels on as data, so the launcher can say
+ * <p>The flag is read once at launch; {@link ReviewModeSource} weighs it against the stored setting at each run start. A value that names no mode never
+ * silently changes how a run behaves: it counts as set, keeps the input it came from, means Unattended, and travels on as data, so the launcher can say
  * once which text it refused.
  */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
@@ -48,7 +48,7 @@ public final class ReviewModeResolver {
         if (mode != null) {
             return new ResolvedReviewMode(mode, source, null);
         }
-        return new ResolvedReviewMode(ReviewMode.UNATTENDED, ResolvedReviewMode.Source.DEFAULT, value);
+        return new ResolvedReviewMode(ReviewMode.UNATTENDED, source, value);
     }
 
     private static @Nullable ReviewMode parse(String value) {

@@ -9,7 +9,6 @@ import java.util.Locale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -56,11 +55,6 @@ class RecurringTermsModelActionsTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
     }
 
-    private void run(final Runnable action) {
-        interact(action);
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
     private ChangeResults results() {
         return onFx(() -> vm.results().get());
     }
@@ -102,7 +96,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
     void reviewWithModel_noModelChosen_saysSoAndAsksNothing() {
         run(() -> vm.recurring().review());
 
-        assertThat(notice()).isEqualTo("Choose a model in the provider settings to scan or review recurring terms.");
+        assertThat(notice()).isEqualTo("Choose a model in the AI model settings to scan or review recurring terms.");
         assertThat(lexicon.calls()).doesNotContain("review(p1)");
     }
 
@@ -158,7 +152,7 @@ class RecurringTermsModelActionsTest extends FxTestBase {
                 .extracting(ChangeRow::term, ChangeRow::origin)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple("imp", ChangeOrigin.TEXT));
         assertThat(notice())
-                .isEqualTo("Found in the text. The model step was skipped: choose a model in the provider settings"
+                .isEqualTo("Found in the text. The model step was skipped: choose a model in the AI model settings"
                         + " to run it.");
         assertThat(onFx(() -> vm.busy().get())).isFalse();
     }

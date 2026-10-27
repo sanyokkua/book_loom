@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
@@ -183,8 +184,8 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
 
         assertThat(engine.requests())
                 .containsExactly(
-                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL),
-                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL));
+                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL, new ModelSelection("ollama", MODEL)),
+                        new RunRequest("p1", ReviewMode.UNATTENDED, null, MODEL, new ModelSelection("ollama", MODEL)));
         assertThat(projects.imports()).containsExactly(BOOK);
         assertThat(state()).isEqualTo(RunState.RUNNING);
         assertThat(controls()).isEqualTo(PAUSE_AND_STOP);

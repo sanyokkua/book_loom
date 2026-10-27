@@ -51,20 +51,20 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     // every other code opens the blocking dialog. A cancelled result ends the run stopped instead, so it is not here.
     static Stream<Arguments> failedRunSurfaces() {
         return Stream.of(
-                Arguments.of(ErrorCode.unreachable, NONE, 1),
-                Arguments.of(ErrorCode.timeout, NONE, 1),
-                Arguments.of(ErrorCode.auth, NONE, 1),
-                Arguments.of(ErrorCode.rateLimited, NONE, 1),
-                Arguments.of(ErrorCode.upstream, NONE, 1),
-                Arguments.of(ErrorCode.emptyCompletion, NONE, 1),
-                Arguments.of(ErrorCode.modelNotFound, NONE, 1),
-                Arguments.of(ErrorCode.modelUnavailable, NONE, 1),
-                Arguments.of(ErrorCode.missingCredential, NONE, 1),
-                Arguments.of(ErrorCode.contextWindow, NONE, 1),
+                Arguments.of(ErrorCode.unreachable, NONE, 0),
+                Arguments.of(ErrorCode.timeout, NONE, 0),
+                Arguments.of(ErrorCode.auth, NONE, 0),
+                Arguments.of(ErrorCode.rateLimited, NONE, 0),
+                Arguments.of(ErrorCode.upstream, NONE, 0),
+                Arguments.of(ErrorCode.emptyCompletion, NONE, 0),
+                Arguments.of(ErrorCode.modelNotFound, NONE, 0),
+                Arguments.of(ErrorCode.modelUnavailable, NONE, 0),
+                Arguments.of(ErrorCode.missingCredential, NONE, 0),
+                Arguments.of(ErrorCode.contextWindow, NONE, 0),
                 Arguments.of(ErrorCode.validation, REFUSED, 0),
-                Arguments.of(ErrorCode.internal, NONE, 1),
-                Arguments.of(ErrorCode.busy, NONE, 1),
-                Arguments.of(ErrorCode.discoveryFailed, NONE, 1));
+                Arguments.of(ErrorCode.internal, NONE, 0),
+                Arguments.of(ErrorCode.busy, NONE, 0),
+                Arguments.of(ErrorCode.discoveryFailed, NONE, 0));
     }
 
     // A cancelled result ends the run stopped, every other code ends it failed.
@@ -78,7 +78,8 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     // --- a run that returns a failure -------------------------------------------------------------------------
 
     // IF any of the fifteen codes reached a surface other than its assigned one, or reached two, THEN one failure
-    // would be told twice or told wrongly.
+    // would be told twice or told wrongly. A run that ends Failed opens no dialog by itself: its banner offers Show
+    // details (notifications "Report a paused or failed run in the run's own banner").
     @ParameterizedTest(name = "{0} -> notice {1}, {2} dialog(s)")
     @MethodSource("failedRunSurfaces")
     void run_returnsAFailure_reachesExactlyTheSurfaceOfItsRunState(
@@ -97,9 +98,9 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     }
 
     // IF a failed run with a provider code drew the provider-error state, THEN a run that cannot be resumed would offer
-    // a Retry with nothing to retry.
+    // a Retry with nothing to retry; IF it opened a dialog by itself, THEN it would interrupt whatever the person did.
     @Test
-    void run_unreachable_opensTheDialogOnceAndShowsNoProviderBanner() throws Exception {
+    void run_unreachable_opensNoDialogAndShowsNoProviderBanner() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -108,7 +109,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(errors.presented()).containsExactly(failureOf(ErrorCode.unreachable));
+        assertThat(errors.presented()).isEmpty();
         assertThat(notice()).isEmpty();
         assertThat(outcomeToasts()).isEmpty();
     }
@@ -121,13 +122,13 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         startAndPrepare();
         emitAccepted(job, 1, 412);
         deliverAndTick();
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
 
         job.finish(Result.err(failureOf(ErrorCode.unreachable)));
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(412);
     }
 
     // IF a pause on an error did not show the provider-error state, THEN a provider hiccup would read as a crash.
@@ -166,9 +167,10 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         assertThat(outcomeToasts()).isEmpty();
     }
 
-    // IF an unexpected failure were shown only as a banner, THEN a bug would read like a routine provider hiccup.
+    // IF an unexpected failure opened its dialog by itself, THEN it would interrupt whatever the person did; the failed
+    // state's banner says what happened and Show details opens it.
     @Test
-    void run_internalFailure_isPresentedToTheErrorPresenterOnceAndShowsNoNotice() throws Exception {
+    void run_internalFailure_opensNoDialogByItselfAndShowsNoNotice() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -177,7 +179,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(errors.presented()).containsExactly(failureOf(ErrorCode.internal));
+        assertThat(errors.presented()).isEmpty();
         assertThat(notice()).isEmpty();
     }
 
@@ -215,14 +217,14 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         assertThat(outcomeToasts()).isEmpty();
     }
 
-    // IF a failed run carrying busy or discoveryFailed drew a warning toast or nothing, THEN a run that ended on an
-    // error would end silently.
+    // IF a failed run carrying busy or discoveryFailed drew a warning toast, THEN a run that ended on an error would
+    // read
+    // as a passing hiccup; its failed state tells it.
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
             names = {"busy", "discoveryFailed"})
-    void run_busyOrDiscoveryFailed_opensTheBlockingDialogAndRaisesNoWarningToast(final ErrorCode code)
-            throws Exception {
+    void run_busyOrDiscoveryFailed_opensNoDialogAndRaisesNoWarningToast(final ErrorCode code) throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -231,7 +233,8 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(errors.presented()).containsExactly(failureOf(code));
+        assertThat(errors.presented()).isEmpty();
+        assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.FAILED);
         assertThat(outcomeToasts()).isEmpty();
     }
 

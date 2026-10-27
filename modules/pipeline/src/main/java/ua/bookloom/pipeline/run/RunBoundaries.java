@@ -4,7 +4,9 @@ import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.project.SegmentRecord;
 
 /**
  * The job's side of the places a run may pause or stop. The chunk runner knows where it stands in the book; the job
@@ -26,6 +28,15 @@ public interface RunBoundaries {
         /** Rejects a decision that names no segment. */
         public Decision {
             Objects.requireNonNull(segmentId, "segmentId");
+        }
+
+        /** The decision of {@code item}, recorded as {@code record}, within {@code work}. */
+        static Decision of(final WorkList work, final WorkItem item, final SegmentRecord record) {
+            return new Decision(
+                    record.segmentId(),
+                    record.status() == SegmentStatus.FLAGGED,
+                    work.endsSection(item),
+                    work.isComplete());
         }
     }
 

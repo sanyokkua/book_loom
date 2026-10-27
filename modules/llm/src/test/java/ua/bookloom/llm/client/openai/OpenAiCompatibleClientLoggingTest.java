@@ -30,8 +30,9 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.http.UnreadableReply;
 
-/** Ensures unreadable provider bodies stay out of non-TRACE log output. */
+/** An unreadable reply is one WARN line naming no body, never an ERROR (it is the AI program's fault, not ours). */
 class OpenAiCompatibleClientLoggingTest {
 
     private static final String PRIVATE_BODY = "<html>private-proxy-body-marker</html>";
@@ -49,31 +50,42 @@ class OpenAiCompatibleClientLoggingTest {
     }
 
     @Test
-    void chat_unreadableResponseKeepsBodyOutOfErrorLog() {
+    void chat_unreadableResponse_isOneWarnLineWithoutTheBodyAndNoError() {
         server.stubFor(post(urlEqualTo("/v1/chat/completions"))
                 .willReturn(aResponse().withStatus(200).withBody(PRIVATE_BODY)));
         final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiCompatibleClient.class);
-        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
-        appender.start();
-        logger.addAppender(appender);
+        final ListAppender<ILoggingEvent> appender = attached(logger);
+        final Logger unreadableReply = (Logger) LoggerFactory.getLogger(UnreadableReply.class);
+        final ListAppender<ILoggingEvent> unreadableReplyLog = attached(unreadableReply);
 
         try {
             final Result<ChatResponse> result =
                     client().chat("model-a", request()).result();
 
-            assertThat(result.error()).extracting("code").isEqualTo(ErrorCode.internal);
+            assertThat(result.error()).extracting("code").isEqualTo(ErrorCode.upstream);
             assertThat(appender.list)
                     .filteredOn(event -> event.getLevel() == Level.ERROR)
+                    .isEmpty();
+            assertThat(unreadableReplyLog.list)
+                    .filteredOn(event -> event.getLevel() == Level.WARN)
                     .singleElement()
                     .satisfies(event -> {
                         assertThat(event.getFormattedMessage()).doesNotContain(PRIVATE_BODY);
                         assertThat(event.getThrowableProxy()).isNull();
                     });
         } finally {
+            unreadableReply.detachAppender(unreadableReplyLog);
             logger.detachAppender(appender);
             appender.stop();
         }
+    }
+
+    private static ListAppender<ILoggingEvent> attached(final Logger logger) {
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        appender.start();
+        logger.addAppender(appender);
+        return appender;
     }
 
     private OpenAiCompatibleClient client() {

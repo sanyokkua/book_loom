@@ -18,11 +18,10 @@ which runs the automated set. Testing is comprehensive by design: correctness of
 that actually breaks, the document round-trip is proven **canonical-equal** (structure-and-text-preserving) per format,
 a whole small book is driven end-to-end, the UI is proven headlessly against the mockup — **structure, tokens, and
 geometry gated in CI; pixel fidelity nightly** — and both LLM client dialects are proven against simulated and — locally
-only — real servers. Every test that proves an acceptance criterion carries a `// Proves: STORY-NNN-AC-N` marker so
-`traceCheck` binds it (`.claude/rules/testing.md`).
+only — real servers..
 
 The single stack is JUnit 5 + AssertJ + Mockito 5 for assertions and collaborators; WireMock for the LLM HTTP seam; a
-real temporary SQLite database with Flyway for persistence; and TestFX + Monocle (headless) for the UI. No
+real temporary SQLite database for persistence (Flyway from the first release, ADR-0043); and TestFX on JavaFX's built-in headless platform (`glass.platform=Headless`, ADR-0019) for the UI. No
 Testcontainers — SQLite is embedded (`06_DATA_MODEL_SQLITE.md`). No test contacts a real network except the local-only
 live set, which is env-gated and excluded from CI.
 
@@ -42,10 +41,10 @@ are mocked; the class under test and pure domain logic are never mocked. Runs in
 ### persistence-integration {#persistence-integration}
 
 Persistence integration tests run the real DAO stack against a **real temporary SQLite database** — a temp file or
-`:memory:` — with **Flyway migrations applied** exactly as the app applies them in two-phase init
+`:memory:` — with **the schema file applied** exactly as the app applies it in two-phase init (Flyway migrations from the first release, ADR-0043)
 (`10_DI_AND_LIFECYCLE.md`). They prove the DDL and JDBI DAOs together: settings KV round-trips (including the persisted
 `ui.language` key), project/segment/glossary/TM/summary stores, the provider/model snapshot bound per project, atomic
-writes, and that every committed `V{ver}__{desc}.sql` migration applies cleanly on an empty database and is never edited
+writes, and, from the first release, that every committed `V{ver}__{desc}.sql` migration applies cleanly on an empty database and is never edited
 after the fact. No Testcontainers, no external database. Runs in CI.
 
 ### provider-integration-wiremock {#provider-integration-wiremock}
@@ -96,7 +95,7 @@ stub responses make the accepted/flagged assertions repeatable. Runs in CI.
 
 ### ui-widget {#ui-widget}
 
-UI widget tests exercise individual controls and their bindings headlessly with **TestFX + Monocle**, asserting control
+UI widget tests exercise individual controls and their bindings headlessly with **TestFX on the built-in headless platform**, asserting control
 state (the P4 rendering pattern): a `ToggleSwitch` reflecting its bound property, a `TableView` populated from an
 `ObservableList`, a `SegmentedButton`/`ToggleGroup` selection, progress/label bindings on the translating screen, and
 that long work marshals state changes onto the FX thread via the observable state mirror's `Platform.runLater` wrapping
@@ -104,18 +103,31 @@ that long work marshals state changes onto the FX thread via the observable stat
 
 ### ui-screen-state {#ui-screen-state}
 
-UI screen/state tests assert each screen's enumerated states render and wire correctly, headless with TestFX + Monocle.
+UI screen/state tests assert each screen's enumerated states render and wire correctly, headless with TestFX on the built-in headless platform.
 They cover every state named in `08_UI_SCREENS_AND_STATES.md`: Import (`detected-ok`, `language-mismatch`,
-`DRM-blocked`, `unsupported`), Translating (`running`, `paused`, `stopped`, `provider-error`), Projects and Review
-populated-vs-empty, and each dialog opening in the modal host with scrim. A state test drives the viewmodel/navigator
+`DRM-blocked`, `unsupported`), Translating (the sixteen rows of the mockup README's "Run states" table, each proven
+by `RunStateMappingTest`: the title bar's text, the AI-model chip, the toolbar's actions and the banner), Projects and
+Review populated-vs-empty, and each dialog opening in the modal host with scrim. A state test drives the viewmodel/navigator
 into the state and asserts the expected controls, banners, and empty states appear — including that the `stopped` state
-shows New run (a stopped run cannot be resumed) and no error surface (cancellation is not an error). Runs in CI.
+shows Continue translation and no error surface (cancellation is not an error). Runs in CI.
+
+The first-launch look is proven by `LocalModelProbeTest` (exactly `http://127.0.0.1:11434` and
+`http://127.0.0.1:1234/v1`, one call each, no second look until Try again; zero models counts as not found) and by the
+WireMock model-list test `ModelCatalogServiceDraftTest` (both dialects receive only `GET /api/tags` / `GET /v1/models`).
+
+**Fit in both languages.** Ukrainian words run about a quarter longer, so the fit tests run in `en` and `uk`, at the
+smallest content area (944 by 600) and at 1920 by 700. `ScreenFitTest` shows every screen state and dialog the
+conformance catalogue lists and `DialogFitTest` every question card (continue, model pick, rename, each confirm);
+both fail when a label or button is shown shorter than its words (a one-line label that carries its whole text as a
+tooltip is cut by design) or a dialog card leaves the window. `LayoutFitTest` holds the title bar and toolbar.
+`VocabularyTest` keeps the engine's words (`flagged`, `Retry now`, `Send again`, `chunk`) off the main screens' English
+bundle and `чанк` and the user-gendering past tense out of the Ukrainian one.
 
 ### ui-matches-mockup-conformance {#ui-conformance}
 
 UI-conformance tests assert the built UI **matches the binding mockup** (`docs/specification/mockups/ui-mockup.html`)
 and the enumeration in `08_UI_SCREENS_AND_STATES.md` — the P6 visual-reference pattern. Rather than pixel diffing,
-conformance is proven **structurally and by looked-up colours**, headless under TestFX + Monocle:
+conformance is proven **structurally and by looked-up colours**, headless under TestFX on the built-in headless platform:
 
 - **Screen/state coverage checklist** — a machine-checkable list, one entry per screen and per enumerated state/dialog
   in `08_UI_SCREENS_AND_STATES.md` (Projects +empty, Import ×4 states, Book Brief with its sections including the "Also
@@ -294,7 +306,7 @@ Playwright equivalent for JavaFX**, so it is layered:
   artifact. Runs only in a **pinned** environment (software Prism pipeline, fixed window size, forced 1× DPI, bundled
   test font), tagged **`visual`**, kept out of the default gate (nightly/on-demand); baselines are regenerated
   deliberately via an explicit switch. Robot **screen-grabs** (not scene-graph snapshots) return black under
-  Monocle-headless and need a real display or **Xvfb**.
+  headless and need a real display.
 - **Assisted review — vision model, late-phase, advisory.** OS-level screenshots of the **real running app** scored by a
   local vision model (e.g. `qwen3-vl` / `gemma4` via the app's own Ollama/LM Studio setup) against a rubric ("labels
   clipped? contrast legible? accent token applied? spacing consistent?"). Slow and non-deterministic, so it is an
@@ -313,12 +325,12 @@ manual.
 | Test type                                                        | CI (merge gate)                                                                         | Local-only                   |
 |------------------------------------------------------------------|-----------------------------------------------------------------------------------------|------------------------------|
 | Unit                                                             | yes                                                                                     | —                            |
-| Persistence integration (temp SQLite + Flyway)                   | yes                                                                                     | —                            |
+| Persistence integration (temp SQLite, schema file)                  | yes                                                                                     | —                            |
 | Provider integration (WireMock, both dialects)                   | yes                                                                                     | —                            |
 | Document round-trip golden                                       | yes                                                                                     | —                            |
 | Pipeline e2e (stub/WireMock provider)                            | yes                                                                                     | —                            |
-| UI widget (TestFX + Monocle)                                     | yes                                                                                     | —                            |
-| UI screen/state (TestFX + Monocle)                               | yes                                                                                     | —                            |
+| UI widget (TestFX, built-in headless platform)                                     | yes                                                                                     | —                            |
+| UI screen/state (TestFX, built-in headless platform)                               | yes                                                                                     | —                            |
 | UI-matches-mockup conformance (token/geometry, headless)         | yes                                                                                     | —                            |
 | i18n (EN default + UK bundles)                                   | yes                                                                                     | —                            |
 | Smoke — app boot                                                 | yes                                                                                     | —                            |
@@ -338,7 +350,6 @@ automated suite (including headless UI and coverage) runs in the CI quality job 
 JaCoCo branch coverage is kept at ~80% on the core modules (`:api`, `:util`, `:document`, `:llm`, `:pipeline`,
 `:persistence`); `:ui` is excluded from the coverage threshold because it is covered behaviourally by the TestFX
 widget/screen/conformance tests (`02_QUALITY_GATES.md#tools`). Every test that proves an acceptance criterion carries
-`// Proves: STORY-NNN-AC-N`, and each enumerated edge case (`EC-<AREA>-<N>`) appears in some proving test;
-`./gradlew traceCheck` fails on any orphan or stale record (`.claude/rules/testing.md`). The `liveLocal` set is excluded
-from coverage and traceability gating — it verifies real-server behaviour, not acceptance criteria that must hold
+a name or comment that says what it proves, and each enumerated edge case (`EC-<AREA>-<N>`) appears in some proving
+test; the trace tooling is retired (ADR-0016). The `liveLocal` set is excluded from coverage gating — it verifies real-server behaviour, not acceptance criteria that must hold
 offline.

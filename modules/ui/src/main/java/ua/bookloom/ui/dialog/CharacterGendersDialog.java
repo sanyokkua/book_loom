@@ -6,17 +6,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.ui.ModalHost;
-import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
@@ -87,13 +83,13 @@ public final class CharacterGendersDialog {
                 return;
             }
             log.debug("asking about {} characters with unknown gender for project {}", found.size(), projectId);
-            final DialogPane card = card(found);
+            final FormCard card = card(found);
             wire(card, projectId, start);
-            modalHost.show(card, false);
+            card.show();
         });
     }
 
-    private DialogPane card(final List<UnknownGender> found) {
+    private FormCard card(final List<UnknownGender> found) {
         final List<UnknownGender> missing =
                 found.stream().filter(character -> !character.suggested()).toList();
         final List<UnknownGender> suggested =
@@ -101,17 +97,16 @@ public final class CharacterGendersDialog {
         final VBox body = new VBox();
         group(body, missing, MessageKey.DIALOG_GENDERS_TEXT, MessageKey.DIALOG_GENDERS_ROW);
         group(body, suggested, MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT, MessageKey.DIALOG_GENDERS_SUGGESTED_ROW);
-        final DialogPane card = new ModalCard();
-        card.setId(CARD_ID);
-        card.getStyleClass().addAll("dialog-card", "elevation-lg");
-        final Label title = new Label(messages.get(
-                missing.isEmpty() ? MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE : MessageKey.DIALOG_GENDERS_TITLE));
-        title.getStyleClass().add("dialog-title");
-        final VBox header = new VBox(title);
-        header.getStyleClass().add("dialog-h");
-        card.setHeader(header);
-        card.setContent(body);
-        card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+        final FormCard card = new FormCard(
+                modalHost,
+                messages,
+                CARD_ID,
+                ModalCard.Size.WIDE,
+                messages.get(
+                        missing.isEmpty()
+                                ? MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE
+                                : MessageKey.DIALOG_GENDERS_TITLE));
+        card.card().setContent(body);
         return card;
     }
 
@@ -121,10 +116,7 @@ public final class CharacterGendersDialog {
         if (characters.isEmpty()) {
             return;
         }
-        final Label text = new Label(messages.get(intro, characters.size()));
-        text.setWrapText(true);
-        text.getStyleClass().add("dialog-text");
-        body.getChildren().add(text);
+        body.getChildren().add(Wrapped.label(messages.get(intro, characters.size()), "dialog-text"));
         for (final UnknownGender character : characters) {
             final Label line = new Label(messages.get(row, character.term(), character.mentions()));
             line.getStyleClass().add("dialog-text");
@@ -132,32 +124,24 @@ public final class CharacterGendersDialog {
         }
     }
 
-    private void wire(final DialogPane card, final String projectId, final Runnable start) {
-        final ButtonType backType =
-                new ButtonType(messages.get(MessageKey.DIALOG_GENDERS_BACK), ButtonBar.ButtonData.CANCEL_CLOSE);
-        final ButtonType startType =
-                new ButtonType(messages.get(MessageKey.DIALOG_GENDERS_START), ButtonBar.ButtonData.OK_DONE);
-        card.getButtonTypes().setAll(backType, startType);
-        final Button back = button(card, backType, BACK_ID, MessageKey.DIALOG_GENDERS_BACK_TIP, "btn-secondary");
-        back.setOnAction(event -> {
-            log.debug("going back without starting");
-            modalHost.hide();
-        });
-        button(card, startType, START_ID, MessageKey.DIALOG_GENDERS_START_TIP, "btn-primary")
-                .setOnAction(event -> {
+    private void wire(final FormCard card, final String projectId, final Runnable start) {
+        card.button(
+                BACK_ID,
+                messages.get(MessageKey.DIALOG_GENDERS_BACK),
+                MessageKey.DIALOG_GENDERS_BACK_TIP,
+                ButtonBar.ButtonData.CANCEL_CLOSE,
+                "btn-secondary",
+                () -> log.debug("going back without starting"));
+        card.button(
+                START_ID,
+                messages.get(MessageKey.DIALOG_GENDERS_START),
+                MessageKey.DIALOG_GENDERS_START_TIP,
+                ButtonBar.ButtonData.OK_DONE,
+                "btn-primary",
+                () -> {
                     log.debug("starting with the genders of project {} unknown", projectId);
                     answered.add(projectId);
-                    modalHost.hide();
                     start.run();
                 });
-    }
-
-    private Button button(
-            final DialogPane card, final ButtonType type, final String id, final MessageKey tip, final String style) {
-        final Button button = (Button) card.lookupButton(type);
-        button.setId(id);
-        Tips.install(messages, button, tip);
-        button.getStyleClass().add(style);
-        return button;
     }
 }

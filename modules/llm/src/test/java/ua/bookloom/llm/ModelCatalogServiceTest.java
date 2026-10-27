@@ -26,6 +26,8 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.testing.FakeProviderConfigs;
+import ua.bookloom.llm.testing.LlmTestStorageModule;
 
 /** Exercises model listing through the real provider clients against a WireMock HTTP endpoint. */
 class ModelCatalogServiceTest {
@@ -37,13 +39,13 @@ class ModelCatalogServiceTest {
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
-    private InMemoryProviderConfigs configs;
+    private FakeProviderConfigs configs;
     private ModelCatalogService catalog;
 
     @BeforeEach
     void startServer() {
         server.start();
-        configs = new InMemoryProviderConfigs();
+        configs = new FakeProviderConfigs();
         catalog = new ModelCatalogService(
                 configs,
                 new ProviderClientFactory(
@@ -117,14 +119,15 @@ class ModelCatalogServiceTest {
     // IF the composition root is built, THEN ModelCatalog resolves to the service.
     @Test
     void llmModule_bindsModelCatalog() {
-        final ModelCatalog bound = Guice.createInjector(new LlmModule()).getInstance(ModelCatalog.class);
+        final ModelCatalog bound = Guice.createInjector(new LlmModule(), new LlmTestStorageModule())
+                .getInstance(ModelCatalog.class);
 
         assertThat(bound).isInstanceOf(ModelCatalogService.class);
     }
 
     private void register(String id, ProviderKind kind, URI baseUrl) {
         final ProviderConfig config = new ProviderConfig(id, kind, baseUrl, CONNECT_TIMEOUT, REQUEST_TIMEOUT);
-        assertThat(configs.register(config).isOk()).isTrue();
+        assertThat(configs.save(config).isOk()).isTrue();
     }
 
     private static URI closedEndpoint() {

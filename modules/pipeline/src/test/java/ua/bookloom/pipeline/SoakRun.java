@@ -37,12 +37,13 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -59,7 +60,7 @@ final class SoakRun {
     private final Injector injector = Guice.createInjector(
             new DocumentModule(),
             new LlmModule(),
-            new PersistenceModule(),
+            new InMemoryPersistenceModule(),
             new PipelineModule(),
             new ReviewModeTestModule());
     private final ObjectMapper mapper = new ObjectMapper();
@@ -151,7 +152,7 @@ final class SoakRun {
 
     private String importBook(final Path book) {
         final ProjectService projects = injector.getInstance(ProjectService.class);
-        final ImportedBook imported = dataOf(projects.importBook(book));
+        final ImportedBook imported = dataOf(projects.create(book));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
         dataOf(projects.updateBrief(projectId, balancedUkrainian(Objects.requireNonNull(imported.brief(), "brief"))));
         return projectId;
@@ -169,6 +170,7 @@ final class SoakRun {
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(ConsistencyPass.class),
                 clock,
+                new UuidIdSource(),
                 delay -> {
                     clock.advance(delay);
                     return 0;
@@ -178,7 +180,8 @@ final class SoakRun {
                     return () -> tick.set(null);
                 },
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
-                WordValidator.none());
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

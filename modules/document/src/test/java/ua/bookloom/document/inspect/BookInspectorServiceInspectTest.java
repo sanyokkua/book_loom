@@ -9,8 +9,11 @@ import java.util.Arrays;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.InspectionVerdict;
@@ -244,16 +247,37 @@ class BookInspectorServiceInspectTest {
     @Test
     void inspect_unrecognizedBinaryFile_unsupportedNamedUnknown() throws Exception {
         final Path bin = tempDir.resolve("mystery.bin");
-        final byte[] bytes = new byte[2048];
-        for (int i = 0; i < bytes.length; i++) {
-            bytes[i] = (byte) (i * 31 + 7);
-        }
-        Files.write(bin, bytes);
+        Files.write(bin, unrecognizedBytes());
 
         final BookInspection inspection = inspectionOf(bin);
 
         assertThat(inspection.verdict()).isEqualTo(InspectionVerdict.UNSUPPORTED);
-        assertThat(inspection.detectedType()).isEqualTo("Unknown");
+        assertThat(inspection.detectedType()).isEqualTo("Unknown").isEqualTo(BookInspection.UNKNOWN_TYPE);
+    }
+
+    // 2 KB of a byte pattern that starts none of the known magics.
+    private static byte[] unrecognizedBytes() {
+        final byte[] bytes = new byte[2048];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) (i * 31 + 7);
+        }
+        return bytes;
+    }
+
+    // IF a file whose name promises a supported format held something else, THEN it is damaged, not "Unknown": the
+    // verdict keeps the format the name promised so the refusal can say what it could not be read as.
+    @ParameterizedTest
+    @CsvSource({"corrupt.epub,EPUB", "odd.fb2,FB2", "odd.fb2.zip,FB2"})
+    void inspect_supportedNameWithOtherContent_damagedAsTheNamedFormat(final String name, final BookFormat format)
+            throws Exception {
+        final Path file = tempDir.resolve(name);
+        Files.write(file, "this is not the book its name promises".getBytes(StandardCharsets.UTF_8));
+
+        final BookInspection inspection = inspectionOf(file);
+
+        assertThat(inspection.verdict()).isEqualTo(InspectionVerdict.DAMAGED);
+        assertThat(inspection.format()).isEqualTo(format);
+        assertThat(inspection.detectedType()).isEqualTo(format.name());
     }
 
     // an EPUB truncated to half its length cannot even be inflated, so inspection answers

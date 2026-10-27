@@ -54,6 +54,12 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
     /** How many run logs stay in the log directory, the one being written included. */
     public static final int RUN_LOGS_KEPT = 10;
 
+    /**
+     * The empty-of-meaning file in the data folder whose presence switches the detailed diagnostic log on from the
+     * next launch; only Settings › Storage &amp; logs creates and deletes it, and the launch variable wins over it.
+     */
+    public static final String DETAILED_LOG_MARKER = "detailed-log.on";
+
     /** The name every file of the detailed diagnostic log starts with: the active file and its rotated archives. */
     public static final String TRACE_LOG_PREFIX = "bookloom-trace";
 

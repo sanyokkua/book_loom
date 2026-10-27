@@ -31,7 +31,15 @@ class ChatContractsTest {
     @Test
     void sizedTo_cappedRequest_takesTheWindowAndLimitsTheCap() {
         final ChatRequest asked = new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, false, 8192, 300, 3900, 7, null);
+                List.of(new ChatMessage(ChatRole.USER, "hello")),
+                0.2,
+                null,
+                ReasoningLevel.OFF,
+                8192,
+                300,
+                3900,
+                7,
+                null);
 
         final ChatRequest sized = asked.sizedTo(4096, 2048);
 
@@ -121,8 +129,8 @@ class ChatContractsTest {
 
     @Test
     void request_sixArgumentConstructor_leavesTheCapUnset() {
-        final ChatRequest request =
-                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, false, 8192, 400);
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, ReasoningLevel.OFF, 8192, 400);
 
         assertThat(request.maxOutputTokens()).isNull();
     }
@@ -133,7 +141,7 @@ class ChatContractsTest {
                 List.of(new ChatMessage(ChatRole.USER, "hello")),
                 0.2,
                 new ResponseFormat("draft", "{\"type\":\"object\"}"),
-                false,
+                ReasoningLevel.OFF,
                 8192,
                 400,
                 661);
@@ -146,14 +154,14 @@ class ChatContractsTest {
     void withoutResponseFormat_clearsOnlyResponseFormat() {
         final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
         final ResponseFormat responseFormat = new ResponseFormat("draft", "{\"type\":\"object\"}");
-        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, false, 8192, 400);
+        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, ReasoningLevel.OFF, 8192, 400);
 
         final ChatRequest stripped = request.withoutResponseFormat();
 
         assertThat(stripped.messages()).isEqualTo(messages);
         assertThat(stripped.temperature()).isEqualTo(0.2);
         assertThat(stripped.responseFormat()).isNull();
-        assertThat(stripped.reasoningEnabled()).isFalse();
+        assertThat(stripped.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
         assertThat(stripped.contextWindow()).isEqualTo(8192);
         assertThat(stripped.expectedOutputTokens()).isEqualTo(400);
     }
@@ -162,7 +170,7 @@ class ChatContractsTest {
     void withoutReasoning_clearsOnlyReasoningControl() {
         final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
         final ResponseFormat responseFormat = new ResponseFormat("draft", "{\"type\":\"object\"}");
-        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, false, 8192, 400);
+        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, ReasoningLevel.OFF, 8192, 400);
 
         final ChatRequest stripped = request.withoutReasoning();
 
@@ -192,12 +200,12 @@ class ChatContractsTest {
         final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
         final ResponseFormat responseFormat = new ResponseFormat("draft", "{\"type\":\"object\"}");
 
-        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, false);
+        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, ReasoningLevel.OFF);
 
         assertThat(request.messages()).isEqualTo(messages);
         assertThat(request.temperature()).isEqualTo(0.2);
         assertThat(request.responseFormat()).isEqualTo(responseFormat);
-        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
     }
 
     @SuppressWarnings("NullAway")
@@ -264,5 +272,17 @@ class ChatContractsTest {
     @Test
     void samplingParams_nonPositiveTopK_isRejected() {
         assertThatThrownBy(() -> new SamplingParams(null, 0, null, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // IF a request carries the Low level, THEN a retry and a seeded copy keep it and only withoutReasoning clears it.
+    @Test
+    void copies_lowLevel_surviveEveryCopyExceptWithoutReasoning() {
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, ReasoningLevel.LOW, 8192, 400, 661);
+
+        assertThat(request.forRetry(3, 300).reasoningEnabled()).isEqualTo(ReasoningLevel.LOW);
+        assertThat(request.withSeed(5).reasoningEnabled()).isEqualTo(ReasoningLevel.LOW);
+        assertThat(request.sizedTo(4096, 100).reasoningEnabled()).isEqualTo(ReasoningLevel.LOW);
+        assertThat(request.withoutReasoning().reasoningEnabled()).isNull();
     }
 }

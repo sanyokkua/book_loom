@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -45,7 +46,7 @@ public final class RunStarter {
     private final CurrentProject current;
     private final ChatModelFactory models;
     private final TranslationEngine engine;
-    private final ReviewMode reviewMode;
+    private final Provider<ReviewMode> reviewMode;
     private final TranslationRunner runner;
     private final SessionReporter reporter;
     private final ExecutorService executor;
@@ -59,7 +60,7 @@ public final class RunStarter {
      * @param current the open book a run is started on
      * @param models the port a model is created through
      * @param engine the port a job is created through
-     * @param reviewMode how the run's pauses for review are chosen, resolved once at launch
+     * @param reviewMode how the run's pauses for review are chosen, asked again at each start
      * @param runner the runner that owns the one active run
      * @param reporter what tells the detailed log which provider, model and brief the run uses
      * @param executor the daemon executor a run is prepared on, never the FX thread
@@ -72,7 +73,7 @@ public final class RunStarter {
             final CurrentProject current,
             final ChatModelFactory models,
             final TranslationEngine engine,
-            final ReviewMode reviewMode,
+            final Provider<ReviewMode> reviewMode,
             final TranslationRunner runner,
             final SessionReporter reporter,
             @BackgroundExecutor final ExecutorService executor,
@@ -92,12 +93,12 @@ public final class RunStarter {
     }
 
     /**
-     * The review mode every run of this launch uses.
+     * The review mode a run started now would use.
      *
-     * @return the mode; never null
+     * @return the mode now, so a change in Settings shows on the next read; never null
      */
     public ReviewMode reviewMode() {
-        return reviewMode;
+        return reviewMode.get();
     }
 
     /**
@@ -112,7 +113,7 @@ public final class RunStarter {
         Objects.requireNonNull(selection, "selection");
         Objects.requireNonNull(whenPrepared, "whenPrepared");
         final OpenedBook book = Objects.requireNonNull(current.book().get(), "an open book, checked by the caller");
-        log.debug("run requested: project {}, review mode {}", book.projectId(), reviewMode);
+        log.debug("run requested: project {}", book.projectId());
         final ActivityTracker.Handle preparing = activities.begin(ActivityKind.RUN_PREPARATION, null);
         preparing.indeterminate(fileNameOf(book));
         final Consumer<@Nullable AppError> ending = failure -> {
@@ -132,7 +133,11 @@ public final class RunStarter {
         log.debug("preparing a run on {}", Thread.currentThread().getName());
         AppError failure = null;
         try {
-            failure = prepare(book, selection);
+            // Read once, here and not on the FX thread (the stored setting is a database read): the request, the
+            // context and the pause points of this run must agree on one mode.
+            final ReviewMode mode = reviewMode.get();
+            log.debug("preparing the run with review mode {}", mode);
+            failure = prepare(book, selection, mode);
         } catch (RuntimeException thrown) {
             log.error("preparing the run threw instead of returning a result", thrown);
             failure = internalError(thrown);
@@ -142,7 +147,7 @@ public final class RunStarter {
         }
     }
 
-    private @Nullable AppError prepare(final OpenedBook book, final ModelSelection selection) {
+    private @Nullable AppError prepare(final OpenedBook book, final ModelSelection selection, final ReviewMode mode) {
         final Result<ChatModel> model = models.create(selection);
         if (model.isErr()) {
             log.debug("no model was created: code {}", errorCode(model));
@@ -151,18 +156,17 @@ public final class RunStarter {
         final Integer detected = capabilities.detectedTokens(selection).orElse(null);
         log.debug("the model's detected context length: {}", detected);
         final Result<TranslationJob> created = engine.newJob(
-                new RunRequest(book.projectId(), reviewMode, detected, selection.modelId()),
+                new RunRequest(book.projectId(), mode, detected, selection.modelId(), selection),
                 Objects.requireNonNull(model.data(), "model"));
         if (created.isErr()) {
             log.debug("no job was created: code {}", errorCode(created));
             return created.error();
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
-        job.pauseAt(pausePoints());
+        job.pauseAt(pausePoints(mode));
         job.recoverWith(ProviderProbe.of(verifier, selection));
         final BookBrief brief = briefOf();
-        final RunContext context =
-                new RunContext(book.projectId(), fileNameOf(book), reviewMode, brief.dial(), selection);
+        final RunContext context = new RunContext(book.projectId(), fileNameOf(book), mode, brief.dial(), selection);
         reporter.runStarting(context, brief);
         final boolean began = runner.start(job, context);
         log.debug("the runner accepted the run: {}", began);
@@ -170,9 +174,9 @@ public final class RunStarter {
     }
 
     /** The mode's own points plus the pause on a model error, which every window run honours. */
-    private Set<PausePoint> pausePoints() {
+    private Set<PausePoint> pausePoints(final ReviewMode mode) {
         final Set<PausePoint> points = EnumSet.of(PausePoint.ON_ERROR);
-        points.addAll(reviewMode.pausePoints());
+        points.addAll(mode.pausePoints());
         return Set.copyOf(points);
     }
 
@@ -192,11 +196,6 @@ public final class RunStarter {
     }
 
     private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The run could not be started because of an unexpected error.",
-                null,
-                cause);
+        return AppErrors.unexpected("The run could not be started because of an unexpected error.", cause);
     }
 }

@@ -1,391 +1,381 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import javafx.application.Platform;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
+import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
-import ua.bookloom.ui.state.ModelAdvice;
-import ua.bookloom.ui.state.ModelListing;
+import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderForm;
+import ua.bookloom.ui.state.ProviderInUse;
 import ua.bookloom.ui.state.ProviderRow;
-import ua.bookloom.ui.state.ProviderTest;
+import ua.bookloom.ui.state.ProviderSwitch;
 import ua.bookloom.ui.state.SettingsViewModel;
-import ua.bookloom.ui.state.StageChip;
 
 /**
- * The settings screen: the providers list, the selected provider's card and its check.
+ * The settings screen: the providers list, the open provider's form and its footer, and the tab strip.
  *
- * <p>The rows and chips are built here from the view model's lists because their number and wording depend on data;
- * everything static is in the FXML. The view model outlives this controller, so it is observed through weak listeners
- * held by the fields below, which live exactly as long as the nodes that use them.
+ * <p>The rows are built here from the view model's list because their number depends on data; the form is drawn by
+ * {@link ProviderFormView}. Every way of leaving a form that holds unsaved typing (another row, New provider, another
+ * tab) goes through {@link SettingsTabGuard}, which asks first. The view model outlives this controller, so it is observed
+ * through weak listeners held by the fields below, which live exactly as long as the nodes that use them.
  */
 @Slf4j
 public final class SettingsController {
 
-    private static final String SELECTED_ROW = "list-item-selected";
-
-    /**
-     * A provider row and the badge that marks it as the current one.
-     *
-     * @param row the clickable row node
-     * @param badge the "current" mark, shown only on the selected row
-     */
-    private record RowNodes(Node row, Label badge) {}
-
     private final SettingsViewModel viewModel;
+    private final ProviderForm form;
     private final Messages messages;
-    private final StageChipRows chipRows;
-    private final ProviderDetailText detail;
-    private final Map<String, RowNodes> rows = new LinkedHashMap<>();
-    private final ChangeListener<String> onSelection = (observed, was, now) -> markSelectedRow();
-    private final ListChangeListener<StageChip> onStages = change -> showChips();
-    private final ListChangeListener<String> onOffered = change -> showOffered();
-    private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
-    private final ChangeListener<String> onModel = (observed, was, now) -> showModel(now);
-    private final ChangeListener<List<ModelAdvice.Note>> onNotes = (observed, was, now) -> showNotes(now);
+    private final ConfirmPrompt confirm;
+    private final ProviderTestDialog testDialog;
+    private final ProviderSwitch providerSwitch;
+    private final ActivityTracker activities;
+    private final SettingsTabGuard guard;
+    private final SettingsTabEntries tabEntries;
+    private final ProviderInUse inUse;
+    private ProviderRowList rowList;
+    private final ListChangeListener<ProviderRow> onProviders = change -> onProvidersLoaded();
+    private final ChangeListener<String> onSelection = (observed, was, now) -> rowList.mark();
+    private final ChangeListener<ProviderForm.Spot> onFocusRequest = (observed, was, now) -> onFocusRequested(now);
+    private final ChangeListener<Tab> onTab = (observed, was, now) -> onTabChanged(was, now);
 
-    /**
-     * Set while this controller itself changes the combo's items, editor or value, so that the events those changes
-     * cause are not mistaken for a person typing or picking; FX thread only.
-     */
-    private boolean applying;
+    // Set while this controller moves the tab selection itself, so the change is not taken for a person's click.
+    private boolean movingTab;
+    private ProviderFormView formView;
+
+    @FXML
+    private TabPane tabs;
 
     @FXML
     private VBox providerList;
 
     @FXML
-    private Label detailName;
-
-    @FXML
-    private Label detailEndpoint;
-
-    @FXML
-    private ComboBox<String> modelCombo;
-
-    @FXML
-    private Label modelNote;
-
-    @FXML
-    private Label modelListing;
-
-    @FXML
-    private Label modelNoList;
-
-    @FXML
-    private Label modelRefusal;
-
-    @FXML
-    private Label checkHint;
-
-    @FXML
-    private Label detailKind;
-
-    @FXML
-    private Label detailModels;
+    private Label providerEmpty;
 
     @FXML
     private Button providerAdd;
 
     @FXML
-    private Button providerEdit;
+    private VBox formCard;
+
+    @FXML
+    private Label formTitle;
+
+    @FXML
+    private Label formBadge;
 
     @FXML
     private Button providerDelete;
 
     @FXML
-    private Button testConnection;
+    private Button formUse;
 
     @FXML
-    private Button testModels;
+    private Label formUseReason;
 
     @FXML
-    private Button testInference;
+    private Label deleteReason;
 
     @FXML
-    private Label checkProgress;
+    private ScrollPane formScroll;
 
     @FXML
-    private Label checkRefusal;
+    private VBox formBody;
 
     @FXML
-    private Pane chips;
+    private Label formDirty;
+
+    @FXML
+    private Label formSaved;
+
+    @FXML
+    private Button formCancel;
+
+    @FXML
+    private Button formSave;
 
     /**
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the state this screen shows
-     * @param messages the catalogue the built rows and chips are worded from
+     * @param form what the open provider's form holds, saves and deletes
+     * @param messages the catalogue the built rows are worded from
+     * @param confirm the question asked before a provider is deleted
+     * @param testDialog the card that shows what a test sent and got back
+     * @param providerSwitch what Use this one does
+     * @param activities the model work under way, which keeps the provider in use from being deleted
+     * @param guard asks before a move would drop typing
+     * @param tabEntries what entering a tab reads again
+     * @param inUse whether the open provider is the one the translation run uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
-    public SettingsController(final SettingsViewModel viewModel, final Messages messages) {
+    public SettingsController(
+            final SettingsViewModel viewModel,
+            final ProviderForm form,
+            final Messages messages,
+            final ConfirmPrompt confirm,
+            final ProviderTestDialog testDialog,
+            final ProviderSwitch providerSwitch,
+            final ActivityTracker activities,
+            final SettingsTabGuard guard,
+            final SettingsTabEntries tabEntries,
+            final ProviderInUse inUse) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.chipRows = new StageChipRows(messages);
-        this.detail = new ProviderDetailText(viewModel, messages);
+        this.confirm = Objects.requireNonNull(confirm, "confirm");
+        this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
+        this.providerSwitch = Objects.requireNonNull(providerSwitch, "providerSwitch");
+        this.activities = Objects.requireNonNull(activities, "activities");
+        this.guard = Objects.requireNonNull(guard, "guard");
+        this.tabEntries = Objects.requireNonNull(tabEntries, "tabEntries");
+        this.inUse = Objects.requireNonNull(inUse, "inUse");
     }
 
     @FXML
     void initialize() {
-        log.debug(
-                "building the settings screen for {} provider(s)",
-                viewModel.providers().size());
-        Tips.install(messages, providerAdd, MessageKey.SETTINGS_PROVIDER_ADD_TIP);
-        Tips.install(messages, providerEdit, MessageKey.SETTINGS_PROVIDER_EDIT_TIP);
-        Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
-        Tips.install(messages, modelCombo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
-        Tips.install(messages, testConnection, MessageKey.SETTINGS_TEST_CONNECTION_TIP);
-        Tips.install(messages, testModels, MessageKey.SETTINGS_TEST_MODELS_TIP);
-        Tips.install(messages, testInference, MessageKey.SETTINGS_TEST_INFERENCE_TIP);
-        viewModel.providers().forEach(this::addRow);
-        markSelectedRow();
+        log.debug("building the settings screen");
+        formView = new ProviderFormView(viewModel, form, messages, testDialog);
+        rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
+        formBody.getChildren().setAll(formView.node());
+        installTips();
+        providerAdd.setOnAction(event -> guard.guardProvider(viewModel::startAdding));
+        providerDelete.setOnAction(event -> askDelete());
+        formUse.setOnAction(event -> providerSwitch.use());
+        formCancel.setOnAction(event -> form.discard());
+        formSave.setOnAction(event -> form.save(() -> log.debug("provider form saved")));
+        showProviders();
+        viewModel.providers().addListener(new WeakListChangeListener<>(onProviders));
         viewModel.selectedProviderId().addListener(new WeakChangeListener<>(onSelection));
-        bindDetail();
-        bindModel();
-        bindTests();
-        viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
-        showChips();
+        viewModel.editedProviderId().addListener(new WeakChangeListener<>(onSelection));
+        bindHeader();
+        bindFooter();
+        tabs.getSelectionModel().selectedItemProperty().addListener(new WeakChangeListener<>(onTab));
+        if (!viewModel.providers().isEmpty()) {
+            viewModel.refreshModels();
+        }
+        form.focusRequest().addListener(new WeakChangeListener<>(onFocusRequest));
+    }
+
+    private void installTips() {
+        Tips.install(messages, providerAdd, MessageKey.SETTINGS_PROVIDER_ADD_TIP);
+        Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
+        Tips.install(messages, formUse, MessageKey.SETTINGS_PROVIDER_USE_TIP);
+        Tips.install(messages, formCancel, MessageKey.SETTINGS_FORM_CANCEL_TIP);
+        Tips.installLive(formSave, Bindings.createStringBinding(this::saveTip, form.findings()));
+    }
+
+    // Save stays pressable so a press can list every problem; until then its explanation names the first one.
+    private String saveTip() {
+        return form.findings().get().stream()
+                .filter(ProviderDraft.FormFinding::blocking)
+                .findFirst()
+                .map(finding -> messages.get(
+                        MessageKey.SETTINGS_FORM_SAVE_BLOCKED,
+                        messages.get(finding.key(), finding.args().toArray())))
+                .orElseGet(() -> messages.get(MessageKey.SETTINGS_FORM_SAVE_TIP));
+    }
+
+    private void bindHeader() {
+        final Observable[] observed = {
+            viewModel.editedProviderId(), viewModel.selectedProviderId(), viewModel.adding(), viewModel.providers()
+        };
+        formTitle
+                .textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> viewModel.adding().get()
+                                ? messages.get(MessageKey.SETTINGS_FORM_NEW_TITLE)
+                                : viewModel.providerName(
+                                        viewModel.editedProviderId().get()),
+                        observed));
+        formBadge
+                .visibleProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> !viewModel.adding().get()
+                                && !viewModel.editedProviderId().get().isEmpty()
+                                && viewModel
+                                        .editedProviderId()
+                                        .get()
+                                        .equals(viewModel.selectedProviderId().get()),
+                        observed));
+        formBadge.managedProperty().bind(formBadge.visibleProperty());
+        bindDelete();
+        bindUse(observed);
+        bindEmptyState();
+    }
+
+    // Offered for a saved provider that is not in use; it is off while the form holds more than a typed model.
+    private void bindUse(final Observable[] observed) {
+        final BooleanBinding offered = Bindings.createBooleanBinding(
+                () -> !viewModel.adding().get()
+                        && !viewModel.editedProviderId().get().isEmpty()
+                        && !viewModel
+                                .editedProviderId()
+                                .get()
+                                .equals(viewModel.selectedProviderId().get()),
+                observed);
+        formUse.visibleProperty().bind(offered);
+        formUse.managedProperty().bind(offered);
+        formUse.disableProperty().bind(form.canUseThis().not().or(form.saving()));
+        final BooleanBinding blockedByChanges = offered.and(form.canUseThis().not());
+        formUseReason.visibleProperty().bind(blockedByChanges);
+        formUseReason.managedProperty().bind(blockedByChanges);
+    }
+
+    private void bindDelete() {
+        final BooleanBinding busy = busyOnCurrent();
+        providerDelete
+                .disableProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> viewModel.adding().get()
+                                || viewModel.editedProviderId().get().isEmpty()
+                                || form.saving().get()
+                                || busy.get(),
+                        viewModel.adding(),
+                        viewModel.editedProviderId(),
+                        form.saving(),
+                        busy));
+        // A disabled button shows no hover text, so the reason is a line beside it.
+        deleteReason.visibleProperty().bind(busy);
+        deleteReason.managedProperty().bind(busy);
+    }
+
+    // Model work is under way and the open provider is the one it uses, or a run, even a paused one, uses it.
+    private BooleanBinding busyOnCurrent() {
+        final ObjectBinding<ActivityKind> blocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
+        final BooleanBinding usedByRun = inUse.byRun(viewModel.editedProviderId());
+        return Bindings.createBooleanBinding(
+                () -> !viewModel.adding().get() && (usedByRun.get() || (blocker.get() != null && isEditingCurrent())),
+                blocker,
+                usedByRun,
+                viewModel.adding(),
+                viewModel.editedProviderId(),
+                viewModel.selectedProviderId());
+    }
+
+    private boolean isEditingCurrent() {
+        return viewModel
+                .editedProviderId()
+                .get()
+                .equals(viewModel.selectedProviderId().get());
+    }
+
+    private void bindEmptyState() {
+        Visibility.bind(providerEmpty, Bindings.isEmpty(viewModel.providers()));
+        Visibility.bind(formCard, Bindings.isNotEmpty(viewModel.providers()).or(viewModel.adding()));
+    }
+
+    private void bindFooter() {
+        Visibility.bind(formDirty, form.dirty());
+        Visibility.bind(formSaved, form.justSaved());
+        formCancel
+                .disableProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> !form.dirty().get() && !viewModel.adding().get(), form.dirty(), viewModel.adding()));
+        formSave.disableProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> !form.dirty().get() || form.saving().get(), form.dirty(), form.saving()));
+    }
+
+    private void onProvidersLoaded() {
+        showProviders();
         viewModel.refreshModels();
     }
 
-    private void bindDetail() {
-        detailName
-                .textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> ProviderNames.displayName(
-                                messages, viewModel.selectedProviderId().get()),
-                        viewModel.selectedProviderId()));
-        detailKind.textProperty().bind(Bindings.createStringBinding(detail::kind, viewModel.selectedProviderId()));
-        detailModels
-                .textProperty()
-                .bind(Bindings.createStringBinding(
-                        detail::modelsFound,
-                        viewModel.selectedProviderId(),
-                        viewModel.modelListing().offered()));
-        detailEndpoint
-                .textProperty()
-                .bind(Bindings.createStringBinding(detail::endpoint, viewModel.selectedProviderId()));
+    private void showProviders() {
+        rowList.show();
     }
 
-    /**
-     * The combo keeps its own copy of the offered ids and its own text, and only listens to the view model: a combo
-     * whose items are the singleton's list also has them rewritten by its skin, and replacing the items would blank
-     * the entry and lose what the person typed.
-     */
-    private void bindModel() {
-        final ModelListing listing = viewModel.modelListing();
-        modelCombo.getItems().setAll(listing.offered());
-        applyText(viewModel.model().get());
-        modelCombo.getEditor().textProperty().addListener(onEntryText);
-        viewModel.model().addListener(new WeakChangeListener<>(onModel));
-        listing.offered().addListener(new WeakListChangeListener<>(onOffered));
-        viewModel.modelNotes().addListener(new WeakChangeListener<>(onNotes));
-        showNotes(viewModel.modelNotes().get());
-        modelCombo.setOnAction(event -> onEntryCommitted());
-        show(modelListing, listing.listing());
-        show(modelNoList, listing.noListObtained());
-        modelRefusal.textProperty().bind(listing.refusal());
-        modelRefusal
-                .visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> !listing.refusal().get().isEmpty(), listing.refusal()));
-        modelRefusal.managedProperty().bind(modelRefusal.visibleProperty());
-    }
-
-    private void showNotes(final List<ModelAdvice.Note> notes) {
-        ModelNoteLabel.show(modelNote, notes, messages);
-    }
-
-    private static void show(final Label note, final ObservableBooleanValue shown) {
-        note.visibleProperty().bind(shown);
-        note.managedProperty().bind(note.visibleProperty());
-    }
-
-    private void onEntryTyped(final String text) {
-        if (applying) {
+    private void onTabChanged(final Tab was, final Tab now) {
+        if (movingTab || now == null) {
             return;
         }
-        log.trace("model entry now holds '{}'", text);
-        viewModel.setModelText(text);
-        applyValue(text);
-    }
-
-    private void onEntryCommitted() {
-        if (!applying) {
-            log.debug("model entry committed");
-            viewModel.commitModel();
+        if (was != null && guard.holdsChanges(was)) {
+            log.debug("tab change vetoed: the form of {} holds unsaved changes", was.getId());
+            select(was);
+            guard.guardTab(was, () -> moveTo(now));
+            return;
         }
+        entered(now);
     }
 
-    private void showModel(final String model) {
-        if (!model.equals(modelCombo.getEditor().getText())) {
-            log.debug("model text of {} character(s) shown in the entry", model.length());
-            applyText(model);
-        }
+    private void moveTo(final Tab tab) {
+        select(tab);
+        entered(tab);
     }
 
-    private void showOffered() {
-        log.debug(
-                "showing {} offered model(s)",
-                viewModel.modelListing().offered().size());
-        final String typed = modelCombo.getEditor().getText();
-        applying = true;
+    private void entered(final Tab tab) {
+        tabEntries.entered(tab.getId());
+    }
+
+    private void select(final Tab tab) {
+        movingTab = true;
         try {
-            modelCombo.getItems().setAll(List.copyOf(viewModel.modelListing().offered()));
+            tabs.getSelectionModel().select(tab);
         } finally {
-            applying = false;
-        }
-        applyText(typed);
-    }
-
-    private void applyText(final String text) {
-        applying = true;
-        try {
-            modelCombo.getEditor().setText(text);
-            modelCombo.setValue(text.isEmpty() ? null : text);
-        } finally {
-            applying = false;
+            movingTab = false;
         }
     }
 
-    /**
-     * Keeps the combo's value equal to what was typed: an editable combo whose value is not one of its items would
-     * otherwise have its skin reset the value, and with it the entry, when the items change.
-     */
-    private void applyValue(final String text) {
-        applying = true;
-        try {
-            modelCombo.setValue(text.isEmpty() ? null : text);
-        } finally {
-            applying = false;
+    private void askDelete() {
+        final String id = viewModel.editedProviderId().get();
+        final String name = viewModel.providerName(id);
+        log.debug("delete of provider '{}' asked", id);
+        confirm.ask(
+                ConfirmPrompt.Question.DELETE_PROVIDER, List.of(name), List.of(name), () -> form.delete(id, () -> {}));
+    }
+
+    private void onFocusRequested(final ProviderForm.Spot spot) {
+        if (spot == ProviderForm.Spot.MODEL) {
+            scrollTo(formView.model().combo());
         }
     }
 
-    private void bindTests() {
-        bindTest(testConnection, ProviderTest.CONNECTION);
-        bindTest(testModels, ProviderTest.MODELS);
-        bindTest(testInference, ProviderTest.INFERENCE);
-        checkProgress.visibleProperty().bind(viewModel.tests().checking());
-        checkProgress.managedProperty().bind(checkProgress.visibleProperty());
-        checkHint
-                .visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> viewModel.model().get().isBlank(), viewModel.model()));
-        checkHint.managedProperty().bind(checkHint.visibleProperty());
-        // The same line says why the inference test is off while other model work (a run, a scan) is under way.
-        checkRefusal
-                .textProperty()
-                .bind(Bindings.createStringBinding(
-                        this::checkLine,
-                        viewModel.tests().checkRefusal(),
-                        viewModel.tests().blockedBy()));
-        checkRefusal
-                .visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> !checkRefusal.getText().isEmpty(), checkRefusal.textProperty()));
-        checkRefusal.managedProperty().bind(checkRefusal.visibleProperty());
-    }
-
-    private String checkLine() {
-        final String refusal = viewModel.tests().checkRefusal().get();
-        final ActivityKind blocker = viewModel.tests().blockedBy().get();
-        return !refusal.isEmpty() || blocker == null
-                ? refusal
-                : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
-    }
-
-    private void bindTest(final Button button, final ProviderTest test) {
-        button.disableProperty().bind(Bindings.not(viewModel.tests().available(test)));
-        button.setOnAction(event -> viewModel.tests().run(test));
-    }
-
-    private void addRow(final ProviderRow provider) {
-        log.debug("adding the row of provider '{}'", provider.id());
-        final Label name = new Label(ProviderNames.displayName(messages, provider.id()));
-        name.getStyleClass().add("provider-name");
-        final Label endpoint = new Label(provider.hostPort());
-        endpoint.getStyleClass().add("provider-endpoint");
-        final Label badge = new Label();
-        badge.getStyleClass().add("chip");
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox row = new HBox(new VBox(name, endpoint), spacer, badge);
-        row.setId("provider-row-" + provider.id());
-        Tips.install(messages, row, MessageKey.SETTINGS_PROVIDERS_TITLE_TIP);
-        row.getStyleClass().add("list-item");
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setFocusTraversable(true);
-        // These lambdas capture this controller; the view model holds it only weakly, so the row keeps it reachable.
-        row.setOnMouseClicked(event -> onRowClicked(event, row, provider));
-        row.setOnKeyPressed(event -> onRowKey(event.getCode(), provider));
-        rows.put(provider.id(), new RowNodes(row, badge));
-        providerList.getChildren().add(row);
-    }
-
-    private void onRowClicked(final MouseEvent event, final Node row, final ProviderRow provider) {
-        if (event.getButton() == MouseButton.PRIMARY) {
-            log.debug("row of provider '{}' clicked", provider.id());
-            row.requestFocus();
-            viewModel.selectProvider(provider.id());
-        }
-    }
-
-    private void onRowKey(final KeyCode code, final ProviderRow provider) {
-        if (code == KeyCode.ENTER || code == KeyCode.SPACE) {
-            log.debug("row of provider '{}' selected with {}", provider.id(), code);
-            viewModel.selectProvider(provider.id());
-        }
-    }
-
-    private void markSelectedRow() {
-        final String selected = viewModel.selectedProviderId().get();
-        log.debug("marking the row of '{}' as selected", selected);
-        rows.forEach((id, nodes) -> {
-            final boolean isSelected = id.equals(selected);
-            nodes.row().getStyleClass().remove(SELECTED_ROW);
-            if (isSelected) {
-                nodes.row().getStyleClass().add(SELECTED_ROW);
+    private void scrollTo(final Node target) {
+        Platform.runLater(() -> {
+            final Node content = formScroll.getContent();
+            final double height = content.getBoundsInLocal().getHeight();
+            final double view = formScroll.getViewportBounds().getHeight();
+            if (height > view) {
+                final double top = target.localToScene(target.getBoundsInLocal())
+                                .getMinY()
+                        - content.localToScene(content.getBoundsInLocal()).getMinY();
+                formScroll.setVvalue(Math.min(1, Math.max(0, top / (height - view))));
             }
-            nodes.badge()
-                    .setText(messages.get(
-                            isSelected ? MessageKey.SETTINGS_PROVIDER_CURRENT : MessageKey.SETTINGS_PROVIDER_IDLE));
-            nodes.badge().getStyleClass().removeAll("chip-ok", "chip-neutral");
-            nodes.badge().getStyleClass().add(isSelected ? "chip-ok" : "chip-neutral");
         });
     }
 
-    private void showChips() {
-        final List<Node> built = viewModel.tests().stages().stream()
-                .map(chipRows::rowOf)
-                .map(Node.class::cast)
-                .toList();
-        log.debug("showing {} stage chip(s)", built.size());
-        chips.getChildren().setAll(built);
+    private void open(final String id) {
+        if (!viewModel.adding().get() && id.equals(viewModel.editedProviderId().get())) {
+            log.debug("provider '{}' is already open", id);
+            return;
+        }
+        guard.guardProvider(() -> viewModel.editProvider(id));
     }
 }

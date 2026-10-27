@@ -19,6 +19,7 @@ module ua.bookloom.pipeline {
     requires ua.bookloom.llm;
     requires ua.bookloom.persistence;
     requires com.google.guice;
+    requires jakarta.inject;
     requires com.fasterxml.jackson.databind;
     requires org.slf4j;
 

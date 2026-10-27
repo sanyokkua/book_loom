@@ -110,6 +110,20 @@ class SearchableComboTest extends FxTestBase {
         assertThat(combo.getItems()).containsExactly("Ukrainian");
     }
 
+    // IF the list were searched by the shown name only, THEN a Ukrainian list could not be searched in English.
+    @Test
+    void typing_textOfTheSearchTextOnly_narrowsToThatEntry() {
+        final SearchableCombo<String> combo = show(SearchableCombo.parsed(
+                List.of("Англійська", "Українська"),
+                s -> s,
+                s -> "Українська".equals(s) ? s + " Ukrainian uk" : s + " English en",
+                text -> Optional.empty()));
+
+        typeInto(combo, "Ukr");
+
+        assertThat(combo.getItems()).containsExactly("Українська");
+    }
+
     @Test
     void strict_unknownText_keepsPreviousValueAndReportsInvalidText() {
         final SearchableCombo<String> combo = show(SearchableCombo.strict(LANGUAGES, s -> s));

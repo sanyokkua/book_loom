@@ -11,6 +11,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
@@ -19,6 +20,7 @@ import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * Turns the run's events into tagged activity-log entries that name a segment by the locator a person reads.
@@ -119,7 +121,7 @@ final class ActivityLogFeed {
                 clock(event.elapsed()));
         final ErrorCode failure = event.failure();
         if (failure == null) {
-            return new LogEntry(LogKind.MODEL_CALL, args);
+            return answered(event.kind(), args);
         }
         if (failure == ErrorCode.cancelled) {
             log.debug(
@@ -127,19 +129,32 @@ final class ActivityLogFeed {
                     event.kind(),
                     locator,
                     event.attempt());
-            return new LogEntry(LogKind.CALL_PAUSED, args);
+            return LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_CALL_PAUSED, args);
         }
         log.debug("a {} call for {} failed with {} on attempt {}", event.kind(), locator, failure, event.attempt());
-        return new LogEntry(
-                LogKind.CALL_FAILED,
+        return LogEntry.of(
+                LogKind.RETRIED,
+                MessageKey.LOG_CALL_FAILED,
                 List.of(args.get(0), args.get(1), args.get(2), args.get(3), args.get(4), failure.name()));
+    }
+
+    // A directed fix repairs a segment and a structure or placeholder repair sends it again, so both are lines every
+    // reader sees; any other answered call is a technical line.
+    private static LogEntry answered(final CallKind kind, final List<String> args) {
+        log.trace("an answered {} call is logged", kind);
+        return switch (kind) {
+            case DIRECTED_FIX -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
+            case STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
+            default -> LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, args);
+        };
     }
 
     LogEntry roundStarted(final RoundStarted event) {
         rounds.put(event.segmentId(), event.round());
         final String finding = event.blockingFinding();
-        return new LogEntry(
-                LogKind.ROUND,
+        return LogEntry.technical(
+                LogKind.MILESTONE,
+                MessageKey.LOG_ROUND,
                 List.of(
                         locatorOf(event.segmentId()),
                         String.valueOf(event.round()),
@@ -154,9 +169,9 @@ final class ActivityLogFeed {
 
     LogEntry memory(final MemoryUpdated event) {
         return switch (event.kind()) {
-            case GLOSSARY -> new LogEntry(LogKind.GLOSSARY_APPLIED, List.of(GLOSSARY, event.label()));
-            case TM -> new LogEntry(LogKind.GLOSSARY_APPLIED, List.of(MEMORY, event.label()));
-            case SUMMARY -> new LogEntry(LogKind.SUMMARY_UPDATED, List.of(event.label()));
+            case GLOSSARY -> new LogEntry(LogKind.MEMORY, List.of(GLOSSARY, event.label()));
+            case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY, event.label()));
+            case SUMMARY -> new LogEntry(LogKind.SUMMARY, List.of(event.label()));
         };
     }
 
@@ -185,8 +200,9 @@ final class ActivityLogFeed {
      */
     LogEntry recovery(final RecoveryWaiting event, final @Nullable LocalTime nextAt) {
         final ErrorCode probe = event.probeFailure();
-        return new LogEntry(
-                LogKind.WAITING,
+        return LogEntry.of(
+                LogKind.RETRIED,
+                MessageKey.LOG_WAITING,
                 List.of(
                         String.valueOf(event.attempt()),
                         nextAt == null

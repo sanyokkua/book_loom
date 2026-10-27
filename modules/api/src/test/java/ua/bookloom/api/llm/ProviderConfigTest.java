@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /** Contract tests for provider descriptions and their copy-with methods. */
@@ -38,6 +40,54 @@ class ProviderConfigTest {
                         URI.create("http://localhost:11434"),
                         Duration.ofSeconds(3),
                         replacement));
+    }
+
+    @Test
+    void fiveArgConstructor_leavesTheNewFieldsAtTheirDefaults() {
+        final ProviderConfig config = providerConfig();
+
+        assertThat(config.displayName()).isNull();
+        assertThat(config.auth()).isEqualTo(ProviderAuth.NONE);
+        assertThat(config.apiKeyHeader()).isNull();
+        assertThat(config.credentialRef()).isNull();
+        assertThat(config.modelsPath()).isNull();
+        assertThat(config.chatPath()).isNull();
+        assertThat(config.headers()).isEmpty();
+        assertThat(config.customModels()).isEmpty();
+    }
+
+    @Test
+    void withers_carryEveryOtherField() {
+        final ProviderConfig full = providerConfig()
+                .withDisplayName("Mine")
+                .withAuth(ProviderAuth.API_KEY)
+                .withApiKeyHeader("X-Api-Key")
+                .withCredentialRef("MY_KEY")
+                .withModelsPath("/m")
+                .withChatPath("/c")
+                .withHeaders(Map.of("Accept", "x"))
+                .withCustomModels(List.of("a", "b"));
+
+        final ProviderConfig moved =
+                full.withBaseUrl(URI.create("http://other")).withRequestTimeout(Duration.ofSeconds(5));
+
+        assertThat(moved.displayName()).isEqualTo("Mine");
+        assertThat(moved.auth()).isEqualTo(ProviderAuth.API_KEY);
+        assertThat(moved.apiKeyHeader()).isEqualTo("X-Api-Key");
+        assertThat(moved.credentialRef()).isEqualTo("MY_KEY");
+        assertThat(moved.modelsPath()).isEqualTo("/m");
+        assertThat(moved.chatPath()).isEqualTo("/c");
+        assertThat(moved.headers()).containsEntry("Accept", "x");
+        assertThat(moved.customModels()).containsExactly("a", "b");
+    }
+
+    @Test
+    void headersAndCustomModels_areDefensivelyCopied() {
+        final java.util.ArrayList<String> models = new java.util.ArrayList<>(List.of("a"));
+        final ProviderConfig config = providerConfig().withCustomModels(models);
+        models.add("b");
+
+        assertThat(config.customModels()).containsExactly("a");
     }
 
     @SuppressWarnings("NullAway")

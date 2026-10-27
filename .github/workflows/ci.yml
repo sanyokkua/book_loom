@@ -63,8 +63,9 @@ jobs:
     runs-on: ubuntu-24.04
 
     # A hung Gradle daemon or a UI test waiting on a display that never came up would otherwise burn the full
-    # six-hour default. This is a ceiling that fails, not a target: the whole job takes a few minutes.
-    timeout-minutes: 30
+    # six-hour default. This is a ceiling that fails, not a target: a green run takes 15-27 minutes on the runner, and
+    # a ceiling of 30 cancelled a run that was only slow (40489525598), so it keeps real headroom.
+    timeout-minutes: 45
 
     steps:
       # Every action is pinned to a full commit SHA with the tag it corresponded to in the comment. A floating

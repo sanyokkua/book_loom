@@ -10,9 +10,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -119,9 +123,35 @@ class AppShellNavigationTest extends ShellTestBase {
     }
 
     @Test
-    void navigation_footerWithNoModel_saysSo() {
-        // IF an empty model were joined to the provider, THEN the footer would read "Ollama · ".
-        assertThat(footerText()).isEqualTo("No model chosen");
+    void navigation_footerWithAProgramButNoModel_saysNoAiModelChosenInTheErrorColour() {
+        // IF an empty model were joined to the provider, THEN the footer would read "Ollama · "; and IF it said "found"
+        // while Ollama is selected, THEN it would claim a search failed when only the choice is missing (W5-D7).
+        assertThat(footerText()).isEqualTo("No AI model chosen");
+        assertThat(required("nav-footer").getStyleClass()).contains("state-failed");
+    }
+
+    // IF the footer did not say where requests go, THEN the one network destination would be hidden.
+    @Test
+    void navigation_footer_explainsItIsTheOneNetworkDestination() {
+        assertThat(Tips.explanationOf(required("nav-footer")))
+                .contains("The one network destination: the AI program and model BookLoom sends its requests to.");
+    }
+
+    // IF the footer and the title bar's chip read different sources, THEN one could say the model answers while the
+    // other says it cannot be reached.
+    @Test
+    void navigation_footerWhileOllamaCannotBeReached_readsAsTheChip() throws TimeoutException {
+        openBook();
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma4:26b"));
+        mirror.publishRunStarted("Frankenstein.epub", null);
+        mirror.publishRunState(RunState.PAUSED);
+        mirror.review().publishProviderError(AppError.of(ErrorCode.unreachable, "Unreachable", "No answer."));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(footerText()).isEqualTo("Ollama · Cannot reach Ollama");
+        assertThat(((Labeled) required("shell-run-connection")).getText()).isEqualTo("Cannot reach Ollama");
+        assertThat(required("nav-footer").getStyleClass()).contains("state-failed");
     }
 
     @Test

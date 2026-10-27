@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -47,11 +46,7 @@ public final class BookBriefViewModel {
 
     private final CurrentProject project;
     private final BriefSaver saver;
-    private final ReadOnlyBooleanWrapper sourceUndeclared = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyBooleanWrapper sameLanguage = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyBooleanWrapper targetUntested = new ReadOnlyBooleanWrapper(false);
-    private final LanguageSupport languages;
-    private final ReadOnlyBooleanWrapper canContinue = new ReadOnlyBooleanWrapper(false);
+    private final BriefLanguageFlags flags;
     private final NarratorNotice narratorNotice;
     private final StyleSuggestion style;
 
@@ -62,6 +57,8 @@ public final class BookBriefViewModel {
      * @param projects the port a changed brief is saved through
      * @param executor the daemon executor a save runs on, never the FX thread
      * @param languages tells whether the chosen target language has tested translation rules
+     * @param setup asks the model for a style, or {@code null} for a window with none
+     * @param outcomes hears what each save was answered, so a refused language pair is asked about
      */
     @Inject
     public BookBriefViewModel(
@@ -69,17 +66,30 @@ public final class BookBriefViewModel {
             final ProjectService projects,
             @BackgroundExecutor final ExecutorService executor,
             final LanguageSupport languages,
-            final @Nullable SetupHelper setup) {
+            final @Nullable SetupHelper setup,
+            final BriefSaveOutcomes outcomes) {
         this.style = new StyleSuggestion(project, setup, (what, op) -> change(what, "applied", op));
         this.project = Objects.requireNonNull(project, "project");
-        this.languages = Objects.requireNonNull(languages, "languages");
+        this.flags = new BriefLanguageFlags(languages);
         this.saver = new BriefSaver(
-                Objects.requireNonNull(projects, "projects"), Objects.requireNonNull(executor, "executor"));
-        project.brief().addListener((observed, was, now) -> derive(now));
-        derive(project.brief().get());
+                Objects.requireNonNull(projects, "projects"),
+                Objects.requireNonNull(executor, "executor"),
+                Objects.requireNonNull(outcomes, "outcomes"));
+        project.brief().addListener((observed, was, now) -> flags.derive(now));
+        flags.derive(project.brief().get());
         this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
+    }
+
+    /** A view model that hears no saved answer, as the tests of the brief alone build it. */
+    public BookBriefViewModel(
+            final CurrentProject project,
+            final ProjectService projects,
+            final ExecutorService executor,
+            final LanguageSupport languages,
+            final @Nullable SetupHelper setup) {
+        this(project, projects, executor, languages, setup, BriefSaveOutcomes.NONE);
     }
 
     /** A view model that offers no model-suggested style, for a window with no setup helper. */
@@ -107,7 +117,7 @@ public final class BookBriefViewModel {
      * @return a read-only property
      */
     public ReadOnlyBooleanProperty sourceUndeclared() {
-        return sourceUndeclared.getReadOnlyProperty();
+        return flags.sourceUndeclared();
     }
 
     /**
@@ -116,7 +126,7 @@ public final class BookBriefViewModel {
      * @return a read-only property
      */
     public ReadOnlyBooleanProperty sameLanguage() {
-        return sameLanguage.getReadOnlyProperty();
+        return flags.sameLanguage();
     }
 
     /**
@@ -125,7 +135,7 @@ public final class BookBriefViewModel {
      * @return a read-only property
      */
     public ReadOnlyBooleanProperty targetUntested() {
-        return targetUntested.getReadOnlyProperty();
+        return flags.targetUntested();
     }
 
     /**
@@ -134,7 +144,7 @@ public final class BookBriefViewModel {
      * @return a read-only property
      */
     public ReadOnlyBooleanProperty canContinue() {
-        return canContinue.getReadOnlyProperty();
+        return flags.canContinue();
     }
 
     /**
@@ -371,6 +381,11 @@ public final class BookBriefViewModel {
             return;
         }
         project.replaceBrief(changed);
+        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
+        if (changed.targetLanguage() != null && Objects.equals(changed.sourceLanguage(), changed.targetLanguage())) {
+            log.debug("{} not saved: source and target are both {}", field, changed.targetLanguage());
+            return;
+        }
         saver.enqueue(book.projectId(), changed);
     }
 
@@ -381,16 +396,5 @@ public final class BookBriefViewModel {
      */
     public StyleSuggestion styleSuggestion() {
         return style;
-    }
-
-    private void derive(final @Nullable BookBrief brief) {
-        final String source = brief == null ? null : brief.sourceLanguage();
-        final String target = brief == null ? null : brief.targetLanguage();
-        final boolean same = source != null && source.equals(target);
-        sourceUndeclared.set(brief != null && source == null);
-        sameLanguage.set(same);
-        targetUntested.set(target != null && !languages.hasTestedRules(target));
-        canContinue.set(BriefLanguages.isUsable(source, target));
-        log.debug("languages {} -> {}: same {}, untested {}", source, target, same, targetUntested.get());
     }
 }

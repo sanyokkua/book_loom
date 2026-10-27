@@ -28,7 +28,7 @@ import ua.bookloom.ui.i18n.Messages;
  * creating one can load it. The hold is published before the call is queued and withdrawn when the call returns,
  * whatever it returns. A retry is refused in place while other model work runs (a glossary scan, an export, a provider
  * inference test), and is registered with the {@link ActivityTracker} while it runs. The retry's model calls reach
- * the busy card of that activity as a run's reach the live panel, and stay in the tracker for the results view.
+ * the progress dialog of that activity as a run's reach the live panel, and stay in the tracker for the results view.
  */
 @Slf4j
 public final class ReviewRetry {

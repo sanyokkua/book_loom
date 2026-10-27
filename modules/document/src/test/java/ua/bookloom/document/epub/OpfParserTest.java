@@ -187,6 +187,31 @@ class OpfParserTest {
         assertThat(opf.title()).isEqualTo("Direct Title");
     }
 
+    // Two manifest items under one id leave the spine pointing at only one of them: the package is damaged.
+    @Test
+    void parse_manifestRepeatsAnId_isACorruptContainerFailure() {
+        final byte[] xml = opf("""
+                <item id="c" href="c01.xhtml" media-type="application/xhtml+xml"/>
+                <item id="c" href="c02.xhtml" media-type="application/xhtml+xml"/>
+                """, "<itemref idref=\"c\"/>").getBytes(StandardCharsets.UTF_8);
+
+        assertThatThrownBy(() -> OpfParser.parse(xml, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
+    }
+
+    // A document the spine lists twice is read once, at its first place, so its segment ids stay unique.
+    @Test
+    void parse_spineListsADocumentTwice_keepsItsFirstPlaceOnly() {
+        final ParsedOpf opf = OpfParser.parse(
+                opf("""
+                                <item id="c01" href="c01.xhtml" media-type="application/xhtml+xml"/>
+                                <item id="c02" href="c02.xhtml" media-type="application/xhtml+xml"/>
+                                """, "<itemref idref=\"c01\"/><itemref idref=\"c02\"/><itemref idref=\"c01\"/>")
+                        .getBytes(StandardCharsets.UTF_8),
+                OPF_PATH);
+
+        assertThat(opf.spineItems()).extracting(SpineItem::href).containsExactly("c01.xhtml", "c02.xhtml");
+    }
+
     @Test
     void parse_missingManifest_isACorruptContainerFailure() {
         final String xml = """

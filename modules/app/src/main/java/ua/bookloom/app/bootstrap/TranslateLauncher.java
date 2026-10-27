@@ -22,6 +22,7 @@ import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.cli.ShutdownCancellation;
 import ua.bookloom.app.cli.TranslateCommand;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 import ua.bookloom.util.paths.AppPathsResolver;
@@ -105,8 +106,8 @@ public final class TranslateLauncher {
                 level.source());
         try {
             final ResolvedReviewMode reviewMode = resolveIgnoredReviewMode(log, getEnv, getProperty);
-            final Injector injector =
-                    Guice.createInjector(new CoreModules(new StartupContext(paths, environment, reviewMode)));
+            final Injector injector = Guice.createInjector(new CoreModules(
+                    new StartupContext(paths, environment, reviewMode), new InMemoryPersistenceModule()));
             final AppLifecycle lifecycle = new AppLifecycle();
             lifecycle.phaseOne(injector);
             lifecycle.phaseTwo(injector);

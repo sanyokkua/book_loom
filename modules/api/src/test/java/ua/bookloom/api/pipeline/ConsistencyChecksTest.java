@@ -48,4 +48,23 @@ class ConsistencyChecksTest {
         assertThatThrownBy(() -> new ConsistencyChecks(0, 0, 0, Map.of("quotes", 0), 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    // IF the five-argument form invented a count, THEN every pass that never stopped early would report unread items.
+    @Test
+    void constructor_fiveArguments_countsNoUnreadItems() {
+        assertThat(new ConsistencyChecks(1, 2, 3, Map.of(), 4).notReread()).isZero();
+        assertThat(ConsistencyChecks.NONE.notReread()).isZero();
+    }
+
+    @Test
+    void constructor_unreadItems_keepsTheCount() {
+        assertThat(new ConsistencyChecks(0, 0, 5, Map.of(), 0, 12).notReread()).isEqualTo(12);
+    }
+
+    // IF a negative unread count were accepted, THEN a report could say "-2 paragraphs were not reread".
+    @Test
+    void constructor_negativeUnreadItems_isRejected() {
+        assertThatThrownBy(() -> new ConsistencyChecks(0, 0, 0, Map.of(), 0, -1))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

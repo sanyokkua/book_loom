@@ -24,8 +24,8 @@ generation itself.
 ## startup {#startup}
 
 Startup is two-phase (`02_Architecture/10_DI_AND_LIFECYCLE.md#two-phase-init`): construct the object graph (fast, no
-IO), then open the DB and run migrations. The first scene shows as soon as settings load; project data streams in
-afterward. Migrations are incremental, so normal launches apply zero pending scripts.
+IO), then open the DB and create the schema (migrations from the first release, ADR-0043). The first scene shows as soon as settings load; project data streams in
+afterward. From the first release migrations are incremental, so normal launches apply zero pending scripts; before it the schema file is a no-op on an existing database.
 
 ## large-file-parsing {#large-file-parsing}
 

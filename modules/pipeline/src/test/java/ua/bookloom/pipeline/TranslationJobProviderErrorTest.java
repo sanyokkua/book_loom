@@ -183,6 +183,7 @@ class TranslationJobProviderErrorTest {
                 .satisfies(failure -> assertThat(failure.code()).isEqualTo(ErrorCode.internal))
                 .satisfies(failure -> assertThat(failure.cause()).isNotNull());
         assertThat(stored(project, "Book.txt:1").status()).isEqualTo(SegmentStatus.PENDING);
+        assertThat(stored(project, "Book.txt:2").status()).isEqualTo(SegmentStatus.PENDING);
     }
 
     @Test

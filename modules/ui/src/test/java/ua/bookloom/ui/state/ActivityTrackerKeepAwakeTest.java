@@ -69,6 +69,21 @@ class ActivityTrackerKeepAwakeTest extends FxTestBase {
         assertThat(calls).last().isEqualTo("stop");
     }
 
+    @Test
+    void switchOff_duringRun_releasedAndRunActivityKeeps() {
+        final KeepAwakeGate gate = new KeepAwakeGate();
+        final ActivityTracker tracker = onFx(() -> new ActivityTracker(mirror, keepAwake, gate));
+        publish(RunState.RUNNING, null);
+
+        onFx(() -> {
+            gate.set(false);
+            return null;
+        });
+
+        assertThat(calls).containsExactly("start", "stop");
+        assertThat(onFx(tracker::running)).extracting(Activity::kind).containsExactly(ActivityKind.TRANSLATION);
+    }
+
     private void publish(final RunState state, final @Nullable RecoveryState recovery) {
         mirror.publishRunState(state);
         mirror.review().publishRecovery(recovery);

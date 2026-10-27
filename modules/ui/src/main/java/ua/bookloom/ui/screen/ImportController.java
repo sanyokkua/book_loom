@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,27 +28,27 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.ConfirmDialog;
-import ua.bookloom.ui.i18n.LanguageNames;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.ToastOccasion;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
+import ua.bookloom.ui.state.ImportVerdicts;
 import ua.bookloom.ui.state.ImportViewModel;
-import ua.bookloom.ui.state.LanguageWarning;
-import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.ProjectFilter;
+import ua.bookloom.ui.state.ProjectsViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
-import ua.bookloom.ui.state.StructureChecksViewModel;
-import ua.bookloom.ui.state.StructureSegmentsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The import screen: a drop zone and a file picker that both hand a file to the view model, and the area below them
- * that shows what the view model made of it. Once a book is open the drop zone shrinks to one line and the area holds
- * the book's details and facts and its structure with the segments of the part picked in it.
+ * that shows what the view model made of it: one verdict line, and for an open book the closed "About this book" fold
+ * and the book's text in three panes. Once a book is open the drop zone shrinks to one line.
  *
  * <p>The view model outlives this controller, so it is observed through a weak listener held by the field below; the
  * browse button's handler captures this controller and keeps it reachable for as long as the screen is on show.
@@ -60,16 +61,19 @@ public final class ImportController {
     private static final double DROPZONE_COLUMN_GAP = 12;
     private static final double DROPZONE_ROW_GAP = 8;
 
+    private final Toasts toasts;
     private final ImportViewModel viewModel;
     private final ImportGuard guard;
     private final Messages messages;
     private final Navigator navigator;
-    private final LanguageNames names;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final WorkflowProgress progress;
     private final StateMirror mirror;
     private final CurrentProject project;
     private final ImportBookView bookView;
+    private final ImportVerdictView verdictView;
+    private final ErrorPresenter errors;
+    private final ProjectsViewModel projectsView;
     private final ChangeListener<ImportState> onState = (observed, was, now) -> show(now);
 
     @FXML
@@ -98,14 +102,14 @@ public final class ImportController {
      *     replaced unasked
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Continue leads
-     * @param names how a language tag is named on the card and in the warnings
      * @param confirm the question asked before Cancel drops a project that holds work
      * @param progress the steps already done, which tell whether the project holds work
      * @param mirror the run's state, since a run that began is work too
      * @param project the open book, whose structure the screen shows beside its details
-     * @param checks the background checks the facts card reports
-     * @param segments the listing of the picked part's segments
-     * @param brief the brief, whose finished save makes the segment listing stale
+     * @param bookView the fold and the text browser shown under the verdict of an open book
+     * @param errors where a damaged file's Details shows the typed reason
+     * @param projectsView the Projects list, searched for the book that is already stored
+     * @param toasts where a dropped folder is refused at once
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -115,14 +119,15 @@ public final class ImportController {
             final ImportGuard guard,
             final Messages messages,
             final Navigator navigator,
-            final LanguageNames names,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final WorkflowProgress progress,
             final StateMirror mirror,
             final CurrentProject project,
-            final StructureChecksViewModel checks,
-            final StructureSegmentsViewModel segments,
-            final BookBriefViewModel brief) {
+            final ImportBookView bookView,
+            final ErrorPresenter errors,
+            final ProjectsViewModel projectsView,
+            final Toasts toasts) {
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -130,9 +135,14 @@ public final class ImportController {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.names = Objects.requireNonNull(names, "names");
         this.project = Objects.requireNonNull(project, "project");
-        this.bookView = new ImportBookView(messages, checks, segments, brief);
+        this.bookView = Objects.requireNonNull(bookView, "bookView");
+        this.errors = Objects.requireNonNull(errors, "errors");
+        this.projectsView = Objects.requireNonNull(projectsView, "projectsView");
+        this.verdictView = new ImportVerdictView(
+                messages,
+                new ImportVerdictView.Actions(
+                        () -> viewModel.cancel(true), this::showThem, this::chooseFile, this::showDetails));
     }
 
     /**
@@ -151,7 +161,14 @@ public final class ImportController {
         if (paths.size() > 1) {
             log.debug("drop carried {} files; opening the first and ignoring the rest", paths.size());
         }
-        guard.requestImport(paths.get(0));
+        final Path first = paths.get(0);
+        // A folder is no book: said at once, before the open-another question or a refusal from deep in the reader.
+        if (Files.isDirectory(first)) {
+            log.debug("drop refused: {} is a folder", first.getFileName());
+            toasts.raise(ToastOccasion.IMPORT_FOLDER);
+            return;
+        }
+        guard.requestImport(first);
     }
 
     @FXML
@@ -249,47 +266,32 @@ public final class ImportController {
     }
 
     private List<Node> nodesFor(final ImportState state) {
-        return switch (state) {
-            case ImportState.Idle idle -> List.of();
-            case ImportState.Opening opening -> List.of(ImportViews.progress(messages, opening.fileName()));
-            case ImportState.Detected detected -> detectedNodes(detected);
-            case ImportState.DrmBlocked blocked -> withChooseAnother(ImportViews.drmBlocked(messages, blocked));
-            case ImportState.Unsupported unsupported ->
-                withChooseAnother(ImportViews.unsupported(messages, unsupported));
-            case ImportState.Refused refused ->
-                withChooseAnother(List.of(ImportViews.refusal(messages, refused.fileName(), refused.error())));
-        };
-    }
-
-    private List<Node> detectedNodes(final ImportState.Detected detected) {
         final List<Node> nodes = new ArrayList<>();
-        final LanguageWarning warning = detected.warning();
-        if (warning != null) {
-            nodes.add(ImportViews.warning(messages, names, warning));
+        ImportVerdicts.of(messages, state).ifPresent(verdict -> {
+            log.info("import verdict {}", verdict.kind());
+            nodes.add(verdictView.build(verdict, state));
+        });
+        if (state instanceof ImportState.Detected detected) {
+            nodes.addAll(bookView.build(detected.card(), project.book().get()));
+            nodes.add(detectedFooter());
         }
-        final Node details = ImportCardView.card(messages, names, detected.card());
-        final OpenedBook book = project.book().get();
-        if (book == null) {
-            log.debug("no book is open behind the detected state; only its details are shown");
-            nodes.add(details);
-        } else {
-            nodes.addAll(bookView.build(details, book));
-        }
-        nodes.add(detectedFooter());
         return nodes;
     }
 
-    private List<Node> withChooseAnother(final List<Node> parts) {
-        final List<Node> nodes = new ArrayList<>(parts);
-        nodes.add(StepFooter.of(
-                null,
-                new StepFooter.Action(
-                        "import-choose-another",
-                        messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER),
-                        messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER_TIP),
-                        "btn-secondary",
-                        this::chooseFile)));
-        return nodes;
+    private void showDetails() {
+        if (viewModel.state().get() instanceof ImportState.Refused refused) {
+            log.debug("details of the refusal of {} requested", refused.fileName());
+            errors.present(refused.error());
+        }
+    }
+
+    private void showThem() {
+        if (viewModel.state().get() instanceof ImportState.AlreadyInProjects already) {
+            log.info("showing the projects of the book {}", already.fileName());
+            projectsView.searchOnNextVisit(already.bookTitle());
+            projectsView.filter().set(ProjectFilter.ALL);
+            navigator.navigate(ViewNames.PROJECTS);
+        }
     }
 
     private Node detectedFooter() {
@@ -308,14 +310,15 @@ public final class ImportController {
                         this::onContinue));
     }
 
+    // A project the import just stored goes with Cancel unless a run decided something in it.
     private void onCancel() {
-        final boolean holdsWork = mirror.runState().get() != RunState.IDLE
-                || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
-        log.debug("cancel pressed, the project holds work: {}", holdsWork);
+        final boolean decided = mirror.runState().get() != RunState.IDLE;
+        final boolean holdsWork = decided || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
+        log.debug("cancel pressed, the project holds work: {}, a run decided in it: {}", holdsWork, decided);
         if (holdsWork) {
-            confirm.ask(ConfirmDialog.Question.DISCARD_PROJECT, viewModel::cancel);
+            confirm.ask(ConfirmPrompt.Question.DISCARD_PROJECT, () -> viewModel.cancel(!decided));
         } else {
-            viewModel.cancel();
+            viewModel.cancel(true);
         }
     }
 

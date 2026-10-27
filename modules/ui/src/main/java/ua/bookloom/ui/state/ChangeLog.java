@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -25,6 +27,7 @@ final class ChangeLog {
     private final Messages messages;
     private final ActivityTracker activities;
     private LiveCalls callsBefore = LiveCalls.EMPTY;
+    private RunEnd end = RunEnd.NONE;
     private final ReadOnlyObjectWrapper<@Nullable ChangeResults> results = new ReadOnlyObjectWrapper<>();
 
     ChangeLog(
@@ -48,6 +51,12 @@ final class ChangeLog {
         marks.clear();
         results.set(null);
         callsBefore = activities.lastCalls().get();
+        end = RunEnd.NONE;
+    }
+
+    /** Keeps what the operation's activity showed, for the results the operation is about to publish. */
+    void ended(final RunEnd shown) {
+        end = Objects.requireNonNull(shown, "shown");
     }
 
     void stopped(final ChangeOperation operation) {
@@ -141,7 +150,35 @@ final class ChangeLog {
             final ChangeOperation operation, final List<ChangeResults.Item> items, final List<String> untargeted) {
         log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
-        results.set(new ChangeResults(
-                operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last, untargeted));
+        final ChangeResults published = new ChangeResults(
+                operation,
+                false,
+                items,
+                last.equals(callsBefore) ? LiveCalls.EMPTY : last,
+                untargeted,
+                end.steps(),
+                end.elapsed(),
+                end.hidden());
+        followUndo(published);
+        results.set(published);
+    }
+
+    // The line that announced the operation is no longer true once every row it changed is put back, so it says so.
+    private void followUndo(final ChangeResults published) {
+        final int changed = published.rows().size();
+        if (changed == 0) {
+            return;
+        }
+        published.reverted().addListener((SetChangeListener<Long>) change -> {
+            if (published.reverted().size() == changed && results.get() == published) {
+                log.info("every one of the {} rows of {} was put back", changed, published.operation());
+                reverts.notice()
+                        .set(new GlossaryNotice(
+                                GlossaryNotice.Level.INFO,
+                                messages.get(
+                                        MessageKey.RESULTS_UNDONE_ALL,
+                                        messages.get(published.operation().label()))));
+            }
+        });
     }
 }

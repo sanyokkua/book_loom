@@ -27,6 +27,8 @@ import ua.bookloom.api.pipeline.StageStarted;
 /** What a run session decides on its own, deterministically, without a job thread. */
 class RunSessionTest extends RunnerTestBase {
 
+    private static final int NOT_WAITING = -1;
+
     private final MutableClock clock = new MutableClock();
     private List<Integer> waits;
 
@@ -34,7 +36,12 @@ class RunSessionTest extends RunnerTestBase {
     void watchTheWaitingSeconds() {
         waits = new CopyOnWriteArrayList<>();
         onFx(() -> {
-            mirror.waitingSeconds().addListener((o, before, after) -> waits.add(after.intValue()));
+            mirror.live()
+                    .waitingCall()
+                    .addListener((o, before, after) -> waits.add(
+                            after == null
+                                    ? NOT_WAITING
+                                    : (int) after.attemptWaited().toSeconds()));
             return null;
         });
     }
@@ -53,7 +60,7 @@ class RunSessionTest extends RunnerTestBase {
         session.onEvent(decided("s-1", SegmentStatus.ACCEPTED, progress(1, 0, 1)));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(waits).containsExactly(10, 12, StateMirror.NOT_WAITING);
+        assertThat(waits).containsExactly(10, 12, NOT_WAITING);
     }
 
     // IF a request that ends and is followed by a repair kept the old start, THEN the notice would claim a wait
@@ -68,7 +75,7 @@ class RunSessionTest extends RunnerTestBase {
         tickAfter(session, 9);
         tickAfter(session, 1);
 
-        assertThat(waits).containsExactly(11, StateMirror.NOT_WAITING, 10);
+        assertThat(waits).containsExactly(11, NOT_WAITING, 10);
     }
 
     // IF a wait were shown while paused, THEN the paused banner would say the model is being waited for.
@@ -81,7 +88,7 @@ class RunSessionTest extends RunnerTestBase {
         session.onEvent(new Paused(PauseReason.REQUESTED, null, progress(0, 0, 1)));
         tickAfter(session, 5);
 
-        assertThat(waits).containsExactly(12, StateMirror.NOT_WAITING);
+        assertThat(waits).containsExactly(12, NOT_WAITING);
     }
 
     // IF the pausing banner kept the wait, THEN it would read as waiting for the model, not as a pause being honoured.
@@ -94,7 +101,7 @@ class RunSessionTest extends RunnerTestBase {
         session.requestPause();
         tickAfter(session, 5);
 
-        assertThat(waits).containsExactly(12, StateMirror.NOT_WAITING);
+        assertThat(waits).containsExactly(12, NOT_WAITING);
     }
 
     // IF the stopping banner kept the wait, THEN Stop would look ignored.
@@ -107,7 +114,7 @@ class RunSessionTest extends RunnerTestBase {
         session.requestStop();
         tickAfter(session, 5);
 
-        assertThat(waits).containsExactly(12, StateMirror.NOT_WAITING);
+        assertThat(waits).containsExactly(12, NOT_WAITING);
     }
 
     // IF the finished run left the wait shown, THEN a completed banner would still say the model is being waited for.
@@ -120,7 +127,7 @@ class RunSessionTest extends RunnerTestBase {
         session.finish(Result.ok(completedReport(1)), () -> {});
         tickAfter(session, 5);
 
-        assertThat(waits).containsExactly(12, StateMirror.NOT_WAITING);
+        assertThat(waits).containsExactly(12, NOT_WAITING);
     }
 
     // IF a run with no request outstanding showed a wait, THEN export or the first segment would read as a slow model.

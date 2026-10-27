@@ -31,8 +31,10 @@ import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
+import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
+import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.response.ReplySanitizer;
@@ -46,7 +48,6 @@ import ua.bookloom.llm.response.ReplySanitizer;
 public final class OpenAiCompatibleClient implements ProviderClient {
     private static final String MODELS_PATH = "/models";
     private static final String CHAT_PATH = "/chat/completions";
-    private static final double NANOS_PER_SECOND = 1_000_000_000.0;
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
@@ -121,6 +122,29 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     @Override
+    public String requestBody(String modelId, ChatRequest request) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        try {
+            final Result<ParsedFormat> parsed = requestMapper.parseFormat(request.responseFormat(), modelId);
+            if (parsed.isErr()) {
+                return "";
+            }
+            final Result<String> body = requestMapper.serializeRequest(
+                    modelId,
+                    request,
+                    Objects.requireNonNull(parsed.data(), "parsed format").format());
+            return body.isErr() ? "" : Objects.requireNonNull(body.data(), "body");
+        } catch (RuntimeException failure) {
+            log.warn(
+                    "the request body of model {} could not be written: {}",
+                    modelId,
+                    failure.getClass().getSimpleName());
+            return "";
+        }
+    }
+
+    @Override
     public Optional<Integer> contextLength(String modelId) {
         return new ContextLengthProbe(exchange, mapper).lmStudio(config, modelId);
     }
@@ -181,15 +205,14 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
-        final Result<HttpReply> response = exchange.post(chatConfig, CHAT_PATH, body);
+        final Result<HttpReply> response = exchange.post(chatConfig, EndpointPaths.chatPath(config, CHAT_PATH), body);
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final Result<HttpReply> mapped = HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId);
         return ProviderCallResult.fromHttpReply(
-                HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
-                reply,
-                CapabilityRejections.from(reply, request));
+                mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
     }
 
     private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply, Duration elapsed) {
@@ -221,7 +244,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         logModelMismatch(requestedModel, decoded.model());
         final FinishReason finishReason =
                 finishReason(decoded.choices().getFirst().finishReason());
-        final TokenUsage usage = usage(decoded.usage(), decoded.stats(), elapsed);
+        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
         log.debug(
                 "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
                 config.baseUrl().getHost(),
@@ -231,26 +254,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 finishReason,
                 usage);
         return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
-    }
-
-    private static @Nullable TokenUsage usage(
-            OpenAiChatResponse.@Nullable Usage usage, OpenAiChatResponse.@Nullable Stats stats, Duration elapsed) {
-        if (usage == null || (usage.promptTokens() == null && usage.completionTokens() == null)) {
-            return null;
-        }
-        final Double generation = stats == null ? null : stats.generationTime();
-        final Double firstToken = stats == null ? null : stats.timeToFirstToken();
-        final OpenAiChatResponse.PromptTokensDetails details = usage.promptTokensDetails();
-        return new TokenUsage(
-                usage.promptTokens(),
-                usage.completionTokens(),
-                generation == null ? elapsed : seconds(generation),
-                firstToken == null ? null : seconds(firstToken),
-                details == null ? null : details.cachedTokens());
-    }
-
-    private static Duration seconds(double value) {
-        return Duration.ofNanos(Math.round(value * NANOS_PER_SECOND));
     }
 
     private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {
@@ -304,7 +307,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private ProviderCallResult<HttpReply> get(CallPurpose purpose, @Nullable String modelId) {
-        final Result<HttpReply> response = exchange.get(config, MODELS_PATH);
+        final Result<HttpReply> response = exchange.get(config, EndpointPaths.modelsPath(config, MODELS_PATH));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
@@ -347,7 +350,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private Result<ChatResponse> unreadableChatResponse(String modelId, @Nullable Throwable cause) {
-        return Result.err(unexpectedError("read chat response", modelId, cause));
+        return Result.err(UnreadableReply.error(config, modelId, cause));
     }
 
     private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {

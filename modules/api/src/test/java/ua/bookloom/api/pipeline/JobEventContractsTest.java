@@ -87,7 +87,47 @@ class JobEventContractsTest {
             case RecoveryWaiting waiting -> "RecoveryWaiting";
             case BatchStarted batch -> "BatchStarted";
             case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
+            case StepsPlanned planned -> "StepsPlanned";
+            case StepChanged changed -> "StepChanged";
+            case BriefSampleRead read -> "BriefSampleRead";
         };
+    }
+
+    @Test
+    void stepsPlanned_keepsKindCountAndEstimateFlag() {
+        final StepsPlanned planned = new StepsPlanned(StepKind.DRAFT, 3, false);
+
+        assertThat(planned.kind()).isEqualTo(StepKind.DRAFT);
+        assertThat(planned.added()).isEqualTo(3);
+        assertThat(planned.estimated()).isFalse();
+    }
+
+    @Test
+    void stepsPlanned_negativeCount_isRejected() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.CHECK, -1, false));
+    }
+
+    @Test
+    void stepChanged_endedWithResult_keepsItemAndResult() {
+        final StepChanged changed =
+                new StepChanged(StepKind.DRAFT, "Draft", 2, StepState.ENDED, "Book.md:2", StepResult.NO_CALL);
+
+        assertThat(changed.itemRef()).isEqualTo("Book.md:2");
+        assertThat(changed.result()).isEqualTo(StepResult.NO_CALL);
+        assertThat(changed.index()).isEqualTo(2);
+    }
+
+    @Test
+    void stepChanged_startedWithResult_isRejected() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () -> new StepChanged(StepKind.CHECK, "Check", 0, StepState.STARTED, null, StepResult.DONE));
+    }
+
+    @Test
+    void stepChanged_negativeIndex_isRejected() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new StepChanged(StepKind.CHECK, "Check", -1, StepState.STARTED, null, null));
     }
 
     @ParameterizedTest
@@ -167,5 +207,42 @@ class JobEventContractsTest {
 
         assertThat(paused.pauses()).isZero();
         assertThat(paused.pausesBeforeFlagging()).isZero();
+    }
+
+    @Test
+    void briefSampleRead_answers_areCopiedAndKeepValueAndQuote() {
+        final java.util.Map<BriefField, SampleAnswer> given = new java.util.EnumMap<>(BriefField.class);
+        given.put(BriefField.GENRE, new SampleAnswer("crime", "He left."));
+        final BriefSampleRead read = new BriefSampleRead(2, 4, given, "ch1 · p02–p14", "Passage 1: He left.");
+        given.clear();
+
+        assertThat(read.answers()).containsOnlyKeys(BriefField.GENRE);
+        assertThat(read.answers().get(BriefField.GENRE)).isEqualTo(new SampleAnswer("crime", "He left."));
+        assertThat(read.sample()).isEqualTo(2);
+    }
+
+    // The dialog names the window's place in the book and shows the text the model was sent.
+    @Test
+    void briefSampleRead_locationAndSent_areKept() {
+        final BriefSampleRead read =
+                new BriefSampleRead(1, 4, java.util.Map.of(), "ch1 · p02–p14", "Passage 1: He left.");
+
+        assertThat(read.location()).isEqualTo("ch1 · p02–p14");
+        assertThat(read.sent()).isEqualTo("Passage 1: He left.");
+    }
+
+    @Test
+    void briefSampleRead_unknownLocation_isTheEmptyString() {
+        final BriefSampleRead read = new BriefSampleRead(1, 1, java.util.Map.of(), "", "");
+
+        assertThat(read.location()).isEmpty();
+        assertThat(read.sent()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,3", "4,3", "1,0"})
+    void briefSampleRead_sampleOutsideTheWindows_isRejected(final int sample, final int samples) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BriefSampleRead(sample, samples, java.util.Map.of(), "", ""));
     }
 }

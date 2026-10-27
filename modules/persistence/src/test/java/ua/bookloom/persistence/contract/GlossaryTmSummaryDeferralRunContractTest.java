@@ -29,9 +29,7 @@ import ua.bookloom.api.project.TmEntry;
  * {@link RunRepository} contract, continuing {@link RepositoryContractTest} in its own file by the project's
  * class-length limit (ADR-0034, {@code design.md} D2).
  */
-public abstract class GlossaryTmSummaryDeferralRunContractTest extends RepositoryContractTest {
-
-    protected abstract GlossaryRepository glossaryRepository();
+public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryPutAllContractTest {
 
     protected abstract TmRepository tmRepository();
 
@@ -45,6 +43,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void add_duplicateTermDifferentCase_answersValidationAndKeepsOneEntry() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -58,6 +57,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
     @ParameterizedTest
     @ValueSource(strings = {"Hale's", "Hale’s", " HALE ", "\"Hale,\""})
     void add_possessiveOrPunctuatedSpelling_answersValidationAsDuplicate(final String spelling) {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -69,6 +69,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void wasRemoved_possessiveSpellingOfRemovedTerm_isTrue() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
         repository.remove("p1", "e1");
@@ -78,6 +79,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void findByTerm_matchesCaseInsensitively() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -88,6 +90,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void remove_thenReAdd_clearsTheRemovalMemory() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -102,6 +105,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void removedTerm_ofOneProject_isNotRememberedForAnother() {
+        givenProjects("p1", "p2");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
         repository.remove("p1", "e1");
@@ -111,6 +115,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void update_existingEntry_replacesItsTarget() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -125,6 +130,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void update_suggestedTarget_readsBackAsASuggestion() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
 
@@ -137,6 +143,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void updateByTerm_changeSeesAPersonsEarlierEdit_andKeepsIt() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale"));
         repository.update(glossaryEntry("e1", "Hale").withTarget("Гейл"));
@@ -151,6 +158,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void updateByTerm_unknownTerm_answersEmptyAndNeverCallsTheChange() {
+        givenProjects("p1");
         final Result<Optional<GlossaryEntry>> stored = glossaryRepository().update("p1", "Nobody", held -> {
             throw new AssertionError("the change must not run");
         });
@@ -160,6 +168,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void updateByTerm_manyConcurrentChanges_loseNone() {
+        givenProjects("p1");
         final GlossaryRepository repository = glossaryRepository();
         repository.add(glossaryEntry("e1", "Hale").withTarget(""));
         final int writers = 64;
@@ -182,6 +191,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void findByTerm_noMatch_answersEmpty() {
+        givenProjects("p1");
         assertThat(glossaryRepository().findByTerm("p1", "unknown").data()).isEmpty();
     }
 
@@ -193,6 +203,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void put_thenExactAndContext_readBackTheStoredEntries() {
+        givenProjects("p1");
         final TmRepository repository = tmRepository();
         repository.put(new TmEntry("t1", "p1", "h1", "c1", "Hello", "Привіт"));
         repository.put(new TmEntry("t2", "p1", "h1", "c2", "Hello", "Вітаю"));
@@ -205,6 +216,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void put_sameKeyAgain_replacesThePriorEntry() {
+        givenProjects("p1");
         final TmRepository repository = tmRepository();
         repository.put(new TmEntry("t1", "p1", "h1", "c1", "Hello", "Привіт"));
 
@@ -218,6 +230,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void candidates_filtersBySourceLengthBand() {
+        givenProjects("p1");
         final TmRepository repository = tmRepository();
         repository.put(new TmEntry("short", "p1", "h1", "c1", "abc", "xyz"));
         repository.put(new TmEntry("long", "p1", "h2", "c1", "a".repeat(20), "b".repeat(20)));
@@ -229,6 +242,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void candidates_measuresSourceLengthInCodePoints() {
+        givenProjects("p1");
         final TmRepository repository = tmRepository();
         repository.put(new TmEntry("faces", "p1", "h1", "c1", "\uD83D\uDE00".repeat(3), "xyz"));
 
@@ -250,6 +264,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void save_higherVersion_becomesLatest() {
+        givenProjects("p1");
         final SummaryRepository repository = summaryRepository();
         repository.save(new RollingSummary("p1", null, "src v1", "tgt v1", 1, null, 0));
 
@@ -269,6 +284,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void add_sameSegmentAndReasonTwice_keepsOneOpenDeferral() {
+        givenProjects("p1");
         final DeferralRepository repository = deferralRepository();
         repository.add(new Deferral("d1", "p1", "ch1:4", DeferralReason.GENDER_UNKNOWN, null, null, null, null));
 
@@ -279,6 +295,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void add_sameSegmentAndReasonDifferentWaitingOn_keepsBothOpenDeferrals() {
+        givenProjects("p1");
         final DeferralRepository repository = deferralRepository();
         repository.add(new Deferral("d1", "p1", "ch1:4", DeferralReason.TERM, "Hale", "Хейл", null, null));
 
@@ -290,6 +307,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void resolve_removesTheDeferralFromOpen() {
+        givenProjects("p1");
         final DeferralRepository repository = deferralRepository();
         repository.add(new Deferral("d1", "p1", "ch1:4", DeferralReason.GENDER_UNKNOWN, null, null, null, null));
 
@@ -299,6 +317,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void resolve_unknownDeferralId_answersFalse() {
+        givenProjects("p1");
         assertThat(deferralRepository().resolve("p1", "unknown").data()).isFalse();
     }
 
@@ -306,6 +325,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void save_upsertedStateSequence_isReadBackAtEachStep() {
+        givenProjects("p1");
         final RunRepository repository = runRepository();
         final Instant started = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -324,6 +344,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void save_terminalStates_areReadBackAsStoppedOrFailed() {
+        givenProjects("p1", "p2");
         final RunRepository repository = runRepository();
         final Instant started = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -336,6 +357,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
 
     @Test
     void latest_answersTheRunStartedMostRecently() {
+        givenProjects("p1");
         final RunRepository repository = runRepository();
         final Instant earlier = Instant.parse("2026-01-01T00:00:00Z");
         final Instant later = Instant.parse("2026-01-02T00:00:00Z");

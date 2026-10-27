@@ -22,11 +22,11 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.TestProjects;
 
 /** The destination checks {@code ExportServiceImpl.newExport} runs on the stored project's source before a job exists. */
 class ExportServiceDestinationTest {
@@ -41,7 +41,7 @@ class ExportServiceDestinationTest {
     void setUp() {
         final var injector = Guice.createInjector(
                 new DocumentModule(),
-                new PersistenceModule(),
+                new InMemoryPersistenceModule(),
                 new ReviewModeTestModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
@@ -144,7 +144,7 @@ class ExportServiceDestinationTest {
     }
 
     private void storeProject(final Path source) {
-        projects.save(new Project("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
+        projects.save(TestProjects.of("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
     }
 
     private static ExportRequest request(final Path destination, final boolean overwrite) {

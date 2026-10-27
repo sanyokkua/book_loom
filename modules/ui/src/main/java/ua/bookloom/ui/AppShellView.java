@@ -25,20 +25,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
-import ua.bookloom.ui.control.ActivityChip;
+import ua.bookloom.ui.control.BannerSlot;
+import ua.bookloom.ui.control.DisabledTips;
+import ua.bookloom.ui.control.LayoutClass;
 import ua.bookloom.ui.control.Motion;
-import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.control.Overrun;
 import ua.bookloom.ui.control.ScrollAnchor;
+import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.SmoothScroll;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.state.ActivityTracker;
-import ua.bookloom.ui.state.DiagnosticActions;
-import ua.bookloom.ui.state.SettingsViewModel;
-import ua.bookloom.ui.state.StepLocks;
-import ua.bookloom.ui.state.WorkflowProgress;
 import ua.bookloom.ui.theme.MonoFont;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
@@ -58,18 +56,13 @@ import ua.bookloom.ui.theme.ThemeController;
 public final class AppShellView {
 
     static final String REDUCED_MOTION_CLASS = "reduce-motion";
+    // Style classes a screen carries: its own minimum height instead of the height hold, and the content cap.
+    static final String FILLS_CLASS = "fills-viewport";
+    static final String CAPPED_CLASS = "content-capped";
 
-    /**
-     * The smallest <em>outer</em> window width. The content area that leaves a person is smaller (borders and title
-     * bar take part of it, about 944 by 600 at least), and every screen still fits its width there without sideways
-     * scrolling.
-     */
+    /** The smallest <em>outer</em> window width; every screen fits the content area it leaves (about 944 wide). */
     public static final double MIN_WIDTH = 960;
-
-    /**
-     * The smallest <em>outer</em> window height; the content area it leaves is about 600 pixels on Windows and 612 on
-     * macOS, and below it the title bar, toolbar and a screen's controls compete for room.
-     */
+    /** The smallest <em>outer</em> window height; it leaves a content area of about 600 pixels on Windows. */
     public static final double MIN_HEIGHT = 640;
 
     private static final int WORKFLOW_STEPS = Arrays.stream(ViewNames.values())
@@ -77,24 +70,21 @@ public final class AppShellView {
             .max()
             .orElse(0);
     private static final double ACTION_SPACING = 10;
+    private static final double TOAST_INSET = 16;
     private static final String CRUMB_SEPARATOR = " / ";
     private static final String STEP_SEPARATOR = " · ";
 
     private final Navigator navigator;
     private final Messages messages;
     private final ThemeController themeController;
-    private final String version;
-    private final ModalHost modalHost;
-    private final BusyHost busyHost;
     private final ActivityTracker activities;
-    private final ToastStack toasts;
-    private final RunStatusBar runStatus;
-    private final ActivityChip activityChip;
-    private final DiagnosticActions diagnostics;
+    private final ShellOverlays overlays;
+    private final ShellRunParts runParts;
+    private final AboutDialog about;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
     private final StackPane contentHost = new ContentHost();
-    private final ScrollPane contentScroll = new ScrollPane(contentHost);
+    private final ScrollPane contentScroll = new ScrollHost(contentHost);
     private final ScrollAnchor contentAnchor = ScrollAnchor.install(contentScroll);
     private final ToggleButton themeToggle = new ToggleButton();
     private @Nullable StackPane root;
@@ -105,46 +95,30 @@ public final class AppShellView {
      * @param navigator the source of the current view and its content, and the only thing that changes them
      * @param messages the catalogue every label comes from
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
-     * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
-     * @param busyHost the layer between the frame and the dialogs that shows the work the window waits for
      * @param activities the running work, whose blocking state disables the navigation and the toolbar actions
-     * @param toasts the transient-message surface whose host the shell places over the content area
-     * @param runStatus the run's status and control, placed between the product name and the theme control
-     * @param activityChip the other model work under way, with its Stop, placed before the run's status
-     * @param progress the completed steps the navigation marks
-     * @param settings the chosen provider and model the navigation footer names
-     * @param locks which steps are closed, for the navigation to draw
-     * @param diagnostics the log settings and actions the About dialog offers
-     * @param version the build version the About dialog reports
+     * @param navColumn the navigation column, its footer and its step marks
+     * @param overlays the busy scrim, the toasts and the dialog host stacked over the frame
+     * @param runParts the title bar's chip and run status, and the banners over the content
+     * @param about the About dialog the title bar opens
      */
     @Inject
     AppShellView(
             final Navigator navigator,
             final Messages messages,
             final ThemeController themeController,
-            final ModalHost modalHost,
-            final BusyHost busyHost,
             final ActivityTracker activities,
-            final ToastStack toasts,
-            final RunStatusBar runStatus,
-            final ActivityChip activityChip,
-            final WorkflowProgress progress,
-            final SettingsViewModel settings,
-            final StepLocks locks,
-            final DiagnosticActions diagnostics,
-            final @BuildVersion String version) {
+            final NavColumn navColumn,
+            final ShellOverlays overlays,
+            final ShellRunParts runParts,
+            final AboutDialog about) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
-        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
-        this.busyHost = Objects.requireNonNull(busyHost, "busyHost");
         this.activities = Objects.requireNonNull(activities, "activities");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
-        this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
-        this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
-        this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate, progress, settings, locks);
+        this.navColumn = Objects.requireNonNull(navColumn, "navColumn");
+        this.overlays = Objects.requireNonNull(overlays, "overlays");
+        this.runParts = Objects.requireNonNull(runParts, "runParts");
+        this.about = Objects.requireNonNull(about, "about");
     }
 
     /**
@@ -163,8 +137,8 @@ public final class AppShellView {
     }
 
     /**
-     * Builds the window's scene around the shell and attaches the theme to it, so the composition root needs no
-     * theme type of its own.
+     * Builds the window's scene around the shell, attaches the theme and shows disabled controls' tooltips
+     * ({@link DisabledTips}), so the composition root needs no theme type of its own.
      *
      * @param width the initial scene width in pixels
      * @param height the initial scene height in pixels
@@ -174,6 +148,7 @@ public final class AppShellView {
         log.debug("creating the scene {}x{}", width, height);
         final Scene scene = new Scene(root(), width, height);
         themeController.attach(scene);
+        DisabledTips.install(scene);
         return scene;
     }
 
@@ -197,26 +172,22 @@ public final class AppShellView {
      */
     public void activate(final ViewNames target) {
         Objects.requireNonNull(target, "target");
-        final ViewNames source = navigator.currentView().get();
-        log.debug("activating {} from {}", target, source);
-        final boolean accepted = navigator.navigate(target);
-        log.debug("activation of {} {}", target, accepted ? "accepted" : "refused");
+        navColumn.activate(target);
     }
 
     private StackPane build() {
         final BorderPane frame = new BorderPane();
         frame.setTop(titleBar());
         frame.setLeft(navColumn.view());
-        // Work the window waits for leaves nothing to navigate to; the busy card says why, and Navigator refuses too.
-        navColumn.view().disableProperty().bind(activities.blocking());
+        // Short work the window waits for leaves nothing to navigate to; its progress dialog says why, and Navigator
+        // refuses too. Long work does not lock: leaving its screen asks whether to let it run on in the background.
+        navColumn.view().disableProperty().bind(activities.locking());
         frame.setCenter(main());
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final Node toastLayer = toasts.view();
-        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
-        final StackPane shell = new StackPane(frame, busyHost.view(), toastLayer, modalHost.view());
-        keepOverTheContent(toastLayer);
+        final StackPane shell = overlaid(frame);
+        LayoutClass.install(shell); // the window's width class: the navigation column and the title bar follow it (L9)
         MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
             log.debug("the activity log is set in {}", face.family());
             shell.getStyleClass().add(face.styleClass());
@@ -237,14 +208,27 @@ public final class AppShellView {
         return shell;
     }
 
-    // The toasts rise from the bottom and are centred over the content, so none covers the navigation column.
+    private StackPane overlaid(final Node frame) {
+        final Node toastLayer = overlays.toasts().view();
+        keepOverTheContent(toastLayer);
+        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
+        return new StackPane(
+                frame,
+                overlays.busyHost().view(),
+                toastLayer,
+                overlays.modalHost().view());
+    }
+
+    // The toasts rise from the content area's bottom-right corner, 16 pixels in, so none covers the navigation column.
     private void keepOverTheContent(final Node toastLayer) {
         final Node nav = navColumn.view();
-        StackPane.setMargin(
-                toastLayer, new Insets(0, 0, 0, nav.getLayoutBounds().getWidth()));
+        StackPane.setMargin(toastLayer, corner(nav.getLayoutBounds().getWidth()));
         nav.layoutBoundsProperty()
-                .addListener(
-                        (observed, was, now) -> StackPane.setMargin(toastLayer, new Insets(0, 0, 0, now.getWidth())));
+                .addListener((observed, was, now) -> StackPane.setMargin(toastLayer, corner(now.getWidth())));
+    }
+
+    private static Insets corner(final double navigationWidth) {
+        return new Insets(0, TOAST_INSET, TOAST_INSET, navigationWidth);
     }
 
     private Node titleBar() {
@@ -255,17 +239,23 @@ public final class AppShellView {
         themeToggle.setId("shell-theme-toggle");
         themeToggle.getStyleClass().add("shell-title-button");
         themeToggle.setOnAction(event -> themeController.toggle());
-        final Button about = new Button(messages.get(MessageKey.SHELL_ABOUT), new FontIcon(Feather.INFO));
-        about.setId("shell-about");
-        Tips.install(messages, about, MessageKey.SHELL_ABOUT_TIP);
-        about.getStyleClass().add("shell-title-button");
-        about.setOnAction(event -> openAbout());
+        final Button aboutButton = new Button(messages.get(MessageKey.SHELL_ABOUT), new FontIcon(Feather.INFO));
+        aboutButton.setId("shell-about");
+        Tips.install(messages, aboutButton, MessageKey.SHELL_ABOUT_TIP);
+        aboutButton.getStyleClass().add("shell-title-button");
+        aboutButton.setOnAction(event -> about.open());
         // Only the run status gives way in a narrow window (it shortens the book name and hides its lesser parts);
         // the product name, the theme toggle and About keep their words whole.
-        for (final Region whole : new Region[] {product, themeToggle, about}) {
+        for (final Region whole : new Region[] {product, themeToggle, aboutButton}) {
             whole.setMinWidth(Region.USE_PREF_SIZE);
         }
-        final HBox bar = new HBox(product, spacer, activityChip.view(), runStatus.view(), themeToggle, about);
+        final HBox bar = new HBox(
+                product,
+                spacer,
+                runParts.activityChip().view(),
+                runParts.runStatus().view(),
+                themeToggle,
+                aboutButton);
         bar.setId("shell-title-bar");
         bar.getStyleClass().add("shell-title-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
@@ -283,37 +273,32 @@ public final class AppShellView {
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.setSpacing(ACTION_SPACING);
         actions.setMinWidth(Region.USE_PREF_SIZE);
-        actions.disableProperty().bind(activities.blocking());
+        actions.disableProperty().bind(activities.locking());
         breadcrumb.setMinWidth(0);
         breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
+        Overrun.install(breadcrumb);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         final ScrollPane scroll = configuredContentScroll();
         final StackPane contentArea = new StackPane(scroll);
         VBox.setVgrow(contentArea, Priority.ALWAYS);
-        return new VBox(toolbar, contentArea);
+        return new VBox(toolbar, new BannerSlot(runParts.banners()), contentArea);
     }
 
     private ScrollPane configuredContentScroll() {
         contentHost.setId("shell-content");
         contentHost.getStyleClass().add("shell-content");
         contentHost.setAlignment(Pos.TOP_LEFT);
+        LayoutClass.install(contentHost);
         final ScrollPane scroll = contentScroll;
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
-        // Both dimensions fit, so a screen whose list grows still fills the viewport; it scrolls once the screen's
-        // minimum, which showContent makes its preferred height, is taller than the window.
-        scroll.setFitToWidth(true);
+        // Both fit: a growing list fills the viewport; it scrolls once the screen's minimum (showContent) is taller.
         scroll.setFitToHeight(true);
+        // A screen narrower than its minimum width is scrolled across rather than cut.
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         return scroll;
-    }
-
-    private void openAbout() {
-        log.debug("opening the About dialog");
-        modalHost.show(new AboutDialog(messages, version, diagnostics, modalHost::hide).card(), true);
     }
 
     private void showCurrent(final @Nullable ViewNames current) {
@@ -322,21 +307,29 @@ public final class AppShellView {
         breadcrumb.setText(current == null ? "" : crumb(current));
     }
 
-    // A screen that is not its own scroll pane is never squeezed below its preferred height: fitting the height clamps
-    // the content only to its minimum, which would otherwise crush lists and text areas into the window instead of
-    // letting the shell scroll. A screen that scrolls itself (import, brief) keeps fitting the window.
+    // A screen is held at its preferred height (fitting the height would crush its lists to their minimum); one with
+    // `fills-viewport` declares its own minimum, and one that scrolls itself fits the window. A capped one is centred.
     private void showContent(final @Nullable Node content) {
         if (content == null) {
             contentHost.getChildren().clear();
         } else {
             if (content instanceof Region region && !(content instanceof ScrollPane)) {
-                log.debug("screen {} keeps its preferred height; the shell scrolls it", content.getId());
-                region.setMinHeight(Region.USE_PREF_SIZE);
+                holdHeight(region);
             }
+            StackPane.setAlignment(
+                    content, content.getStyleClass().contains(CAPPED_CLASS) ? Pos.TOP_CENTER : Pos.TOP_LEFT);
             contentHost.getChildren().setAll(content);
             Motion.fadeIn(content, Motion.QUICK);
         }
         contentAnchor.reset();
+    }
+
+    private static void holdHeight(final Region region) {
+        final boolean fills = region.getStyleClass().contains(FILLS_CLASS);
+        log.debug("screen {} {}", region.getId(), fills ? "declares its own minimum" : "is held at its height");
+        if (!fills) {
+            region.setMinHeight(Region.USE_PREF_SIZE);
+        }
     }
 
     private String crumb(final ViewNames view) {

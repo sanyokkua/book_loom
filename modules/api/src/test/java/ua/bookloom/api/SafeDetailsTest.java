@@ -6,12 +6,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.RecordComponent;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * The safe-details allowlist — the privacy half of the error envelope.
@@ -24,6 +28,7 @@ class SafeDetailsTest {
 
     /** The allowlist, written out rather than read from the type, so the type cannot define its own correctness. */
     private static final List<String> ALLOWLIST = List.of(
+            "reason",
             "httpStatus",
             "endpointHost",
             "modelName",
@@ -31,7 +36,8 @@ class SafeDetailsTest {
             "attempt",
             "qaFindings",
             "expectedPlaceholders",
-            "observedPlaceholders");
+            "observedPlaceholders",
+            "folderName");
 
     // WHEN a failure carries technical detail, the system SHALL
     // populate AppError.details only from the allowlisted fields: HTTP status, endpoint host, model name, timeout,
@@ -235,5 +241,34 @@ class SafeDetailsTest {
 
         assertThat(base.render()).isEqualTo("model=llama3");
         assertThat(extended.render()).isEqualTo("httpStatus=500, model=llama3");
+    }
+
+    // IF the folder's whole path were kept, THEN a dialog and a log line would name the person's home folder.
+    @Test
+    void withFolder_aDeepPath_keepsOnlyTheFoldersOwnName() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.DISK_FULL)
+                .withFolder(Path.of("/Users/someone/Books"))
+                .render();
+
+        assertThat(details).isEqualTo("reason=disk-full, folder=Books");
+    }
+
+    // IF the reason could not be read back, THEN the interface could not word the advice in the display language.
+    @Test
+    void withReason_rendered_isReadBackByFailureReason() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.READ_ONLY)
+                .withHttpStatus(500)
+                .render();
+
+        assertThat(FailureReason.in(details)).contains(FailureReason.READ_ONLY);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"httpStatus=500", "reason=unheard-of", "folder=reason=disk-full"})
+    void in_detailsWithoutAKnownLeadingReason_isEmpty(final String details) {
+        assertThat(FailureReason.in(details)).isEmpty();
     }
 }

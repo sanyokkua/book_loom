@@ -82,7 +82,7 @@ final class MentionFinder {
             final Case mode,
             final int ordinal,
             final List<Mention> found) {
-        final Occurrences.Read read = data.reads().get(ordinal);
+        final Occurrences.Read read = data.read(ordinal);
         final int length = wanted.words().size();
         for (int start = 0; start + length <= read.words().size(); start++) {
             if (isRun(read, start, wanted, mode)) {

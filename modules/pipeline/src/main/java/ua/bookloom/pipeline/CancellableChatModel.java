@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import java.time.Clock;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -43,6 +44,11 @@ final class CancellableChatModel implements ChatModel {
         this.control = Objects.requireNonNull(control, "control");
         this.onCallEntered = Objects.requireNonNull(onCallEntered, "onCallEntered");
         this.stalls = Objects.requireNonNull(stalls, "stalls");
+    }
+
+    @Override
+    public @Nullable Integer contextWindowOverride() {
+        return delegate.contextWindowOverride();
     }
 
     @Override

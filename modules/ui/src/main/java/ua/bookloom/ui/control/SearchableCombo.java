@@ -48,6 +48,7 @@ public final class SearchableCombo<T> extends ComboBox<T> {
     private final Mode mode;
     private final List<T> allItems;
     private final Function<T, String> name;
+    private final Function<T, String> searchText;
     private final @Nullable Function<String, T> fromText;
     private final @Nullable Function<String, Optional<T>> parse;
     private final FilteredList<T> filtered;
@@ -59,11 +60,13 @@ public final class SearchableCombo<T> extends ComboBox<T> {
             final Mode mode,
             final List<T> items,
             final Function<T, String> name,
+            final Function<T, String> searchText,
             final @Nullable Function<String, T> fromText,
             final @Nullable Function<String, Optional<T>> parse) {
         this.mode = mode;
         this.allItems = List.copyOf(items);
         this.name = Objects.requireNonNull(name, "name");
+        this.searchText = Objects.requireNonNull(searchText, "searchText");
         this.fromText = fromText;
         this.parse = parse;
         this.filtered = new FilteredList<>(FXCollections.observableArrayList(allItems));
@@ -91,19 +94,33 @@ public final class SearchableCombo<T> extends ComboBox<T> {
 
     /** A box that keeps the previous value when the typed text names no entry. */
     public static <T> SearchableCombo<T> strict(final List<T> items, final Function<T, String> name) {
-        return new SearchableCombo<>(Mode.STRICT, items, name, null, null);
+        return new SearchableCombo<>(Mode.STRICT, items, name, name, null, null);
     }
 
     /** A box that keeps whatever text was typed, turned into a value by {@code fromText}. */
     public static <T> SearchableCombo<T> freeText(
             final List<T> items, final Function<T, String> name, final Function<String, T> fromText) {
-        return new SearchableCombo<>(Mode.FREE_TEXT, items, name, Objects.requireNonNull(fromText, "fromText"), null);
+        return new SearchableCombo<>(
+                Mode.FREE_TEXT, items, name, name, Objects.requireNonNull(fromText, "fromText"), null);
     }
 
     /** A box whose typed text goes to {@code parse}, which may recognise a value the list does not hold. */
     public static <T> SearchableCombo<T> parsed(
             final List<T> items, final Function<T, String> name, final Function<String, Optional<T>> parse) {
-        return new SearchableCombo<>(Mode.PARSED, items, name, null, Objects.requireNonNull(parse, "parse"));
+        return parsed(items, name, name, parse);
+    }
+
+    /**
+     * A box whose typed text goes to {@code parse} and narrows the list by {@code searchText}, which may hold more
+     * than the shown name (a language's English name and tag beside its Ukrainian name).
+     */
+    public static <T> SearchableCombo<T> parsed(
+            final List<T> items,
+            final Function<T, String> name,
+            final Function<T, String> searchText,
+            final Function<String, Optional<T>> parse) {
+        return new SearchableCombo<>(
+                Mode.PARSED, items, name, searchText, null, Objects.requireNonNull(parse, "parse"));
     }
 
     /** The committed value; null until something is chosen. */
@@ -148,8 +165,8 @@ public final class SearchableCombo<T> extends ComboBox<T> {
         }
         updating = true;
         try {
-            filtered.setPredicate(item ->
-                    needle.isEmpty() || TextMatch.normalize(displayName(item)).contains(needle));
+            filtered.setPredicate(item -> needle.isEmpty()
+                    || TextMatch.normalize(searchText.apply(item)).contains(needle));
             setVisibleRowCount(Math.clamp(filtered.size(), 1, MAX_VISIBLE_ROWS));
             if (!Objects.equals(getValue(), committed.get())) {
                 setValue(committed.get());

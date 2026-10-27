@@ -13,6 +13,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /** Jobs whose recovery waits and watchdog cadence a test scripts. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -40,10 +41,12 @@ final class TimedJobs {
                 TranslationJobTestSupport.SPLITTER,
                 ConsistencyPassFixture.over(project),
                 clock,
+                new UuidIdSource(),
                 timer,
                 ticks,
                 BatchDrafter.NO_BATCHING,
-                WordValidator.none());
+                WordValidator.none(),
+                RequestDefaultsSource.environmentOnly());
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

@@ -6,8 +6,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -20,17 +22,20 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.RequestSummary;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.StepAnnouncer;
 
 /**
  * The run's {@link ModelCalls}: every call goes through the job's guarded model, and each attempt of a call that
@@ -55,16 +60,13 @@ public final class JobModelCalls implements ModelCalls {
     private final Consumer<JobEvent> announce;
     private final Clock clock;
     private final String targetLanguage;
-    private final int window;
+    private final IntSupplier window;
     private final CallSnapshots snapshots;
+    private final StepAnnouncer steps;
+    private final AtomicInteger callSeq = new AtomicInteger();
 
     /**
      * Creates a seam for calls made against the default window, such as a glossary scan before any run.
-     *
-     * @param guard see the full constructor
-     * @param announce see the full constructor
-     * @param clock see the full constructor
-     * @param targetLanguage see the full constructor
      */
     public JobModelCalls(
             final Function<Runnable, ChatModel> guard,
@@ -94,16 +96,7 @@ public final class JobModelCalls implements ModelCalls {
         this(guard, announce, clock, targetLanguage, window, Map.of());
     }
 
-    /**
-     * Creates the run's model-call seam, which names a shown call's segments by their locators.
-     *
-     * @param guard see the five-argument constructor
-     * @param announce see the five-argument constructor
-     * @param clock see the five-argument constructor
-     * @param targetLanguage see the five-argument constructor
-     * @param window see the five-argument constructor
-     * @param locators the non-null locator of every segment of the opened book; a segment it lacks is named by its id
-     */
+    /** Creates the run's model-call seam, which names a shown call's segments by their locators. */
     public JobModelCalls(
             final Function<Runnable, ChatModel> guard,
             final Consumer<JobEvent> announce,
@@ -111,15 +104,60 @@ public final class JobModelCalls implements ModelCalls {
             final String targetLanguage,
             final int window,
             final Map<String, SegmentLocator> locators) {
+        this(guard, announce, clock, targetLanguage, fixed(window), locators);
+    }
+
+    /** Creates the seam with a window read afresh for each request, so a chunk at another window sizes for it. */
+    public JobModelCalls(
+            final Function<Runnable, ChatModel> guard,
+            final Consumer<JobEvent> announce,
+            final Clock clock,
+            final String targetLanguage,
+            final IntSupplier window,
+            final Map<String, SegmentLocator> locators) {
+        this(
+                guard,
+                announce,
+                clock,
+                targetLanguage,
+                window,
+                new CallSnapshots(Objects.requireNonNull(announce, "announce"), locators),
+                StepAnnouncer.silent());
+    }
+
+    private JobModelCalls(
+            final Function<Runnable, ChatModel> guard,
+            final Consumer<JobEvent> announce,
+            final Clock clock,
+            final String targetLanguage,
+            final IntSupplier window,
+            final CallSnapshots snapshots,
+            final StepAnnouncer steps) {
         this.guard = Objects.requireNonNull(guard, "guard");
-        this.announce = Objects.requireNonNull(announce, "announce");
+        this.announce = announce;
         this.clock = Objects.requireNonNull(clock, "clock");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
+        this.window = Objects.requireNonNull(window, "window");
+        this.snapshots = snapshots;
+        this.steps = steps;
+    }
+
+    /** This seam announcing the steps a timeout resend adds through {@code steps}; all else is shared. */
+    public JobModelCalls withSteps(final StepAnnouncer steps) {
+        return new JobModelCalls(
+                guard, announce, clock, targetLanguage, window, snapshots, Objects.requireNonNull(steps, "steps"));
+    }
+
+    @Override
+    public StepAnnouncer steps() {
+        return steps;
+    }
+
+    private static IntSupplier fixed(final int window) {
         if (window <= 0) {
             throw new IllegalArgumentException("window must be positive: " + window);
         }
-        this.window = window;
-        this.snapshots = new CallSnapshots(announce, locators);
+        return () -> window;
     }
 
     @Override
@@ -146,6 +184,11 @@ public final class JobModelCalls implements ModelCalls {
         snapshots.noted(note);
     }
 
+    @Override
+    public void parsed(final List<String> segmentIds, final List<CallItem> items) {
+        snapshots.parsed(segmentIds, items);
+    }
+
     private Result<ChatResponse> send(
             final CallKind kind,
             final List<String> segmentIds,
@@ -154,9 +197,10 @@ public final class JobModelCalls implements ModelCalls {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(asked, "request");
+        final int tokens = window.getAsInt();
         final ChatRequest request = asked.contextWindow() == null
                 ? asked
-                : asked.sizedTo(window, Math.max(1, window / OUTPUT_WINDOW_DIVISOR));
+                : asked.sizedTo(tokens, Math.max(1, tokens / OUTPUT_WINDOW_DIVISOR));
         log.debug(
                 "Model call sized kind={} window={} asked={} cap={}",
                 kind,
@@ -210,10 +254,12 @@ public final class JobModelCalls implements ModelCalls {
         private final CallSnapshots.@Nullable Shown shown;
         private @Nullable CallAttempt current;
         private @Nullable Instant startedAt;
+        private final ResendSteps resends;
 
         Attempts(final Call call, final CallSnapshots.@Nullable Shown shown) {
             this.call = call;
             this.shown = shown;
+            this.resends = new ResendSteps(steps, callSeq.incrementAndGet(), call.soleSegment());
         }
 
         @Override
@@ -243,12 +289,14 @@ public final class JobModelCalls implements ModelCalls {
             if (shown != null) {
                 shown.started(attempt, at);
             }
+            resends.started(attempt);
         }
 
         @Override
         public void failed(final CallAttempt attempt, final ErrorCode code) {
             final Duration elapsed = elapsed();
             current = null;
+            resends.ended(StepResult.FAILED);
             log.debug(
                     "Model call attempt failed kind={} segmentIds={} attempt={} elapsedMs={} code={}",
                     call.kind(),
@@ -290,6 +338,7 @@ public final class JobModelCalls implements ModelCalls {
             }
             final ModelCallFinished done = finished(attempt, elapsed(), reply);
             announce.accept(done);
+            resends.ended(StepResult.DONE);
             if (shown != null) {
                 shown.answered(reply.content(), done.usage(), done.elapsed());
             }

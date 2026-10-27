@@ -12,15 +12,19 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.Labeled;
+import javafx.scene.control.TitledPane;
+import javafx.scene.text.Text;
 import org.jspecify.annotations.Nullable;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.TwoColumns;
-import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
+import ua.bookloom.ui.dialog.RecordingOpenAnotherBookPrompt;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
@@ -37,11 +41,16 @@ abstract class ImportScreenTestBase extends ShellTestBase {
     static final List<String> CARD_ROWS = List.of("file", "format", "titleAuthor", "declaredLang", "chapters", "drm");
 
     final ScriptedProjectService projects = new ScriptedProjectService();
-    final RecordingReplaceRunPrompt prompt = new RecordingReplaceRunPrompt();
+    final RecordingOpenAnotherBookPrompt prompt = new RecordingOpenAnotherBookPrompt();
+    final RecordingErrorPresenter errors = new RecordingErrorPresenter();
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.builder(locale).projects(projects).prompt(prompt).build();
+        return UiTestInjector.builder(locale)
+                .projects(projects)
+                .prompt(prompt)
+                .errorPresenter(errors)
+                .build();
     }
 
     void openImport() {
@@ -85,9 +94,37 @@ abstract class ImportScreenTestBase extends ShellTestBase {
         return node != null && node.isVisible() && node.isManaged();
     }
 
-    /** Every text shown at or below the node with this id, joined with spaces. */
+    /**
+     * Every text shown at or below the node with this id, joined with spaces. A labelled control's own text is read
+     * once: the {@code Text} its skin draws it with is not counted again, so an exact comparison is possible.
+     */
     String textOf(final String id) {
-        return String.join(" ", textsUnder(required(id)));
+        final List<String> texts = new ArrayList<>();
+        ThemeTestSupport.onFx(() -> {
+            collectTexts(required(id), texts);
+            return null;
+        });
+        return String.join(" ", texts);
+    }
+
+    private static void collectTexts(final Node node, final List<String> texts) {
+        if (node instanceof Labeled labeled && !(node instanceof TitledPane)) {
+            if (labeled.getText() != null && !labeled.getText().isEmpty()) {
+                texts.add(labeled.getText());
+            }
+            return;
+        }
+        if (node instanceof Text text) {
+            texts.add(text.getText());
+        }
+        if (node instanceof Parent parent) {
+            parent.getChildrenUnmodifiable().forEach(child -> collectTexts(child, texts));
+        }
+    }
+
+    /** Opens the closed "About this book" fold, so the rows inside it are on show. */
+    void openFold() {
+        onFx(() -> ((TitledPane) required("import-about")).setExpanded(true));
     }
 
     Button button(final String id) {

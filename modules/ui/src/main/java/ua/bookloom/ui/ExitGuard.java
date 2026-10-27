@@ -5,7 +5,8 @@ import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.ui.dialog.ConfirmDialog;
+import ua.bookloom.ui.dialog.ConfirmPrompt;
+import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.RunState;
@@ -30,7 +31,7 @@ public final class ExitGuard {
     private final ActivityTracker activities;
     private final StateMirror mirror;
     private final TranslationRunner runner;
-    private final ConfirmDialog confirm;
+    private final ConfirmPrompt confirm;
     private final WorkflowProgress progress;
 
     /**
@@ -47,7 +48,7 @@ public final class ExitGuard {
             final ActivityTracker activities,
             final StateMirror mirror,
             final TranslationRunner runner,
-            final ConfirmDialog confirm,
+            final ConfirmPrompt confirm,
             final WorkflowProgress progress) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -66,7 +67,9 @@ public final class ExitGuard {
     public boolean requestClose(final Runnable exit) {
         Objects.requireNonNull(exit, "exit");
         final RunState state = mirror.runState().get();
-        final boolean working = activities.blocking().get() || RUN_UNDER_WAY.contains(state);
+        // Work in the background still counts: closing would lose it as surely as work shown.
+        final boolean working =
+                activities.running().stream().anyMatch(Activity::isBlocking) || RUN_UNDER_WAY.contains(state);
         final boolean unexported = RUN_ENDED.contains(state) && !progress.done().contains(ViewNames.EXPORT);
         log.debug(
                 "close requested: run {}, activities {}, working {}, unexported {}",
@@ -75,7 +78,7 @@ public final class ExitGuard {
                 working,
                 unexported);
         if (working) {
-            confirm.ask(ConfirmDialog.Question.QUIT, () -> {
+            confirm.ask(ConfirmPrompt.Question.QUIT, () -> {
                 log.info("closing with work under way: stopping it first");
                 stopEverything(state);
                 exit.run();
@@ -83,7 +86,7 @@ public final class ExitGuard {
             return false;
         }
         if (unexported) {
-            confirm.ask(ConfirmDialog.Question.QUIT_UNEXPORTED, () -> {
+            confirm.ask(ConfirmPrompt.Question.QUIT_UNEXPORTED, () -> {
                 log.info("closing on a {} run that was never exported", state);
                 exit.run();
             });

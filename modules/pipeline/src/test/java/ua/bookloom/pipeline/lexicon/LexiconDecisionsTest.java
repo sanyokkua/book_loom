@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
 import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
 import ua.bookloom.pipeline.review.ReviewFixtures;
@@ -39,7 +39,7 @@ class LexiconDecisionsTest {
     @BeforeEach
     void open() {
         desk = ReviewFixtures.markdown(tempDir, String.join("\n\n", Collections.nCopies(4, PARAGRAPH)) + "\n");
-        lexicon = Guice.createInjector(new PersistenceModule()).getInstance(LexiconRepository.class);
+        lexicon = Guice.createInjector(new InMemoryPersistenceModule()).getInstance(LexiconRepository.class);
         decisions = new LexiconDecisions(
                 lexicon, desk.glossary(), desk.openProjects().index(desk.projectId()));
     }

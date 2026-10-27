@@ -14,7 +14,7 @@ realized.
 ### DD-01 — Local-first, offline by default
 
 **Decision:** The application runs fully offline; the only outbound traffic is user-triggered provider communication —
-inference, model discovery, and verification — with the configured local or OpenAI-compatible provider. **Why:** Book
+inference, model discovery, and verification — with the configured local or OpenAI-compatible provider, plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. **Why:** Book
 content and translations must stay under the user's control; there is no account or backend. **Consequences:** No
 telemetry, analytics, background updates, or remote crash reporting; an offline invariant must be enforced and testable.
 **ADR:** ADR-0010 **Requirements:** FR-INFER-01, NFR-OFFLINE-01, NFR-PRIV-01.
@@ -112,7 +112,7 @@ FR-PROV-02, FR-PROV-03.
 
 ### DD-11 — Credentials stored as a reference, never the secret
 
-**Decision:** Persist only a reference to a credential (environment-variable name or OS keychain entry), never the
+**Decision:** Persist only a reference to a credential (environment-variable name; an OS keychain entry is allowed later but not built, ADR-0043), never the
 secret value. **Why:** Avoid storing plaintext secrets in the local database. **Consequences:** The secret is resolved
 at call time; export/backup never contains secrets. **ADR:** ADR-0006 **Requirements:** FR-PROV-05, FR-PERSIST-05,
 NFR-PRIV-02.
@@ -189,11 +189,11 @@ window is capped (~3 blocks). **ADR:** ADR-0007 **Requirements:** FR-ALGO-02, FR
 
 ## dd-20-sqlite-persistence {#dd-20-sqlite-persistence}
 
-### DD-20 — SQLite (WAL) + Flyway + JDBI, typed KV settings
+### DD-20 — SQLite (WAL) + JDBI, typed KV settings (Flyway from the first release)
 
-**Decision:** Persist with SQLite in WAL mode, Flyway migrations, JDBI access, a generic typed
+**Decision:** Persist with SQLite in WAL mode, JDBI access (Flyway migrations arrive with the first release; until then one schema file and no migrations, ADR-0043), a generic typed
 `settings(key,value,type)` KV table, atomic writes, a per-OS data dir, and a single-instance lock. **Why:** Embedded,
-robust, zero-admin local storage. **Consequences:** No external DB; schema evolves via migrations; `synchronous=NORMAL`
+robust, zero-admin local storage. **Consequences:** No external DB; schema evolves via additive migrations from the first release (until then the schema file is edited in place); `synchronous=NORMAL`
 makes checkpoints process-crash-safe and forced-quit-safe (on OS crash/power loss at most the last in-flight commit is
 lost — see reliability); the process single-instance lock is acquired pre-injector by `:app`/`:util`, not by
 `:persistence`. **ADR:** ADR-0009 **Requirements:** FR-PERSIST-01, FR-PERSIST-02, FR-SETTINGS-01.
@@ -352,8 +352,8 @@ defaulted. **ADR:** ADR-0013 **Requirements:** FR-INFER-09, FR-INFER-10.
 
 **Decision:** This version ships exactly two UI languages — **English (default)** and **Ukrainian** (`uk`) — with all
 user-facing text in `ResourceBundle`s (`messages_en`, `messages_uk`) kept in parity. First start detects the OS locale
-(Ukrainian → `uk`, else English); the choice is stored in the DB (typed KV key `ui.language`) and is user-switchable in
-Settings → Appearance (apply-on-change; restart acceptable). **Why:** Deliver a fully localized product for the two
+(Ukrainian → `uk`, else English); the choice is stored in the DB (typed KV key `ui.language`, read first at the next launch, before the OS locale) and is
+user-switchable in Settings → Appearance; it applies after a restart, which the tab offers as Restart now. **Why:** Deliver a fully localized product for the two
 target audiences without over-scoping i18n. **Consequences:** Two complete bundles are a release gate; a third language
 is future work, not assumed here. **ADR:** — **Requirements:** FR-I18N-1, FR-I18N-2, FR-I18N-4, FR-I18N-7.
 
@@ -376,7 +376,9 @@ documents, providers, pipeline, and a binding UI; local models can only be truly
 
 **Decision:** Recommend a **low** sampling temperature for fidelity: default **0.2**, with per-phase guidance (draft ~
 0.2; judge/QA ~0.0–0.2; repair/reflect may go slightly higher). It is user-adjustable in Generation settings (range
-0.0–2.0), and a per-retry "lower temperature" option exists. **Why:** Low temperature yields more deterministic, less
+0.0–2.0), and a per-retry "lower temperature" option exists. Per model, Settings > Models chooses how it is sent:
+**Let BookLoom choose** (the per-phase value above), **My value** (one value for every call kind) or **Don't send**
+(the field is left out); a save applies from the next request. **Why:** Low temperature yields more deterministic, less
 hallucinated translations. **Consequences:** Defaults favour fidelity; users can trade for variability knowingly.
 **ADR:** — **Requirements:** FR-SETTINGS-03.
 
@@ -487,18 +489,19 @@ wording is replaced by canonical-equal; the golden gate compares canonical forms
 
 ## dd-44-token-budget-heuristic {#dd-44-token-budget-heuristic}
 
-### DD-44 — Token budget by heuristic; a fixed effective context in this build
+### DD-44 — Token budget by heuristic; a default context window with a per-model override
 
 **Decision:** No tokenizer is shipped. Tokens are estimated with a deterministic `chars ÷ K` heuristic (per-script K
-table + a 0.15 safety margin). **This build uses one fixed effective context of 8192 tokens** for every run, sent to
-Ollama as `num_ctx`; an OpenAI-compatible server receives no context-size field. The Generation chunk-budget setting is
-a **cap**: `chunkBudget = min(8192 − reservedHeadroom, chunkBudgetSetting)`. Resolving a genuinely **per-provider**
-effective context — from Ollama `num_ctx`/`/api/show`, model discovery, or a manual "effective context (tokens)"
-provider field — is **not built in this version**; it arrives with the Generation settings screen (future work).
-**Why:** The user's model tokenizer is unknown and OpenAI-compatible servers don't expose a context size; a fixed,
-generous constant is deterministic, offline, and simple to reason about until per-provider resolution is built.
-**Consequences:** No `providers.effective_context` column in this build; K table + margin + rolling-summary K are fixed
-constants, not settings. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07.
+table + a 0.15 safety margin). A run's effective context is the model's detected window limited to 16384 tokens, or
+16384 when none is known, **unless the person set a context window for that model in Settings > Models, which replaces
+it** (and may be larger than the cap). It is sent to Ollama as `num_ctx`; an OpenAI-compatible server receives no
+context-size field. The override is read again each time a chunk is entered: the chunk running keeps the window it was
+packed for, and the segments not yet packed are packed again for the new one. The Generation chunk-budget setting is a
+**cap**: `chunkBudget = min(window − reservedHeadroom, chunkBudgetSetting)`. **Why:** The user's model tokenizer is
+unknown and OpenAI-compatible servers don't expose a context size; a bounded default is deterministic and offline, and
+the per-model override lets a person who knows their model's window use it. **Consequences:** K table + margin +
+rolling-summary K are fixed constants, not settings; a window saved mid-run changes the next chunk, never the one in
+flight. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07.
 
 ## dd-45-acceptance-model {#dd-45-acceptance-model}
 

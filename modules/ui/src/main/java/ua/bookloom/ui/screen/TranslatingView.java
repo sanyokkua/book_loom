@@ -1,11 +1,12 @@
 package ua.bookloom.ui.screen;
 
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -18,39 +19,43 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.kordamp.ikonli.feather.Feather;
+import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.LiveCallPanel;
 import ua.bookloom.ui.control.StepFooter;
-import ua.bookloom.ui.control.TaggedLog;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
-import ua.bookloom.ui.state.ControlState;
-import ua.bookloom.ui.state.Controls;
+import ua.bookloom.ui.state.BlockedWords;
+import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.RecoveryState;
-import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
-import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.RunStateSource;
+import ua.bookloom.ui.state.RunStateView;
+import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
+import ua.bookloom.ui.state.SleepHelp;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * Builds the translating dashboard: the banner, the ready card before a run, the progress card and tiles while one
- * lives, the outcome once it ends, the live panel and log, and the run controls.
+ * Builds the Translating screen: why a start waits and the sleep help line, the summary strip in every state, the ready
+ * card before a run and the full-height live card from its start on, and the footer whose run actions the toolbar
+ * shows.
  *
  * <p>Everything that follows a property is bound to it, and the bindings hold their sources weakly, so a screen that
- * is replaced on the next visit is not kept alive by the mirror it observed. Which cards show is decided by the run
- * state alone: the ready card while idle, the progress card and tiles while a run is under way or stopped, the
- * outcome once it completed or failed. The log's cells log nothing, since they are refreshed on every scroll.
+ * is replaced on the next visit is not kept alive by the mirror it observed. Which card shows under the strip is
+ * decided by the run state: the ready card while idle, the live card otherwise. The run actions and the banner follow
+ * the run-state row ({@link RunStateSource}) instead, so they read as the title bar does.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -61,179 +66,167 @@ final class TranslatingView {
 
     private static final double SCREEN_SPACING = 14;
     private static final double CARD_SPACING = 8;
-    private static final double TILE_SPACING = 12;
-    private static final double ACTION_SPACING = 10;
 
-    private static final Set<RunState> UNDER_WAY =
-            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPING, RunState.STOPPED);
-    private static final Set<RunState> ENDED = Set.of(RunState.COMPLETED, RunState.FAILED);
-    private static final Set<RunState> REVIEWABLE =
-            Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPED, RunState.COMPLETED);
+    private static final Set<RunState> RUNNING = Set.of(RunState.RUNNING, RunState.PAUSING);
     private static final Set<RunState> WATCHED = EnumSet.complementOf(EnumSet.of(RunState.IDLE));
 
-    /** One run control: its id suffix, its look, its label and which part of the view model's table decides it. */
-    private record Control(
-            String name,
-            String styleClass,
-            MessageKey label,
-            MessageKey tip,
-            Function<Controls, ControlState> availability) {}
-
-    private static final Control START = new Control(
-            "start", "btn-primary", MessageKey.TRANSLATING_START, MessageKey.TRANSLATING_START_TIP, Controls::start);
-    private static final Control PAUSE = new Control(
-            "pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, MessageKey.TRANSLATING_PAUSE_TIP, Controls::pause);
-    private static final Control RESUME = new Control(
-            "resume",
-            "btn-primary",
-            MessageKey.TRANSLATING_RESUME,
-            MessageKey.TRANSLATING_RESUME_TIP,
-            Controls::resume);
-    private static final Control STOP = new Control(
-            "stop", "btn-ghost", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, Controls::stop);
-
-    /** One action the banner may offer: its node id, its label, its hover explanation and whether it is a ghost. */
-    private record BannerAction(String id, MessageKey label, MessageKey tip, boolean ghost) {}
-
-    private static final BannerAction RETRY_NOW = new BannerAction(
-            "translating-retry-now", MessageKey.TRANSLATING_RETRY_NOW, MessageKey.TRANSLATING_RETRY_NOW_TIP, false);
-    private static final BannerAction SKIP_SEGMENT = new BannerAction(
-            "translating-skip-segment",
-            MessageKey.TRANSLATING_SKIP_SEGMENT,
-            MessageKey.TRANSLATING_SKIP_SEGMENT_TIP,
-            false);
-    private static final BannerAction OPEN_SETTINGS = new BannerAction(
-            "translating-open-settings",
-            MessageKey.TRANSLATING_OPEN_SETTINGS,
-            MessageKey.TRANSLATING_OPEN_SETTINGS_TIP,
-            false);
-    private static final BannerAction STAY_PAUSED = new BannerAction(
-            "translating-stay-paused",
-            MessageKey.TRANSLATING_STAY_PAUSED,
-            MessageKey.TRANSLATING_STAY_PAUSED_TIP,
-            true);
-    private static final BannerAction SEND_AGAIN = new BannerAction(
-            "translating-send-again", MessageKey.TRANSLATING_RETRY_CALL, MessageKey.TRANSLATING_RETRY_CALL_TIP, false);
-    private static final BannerAction STOP_RUN = new BannerAction(
-            "translating-stop-run", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, true);
-    private static final BannerAction PAUSE_STUCK = new BannerAction(
-            "translating-pause-stuck",
-            MessageKey.TRANSLATING_PAUSE_STUCK,
-            MessageKey.TRANSLATING_PAUSE_STUCK_TIP,
-            true);
-
     /**
-     * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
-     * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card; and
-     * the session's memory of which sections the person left open, which outlives the rebuilt screen.
+     * What the screen's own buttons do that the view model does not: leave for another step, count the segments to
+     * review, open the review desk, and read the run-state row; and the session's memory of which sections the person left open, which outlives the rebuilt screen.
      */
     record Exits(
             Navigator navigator,
-            Runnable openSettings,
             ReviewViewModel review,
             TranslatingDialogs dialogs,
-            ReviewPauseFollower pauses,
-            RunInterventions interventions,
-            SectionMemory sections) {}
+            ReviewDeskLauncher desk,
+            SectionMemory sections,
+            RunStateSource runs) {}
 
-    static TranslatingDashboard build(
+    /**
+     * What the strip and the live card read besides the mirror: the estimate before a start, the scene summary, the
+     * sleep help line and whether technical details are on.
+     */
+    record Reads(BriefEstimate estimate, SceneSummary summary, SleepHelp sleep, TechnicalDetails technical) {}
+
+    static Node build(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
             final CurrentProject current,
             final LanguageNames names,
             final Messages messages,
-            final Exits exits) {
+            final Exits exits,
+            final Reads reads) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(mirror, "mirror");
         Objects.requireNonNull(current, "current");
         Objects.requireNonNull(names, "names");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(exits, "exits");
-        log.debug("building the translating dashboard");
-        final ReadOnlyObjectProperty<RunState> state = mirror.runState();
-        final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits);
-        final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
+        Objects.requireNonNull(reads, "reads");
+        log.debug("building the translating screen");
+        return layout(viewModel, mirror, current, names, messages, exits, reads);
+    }
+
+    private static Node layout(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
+            final Messages messages,
+            final Exits exits,
+            final Reads reads) {
         final ObservableValue<String> sourceName =
                 languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
         final ObservableValue<String> targetName =
                 languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
-        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
-        final VBox screen = new VBox(
-                SCREEN_SPACING,
-                head(banner, actions(viewModel, mirror, exits.review(), review, exits.dialogs(), messages)),
-                review,
-                StateVisibility.shownIn(
-                        TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
-                StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
-                StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
-                StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
-                StateVisibility.shownIn(
-                        watch(logList, mirror, sourceName, targetName, messages, exits), state, WATCHED),
-                footer(mirror, messages, exits.navigator()));
-        return new TranslatingDashboard(screen, banner, messages, mirror);
+        final VBox screen = new VBox(SCREEN_SPACING, head(viewModel, mirror, reads.sleep(), messages));
+        screen.getChildren()
+                .addAll(
+                        TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads), messages),
+                        StateVisibility.shownIn(
+                                TranslatingReadyCard.build(
+                                        viewModel, mirror, current, exits.runs().view(), messages),
+                                mirror.runState(),
+                                Set.of(RunState.IDLE)),
+                        StateVisibility.shownIn(
+                                liveCard(mirror, List.of(sourceName, targetName), messages, exits, reads),
+                                mirror.runState(),
+                                WATCHED),
+                        footer(viewModel, mirror, messages, exits));
+        return screen;
     }
 
-    // The run controls sit under the banner, so they stay in view above the live panel during a long stall.
-    private static Node head(final TranslatingDashboard.LiveBanner banner, final Node actions) {
-        final VBox head = new VBox(CARD_SPACING, banner.banner(), actions);
+    private static TranslatingSummaryStrip.Inputs stripInputs(
+            final StateMirror mirror, final Exits exits, final Reads reads) {
+        return new TranslatingSummaryStrip.Inputs(
+                exits.runs().view(),
+                exits.runs().decidedSegments(),
+                exits.runs().totalSegments(),
+                reads.estimate().estimate(),
+                // The desk's count, or the run's own flagged rows while the desk has not counted them yet.
+                Bindings.createIntegerBinding(
+                        () -> Math.max(
+                                exits.review().flaggedCount().get(),
+                                mirror.live().flaggedQueue().size()),
+                        exits.review().flaggedCount(),
+                        mirror.live().flaggedQueue()),
+                () -> exits.desk().open(ReviewFilter.ALL_FLAGGED));
+    }
+
+    // Why start or resume waits, and the help line about sleep while a translation runs. The banner is not part of the
+    // page: the shell pins it above the scrolling content on every screen (RunBanner).
+    private static Node head(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final SleepHelp sleep,
+            final Messages messages) {
+        final VBox head = new VBox(CARD_SPACING, heldNote(viewModel, messages), sleepLine(mirror, sleep, messages));
         head.setId("translating-head");
         return head;
     }
 
-    private static TranslatingDashboard.LiveBanner banner(
-            final TranslatingViewModel viewModel, final Messages messages, final Exits exits) {
-        final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
-        final RunInterventions interventions = exits.interventions();
-        final Button retry = action(RETRY_NOW, messages, () -> {
-            log.debug("retry now pressed: resuming the paused run");
-            viewModel.resume();
+    private static Node sleepLine(final StateMirror mirror, final SleepHelp sleep, final Messages messages) {
+        final HBox line = new HBox(CARD_SPACING, sleepText(sleep, messages), closeButton(sleep, messages));
+        line.setId("translating-help-sleep");
+        line.setAlignment(Pos.CENTER_LEFT);
+        line.getStyleClass().addAll("banner", "banner-info");
+        Visibility.bind(
+                line,
+                Bindings.createBooleanBinding(
+                        () -> sleep.shown().get()
+                                && RUNNING.contains(mirror.runState().get()),
+                        sleep.shown(),
+                        mirror.runState()));
+        return line;
+    }
+
+    private static Label sleepText(final SleepHelp sleep, final Messages messages) {
+        final Label text = new Label();
+        text.setGraphic(new FontIcon(Feather.INFO));
+        text.setWrapText(true);
+        text.getStyleClass().add("banner-text");
+        text.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                sleep.keepAwake().get()
+                                        ? MessageKey.TRANSLATING_HELP_SLEEP
+                                        : MessageKey.TRANSLATING_HELP_SLEEP_OFF),
+                        sleep.keepAwake()));
+        HBox.setHgrow(text, Priority.ALWAYS);
+        return text;
+    }
+
+    private static Button closeButton(final SleepHelp sleep, final Messages messages) {
+        final Button close = Tips.install(messages, new Button(), MessageKey.TRANSLATING_HELP_CLOSE_TIP);
+        close.setGraphic(new FontIcon(Feather.X));
+        close.setAccessibleText(messages.get(MessageKey.TRANSLATING_HELP_CLOSE));
+        close.setId("translating-help-sleep-close");
+        close.getStyleClass().add("btn-ghost");
+        close.setOnAction(event -> {
+            log.debug("sleep help line: close pressed");
+            sleep.close();
         });
-        final Button skip = action(SKIP_SEGMENT, messages, interventions::skipSegment);
-        final Button settings = action(OPEN_SETTINGS, messages, exits.openSettings());
-        final Button stay = action(STAY_PAUSED, messages, () -> {});
-        final Button again = action(SEND_AGAIN, messages, interventions::sendAgain);
-        final Button pause = action(PAUSE_STUCK, messages, viewModel::pause);
-        final Button stop = action(STOP_RUN, messages, () -> exits.dialogs().askToStop(viewModel));
-        final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay, stop);
-        row.setId("translating-banner-actions");
-        row.setAlignment(Pos.CENTER_LEFT);
-        banner.addDetail(row);
-        return new TranslatingDashboard.LiveBanner(banner, retry, skip, settings, stay, again, pause, stop);
+        return close;
     }
 
-    // Hidden until a look offers it; the ghost ones take only their own class, as the plain secondary look would
-    // otherwise frame them.
-    private static Button action(final BannerAction spec, final Messages messages, final Runnable run) {
-        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
-        button.setId(spec.id());
-        if (spec.ghost()) {
-            button.getStyleClass().setAll("btn-ghost");
-        } else {
-            button.getStyleClass().add("btn-secondary");
-        }
-        button.setOnAction(event -> run.run());
-        Banner.setActionShown(button, false);
-        return button;
-    }
-
-    private static Node watch(
-            final TaggedLog logList,
+    private static Node liveCard(
             final StateMirror mirror,
-            final ObservableValue<String> sourceName,
-            final ObservableValue<String> targetName,
+            final List<ObservableValue<String>> columnNames,
             final Messages messages,
-            final Exits exits) {
-        final LiveCallPanel live = new LiveCallPanel(
-                "translating-live-card", mirror.live().calls(), mirror.runState(), sourceName, targetName, messages);
-        live.rememberSectionsIn(exits.sections());
-        final Node logCard = TranslatingLogCard.build(logList, messages);
-        final VBox row = new VBox(TILE_SPACING, live, logCard);
-        row.setId("translating-watch");
-        VBox.setVgrow(row, Priority.ALWAYS);
-        return row;
+            final Exits exits,
+            final Reads reads) {
+        final LiveCallPanel.Sources sources = new LiveCallPanel.Sources(
+                mirror.live().calls(),
+                exits.runs().view(),
+                mirror.live().waitingCall(),
+                mirror.activityLog(),
+                reads.technical().property(),
+                reads.summary().text());
+        return new LiveCallPanel(sources, columnNames, exits.sections(), exits.dialogs()::showCalls, messages);
     }
 
-    private static ObservableValue<String> languageName(
+    /** The name of one of the open book's languages, in the display language, or the fallback while none is set. */
+    static ObservableValue<String> languageName(
             final CurrentProject current,
             final Function<BookBrief, @Nullable String> tagOf,
             final MessageKey fallback,
@@ -248,58 +241,6 @@ final class TranslatingView {
                 current.brief());
     }
 
-    // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
-    // button. It opens right under the run controls, where Review flagged is, so pressing it always shows something —
-    // with nothing flagged, the empty state that says so.
-    private static ReviewPanel reviewPanel(
-            final Exits exits,
-            final ObservableValue<String> sourceName,
-            final ObservableValue<String> targetName,
-            final Messages messages,
-            final ReadOnlyObjectProperty<RunState> state) {
-        final ReviewPanel panel =
-                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.dialogs(), exits.pauses());
-        panel.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),
-                        panel.openProperty(),
-                        state));
-        panel.managedProperty().bind(panel.visibleProperty());
-        return panel;
-    }
-
-    private static Node actions(
-            final TranslatingViewModel viewModel,
-            final StateMirror mirror,
-            final ReviewViewModel review,
-            final ReviewPanel panel,
-            final TranslatingDialogs dialogs,
-            final Messages messages) {
-        final ReadOnlyObjectProperty<Controls> controls = viewModel.controls();
-        final HBox row = new HBox(
-                ACTION_SPACING,
-                control(START, () -> dialogs.narrator().startAfterAsking(viewModel::start), controls, messages),
-                control(PAUSE, viewModel::pause, controls, messages),
-                retryNowWhileRecovering(control(RESUME, viewModel::resume, controls, messages), mirror, messages),
-                control(STOP, () -> dialogs.askToStop(viewModel), controls, messages),
-                reviewFlagged(mirror, review, panel, messages));
-        row.setAlignment(Pos.CENTER_LEFT);
-        return new VBox(CARD_SPACING, row, heldNote(viewModel, messages));
-    }
-
-    // While the run waits for the provider by itself, resuming is trying the provider at once, and says so.
-    private static Button retryNowWhileRecovering(
-            final Button resume, final StateMirror mirror, final Messages messages) {
-        resume.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                RecoveryState.waits(mirror.review().recovery().get())
-                                        ? MessageKey.TRANSLATING_RETRY_NOW
-                                        : MessageKey.TRANSLATING_RESUME),
-                        mirror.review().recovery()));
-        return resume;
-    }
-
     // Says why start or resume is off while other model work (a scan, an export, a provider test, a retry) runs.
     private static Label heldNote(final TranslatingViewModel viewModel, final Messages messages) {
         final Label note = new Label();
@@ -310,85 +251,60 @@ final class TranslatingView {
                 .bind(Bindings.createStringBinding(
                         () -> {
                             final ActivityKind kind = viewModel.otherWork().get();
-                            return kind == null
-                                    ? ""
-                                    : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(kind.label()));
+                            return kind == null ? "" : BlockedWords.in(messages, kind, ActivityKind.TRANSLATION);
                         },
                         viewModel.otherWork()));
-        note.visibleProperty().bind(note.textProperty().isNotEmpty());
-        note.managedProperty().bind(note.visibleProperty());
+        Visibility.bind(note, note.textProperty().isNotEmpty());
         return note;
     }
 
-    private static Button reviewFlagged(
-            final StateMirror mirror, final ReviewViewModel review, final ReviewPanel panel, final Messages messages) {
-        final Button button = new Button();
-        button.setId("translating-review-flagged");
-        Tips.install(messages, button, MessageKey.TRANSLATING_REVIEW_FLAGGED_TIP);
-        button.getStyleClass().add("btn-secondary");
-        button.textProperty()
-                .bind(Bindings.createStringBinding(
-                        () -> reviewLabel(
-                                messages,
-                                review.flaggedCount().get(),
-                                mirror.live().suspicious().get()),
-                        review.flaggedCount(),
-                        mirror.live().suspicious()));
-        button.setOnAction(event -> {
-            final int flagged = review.flaggedCount().get();
-            final int suspicious = mirror.live().suspicious().get();
-            log.debug(
-                    "review pressed with {} flagged and {} suspicious segments: opening the panel",
-                    flagged,
-                    suspicious);
-            review.selectFilter(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
-            panel.setOpen(true);
-        });
-        return StateVisibility.shownIn(button, mirror.runState(), REVIEWABLE);
-    }
-
-    // The suspicious segments are accepted ones the audit doubts: the button names them beside the flagged, so the
-    // number a person sees here is the number the outcome card shows.
-    private static String reviewLabel(final Messages messages, final int flagged, final int suspicious) {
-        return suspicious > 0
-                ? messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED_SUSPICIOUS, flagged, suspicious)
-                : messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED, flagged);
-    }
-
-    private static Node footer(final StateMirror mirror, final Messages messages, final Navigator navigator) {
+    // Translating's toolbar: Back, then the run actions of the row; the forward action is Continue to Export.
+    private static Node footer(
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final Messages messages,
+            final Exits exits) {
         final StepFooter footer = StepFooter.of(
-                new StepFooter.Action(
-                        "translating-back",
-                        messages.get(MessageKey.TRANSLATING_BACK),
-                        messages.get(MessageKey.TRANSLATING_BACK_TIP),
-                        "btn-ghost",
-                        () -> navigator.navigate(ViewNames.NAMES_STYLE)),
-                new StepFooter.Action(
-                        "translating-continue",
-                        messages.get(MessageKey.TRANSLATING_CONTINUE),
-                        messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
-                        "btn-primary",
-                        () -> navigator.navigate(ViewNames.EXPORT)));
-        StateVisibility.shownIn(footer.forwardButton(), mirror.runState(), Set.of(RunState.COMPLETED));
-        return footer;
+                        new StepFooter.Action(
+                                "translating-back",
+                                messages.get(MessageKey.TRANSLATING_BACK),
+                                messages.get(MessageKey.TRANSLATING_BACK_TIP),
+                                "btn-ghost",
+                                () -> exits.navigator().navigate(ViewNames.NAMES_STYLE)),
+                        new StepFooter.Action(
+                                RunStateView.TO_EXPORT,
+                                messages.get(MessageKey.TRANSLATING_CONTINUE),
+                                messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
+                                "btn-primary",
+                                () -> exits.navigator().navigate(ViewNames.EXPORT)))
+                .withCompactBack(messages.get(MessageKey.COMMON_BACK_COMPACT));
+        final TranslatingRunActions actions = new TranslatingRunActions(
+                exits.runs(), messages, runCommands(viewModel, mirror, exits), footer.forwardButton());
+        return footer.withRunGroup(actions.buttons());
     }
 
-    private static Button control(
-            final Control spec,
-            final Runnable action,
-            final ReadOnlyObjectProperty<Controls> controls,
-            final Messages messages) {
-        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
-        button.setId("translating-" + spec.name());
-        button.getStyleClass().add(spec.styleClass());
-        button.setOnAction(event -> action.run());
-        button.visibleProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> spec.availability().apply(controls.get()).isShown(), controls));
-        button.managedProperty().bind(button.visibleProperty());
-        button.disableProperty()
-                .bind(Bindings.createBooleanBinding(
-                        () -> !spec.availability().apply(controls.get()).isEnabled(), controls));
-        return button;
+    private static Map<String, Runnable> runCommands(
+            final TranslatingViewModel viewModel, final StateMirror mirror, final Exits exits) {
+        final TranslatingDialogs dialogs = exits.dialogs();
+        return Map.of(
+                RunStateView.START,
+                () -> dialogs.narrator().startAfterAsking(viewModel::start),
+                RunStateView.RESUME,
+                viewModel::resume,
+                RunStateView.PAUSE,
+                viewModel::pause,
+                RunStateView.STOP,
+                () -> dialogs.askToStop(viewModel, exits.runs().stopFigures()),
+                RunStateView.REVIEW,
+                () -> openReview(mirror, exits));
+    }
+
+    // The suspicious segments are accepted ones the audit doubts: with nothing flagged, Review opens on them, so the
+    // count a person sees on the button is what the desk shows.
+    private static void openReview(final StateMirror mirror, final Exits exits) {
+        final int flagged = exits.review().flaggedCount().get();
+        final int suspicious = mirror.live().suspicious().get();
+        log.debug("review pressed with {} flagged and {} suspicious segments: opening the desk", flagged, suspicious);
+        exits.desk().open(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
     }
 }

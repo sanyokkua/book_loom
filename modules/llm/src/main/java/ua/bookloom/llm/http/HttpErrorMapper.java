@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -39,7 +40,13 @@ public final class HttpErrorMapper {
                     + "|\\bno\\s+models?\\s+(?:are\\s+|is\\s+)?loaded\\b"
                     + "|\\bmodel\\b[^\"]{0,256}\\bnot\\s+(?:currently\\s+)?loaded\\b",
             Pattern.CASE_INSENSITIVE);
+    // A body that is nothing but an error object: LM Studio's "Unexpected endpoint or method" for a path it does not
+    // serve, which it sends with HTTP 200.
+    private static final Pattern ERROR_ONLY_BODY = Pattern.compile("\\A\\s*\\{\\s*\"error\"\\s*:\\s*[\"{]");
+    private static final int HTTP_UNAUTHORIZED = 401;
+    private static final int HTTP_FORBIDDEN = 403;
     private static final int HTTP_BAD_REQUEST = 400;
+    private static final int HTTP_UNPROCESSABLE = 422;
     private static final int HTTP_NOT_FOUND = 404;
     private static final int HTTP_SUCCESS_MIN = 200;
     private static final int HTTP_SUCCESS_MAX = 299;
@@ -71,12 +78,20 @@ public final class HttpErrorMapper {
                 reply.status(),
                 reply.body().length(),
                 modelName != null);
+        if (isErrorOnlySuccess(reply, config, purpose)) {
+            return Result.err(wrongPathError(reply, config, purpose, modelName));
+        }
         if (isProbeReachable(purpose, reply.status())) {
             return successfulReply(reply, config, purpose, "probe-reachable");
         }
         if (isSuccessful(reply.status()) && !isOllamaModelNotFound(reply, config)) {
             return successfulReply(reply, config, purpose, "successful-response");
         }
+        return failedReply(reply, config, purpose, modelName);
+    }
+
+    private static Result<HttpReply> failedReply(
+            HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         final Mapping mapping = classify(reply, config, purpose);
         final AppError error = statusError(mapping, reply, config, modelName);
         log.debug(
@@ -133,10 +148,52 @@ public final class HttpErrorMapper {
         return error;
     }
 
+    // An Ollama chat reply is a stream whose error lines its reader handles, and Ollama's own "model not found" keeps
+    // its row; every other success that is only an error object means the path is not served.
+    private static boolean isErrorOnlySuccess(HttpReply reply, ProviderConfig config, CallPurpose purpose) {
+        final boolean streamed = purpose == CallPurpose.CHAT && config.kind() == ProviderKind.OLLAMA;
+        return !streamed
+                && isSuccessful(reply.status())
+                && ERROR_ONLY_BODY.matcher(reply.body()).find()
+                && !isOllamaModelNotFound(reply, config);
+    }
+
+    private static AppError wrongPathError(
+            HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
+        final AppError error = statusError(wrongPath(config), reply, config, modelName);
+        log.warn(
+                "Provider answered a success holding only an error purpose={} host={} status={} code={}",
+                purpose,
+                config.baseUrl().getHost(),
+                reply.status(),
+                error.code());
+        return error;
+    }
+
+    private static Mapping wrongPath(ProviderConfig config) {
+        final String path =
+                config.baseUrl().getPath() == null ? "" : config.baseUrl().getPath();
+        final boolean missingV1 = config.kind() == ProviderKind.OPENAI_COMPATIBLE && !path.matches(".*/v1/?");
+        log.debug(
+                "Wrong-path answer worded host={} kind={} missingV1={}",
+                config.baseUrl().getHost(),
+                config.kind(),
+                missingV1);
+        return new Mapping(
+                ErrorCode.validation,
+                "error-only-success",
+                "The server does not serve this path",
+                "The server answered, but it does not serve this path: "
+                        + (missingV1
+                                ? "the address probably needs /v1 at the end."
+                                : "check the address and the kind of server."),
+                FailureReason.WRONG_PATH);
+    }
+
     private static boolean isProbeReachable(CallPurpose purpose, int status) {
         return purpose == CallPurpose.PROBE
-                && status != 401
-                && status != 403
+                && status != HTTP_UNAUTHORIZED
+                && status != HTTP_FORBIDDEN
                 && (status < HTTP_SERVER_ERROR_MIN || status > HTTP_SERVER_ERROR_MAX);
     }
 
@@ -146,8 +203,8 @@ public final class HttpErrorMapper {
 
     private static Mapping classify(HttpReply reply, ProviderConfig config, CallPurpose purpose) {
         final int status = reply.status();
-        if (status == 401 || status == 403) {
-            return authenticationFailure();
+        if (status == HTTP_UNAUTHORIZED || status == HTTP_FORBIDDEN) {
+            return authenticationFailure(status);
         }
         if (isUnloadedModel(reply, purpose)) {
             return mapping(
@@ -187,9 +244,9 @@ public final class HttpErrorMapper {
                     ErrorCode.upstream,
                     "server-error",
                     "Provider server error",
-                    "The provider could not complete the request.");
+                    "The AI program had an error (HTTP " + status + ").");
         }
-        if (status == HTTP_BAD_REQUEST) {
+        if (status == HTTP_BAD_REQUEST || status == HTTP_UNPROCESSABLE) {
             return classifyBadRequest(reply.body());
         }
         return mapping(
@@ -214,12 +271,14 @@ public final class HttpErrorMapper {
                 "The provider reported an invalid request.");
     }
 
-    private static Mapping authenticationFailure() {
+    // The server answered: the words say so, so a refused key never reads as "does not answer".
+    private static Mapping authenticationFailure(int status) {
         return mapping(
                 ErrorCode.auth,
                 "authentication",
-                "Provider authentication failed",
-                "The provider rejected the request.");
+                "The server refused the sign-in",
+                "The server answered " + status + (status == HTTP_FORBIDDEN ? " (forbidden)" : " (not authorised)")
+                        + ": the sign-in is missing or wrong. Check the sign-in type and the key variable.");
     }
 
     private static Mapping modelNotFoundFailure() {
@@ -263,7 +322,10 @@ public final class HttpErrorMapper {
 
     private static AppError statusError(
             Mapping mapping, HttpReply reply, ProviderConfig config, @Nullable String modelName) {
-        SafeDetails details = SafeDetails.empty().withHttpStatus(reply.status()).withEndpoint(config.baseUrl());
+        SafeDetails details = mapping.reason() == null
+                ? SafeDetails.empty()
+                : SafeDetails.empty().withReason(mapping.reason());
+        details = details.withHttpStatus(reply.status()).withEndpoint(config.baseUrl());
         details = modelName == null ? details : details.withModelName(modelName);
         return AppError.of(mapping.code(), mapping.title(), mapping.message(), details.render(), null);
     }
@@ -276,7 +338,7 @@ public final class HttpErrorMapper {
     }
 
     private static Mapping mapping(ErrorCode code, String row, String title, String message) {
-        return new Mapping(code, row, title, message);
+        return new Mapping(code, row, title, message, null);
     }
 
     /** Captures one D4 row so the chosen code and explanation cannot drift apart.
@@ -285,6 +347,12 @@ public final class HttpErrorMapper {
      * @param row the stable D4 row name written to DEBUG diagnostics
      * @param title a readable, body-independent error heading
      * @param message a readable, body-independent explanation
+     * @param reason what the person must fix where the code alone cannot say, or {@code null}
      */
-    private record Mapping(ErrorCode code, String row, String title, String message) {}
+    private record Mapping(
+            ErrorCode code,
+            String row,
+            String title,
+            String message,
+            @Nullable FailureReason reason) {}
 }

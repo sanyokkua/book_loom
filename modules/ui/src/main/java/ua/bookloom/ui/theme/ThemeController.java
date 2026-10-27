@@ -2,38 +2,69 @@ package ua.bookloom.ui.theme;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.settings.AppSetting;
+import ua.bookloom.ui.SettingWriter;
 import ua.bookloom.ui.Theme;
 
 /**
  * Holds the theme mode and applies the matching value block to the attached scene by toggling the dark style class on
  * its root — never by writing an inline style.
  *
- * <p>Every method must be called on the JavaFX Application Thread. The provider is consulted only when a scene is
+ * <p>Every method but {@link #seed} must be called on the JavaFX Application Thread; the mode is written to the store
+ * in the background whenever a person chooses one. The provider is consulted only when a scene is
  * attached and when the mode is set to {@link ThemeMode#SYSTEM}, so an explicit choice is never overridden by a later
  * change in the operating system.
  */
 @Slf4j
 @Singleton
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ThemeController {
 
     private final ColorSchemeProvider provider;
+    private final SettingWriter writer;
+    private volatile @Nullable ThemeMode seeded;
+    private volatile boolean chosen;
+    private volatile boolean attached;
     private final ReadOnlyObjectWrapper<ThemeBlock> activeBlock = new ReadOnlyObjectWrapper<>(ThemeBlock.LIGHT);
     private final ReadOnlyObjectWrapper<ThemeMode> mode = new ReadOnlyObjectWrapper<>(ThemeMode.SYSTEM);
     private @Nullable Scene scene;
-    // Scenes of secondary windows that follow the block; weakly held, so a closed window is forgotten.
-    private final List<WeakReference<Scene>> followers = new ArrayList<>();
+
+    /**
+     * Creates the controller.
+     *
+     * @param provider the operating system's colour scheme
+     * @param writer stores the chosen mode off the FX thread
+     */
+    @Inject
+    public ThemeController(final ColorSchemeProvider provider, final SettingWriter writer) {
+        this.provider = Objects.requireNonNull(provider, "provider");
+        this.writer = Objects.requireNonNull(writer, "writer");
+    }
+
+    /**
+     * Records the stored mode before the scene exists; any thread. It is applied when the scene is attached, without
+     * a write, and ignored once a scene is attached or a person has chosen. It must therefore run before
+     * {@code start()} builds and attaches the scene, which is why startup reads the store in {@code init()}.
+     *
+     * @param stored the mode the store held
+     */
+    public void seed(final ThemeMode stored) {
+        Objects.requireNonNull(stored, "stored");
+        if (attached || chosen) {
+            log.debug("theme seed {} ignored: attached={} chosen={}", stored, attached, chosen);
+            return;
+        }
+        seeded = stored;
+        log.debug("theme seeded {}", stored);
+    }
 
     /**
      * Adds the theme stylesheet to the scene if it is not already listed and applies the block for the current mode.
@@ -49,25 +80,12 @@ public final class ThemeController {
             stylesheets.add(stylesheet);
         }
         scene = target;
-        apply(resolveBlock());
-    }
-
-    /**
-     * Themes a secondary window's scene the way the attached one is, and keeps it in step with every later change of
-     * mode, without moving the controller off its own scene.
-     *
-     * @param extra the scene of a window other than the main one
-     */
-    public void attachAlso(final Scene extra) {
-        Objects.requireNonNull(extra, "extra");
-        log.debug("attaching a secondary scene, block {}", activeBlock.get());
-        final String stylesheet = Theme.stylesheet();
-        if (!extra.getStylesheets().contains(stylesheet)) {
-            extra.getStylesheets().add(stylesheet);
+        final ThemeMode seed = seeded;
+        if (!attached && !chosen && seed != null) {
+            mode.set(seed);
         }
-        followers.removeIf(held -> held.get() == null);
-        followers.add(new WeakReference<>(extra));
-        mark(extra, activeBlock.get());
+        attached = true;
+        apply(resolveBlock());
     }
 
     /**
@@ -78,8 +96,19 @@ public final class ThemeController {
     public void setMode(final ThemeMode newMode) {
         Objects.requireNonNull(newMode, "newMode");
         log.debug("theme mode {} -> {}", mode.get(), newMode);
+        chosen = true;
         mode.set(newMode);
         apply(resolveBlock());
+        writer.put(AppSetting.THEME, ThemeModes.toSetting(newMode));
+    }
+
+    /**
+     * Whether the last choice could not be stored.
+     *
+     * @return a read-only property; the mode still holds until the app closes
+     */
+    public ReadOnlyBooleanProperty saveFailedProperty() {
+        return writer.saveFailedProperty();
     }
 
     /** Flips between light and dark and holds the result as an explicit mode, ending any following of the system. */
@@ -142,13 +171,6 @@ public final class ThemeController {
         final Scene current = scene;
         if (current != null) {
             mark(current, block);
-        }
-        followers.removeIf(held -> held.get() == null);
-        for (final WeakReference<Scene> held : followers) {
-            final Scene extra = held.get();
-            if (extra != null) {
-                mark(extra, block);
-            }
         }
         activeBlock.set(block);
         log.debug("applied theme block {}", block);

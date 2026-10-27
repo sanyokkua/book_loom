@@ -22,6 +22,9 @@ final class WaitNotice {
     /** A request answered within this many seconds is normal for a local model and is not worth a notice. */
     private static final long THRESHOLD_SECONDS = 10;
 
+    /** The seconds shown while no notice is up. */
+    private static final int NOT_SHOWN = -1;
+
     /** An attempt outstanding this long is offered a way out: skip the segment, send it again or pause. */
     static final long STUCK_SECONDS = 60;
 
@@ -31,7 +34,7 @@ final class WaitNotice {
     private final StateMirror mirror;
     private final Clock clock;
     private @Nullable Outstanding outstanding;
-    private int shownSeconds = StateMirror.NOT_WAITING;
+    private int shownSeconds = NOT_SHOWN;
 
     WaitNotice(final StateMirror mirror, final Clock clock) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -74,11 +77,10 @@ final class WaitNotice {
     /** Both clocks stop with the request: a decision, a pause or the end of the run means nothing is outstanding. */
     void clear(final String why) {
         outstanding = null;
-        if (shownSeconds != StateMirror.NOT_WAITING) {
+        if (shownSeconds != NOT_SHOWN) {
             log.debug("waiting notice cleared after {} s because {}", shownSeconds, why);
-            shownSeconds = StateMirror.NOT_WAITING;
+            shownSeconds = NOT_SHOWN;
             mirror.live().publishWaitingCall(null);
-            mirror.publishWaitingSeconds(StateMirror.NOT_WAITING);
         }
     }
 
@@ -93,7 +95,7 @@ final class WaitNotice {
         if (waited < THRESHOLD_SECONDS || waited == shownSeconds) {
             return;
         }
-        if (shownSeconds == StateMirror.NOT_WAITING) {
+        if (shownSeconds == NOT_SHOWN) {
             log.debug("a model request has been outstanding for {} s, showing the waiting notice", waited);
         }
         if (waited >= STUCK_SECONDS && shownSeconds < STUCK_SECONDS) {
@@ -103,9 +105,7 @@ final class WaitNotice {
                     waited);
         }
         shownSeconds = Math.toIntExact(waited);
-        // The call first: the screen redraws on the seconds and reads the call it names.
         mirror.live().publishWaitingCall(callOf(waiting, now, waited));
-        mirror.publishWaitingSeconds(shownSeconds);
     }
 
     private static WaitingCall callOf(final Outstanding waiting, final Instant now, final long waited) {

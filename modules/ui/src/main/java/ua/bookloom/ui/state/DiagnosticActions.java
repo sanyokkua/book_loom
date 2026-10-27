@@ -14,10 +14,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Consumer;
 import javafx.application.Platform;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -26,8 +26,10 @@ import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
 import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.SessionInfo;
+import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Severity;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
@@ -47,16 +49,17 @@ public final class DiagnosticActions {
     private final DiagnosticLog diagnosticLog;
     private final SessionInfo session;
     private final FileRevealer revealer;
-    private final DestinationChooser chooser;
+    private final FileChooserPort chooser;
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final String version;
     private final ExecutorService executor;
     private final Clock clock;
-    private final Consumer<String> clipboard;
+    private final TextClipboard clipboard;
+    private final StringProperty bundleSaved = new SimpleStringProperty();
 
     /**
-     * Creates the actions over the system clipboard and clock.
+     * Creates the actions over the system clock.
      *
      * @param diagnosticLog where the logs are and whether the detailed log is on
      * @param session the facts {@code session.json} names
@@ -66,17 +69,19 @@ public final class DiagnosticActions {
      * @param errors shows why a bundle could not be saved
      * @param version the build version {@code session.json} names
      * @param executor the daemon pool the bundle is written on
+     * @param clipboard where Copy path puts the log folder's path
      */
     @Inject
     public DiagnosticActions(
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final Toasts toasts,
             final ErrorPresenter errors,
             @BuildVersion final String version,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final TextClipboard clipboard) {
         this(
                 diagnosticLog,
                 session,
@@ -87,20 +92,20 @@ public final class DiagnosticActions {
                 version,
                 executor,
                 Clock.system(ZoneId.systemDefault()),
-                DiagnosticActions::copyToSystemClipboard);
+                clipboard);
     }
 
     DiagnosticActions(
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
             final FileRevealer revealer,
-            final DestinationChooser chooser,
+            final FileChooserPort chooser,
             final Toasts toasts,
             final ErrorPresenter errors,
             final String version,
             final ExecutorService executor,
             final Clock clock,
-            final Consumer<String> clipboard) {
+            final TextClipboard clipboard) {
         this.diagnosticLog = Objects.requireNonNull(diagnosticLog, "diagnosticLog");
         this.session = Objects.requireNonNull(session, "session");
         this.revealer = Objects.requireNonNull(revealer, "revealer");
@@ -122,6 +127,16 @@ public final class DiagnosticActions {
         return diagnosticLog;
     }
 
+    /** {@return the name of the bundle written last, or {@code null} before one is written or after {@link #clearStatus}} */
+    public ReadOnlyStringProperty bundleSavedProperty() {
+        return bundleSaved;
+    }
+
+    /** Forgets the bundle written last, so a screen that showed it stops saying so. FX thread only. */
+    public void clearStatus() {
+        bundleSaved.set(null);
+    }
+
     /** Opens the log folder in the operating system's file manager. FX thread only. */
     public void openFolder() {
         log.info("opening the log folder {}", diagnosticLog.directory());
@@ -131,15 +146,16 @@ public final class DiagnosticActions {
     /** Puts the log folder's path on the clipboard and says so. FX thread only. */
     public void copyPath() {
         log.info("copying the log folder path to the clipboard");
-        clipboard.accept(diagnosticLog.directory().toString());
-        toasts.info(MessageKey.ABOUT_LOG_PATH_COPIED);
+        clipboard.copy(diagnosticLog.directory().toString());
+        toasts.feedback(Severity.INFO, MessageKey.ABOUT_LOG_PATH_COPIED);
     }
 
     /** Asks where the bundle goes and writes it there in the background; a cancelled dialog does nothing. */
     public void saveBundle() {
+        bundleSaved.set(null);
         final Path initial = Path.of(System.getProperty("user.home", "."))
                 .resolve("bookloom-diagnostics-" + LocalDateTime.now(clock).format(STAMP) + ".zip");
-        final Optional<Path> chosen = chooser.choose(initial);
+        final Optional<Path> chosen = chooser.chooseToSave(null, FileChooserPort.FileKind.ANY, initial);
         log.info("diagnostic bundle requested; a file was chosen {}", chosen.isPresent());
         chosen.ifPresent(this::writeInBackground);
     }
@@ -169,7 +185,9 @@ public final class DiagnosticActions {
             return;
         }
         final Path name = target.getFileName();
-        toasts.success(MessageKey.ABOUT_BUNDLE_SAVED, name == null ? target.toString() : name.toString());
+        final String saved = name == null ? target.toString() : name.toString();
+        bundleSaved.set(saved);
+        toasts.feedback(Severity.SUCCESS, MessageKey.ABOUT_BUNDLE_SAVED, saved);
     }
 
     private Map<String, String> about() {
@@ -186,11 +204,5 @@ public final class DiagnosticActions {
 
     private static String property(final String name) {
         return System.getProperty(name, "unknown");
-    }
-
-    private static void copyToSystemClipboard(final String text) {
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(text);
-        Clipboard.getSystemClipboard().setContent(content);
     }
 }

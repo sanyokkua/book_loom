@@ -43,7 +43,10 @@ class RunSessionRecoveryTest extends LiveSessionTestBase {
                         ErrorCode.unreachable,
                         252));
         assertThat(logEntries())
-                .contains(new LogEntry(LogKind.WAITING, List.of("6", "00:04:12", "unreachable", "waiting")));
+                .contains(LogEntry.of(
+                        LogKind.RETRIED,
+                        ua.bookloom.ui.i18n.MessageKey.LOG_WAITING,
+                        List.of("6", "00:04:12", "unreachable", "waiting")));
     }
 
     @Test

@@ -127,20 +127,7 @@ final class NamesPassStore {
 
     // Best effort: every entry the step left that was not there goes, every one that was is written back as it was.
     private void restore(final String projectId, final List<GlossaryEntry> names, final List<LexiconEntry> terms) {
-        final Set<String> ids = new HashSet<>();
-        names.forEach(entry -> ids.add(entry.id()));
-        final List<GlossaryEntry> now = glossary.all(projectId).data();
-        if (now != null) {
-            now.stream()
-                    .filter(entry -> !ids.contains(entry.id()))
-                    .forEach(entry -> glossary.remove(projectId, entry.id()));
-        }
-        names.forEach(entry -> {
-            final Result<GlossaryEntry> back = glossary.update(entry);
-            if (back.isErr()) {
-                glossary.add(entry);
-            }
-        });
+        GlossaryRestore.restore(glossary, projectId, names);
         final Set<String> keys = new HashSet<>();
         terms.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
         final List<LexiconEntry> held = lexicon.all(projectId).data();

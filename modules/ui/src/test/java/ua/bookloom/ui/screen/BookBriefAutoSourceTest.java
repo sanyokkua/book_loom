@@ -18,8 +18,8 @@ import ua.bookloom.ui.ViewNames;
  */
 class BookBriefAutoSourceTest extends BookBriefScreenTestBase {
 
-    private static final String AUTO_EN = "Auto — the model identifies it";
-    private static final String AUTO_UK = "Авто — модель визначає сама";
+    private static final String AUTO_EN = "Find out from the text";
+    private static final String AUTO_UK = "Визначити за текстом";
 
     private void openBookWithNoLanguage() throws TimeoutException {
         openBookThenShowBrief(Path.of("Diary.txt"), BookFixtures.declaringNoLanguage("diary", BookFormat.TXT, 1));
@@ -93,7 +93,7 @@ class BookBriefAutoSourceTest extends BookBriefScreenTestBase {
 
         final String note = ((Label) required("brief-source-undeclared")).getText();
 
-        assertThat(note).contains("the model will identify");
+        assertThat(note).contains("The model will name the language");
         assertThat(note).doesNotContain("does not declare");
     }
 

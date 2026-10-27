@@ -22,7 +22,7 @@ import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /**
  * The glossary port keeps a gender's origin (15i.N0): the dialog, the table edit and a CSV row with a gender write the
@@ -42,7 +42,7 @@ class GlossaryGenderOriginServiceTest {
     void setUp() {
         service = Guice.createInjector(
                         new DocumentModule(),
-                        new PersistenceModule(),
+                        new InMemoryPersistenceModule(),
                         binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
                 .getInstance(GlossaryServiceImpl.class);
     }
