@@ -4,7 +4,7 @@
 
 The system SHALL send a provider's custom headers with every request to it, SHALL replace each `${env:NAME}` in a header value with the value of the environment variable `NAME` when the request is made (looked up as the "Look a variable up where the person set it" requirement says), and SHALL send the provider's key in the way its sign-in says (a Bearer token, or a named header).
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D13", decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, ADR-0043. In plain words: a gateway that wants an extra header, or a server that wants a key, works without the key ever being saved: the value is read from the person's environment at the moment of the call.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#providers`, ADR-0043. In plain words: a gateway that wants an extra header, or a server that wants a key, works without the key ever being saved: the value is read from the person's environment at the moment of the call.
 
 #### Scenario: A bearer key is sent
 
@@ -62,7 +62,7 @@ IF a provider answers HTTP 401 or 403, THEN the system SHALL answer `ErrorCode.a
 
 IF a provider names an environment variable for its key or for a header and that variable is not set, THEN the system SHALL answer `ErrorCode.missingCredential` naming the variable and saying how to set it for the user account on macOS, Windows and Linux, before any request is sent, and SHALL NOT include any key value in the answer.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D13", `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a call without its key would only come back as a confusing 401. Saying "the variable `HOME_API_KEY` is not set" lets the person fix the real cause.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/02_Architecture/09_ERROR_HANDLING.md#error-code`. In plain words: a call without its key would only come back as a confusing 401. Saying "the variable `HOME_API_KEY` is not set" lets the person fix the real cause.
 
 #### Scenario: An unset key variable
 
@@ -95,7 +95,7 @@ The system SHALL NOT write a key or a resolved header value to a log line at any
 
 WHERE the application runs in the desktop window, WHEN it starts for the first time or for the first time after a fresh database, the system SHALL ask exactly `http://127.0.0.1:11434` (`/api/tags`) and `http://127.0.0.1:1234/v1` (`/models`) for their model lists with a 1 second connect timeout, SHALL send no other request and no inference, SHALL record that the look happened whatever it found, and SHALL NOT look again by itself.
 
-**Source**: ADR-0044, owner decision 13 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/finalize-ui-and-persistence/design.md` "D14". In plain words: someone who just installed Ollama should find "AI model: Ollama — ready" on the first screen instead of an empty settings form. The look is local, listing only, and happens once; a fresh database counts as a first launch because the record of the look lives in it. The command line and the tests never look.
+**Source**: ADR-0044, owner decision 13 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: someone who just installed Ollama should find "AI model: Ollama — ready" on the first screen instead of an empty settings form. The look is local, listing only, and happens once; a fresh database counts as a first launch because the record of the look lives in it. The command line and the tests never look.
 
 #### Scenario: Only the model lists are requested
 
@@ -127,7 +127,7 @@ WHERE the application runs in the desktop window, WHEN it starts for the first t
 
 WHEN a program asked by the first-launch look answers with at least one model, the system SHALL store it as a provider and, IF both programs answer, THEN Ollama SHALL become the current provider; it SHALL select the model when there is exactly one and ask the person when there are several. A program that answers with zero models SHALL count as not found.
 
-**Source**: ADR-0044, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/finalize-ui-and-persistence/design.md` "D14". In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing.
+**Source**: ADR-0044, `docs/specification/mockups/README.md#first-launch-and-the-ai-model-owner-decision-13`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D14". In plain words: a program with nothing loaded cannot translate, so it is reported as not found rather than as "ready"; a person with several models chooses one instead of BookLoom guessing.
 
 #### Scenario: Ollama with one model
 
@@ -191,7 +191,7 @@ WHEN an AI program answers a chat request with HTTP 200 and a body that is empty
 
 The system SHALL describe a provider's sign-in as none, a Bearer token, or a named API-key header, SHALL hold for the last two only the name of the environment variable that holds the key, and SHALL NOT hold a key value; IF a Bearer or API-key sign-in has no variable name, or an API-key sign-in has no header name, THEN the system SHALL refuse the description with `ErrorCode.validation`.
 
-**Source**: FR-PROV-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/finalize-ui-and-persistence/design.md` "D13", ADR-0043. In plain words: a provider says where its key lives, never what the key is, so describing or saving a provider can never leak it.
+**Source**: FR-PROV-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", ADR-0043. In plain words: a provider says where its key lives, never what the key is, so describing or saving a provider can never leak it.
 
 #### Scenario: A remote provider with a key reference
 
@@ -217,7 +217,7 @@ The system SHALL describe a provider's sign-in as none, a Bearer token, or a nam
 
 The system SHALL let a provider description carry an override of the models endpoint, an override of the inference endpoint, custom headers each with a name and a value that may be `${env:NAME}`, and custom model identifiers.
 
-**Source**: decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: servers behind a gateway or with unusual routes need small adjustments, and a provider can name models its server does not list. Which header names must take an `${env:NAME}` value before a provider is saved is the `local-storage` capability's rule.
+**Source**: decision 7 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: servers behind a gateway or with unusual routes need small adjustments, and a provider can name models its server does not list. Which header names must take an `${env:NAME}` value before a provider is saved is the `local-storage` capability's rule.
 
 #### Scenario: A full description is accepted
 
@@ -276,7 +276,7 @@ IF the inference stage's structured probe is rejected or answered nonconformingl
 
 WHEN verification is asked for a provider description that has not been saved, the system SHALL verify it exactly as given, with its endpoints, headers and key, and SHALL NOT register or store it.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: a person can test the form before saving it, so a wrong address never reaches the stored settings.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/mockups/README.md#providers`. In plain words: a person can test the form before saving it, so a wrong address never reaches the stored settings.
 
 #### Scenario: An unsaved provider is verified without being stored
 
@@ -312,7 +312,7 @@ The system SHALL describe a provider by an id, a display name, a kind (Ollama-na
 
 WHERE the application runs from the command line, the system SHALL offer without configuration the provider `ollama` (Ollama-native, `http://localhost:11434`) and the provider `lmstudio` (OpenAI-compatible, `http://localhost:1234/v1`) with the default timeouts; WHERE it runs in the window, the provider list SHALL start empty and hold only what the first-launch look found and what the person adds. A lookup SHALL answer the description or nothing, and a registration of a known id SHALL replace it.
 
-**Source**: FR-PROV-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043, ADR-0044, `openspec/changes/finalize-ui-and-persistence/design.md` "D13". In plain words: the command line still starts with the two usual servers and can point at another for one run. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
+**Source**: FR-PROV-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#provider-factory`, `#provider-profile`, ADR-0043, ADR-0044, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: the command line still starts with the two usual servers and can point at another for one run. The window lists only real providers: the ones found on this computer and the ones the person saved. The presets keep the address `localhost`; the first-launch look deliberately asks `127.0.0.1`, so it never depends on how the name `localhost` resolves.
 
 #### Scenario: The presets exist from the start
 

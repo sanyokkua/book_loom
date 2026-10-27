@@ -51,4 +51,4 @@ above it.
 - Design decisions: DD-45.
 - Spec clauses: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md`, `docs/specification/mockups/README.md`
   ("Dialog · Review").
-- Change: `openspec/changes/finalize-ui-and-persistence/`.
+- Change: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`.

@@ -84,4 +84,4 @@ Either result means the hot fields belong in columns.
 
 - Design decisions: DD-20 (durability).
 - Spec clauses: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`, `01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`.
-- Change: `openspec/changes/finalize-ui-and-persistence/`.
+- Change: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`.

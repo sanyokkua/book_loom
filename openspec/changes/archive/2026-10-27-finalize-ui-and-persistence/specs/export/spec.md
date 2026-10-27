@@ -46,7 +46,7 @@ The export screen's title and author card SHALL show the original title and auth
 
 The system SHALL take the book's original title from the first source that has one — the book's metadata title, then for Markdown the front-matter title, then for Markdown the first heading, then the file name without its extension — and the card SHALL show under it the reason line of that source: "From the book's details", "From the front matter", "From the first heading" or "The book names no title — the file name is used".
 
-**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/finalize-ui-and-persistence/design.md "K8". In plain words: every book gets a title, a Markdown book still gets one from its own text, a plain-text book uses its file name, and the person can see which of these it was.
+**Source**: docs/specification/mockups/README.md#step-5--export--e1e3-i, openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md "K8". In plain words: every book gets a title, a Markdown book still gets one from its own text, a plain-text book uses its file name, and the person can see which of these it was.
 
 #### Scenario: The metadata title comes first
 

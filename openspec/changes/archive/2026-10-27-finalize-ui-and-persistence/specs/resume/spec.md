@@ -4,7 +4,7 @@
 
 WHEN a project that has at least one decided segment and at least one pending segment is opened after a restart, the system SHALL show it as ready to continue: the title bar reading the share of its steps done, the banner "Welcome back — 74 of 142 segments are done." with that project's figures, the live line naming where it continues, and Continue translation in the toolbar. A project with no pending segment SHALL NOT be shown as ready to continue.
 
-**Source**: FR-RESUME-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: after closing the application a person sees at once how far an unfinished translation got and what the button will do; a finished one has nothing to continue.
+**Source**: FR-RESUME-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: after closing the application a person sees at once how far an unfinished translation got and what the button will do; a finished one has nothing to continue.
 
 #### Scenario: A project reopens ready to continue
 
@@ -21,7 +21,7 @@ WHEN a project that has at least one decided segment and at least one pending se
 
 WHEN a project is opened, the system SHALL NOT start or resume a run until the person chooses Continue translation, whatever state the project was stored in.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: a model call can take a computer's whole attention, so opening a project to look at it must never begin using the AI model without being asked.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#run-states-a`. In plain words: a model call can take a computer's whole attention, so opening a project to look at it must never begin using the AI model without being asked.
 
 #### Scenario: Opening does not call the model
 
@@ -43,7 +43,7 @@ WHEN the person chooses Continue translation on a reopened project, the system S
 
 WHEN a project whose last run was stored as running or paused is opened, the system SHALL treat that run as interrupted and show the project as ready to continue, whether the application was closed cleanly or ended by a crash.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D11", FR-PERSIST-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`). In plain words: a run that was in flight when the window closed or the process died is not "still running" on the next launch; it simply stopped, and the decided segments are all kept.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", FR-PERSIST-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-persist`). In plain words: a run that was in flight when the window closed or the process died is not "still running" on the next launch; it simply stopped, and the decided segments are all kept.
 
 #### Scenario: A crash during a run
 
@@ -59,7 +59,7 @@ WHEN a project whose last run was stored as running or paused is opened, the sys
 
 WHEN a project is opened after a restart, the system SHALL make the run's step plan again from the book and the brief and count as done the draft of every decided segment and the checks of every chunk whose segments are all decided; it SHALL show no time left until the new run has timed its own steps.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D3", `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the steps are not stored, but the decisions are, so the bar after a restart starts where the work really stands; the speed of the earlier run is not measured in this one, so no time left is guessed.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D3", `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`. In plain words: the steps are not stored, but the decisions are, so the bar after a restart starts where the work really stands; the speed of the earlier run is not measured in this one, so no time left is guessed.
 
 #### Scenario: The bar starts from the stored decisions
 
@@ -75,7 +75,7 @@ WHEN a project is opened after a restart, the system SHALL make the run's step p
 
 WHEN the person chooses Continue translation and the AI model the project's stored run used does not answer, the system SHALL show the dialog "AI model not answering" with Try again, Use another AI model… and Not now, and SHALL start no run until the person has chosen. "Does not answer" means the model's program fails to list its models, or lists some and not this one (a listing, never a model call); a program that lists none counts as answering. The stored model is read from the project's latest run each time Continue is chosen. Escape counts as Not now. Try again here asks only that one model again: it does not look for programs and saves nothing (it is not the Projects screen's Try again).
 
-**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
+**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: instead of failing on the first call, the person is told right away that Ollama is not open and can fix that, pick another model, or leave.
 
 #### Scenario: Ollama is not open
 
@@ -97,7 +97,7 @@ WHEN the person chooses Continue translation and the AI model the project's stor
 
 WHEN the person chooses Continue translation and the current AI model differs from the one the project's stored run used, the system SHALL show the dialog "A different model is chosen" with Use the earlier model and Continue with the new one, and SHALL start the run only on one of them. This question comes first; the answer test of the model that was chosen follows it. Escape starts nothing. Use the earlier model leaves the current model unchanged.
 
-**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: continuing a half-translated book with another model can change its voice, so the person decides whether to keep the earlier model or accept the change.
+**Source**: FR-PROV-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-prov`), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#other-dialogs`. In plain words: continuing a half-translated book with another model can change its voice, so the person decides whether to keep the earlier model or accept the change.
 
 #### Scenario: The earlier model is kept
 
@@ -192,7 +192,7 @@ A pause on a flagged segment or after a segment SHALL name the segment just deci
 
 The system SHALL store, for each run of a project, its current state — running from its start, paused at each pause, running again at each resume, and completed, stopped or failed when it ends — and SHALL let the rest of the application read the state of a project's latest run, also after a restart.
 
-**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `openspec/changes/finalize-ui-and-persistence/design.md` "D11". In plain words: a review retry needs the model, which a running run is using and a paused or finished one is not, so the current state is kept on every pause and resume (see the review-queue capability's "Allow a retry whenever no run of the project is running"). Because it is stored, a run that was in flight when the application closed is recognised as interrupted ("Treat a run stored as running or paused as interrupted").
+**Source**: FR-RESUME-03, FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#workflow-states-and-recovery`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: a review retry needs the model, which a running run is using and a paused or finished one is not, so the current state is kept on every pause and resume (see the review-queue capability's "Allow a retry whenever no run of the project is running"). Because it is stored, a run that was in flight when the application closed is recognised as interrupted ("Treat a run stored as running or paused as interrupted").
 
 #### Scenario: The state follows pauses and resumes
 

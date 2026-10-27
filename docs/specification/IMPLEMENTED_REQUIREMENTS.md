@@ -286,7 +286,7 @@ These were left out on purpose and are ordered in `docs/implementation_plan/CHAN
 
 ## Requirements implemented by `finalize-ui-and-persistence`
 
-The Projects screen, the full Settings, SQLite storage, continue after a restart, the first-launch look and the words in English and Ukrainian. Rows for FR-SETTINGS-03, -05 and -06 stand in the table above. The `local-storage` capability is new: its spec sits in `openspec/changes/finalize-ui-and-persistence/specs/local-storage/` until the change is archived and folded into `openspec/specs/`.
+The Projects screen, the full Settings, SQLite storage, continue after a restart, the first-launch look and the words in English and Ukrainian. Rows for FR-SETTINGS-03, -05 and -06 stand in the table above. The `local-storage` capability is new: its spec is `openspec/specs/local-storage/spec.md`; the change itself is archived in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`.
 
 | Requirement id | Status | Change | Owning capability (`openspec/specs/<capability>/`) | Notes |
 |---|---|---|---|---|

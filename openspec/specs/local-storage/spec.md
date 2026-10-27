@@ -1,8 +1,9 @@
-## Purpose
+# local-storage Specification
 
+## Purpose
 Keeping the application's work on this computer so that a translation can be closed and continued after a restart: what is stored, how a crash or an unreadable database is handled, what is never stored (a credential), and what removing a project deletes. The command line is the one user of the application that keeps nothing on disk.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Keep the application's work across a restart
 
@@ -100,7 +101,7 @@ The system SHALL store, for a provider that needs a key, only the name of the en
 
 IF a custom header's name contains `authorization`, `key`, `token` or `secret` — compared ignoring letter case, as a part of the name — and its value is not a `${env:NAME}` reference, THEN the system SHALL refuse to save the provider and say which header needs a reference.
 
-**Source**: ADR-0043, `openspec/changes/finalize-ui-and-persistence/design.md` "D13", `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#authentication-and-credentials`. In plain words: typing a secret straight into a header value would store it. Requiring a reference for any header that looks like a credential closes that route, and the message names the header so it is easy to fix. The match is a plain part of the name, so `X-Monkey` (it contains `key`) also needs a reference; a false alarm costs one `${env:NAME}`, a miss would store a secret.
+**Source**: ADR-0043, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13", `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#authentication-and-credentials`. In plain words: typing a secret straight into a header value would store it. Requiring a reference for any header that looks like a credential closes that route, and the message names the header so it is easy to fix. The match is a plain part of the name, so `X-Monkey` (it contains `key`) also needs a reference; a false alarm costs one `${env:NAME}`, a miss would store a secret.
 
 #### Scenario: A literal key in a header is refused
 
@@ -197,7 +198,7 @@ WHEN the person chooses a file with Find the book… for a project whose book fi
 
 The system SHALL refuse a project name that equals the name of another project of the same book when letter case is ignored, Cyrillic letters folded like Latin ones, and SHALL report the duplicate instead of saving it; projects of different books MAY carry the same name.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D10", `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn`, decision 9 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: Projects groups translations by book, so two translations of one book that differ only by capitals would look the same under one heading. Two different books — two editions with the same title, for example — each keep their automatic name.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn`, decision 9 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`). In plain words: Projects groups translations by book, so two translations of one book that differ only by capitals would look the same under one heading. Two different books — two editions with the same title, for example — each keep their automatic name.
 
 #### Scenario: Two books with the same title and pair both keep the name
 

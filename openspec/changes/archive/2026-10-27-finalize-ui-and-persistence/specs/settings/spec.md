@@ -594,7 +594,7 @@ The settings screen SHALL carry the subtitle "Your books stay on this computer. 
 
 The application SHALL apply a changed app language at the next launch and a changed When to stop and ask you at the next run start, leaving a running run in its mode; WHERE the review mode is set by the environment variable `BOOKLOOM_REVIEW_MODE` or the launch property `bookloom.review.mode`, that value SHALL win over the stored choice.
 
-**Source**: `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `openspec/changes/finalize-ui-and-persistence/design.md` "D12". In plain words: the language needs a restart because every screen is built in one language; the review mode belongs to a run, so a change steers the next run rather than surprising the one going. Scripts and evaluations that set the mode explicitly keep control of it.
+**Source**: `docs/specification/mockups/README.md#settings--s1s5-h1-decisions-67`, `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D12". In plain words: the language needs a restart because every screen is built in one language; the review mode belongs to a run, so a change steers the next run rather than surprising the one going. Scripts and evaluations that set the mode explicitly keep control of it.
 
 #### Scenario: A changed review mode reaches the next run
 
@@ -626,7 +626,7 @@ WHEN Keep the computer awake is turned off while the application holds the compu
 
 WHEN Test inference passes for a model of a stored provider, the application SHALL store the measured speed in seconds per segment on that model's settings, together with where it was measured (the inference test or an earlier translation, the later measurement winning), and the estimate before Start SHALL say where it was measured. WHEN a translation ends, the stored value SHALL be that run's seconds per drafted segment (the seconds its drafting calls took, pauses left out, divided by the segments drafted); a run that drafted nothing SHALL store nothing.
 
-**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
+**Source**: S2 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `docs/specification/mockups/README.md#g10--progress-and-time-left-count-all-the-work-pr`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D13". In plain words: an estimate needs a measurement behind it, and the test the person just ran is one; storing it on the model keeps it after a restart and keeps two models' speeds apart.
 
 #### Scenario: The measured speed is stored and named
 

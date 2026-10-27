@@ -58,7 +58,7 @@ The application SHALL size each dialog as a confirmation (480 pixels wide), a fo
 
 WHILE a dialog is open, the application SHALL keep Tab inside it, SHALL run the footer's main button on Enter (Ctrl or Command with Enter inside a text area, and everywhere in the review desk, whose main button decides a segment and so runs only on Ctrl or Command with Enter), and SHALL close it on Escape. On a progress dialog Escape SHALL hide long work, the export's last check included, and cancel short work; only the export dialog's Cancel button SHALL ask "Cancel the export?". Only About SHALL close on a click outside it.
 
-**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`, owner answer of 2026-10-20 recorded in `openspec/changes/finalize-ui-and-persistence/design.md` "D1". In plain words: a person at the keyboard should be able to answer any dialog without finding the mouse, and Escape never loses long work: it only puts it out of the way.
+**Source**: `docs/specification/mockups/README.md#g1--dialogs-live-in-the-window-on-two-layers`, owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D1". In plain words: a person at the keyboard should be able to answer any dialog without finding the mouse, and Escape never loses long work: it only puts it out of the way.
 
 #### Scenario: Enter presses the main button
 
@@ -576,7 +576,7 @@ Each project row SHALL show the project's name (a "named" chip when the person n
 
 WHEN Continue or Open is used on a project, the application SHALL open it at its step. A project whose stored run reads running or paused, after a clean quit or a crash, SHALL show "Ready to continue" and wait for the person to press Continue translation; a finished project SHALL show Finished, not "Ready to continue". How the stored run is read and continued is specified by resume.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/finalize-ui-and-persistence/design.md` "D11". In plain words: reopening a project must not begin using the model without a person choosing to. They see where it was and press Continue translation.
+**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: reopening a project must not begin using the model without a person choosing to. They see where it was and press Continue translation.
 
 #### Scenario: Continue from the list
 
@@ -597,7 +597,7 @@ WHEN Continue or Open is used on a project, the application SHALL open it at its
 
 WHEN Continue or Open is used on a project other than the one the window's run translates, the application SHALL leave a stopped, finished or failed run behind and show the opened project's own state; IF that run is still at work (running, pausing, paused or stopping), THEN it SHALL first ask "Stop the translation and open another project?" with `Stop and open` and Cancel, stop the run and wait for it to end before opening, and SHALL change nothing on Cancel.
 
-**Source**: `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/finalize-ui-and-persistence/design.md` "D11". In plain words: one translation exists per application run and belongs to its project; another project must never show its figures, rows or Continue translation, and a run is never stopped without the person agreeing.
+**Source**: `docs/specification/mockups/README.md#run-states-a`, `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11". In plain words: one translation exists per application run and belongs to its project; another project must never show its figures, rows or Continue translation, and a run is never stopped without the person agreeing.
 
 #### Scenario: A stopped run stays with its project
 
@@ -613,7 +613,7 @@ WHEN Continue or Open is used on a project other than the one the window's run t
 
 WHERE Settings › Automation "Reopen the last project" is on, the window SHALL open, at launch, the project that was open when BookLoom last closed; WHERE it is off, or no project was open, the window SHALL open Projects.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: a person who works on one book all week should land back in it, and a person who does not want that lands on the list of their translations. When the setting applies is specified by settings.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D11", `docs/specification/mockups/README.md#generation--appearance--automation--storage--logs`. In plain words: a person who works on one book all week should land back in it, and a person who does not want that lands on the list of their translations. When the setting applies is specified by settings.
 
 #### Scenario: The switch is on
 
@@ -750,7 +750,7 @@ The application SHALL allow one unnamed project for each language pair of a book
 
 WHEN a name is typed for a project, the application SHALL refuse it with "That name is already used", shown only after the first edit, IF another project of the same book has that name after trimming and ignoring letter case, Cyrillic included. A project of another book SHALL never make a name used. How names are stored is specified by local-storage, and how exports of two projects stay apart by export.
 
-**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 4), owner answer of 2026-10-20 recorded in `openspec/changes/finalize-ui-and-persistence/design.md` "D10". In plain words: two translations of one book must be told apart in every list and dialog, but two different books that happen to share a title may each keep their natural name.
+**Source**: `docs/specification/mockups/README.md#project-names--one-book-several-translations-pn` (item 4), owner answer of 2026-10-20 recorded in `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: two translations of one book must be told apart in every list and dialog, but two different books that happen to share a title may each keep their natural name.
 
 #### Scenario: Two books with the same title
 
@@ -792,7 +792,7 @@ WHEN "Rename…" is used, the application SHALL ask for a name with chips, an er
 
 WHEN "Translate into another language" is used, the application SHALL ask for the language and the project name (required for a used pair), create a project on the already imported book that uses the currently chosen AI model, copy the brief and the Glossary and Recurring terms (entries, kinds, genders, locked marks) with every translation emptied, never copy the translation memory, import nothing again and open the new project's brief.
 
-**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (recorded default), `openspec/changes/finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
+**Source**: `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`, open question 5 of `docs/proposals/2026-10-19-ui-finalization-and-persistence.md` (recorded default), `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10". In plain words: the characters and places are the same in any language, so their list is kept; renderings and old translations would pull a new language wrong, so they are cleared.
 
 #### Scenario: A German copy of a Ukrainian project
 
@@ -1009,7 +1009,7 @@ WHEN a person leaves a screen while long model work started from it is running, 
 
 IF the book file of a project is missing or its content has changed when the project is opened, THEN the application SHALL offer "Find the book…", and SHALL accept a chosen file only when its content equals the stored book's. Otherwise it SHALL say "This is a different book" and change nothing.
 
-**Source**: `openspec/changes/finalize-ui-and-persistence/design.md` "D10", `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a book moved to another folder should not orphan its translation, but a different book must never be attached to someone else's saved work.
+**Source**: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/design.md` "D10", `docs/specification/mockups/README.md#projects-new-screen--g6-p-pn-d`. In plain words: a book moved to another folder should not orphan its translation, but a different book must never be attached to someone else's saved work.
 
 #### Scenario: The file was moved
 

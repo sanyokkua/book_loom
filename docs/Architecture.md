@@ -378,9 +378,9 @@ during a run, package into a native image on macOS, Windows and Linux; and, thro
 with the workflow screens in §5, in English or Ukrainian (chosen by the OS), in a light or dark token-only theme that
 holds WCAG AA.
 
-**Cannot yet:** persist anything across a restart (no resume, no remembered theme, provider or brief — SQLite is the
-next adapter), open the Projects entry, switch the interface language in the app, translate through a cloud provider's
-parallel lanes (local inference is single-flight), or use the Settings tabs Models, Generation, Automation and Storage.
+**Cannot yet:** translate through a cloud provider's parallel lanes (local inference is single-flight). Projects,
+settings, providers, briefs and runs are kept in SQLite across a restart (ADR-0043), the interface language is switched
+in Settings › Appearance (applied after a restart), and every Settings tab is live.
 
 **Text outside the body** — the navigation, metadata and alt text the auxiliary unit carries (§4.9, ADR-0041) is
 translated when the brief's "Also translate" switches ask for it; a switched-off kind stays in the source language.

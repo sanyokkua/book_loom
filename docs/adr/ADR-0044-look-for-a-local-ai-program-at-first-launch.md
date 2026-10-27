@@ -57,4 +57,4 @@ same computer, on fixed ports.
 - Design decisions: DD-01.
 - Spec clauses: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`, `docs/specification/mockups/README.md`
   ("First launch and the AI model").
-- Change: `openspec/changes/finalize-ui-and-persistence/`.
+- Change: `openspec/changes/archive/2026-10-27-finalize-ui-and-persistence/`.
