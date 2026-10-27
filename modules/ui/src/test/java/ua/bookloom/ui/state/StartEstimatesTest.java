@@ -31,7 +31,7 @@ class StartEstimatesTest {
     @Test
     void of_noStoredSpeed_readsInUkrainianToo() {
         assertThat(StartEstimates.of(Optional::empty, 400, QualityDial.MAX).lines(UK))
-                .containsExactly("Збалансовано ≈ 1,5× від Швидко", "Найвища якість ≈ 3× від Швидко");
+                .containsExactly("Збалансовано ≈ 1,5× від Швидкого", "Найвища якість ≈ 3× від Швидкого");
     }
 
     // IF the stored speed were not scaled by the quality, THEN Max would promise the time of Fast.
