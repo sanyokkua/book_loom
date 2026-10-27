@@ -6,12 +6,12 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -101,8 +101,7 @@ final class ExportSideFilesColumn {
         final CheckBox box = Tips.install(messages, new CheckBox(messages.get(label)), tip);
         box.setId(id);
         // The column is narrow; a long label (the bilingual copy's) wraps instead of ending in an ellipsis.
-        box.setWrapText(true);
-        box.setMinHeight(Region.USE_PREF_SIZE);
+        Wrapped.wholeLines(box);
         box.setSelected(viewModel.sideFiles().contains(file));
         box.selectedProperty().addListener((observed, was, now) -> viewModel.setSideFile(file, now));
         box.disableProperty().bind(viewModel.runNote().isNotEmpty());

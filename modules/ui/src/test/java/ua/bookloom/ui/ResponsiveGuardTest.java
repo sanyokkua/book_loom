@@ -27,6 +27,7 @@ class ResponsiveGuardTest {
                     + "|static final double \\w*(_BELOW|BREAKPOINT\\w*|_AT|SIDE_BY_SIDE\\w*)\\s*=");
     private static final Map<String, String> SIZING_ONLY = Map.of(
             "control/LayoutClass.java", "the one responsive mechanism",
+            "control/Wrapped.java", "gives a wrapping label the height of its lines; changes no arrangement",
             "control/Overrun.java", "shows a tooltip while a label is cut; changes no arrangement",
             "ModalHost.java", "sizes the dialog card to the window",
             "BusyHost.java", "sizes the progress card to the window",

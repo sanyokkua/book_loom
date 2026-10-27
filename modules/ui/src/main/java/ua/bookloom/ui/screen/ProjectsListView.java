@@ -180,6 +180,8 @@ final class ProjectsListView {
         final Label meta = new Label(messages.get(
                 MessageKey.PROJECTS_BOOK_META, group.fileName(), group.format().name(), group.totalSegments()));
         meta.getStyleClass().add("muted");
+        meta.setWrapText(true);
+        meta.setMinHeight(Region.USE_PREF_SIZE);
         meta.setId("projects-book-meta-"
                 + group.contentHash()
                         .substring(0, Math.min(HASH_PREFIX, group.contentHash().length())));
@@ -187,16 +189,23 @@ final class ProjectsListView {
         final Label count = new Label(
                 messages.get(MessageKey.PROJECTS_BOOK_TRANSLATIONS, group.rows().size()));
         count.getStyleClass().add("count-pill");
-        final Button translateInto = new Button(messages.get(MessageKey.PROJECTS_BOOK_TRANSLATE_INTO));
-        translateInto.getStyleClass().add("btn-secondary");
-        Tips.install(messages, translateInto, MessageKey.PROJECTS_BOOK_TRANSLATE_INTO_TIP);
-        translateInto.setOnAction(event -> viewModel.translateInto(group));
+        count.setMinWidth(Region.USE_PREF_SIZE);
+        final Button translateInto = translateIntoButton(group);
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final HBox head = new HBox(
                 HEAD_SPACING, cover(group), new VBox(TITLE_SPACING, title, meta), spacer, count, translateInto);
         head.setAlignment(Pos.CENTER_LEFT);
         return head;
+    }
+
+    private Button translateIntoButton(final BookGroup group) {
+        final Button translateInto = new Button(messages.get(MessageKey.PROJECTS_BOOK_TRANSLATE_INTO));
+        translateInto.getStyleClass().add("btn-secondary");
+        translateInto.setMinWidth(Region.USE_PREF_SIZE);
+        Tips.install(messages, translateInto, MessageKey.PROJECTS_BOOK_TRANSLATE_INTO_TIP);
+        translateInto.setOnAction(event -> viewModel.translateInto(group));
+        return translateInto;
     }
 
     private static Node cover(final BookGroup group) {

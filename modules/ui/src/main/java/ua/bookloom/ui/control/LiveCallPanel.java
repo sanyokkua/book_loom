@@ -14,12 +14,14 @@ import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -189,11 +191,12 @@ public final class LiveCallPanel extends VBox {
         return tab;
     }
 
-    private HBox toolbar(final Consumer<List<CallSnapshot>> allCalls) {
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox bar = new HBox(SPACING, modes(), followSwitch(), followAgain(), spacer, allCallsButton(allCalls));
+    private FlowPane toolbar(final Consumer<List<CallSnapshot>> allCalls) {
+        // The controls wrap onto a second line in a narrow window instead of pushing the card past its edge.
+        final FlowPane bar =
+                new FlowPane(SPACING, SPACING, modes(), followSwitch(), followAgain(), allCallsButton(allCalls));
         bar.setAlignment(Pos.CENTER_LEFT);
+        bar.setRowValignment(VPos.CENTER);
         return bar;
     }
 
@@ -201,6 +204,7 @@ public final class LiveCallPanel extends VBox {
         final ToggleButton simple = modeButton("translating-live-mode-simple", MessageKey.PROGRESS_VIEW_SIMPLE);
         final ToggleButton detail = modeButton("translating-live-mode-detailed", MessageKey.PROGRESS_VIEW_DETAILED);
         final SegmentedButton mode = new SegmentedButton(simple, detail);
+        mode.setMinWidth(Region.USE_PREF_SIZE);
         mode.setToggleGroup(new ToggleGroup());
         mode.getToggleGroup().selectToggle(detailed.get() ? detail : simple);
         // The segmented button puts its buttons in the group only when its skin is made, which drops a choice made
@@ -256,6 +260,7 @@ public final class LiveCallPanel extends VBox {
         final Button button = Tips.install(
                 messages, new Button(messages.get(MessageKey.LIVE_ALL_CALLS)), MessageKey.LIVE_ALL_CALLS_TIP);
         button.setId("translating-live-all-calls");
+        button.setMinWidth(Region.USE_PREF_SIZE);
         button.getStyleClass().add("btn-ghost");
         button.setOnAction(event -> allCalls.accept(sources.calls().get().recent()));
         return button;

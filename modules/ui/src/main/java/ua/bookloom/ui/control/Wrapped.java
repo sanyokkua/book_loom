@@ -22,6 +22,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Wrapped {
 
+    private static final double SAFETY = 8;
+
     /**
      * A label whose text wraps.
      *
@@ -31,9 +33,8 @@ public final class Wrapped {
      */
     public static Label label(final String text, final String styleClass) {
         final Label label = new Label(text);
-        label.setWrapText(true);
         label.getStyleClass().add(styleClass);
-        return label;
+        return wholeLines(label);
     }
 
     /**
@@ -57,6 +58,30 @@ public final class Wrapped {
         label.insetsProperty().addListener(measure);
         label.graphicProperty().addListener(measure);
         measure.invalidated(null);
+        return label;
+    }
+
+    /**
+     * Makes a wrapping check box or label tall enough for every line its width needs: the skin may count one line
+     * fewer than it draws, because the text area is a little narrower than the width the height was asked for, so the
+     * height is asked for a width {@value #SAFETY} px narrower and the last line is never ended in an ellipsis.
+     *
+     * @param label the label; its text may change later
+     * @param <T> the label's type
+     * @return the same label
+     */
+    public static <T extends Labeled> T wholeLines(final T label) {
+        Objects.requireNonNull(label, "label");
+        label.setWrapText(true);
+        final InvalidationListener measure = observed -> {
+            final double width = label.getWidth();
+            if (width > SAFETY) {
+                label.setMinHeight(Math.ceil(label.prefHeight(width - SAFETY)));
+            }
+        };
+        label.widthProperty().addListener(measure);
+        label.textProperty().addListener(measure);
+        label.fontProperty().addListener(measure);
         return label;
     }
 

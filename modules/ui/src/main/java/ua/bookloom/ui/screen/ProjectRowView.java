@@ -37,6 +37,7 @@ import ua.bookloom.ui.state.ProjectsViewModel;
 final class ProjectRowView {
 
     // The statuses whose row offers Continue: a translation that began and did not finish.
+    private static final double TITLE_MIN_WIDTH = 48;
     private static final Set<ProjectStatus> CONTINUES = EnumSet.of(
             ProjectStatus.TRANSLATING,
             ProjectStatus.PAUSED,
@@ -112,7 +113,8 @@ final class ProjectRowView {
         final int pair = separator > 0 ? separator : name.lastIndexOf(ARROW);
         final Label title = new Label(pair > 0 ? name.substring(0, pair) : name);
         title.getStyleClass().add("provider-name");
-        title.setMinWidth(0);
+        // Never squeezed to nothing: a longer language word beside it would otherwise leave the title no room at all.
+        title.setMinWidth(TITLE_MIN_WIDTH);
         Overrun.install(title, name);
         final HBox parts = new HBox(title);
         parts.setAlignment(Pos.CENTER_LEFT);

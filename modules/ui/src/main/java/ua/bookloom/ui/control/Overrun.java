@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Tooltip;
+import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -84,7 +85,12 @@ public final class Overrun {
             final Insets insets = label.getInsets();
             final Node graphic = label.getGraphic();
             final double icon = graphic == null ? 0 : graphic.prefWidth(-1) + label.getGraphicTextGap();
-            return ruler.getLayoutBounds().getWidth() + insets.getLeft() + insets.getRight() + icon;
+            final double measured = ruler.getLayoutBounds().getWidth() + insets.getLeft() + insets.getRight() + icon;
+            // The skin asks a little more than the bare text on some platforms, and ends the line in an ellipsis below
+            // that, so a label is cut from the width it asks for, when nobody set it.
+            return label.getPrefWidth() == Region.USE_COMPUTED_SIZE
+                    ? Math.max(measured, label.prefWidth(-1))
+                    : measured;
         }
 
         private void show(final String text) {

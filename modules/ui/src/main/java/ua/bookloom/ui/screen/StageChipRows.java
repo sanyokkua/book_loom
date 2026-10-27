@@ -6,6 +6,7 @@ import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CheckSentences;
@@ -71,8 +72,7 @@ final class StageChipRows {
         final Label detail = new Label(reason);
         detail.setId("chip-detail-" + stage.stage().name());
         detail.getStyleClass().add("hint");
-        detail.setWrapText(true);
-        return detail;
+        return Wrapped.wholeLines(detail);
     }
 
     /** What a person needs to read under a chip: the failure for a failed stage, the qualifier for a soft pass. */

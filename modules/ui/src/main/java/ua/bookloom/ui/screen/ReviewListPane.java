@@ -115,6 +115,7 @@ final class ReviewListPane extends VBox {
         shortcuts.setId("review-shortcuts");
         shortcuts.getStyleClass().add("muted");
         shortcuts.setWrapText(true);
+        shortcuts.setMinHeight(Region.USE_PREF_SIZE);
         getChildren().addAll(filterRow(), list, shortcuts);
         viewModel.selected().addListener((observed, was, now) -> syncSelection());
         viewModel.rows().addListener((ListChangeListener<ReviewRow>) change -> Platform.runLater(this::syncSelection));

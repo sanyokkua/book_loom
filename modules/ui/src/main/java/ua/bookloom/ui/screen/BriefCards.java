@@ -42,6 +42,8 @@ final class BriefCards {
         Objects.requireNonNull(title, "title");
         final Label heading = new Label(messages.get(title));
         heading.getStyleClass().add("card-title");
+        heading.setWrapText(true);
+        heading.setMinHeight(Region.USE_PREF_SIZE);
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final HBox header = new HBox(heading, spacer);

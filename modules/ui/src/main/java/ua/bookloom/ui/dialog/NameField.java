@@ -7,7 +7,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Project;
@@ -47,7 +47,7 @@ final class NameField {
     private final Runnable onEdit;
     private final TextField field = new TextField();
     private final Label error = new Label();
-    private final HBox chips = new HBox(CHIP_SPACING);
+    private final FlowPane chips = new FlowPane(CHIP_SPACING, SPACING);
     private boolean touched;
     private boolean serviceError;
     private boolean starting;

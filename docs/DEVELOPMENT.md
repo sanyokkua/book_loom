@@ -1950,6 +1950,14 @@ Prone + NullAway (as javac plugins; every package is `@NullMarked`), SpotBugs + 
 ArchUnit (`:app:archTest`), the tests, and the JaCoCo verification. `./gradlew spotlessApply` fixes formatting;
 `spotlessCheck` only reports it.
 
+The fit tests measure text with the platform's font, so they can pass on macOS and fail on the Ubuntu runner. Run them
+there before pushing a UI change (needs a Docker daemon, e.g. `colima start --cpu 2 --memory 4`; the first run builds a
+small image and compiles, later runs reuse both):
+
+```bash
+scripts/ci-linux-ui.sh     # the fit tests on Ubuntu; add --tests '*SomeTest' for another :ui selection
+```
+
 CI-only, because it needs the network: the licence gate.
 
 ```bash

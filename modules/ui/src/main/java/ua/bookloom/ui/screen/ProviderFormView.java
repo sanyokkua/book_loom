@@ -96,6 +96,8 @@ final class ProviderFormView {
         fold.setContentDisplay(ContentDisplay.RIGHT);
         fold.setAnimated(false);
         fold.setMinHeight(Region.USE_PREF_SIZE);
+        // The title and its subtitle are one line; a narrow card clips the subtitle instead of growing past the window.
+        fold.setMinWidth(0);
         Tips.installOnTitle(messages, fold, MessageKey.SETTINGS_CONNECTION_TIP);
         errors.setId("settings-form-errors");
         errors.getStyleClass().add("form-errors");

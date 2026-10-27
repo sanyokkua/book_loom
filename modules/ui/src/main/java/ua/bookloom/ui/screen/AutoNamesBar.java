@@ -57,11 +57,15 @@ final class AutoNamesBar {
         final Button auto = button(messages, names, frozen);
         final Label title = new Label(messages.get(MessageKey.NAMES_STYLE_AUTO));
         title.getStyleClass().add("card-title");
+        title.setWrapText(true);
+        title.setMinHeight(Region.USE_PREF_SIZE);
         final Label about = new Label(messages.get(MessageKey.NAMES_STYLE_AUTO_ABOUT));
         about.getStyleClass().add("muted");
         about.setWrapText(true);
         final Label subtitle = new Label();
         subtitle.setId("names-style-auto-subtitle");
+        subtitle.setWrapText(true);
+        subtitle.setMinHeight(Region.USE_PREF_SIZE);
         subtitle.getStyleClass().add("muted");
         follow(messages, names, brief, subtitle);
         final VBox texts = new VBox(SPACING, title, about, subtitle);

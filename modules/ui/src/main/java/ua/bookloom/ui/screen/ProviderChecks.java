@@ -152,8 +152,7 @@ final class ProviderChecks {
         final Label label = new Label(messages.get(text));
         label.setId(id);
         label.getStyleClass().add("hint");
-        label.setWrapText(true);
-        return label;
+        return Wrapped.wholeLines(label);
     }
 
     // The same line says why the inference test is off while other model work (a run, a scan) is under way.

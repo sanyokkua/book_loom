@@ -141,6 +141,12 @@ step. Never `--no-verify`, never force-push; if a hook is wrong, fix the hook an
 
 ## What will bite you
 
+- The window's text is measured with the platform's font, so a fit test that passes on macOS can fail on the Ubuntu
+  runner (run 40489525598: 199 failures, then the 30-minute ceiling). Layouts must hold on both without a bundled
+  font: a wrapping label gets `Wrapped.wholeLines`, a button or chip that must stay whole gets
+  `setMinWidth(Region.USE_PREF_SIZE)`, and a row that can run out of room wraps (`FlowPane`) instead of squeezing.
+  Before pushing a change to a screen, a dialog or a UI word run `scripts/ci-linux-ui.sh` (Docker/Colima), and push
+  after each step group, never 100+ commits at once.
 - A `gradle/libs.versions.toml` pin that no `constraints {}` block references does nothing — grep for the `libs.`
   accessor; no hit means decoration.
 - `:app` runtime deps produce no lockfile diff — correct, not broken (JavaFX per-OS classifier carve-out). Verify an
