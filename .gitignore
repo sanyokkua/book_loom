@@ -53,3 +53,4 @@ jpackage/
 
 # Isolated agent worktrees
 .worktrees/
+__pycache__/

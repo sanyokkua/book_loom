@@ -25,16 +25,14 @@ class BaselineFilesTest {
     private static final String SHORT_ID = BASELINE_OF.substring(0, 8);
 
     static Stream<Path> baselineFiles() throws IOException, URISyntaxException {
-        final var folder = BaselineFilesTest.class.getResource("/eval/baseline");
-        if (folder == null) {
-            return Stream.empty();
-        }
+        final var folder = Objects.requireNonNull(
+                BaselineFilesTest.class.getResource("/eval/baseline"), "the committed baselines are missing");
         try (Stream<Path> files = Files.list(Path.of(folder.toURI()))) {
             return files.filter(f -> f.getFileName().toString().endsWith(".json")).sorted().toList().stream();
         }
     }
 
-    @ParameterizedTest(allowZeroInvocations = true)
+    @ParameterizedTest
     @MethodSource("baselineFiles")
     void baseline_everyFile_recordsItsCommitAndTodaysBehaviourAndHoldsOnlyInventedDatasets(final Path file)
             throws IOException {

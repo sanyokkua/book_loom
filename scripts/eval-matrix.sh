@@ -15,7 +15,7 @@
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
 #                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8,12,16]
-#                          [--repeats K] [--judge] [--pair en-uk|ru-uk] [--baseline-of SHA]
+#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA]
 # --relevant-pairs on|off (15i.T8) switches the batch prompt's "Related earlier pairs" block for the run (unset keeps the
 # default, on); run --suite sequence once with each and compare the two reports (their provenance records relevant_pairs=).
 # --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
@@ -88,7 +88,7 @@
 # default), markers = one passage marked ⟦s1⟧ … with a plain-text reply and no schema, dual = the passage as context beside
 # the numbered items with a JSON reply. It reaches the code as BOOKLOOM_EVAL_BATCH_FORMAT and each report's provenance names it.
 # --repeats K (BOOKLOOM_EVAL_REPEATS) runs the dataset K times with seeds base+0..K-1 (1 in the inner loop, 3 for a decision);
-# --judge (BOOKLOOM_EVAL_JUDGE=1) lets the local judge compare the changed cases; --pair en-uk|ru-uk (BOOKLOOM_EVAL_PAIR)
+# --pair en-uk|ru-uk (BOOKLOOM_EVAL_PAIR)
 # picks the dataset's language pair; --baseline-of SHA (BOOKLOOM_EVAL_BASELINE_OF) records that the run reproduces the
 # baseline of that commit. These four are read only by the eval test classes. BOOKLOOM_EVAL_QUANT is read from the server
 # for each model (Ollama /api/show details.quantization_level, LM Studio /api/v0/models quantization) and reported in the
@@ -136,7 +136,6 @@ BATCH_FORMAT=
 REASONING=""
 BATCH_NOTES=""
 REPEATS=""
-JUDGE=""
 PAIR=""
 BASELINE_OF=""
 DEFAULT_CONTEXT=16384
@@ -180,7 +179,6 @@ while [ $# -gt 0 ]; do
     --repeats)
       case "$2" in ''|*[!0-9]*|0) echo "--repeats takes a positive whole number, not $2" >&2; exit 2 ;; *) REPEATS=$2 ;; esac
       shift 2 ;;
-    --judge) JUDGE=1; shift ;;
     --pair)
       case "$2" in en-uk|ru-uk) PAIR=$2 ;; *) echo "--pair takes en-uk or ru-uk, not $2" >&2; exit 2 ;; esac
       shift 2 ;;
@@ -295,7 +293,7 @@ run_one() {
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
     BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT \
-    BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_JUDGE=$JUDGE BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
+    BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
     grep -E "Eval window|FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'

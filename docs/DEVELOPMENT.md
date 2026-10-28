@@ -931,7 +931,6 @@ frozen with no tuning rounds (hash `d7b8b8ded24e`, file SHA-256
   second opinion by hand. Reports carry `judge.calibration.passed = false`, read from
   `modules/pipeline/src/test/resources/eval/judge/calibration.json`.
 
-A baseline table will be added by task 1.10.
 
 **Reference book `article-gravity` (task 1.11).** One invented science article (about 2,350 words of prose) in English, Ukrainian,
 Russian and French, each as Markdown, EPUB and FB2 (`modules/pipeline/src/test/resources/eval/datasets/article-gravity/`, with its own
@@ -969,7 +968,7 @@ lower is better). Time is the first repeat.
 
 All three article runs kept every protected span (score 1.0). Findings: (1) a noise band of 0.0 is real for most e4b cells (three seeds gave
 the same pass rate), but it does not mean the replies are identical: in the check-2 rerun below 15 of 48 replies differed in text and the
-pass rate did not move. A band of 0.0 therefore means "the graders did not move", not "the model is deterministic". (2) Max is not better than
+pass rate did not move. The reviewer call keeps a fixed seed (15), so repeats differ only in the draft seeds, which also narrows the band. A band of 0.0 therefore means "the graders did not move", not "the model is deterministic". (2) Max is not better than
 Balanced on `mini` (0.8947 against 0.9240 on en-uk) and costs 4 to 10 times the calls. (3) The `sequence` Balanced and Max aggregates
 differ by 0.002, inside the band.
 

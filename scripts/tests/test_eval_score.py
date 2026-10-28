@@ -171,6 +171,85 @@ class PairedDiffTest(unittest.TestCase):
             self.assertIn("1:0", text)
 
 
+def real_run(tmp, name, passes_by_repeat, k_in_jsonl=True):
+    """A run in the real shape: report.json holds repeat 0 only, cases.jsonl holds every repeat."""
+    run = Path(tmp) / name
+    run.mkdir()
+    records = [case("c%d" % i, passed, repeat) for repeat, passes in enumerate(passes_by_repeat)
+               for i, passed in enumerate(passes)]
+    first = [r for r in records if r["repeat"] == 0]
+    (run / "report.json").write_text(json.dumps({"provenance": {"version": 2, "suite": "mini", "model": "m"},
+                                                 "cases": first}), encoding="utf-8")
+    if k_in_jsonl:
+        (run / "cases.jsonl").write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    return str(run)
+
+
+def baseline_file(tmp, name, passes_by_repeat, noise_band=None):
+    records = [case("c%d" % i, passed, repeat) for repeat, passes in enumerate(passes_by_repeat)
+               for i, passed in enumerate(passes)]
+    provenance = {"version": 2, "suite": "mini", "model": {"id": "m"}, "noiseBand": noise_band}
+    outputs = {"c%d" % i: "target %d" % i for i in range(len(passes_by_repeat[0]))}
+    path = Path(tmp) / name
+    path.write_text(json.dumps({"provenance": provenance, "cases": records, "outputs": outputs}), encoding="utf-8")
+    return str(path)
+
+
+class RealShapeTest(unittest.TestCase):
+    def test_diff_paired_kThreeRunInRealShape_printsANoiseBand(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = real_run(tmp, "a", [[True, False], [True, True], [False, False]])
+            b = real_run(tmp, "b", [[True, True], [True, True], [True, False]])
+            text = run_main(["diff", "--paired", a, b])
+            self.assertNotIn("none (K=1)", text)
+            self.assertIn("grader pass rate", text)
+
+    def test_diff_paired_baselineFiles_areAcceptedAndUseAllRepeats(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = baseline_file(tmp, "a.json", [[False, False], [False, False], [False, False]])
+            b = baseline_file(tmp, "b.json", [[True, True], [True, True], [True, True]])
+            text = run_main(["diff", "--paired", a, b])
+            self.assertIn("2:0", text)
+            self.assertIn("grader pass rate", text)
+
+    def test_diff_paired_noPerRepeatData_fallsBackToProvenanceNoiseBand(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = baseline_file(tmp, "a.json", [[True]], noise_band=0.0625)
+            b = baseline_file(tmp, "b.json", [[True]], noise_band=0.0625)
+            self.assertIn("grader pass rate 0.0625", run_main(["diff", "--paired", a, b]))
+
+    def test_diff_paired_significantLoss_saysBWorse(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ids = ["c%d" % i for i in range(6)]
+            a = write_run(tmp, "a", 2, [case(i, True) for i in ids])
+            b = write_run(tmp, "b", 2, [case(i, False) for i in ids])
+            text = run_main(["diff", "--paired", a, b])
+            self.assertIn("real effect: yes, B worse", text)
+            self.assertIn("real effect: yes, B better", run_main(["diff", "--paired", b, a]))
+
+    def test_show_baselineFile_printsSourceTargetAndGraders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = baseline_file(tmp, "a.json", [[True], [False]])
+            text = run_main(["show", path, "c0"])
+            self.assertIn("target 0", text)
+            self.assertIn("grader G", text)
+            self.assertEqual(2, text.count("== case c0"))
+
+    def test_blind_baselineFiles_useDecidedTargets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = baseline_file(tmp, "a.json", [[True, True]])
+            b = Path(tmp) / "b.json"
+            data = json.loads(Path(a).read_text())
+            data["outputs"] = {k: v + " changed" for k, v in data["outputs"].items()}
+            b.write_text(json.dumps(data), encoding="utf-8")
+            out, key = str(Path(tmp) / "p.md"), str(Path(tmp) / "k.json")
+            run_main(["blind", a, str(b), "--out", out, "--key", key, "--seed", "3"])
+            text = Path(out).read_text()
+            self.assertIn("target 0", text)
+            self.assertIn("target 0 changed", text)
+            self.assertEqual(2, len(json.loads(Path(key).read_text())["pairs"]))
+
+
 def items_and_labels(tmp):
     """Twenty invented test items plus one dev item: 10 defective and 5 clean singles, 5 pairs."""
     items, agent, codex, judge = [], {}, {}, []

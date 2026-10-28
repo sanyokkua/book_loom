@@ -68,7 +68,7 @@ def history_dir(arg):
 
 
 def load(run):
-    path = os.path.join(run, "report.json")
+    path = run if os.path.isfile(run) else os.path.join(run, "report.json")
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
@@ -84,6 +84,8 @@ def describe(run):
 
 
 def resolve(selector, history):
+    if os.path.isfile(selector) and selector.endswith(".json"):
+        return selector
     if os.path.isdir(selector) and os.path.isfile(os.path.join(selector, "report.json")):
         return selector
     if selector.split(":")[0] in ("latest", "previous"):
@@ -315,6 +317,17 @@ def repeat_aggregates(report):
     return [mean(v) for v in passes.values() if v], [mean(v) for v in scores.values()]
 
 
+def grader_band(report):
+    """Noise band of the grader pass rate: from the repeats' cases, else the recorded provenance."""
+    band = noise_band(repeat_aggregates(report)[0])
+    if band is not None:
+        return band
+    provenance = report.get("provenance", {})
+    if provenance.get("noiseBand") is not None:
+        return provenance["noiseBand"]
+    return noise_band(provenance.get("aggregates") or [])
+
+
 def paired_report(ra, rb):
     """The lines of `diff --paired` for two version-2 reports."""
     a, b = per_case(ra), per_case(rb)
@@ -333,11 +346,10 @@ def paired_report(ra, rb):
         moved |= wins - losses >= 2
         lost |= losses - wins >= 2
         out.append("grader %-28s discordant %d:%d  p=%.5f%s" % (grader, wins, losses, p, "  *" if p < SIGNIFICANT else ""))
-    band = max([x for x in (noise_band(repeat_aggregates(ra)[0]), noise_band(repeat_aggregates(rb)[0])) if x is not None],
-               default=None)
+    band = max([x for x in (grader_band(ra), grader_band(rb)) if x is not None], default=None)
     judge_band = max([x for x in (noise_band(repeat_aggregates(ra)[1]), noise_band(repeat_aggregates(rb)[1])) if x is not None],
                      default=None)
-    interval_wins = False
+    interval_wins, mean = False, 0.0
     diffs = [b[c][1] - a[c][1] for c in shared if a[c][1] is not None and b[c][1] is not None]
     if diffs:
         mean = sum(diffs) / len(diffs)
@@ -349,14 +361,24 @@ def paired_report(ra, rb):
     out.append("screen: %s (moves >= 2 cases: %s; a metric loses 2: %s)" % (
         "pass" if moved and not lost else "fail", "yes" if moved else "no", "yes" if lost else "no"))
     out.append("real effect: %s (p < 0.05: %s; interval excludes 0 beyond the noise band: %s)" % (
-        "yes" if significant or interval_wins else "no", "yes" if significant else "no", "yes" if interval_wins else "no"))
+        effect_text(significant or interval_wins, lost, moved, mean), "yes" if significant else "no", "yes" if interval_wins else "no"))
     return out
+
+
+def effect_text(real, lost, moved, judge_mean):
+    """'no', or 'yes, B better' / 'yes, B worse' from the discordant counts (the judge mean breaks a tie)."""
+    if not real:
+        return "no"
+    if lost != moved:
+        return "yes, B worse" if lost else "yes, B better"
+    return "yes, B worse" if judge_mean < 0 else "yes, B better"
 
 
 def cmd_paired(args):
     history = history_dir(args.history)
     a, b = resolve(args.a, history), resolve(args.b, history)
     ra, rb = load(a), load(b)
+    ra["cases"], rb["cases"] = run_cases(a, ra), run_cases(b, rb)
     if version_of(ra) != version_of(rb):
         raise SystemExit("cannot compare a version-%s report with a version-%s report; rerun the older suite" % (
             version_of(ra), version_of(rb)))
@@ -449,13 +471,16 @@ def calls_of(run, record):
 def cmd_show(args):
     run = resolve(args.run, history_dir(args.history))
     report = load(run)
-    records = [r for r in report.get("cases", []) if r["caseId"] == args.case]
+    records = [r for r in run_cases(run, report) if r["caseId"] == args.case]
     if not records:
         raise SystemExit("no case %s in %s" % (args.case, run))
     for record in records:
         print("== case %s repeat %s seed %s" % (record["caseId"], record.get("repeat"), record.get("seed")))
         if record.get("source"):
             print("source: " + record["source"])
+        target = report.get("outputs", {}).get(record["caseId"])
+        if target is not None:
+            print("target: " + target)
         for g in record.get("graders", []):
             print("grader %-28s %-5s %s" % (g["id"], g.get("level", ""), "pass" if g["passed"] else "FAIL"))
         print("time %s tokens %s" % (record.get("time"), record.get("tokens")))
@@ -464,7 +489,10 @@ def cmd_show(args):
             print("-- call %d prompt:\n%s\n-- call %d reply:\n%s" % (n, call.get("prompt"), n, call.get("reply")))
 
 
-def final_output(run, record):
+def final_output(run, report, record):
+    target = report.get("outputs", {}).get(record["caseId"])
+    if target is not None:
+        return target
     calls = calls_of(run, record)
     return calls[-1].get("reply") if calls else None
 
@@ -472,12 +500,13 @@ def final_output(run, record):
 def cmd_blind(args):
     history = history_dir(args.history)
     a, b = resolve(args.a, history), resolve(args.b, history)
-    first = {r["caseId"]: r for r in load(a).get("cases", []) if r.get("repeat", 0) == 0}
-    second = {r["caseId"]: r for r in load(b).get("cases", []) if r.get("repeat", 0) == 0}
+    report_a, report_b = load(a), load(b)
+    first = {r["caseId"]: r for r in run_cases(a, report_a) if r.get("repeat", 0) == 0}
+    second = {r["caseId"]: r for r in run_cases(b, report_b) if r.get("repeat", 0) == 0}
     rng = random.Random(args.seed)
     key, lines = {}, ["# Blind pairs", ""]
     for case_id in sorted(set(first) & set(second)):
-        out_a, out_b = final_output(a, first[case_id]), final_output(b, second[case_id])
+        out_a, out_b = final_output(a, report_a, first[case_id]), final_output(b, report_b, second[case_id])
         if out_a is None or out_b is None or out_a == out_b:
             continue
         flip = rng.random() < 0.5
@@ -510,7 +539,7 @@ def refuse_baseline(provenance):
 def run_cases(run, report):
     """Every repeat's case records: the run folder's cases.jsonl, else the report's own (repeat 0) cases."""
     path = os.path.join(run, "cases.jsonl")
-    if not os.path.isfile(path):
+    if os.path.isfile(run) or not os.path.isfile(path):
         return report.get("cases", [])
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]

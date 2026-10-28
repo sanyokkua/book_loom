@@ -434,7 +434,7 @@ never in the app runtime** (preserves DD-18). Default eval embedding model is a 
 `embeddinggemma:300m`); chat model defaults to the smallest viable, configurable per story. `complete-translation-workflow`
 ships the **first harness, Layers 0 and 1 only**: `PromptEvalTest` (`:pipeline`, tag `promptEval`, env-gated on
 `BOOKLOOM_EVAL_OLLAMA_URL`, model `BOOKLOOM_EVAL_MODEL`) sends a fixed English → Ukrainian case set through the
-production prompt builders to a real Ollama model and fails below parse 95%, gate 90% and judge separation 80%; its
+production prompt builders to a real Ollama model and fails below parse 95% and gate 90% (the judge-separation floor was removed with the v2 harness); its
 prompts are also pinned by golden files and `PromptShapeTest`. The embedding (Layer 2) and LLM-judge (Layer 3) layers
 stay planned. **Why:** Prompts are load-bearing and must be regression-tested against real
 local models; cosine alone is a drift signal, so structural checks catch what it hides. **Consequences:** A test-scope

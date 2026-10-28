@@ -952,7 +952,7 @@ task edits the delta requirement and this file's line; the result is written int
   test decorator stamping `seed = base + k`), `CaseRecord` (`cases.jsonl` and a calls folder), `JudgeRunner`,
   `JudgeRubric` (`bl-judge-1`), `JudgeReplyParser` (tests on recorded replies). `MiniRunner` reads the pair from the
   manifest. `scripts/eval-score.py` gains `diff --paired` (exact sign test, computed noise band), `calibrate`, `show`;
-  `eval-matrix.sh` gains `--repeats`, `--judge`, `--pair`. The `reviewSeparation` floor and the fixed noise default are
+  `eval-matrix.sh` gains `--repeats`, `--pair`. The `reviewSeparation` floor and the fixed noise default are
   dropped. A `pseudo`-provider dry run must produce a complete version-2 report (in `check`).
 - **Datasets** (`eval/datasets/`, invented text only, LF-normalised): `mini-en` (two chapters, numbered heading,
   negation, a stress-marked glossary seed, a proofread trap, numbers) and `mini-ru` (17 blocks, ru→uk, two chapters,
