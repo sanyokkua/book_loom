@@ -9,6 +9,11 @@
    "id": "every-no-russian-letters",
    "defect": "russian-letter",
    "check": "NO_RUSSIAN_LETTERS"
+  },
+  {
+   "id": "every-no-stress-mark",
+   "defect": "stress-mark",
+   "check": "NO_STRESS_MARK"
   }
  ],
  "segments": [
@@ -385,6 +390,47 @@
     "m26"
    ],
    "check": "ADDRESS_SAME"
+  },
+  {
+   "id": "heading-number-m13",
+   "defect": "heading-number",
+   "segment": "m13",
+   "check": "HEADING_NUMBER",
+   "args": [
+    "3."
+   ]
+  },
+  {
+   "id": "negation-kept-m29",
+   "defect": "negation",
+   "segment": "m29",
+   "check": "NEGATION_KEPT",
+   "args": [
+    "не",
+    "2"
+   ]
+  },
+  {
+   "id": "numbers-kept-m30",
+   "defect": "numbers",
+   "segment": "m30",
+   "check": "NUMBERS_KEPT",
+   "args": [
+    "14"
+   ]
+  },
+  {
+   "id": "late-name-latin-m31",
+   "defect": "late-name",
+   "segment": "m31",
+   "check": "NO_LATIN_EXCEPT",
+   "args": []
+  },
+  {
+   "id": "proofread-trap-usable-m33",
+   "defect": "proofread-trap",
+   "segment": "m33",
+   "check": "NOT_FLAGGED"
   }
  ],
  "glossary": [
@@ -573,6 +619,18 @@
     "Sit"
    ],
    "absent": true
+  },
+  {
+   "id": "glossary-tobin",
+   "defect": "late-name",
+   "terms": [
+    "Tobin Reed",
+    "Tobin"
+   ],
+   "type": "CHARACTER",
+   "gender": "MALE",
+   "optional": true,
+   "targetCyrillic": true
   }
  ]
 }

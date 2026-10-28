@@ -137,9 +137,9 @@ system message is byte-identical for every call of a run.
 Size limits, enforced by `LanguageFilesTest` in estimated tokens: a target's rules 200 (its reviewer checks a further
 60), a source's notes 80, a pair's rules 100. The rules of languages whose files were drafted for native-speaker review
 (every language but English, Russian and Ukrainian) are marked `status=untested`; a rule list stays only if the prompt
-matrix shows it moves a metric against the generic rules (`scripts/eval-matrix.sh --rules generic`, which sets
-`BOOKLOOM_EVAL_RULES=generic`, or the system property `bookloom.eval.rules=generic`, to build every section from
-`generic.properties` alone). Each language has a mini-corpus of draft and reviewer cases in the eval format under
+matrix shows it moves a metric against the generic rules (`scripts/eval-matrix.sh --rules generic`, which passes
+`BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY` to the eval's test injector, so its `PromptVariants` binding builds
+every section from `generic.properties` alone; the application always binds the bundled rules and reads no variable). Each language has a mini-corpus of draft and reviewer cases in the eval format under
 `src/test/resources/eval/languages/<tag>.json` (`BOOKLOOM_EVAL_LANGS=all` or a list of tags).
 
 ## output-contract {#output-contract}

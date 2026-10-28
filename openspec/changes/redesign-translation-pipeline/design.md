@@ -975,7 +975,7 @@ task edits the delta requirement and this file's line; the result is written int
   swapped, a win only when both orders agree; cached by judge, rubric, mode and input hashes; reports flag
   `judgeSameFamily`. Calibration `cal-1`: about 60 invented items (≥ 20 ru→uk, ≥ 10 long), split 10 few-shot / 25 dev /
   25 hidden test; reference labels are the grades the developer agent and the owner's Codex CLI, asked by hand, agree
-  on; `cal-1/labels.json` may be committed. Codex is never called by the app, a script or CI (owner decision D-21).
+  on; `cal-1/labels.json` may be committed. Codex is never called by the app, a script or CI (owner decision D-21). The Wilson lower bound reaches 0.8 only with about 16 positives and 16 negatives all correct, so a test split with 13 singles cannot pass it.
 - **Statistics.** Unit = case; K repeats averaged first; K = 1 in the inner loop (mini-en + mini-ru, graders only,
   about 4 minutes), K = 3 with recorded seeds for decisions; `sequence` (about 320 paragraphs) to confirm small
   effects. Decision: a screen moves ≥ 2 cases with no key metric losing ≥ 2; a real effect is the two-sided sign test on
@@ -1002,7 +1002,7 @@ task edits the delta requirement and this file's line; the result is written int
 
 | Arm | Group | Default (shipped) | Alternative | Rule | Result |
 |---|---|---|---|---|---|
-| 1 judge calibration | 1 (gates judge use from 2) | judge grades pairwise | judge as a screen only; every discordant case read by the agent with a Codex second opinion by hand | TPR and TNR ≥ 0.8 (Wilson lower bounds), position consistency ≥ 0.7 on the hidden test split | — |
+| 1 judge calibration | 1 (gates judge use from 2) | judge grades pairwise | judge as a screen only; every discordant case read by the agent with a Codex second opinion by hand | TPR and TNR ≥ 0.8 (Wilson lower bounds), position consistency ≥ 0.7 on the hidden test split | Failed on the Wilson bounds, reasoning off, rubric `bl-judge-1` (`d7b8b8ded24e`) frozen untuned, 59 of 60 items agreed: test TPR 4/4 (lower 0.510), TNR 9/9 (0.701), position consistency 0.818, tau-b 0.716, pairwise accuracy 11/11. The owner kept the rule: the judge is a screen only; `judge.calibration.passed` = false. Reasoning on loses items (`docs/DEVELOPMENT.md#redesign-arms`) |
 | 2 batch format | 2 | JSON items | markers | markers only with ≥ 2 fewer WRONG paragraphs and no hard-gate rise ≥ 2 | — |
 | 3a sampling | 6 | app temperature + explicit neutral penalties | vendor `top_k`/`top_p`/`min_p` as row data | vendor set only if no hard grader worse and token fidelity within noise | — |
 | 3b batch size | 6 (wired in 10) | 4 on small models; 8 on large | 8 on small models | 8 only if token fidelity, fallbacks and hard gates are no worse beyond noise | — |

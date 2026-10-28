@@ -4,8 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.Gender;
@@ -27,8 +31,7 @@ class MiniScorerTest {
         return new Outcome(id, source, target, SegmentStatus.ACCEPTED, List.of());
     }
 
-    private static MiniRun run(
-            final NamePolicy policy, final List<Outcome> outcomes, final List<GlossaryEntry> glossary) {
+    static MiniRun run(final NamePolicy policy, final List<Outcome> outcomes, final List<GlossaryEntry> glossary) {
         return new MiniRun(
                 policy,
                 JobState.COMPLETED,
@@ -48,7 +51,7 @@ class MiniScorerTest {
                 .get(0);
     }
 
-    private static MiniResult scoreGlossary(
+    static MiniResult scoreGlossary(
             final GlossaryExpectation expectation, final NamePolicy policy, final GlossaryEntry... entries) {
         return MiniScorer.score(
                         new MiniExpectations(List.of(), List.of(), List.of(expectation)),
@@ -56,9 +59,111 @@ class MiniScorerTest {
                 .get(0);
     }
 
-    private static GlossaryEntry entry(
-            final String term, final String target, final TermType type, final Gender gender) {
+    static GlossaryEntry entry(final String term, final String target, final TermType type, final Gender gender) {
         return new GlossaryEntry("id-" + term, "p", term, target, type, gender, false);
+    }
+
+    @ParameterizedTest(name = "{0} {1} / {2} -> {3}")
+    @CsvSource(
+            delimiter = '|',
+            quoteCharacter = '"',
+            value = {
+                "HEADING_NUMBER|3.|\"3. Кімната для ламп\"|true",
+                "HEADING_NUMBER|3.|Кімната для ламп|false",
+                "NEGATION_KEPT|не;2|\"Вона не знала й не спитала б.\"|true",
+                "NEGATION_KEPT|не;2|\"Вона не знала, але спитала б.\"|false",
+                "NUMBERS_KEPT|14|\"14 човнів витягли дев’ятнадцять сіток.\"|true",
+                "NUMBERS_KEPT|14|\"Чотирнадцять човнів витягли дев’ятнадцять сіток.\"|false",
+                "NO_STRESS_MARK||\"Пелл чекав біля комори для сіток.\"|true",
+                "NO_STRESS_MARK||\"Пе\u0301лл чекав біля комори для сіток.\"|false",
+                "PLACEHOLDERS|⟦g1⟧;⟦g2⟧|\"⟦g2⟧ і ⟦g1⟧\"|true",
+                "PLACEHOLDERS|⟦g1⟧;⟦g2⟧|\"⟦g1⟧ і ⟦g1⟧\"|false"
+            })
+    void score_pairNeutralGrader_passesTheAuthorsLiteralAndFailsItsAbsence(
+            final CheckKind check, final String args, final String target, final boolean passes) {
+        final List<String> literal = Stream.of(Objects.toString(args, "").split(";"))
+                .filter(a -> !a.isBlank())
+                .toList();
+
+        assertThat(scoreOne(check, literal, outcome("m1", "a", target)).passed())
+                .isEqualTo(passes);
+    }
+
+    @ParameterizedTest(name = "{0} {2} / {3} -> {4}")
+    @CsvSource(
+            delimiter = '|',
+            quoteCharacter = '"',
+            value = {
+                "NO_SOURCE_LINE|\"Нет, не сегодня.\"||\"Ні, не сьогодні.\"|true",
+                "NO_SOURCE_LINE|\"Нет, не сегодня.\"||\"Нет, не сегодня.\"|false",
+                "SOURCE_ONLY_WORDS|\"Она сказала, что придёт.\"|что|\"Вона сказала, що прийде.\"|true",
+                "SOURCE_ONLY_WORDS|\"Она сказала, что придёт.\"|что|\"Вона сказала, что прийде.\"|false",
+                "TARGET_ALPHABET|\"Он нашёл ключ.\"|uk|\"Він знайшов ключ.\"|true",
+                "TARGET_ALPHABET|\"Он нашёл ключи.\"|uk|\"Він знайшов ключы.\"|false",
+                "FOREIGN_SCRIPT|\"Он нашёл ключ.\"||\"Він знайшов ключ 鍵.\"|false",
+                "FOREIGN_SCRIPT|\"Он нашёл ключ.\"||\"Він знайшов ключ KX-7.\"|true",
+                "DIALOGUE_DASH|\"— Дверь открыта.\"||\"— Двері відчинені.\"|true",
+                "DIALOGUE_DASH|\"— Дверь открыта.\"||\"Двері відчинені.\"|false",
+                "VOCATIVE|\"— Иван, иди сюда.\"|Іване;Івасю|\"— Іване, іди сюди.\"|true",
+                "VOCATIVE|\"— Иван, иди сюда.\"|Іване;Івасю|\"— Іван іде сюди.\"|false",
+                "NARRATOR_GENDER|\"Я вернулась поздно.\"|повернулася;!повернувся|\"Я повернулася пізно.\"|true",
+                "NARRATOR_GENDER|\"Я вернулась поздно.\"|повернулася;!повернувся|\"Я повернувся пізно.\"|false"
+            })
+    void score_ruGrader_passesTheAuthorsLiteralAndFailsItsAbsence(
+            final CheckKind check, final String source, final String args, final String target, final boolean passes) {
+        final List<String> literal = Stream.of(Objects.toString(args, "").split(";"))
+                .filter(a -> !a.isBlank())
+                .toList();
+
+        assertThat(scoreOne(check, literal, outcome("m1", source, target)).passed())
+                .isEqualTo(passes);
+    }
+
+    @ParameterizedTest(name = "{0} / {1} -> {2}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Покличте Велемира.|Ключ Велемира лежав на столі.|true",
+                "Покличте Велемира.|Ключ Велимира лежав на столі.|false"
+            })
+    void score_oneSpellingPerLemma_failsWhenTwoListedSpellingsAppearAcrossTheGroup(
+            final String firstTarget, final String secondTarget, final boolean passes) {
+        final Expectation expectation = new Expectation(
+                "x",
+                "d",
+                null,
+                List.of("a", "b"),
+                CheckKind.ONE_SPELLING_PER_LEMMA,
+                List.of("Велемир", "Велимир"),
+                List.of());
+
+        final MiniResult result = MiniScorer.score(
+                        new MiniExpectations(List.of(), List.of(expectation), List.of()),
+                        run(
+                                NamePolicy.TRANSLITERATE,
+                                List.of(outcome("a", "x", firstTarget), outcome("b", "x", secondTarget)),
+                                List.of()))
+                .get(0);
+
+        assertThat(result.passed()).isEqualTo(passes);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "TARGET_ALPHABET,HARD",
+        "FOREIGN_SCRIPT,HARD",
+        "NO_SOURCE_LINE,HARD",
+        "GLOSSARY_ONE_ENTRY,HARD",
+        "GLOSSARY_GENDER,HARD",
+        "ONE_SPELLING_PER_LEMMA,HARD",
+        "SOURCE_ONLY_WORDS,SOFT",
+        "DIALOGUE_DASH,SOFT",
+        "VOCATIVE,SOFT",
+        "NARRATOR_GENDER,SOFT",
+        "ADDRESS_SAME,SOFT"
+    })
+    void level_ruGraders_followTheDesignTable(final CheckKind check, final CheckKind.Level level) {
+        assertThat(check.level()).isEqualTo(level);
     }
 
     @Test
@@ -134,7 +239,7 @@ class MiniScorerTest {
         assertThat(scoreOne(
                                 CheckKind.MIN_RATIO,
                                 List.of("0.6"),
-                                outcome("m1", source, "Контору гавані збудували за великого морозу."))
+                                outcome("m1", source, "Контору гавані збудували у лютий мороз."))
                         .passed())
                 .isTrue();
     }
@@ -220,137 +325,5 @@ class MiniScorerTest {
 
         assertThat(result.passed()).isFalse();
         assertThat(result.detail()).isEqualTo("failing: m2");
-    }
-
-    @Test
-    void score_glossaryGender_isSettledOnlyWhenNotMerelySuggested() {
-        final GlossaryExpectation settled = new GlossaryExpectation(
-                "g",
-                "d",
-                List.of("Ilsabet"),
-                false,
-                false,
-                TermType.CHARACTER,
-                null,
-                Gender.FEMALE,
-                true,
-                null,
-                false,
-                false,
-                null,
-                0,
-                List.of());
-        final GlossaryEntry suggested =
-                entry("Ilsabet", "Ільзабет", TermType.CHARACTER, Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE);
-        final GlossaryEntry chosen =
-                entry("Ilsabet", "Ільзабет", TermType.CHARACTER, Gender.UNKNOWN).withGender(Gender.FEMALE);
-
-        assertThat(scoreGlossary(settled, NamePolicy.TRANSLITERATE, suggested).passed())
-                .isFalse();
-        assertThat(scoreGlossary(settled, NamePolicy.TRANSLITERATE, chosen).passed())
-                .isTrue();
-    }
-
-    private static GlossaryExpectation keptExpectation() {
-        return new GlossaryExpectation(
-                "g",
-                "d",
-                List.of("Velmora"),
-                false,
-                false,
-                null,
-                null,
-                null,
-                null,
-                true,
-                false,
-                true,
-                null,
-                0,
-                List.of());
-    }
-
-    @Test
-    void score_brandKeptUnderKeepOriginal_needsTheLockedSourceSpelling() {
-        final GlossaryExpectation kept = keptExpectation();
-
-        assertThat(scoreGlossary(
-                                kept,
-                                NamePolicy.KEEP_ORIGINAL,
-                                entry("Velmora", "Velmora", TermType.TERM, Gender.UNKNOWN)
-                                        .withLocked(true))
-                        .passed())
-                .isTrue();
-        assertThat(scoreGlossary(
-                                kept,
-                                NamePolicy.KEEP_ORIGINAL,
-                                entry("Velmora", "Вельмора", TermType.TERM, Gender.UNKNOWN))
-                        .passed())
-                .isFalse();
-    }
-
-    private static GlossaryExpectation placeExpectation() {
-        return new GlossaryExpectation(
-                "g",
-                "d",
-                List.of("Brindle Harbour"),
-                false,
-                false,
-                TermType.PLACE,
-                null,
-                null,
-                null,
-                null,
-                true,
-                false,
-                "^Бр",
-                2,
-                List.of());
-    }
-
-    private static GlossaryExpectation junkExpectation() {
-        return new GlossaryExpectation(
-                "j",
-                "d",
-                List.of("Nobody"),
-                true,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                0,
-                List.of());
-    }
-
-    private static boolean placeScores(final String target) {
-        return scoreGlossary(
-                        placeExpectation(),
-                        NamePolicy.TRANSLITERATE,
-                        entry("Brindle Harbour", target, TermType.PLACE, Gender.UNKNOWN))
-                .passed();
-    }
-
-    @Test
-    void score_multiWordPlaceTarget_isCheckedWordByWord() {
-        assertThat(placeScores("Брендл Гавань")).isTrue();
-        assertThat(placeScores("Брендл")).isFalse();
-        assertThat(scoreGlossary(placeExpectation(), NamePolicy.TRANSLITERATE).passed())
-                .isFalse();
-    }
-
-    @Test
-    void score_junkEntry_failsOnlyWhenTheGlossaryHoldsIt() {
-        final GlossaryEntry junk = entry("Nobody", "Ніхто", TermType.CHARACTER, Gender.UNKNOWN);
-
-        assertThat(scoreGlossary(junkExpectation(), NamePolicy.TRANSLITERATE, junk)
-                        .passed())
-                .isFalse();
-        assertThat(scoreGlossary(junkExpectation(), NamePolicy.TRANSLITERATE).passed())
-                .isTrue();
     }
 }

@@ -38,6 +38,8 @@ class MiniEvalOfflineTest {
             "evidence-woman-m21",
             "long-sentences",
             "address-mix-m25",
+            "heading-number-m13",
+            "numbers-kept-m30",
             "glossary-pell",
             "glossary-charrow",
             "glossary-almanac",
@@ -46,7 +48,8 @@ class MiniEvalOfflineTest {
             "glossary-quorrel-written",
             "glossary-corvanium",
             "glossary-sedrafine",
-            "glossary-no-sentence-starters");
+            "glossary-no-sentence-starters",
+            "glossary-tobin");
 
     @TempDir
     private static Path workDir;
@@ -56,23 +59,25 @@ class MiniEvalOfflineTest {
 
     @BeforeAll
     static void runPseudoBook() {
-        run = new MiniRunner(MiniBook.load(), QualityDial.FAST, NamePolicy.TRANSLITERATE, null)
+        run = new MiniRunner(MiniBook.load(MiniBook.MINI_EN), QualityDial.FAST, NamePolicy.TRANSLITERATE, null)
                 .run(new PseudoChatModel(new ObjectMapper()), workDir);
-        report = new MiniReport("pseudo", QualityDial.FAST.name(), run, MiniScorer.score(MiniExpectations.load(), run));
+        report = new MiniReport(
+                "pseudo", QualityDial.FAST.name(), run, MiniScorer.score(MiniExpectations.load(MiniBook.MINI_EN), run));
     }
 
     @Test
     void run_pseudoModel_completesAndDecidesEveryBlockOfTheBook() {
         assertThat(run.errors()).isEmpty();
         assertThat(run.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(run.outcomes()).hasSize(MiniBook.load().blocks().size());
+        assertThat(run.outcomes())
+                .hasSize(MiniBook.load(MiniBook.MINI_EN).blocks().size());
         assertThat(run.calls().names()).isPositive();
         assertThat(run.calls().translation()).isPositive();
     }
 
     @Test
     void score_pseudoModel_scoresEveryApplicableExpectationOnce() {
-        final MiniExpectations expectations = MiniExpectations.load();
+        final MiniExpectations expectations = MiniExpectations.load(MiniBook.MINI_EN);
         final long other = expectations.segments().stream()
                         .filter(e -> !e.policies().isEmpty() && !e.policies().contains(NamePolicy.TRANSLITERATE))
                         .count()
@@ -109,5 +114,16 @@ class MiniEvalOfflineTest {
         assertThat(json.get("results")).hasSize(report.results().size());
         assertThat(Files.readString(reports.resolve("pseudo-mini-TRANSLITERATE.txt")))
                 .contains("expectations");
+    }
+
+    @Test
+    void json_pseudoReport_keepsTheOutputsOfRepeatZeroByBlockId() throws IOException {
+        final JsonNode outputs = new ObjectMapper().readTree(report.json()).get("outputs");
+
+        assertThat(outputs).isNotNull();
+        assertThat(outputs.size()).isEqualTo(run.outcomes().size());
+        assertThat(outputs.fieldNames())
+                .toIterable()
+                .containsExactlyElementsOf(run.outcomes().keySet());
     }
 }

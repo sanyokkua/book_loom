@@ -21,10 +21,9 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
 
     static final double PARSE_FLOOR = 0.95;
     static final double GATE_FLOOR = 0.90;
-    static final double REVIEW_FLOOR = 0.80;
 
     private static final int DETAIL_WIDTH = 90;
-    private static final String ROW = "%-22s %-5s %-5s %-5s %-6s %-6s %-6s %-5s %s";
+    private static final String ROW = "%-22s %-5s %-5s %-5s %-6s %-6s %-6s %s";
 
     /** Copies the rows. */
     EvalReport {
@@ -58,16 +57,9 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         return rate(EvalRow::injection);
     }
 
-    double reviewRate() {
-        return rate(EvalRow::reviewed);
-    }
-
-    /** Whether the parse, gate and review-separation rates reach their floors. */
+    /** Whether the parse and gate rates reach their floors. */
     boolean meetsThresholds() {
-        return parseRate() >= PARSE_FLOOR
-                && gateRate() >= GATE_FLOOR
-                && reviewRate() >= REVIEW_FLOOR
-                && meetsDefectThresholds();
+        return parseRate() >= PARSE_FLOOR && gateRate() >= GATE_FLOOR && meetsDefectThresholds();
     }
 
     /** Whether the corpus reviewer rates reach the model class's thresholds and no applied edit broke a token; true when no
@@ -124,7 +116,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         return String.format(
                 Locale.ROOT,
                 "{\"model\":\"%s\",\"rules\":\"%s\",\"class\":\"%s\",\"parse\":%.3f,\"gate\":%.3f,\"script\":%.3f,"
-                        + "\"marker\":%.3f,\"injection\":%.3f,\"reviewSeparation\":%.3f,"
+                        + "\"marker\":%.3f,\"injection\":%.3f,"
                         + "\"reviewParse\":%.3f,\"falseNegative\":%.3f,\"falsePositive\":%.3f,"
                         + "\"stability\":%.3f,\"tokenBreaks\":%d,\"byKind\":%s,\"meetsThresholds\":%b}",
                 model,
@@ -135,7 +127,6 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 scriptRate(),
                 markerRate(),
                 injectionRate(),
-                reviewRate(),
                 EvalMetrics.parseRate(defectRows),
                 EvalMetrics.falseNegativeRate(defectRows),
                 EvalMetrics.falsePositiveRate(defectRows),
@@ -150,18 +141,16 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         final List<String> lines = new ArrayList<>();
         lines.add("promptEval model=" + model + " rules=" + rules);
         lines.add(String.format(
-                Locale.ROOT, ROW, "case", "kind", "parse", "gate", "script", "marker", "inject", "review", "reply"));
+                Locale.ROOT, ROW, "case", "kind", "parse", "gate", "script", "marker", "inject", "reply"));
         rows.forEach(row -> lines.add(line(row)));
         lines.add(String.format(
                 Locale.ROOT,
-                "parse %.0f%% (>= %.0f%%)  gate %.0f%% (>= %.0f%%)  review %.0f%% (>= %.0f%%)  script %.0f%%  marker"
+                "parse %.0f%% (>= %.0f%%)  gate %.0f%% (>= %.0f%%)  script %.0f%%  marker"
                         + " %.0f%%  injection %.0f%%",
                 percent(parseRate()),
                 percent(PARSE_FLOOR),
                 percent(gateRate()),
                 percent(GATE_FLOOR),
-                percent(reviewRate()),
-                percent(REVIEW_FLOOR),
                 percent(scriptRate()),
                 percent(markerRate()),
                 percent(injectionRate())));
@@ -196,7 +185,6 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 row.script().label(),
                 row.marker().label(),
                 row.injection().label(),
-                row.reviewed().label(),
                 detail.length() > DETAIL_WIDTH ? detail.substring(0, DETAIL_WIDTH) + "…" : detail);
     }
 

@@ -902,6 +902,52 @@ helps where a gender is suggested); both belong to the redesign's model-knowledg
 
 Tried and reverted: the token rules at the end of the draft and batch system prompts (`#time-to-first-token`).
 
+### Redesign arms {#redesign-arms}
+
+The paired evals of the `redesign-translation-pipeline` change (design D24). Each arm's result is recorded here and in the
+`Result` cell of its row in the change's `design.md`.
+
+**Arm 1: judge calibration `cal-1` (task 1.9).** Judge `gemma4:26b-mlx` on Ollama, single-flight, rubric `bl-judge-1`
+frozen with no tuning rounds (hash `d7b8b8ded24e`, file SHA-256
+`d7b8b8ded24e4677f50c39e28a6cb69fda502c5cf659737aeb0b8117c8fcaf1b`).
+
+- *Items.* 60 invented items: 30 single translations and 30 pairs, 25 ru->uk and 15 long, split 10 few-shot, 25 dev and
+  25 test.
+- *Labels.* Grader `agent` is a blind Claude agent. Grader `codex` is the majority of three Codex CLI models asked by
+  hand (`gpt-6-luna` and `gpt-6.1-terra` at reasoning none, `gpt-6.1-sol` at low because it rejects none). A single
+  item is agreed when `meaningError` matches and the scores are within 1 (the mean is kept); a pair is agreed when the
+  winner matches. 59 of 60 items were agreed; 1 was left out (`cal-p29`).
+- *Dev, reasoning off.* TPR 3/3 (Wilson lower bound 0.438), TNR 9/9 (0.701), position consistency 12/13 (0.923),
+  Kendall tau-b 0.555 over 12, pairwise accuracy 10/13 (0.769).
+- *Hidden test, reasoning off, run once.* 13 single and 11 pair items scored. TPR 4/4 (Wilson lower bound 0.510), TNR
+  9/9 (0.701), position consistency 9/11 (0.818), tau-b 0.716 over 13, pairwise accuracy 11/11 (1.000), 1 item left out.
+- *Reasoning on, dev.* Only 5 of 12 singles and 9 of 13 pairs gave a readable answer, and a run took 23 minutes against
+  about 3. It fixes nothing net and loses items, so the judge's reasoning stays off.
+- *Decision rule.* TPR and TNR Wilson lower bounds >= 0.8 and position consistency >= 0.7. It fails on the Wilson
+  bounds (0.510 and 0.701) although both point rates are 1.0 and position consistency (0.818) passes. The owner kept the
+  rule and accepted the fallback. Cause: the bound reaches 0.8 only with about 16 positives and 16 negatives all
+  correct, and the test split has 13 singles (4 positives, 9 negatives), so the rule cannot pass at this split size.
+- *Outcome.* The judge is a pairwise screen only: every case it marks discordant is read by the agent with a Codex
+  second opinion by hand. Reports carry `judge.calibration.passed = false`, read from
+  `modules/pipeline/src/test/resources/eval/judge/calibration.json`.
+
+A baseline table will be added by task 1.10.
+
+**Reference book `article-gravity` (task 1.11).** One invented science article (about 2,350 words of prose) in English, Ukrainian,
+Russian and French, each as Markdown, EPUB and FB2 (`modules/pipeline/src/test/resources/eval/datasets/article-gravity/`, with its own
+README). It holds what a translation must keep: code in four languages, a LaTeX block, two Mermaid diagrams, an ASCII diagram, tables
+with code cells, raw HTML, GitHub alerts, a local and a remote image, DOI/ISBN/URL references, and four foreign-language quotations
+(Latin, German, French, Ukrainian) that stay in their language with a gloss. The English was written by an Opus agent; the
+Ukrainian, Russian and French were translated by Opus agents. Each translation was reviewed by three Codex models
+(`gpt-6-luna` and `gpt-6.1-terra` at reasoning `none`, `gpt-6.1-sol` at `low`, the lowest it accepts) on invented text only, by hand. An editor applied a finding when two
+reviewers agreed or it was clearly right and logged every decision (applied/rejected, who, why). Result: Ukrainian 14 of 37 findings
+applied, Russian 7 of 17, French 6 of 11 (plus one own fix). The English source was then reviewed once (Sol) and
+corrected (two arithmetic fixes, 8.73 and 0.0275 %, wording, unverifiable DOIs/ISBN replaced by fictional ones) and the same edits were
+carried into all three translations. Fixed decisions: HTML comments and the metadata footer stay English in every language, contents
+anchors follow each language's headings, code and identifiers are untouched. Segment counts through the real importer: Markdown 152,
+EPUB 169, FB2 207, identical in the four languages. The EPUB/FB2 files are built by `scripts/md-to-books.py` (standard library only,
+byte-reproducible). Models that reject a reasoning level: `none` for Sol, `minimal` for Luna.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
@@ -1439,14 +1485,14 @@ renderings one source word got. Each book's JSON also carries a `diagnostics` ob
 the numbers: each wrong gender with its origin, the wrong types, the lost names, each cluster's renderings, the junk kept, the
 recurring terms per gold decision, the other lexicon terms and the whole final glossary.
 
-<a id="mini-suite"></a>**The mini suite: one small invented book that holds every defect seen so far (15j.J15).** `eval/mini/book.json` is a
-28-block invented book (a first-person male narrator, a harbour town, no line from any real book) with one block per defect the owner's
+<a id="mini-suite"></a>**The mini suite: one small invented book that holds every defect seen so far (15j.J15).** `eval/datasets/mini-en/book.json` is a
+33-block invented book in two chapters (a first-person male narrator, a numbered chapter heading, a double negation, a numbers line, a name that first appears in chapter 2, a proofread trap, a stress-marked seed in `gold-map.json`; `labels.json` and a hashed `manifest.json` sit beside it, and a label value with fewer than 8 cases is printed "not interpretable"; `MiniRunner` takes its pair and narrator from the book; a harbour town, no line from any real book) with one block per defect the owner's
 runs showed: Ukrainian dialogue punctuation, an inflected title and an inflected multi-word term, a brand, a material and a drug, a
 woman and a man whose pronouns prove their gender and a name with none, a multi-word place and a place whose first letter a model
 mis-transliterates, a word that tempts a Russian letter, an injected instruction, a long paragraph, a ти/Ви mix, a footnote aside and a
-code that must stay Latin. `MiniBook` writes it as an EPUB 3 for each run (nothing binary is committed) and `eval/mini/expectations.json`
+code that must stay Latin. `MiniBook` writes it as an EPUB 3 for each run (nothing binary is committed) and `eval/datasets/mini-en/expectations.json`
 says what each block must come to: a check of one segment or of a group (`NO_LATIN_EXCEPT`, `NO_RUSSIAN_LETTERS`, `MATCHES`, `ABSENT`,
-`NOT_FLAGGED`, `NO_FINDING` by the finding's `raisedBy` name, `NARRATOR_MALE`, `MIN_RATIO`, `ADDRESS_SAME`), the two checks every block
+`NOT_FLAGGED`, `NO_FINDING` by the finding's `raisedBy` name, `NARRATOR_MALE`, `MIN_RATIO`, `ADDRESS_SAME`, and the pair-neutral `NO_STRESS_MARK`, `HEADING_NUMBER`, `NEGATION_KEPT`, `NUMBERS_KEPT`, `PLACEHOLDERS`), the two checks every block
 must pass, and what the glossary holds after the names pass (type, gender and whether it is settled, locked, target in Cyrillic, target
 words, junk absent). Each expectation carries the defect it guards. `MiniRunner` runs it as the app runs a whole book: the autonomous
 names pass (`NamesPass`), the batched translation job, then the export's consistency pass, over one imported project; `MiniScorer`
@@ -1458,7 +1504,7 @@ scripts/eval-matrix.sh --suite mini --models "ollama:gemma4:e4b-mlx" --names kee
 BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_SUITE=mini ./gradlew :pipeline:promptEval   # one model, by hand
 ```
 
-The book has 28 segments; a run covers the names pass, the translation and one consistency pass at Balanced. Its runtime on e4b is measured by the orchestrator, not stated here. `--names` (env
+The book has 39 segments; a run covers the names pass, the translation and one consistency pass at Balanced. Its runtime on e4b is measured by the orchestrator, not stated here. `--names` (env
 `BOOKLOOM_EVAL_NAMES`) is the brief's name policy: under Transliterate and Translate a brand must come out in Cyrillic and unlocked, under Keep
 original it must keep its Latin spelling and be locked; the material and the drug are translated under every policy. The report is
 `build/reports/promptEval/<model>-mini-<POLICY>.{txt,json}` and the history; the `.txt` lists each expectation not met with what was found,

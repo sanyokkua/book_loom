@@ -1,8 +1,10 @@
 package ua.bookloom.pipeline.eval;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -18,8 +20,9 @@ import ua.bookloom.api.document.SegmentStatus;
  * @param dial the quality dial of the run
  * @param run what the run decided
  * @param results every applicable expectation scored
+ * @param labels the dataset's case labels, which the table summarises
  */
-record MiniReport(String model, String dial, MiniRun run, List<MiniResult> results) {
+record MiniReport(String model, String dial, MiniRun run, List<MiniResult> results, MiniLabels labels) {
 
     static final String SUITE = "mini";
 
@@ -31,7 +34,13 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
     MiniReport {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(run, "run");
+        Objects.requireNonNull(labels, "labels");
         results = List.copyOf(results);
+    }
+
+    /** A report with no case labels. */
+    MiniReport(final String model, final String dial, final MiniRun run, final List<MiniResult> results) {
+        this(model, dial, run, results, MiniLabels.NONE);
     }
 
     int passed() {
@@ -59,6 +68,11 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         return byDefect;
     }
 
+    /** The per-case records of repeat {@code repeat}, whose requests carried {@code seed}. */
+    List<CaseRecord.Entry> cases(final int repeat, final int seed) {
+        return MiniCases.of(run, results, repeat, seed);
+    }
+
     /** The report as one JSON object. */
     String json() {
         final ObjectNode root = MAPPER.createObjectNode();
@@ -81,6 +95,8 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         run.errors().forEach(errors::add);
         putDefects(root);
         putResults(root);
+        putCases(root);
+        putOutputs(root);
         return root.toString();
     }
 
@@ -89,6 +105,23 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         byDefect()
                 .forEach((defect, counts) ->
                         defects.putObject(defect).put("passed", counts[0]).put("total", counts[1]));
+    }
+
+    private void putCases(final ObjectNode root) {
+        final ArrayNode rows = root.putArray("cases");
+        cases(0, EvalRepeats.BASE_SEED).forEach(entry -> {
+            try {
+                rows.add(MAPPER.readTree(entry.record().json()));
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
+    }
+
+    /** Every block's stored target of this report's run, so a baseline keeps the text of invented books. */
+    private void putOutputs(final ObjectNode root) {
+        final ObjectNode outputs = root.putObject("outputs");
+        run.outcomes().forEach((id, outcome) -> outputs.put(id, outcome.target()));
     }
 
     private void putResults(final ObjectNode root) {
@@ -121,6 +154,18 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
                 .filter(r -> !r.passed())
                 .forEach(r -> out.append(
                         String.format(Locale.ROOT, "  MISS %-22s %-26s %s%n", r.id(), r.defect(), r.detail())));
+        out.append(labels.describe(usableByBlock()));
         return out.toString();
+    }
+
+    private Map<String, Boolean> usableByBlock() {
+        final Map<String, Boolean> usable = new LinkedHashMap<>();
+        run.outcomes()
+                .forEach((id, o) -> usable.put(
+                        id,
+                        o.target() != null
+                                && o.status() != SegmentStatus.FLAGGED
+                                && o.status() != SegmentStatus.PENDING));
+        return usable;
     }
 }

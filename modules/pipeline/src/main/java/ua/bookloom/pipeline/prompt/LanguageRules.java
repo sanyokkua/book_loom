@@ -87,18 +87,9 @@ public final class LanguageRules implements LanguageSupport {
         return Holder.NORMAL;
     }
 
-    /**
-     * The bundled map, or the one that states only the generic rules when the eval asks for it with the system
-     * property {@code bookloom.eval.rules} or the environment variable {@code BOOKLOOM_EVAL_RULES} set to
-     * {@code generic}.
-     */
-    static LanguageRules forEnvironment() {
-        final String asked = System.getProperty("bookloom.eval.rules", System.getenv("BOOKLOOM_EVAL_RULES"));
-        if ("generic".equalsIgnoreCase(asked)) {
-            log.info("Language rules forced to the generic rules by the eval switch");
-            return Holder.GENERIC_ONLY;
-        }
-        return Holder.NORMAL;
+    /** The bundled map that states only the generic rules, for the eval's {@link PromptVariants} choice. */
+    static LanguageRules genericOnly() {
+        return Holder.GENERIC_ONLY;
     }
 
     /** A language is tested when it has its own file marked {@code status=tested}; any other tag is not. */

@@ -19,7 +19,6 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.checks.WordValidators;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
@@ -61,7 +60,7 @@ class WordsEvalTest {
         final String mode = System.getProperty(
                 WordValidators.SWITCH, System.getenv().getOrDefault("BOOKLOOM_EVAL_WORDVALIDATOR", "model"));
         final WordValidator chosen =
-                WordValidators.forMode(mode, new PromptTemplates(), new ObjectMapper(), calls, FRAME);
+                WordValidators.forMode(mode, EvalVariants.templates(), new ObjectMapper(), calls, FRAME);
         final int batch =
                 Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_WORD_BATCH", "" + DEFAULT_BATCH));
 

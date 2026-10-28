@@ -55,10 +55,30 @@ public final class PromptTemplates {
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
 
-    /** Loads the bundled templates. */
-    @Inject
+    /** Loads the bundled templates with the bundled language rules. */
     public PromptTemplates() {
-        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName), LanguageRules.forEnvironment());
+        this(PromptVariants.DEFAULTS);
+    }
+
+    /**
+     * Loads the bundled templates with the language rules the bound variants choose.
+     *
+     * @param variants the non-null prompt alternatives; the production injector binds {@link PromptVariants#DEFAULTS}
+     */
+    @Inject
+    public PromptTemplates(final PromptVariants variants) {
+        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName), variantRules(variants));
+    }
+
+    private static LanguageRules variantRules(final PromptVariants variants) {
+        Objects.requireNonNull(variants, "variants");
+        if (!variants.isDefault()) {
+            log.debug(
+                    "Prompt variants differ from the defaults: languageRules={} batchFormat={}",
+                    variants.languageRules(),
+                    variants.batchFormat());
+        }
+        return variants.rules();
     }
 
     PromptTemplates(final ResourceLoader loader) {

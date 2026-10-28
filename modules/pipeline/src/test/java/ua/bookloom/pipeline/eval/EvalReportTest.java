@@ -30,4 +30,23 @@ class EvalReportTest {
     void kindSummary_noCorpusRun_isEmpty() {
         assertThat(new EvalReport("gemma4:e4b", List.of()).kindSummary()).isEmpty();
     }
+
+    @Test
+    void floors_noReviewSeparationFloor_isNotAskedFor() {
+        final EvalRow reviewFails = new EvalRow(
+                "c",
+                "draft",
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.PASS,
+                EvalRow.Check.FAIL,
+                "");
+        final EvalReport report = new EvalReport("gemma4:e4b", List.of(reviewFails));
+
+        assertThat(report.meetsThresholds()).isTrue();
+        assertThat(report.json()).doesNotContain("reviewSeparation");
+        assertThat(report.table()).doesNotContain("review ");
+    }
 }

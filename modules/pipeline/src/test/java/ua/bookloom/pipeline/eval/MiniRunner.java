@@ -17,11 +17,10 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
-import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
@@ -33,14 +32,12 @@ import ua.bookloom.pipeline.revision.PassOptions;
 /**
  * Runs the mini book the way the app does a whole book: the autonomous names pass, the translation job, then the
  * export's consistency pass, all through the production classes over one imported project and one model. The brief
- * names a first-person male narrator, as the book is told by one.
+ * takes the pair and the narrator from the dataset's book.
  */
 @Slf4j
 final class MiniRunner {
 
     private static final Pattern TOKEN = Pattern.compile("⟦[^⟧]*⟧");
-    private static final String SOURCE = "en";
-    private static final String TARGET = "uk";
 
     private final MiniBook book;
     private final QualityDial dial;
@@ -72,9 +69,7 @@ final class MiniRunner {
     MiniRun run(final ChatModel model, final Path workDir) {
         log.info("Mini eval start dial={} names={} window={}", dial, policy, window);
         final Path file = book.writeEpub(workDir);
-        final Narrator narrator = new Narrator(NarratorPerson.FIRST, Gender.MALE);
-        final Prepared prepared =
-                SequenceJobs.importBook(file, SequenceJobs.brief(SOURCE, TARGET, dial, narrator, policy));
+        final Prepared prepared = SequenceJobs.importBook(file, brief());
         final StageProbe probe = new StageProbe(model);
         final List<String> errors = new ArrayList<>();
         final Instant started = Instant.now();
@@ -86,12 +81,23 @@ final class MiniRunner {
         final Calls calls = new Calls(names, afterJob - afterNames, probe.mark() - afterJob);
         final Duration elapsed = Duration.between(started, Instant.now());
         log.info("Mini eval end state={} calls={} errors={} elapsed={}", end, calls, errors, elapsed);
-        return new MiniRun(policy, end, outcomes(prepared), glossary(prepared), errors, calls, elapsed);
+        return new MiniRun(
+                policy, end, outcomes(prepared), glossary(prepared), errors, calls, elapsed, probe.callsSince(0));
+    }
+
+    /** The brief the run imports the book with: the dataset's pair and narrator, this runner's dial and policy. */
+    BookBrief brief() {
+        final Narrator narrator =
+                new Narrator(book.narrator().person(), book.narrator().gender());
+        return SequenceJobs.brief(book.sourceLanguage(), book.targetLanguage(), dial, narrator, policy);
     }
 
     private void consistency(final Prepared prepared, final StageProbe probe, final List<String> errors) {
         final Result<?> result = SequenceJobs.consistencyPass(prepared)
-                .run(prepared.projectId(), probe.calls(TARGET), new PassOptions(true, dial == QualityDial.MAX));
+                .run(
+                        prepared.projectId(),
+                        probe.calls(book.targetLanguage()),
+                        new PassOptions(true, dial == QualityDial.MAX));
         WholeBookStages.note("consistency pass", result, errors);
     }
 

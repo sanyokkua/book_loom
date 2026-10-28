@@ -1,0 +1,3 @@
+<think>The source has two clauses and a second sentence about the lamp. The translation keeps all of it. Final answer:
+{"analysis":"Every statement is kept and reads naturally.","errors":[],"scores":{"meaning":5,"grammar":5,"terminology":5,"fluency":5},"flags":{"meaningError":false,"omission":false,"addition":false,"sourceLanguageResidue":false,"formattingBroken":false},"verdict":"good"}
+</think>

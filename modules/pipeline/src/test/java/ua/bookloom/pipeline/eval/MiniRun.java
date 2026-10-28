@@ -21,6 +21,7 @@ import ua.bookloom.api.project.QaFinding;
  * @param errors the phases that ended in an error, each as {@code phase: code}
  * @param calls the model calls made by the names pass, the translation and the consistency pass
  * @param elapsed the wall time of the three phases
+ * @param sent every call the run made, with the usage each reply reported, for the per-case records
  */
 record MiniRun(
         NamePolicy policy,
@@ -29,7 +30,20 @@ record MiniRun(
         List<GlossaryEntry> glossary,
         List<String> errors,
         Calls calls,
-        Duration elapsed) {
+        Duration elapsed,
+        List<StageProbe.Call> sent) {
+
+    /** A run that kept no record of its calls. */
+    MiniRun(
+            final NamePolicy policy,
+            final JobState end,
+            final Map<String, Outcome> outcomes,
+            final List<GlossaryEntry> glossary,
+            final List<String> errors,
+            final Calls calls,
+            final Duration elapsed) {
+        this(policy, end, outcomes, glossary, errors, calls, elapsed, List.of());
+    }
 
     /**
      * One segment as the run decided it.
@@ -70,5 +84,6 @@ record MiniRun(
         outcomes = Map.copyOf(outcomes);
         glossary = List.copyOf(glossary);
         errors = List.copyOf(errors);
+        sent = List.copyOf(sent);
     }
 }

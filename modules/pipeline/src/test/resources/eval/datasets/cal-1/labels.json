@@ -1,0 +1,429 @@
+{
+ "graders": {
+  "agent": {
+   "cal-s01": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s02": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s03": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s04": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s05": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s06": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s07": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s08": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s09": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s10": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s11": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s12": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s13": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s14": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s15": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s16": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s17": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s18": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s19": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s20": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s21": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s22": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s23": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s24": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s25": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s26": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s27": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s28": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s29": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s30": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-p01": {
+    "winner": "A"
+   },
+   "cal-p02": {
+    "winner": "B"
+   },
+   "cal-p03": {
+    "winner": "tie"
+   },
+   "cal-p04": {
+    "winner": "B"
+   },
+   "cal-p05": {
+    "winner": "A"
+   },
+   "cal-p06": {
+    "winner": "A"
+   },
+   "cal-p07": {
+    "winner": "B"
+   },
+   "cal-p08": {
+    "winner": "tie"
+   },
+   "cal-p09": {
+    "winner": "A"
+   },
+   "cal-p10": {
+    "winner": "B"
+   },
+   "cal-p11": {
+    "winner": "A"
+   },
+   "cal-p12": {
+    "winner": "tie"
+   },
+   "cal-p13": {
+    "winner": "B"
+   },
+   "cal-p14": {
+    "winner": "A"
+   },
+   "cal-p15": {
+    "winner": "B"
+   },
+   "cal-p16": {
+    "winner": "A"
+   },
+   "cal-p17": {
+    "winner": "tie"
+   },
+   "cal-p18": {
+    "winner": "B"
+   },
+   "cal-p19": {
+    "winner": "A"
+   },
+   "cal-p20": {
+    "winner": "B"
+   },
+   "cal-p21": {
+    "winner": "tie"
+   },
+   "cal-p22": {
+    "winner": "B"
+   },
+   "cal-p23": {
+    "winner": "A"
+   },
+   "cal-p24": {
+    "winner": "B"
+   },
+   "cal-p25": {
+    "winner": "A"
+   },
+   "cal-p26": {
+    "winner": "tie"
+   },
+   "cal-p27": {
+    "winner": "B"
+   },
+   "cal-p28": {
+    "winner": "A"
+   },
+   "cal-p29": {
+    "winner": "tie"
+   },
+   "cal-p30": {
+    "winner": "A"
+   }
+  },
+  "codex": {
+   "cal-s01": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s02": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s03": {
+    "meaningError": false,
+    "score": 4
+   },
+   "cal-s04": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s05": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s06": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s07": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s08": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s09": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s10": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s11": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s12": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s13": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s14": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s15": {
+    "meaningError": false,
+    "score": 2
+   },
+   "cal-s16": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s17": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s18": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s19": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s20": {
+    "meaningError": true,
+    "score": 3
+   },
+   "cal-s21": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s22": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s23": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s24": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s25": {
+    "meaningError": true,
+    "score": 2
+   },
+   "cal-s26": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s27": {
+    "meaningError": false,
+    "score": 3
+   },
+   "cal-s28": {
+    "meaningError": true,
+    "score": 1
+   },
+   "cal-s29": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-s30": {
+    "meaningError": false,
+    "score": 5
+   },
+   "cal-p01": {
+    "winner": "A"
+   },
+   "cal-p02": {
+    "winner": "B"
+   },
+   "cal-p03": {
+    "winner": "tie"
+   },
+   "cal-p04": {
+    "winner": "B"
+   },
+   "cal-p05": {
+    "winner": "A"
+   },
+   "cal-p06": {
+    "winner": "A"
+   },
+   "cal-p07": {
+    "winner": "B"
+   },
+   "cal-p08": {
+    "winner": "tie"
+   },
+   "cal-p09": {
+    "winner": "A"
+   },
+   "cal-p10": {
+    "winner": "B"
+   },
+   "cal-p11": {
+    "winner": "A"
+   },
+   "cal-p12": {
+    "winner": "tie"
+   },
+   "cal-p13": {
+    "winner": "B"
+   },
+   "cal-p14": {
+    "winner": "A"
+   },
+   "cal-p15": {
+    "winner": "B"
+   },
+   "cal-p16": {
+    "winner": "A"
+   },
+   "cal-p17": {
+    "winner": "tie"
+   },
+   "cal-p18": {
+    "winner": "B"
+   },
+   "cal-p19": {
+    "winner": "A"
+   },
+   "cal-p20": {
+    "winner": "B"
+   },
+   "cal-p21": {
+    "winner": "tie"
+   },
+   "cal-p22": {
+    "winner": "B"
+   },
+   "cal-p23": {
+    "winner": "A"
+   },
+   "cal-p24": {
+    "winner": "B"
+   },
+   "cal-p25": {
+    "winner": "A"
+   },
+   "cal-p26": {
+    "winner": "tie"
+   },
+   "cal-p27": {
+    "winner": "B"
+   },
+   "cal-p28": {
+    "winner": "A"
+   },
+   "cal-p29": {
+    "winner": "B"
+   },
+   "cal-p30": {
+    "winner": "A"
+   }
+  }
+ },
+ "unlabelled": []
+}

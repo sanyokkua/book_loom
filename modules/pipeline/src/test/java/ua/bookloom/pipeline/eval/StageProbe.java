@@ -8,11 +8,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -20,17 +22,37 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 /**
  * Passes every call to the model under test and keeps what was sent, so a stage suite can count calls, errors and
  * repeats per case and a test can compare the request with what the production class builds. The model seam the
- * production classes get is the run's own {@link JobModelCalls}, sized to the eval window as in the other suites.
+ * production classes get is the run's own {@link JobModelCalls}, sized to the eval window as in the other suites. Each
+ * call's reported usage is kept too, so a case's record can carry its times and tokens.
  */
 final class StageProbe implements ChatModel {
 
     /** What the calls since a mark came to. */
     record Counts(int calls, int failed, int repeated) {}
 
+    /**
+     * One call as it was sent and answered.
+     *
+     * @param request the request sent
+     * @param failed whether the call ended in an error
+     * @param reply the reply's text; empty when the call failed
+     * @param usage the figures the provider reported, or null when it reported none
+     */
+    record Call(
+            ChatRequest request,
+            boolean failed,
+            String reply,
+            @Nullable TokenUsage usage) {
+
+        /** Rejects a missing part. */
+        Call {
+            Objects.requireNonNull(request, "request");
+            Objects.requireNonNull(reply, "reply");
+        }
+    }
+
     private final ChatModel model;
-    private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
-    private final List<Boolean> failures = new CopyOnWriteArrayList<>();
-    private final List<String> replies = new CopyOnWriteArrayList<>();
+    private final List<Call> calls = new CopyOnWriteArrayList<>();
 
     StageProbe(final ChatModel model) {
         this.model = Objects.requireNonNull(model, "model");
@@ -43,12 +65,17 @@ final class StageProbe implements ChatModel {
 
     /** Every request sent so far, in order. */
     List<ChatRequest> requests() {
-        return List.copyOf(requests);
+        return calls.stream().map(Call::request).toList();
+    }
+
+    /** The calls made after {@code mark}, with the figures each reply reported, for a case's record. */
+    List<Call> callsSince(final int mark) {
+        return List.copyOf(calls.subList(mark, calls.size()));
     }
 
     /** The number of calls so far, to hand to {@link #since}. */
     int mark() {
-        return requests.size();
+        return calls.size();
     }
 
     /** The calls made after {@code mark}; a repeat is a request whose messages an earlier call after the mark sent. */
@@ -63,17 +90,17 @@ final class StageProbe implements ChatModel {
 
     private Counts since(final int mark, final Predicate<CallKind> wanted) {
         final Set<List<?>> seen = new HashSet<>();
-        int calls = 0;
+        int count = 0;
         int repeated = 0;
         int failed = 0;
-        for (int i = mark; i < requests.size(); i++) {
-            if (wanted.test(requests.get(i).callKind())) {
-                calls++;
-                repeated += seen.add(requests.get(i).messages()) ? 0 : 1;
-                failed += failures.get(i) ? 1 : 0;
+        for (final Call call : callsSince(mark)) {
+            if (wanted.test(call.request().callKind())) {
+                count++;
+                repeated += seen.add(call.request().messages()) ? 0 : 1;
+                failed += call.failed() ? 1 : 0;
             }
         }
-        return new Counts(calls, failed, repeated);
+        return new Counts(count, failed, repeated);
     }
 
     /**
@@ -82,12 +109,11 @@ final class StageProbe implements ChatModel {
      * @return its text, or empty when no such call was made or it failed
      */
     Optional<String> replyOf(final int mark, final CallKind kind) {
-        for (int i = mark; i < requests.size(); i++) {
-            if (requests.get(i).callKind() == kind) {
-                return failures.get(i) ? Optional.empty() : Optional.of(replies.get(i));
-            }
-        }
-        return Optional.empty();
+        return callsSince(mark).stream()
+                .filter(call -> call.request().callKind() == kind)
+                .findFirst()
+                .filter(call -> !call.failed())
+                .map(Call::reply);
     }
 
     @Override
@@ -101,9 +127,9 @@ final class StageProbe implements ChatModel {
     }
 
     private Result<ChatResponse> seen(final ChatRequest request, final Result<ChatResponse> result) {
-        requests.add(request);
-        failures.add(result.isErr());
-        replies.add(result.isOk() ? Objects.requireNonNull(result.data()).content() : "");
+        final ChatResponse response = result.data();
+        final String reply = response == null ? "" : response.content();
+        calls.add(new Call(request, result.isErr(), reply, response == null ? null : response.usage()));
         return result;
     }
 }

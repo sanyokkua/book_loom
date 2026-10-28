@@ -218,4 +218,21 @@ class PromptTemplatesTest {
                         "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
                 .doesNotContain("«…» for speech", "russisms");
     }
+
+    // An arm chooses the generic rules through the injector's binding, never through a variable src/main reads.
+    @Test
+    void render_genericOnlyVariant_statesOnlyTheGenericRules() {
+        final PromptTemplates templates = new PromptTemplates(new PromptVariants(
+                PromptVariants.LanguageRulesVariant.GENERIC_ONLY, PromptVariants.BatchFormatVariant.JSON));
+        final CallFrame frame = new CallFrame(
+                "en",
+                "uk",
+                StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
+                ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
+
+        assertThat(templates.renderSystem(PromptName.DRAFT, frame))
+                .contains(
+                        "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
+                .doesNotContain("«…» for speech", "russisms");
+    }
 }

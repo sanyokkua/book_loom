@@ -53,7 +53,7 @@ final class PromptEvalRunner {
     private final ModelCalls calls;
     private final String sourceLanguage;
     private final String targetLanguage;
-    private final PromptTemplates templates = new PromptTemplates();
+    private final PromptTemplates templates = EvalVariants.templates();
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
     private final DirectedFix directedFix = new DirectedFix(templates, parser);
     private final ReviewerEval reviews;

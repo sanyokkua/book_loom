@@ -29,7 +29,6 @@ import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
 
 /**
@@ -87,7 +86,7 @@ final class BatchEvalRunner {
         final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
         return new BatchDrafter(
                 new BatchPromptBuilder(
-                        new PromptTemplates(), any.frame(), BatchFormat.current(), RelevantPairsSwitch.isOn()),
+                        EvalVariants.templates(), any.frame(), BatchFormat.current(), RelevantPairsSwitch.isOn()),
                 parser,
                 calls,
                 SOURCE,

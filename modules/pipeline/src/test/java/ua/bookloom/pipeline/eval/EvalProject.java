@@ -63,7 +63,7 @@ public final class EvalProject {
 
     private static final String PROJECT = "eval";
     private static final String UNIT = "eval";
-    private static final PromptTemplates TEMPLATES = new PromptTemplates();
+    private static final PromptTemplates TEMPLATES = EvalVariants.templates();
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final DocumentPort DOCUMENTS =
             Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);

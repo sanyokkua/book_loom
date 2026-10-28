@@ -14,13 +14,15 @@
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|book] [--batch-sizes 4,8,12,16]
+#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8,12,16]
+#                          [--repeats K] [--judge] [--pair en-uk|ru-uk] [--baseline-of SHA]
 # --relevant-pairs on|off (15i.T8) switches the batch prompt's "Related earlier pairs" block for the run (unset keeps the
 # default, on); run --suite sequence once with each and compare the two reports (their provenance records relevant_pairs=).
 # --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
 # for the run (Ollama think:true, LM Studio reasoning_effort medium); unset leaves every call off. --batch-notes on asks the
 # batch draft for a one-line note before each target. The provenance of a report records both (reasoning=, batchNotes=).
-# --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
+# --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
+# read only by the eval test classes; reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
 # draft A/B instead (consecutive cases, sized as a job sizes its batches unless --batch-sizes fixes the sweep, through the JSON batch protocol; reports end in
@@ -70,15 +72,49 @@
 # call and scores the gender votes the reading keeps (reports end in -coref.json): one row per model with the windows
 # read right, the wrong votes, the abstentions and the wrong-vote rate (the gate is at most 5 %, else that model's votes
 # only break ties).
-# --suite mini (15j.J15) runs the invented 28-block EPUB (eval/mini/book.json, one block per defect seen so far) through the
-# names pass, the translation job and the export's consistency pass, and scores each expectation of eval/mini/expectations.json
+# --suite mini (15j.J15) runs the invented 33-block EPUB (eval/datasets/mini-en/book.json, one block per defect seen so far) through the
+# names pass, the translation job and the export's consistency pass, and scores each expectation of eval/datasets/mini-en/expectations.json
 # (reports end in -mini-<policy>.json): one row per model with the expectations met, the segments flagged, the calls and the
 # seconds, then the defects that missed. Measured: see docs/DEVELOPMENT.md. --names transliterate|translate|keep_original (default
 # transliterate, BOOKLOOM_EVAL_NAMES) is the brief's name policy and decides what the three brand expectations demand;
 # BOOKLOOM_EVAL_DIAL and BOOKLOOM_EVAL_WINDOW pass through.
+# --suite article (redesign 1.11, ArticleEvalTest) runs the English article of eval/datasets/article-gravity/ (Markdown,
+# about 150 segments) through today's job into one target, BOOKLOOM_EVAL_PAIR_TARGET=uk|ru|fr (default uk; it passes
+# through the environment), exports it and prints one row per model: segments, flagged rate (each repeat's aggregate) and
+# the share of the English protected spans (URLs, DOIs, code identifiers) the exported Markdown keeps verbatim. Reports end
+# in -article-en-<target>-<dial>.json; the per-model timeout defaults to 5400 s, as for sequence. The three targets, K = 1:
+#   for T in uk ru fr; do BOOKLOOM_EVAL_PAIR_TARGET=$T BOOKLOOM_EVAL_DIAL=BALANCED scripts/eval-matrix.sh --suite article --repeats 1; done
 # --batch-format (15i.X1, an experiment) chooses how a batch is sent and answered: json = numbered items and a JSON reply (the
 # default), markers = one passage marked ⟦s1⟧ … with a plain-text reply and no schema, dual = the passage as context beside
 # the numbered items with a JSON reply. It reaches the code as BOOKLOOM_EVAL_BATCH_FORMAT and each report's provenance names it.
+# --repeats K (BOOKLOOM_EVAL_REPEATS) runs the dataset K times with seeds base+0..K-1 (1 in the inner loop, 3 for a decision);
+# --judge (BOOKLOOM_EVAL_JUDGE=1) lets the local judge compare the changed cases; --pair en-uk|ru-uk (BOOKLOOM_EVAL_PAIR)
+# picks the dataset's language pair; --baseline-of SHA (BOOKLOOM_EVAL_BASELINE_OF) records that the run reproduces the
+# baseline of that commit. These four are read only by the eval test classes. BOOKLOOM_EVAL_QUANT is read from the server
+# for each model (Ollama /api/show details.quantization_level, LM Studio /api/v0/models quantization) and reported in the
+# run's model block; it stays empty when the server does not say. Statistics and the judge calibration: scripts/eval-score.py.
+# THE BASELINE SET (redesign task 1.10): the recorded behaviour of commit 79ffede6, the measure of every later group.
+# Run single-flight and unattended, in this order, from a checkout whose src/main is that behaviour plus the group-1 seams.
+# The dial is BOOKLOOM_EVAL_DIAL (FAST, BALANCED or MAX; there is no --dial flag) and passes through. MODEL_TIMEOUT (seconds)
+# is raised because the default of 1500 s for mini (5400 s for sequence, per narrator mode) is too short for K = 3 repeats.
+# The first model of scripts/eval-models.txt is gemma4:e4b-mlx; the 26b is named with --models. The history label of a run is
+# <pair>-<dial>-<policy> (sequence: en-uk-<dial>-<narrator>), so no two of these runs overwrite each other.
+#   export MODEL_TIMEOUT=14400
+#   for DIAL in FAST BALANCED MAX; do
+#     BOOKLOOM_EVAL_DIAL=$DIAL scripts/eval-matrix.sh --suite mini --pair en-uk --repeats 3 --baseline-of 79ffede6
+#     BOOKLOOM_EVAL_DIAL=$DIAL scripts/eval-matrix.sh --suite mini --pair ru-uk --repeats 3 --baseline-of 79ffede6
+#   done
+#   BOOKLOOM_EVAL_DIAL=BALANCED scripts/eval-matrix.sh --suite sequence --repeats 3 --baseline-of 79ffede6   # 45-75 min
+#   BOOKLOOM_EVAL_DIAL=MAX      scripts/eval-matrix.sh --suite sequence --repeats 1 --baseline-of 79ffede6
+#   for PAIR in en-uk ru-uk; do
+#     BOOKLOOM_EVAL_DIAL=BALANCED scripts/eval-matrix.sh --suite mini --pair $PAIR --repeats 1 --models "ollama:gemma4:26b-mlx" --baseline-of 79ffede6
+#   done
+# Then write each run into a committed baseline file (RUN is a glob over the history folder names; the model's ':' and '/'
+# are '_' there; refuses a run that is not version 2, has owner data or has no baselineOf):
+#   python3 scripts/eval-score.py baseline '*-mini-gemma4_e4b-mlx-ru-uk-balanced-TRANSLITERATE' \
+#     --out modules/pipeline/src/test/resources/eval/baseline/mini-ru-uk-gemma4_e4b-mlx-balanced.json
+#   (the same for mini-en-uk, each dial; sequence: '*-sequence-gemma4_e4b-mlx-en-uk-balanced-unset' and
+#    .../sequence-en-uk-gemma4_e4b-mlx-balanced.json; the 26b: model gemma4_26b-mlx.)
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -99,6 +135,10 @@ RELEVANT_PAIRS=""
 BATCH_FORMAT=
 REASONING=""
 BATCH_NOTES=""
+REPEATS=""
+JUDGE=""
+PAIR=""
+BASELINE_OF=""
 DEFAULT_CONTEXT=16384
 # An entry is model,context,label: the columns of a line of eval-models.txt joined by commas ("-" for no context).
 entries() { awk '{ print $1 "," ($2 == "" ? "-" : $2) "," $3 }' | tr '\n' ' '; }
@@ -119,7 +159,12 @@ while [ $# -gt 0 ]; do
     --book-file) BOOK_FILE=$2; shift 2 ;;
     --out-dir) OUT_DIR=$2; shift 2 ;;
     --table-only) TABLE_ONLY=1; shift ;;
-    --rules) RULES=$2; shift 2 ;;
+    --rules)
+      case "$2" in
+        generic|language) RULES=$2 ;;
+        *) echo "--rules takes generic or language, not $2" >&2; exit 2 ;;
+      esac
+      shift 2 ;;
     --langs) LANGS=$2; shift 2 ;;
     --suite) SUITE=$2; shift 2 ;;
     --batch-sizes) BATCH_SIZES=$2; shift 2 ;;
@@ -132,9 +177,21 @@ while [ $# -gt 0 ]; do
       shift 2 ;;
     --reasoning) REASONING=$2; shift 2 ;;
     --batch-notes) BATCH_NOTES=$2; shift 2 ;;
+    --repeats)
+      case "$2" in ''|*[!0-9]*|0) echo "--repeats takes a positive whole number, not $2" >&2; exit 2 ;; *) REPEATS=$2 ;; esac
+      shift 2 ;;
+    --judge) JUDGE=1; shift ;;
+    --pair)
+      case "$2" in en-uk|ru-uk) PAIR=$2 ;; *) echo "--pair takes en-uk or ru-uk, not $2" >&2; exit 2 ;; esac
+      shift 2 ;;
+    --baseline-of) BASELINE_OF=$2; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
+
+# The rules choice reaches the eval's test injector as a PromptVariants field; the application never reads it.
+VARIANTS=""
+[ "$RULES" = generic ] && VARIANTS="languageRules=GENERIC_ONLY"
 
 if [ "$QUICK" = 1 ]; then
   export BOOKLOOM_EVAL_QUICK=1
@@ -168,7 +225,7 @@ fi
 export MATRIX_TESTS="${MATRIX_TESTS:-}"
 
 REPORTS=modules/pipeline/build/reports/promptEval
-if [ "$SUITE" = book ]; then DEFAULT_TIMEOUT=86400; elif [ "$SUITE" = sequence ] || [ "$SUITE" = names ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
+if [ "$SUITE" = book ]; then DEFAULT_TIMEOUT=86400; elif [ "$SUITE" = sequence ] || [ "$SUITE" = names ] || [ "$SUITE" = article ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
 
 # One (suite x model) Gradle run with its watchdog; it runs under scripts/gradle-lock.sh (see gradle_locked), so the
 # timeout counts only the time Gradle really holds the lock, not the wait in the queue.
@@ -192,6 +249,28 @@ export -f gradle_section
 # Takes the lock for the one Gradle invocation named by the caller's environment and nothing else.
 gradle_locked() { scripts/gradle-lock.sh bash -c gradle_section; }
 
+# The quantisation the server reports for a model, or nothing: Ollama /api/show details.quantization_level, LM Studio
+# /api/v0/models (the entry whose id is the model). Read-only calls to the user's own configured server.
+quant_of() {
+  local provider=$1 model=$2
+  if [ "$provider" = lmstudio ]; then
+    curl -fsS --max-time 5 "${LMSTUDIO_URL%/v1}/api/v0/models" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin).get("data", [])
+except ValueError:
+    data = []
+print(next((m.get("quantization", "") for m in data if m.get("id") == sys.argv[1]), ""))' "$model" 2>/dev/null
+  else
+    curl -fsS --max-time 5 -d "{\"model\":\"$model\"}" "$OLLAMA_URL/api/show" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin).get("details", {}).get("quantization_level", ""))
+except ValueError:
+    print("")' 2>/dev/null
+  fi
+}
+
 # run_one <entry> [narrator] [keep]: keep=1 leaves an Ollama model loaded because the next run uses it too.
 run_one() {
   local entry=$1 narrator=${2:-unset} keep=${3:-0} spec context label provider model api_model url env_provider log
@@ -208,12 +287,15 @@ run_one() {
   else
     url=$OLLAMA_URL; env_provider=ollama
   fi
+  local quant
+  quant=$(quant_of "$provider" "$api_model")
   mkdir -p build/eval-matrix
   log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT \
+    BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_JUDGE=$JUDGE BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
     grep -E "Eval window|FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'
@@ -288,6 +370,11 @@ if sys.argv[2] == "sequence":
     for r in runs:
         print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%% %7.1f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), 100 * r.get("ltcr1", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
     print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering; LTCR-1: the share of a term's or name's later occurrences that carry the rendering its first one had, DelTA's consistency metric)")
+    sys.exit(0)
+if sys.argv[2] == "article":
+    print("%-36s %-6s %-8s %5s %6s %7s %7s %6s %8s  %s" % ("model", "target", "dial", "segs", "flag", "flag%", "spans%", "calls", "seconds", "lost spans"))
+    for r in (r for r in reports if r.get("suite") == "article"):
+        print("%-36s %-6s %-8s %5d %6d %6.1f%% %6.1f%% %6d %8.0f  %s" % (r.get("model", "?"), r.get("target", "?"), r.get("dial", "?"), r.get("segments", 0), r.get("flagged", 0), 100 * r.get("flaggedRate", 0), 100 * r.get("protectedSpansKept", 0), r.get("calls", 0), r.get("elapsedSeconds", 0), " ".join(r.get("protectedSpansLost", []))))
     sys.exit(0)
 if sys.argv[2] == "names":
     print("%-30s %-32s %7s %6s %6s %9s %6s %5s %5s %9s %5s %6s %7s" % ("model", "book", "gender", "wrongV", "type", "cluster1G", "spell", "junk", "lost", "termsOK", "promo", "calls", "minutes"))
@@ -377,8 +464,8 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini", "book") + STAGES]
-cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini", "article", "book") + STAGES]
+cols = ["parse", "gate", "script", "marker", "injection", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:
     print("%-36s %-8s %-6s " % (r["model"], r.get("rules", "language"), r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + " %6d  " % r.get("tokenBreaks", 0) + ("yes" if r["meetsThresholds"] else "NO"))

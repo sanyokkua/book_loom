@@ -2,7 +2,9 @@
   "title": "The Harbour Almanac",
   "author": "Anselm Verrow",
   "language": "en",
-  "about": "Invented for the mini eval (15j.J15): 28 blocks, one per defect seen so far. No line comes from a book.",
+  "pair": "en-uk",
+  "narrator": {"person": "first", "gender": "male"},
+  "about": "Invented for the mini eval (15j.J15, reshaped in 1.3): two chapters, one block per defect seen so far, a numbered heading, a negation, a stress-marked seed, a proofread trap and a numbers line. No line comes from a book.",
   "blocks": [
     {"id": "m01", "kind": "h", "text": "Low Tide"},
     {"id": "m02", "kind": "p", "text": "I came to Brindle Harbour on the last ferry, tired and wet, with one bag and a letter I had not dared to open."},
@@ -16,7 +18,7 @@
     {"id": "m10", "kind": "p", "text": "On the wall hung a Velmora clock that had stopped at a quarter to nine, and nobody had wound it since."},
     {"id": "m11", "kind": "p", "text": "Pell laughed at the clock and said the tide kept better time."},
     {"id": "m12", "kind": "p", "text": "Dorrin came in with the lamp-oil. He set the can down and looked at the clock too."},
-    {"id": "m13", "kind": "h", "text": "The Lantern Council"},
+    {"id": "m13", "kind": "h", "text": "3. The Lamp Room"},
     {"id": "m14", "kind": "p", "text": "The Lantern Council met on the first Monday of every month, and she sat at its head."},
     {"id": "m15", "kind": "p", "text": "Nobody had ever argued with the Lantern Council and won; Dorrin said that to argue with the Lantern Council was to argue with the weather."},
     {"id": "m16", "kind": "p", "text": "On the shelf lay a copy of The Tide Almanac, and in the margins of The Tide Almanac someone had been counting ships."},
@@ -31,6 +33,11 @@
     {"id": "m25", "kind": "p", "text": "“You should not be here,” Dorrin told the old inspector. “You know what you are risking, sir, and you know what you cost us. You, of all people, should know better than to come back.”"},
     {"id": "m26", "kind": "p", "text": "“I know what I cost you,” said the inspector. “I am sorry, truly. You have my word, and you have my thanks.”"},
     {"id": "m27", "kind": "note", "text": "The Greywater is the old name for the river; the charts call it the Lower Reach."},
-    {"id": "m28", "kind": "p", "text": "I opened the letter that night, by Dorrin’s lamp, and I read it twice before I understood it. I was glad I had come."}
+    {"id": "m28", "kind": "p", "text": "I opened the letter that night, by Dorrin’s lamp, and I read it twice before I understood it. I was glad I had come."},
+    {"id": "m29", "kind": "p", "text": "She did not know, and would not ask."},
+    {"id": "m30", "kind": "p", "text": "The 14 boats took nineteen nets out."},
+    {"id": "m31", "kind": "p", "text": "Tobin Reed came up to the lamp room before dawn with a coil of rope on his shoulder, and he said he had come about the nets."},
+    {"id": "m32", "kind": "p", "text": "Dorrin’s stick stood by the door, and Ilsabet’s ledger lay open on the sill beside it."},
+    {"id": "m33", "kind": "p", "text": "Dorrin said the fog was thick enough to stand a spoon in, and Pell, who was holding the spoon, said he hoped it was soup."}
   ]
 }

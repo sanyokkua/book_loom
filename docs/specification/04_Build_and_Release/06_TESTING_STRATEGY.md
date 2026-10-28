@@ -258,6 +258,8 @@ separation 80%. Run it with `BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 [BO
 ./gradlew :pipeline:promptEval`; with the URL unset it is skipped. The layered design below (embeddings, LLM judge)
 remains the target.
 
+**The local judge is a screen, not a grader.** Its calibration `cal-1` (60 invented items, rubric `bl-judge-1`) failed the Wilson lower-bound rule on the hidden test split (TPR 0.510, TNR 0.701), so every case it marks discordant is read by the agent with a Codex second opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/DEVELOPMENT.md#redesign-arms`. The "judge separation" floor above is replaced by the version-2 harness in task 1.10 of the redesign change.
+
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from
 CI, env-gated like `liveLocal`). The eval calls the **same production prompt builder** the app uses to produce the
 `{system, user}` messages, sends them to a real local model, and scores the response with a **layered rubric** (DD-40).

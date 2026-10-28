@@ -34,6 +34,7 @@ class SequenceEvalOfflineTest {
 
     private static final SequenceFixture FIXTURE = SequenceFixture.load();
     private static SequenceMetrics scripted;
+    private static SequenceRun scriptedRun;
 
     @TempDir
     private static Path workDir;
@@ -43,6 +44,7 @@ class SequenceEvalOfflineTest {
         final SequenceRun run = new SequenceEval(FIXTURE, QualityDial.FAST, null, SequenceNarratorMode.UNSET)
                 .run(new SequenceScriptedModel(), workDir);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
+        scriptedRun = run;
         scripted = new SequenceMeasure(FIXTURE).measure("scripted", "FAST", run);
     }
 
@@ -375,5 +377,14 @@ class SequenceEvalOfflineTest {
         final SequenceReport report = new SequenceReport(measureOf(segments, List.of()));
 
         assertThat(report.table()).contains("LTCR-1 n/a");
+    }
+
+    @Test
+    void json_withRun_keepsEverySegmentsTargetByIdBesideTheMetrics() throws java.io.IOException {
+        final com.fasterxml.jackson.databind.JsonNode json = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(new SequenceReport(scripted).json(scriptedRun));
+
+        assertThat(json.get("segments").asInt()).isEqualTo(328);
+        assertThat(json.get("outputs").size()).isEqualTo(328);
     }
 }

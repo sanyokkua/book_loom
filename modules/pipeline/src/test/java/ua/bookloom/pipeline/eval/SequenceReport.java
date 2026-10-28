@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.eval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,19 @@ record SequenceReport(SequenceMetrics metrics) {
     String json() {
         try {
             return new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(metrics);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** The metrics with the target of every segment by id, so a baseline keeps the text of the invented book. */
+    String json(final SequenceRun run) {
+        try {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ObjectNode root = (ObjectNode) mapper.readTree(json());
+            final ObjectNode outputs = root.putObject("outputs");
+            run.segments().forEach(segment -> outputs.put(segment.id(), segment.target()));
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

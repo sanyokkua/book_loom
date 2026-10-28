@@ -1,0 +1,38 @@
+[
+ {
+  "lemma": "Ilsabet Corwen",
+  "forms": [
+   "Ilsabet Corwen",
+   "Ilsabet",
+   "Ilsabet’s"
+  ],
+  "target": "Ілсабет Корвен",
+  "gender": "FEMALE"
+ },
+ {
+  "lemma": "Dorrin Vask",
+  "forms": [
+   "Dorrin Vask",
+   "Dorrin",
+   "Dorrin’s"
+  ],
+  "target": "Дорін Васк",
+  "gender": "MALE"
+ },
+ {
+  "lemma": "Pell",
+  "forms": [
+   "Pell"
+  ],
+  "target": "Пе́лл",
+  "gender": "UNKNOWN"
+ },
+ {
+  "lemma": "Tobin Reed",
+  "forms": [
+   "Tobin Reed"
+  ],
+  "target": "Тобін Рід",
+  "gender": "MALE"
+ }
+]

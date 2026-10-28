@@ -27,6 +27,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.eval.EvalVariants;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
@@ -176,7 +177,7 @@ public final class SequenceJobs {
 
     /** The glossary and lexicon services over the prepared book's stores (the names eval reaches them from here). */
     public static Names names(final Prepared prepared) {
-        final PromptTemplates templates = new PromptTemplates();
+        final PromptTemplates templates = EvalVariants.templates();
         final ObjectMapper mapper = new ObjectMapper();
         final RunStores stores = prepared.stores();
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);
@@ -203,7 +204,7 @@ public final class SequenceJobs {
 
     /** The autonomous names pass ("Prepare names automatically") over the prepared book's own stores. */
     public static NamesPass namesPass(final Prepared prepared) {
-        final PromptTemplates templates = new PromptTemplates();
+        final PromptTemplates templates = EvalVariants.templates();
         final ObjectMapper mapper = new ObjectMapper();
         final RunStores stores = prepared.stores();
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);

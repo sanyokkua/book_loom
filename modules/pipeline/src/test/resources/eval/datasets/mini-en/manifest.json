@@ -1,0 +1,13 @@
+{
+ "id": "mini-en",
+ "version": 1,
+ "pair": "en-uk",
+ "ownerData": false,
+ "files": [
+  {"path": "datasets/mini-en/book.json", "sha256": "6f145cdb3a9064c04141389a6bfa53f34c98bf579205359a9d0befceaf3968d6"},
+  {"path": "datasets/mini-en/expectations.json", "sha256": "f3968000d942c23e1d556fd8e0558a92c1c543c6311a8a26f9c0347b18641e6b"},
+  {"path": "datasets/mini-en/gold-map.json", "sha256": "bbf19bf4871e9edfa2446afb2b248a3a02bb668b752de4ccacd8cd038d2bdd67"},
+  {"path": "datasets/mini-en/labels.json", "sha256": "96d5086523e60f6f62bdbd088196f79c208ac91854aee7acfdf21a376515c175"}
+ ],
+ "rootHash": "d712187aecede0b020c42764d05f09e6675b80b3fa47fa79898e01c1a48ac5e5"
+}

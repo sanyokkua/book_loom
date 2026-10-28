@@ -1,0 +1,73 @@
+{
+ "id": "article-gravity",
+ "version": 1,
+ "pair": "en-uk+en-ru+en-fr",
+ "ownerData": false,
+ "files": [
+  {
+   "path": "datasets/article-gravity/en/Picture_of_earth.jpg",
+   "sha256": "77b688b2827836cf210ff69ab70fd32a7280601feac33738621d3a2aaa458677"
+  },
+  {
+   "path": "datasets/article-gravity/en/gravity.epub",
+   "sha256": "2d6eb021fdef8c71f85d09bbd2734b35b4100d667b20909ceed8660450b07865"
+  },
+  {
+   "path": "datasets/article-gravity/en/gravity.fb2",
+   "sha256": "91da8de332e9a0794f59356792b579d1285d27cd130c91279f630305f9256d84"
+  },
+  {
+   "path": "datasets/article-gravity/en/gravity.md",
+   "sha256": "77f47fe38ada94bcb97578f6bc9d8a9b8a2645c9e3fac3de5a940be513f8e724"
+  },
+  {
+   "path": "datasets/article-gravity/fr/Picture_of_earth.jpg",
+   "sha256": "77b688b2827836cf210ff69ab70fd32a7280601feac33738621d3a2aaa458677"
+  },
+  {
+   "path": "datasets/article-gravity/fr/gravity.epub",
+   "sha256": "d2df5c8bd227352c41843c7f9fdaed2134ca71a94dc295cb366dd5cc55e90547"
+  },
+  {
+   "path": "datasets/article-gravity/fr/gravity.fb2",
+   "sha256": "658ebf8af999ccbff1c3ada14c60c7c1f71e07f80bafb5d462208f16c9ff9000"
+  },
+  {
+   "path": "datasets/article-gravity/fr/gravity.md",
+   "sha256": "5cd2bdce21337fe8b6c3cef872574a733220138edecf897b900ee58cac9ce77b"
+  },
+  {
+   "path": "datasets/article-gravity/ru/Picture_of_earth.jpg",
+   "sha256": "77b688b2827836cf210ff69ab70fd32a7280601feac33738621d3a2aaa458677"
+  },
+  {
+   "path": "datasets/article-gravity/ru/gravity.epub",
+   "sha256": "d04beb82339ffb83db75ba3eb8fa283576f115cbb0b74b05ecc9ddede2490b26"
+  },
+  {
+   "path": "datasets/article-gravity/ru/gravity.fb2",
+   "sha256": "12e27aa4c41f0b7792232619fce3a67f627acb40123c1e59e4be610869a0695d"
+  },
+  {
+   "path": "datasets/article-gravity/ru/gravity.md",
+   "sha256": "f850638e173fa6713068bd28adc95872da60b81d33298b05ceb576258ed203bd"
+  },
+  {
+   "path": "datasets/article-gravity/uk/Picture_of_earth.jpg",
+   "sha256": "77b688b2827836cf210ff69ab70fd32a7280601feac33738621d3a2aaa458677"
+  },
+  {
+   "path": "datasets/article-gravity/uk/gravity.epub",
+   "sha256": "fdac5679ec1797e60e2ced3f6bb91f5c184e7eeac76fafc5ac3bf4193e075719"
+  },
+  {
+   "path": "datasets/article-gravity/uk/gravity.fb2",
+   "sha256": "991315d2222d2877d13216293db2713bbfb846207ee5703bd5457a46065df77f"
+  },
+  {
+   "path": "datasets/article-gravity/uk/gravity.md",
+   "sha256": "739ed543181cf8767d66dd316639edeb0f166d653ff688d2b568d87c82c647b2"
+  }
+ ],
+ "rootHash": "0499bbe12ee7bdfb534882bfce8f5ac0f8e3fe68f6e88fe8c5afa05b2fdb6620"
+}

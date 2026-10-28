@@ -36,7 +36,7 @@ class BookRunnerOfflineTest {
 
     @BeforeAll
     static void runPseudoBook() throws IOException {
-        book = MiniBook.load().writeEpub(workDir);
+        book = MiniBook.load(MiniBook.MINI_EN).writeEpub(workDir);
         outDir = Files.createDirectory(workDir.resolve("out"));
         summary = new BookRunner(new BookRunner.Options(book, outDir, "en", "uk", QualityDial.FAST, null))
                 .run(new PseudoChatModel(new ObjectMapper()), "pseudo");
@@ -51,8 +51,8 @@ class BookRunnerOfflineTest {
         final Document without = ExportedBooks.open(documents, outDir.resolve("mini-book.no_consistency_pass.epub"));
         final Document with = ExportedBooks.open(documents, outDir.resolve("mini-book.with_consistency_pass.epub"));
 
-        assertThat(ExportedBooks.sourceCount(without)).isEqualTo(34);
-        assertThat(ExportedBooks.sourceCount(with)).isEqualTo(34);
+        assertThat(ExportedBooks.sourceCount(without)).isEqualTo(39);
+        assertThat(ExportedBooks.sourceCount(with)).isEqualTo(39);
     }
 
     @Test
@@ -71,22 +71,22 @@ class BookRunnerOfflineTest {
         "/brief/suggested,true",
         "/brief/names,TRANSLITERATE",
         "/brief/narratorGender,UNKNOWN",
-        "/segments,34",
-        "/flaggedSegments,26",
+        "/segments,39",
+        "/flaggedSegments,31",
         "/calls/briefSuggestion,2",
         "/calls/names,2",
         "/characters/verified,0",
         "/characters/suggested,0",
         "/characters/none,0",
-        "/noConsistencyPass/aligned,34",
+        "/noConsistencyPass/aligned,39",
         "/noConsistencyPass/unaligned,0",
-        "/noConsistencyPass/latinWords,676",
+        "/noConsistencyPass/latinWords,758",
         "/noConsistencyPass/alphabetWords,0",
         "/noConsistencyPass/awaitingGenderSegments,0",
-        "/noConsistencyPass/detectors/echo,34",
-        "/withConsistencyPass/aligned,34",
-        "/withConsistencyPass/latinWords,676",
-        "/withConsistencyPass/detectors/script,26"
+        "/noConsistencyPass/detectors/echo,39",
+        "/withConsistencyPass/aligned,39",
+        "/withConsistencyPass/latinWords,758",
+        "/withConsistencyPass/detectors/script,31"
     })
     void run_pseudoModel_holdsTheCountsOfTheRun(final String pointer, final String expected) {
         assertThat(json.at(pointer).asText()).as(pointer).isEqualTo(expected);

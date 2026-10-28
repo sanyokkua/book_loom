@@ -16,21 +16,28 @@ import java.util.Objects;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NarratorPerson;
 
 /**
- * The invented mini eval book (15j.J15) as its committed source, {@code eval/mini/book.json}, and the EPUB 3 written
- * from it for each run. The source stays text so a reviewer can read the book and its expectations side by side; the
+ * An invented mini eval book (15j.J15) as its committed source, {@code eval/datasets/<id>/book.json}, and the EPUB 3
+ * written from it for each run. The source stays text so a reviewer can read the book and its expectations side by side; the
  * EPUB is generated, so no binary is committed.
  *
  * @param title the book's title
  * @param author the author's name
  * @param language the source language tag
+ * @param pair the language pair, {@code source-target}, that a run translates
+ * @param narrator who tells the book, so a run's brief states it as the dataset does
  * @param blocks the book's blocks in reading order
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-record MiniBook(String title, String author, String language, List<Block> blocks) {
+record MiniBook(String title, String author, String language, String pair, NarratorSpec narrator, List<Block> blocks) {
 
-    private static final String RESOURCE = "/eval/mini/book.json";
+    static final String MINI_EN = "mini-en";
+    static final String MINI_RU = "mini-ru";
+
     private static final String CONTAINER_NS = "urn:oasis:names:tc:opendocument:xmlns:container";
     private static final String XHTML_HEAD = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
             + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">";
@@ -46,31 +53,63 @@ record MiniBook(String title, String author, String language, List<Block> blocks
     }
 
     /**
+     * Who narrates, as the brief states it.
+     *
+     * @param person the narrator's grammatical person
+     * @param gender the narrator's gender
+     */
+    record NarratorSpec(NarratorPerson person, Gender gender) {}
+
+    /**
      * One block of the book.
      *
-     * @param id the id the expectations name, {@code m01} onwards
+     * @param id the id the expectations name: {@code m01} onwards, or {@code <chapter file>:<line>} as the pipeline
+     *     names a segment
      * @param kind what the block is
      * @param text its text, with no markup and none of the characters {@code & < >}
+     * @param reference the target text the case author holds to be right, or null when the case has none
      */
-    record Block(String id, Kind kind, String text) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Block(
+            String id, Kind kind, String text, @Nullable String reference) {
+
+        /** A block with no reference text. */
+        Block(final String id, final Kind kind, final String text) {
+            this(id, kind, text, null);
+        }
+    }
 
     /** Copies the blocks. */
     MiniBook {
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(author, "author");
         Objects.requireNonNull(language, "language");
+        Objects.requireNonNull(pair, "pair");
+        Objects.requireNonNull(narrator, "narrator");
         blocks = List.copyOf(blocks);
     }
 
-    static MiniBook load() {
-        try (InputStream in = MiniBook.class.getResourceAsStream(RESOURCE)) {
+    /** The book of the dataset folder {@code eval/datasets/<dataset>}. */
+    static MiniBook load(final String dataset) {
+        final String resource = "/eval/datasets/" + dataset + "/book.json";
+        try (InputStream in = MiniBook.class.getResourceAsStream(resource)) {
             return JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
                     .build()
-                    .readValue(Objects.requireNonNull(in, RESOURCE), MiniBook.class);
+                    .readValue(Objects.requireNonNull(in, resource), MiniBook.class);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    /** The source language of the pair. */
+    String sourceLanguage() {
+        return pair.substring(0, pair.indexOf('-'));
+    }
+
+    /** The target language of the pair. */
+    String targetLanguage() {
+        return pair.substring(pair.indexOf('-') + 1);
     }
 
     /**

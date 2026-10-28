@@ -1,0 +1,11 @@
+{
+ "id": "sequence",
+ "version": 1,
+ "pair": "en-uk",
+ "ownerData": false,
+ "files": [
+  {"path": "sequence/book.md", "sha256": "c0fdcd9a743e5ec428be1c683989d833aa16d06eda19eab2554faaad46191a04"},
+  {"path": "sequence/manifest.json", "sha256": "7ebadd5ef70585e58bf2f3e51942cedd962144c484585413448ccaa2ba2f8a69"}
+ ],
+ "rootHash": "7a7ca6fe4b13e264c1e98645f93ce902ba802e16fecd706c20553d5a33049110"
+}

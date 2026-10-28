@@ -70,7 +70,7 @@ final class RealRunRunner {
         this.calls = Objects.requireNonNull(calls, "calls");
         this.repeats = Math.max(1, repeats);
         this.workDir = Objects.requireNonNull(workDir, "workDir");
-        final PromptTemplates templates = new PromptTemplates();
+        final PromptTemplates templates = EvalVariants.templates();
         this.reviews = new ReviewerEval(calls, templates, new DirectedFix(templates, parser));
     }
 

@@ -1,0 +1,17 @@
+{
+ "id": "cal-1",
+ "version": 1,
+ "pair": "en-uk+ru-uk",
+ "ownerData": false,
+ "files": [
+  {
+   "path": "datasets/cal-1/items.json",
+   "sha256": "a87d4a818d3b3a3821c45b3edd6d10d7fe5d3877ae6e79f050c0302e856cc43f"
+  },
+  {
+   "path": "datasets/cal-1/labels.json",
+   "sha256": "b7ae22ea8712e1a5cad3d2b2aad12ef63345ff9834478cb922c128202a3c27ad"
+  }
+ ],
+ "rootHash": "c907781b0973aef99a49277a76a0131f9ca00624505bc0addb687c26ab38b6a9"
+}
