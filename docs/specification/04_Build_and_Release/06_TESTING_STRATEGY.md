@@ -248,17 +248,27 @@ matrix rather than extrapolating these observations.
 **Built today (Layers 0 and 1):** `ua.bookloom.pipeline.eval.PromptEvalTest` sends ~25 fixed English → Ukrainian cases
 — dialogue with a locked name, a heading, number-, symbol- and Roman-numeral-only paragraphs, a drop cap, nested
 emphasis, a footnote reference, a kept foreign run, glossary names, a long sentence, a link pair, two instruction-like
-texts that must be translated rather than obeyed, directed fixes (echo, missing token, omission, refusal) and judge
-cases (a good and a bad candidate each) — through `DraftPromptBuilder`, `DirectedFix` and `JudgeCall` to a real
-Ollama model via the production client. It measures, before any repair: the reply parses as its schema, the token
-sequence is intact with every pair still around words (gate), the target script, a per-case marker (a glossary
-rendering, a correct drop cap, a translated instruction), and judge separation (good ≥ 0.8, bad ≤ 0.6). It writes a
-table to `modules/pipeline/build/reports/promptEval/<model>.txt` and fails below parse 95%, gate 90% or judge
-separation 80%. Run it with `BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 [BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx]
-./gradlew :pipeline:promptEval`; with the URL unset it is skipped. The layered design below (embeddings, LLM judge)
-remains the target.
+texts that must be translated rather than obeyed, and directed fixes (echo, missing token, omission, refusal) — through
+`DraftPromptBuilder` and `DirectedFix` to a real Ollama model via the production client. It measures, before any
+repair: the reply parses as its schema, the token sequence is intact with every pair still around words (gate), the
+target script, and a per-case marker (a glossary rendering, a correct drop cap, a translated instruction). It writes a
+table to `modules/pipeline/build/reports/promptEval/<model>.txt` and fails below parse 95% or gate 90%. Run it with
+`BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 [BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx] ./gradlew :pipeline:promptEval`;
+with the URL unset it is skipped.
 
-**The local judge is a screen, not a grader.** Its calibration `cal-1` (60 invented items, rubric `bl-judge-1`) failed the Wilson lower-bound rule on the hidden test split (TPR 0.510, TNR 0.701), so every case it marks discordant is read by the agent with a Codex second opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/DEVELOPMENT.md#redesign-arms`. The "judge separation" floor above is replaced by the version-2 harness in task 1.10 of the redesign change.
+**Harness v2 (redesign group 1).** Datasets live in `eval/datasets/<id>/` with a `manifest.json` (SHA-256 per file and a
+root hash, rechecked by `DatasetManifestCheckTest`), so a changed fixture can never move a score unnoticed: `mini-en`,
+`mini-ru`, `sequence`, `detectors-ru-uk`, the calibration set `cal-1` and the four-language reference book
+`article-gravity`. A run repeats K times with recorded seeds, writes one record per case (`cases.jsonl`, with the prompt and
+reply of each call in `calls/`) and a version-2 `report.json` with the dataset, model, judge, repeats and noise band.
+`scripts/eval-score.py` holds the statistics (`diff --paired` with the exact sign test, `calibrate`, `show`, `blind`,
+`baseline`). Arms select a prompt alternative only through the test-only `PromptVariants` binding. Baselines of the
+behaviour of commit `79ffede6` are in `eval/baseline/`. Nothing in the repository calls a cloud model or Codex.
+
+**The local judge is a screen, not a grader.** The judge is `gemma4:26b-mlx` run locally through `:llm`, pairwise with the
+order swapped. Its calibration `cal-1` (60 invented items, rubric `bl-judge-1`) failed the Wilson lower-bound rule on the
+hidden test split (TPR 0.510, TNR 0.701), so every case it marks discordant is read by the agent with a Codex second
+opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/DEVELOPMENT.md#redesign-arms`.
 
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from
 CI, env-gated like `liveLocal`). The eval calls the **same production prompt builder** the app uses to produce the

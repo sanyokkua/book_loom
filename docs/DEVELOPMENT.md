@@ -948,6 +948,36 @@ anchors follow each language's headings, code and identifiers are untouched. Seg
 EPUB 169, FB2 207, identical in the four languages. The EPUB/FB2 files are built by `scripts/md-to-books.py` (standard library only,
 byte-reproducible). Models that reject a reasoning level: `none` for Sol, `minimal` for Luna.
 
+**Baselines of `79ffede6` (task 1.10).** Recorded on 2026-10-28/29 with the `redesign-translation-pipeline` harness (v2) on Ollama, one run at a
+time, seeds 1000.., and committed under `modules/pipeline/src/test/resources/eval/baseline/` (aggregates, per-case results, noise band,
+provenance with `baselineOf` `79ffede6`, outputs of invented text). Aggregate = mean pass rate of the suite's graders (article: flagged rate,
+lower is better). Time is the first repeat.
+
+| File | Model | Dial | K | Aggregate | Noise band | Flagged | Calls | Seconds |
+|---|---|---|---|---|---|---|---|---|
+| mini-en-uk-gemma4_e4b-mlx-fast | e4b | Fast | 3 | 0.9123 | 0.0 | 0/33 | 12 | 81 |
+| mini-en-uk-gemma4_e4b-mlx-balanced | e4b | Balanced | 3 | 0.9240 | 0.0175 | 0/33 | 25 | 133 |
+| mini-en-uk-gemma4_e4b-mlx-max | e4b | Max | 3 | 0.8947 | 0.0 | 0/33 | 105 | 283 |
+| mini-ru-uk-gemma4_e4b-mlx-fast | e4b | Fast | 3 | 0.8077 | 0.0 | 1/17 | 12 | 41 |
+| mini-ru-uk-gemma4_e4b-mlx-balanced | e4b | Balanced | 3 | 0.8077 | 0.0 | 1/17 | 19 | 78 |
+| mini-ru-uk-gemma4_e4b-mlx-max | e4b | Max | 3 | 0.8205 | 0.0385 | 0/17 | 60 | 116 |
+| mini-en-uk-gemma4_26b-mlx-balanced | 26b | Balanced | 1 | 0.9298 | none | 0/33 | 27 | 178 |
+| mini-ru-uk-gemma4_26b-mlx-balanced | 26b | Balanced | 1 | 0.7692 | none | 0/17 | 17 | 73 |
+| sequence-en-uk-gemma4_e4b-mlx-balanced | e4b | Balanced | 3 | 0.9736 | 0.0030 | 9/328 | 118 | 1198 |
+| sequence-en-uk-gemma4_e4b-mlx-max | e4b | Max | 1 | 0.9756 | none | 8/328 | 601 | 2157 |
+| article-gravity-en-uk / -ru / -fr (e4b, Balanced) | e4b | Balanced | 1 | flagged 3.9 % / 5.3 % / 2.0 % | none | 6 / 8 / 3 of 152 | 53 / 56 / 54 | 312 / 294 / 285 |
+
+All three article runs kept every protected span (score 1.0). Findings: (1) a noise band of 0.0 is real for most e4b cells (three seeds gave
+the same pass rate), but it does not mean the replies are identical: in the check-2 rerun below 15 of 48 replies differed in text and the
+pass rate did not move. A band of 0.0 therefore means "the graders did not move", not "the model is deterministic". (2) Max is not better than
+Balanced on `mini` (0.8947 against 0.9240 on en-uk) and costs 4 to 10 times the calls. (3) The `sequence` Balanced and Max aggregates
+differ by 0.002, inside the band.
+
+Reproduction checks of task 1.10: (1) `git diff 79ffede6` of `PromptRequestsEquivalenceTest`, `PromptRequestsBatchFormatEquivalenceTest`,
+`DraftPromptGoldenTest` and `SelfHealPromptGoldenTest` prints nothing. (2) `mini-ru` at Balanced, K = 1, seed 1000, run again: the first
+request of all 17 segments is byte-identical to the baseline's recorded request (later requests carry earlier replies, so they follow
+the replies), and the pass rate is 0.8077, the baseline's.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
