@@ -7,6 +7,7 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.SegmentPath;
@@ -143,9 +144,10 @@ public final class ChunkDecider {
 
     private static SegmentOutcome flaggedOutcome(final DraftOutcome.FlaggedAtOnce flaggedAtOnce) {
         log.warn(
-                "Segment {} flagged at once code={}",
+                "Segment {} flagged at once code={} reason={}",
                 flaggedAtOnce.segment().id(),
-                flaggedAtOnce.error().code());
+                flaggedAtOnce.error().code(),
+                FailureReason.tokenIn(flaggedAtOnce.error().details()));
         return new SegmentOutcome(
                 flaggedAtOnce.segment().id(),
                 SegmentStatus.FLAGGED,

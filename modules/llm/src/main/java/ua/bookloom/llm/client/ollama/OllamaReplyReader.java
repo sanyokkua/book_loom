@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatResponse;
@@ -18,6 +19,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OllamaChatResponse;
+import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.response.ReplySanitizer;
 
@@ -62,7 +64,7 @@ final class OllamaReplyReader {
             return Result.err(unreadable.apply(requestedModel, null));
         }
         if (parts.stream().anyMatch(part -> part.error() != null)) {
-            return stoppedWithError(requestedModel, parts.size());
+            return stoppedWithError(requestedModel, parts);
         }
         return chatResponse(requestedModel, reply, merged(parts, reply.cut()));
     }
@@ -114,19 +116,21 @@ final class OllamaReplyReader {
         return Result.ok(new ChatResponse(ReplySanitizer.clean(content), finishReason, usage));
     }
 
-    private Result<ChatResponse> stoppedWithError(String modelId, int parts) {
+    private Result<ChatResponse> stoppedWithError(String modelId, List<OllamaChatResponse> parts) {
+        final String text = parts.stream()
+                .map(OllamaChatResponse::error)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("");
+        final AppError error = HttpErrorMapper.mapStreamedError(config, modelId, text);
         log.warn(
-                "Ollama stopped a reply with an error host={} model={} parts={} code={}",
+                "Ollama stopped a reply with an error host={} model={} parts={} code={} reason={}",
                 config.baseUrl().getHost(),
                 modelId,
-                parts,
-                ErrorCode.upstream);
-        return Result.err(AppError.of(
-                ErrorCode.upstream,
-                "Provider server error",
-                "Ollama stopped the reply with an error.",
-                details(modelId),
-                null));
+                parts.size(),
+                error.code(),
+                FailureReason.tokenIn(error.details()));
+        return Result.err(error);
     }
 
     private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {

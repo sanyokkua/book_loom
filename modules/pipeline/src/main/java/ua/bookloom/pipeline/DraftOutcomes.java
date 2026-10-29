@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
@@ -80,9 +81,10 @@ final class DraftOutcomes {
             final DraftAttempt attempt, final AppError error, final String finish, final String observedTokens) {
         final Segment segment = attempt.segment();
         log.warn(
-                "Flagged segment id={} code={} expectedTokens={} observedTokens={}",
+                "Flagged segment id={} code={} reason={} expectedTokens={} observedTokens={}",
                 segment.id(),
                 error.code(),
+                FailureReason.tokenIn(error.details()),
                 expectedTokens(attempt),
                 observedTokens);
         log.debug(

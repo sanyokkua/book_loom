@@ -13,6 +13,7 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
@@ -40,7 +41,8 @@ import ua.bookloom.pipeline.reviewer.EditOutcome;
  * Writes one INFO {@code run summary} line a minute while a job runs, and a last one when it ends: segments accepted,
  * flagged, kept verbatim and pending, model calls with their average and 95th-percentile time (over the newest
  * {@link #PERCENTILE_WINDOW} calls, so the memory held does not grow with the run), tokens a second,
- * timeouts so far and the segment being translated.
+ * timeouts so far and the segment being translated. The final line adds the run's calls by kind, read from the call
+ * ledger, so every stage is counted from what each call reported.
  *
  * <p>Driven by the job's own events rather than a timer: the first event at least {@link #INTERVAL} after the last
  * line writes the next one, so no thread is added, a paused job (which sends no events) writes nothing, and a test
@@ -58,11 +60,12 @@ final class RunSummaryLogger {
 
     private static final double PERCENTILE = 0.95;
     private static final double MILLIS_PER_SECOND = 1000.0;
-    private static final double PERCENT = 100.0;
     private static final String NONE = "-";
 
     private final Clock clock;
-    private final CallKindTotals kindTotals = new CallKindTotals();
+    private final CallLedger ledger;
+    // The ledger's records after this mark are the run's: the job is built just before it runs.
+    private final long mark;
     private final Deque<Long> recentMillis = new ArrayDeque<>();
     private long calls;
     private long totalMillis;
@@ -78,7 +81,14 @@ final class RunSummaryLogger {
     private long generationMillis;
 
     RunSummaryLogger(final Clock clock) {
+        this(clock, CallLedger.none());
+    }
+
+    /** A summary whose final line counts, by kind, the calls the ledger keeps from now on. */
+    RunSummaryLogger(final Clock clock, final CallLedger ledger) {
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.ledger = Objects.requireNonNull(ledger, "ledger");
+        this.mark = ledger.mark();
     }
 
     /**
@@ -151,7 +161,6 @@ final class RunSummaryLogger {
 
     private void record(final ModelCallFinished finished) {
         final long millis = finished.elapsed().toMillis();
-        kindTotals.record(finished);
         calls++;
         totalMillis += millis;
         recentMillis.addLast(millis);
@@ -191,30 +200,10 @@ final class RunSummaryLogger {
                 "final".equals(kind) ? byKind() : "");
     }
 
+    // Counted from what each call reported, so every stage of the run is in it and a missing figure stays missing.
     private String byKind() {
-        final StringBuilder line = new StringBuilder();
-        kindTotals.totals().forEach((kind, totals) -> {
-            if (!line.isEmpty()) {
-                line.append(' ');
-            }
-            line.append(String.format(
-                    Locale.ROOT,
-                    "%s=%d/%d in:%d out:%d promptEvalMs:%d generationMs:%d cached:%d ttftMs:%s prefill:%s",
-                    kind,
-                    totals.attempts(),
-                    totals.failed(),
-                    totals.promptTokens(),
-                    totals.completionTokens(),
-                    totals.promptEval().toMillis(),
-                    totals.generation().toMillis(),
-                    totals.cachedPromptTokens(),
-                    totals.meanFirstToken()
-                            .map(mean -> String.valueOf(mean.toMillis()))
-                            .orElse(NONE),
-                    totals.prefillShare()
-                            .map(share -> String.format(Locale.ROOT, "%.1f%%", share * PERCENT))
-                            .orElse(NONE)));
-        });
+        final String line =
+                PrepSummary.byKind(CallKindTotals.of(ledger.since(mark)).totals());
         return line.isEmpty() ? "" : " byKind[" + line + "]";
     }
 

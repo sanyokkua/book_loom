@@ -15,6 +15,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -60,6 +61,7 @@ import ua.bookloom.pipeline.run.RunReports;
 import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
+import ua.bookloom.pipeline.run.RunStartLog;
 import ua.bookloom.pipeline.run.RunSteps;
 import ua.bookloom.pipeline.run.RunStores;
 import ua.bookloom.pipeline.run.RunWindow;
@@ -97,10 +99,12 @@ final class TranslationJobImpl implements TranslationJob {
     private final int batchSize;
     private final WordValidator words;
     private final RequestDefaultsSource requestDefaultsSource;
+    private final String providerKind;
 
     /**
      * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its
-     * requests use the reasoning level and sampling mode the source reads when the run starts.
+     * requests use the reasoning level and sampling mode the source reads when the run starts, and its start line
+     * names {@code providerKind}, the kind of server the model runs on or {@code unknown}.
      */
     TranslationJobImpl(
             final DocumentPort documents,
@@ -118,7 +122,10 @@ final class TranslationJobImpl implements TranslationJob {
             final RunTicks ticks,
             final int batchSize,
             final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource) {
+            final RequestDefaultsSource requestDefaultsSource,
+            final CallLedger ledger,
+            final String providerKind) {
+        this.providerKind = Objects.requireNonNull(providerKind, "providerKind");
         this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
         this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
         this.words = Objects.requireNonNull(words, "words");
@@ -134,7 +141,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.control = new JobControl(request.mode().pausePoints());
-        this.runSummary = new RunSummaryLogger(clock);
+        this.runSummary = new RunSummaryLogger(clock, ledger);
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.model());
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId(), recorder);
         this.startedAt = clock.instant();
@@ -258,12 +265,13 @@ final class TranslationJobImpl implements TranslationJob {
         if (proposed > 0) {
             emit(MemoryEvents.namesAdded(proposed));
         }
-        final RunEnd end = stages(run, dataOf(prepared).styleSheet()).run(work);
+        final RunEnd end = stages(run, dataOf(prepared)).run(work);
         new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
     }
 
-    private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
+    private StageRunner stages(final RunStart.Started run, final PrepStage.Prepared prepared) {
+        final StyleSheet styleSheet = prepared.styleSheet();
         final BookBrief brief = run.project().brief();
         final RunWindow runWindow = new RunWindow(request.detectedContext(), model::contextWindowOverride);
         final CallFrame frame = CallFrame.forRun(
@@ -282,6 +290,7 @@ final class TranslationJobImpl implements TranslationJob {
                         SegmentLocators.of(run.document()))
                 .withSteps(StepAnnouncer.over(this::emit));
         final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
+        RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(
                 chunkRunner(run, settings, runWindow, sinks, calls),

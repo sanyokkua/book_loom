@@ -9,7 +9,10 @@ import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.pipeline.run.PauseDecider.Recovery;
@@ -39,7 +42,7 @@ class PauseDeciderTest {
         "discoveryFailed,FAIL"
     })
     void route_everyCode_matchesTheTable(final ErrorCode code, final Route expected) {
-        assertThat(PauseDecider.route(code)).isEqualTo(expected);
+        assertThat(PauseDecider.route(code, null)).isEqualTo(expected);
     }
 
     // An outage must never spend a segment's budget, and a code only the person can fix must never wake by itself. An
@@ -69,12 +72,56 @@ class PauseDeciderTest {
             final boolean automatic,
             final int budget,
             final int wakesPerOutage) {
-        final Recovery recovery = PauseDecider.recovery(code);
+        final Recovery recovery = PauseDecider.recovery(code, null);
 
         assertThat(recovery).isEqualTo(expected);
         assertThat(recovery.isAutomatic()).isEqualTo(automatic);
         assertThat(recovery.pausesBeforeFlagging()).isEqualTo(budget);
         assertThat(recovery.wakesPerOutage()).isEqualTo(wakesPerOutage);
+    }
+
+    // Waiting does not free memory, so only the person can act on it; a model that is merely not loaded (or still
+    // loading) keeps the unloaded-model wait with its six wakes.
+    @ParameterizedTest
+    @CsvSource({
+        "OUT_OF_MEMORY,PERSON,false,0",
+        "NO_MODEL_LOADED,UNLOADED_MODEL,true,6",
+        "MODEL_UNLOADED,UNLOADED_MODEL,true,6",
+        "MODEL_LOADING,UNLOADED_MODEL,true,6"
+    })
+    void recovery_modelUnavailableWithOutOfMemory_isPersonAndNoModelLoadedIsUnloadedModel(
+            final FailureReason reason, final Recovery expected, final boolean automatic, final int wakesPerOutage) {
+        final Recovery recovery = PauseDecider.recovery(ErrorCode.modelUnavailable, reason);
+
+        assertThat(recovery).isEqualTo(expected);
+        assertThat(recovery.isAutomatic()).isEqualTo(automatic);
+        assertThat(recovery.wakesPerOutage()).isEqualTo(wakesPerOutage);
+    }
+
+    // A model that looped twice on one passage would loop on it again after a pause: the passage is flagged. Every
+    // other upstream failure is an outage the run waits through.
+    @ParameterizedTest
+    @CsvSource(
+            nullValues = "-",
+            value = {"REPEAT_LIMIT,FLAG_AT_ONCE", "TERMINATED,PAUSE_OR_FAIL", "-,PAUSE_OR_FAIL"})
+    void route_upstreamRepeatLimit_flagsAtOnce(@Nullable final FailureReason reason, final Route expected) {
+        assertThat(PauseDecider.route(ErrorCode.upstream, reason)).isEqualTo(expected);
+    }
+
+    // The forms that take the error read its reason from the details, so a caller never parses them itself.
+    @ParameterizedTest
+    @CsvSource({"upstream,REPEAT_LIMIT,FLAG_AT_ONCE,PERSON", "modelUnavailable,OUT_OF_MEMORY,PAUSE_OR_FAIL,PERSON"})
+    void routeAndRecovery_error_readTheReasonFromItsDetails(
+            final ErrorCode code, final FailureReason reason, final Route route, final Recovery recovery) {
+        final AppError error = AppError.of(
+                code,
+                "Failed",
+                "It failed.",
+                SafeDetails.empty().withReason(reason).render(),
+                null);
+
+        assertThat(PauseDecider.route(error)).isEqualTo(route);
+        assertThat(PauseDecider.recovery(error)).isEqualTo(recovery);
     }
 
     // The last segment of a book ends a segment, a section and the stage at once and must pause once; a flagged

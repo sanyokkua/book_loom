@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -74,9 +76,11 @@ public final class ModelWordValidator implements WordValidator {
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.REVIEW, List.of(), request, CallDescriptor.whole(PromptName.SUSPICIOUS_WORDS));
         if (reply.isErr()) {
+            final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
-                    "Garbled-word call failed code={}; no words reported",
-                    Objects.requireNonNull(reply.error()).code());
+                    "Garbled-word call failed code={} reason={}; no words reported",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return emptyFor(targets);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();

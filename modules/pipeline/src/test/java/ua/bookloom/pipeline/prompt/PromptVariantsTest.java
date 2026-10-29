@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
@@ -24,6 +25,7 @@ class PromptVariantsTest {
         final Injector injector = Guice.createInjector(
                 new PipelineModule(),
                 new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
                 new DocumentModule(),
                 new InMemoryPersistenceModule());
 
@@ -38,6 +40,7 @@ class PromptVariantsTest {
         final Injector injector = Guice.createInjector(Modules.override(
                         new PipelineModule(),
                         new ReviewModeTestModule(),
+                        new CallLedgerTestModule(),
                         new DocumentModule(),
                         new InMemoryPersistenceModule())
                 .with(binder -> binder.bind(PromptVariants.class)

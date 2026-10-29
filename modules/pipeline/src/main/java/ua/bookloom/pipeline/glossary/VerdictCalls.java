@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -108,10 +109,11 @@ final class VerdictCalls {
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
-                    "{} call for entry {} failed code={}",
+                    "{} call for entry {} failed code={} reason={}",
                     name.responseFormatName(),
                     facts.entry().id(),
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();

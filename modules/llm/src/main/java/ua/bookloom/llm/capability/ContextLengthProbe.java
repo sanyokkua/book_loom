@@ -1,8 +1,6 @@
 package ua.bookloom.llm.capability;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +8,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.provider.EndpointPaths;
 
 /**
  * Asks a provider's model-detail endpoint for a model's context length. Every failure — transport, status, shape —
@@ -80,7 +79,7 @@ public final class ContextLengthProbe {
                 "LM Studio context length probe host={} model={}",
                 config.baseUrl().getHost(),
                 modelId);
-        final Optional<ProviderConfig> rooted = atHostRoot(config);
+        final Optional<ProviderConfig> rooted = EndpointPaths.atHostRoot(config);
         if (rooted.isEmpty()) {
             return Optional.empty();
         }
@@ -101,17 +100,6 @@ public final class ContextLengthProbe {
             return Optional.empty();
         }
         return reader.read(data.body(), mapper);
-    }
-
-    private static Optional<ProviderConfig> atHostRoot(final ProviderConfig config) {
-        final URI base = config.baseUrl();
-        try {
-            return Optional.of(config.withBaseUrl(
-                    new URI(base.getScheme(), null, base.getHost(), base.getPort(), "", null, null)));
-        } catch (URISyntaxException failure) {
-            log.debug("Provider base URL has no usable host root; no LM Studio probe");
-            return Optional.empty();
-        }
     }
 
     @FunctionalInterface

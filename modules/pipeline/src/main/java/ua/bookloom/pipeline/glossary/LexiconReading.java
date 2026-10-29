@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -274,7 +275,10 @@ public final class LexiconReading {
                 CallDescriptor.whole(PromptName.LEXICON_READING));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Lexicon reading of a term failed code={}", error.code());
+            log.warn(
+                    "Lexicon reading of a term failed code={} reason={}",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame));

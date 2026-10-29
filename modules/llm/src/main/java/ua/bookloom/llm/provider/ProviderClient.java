@@ -63,6 +63,16 @@ public interface ProviderClient {
         return Optional.empty();
     }
 
+    /**
+     * Asks the server's health route whether it is still loading its model; never fails the caller. Asked only by the
+     * wake of a run paused on a loading model.
+     *
+     * @return {@code true} if the server answered that it is loading, {@code false} otherwise or when it cannot say
+     */
+    default boolean isLoadingModel() {
+        return false;
+    }
+
     /** Identifies the wire dialect implemented by this client. */
     ProviderKind kind();
 }

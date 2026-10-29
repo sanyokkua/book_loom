@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
@@ -33,6 +34,7 @@ import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.llm.CallLedgerImpl;
 
 /**
  * The run summary: one INFO line a minute while a job runs and one when it ends, with the counts, call times and
@@ -45,6 +47,7 @@ class RunSummaryLoggerTest {
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
     private final SettableClock clock = new SettableClock();
+    private final CallLedgerImpl ledger = new CallLedgerImpl();
     private Logger logger;
 
     @BeforeEach
@@ -148,14 +151,16 @@ class RunSummaryLoggerTest {
                         + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=-");
     }
 
-    // The final line says per kind what the calls cost, so a shared log shows where the time went.
+    // The final line says per kind what the calls cost, so a shared log shows where the time went; the ledger, which
+    // every stage's calls reach, is what it counts.
     @Test
     void onEvent_finishedAfterCalls_finalLineCarriesTheTotalsOfEachKind() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage usage = new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600);
 
         summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(answered(
-                Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
+        ledger.record(new CallRecord(CallKind.DRAFT, usage, Duration.ofSeconds(3), null, null));
+        summary.onEvent(answered(Duration.ofSeconds(3), usage));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
@@ -169,14 +174,37 @@ class RunSummaryLoggerTest {
     // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.
     @Test
     void onEvent_noPromptEvalReported_firstTokenFiguresAreDashes() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage usage = new TokenUsage(800, 90, Duration.ofMillis(2500));
 
         summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(answered(Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500))));
+        ledger.record(new CallRecord(CallKind.DRAFT, usage, Duration.ofSeconds(3), null, null));
+        summary.onEvent(answered(Duration.ofSeconds(3), usage));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
-        assertThat(summaries()).singleElement().asString().endsWith(" cached:0 ttftMs:- prefill:-]");
+        assertThat(summaries()).singleElement().asString().endsWith(" cached:– ttftMs:– prefill:–]");
+    }
+
+    // A call that reported no time before its first token prints a dash, never 0; a call made before the job was
+    // built is not the run's.
+    @Test
+    void finalLine_noCallReportedTtft_printsADash() {
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(9), null, null));
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+
+        ledger.record(new CallRecord(
+                CallKind.DRAFT, new TokenUsage(800, 90, Duration.ofMillis(2500)), Duration.ofSeconds(3), null, null));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries())
+                .singleElement()
+                .asString()
+                .contains(" byKind[DRAFT=1/0 ")
+                .doesNotContain("REVIEW")
+                .contains("ttftMs:–")
+                .contains("prefill:–");
     }
 
     // A night's run makes tens of thousands of calls; the line counts them all but keeps only the newest

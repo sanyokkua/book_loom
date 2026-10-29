@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
@@ -74,7 +75,8 @@ class BriefReasoningLevelWireMockTest {
                     new PromptTemplates(),
                     MAPPER,
                     Clock.systemUTC(),
-                    new RequestDefaultsSource(settings));
+                    new RequestDefaultsSource(settings),
+                    CallLedger.none());
             assertThat(assistant
                             .suggestBrief(desk.projectId(), provider.model(Duration.ofSeconds(5), duration -> {}))
                             .error())

@@ -88,7 +88,7 @@ final class PieceDrafter {
                 new PieceDrafter(owner, replyParser, calls, instruction, false).draftAll(segment, context, pieces);
         if (drafted.isErr()) {
             final AppError error = Objects.requireNonNull(drafted.error());
-            return PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
+            return PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE
                     ? Result.ok(new RepairReply.FlagNow(error))
                     : Result.err(error);
         }

@@ -20,6 +20,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.MetadataKey;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -32,6 +33,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.CallKindTotals;
+import ua.bookloom.pipeline.PrepSummary;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.OriginalTitles;
@@ -68,8 +71,12 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final Clock clock;
 
     private final RequestDefaultsSource requestDefaultsSource;
+    private final CallLedger ledger;
 
-    /** A setup assistant whose requests use the defaults the environment alone gives (the command line, tests). */
+    /**
+     * A setup assistant whose requests use the defaults the environment alone gives and whose calls are counted
+     * nowhere (tests, evals).
+     */
     public SetupAssistantImpl(
             final ProjectRepository projects,
             final SegmentRepository segments,
@@ -86,7 +93,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 templates,
                 mapper,
                 clock,
-                RequestDefaultsSource.environmentOnly());
+                RequestDefaultsSource.environmentOnly(),
+                CallLedger.none());
     }
 
     @Override
@@ -123,6 +131,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         log.debug("Brief suggestion requested project={} detectedContext={}", projectId, detectedContext);
+        final long mark = ledger.mark();
         try {
             return opened(projectId)
                     .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
@@ -133,6 +142,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                                     calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
+        } finally {
+            PrepSummary.log("brief", projectId, CallKindTotals.of(ledger.since(mark)));
         }
     }
 

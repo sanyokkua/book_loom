@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -111,6 +112,97 @@ class HttpErrorMapperTest {
     }
 
     @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void map_ollama400VerbFirst_isContextWindowWithReasonContextOverflow(ProviderKind kind) {
+        final HttpReply reply = new HttpReply(
+                400, Map.of(), "{\"error\":\"request (696 tokens) exceeds the available context size (512 tokens)\"}");
+
+        final Result<HttpReply> result =
+                HttpErrorMapper.map(reply, config(kind), HttpErrorMapper.CallPurpose.CHAT, "test-model");
+
+        assertThat(result.isErr()).isTrue();
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.contextWindow);
+        assertThat(error.details()).contains("reason=context-overflow");
+    }
+
+    // A row matches the meaning of the words in any order, whatever the status; no row means the status decides, with
+    // the reason "unclassified".
+    @ParameterizedTest
+    @MethodSource("meaningCases")
+    void map_bodyByMeaning_selectsCodeAndReason(
+            int status, String body, ErrorCode expectedCode, String expectedReason) {
+        final Result<HttpReply> result = HttpErrorMapper.map(
+                new HttpReply(status, Map.of(), body),
+                config(ProviderKind.OPENAI_COMPATIBLE),
+                HttpErrorMapper.CallPurpose.CHAT,
+                "test-model");
+
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(expectedCode);
+        assertThat(error.details()).startsWith("reason=" + expectedReason + ",");
+    }
+
+    @Test
+    void map_401_isAuthAndTheBodyIsNotInTheError() {
+        final String body = "{\"error\":\"invalid api key " + PRIVATE_BODY + "\"}";
+
+        final Result<HttpReply> result = HttpErrorMapper.map(
+                new HttpReply(401, Map.of(), body),
+                config(ProviderKind.OPENAI_COMPATIBLE),
+                HttpErrorMapper.CallPurpose.CHAT,
+                "test-model");
+
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.auth);
+        assertThat(error.title() + error.message() + error.details()).doesNotContain(PRIVATE_BODY);
+    }
+
+    // The mapper passes an answered 200 on; the chat reader cannot read it and calls it upstream, never validation.
+    @Test
+    void map_answered200Html_isLeftToTheReaderWhichCallsItUpstream() {
+        final HttpReply reply = new HttpReply(200, Map.of(), "<html>proxy error</html>");
+        final ProviderConfig config = config(ProviderKind.OPENAI_COMPATIBLE);
+
+        final Result<HttpReply> result =
+                HttpErrorMapper.map(reply, config, HttpErrorMapper.CallPurpose.CHAT, "test-model");
+
+        assertThat(result.data()).isSameAs(reply);
+        assertThat(UnreadableReply.error(config, "test-model", null).code()).isEqualTo(ErrorCode.upstream);
+    }
+
+    @Test
+    void map_verbFirstOverflow_detailsHoldBothCounts() {
+        final HttpReply reply = new HttpReply(
+                400, Map.of(), "{\"error\":\"request (696 tokens) exceeds the available context size (512 tokens)\"}");
+
+        final Result<HttpReply> result =
+                HttpErrorMapper.map(reply, config(ProviderKind.OLLAMA), HttpErrorMapper.CallPurpose.CHAT, "test-model");
+
+        assertThat(Objects.requireNonNull(result.error(), "error").details())
+                .startsWith("reason=context-overflow,")
+                .endsWith("promptTokens=696, windowTokens=512")
+                .doesNotContain("available context size");
+    }
+
+    @Test
+    void map_llamaServerTypedOverflow_detailsHoldBothCounts() {
+        final HttpReply reply = new HttpReply(
+                400,
+                Map.of(),
+                "{\"error\":{\"code\":400,\"message\":\"the request exceeds the available context size, try"
+                        + " increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":9120,"
+                        + "\"n_ctx\":8192}}");
+
+        final Result<HttpReply> result = HttpErrorMapper.map(
+                reply, config(ProviderKind.OPENAI_COMPATIBLE), HttpErrorMapper.CallPurpose.CHAT, "test-model");
+
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.contextWindow);
+        assertThat(error.details()).endsWith("promptTokens=9120, windowTokens=8192");
+    }
+
+    @ParameterizedTest
     @MethodSource("probeFailureCases")
     void map_probeAuthAndServerStatusesRemainFailures(int status, ErrorCode expectedCode) {
         final Result<HttpReply> result = HttpErrorMapper.map(
@@ -165,12 +257,15 @@ class HttpErrorMapperTest {
                         "{\"error\":\"No models loaded. Please load a model in the developer page.\"}",
                         ErrorCode.modelUnavailable),
                 chatStatus(400, "{\"error\":\"model 'gemma' is not loaded\"}", ErrorCode.modelUnavailable),
+                // Rows read the words whatever the status and purpose (task 3.4), so a DISCOVERY 400 that says the
+                // model
+                // is unloaded is modelUnavailable now; before, a guard limited this meaning to chat calls.
                 statusCase(
                         400,
                         "{\"error\":\"Model unloaded\"}",
                         ProviderKind.OPENAI_COMPATIBLE,
                         HttpErrorMapper.CallPurpose.DISCOVERY,
-                        ErrorCode.validation));
+                        ErrorCode.modelUnavailable));
     }
 
     private static Stream<Arguments> ollamaModelBodyCases() {
@@ -240,6 +335,28 @@ class HttpErrorMapperTest {
         return Stream.of(
                 arguments(new HttpTimeoutException("PRIVATE-EXCEPTION-MESSAGE"), Duration.ofSeconds(3)),
                 arguments(new HttpConnectTimeoutException("PRIVATE-EXCEPTION-MESSAGE"), Duration.ofSeconds(2)));
+    }
+
+    private static Stream<Arguments> meaningCases() {
+        return Stream.of(
+                arguments(
+                        400,
+                        "{\"error\":{\"message\":\"This model's maximum context length is 8192 tokens; your request"
+                                + " exceeds it\",\"code\":\"context_length_exceeded\"}}",
+                        ErrorCode.contextWindow,
+                        "context-overflow"),
+                arguments(
+                        400,
+                        "{\"error\":\"input length 9120 is greater than the context length 8192\"}",
+                        ErrorCode.contextWindow,
+                        "context-overflow"),
+                arguments(400, "{\"error\":\"invalid option: temperature\"}", ErrorCode.validation, "unclassified"),
+                arguments(503, "", ErrorCode.upstream, "unclassified"),
+                arguments(
+                        500,
+                        "{\"error\":\"request (696 tokens) exceeds the available context size (512 tokens)\"}",
+                        ErrorCode.contextWindow,
+                        "context-overflow"));
     }
 
     private static Stream<Arguments> probeFailureCases() {

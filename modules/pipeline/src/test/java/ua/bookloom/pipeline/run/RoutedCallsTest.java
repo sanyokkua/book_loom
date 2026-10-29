@@ -63,7 +63,7 @@ class RoutedCallsTest {
     }
 
     /** Resumes at once after every pause, as a recovery whose probe passes would. */
-    private static final class ResumingBoundaries implements RunBoundaries {
+    static final class ResumingBoundaries implements RunBoundaries {
 
         @Override
         public Optional<RunEnd> afterDecision(final Decision decision, final JobProgress progress) {

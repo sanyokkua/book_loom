@@ -40,6 +40,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
@@ -70,7 +71,11 @@ class ExportServiceImplTest {
     @BeforeEach
     void setUp() {
         injector = Guice.createInjector(
-                new DocumentModule(), new InMemoryPersistenceModule(), new ReviewModeTestModule(), binder -> {
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
+                binder -> {
                     binder.bind(Clock.class).toInstance(Clock.systemUTC());
                     binder.bind(IdSource.class).toInstance(new UuidIdSource());
                 });
@@ -95,7 +100,8 @@ class ExportServiceImplTest {
                         new DocumentModule(),
                         new InMemoryPersistenceModule(),
                         new PipelineModule(),
-                        new ReviewModeTestModule())
+                        new ReviewModeTestModule(),
+                        new CallLedgerTestModule())
                 .getInstance(ExportService.class);
 
         assertThat(bound).isInstanceOf(ExportServiceImpl.class);

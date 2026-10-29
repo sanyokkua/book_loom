@@ -189,12 +189,13 @@ final class RunReport {
             final ObjectNode node = kinds.putObject(kind.name());
             node.put("attempts", totals.attempts());
             node.put("failed", totals.failed());
-            node.put("promptTokens", totals.promptTokens());
-            node.put("completionTokens", totals.completionTokens());
-            node.put("cachedPromptTokens", totals.cachedPromptTokens());
             node.put("elapsedSeconds", seconds(totals.elapsed()));
-            node.put("promptEvalSeconds", seconds(totals.promptEval()));
-            node.put("generationSeconds", seconds(totals.generation()));
+            // A figure no call reported is left out, never written as 0.
+            totals.promptTotal().ifPresent(tokens -> node.put("promptTokens", tokens));
+            totals.completionTotal().ifPresent(tokens -> node.put("completionTokens", tokens));
+            totals.cachedTotal().ifPresent(tokens -> node.put("cachedPromptTokens", tokens));
+            totals.promptEvalTotal().ifPresent(time -> node.put("promptEvalSeconds", seconds(time)));
+            totals.generationTotal().ifPresent(time -> node.put("generationSeconds", seconds(time)));
             totals.meanFirstToken().ifPresent(mean -> node.put("meanFirstTokenSeconds", seconds(mean)));
             totals.prefillShare().ifPresent(share -> node.put("prefillShare", share));
         });

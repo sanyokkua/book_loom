@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -256,7 +257,12 @@ public final class PreScan {
                 calls.callAbout(CallKind.PRESCAN, List.of(), request, CallDescriptor.whole(PromptName.PRESCAN));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Pre-scan batch {} of size {} failed code={}", index, batch.size(), error.code());
+            log.warn(
+                    "Pre-scan batch {} of size {} failed code={} reason={}",
+                    index,
+                    batch.size(),
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();

@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestProjects;
@@ -47,6 +48,7 @@ class ExportJobLogTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
                 binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);

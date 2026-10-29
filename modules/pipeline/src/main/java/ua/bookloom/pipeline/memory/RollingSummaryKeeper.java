@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
@@ -25,6 +26,7 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
  * Keeps the rolling summary of one book: a short record of who is who that travels with every draft prompt, because
@@ -235,11 +237,15 @@ public final class RollingSummaryKeeper {
         return asked;
     }
 
-    // Design D3: an empty or over-long reply never fails a run, so the summary keeps its previous version, as the
+    // Design D3: an empty or over-long reply, or a model that looped, never fails a run, so the summary keeps its
+    // previous version, as the
     // reviewer keeps its answer unread. Every other error is the run's to route — a pause, a stop or a failure.
     private static Result<Optional<String>> unanswered(final AppError error) {
-        if (error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow) {
-            log.warn("Summary call gave no summary, previous version kept code={}", error.code());
+        if (PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE) {
+            log.warn(
+                    "Summary call gave no summary, previous version kept code={} reason={}",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(Optional.empty());
         }
         log.debug("Summary call failed code={}; the run routes it", error.code());

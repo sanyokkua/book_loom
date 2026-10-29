@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
@@ -28,9 +29,10 @@ final class StageOutcomes {
 
     static StageOutcome softPass(@Nullable AppError error, int count) {
         log.warn(
-                "Provider verification stage soft-passed stage={} code={} note={}",
+                "Provider verification stage soft-passed stage={} code={} reason={} note={}",
                 VerificationStage.MODELS,
                 error == null ? "none" : error.code(),
+                error == null ? "none" : FailureReason.tokenIn(error.details()),
                 MODEL_LIST_UNAVAILABLE);
         return withCount(
                 new StageOutcome(VerificationStage.MODELS, StageStatus.SOFT_PASS, error, MODEL_LIST_UNAVAILABLE),
@@ -38,7 +40,11 @@ final class StageOutcomes {
     }
 
     static StageOutcome failed(VerificationStage stage, AppError error) {
-        log.warn("Provider verification stage failed stage={} code={}", stage, error.code());
+        log.warn(
+                "Provider verification stage failed stage={} code={} reason={}",
+                stage,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
         return new StageOutcome(stage, StageStatus.FAILED, error, null);
     }
 

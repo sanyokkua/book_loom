@@ -28,6 +28,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -83,7 +84,8 @@ final class NamesPassFixture {
                 Modules.override(new InMemoryPersistenceModule()).with(stores),
                 Modules.override(new PipelineModule())
                         .with(binder -> binder.bind(Clock.class).toInstance(clock)),
-                new ReviewModeTestModule());
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule());
         glossary = injector.getInstance(GlossaryRepository.class);
         lexicon = injector.getInstance(LexiconRepository.class);
     }

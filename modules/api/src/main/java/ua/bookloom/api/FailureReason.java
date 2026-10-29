@@ -39,11 +39,86 @@ public enum FailureReason {
      */
     WRONG_PATH("wrong-path"),
 
+    /** Ollama does not have the model installed; the person pulls it or picks another. */
+    MODEL_NOT_PULLED("model-not-pulled"),
+
+    /** The model has no thinking capability, so the reasoning control that was sent is refused. */
+    THINKING_UNSUPPORTED("thinking-unsupported"),
+
+    /** The server does not accept the reasoning level that was sent for this model. */
+    THINK_LEVEL_INVALID("think-level-invalid"),
+
+    /** The server's queue is full; waiting and sending again can succeed. */
+    SERVER_BUSY("server-busy"),
+
+    /** The server rejected an option BookLoom sent with the wrong JSON type; a BookLoom fault, not the person's. */
+    OPTION_TYPE("option-type"),
+
+    /** Ollama refused the address the request was sent to (its host guard); the person uses 127.0.0.1 or lets it listen on the network. */
+    HOST_FORBIDDEN("host-forbidden"),
+
+    /** Ollama's cloud models are switched off on this machine. */
+    CLOUD_DISABLED("cloud-disabled"),
+
+    /** A cloud model needs the person to sign in to Ollama first. */
+    CLOUD_SIGNIN("cloud-signin"),
+
+    /** Ollama could not reach its cloud service. */
+    CLOUD_UNREACHABLE("cloud-unreachable"),
+
+    /** The model's runner process stopped unexpectedly; the same request may succeed once. */
+    RUNNER_CRASHED("runner-crashed"),
+
+    /** The machine has too little free memory to load the model. */
+    OUT_OF_MEMORY("out-of-memory"),
+
+    /** The model looped on the same tokens and the server aborted; another seed can succeed. */
+    REPEAT_LIMIT("repeat-limit"),
+
     /**
      * A translated text, saved by the person or restored from the model, would add Markdown structure its source did
      * not have, or lose structure it had.
      */
-    MARKDOWN_STRUCTURE("markdown-structure");
+    MARKDOWN_STRUCTURE("markdown-structure"),
+
+    /**
+     * A provider said the prompt does not fit the model's window, in any word order: that passage is flagged and the
+     * book goes on, because sending it again unchanged cannot fit.
+     */
+    CONTEXT_OVERFLOW("context-overflow"),
+
+    /** The server closed the connection while it was answering; the same request can be sent once more. */
+    TERMINATED("terminated"),
+
+    /** The server has no model loaded, so there is nothing to answer yet; loading one fixes it. */
+    NO_MODEL_LOADED("no-model-loaded"),
+
+    /** The model was unloaded while the call was waiting or running (idle timeout, eviction, the person). */
+    MODEL_UNLOADED("model-unloaded"),
+
+    /** The structured-output grammar is too large or cannot be parsed; sending it again cannot help. */
+    GRAMMAR_TOO_LARGE("grammar-too-large"),
+
+    /** The server cannot use the structured-output schema BookLoom sent; sending it again cannot help. */
+    SCHEMA_INVALID("schema-invalid"),
+
+    /** The model's runtime has no structured output at all. */
+    STRUCTURED_UNAVAILABLE("structured-unavailable"),
+
+    /** The server's own engine could not be reached (crashed or reloading); the same request can be sent once more. */
+    ENGINE_UNREACHABLE("engine-unreachable"),
+
+    /** The model's chat template refused the message layout BookLoom sent. */
+    TEMPLATE_REJECTED("template-rejected"),
+
+    /** The server is still loading the model and answers nothing else until it is ready. */
+    MODEL_LOADING("model-loading"),
+
+    /** The server could not apply the schema to the model's reply; the reply is not the shape that was asked for. */
+    SCHEMA_NOT_APPLIED("schema-not-applied"),
+
+    /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
+    UNCLASSIFIED("unclassified");
 
     private static final String PREFIX = "reason=";
 
@@ -77,5 +152,16 @@ public enum FailureReason {
         return Arrays.stream(values())
                 .filter(reason -> Objects.equals(reason.token, found))
                 .findFirst();
+    }
+
+    /**
+     * The word a log line writes as its {@code reason=} field, read from typed details only, so that no reply body or
+     * exception message can reach the line.
+     *
+     * @param details the rendered details, or {@code null}
+     * @return the reason's token if the details start with one, or {@code none} if they do not
+     */
+    public static String tokenIn(final @Nullable String details) {
+        return in(details).map(FailureReason::token).orElse("none");
     }
 }

@@ -87,15 +87,68 @@ public enum ErrorCode {
 ## safe-details-allowlist {#safe-details-allowlist}
 
 `AppError.details` is populated only from an **allowlist** of safe fields — HTTP status, endpoint host (not full URL
-with tokens), model name, timeout value, attempt count, QA finding names, a failure reason and a folder's own name.
-The **failure reason** is a fixed token (`FailureReason`: `folder-missing`, `access-denied`, `read-only`, `disk-full`,
-`not-utf8`, `csv-header`), rendered first as `reason=<token>`, for a failure whose code alone cannot say what to fix: the
-services word failures in English, and the window words a failure in another display language by its reason when it
-has one, else by its code. A write that fails for a missing folder, a refused permission, a read-only place or a full
+with tokens), model name, timeout value, attempt count, QA finding names, a failure reason, a folder's own name and,
+for a prompt that did not fit, the two typed token counts the provider stated (`promptTokens=696, windowTokens=512`,
+integers read from the body, never its sentence). The **failure reason** is a fixed token (`FailureReason`:
+`folder-missing`, `access-denied`, `read-only`, `disk-full`, `not-utf8`, `csv-header`, `wrong-path`,
+`markdown-structure`, and the provider reasons of `#failure-reasons`: `model-not-pulled`, `thinking-unsupported`,
+`think-level-invalid`, `server-busy`, `option-type`, `host-forbidden`, `cloud-disabled`, `cloud-signin`,
+`cloud-unreachable`, `runner-crashed`, `out-of-memory`, `repeat-limit`, `context-overflow`, `terminated`,
+`no-model-loaded`, `model-unloaded`, `grammar-too-large`, `schema-invalid`, `structured-unavailable`,
+`engine-unreachable`, `template-rejected`, `model-loading`, `schema-not-applied`, `unclassified`), rendered first as
+`reason=<token>`, for a failure whose code
+alone cannot say what to fix: the services word failures in English, and the window words a failure in another display
+language by its reason when it has advice of its own, else by its code. Every HTTP failure of a provider carries a
+reason: the token of the catalogue row its body matched, or `unclassified` when none did; the provider's own sentence
+reaches the log at TRACE only. A write that fails for a missing folder, a refused permission, a read-only place or a full
 disk is `validation` with that reason and the folder's last name only (never its path). It **never** contains: credentials, resolved
 secret values, `Authorization` headers, full request/response bodies, or file contents. A helper builds `details` from
 typed inputs, not from string-concatenating arbitrary exception messages, so secrets cannot leak into the UI or logs
 (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`).
+
+### failure-reasons {#failure-reasons}
+
+A provider failure's reason is the token of the catalogue row its reply matched (`04_LLM_INTEGRATION.md#http-error-mapping`,
+Table A, which also gives each row's words and status). The token says what to do; the code says how the envelope
+treats it.
+
+| Token | Usual code | Retry rule | Who is asked |
+|---|---|---|---|
+| `context-overflow` | `contextWindow` | NONE | nobody: the segment is flagged and the book goes on |
+| `repeat-limit` | `upstream` | NEW_SEED once | nobody: the segment is flagged after the resend |
+| `terminated` | `upstream` | SAME once, after a state check | nobody: a second one waits as an outage |
+| `runner-crashed` | `upstream` | SAME once | nobody: the run waits as for an outage |
+| `engine-unreachable` | `upstream` | SAME once | nobody: the run waits as for an outage |
+| `server-busy` | `upstream` | BACKOFF | nobody: the run waits as for an outage |
+| `cloud-unreachable` | `upstream` | BACKOFF | nobody: the run waits as for an outage |
+| `no-model-loaded` | `modelUnavailable` | AUTO_WAIT | nobody for six wakes, then the person |
+| `model-unloaded` | `modelUnavailable` | AUTO_WAIT | nobody for six wakes, then the person |
+| `model-loading` | `modelUnavailable` | AUTO_WAIT | nobody: the run waits until the server is ready |
+| `out-of-memory` | `modelUnavailable` | NONE | the person |
+| `model-not-pulled` | `modelNotFound` | NONE | the person |
+| `host-forbidden` | `auth` | NONE | the person |
+| `cloud-disabled` | `auth` | NONE | the person |
+| `cloud-signin` | `auth` | NONE | the person |
+| `thinking-unsupported` | `validation` | NONE | nobody when the control can be dropped and the request sent again; else the person |
+| `think-level-invalid` | `validation` | NONE | as `thinking-unsupported` |
+| `option-type` | `validation` | NONE | the person; a BookLoom fault, logged at ERROR once per model |
+| `grammar-too-large` | `validation` | NONE | the person |
+| `schema-invalid` | `validation` | NONE | the person |
+| `structured-unavailable` | `validation` | NONE | the person |
+| `template-rejected` | `validation` | NONE | the person |
+| `schema-not-applied` | `validation` | NONE | the person |
+| `wrong-path` | `validation` | no row: the code's own (not retried) | the person |
+| `unclassified` | the status's code (Table B) | the code's own | as the code decides |
+
+"The person" means the run pauses and waits for them; a step that keeps failing is flagged after its pauses, so the
+book goes on. Eight of these tokens have words of their own in the window (`context-overflow`, `repeat-limit`,
+`out-of-memory`, `model-not-pulled`, `host-forbidden`, `cloud-disabled`, `cloud-signin`, `terminated`); every other
+token is worded by its code (`01_Product/11_NOTIFICATIONS_AND_ERRORS.md#error-code-categories`).
+
+**Log lines.** Every WARN line about a retried, given-up or refused call, or a flagged step, carries `reason=<token>`
+next to `code=`. The token is read from the typed details with `FailureReason.tokenIn(details)` — never from an
+exception message or a reply body — and is `none` when the details name no reason (a timeout, a failure built before
+the catalogue). For example: `gave up provider chat code=validation reason=grammar-too-large kind=TERM_READING`.
 
 ## boundary-discipline {#boundary-discipline}
 

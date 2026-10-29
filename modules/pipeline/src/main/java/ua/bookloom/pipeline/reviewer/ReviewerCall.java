@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -25,6 +26,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
  * The per-chunk reviewer call: one call reading every drafted pair of a batch that passed its hard gates, answered per
@@ -53,7 +55,8 @@ public final class ReviewerCall {
      * @param pass which pass of the batch this is
      * @param calls the seam the call is sent through
      * @return the batch's verdict — {@link Result#ok} even for an unreadable reply or a call answered
-     *     {@link ErrorCode#emptyCompletion}/{@link ErrorCode#contextWindow}, and an unavailable verdict for a call
+     *     with an error {@link PauseDecider#route(AppError)} flags at once (an empty reply, a prompt
+     *     too long, a model that looped), and an unavailable verdict for a call
      *     that timed out twice; {@link Result#err} for any other call failure, so a provider outage waits for the
      *     provider as a draft call does
      */
@@ -232,16 +235,16 @@ public final class ReviewerCall {
     // as it does for the first call, so the step is redone on resume instead of storing unreviewed pairs as accepted.
     private static Result<ReviewVerdict> reAskFailed(
             final ReviewVerdict first, final List<ReviewedPair> unread, final AppError error) {
-        final boolean isUnreadable = error.code() == ErrorCode.emptyCompletion
-                || error.code() == ErrorCode.contextWindow
-                || error.code() == ErrorCode.timeout;
+        final boolean isUnreadable =
+                PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE || error.code() == ErrorCode.timeout;
         if (!isUnreadable) {
             log.debug("Re-asking the unread pairs failed code={}; the review fails as a whole", error.code());
             return Result.err(error);
         }
         log.warn(
-                "Re-asking the unread pairs failed code={}; they are taken as ok count={}",
+                "Re-asking the unread pairs failed code={} reason={}; they are taken as ok count={}",
                 error.code(),
+                FailureReason.tokenIn(error.details()),
                 unread.size());
         return Result.ok(first);
     }
@@ -277,8 +280,12 @@ public final class ReviewerCall {
     }
 
     private static Result<ReviewVerdict> routeFailure(final List<String> segmentIds, final AppError error) {
-        if (error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow) {
-            log.warn("Unreadable review reply segmentIds={} code={}", segmentIds, error.code());
+        if (PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE) {
+            log.warn(
+                    "Unreadable review reply segmentIds={} code={} reason={}",
+                    segmentIds,
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(ReviewVerdict.unreadable());
         }
         // The provider already retried the stalled call and so did this call; pausing the run on it a third time would
@@ -287,9 +294,10 @@ public final class ReviewerCall {
         if (error.code() == ErrorCode.timeout) {
             log.warn(
                     "Reviewer unavailable; its segments are decided by the quality checks alone and flagged"
-                            + " segmentIds={} code={}",
+                            + " segmentIds={} code={} reason={}",
                     segmentIds,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(ReviewVerdict.unavailable(error));
         }
         log.debug("Review call failed segmentIds={} code={}", segmentIds, error.code());

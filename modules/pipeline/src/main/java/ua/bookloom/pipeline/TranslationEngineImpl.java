@@ -10,7 +10,10 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
@@ -39,6 +42,8 @@ import ua.bookloom.pipeline.run.RunStores;
 @Slf4j
 public final class TranslationEngineImpl implements TranslationEngine {
 
+    private static final String UNKNOWN_PROVIDER_KIND = "unknown";
+
     private final DocumentPort documents;
     private final ObjectMapper mapper;
     private final PromptTemplates templates;
@@ -51,11 +56,14 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final RecoveryTimer timer;
     private final WordValidator words;
     private final RequestDefaultsSource requestDefaultsSource;
+    private final CallLedger ledger;
+    private final ProviderConfigs providers;
 
     /**
      * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
      * the sentence splitter an oversized segment is drafted in pieces with, the backward-revision pass a Max run
-     * ends with, and the timer a run's recovery waits pass by.
+     * ends with, the timer a run's recovery waits pass by, the ledger each run's summary counts its calls from, and
+     * the provider registry a run's start line reads the server's kind from.
      */
     @Inject
     public TranslationEngineImpl(
@@ -78,8 +86,12 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final IdSource idSource,
             final RecoveryTimer timer,
             final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource) {
+            final RequestDefaultsSource requestDefaultsSource,
+            final CallLedger ledger,
+            final ProviderConfigs providers) {
+        this.providers = Objects.requireNonNull(providers, "providers");
         this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
+        this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
@@ -130,6 +142,22 @@ public final class TranslationEngineImpl implements TranslationEngine {
                 RunTicks.DAEMON,
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
                 words,
-                requestDefaultsSource);
+                requestDefaultsSource,
+                ledger,
+                providerKindOf(request));
+    }
+
+    // Only the kind is logged, never the provider's id or address; a run the registry cannot place (the pseudo model,
+    // a request with no selection) is "unknown".
+    private String providerKindOf(final RunRequest request) {
+        final ModelSelection selection = request.model();
+        final String kind = selection == null
+                ? UNKNOWN_PROVIDER_KIND
+                : providers
+                        .find(selection.providerId())
+                        .map(config -> config.kind().name())
+                        .orElse(UNKNOWN_PROVIDER_KIND);
+        log.debug("Run provider kind={} selected={}", kind, selection != null);
+        return kind;
     }
 }

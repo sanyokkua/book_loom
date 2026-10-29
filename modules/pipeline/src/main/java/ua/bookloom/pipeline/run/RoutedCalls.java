@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
@@ -195,7 +196,7 @@ final class RoutedCalls {
             final JobProgress progress,
             @Nullable final GiveUp<T> giveUp,
             final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
-        return switch (PauseDecider.route(error.code())) {
+        return switch (PauseDecider.route(error)) {
             case CANCELLED -> afterAbortedCall(progress, giveUp);
             case PAUSE_OR_FAIL -> afterProviderError(error, progress, giveUp, unnamedPauses);
             case FLAG_AT_ONCE, FAIL -> Optional.of(new Step.Stopped<>(failedBy(endingError(error))));
@@ -222,18 +223,19 @@ final class RoutedCalls {
             final JobProgress progress,
             @Nullable final GiveUp<T> giveUp,
             final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
-        final PauseDecider.Recovery recovery = PauseDecider.recovery(error.code());
+        final PauseDecider.Recovery recovery = PauseDecider.recovery(error);
         final int budget = recovery.pausesBeforeFlagging();
         final int pausedBefore = giveUp == null
                 ? unnamedPauses.getOrDefault(recovery, 0)
                 : pauses.getOrDefault(countKey(giveUp, recovery), 0);
         if (giveUp != null && pausedBefore >= budget) {
             log.warn(
-                    "Flagging step={} after {} pauses for it recovery={} code={}; the run goes on",
+                    "Flagging step={} after {} pauses for it recovery={} code={} reason={}; the run goes on",
                     giveUp.step(),
                     budget,
                     recovery,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
         }
         final Optional<RunEnd> end =
@@ -322,7 +324,11 @@ final class RoutedCalls {
         }
         final IllegalStateException cause = new IllegalStateException(
                 "A model call answered " + error.code() + ", which a run cannot recover from");
-        log.error("Translation job stopped by a model error it cannot recover from code={}", error.code(), cause);
+        log.error(
+                "Translation job stopped by a model error it cannot recover from code={} reason={}",
+                error.code(),
+                FailureReason.tokenIn(error.details()),
+                cause);
         return AppError.of(
                 ErrorCode.internal,
                 "Translation job failed",

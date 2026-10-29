@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
@@ -64,16 +65,20 @@ final class UnattendedRun {
     private final List<FlaggedDetail> flagged = new ArrayList<>();
     private final AtomicReference<@Nullable String> stopReason = new AtomicReference<>();
     private @Nullable JobProgress lastProgress;
-    private final CallKindTotals kindTotals = new CallKindTotals();
+    private final CallLedger ledger;
+    // The ledger's records after this mark are the run's: taken when the job is wired, before it runs.
+    private final long mark;
     private int modelCalls;
     private int decidedSegments;
     private Duration modelTime = Duration.ZERO;
     private int waits;
 
-    private UnattendedRun(TranslationJob job, PrintStream out, int stopAfter) {
+    private UnattendedRun(TranslationJob job, PrintStream out, int stopAfter, CallLedger ledger) {
         this.job = job;
         this.out = out;
         this.stopAfter = stopAfter;
+        this.ledger = ledger;
+        this.mark = ledger.mark();
     }
 
     /**
@@ -84,12 +89,21 @@ final class UnattendedRun {
      * @param maxOutage the longest outage waited through before the run is stopped; never null
      * @param stopAfter how many decided segments end the run early, or zero to run the whole book
      * @param out where the outage lines go; never null
+     * @param ledger the ledger the run's calls are counted from, by kind; never null
      * @return the watcher, whose tallies are complete once the job's run returns
      */
     static UnattendedRun attach(
-            TranslationJob job, ProviderProbe probe, Duration maxOutage, int stopAfter, PrintStream out) {
-        final UnattendedRun run =
-                new UnattendedRun(Objects.requireNonNull(job, "job"), Objects.requireNonNull(out), stopAfter);
+            TranslationJob job,
+            ProviderProbe probe,
+            Duration maxOutage,
+            int stopAfter,
+            PrintStream out,
+            CallLedger ledger) {
+        final UnattendedRun run = new UnattendedRun(
+                Objects.requireNonNull(job, "job"),
+                Objects.requireNonNull(out),
+                stopAfter,
+                Objects.requireNonNull(ledger, "ledger"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         job.recoverWith(Objects.requireNonNull(probe, "probe"), Objects.requireNonNull(maxOutage, "maxOutage"));
         job.subscribe(run::onEvent);
@@ -104,7 +118,6 @@ final class UnattendedRun {
             case Resumed resumed -> onResumed();
             case SegmentDecided decided -> onDecided(decided);
             case ModelCallFinished finished -> {
-                kindTotals.record(finished);
                 modelCalls++;
                 modelTime = modelTime.plus(finished.elapsed());
             }
@@ -198,8 +211,9 @@ final class UnattendedRun {
         return List.copyOf(flagged);
     }
 
+    /** The run's calls by kind, counted from what each call reported. */
     CallKindTotals kindTotals() {
-        return kindTotals;
+        return CallKindTotals.of(ledger.since(mark));
     }
 
     int modelCalls() {

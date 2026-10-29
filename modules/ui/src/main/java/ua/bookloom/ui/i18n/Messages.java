@@ -105,13 +105,19 @@ public final class Messages {
      *
      * @param key a message whose argument 0 selects on the normalised code and whose {@code other} branch shows {1}
      * @param code the code as reported, for example {@code MISSING} or {@code latin-run}
+     * @param more the message's further arguments, from {2} on, for a branch that shows figures; none for most codes
      * @return the words of the interface language, or the code itself when the message has none for it
      */
-    public String code(final MessageKey key, final String code) {
+    public String code(final MessageKey key, final String code, final Object... more) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(code, "code");
+        Objects.requireNonNull(more, "more");
         final String selector = code.strip().toLowerCase(Locale.ROOT).replace('-', '_');
-        return get(key, selector.isEmpty() ? "none" : selector, code);
+        final Object[] args = new Object[2 + more.length];
+        args[0] = selector.isEmpty() ? "none" : selector;
+        args[1] = code;
+        System.arraycopy(more, 0, args, 2, more.length);
+        return get(key, args);
     }
 
     /**

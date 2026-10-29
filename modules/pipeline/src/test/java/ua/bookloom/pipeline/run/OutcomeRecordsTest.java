@@ -72,7 +72,8 @@ class OutcomeRecordsTest {
                         List.of());
     }
 
-    // A flagged draft has no target to keep, and its reason must survive as the finding the review desk shows.
+    // A flagged draft has no target to keep, and its reason must survive as the finding the review desk shows, worded
+    // for the person rather than as the provider's heading.
     @Test
     void decided_flaggedAtOnce_storesItsReasonAsAHighReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
@@ -82,8 +83,11 @@ class OutcomeRecordsTest {
         assertThat(record.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(record.machineTarget()).isNull();
         assertThat(record.findings())
-                .containsExactly(
-                        new QaFinding("contextWindow", Severity.HIGH, "The segment exceeds the window.", "reply"));
+                .containsExactly(new QaFinding(
+                        "contextWindow",
+                        Severity.HIGH,
+                        "This passage did not fit the model's window. It was flagged.",
+                        "reply"));
     }
 
     // Reading a different code back would report a flagged segment under a reason the model never gave.

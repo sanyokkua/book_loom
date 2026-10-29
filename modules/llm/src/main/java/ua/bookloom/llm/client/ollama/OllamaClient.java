@@ -325,17 +325,8 @@ public final class OllamaClient implements ProviderClient {
                     "Ollama discovery outcome host={} code={}", config.baseUrl().getHost(), error.code());
             return Result.err(error);
         }
-        log.warn(
-                "Ollama discovery degraded host={} originalCode={} code={}",
-                config.baseUrl().getHost(),
-                error.code(),
-                ErrorCode.discoveryFailed);
-        return Result.err(AppError.of(
-                ErrorCode.discoveryFailed,
-                "Model discovery failed",
-                "The Ollama model list could not be read.",
-                error.details(),
-                error.cause()));
+        return Result.err(DiscoveryErrors.degraded(
+                "Ollama", config.baseUrl().getHost(), error, "The Ollama model list could not be read."));
     }
 
     private AppError discoveryFailure(@Nullable Throwable cause) {

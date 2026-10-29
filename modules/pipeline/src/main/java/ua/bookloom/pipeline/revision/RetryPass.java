@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
@@ -208,9 +209,7 @@ final class RetryPass {
             if (error.code() == ErrorCode.cancelled) {
                 return Result.err(error);
             }
-            log.warn("Retry of doubted segmentId={} skipped: the draft failed code={}", id, error.code());
-            tally.skipped();
-            return Result.ok(Attempt.SKIPPED);
+            return skipped(id, error, tally);
         }
         final RetryCandidate candidate = Objects.requireNonNull(drafted.data(), "candidate");
         final Optional<String> refusal = refusal(inputs, record, candidate);
@@ -229,6 +228,16 @@ final class RetryPass {
             return Result.ok(Attempt.KEPT);
         }
         return store(inputs, record, candidate, tally);
+    }
+
+    private static Result<Attempt> skipped(final String id, final AppError error, final PassTally tally) {
+        log.warn(
+                "Retry of doubted segmentId={} skipped: the draft failed code={} reason={}",
+                id,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
+        tally.skipped();
+        return Result.ok(Attempt.SKIPPED);
     }
 
     private static Optional<String> refusal(

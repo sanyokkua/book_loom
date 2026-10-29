@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -88,7 +89,11 @@ public final class QualityLoop {
         Objects.requireNonNull(outcomes, "outcomes");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(reason, "reason");
-        log.warn("Deciding a chunk without its reviewer chunkSize={} code={}", outcomes.size(), reason.code());
+        log.warn(
+                "Deciding a chunk without its reviewer chunkSize={} code={} reason={}",
+                outcomes.size(),
+                reason.code(),
+                FailureReason.tokenIn(reason.details()));
         final EvaluatedDrafts drafts = evaluateDrafts(outcomes, settings, Objects.requireNonNull(gate, "gate"));
         new CheckSteps(calls.steps(), outcomes, settings.dial().reviewPasses()).abandoned();
         return new ChunkDecider(

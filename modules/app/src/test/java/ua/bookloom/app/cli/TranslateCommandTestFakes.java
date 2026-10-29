@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatResponse;
@@ -59,7 +60,8 @@ final class TranslateCommandTestFakes {
                 core.getInstance(ShutdownCancellation.class),
                 core.getInstance(Clock.class),
                 (providerId, modelId) -> Result.ok(ContextLength.unknown()),
-                core.getInstance(LexiconService.class));
+                core.getInstance(LexiconService.class),
+                core.getInstance(CallLedger.class));
     }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {

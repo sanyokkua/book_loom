@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -112,7 +113,7 @@ final class UnattendedRecovery {
 
     private PauseWait waitThrough(final AppError error, final JobProgress progress, final Instant since) {
         lastProbe = null;
-        final int cap = PauseDecider.recovery(error.code()).wakesPerOutage();
+        final int cap = PauseDecider.recovery(error).wakesPerOutage();
         while (true) {
             final Instant now = clock.instant();
             final Optional<Duration> delay =
@@ -132,9 +133,10 @@ final class UnattendedRecovery {
     private void logGivingUp(final AppError error, final Instant since, final int cap) {
         if (cappedWakes >= cap) {
             log.warn(
-                    "No model loaded after {} wakes code={}; waiting for the person to load it and resume",
+                    "No model loaded after {} wakes code={} reason={}; waiting for the person to load it and resume",
                     cappedWakes,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return;
         }
         log.warn("Provider down since {} for over {}; waiting for the person", since, maxOutage);
@@ -157,7 +159,7 @@ final class UnattendedRecovery {
         if (cap != PauseDecider.UNCAPPED_WAKES) {
             cappedWakes++;
         }
-        lastProbe = probeOnce();
+        lastProbe = probeOnce(error);
         return lastProbe == null ? resumeAfterProbe(error, progress, since) : Optional.empty();
     }
 
@@ -173,10 +175,11 @@ final class UnattendedRecovery {
             final AppError error, final JobProgress progress, final Instant since) {
         if (control.resumeAutomatically()) {
             log.info(
-                    "Resumed by itself after {} min and {} wakes code={}",
+                    "Resumed by itself after {} min and {} wakes code={} reason={}",
                     Duration.between(since, clock.instant()).toMinutes(),
                     wakes,
-                    error.code());
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Optional.of(PauseWait.RESUMED);
         }
         return settle(control.awaitWake(0), error, progress, since, null);
@@ -227,9 +230,9 @@ final class UnattendedRecovery {
     }
 
     // A probe that throws is a failed probe, never a reason to leave the wait.
-    private @Nullable ErrorCode probeOnce() {
+    private @Nullable ErrorCode probeOnce(final AppError pausedOn) {
         try {
-            final Result<Duration> probed = Objects.requireNonNull(probe.probe(), "probe result");
+            final Result<Duration> probed = Objects.requireNonNull(probe.probe(pausedOn), "probe result");
             if (probed.isOk()) {
                 log.info("Provider probe at wake {} passed in {} ms", wakes, millisOf(probed));
                 return null;

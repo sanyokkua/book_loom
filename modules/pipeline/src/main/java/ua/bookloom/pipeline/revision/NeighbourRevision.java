@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
@@ -246,7 +247,11 @@ final class NeighbourRevision {
         if (error.code() == ErrorCode.cancelled) {
             return Result.err(error);
         }
-        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", record.segmentId(), error.code());
+        log.warn(
+                "Neighbour check segmentId={} skipped: the call failed code={} reason={}",
+                record.segmentId(),
+                error.code(),
+                FailureReason.tokenIn(error.details()));
         tally.skipped();
         return unchanged(calls, record, "skipped", around);
     }

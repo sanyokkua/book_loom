@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
@@ -37,6 +38,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final ObjectMapper mapper;
     private final ModelSettingsCache modelSettings;
     private final RefusalMemory refusals;
+    private final CallLedger ledger;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -82,7 +84,8 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 gate,
                 retryPolicy,
                 modelSettings::current,
-                refusals));
+                refusals,
+                ledger));
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

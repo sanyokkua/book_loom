@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
@@ -29,8 +30,9 @@ final class ReAskMerge {
         final BatchReply again = second.data();
         if (again == null || !again.readable()) {
             log.warn(
-                    "The re-ask for the missing ids brought nothing code={}; they fall back one by one",
-                    failure == null ? "unreadable" : failure.code());
+                    "The re-ask for the missing ids brought nothing code={} reason={}; they fall back one by one",
+                    failure == null ? "unreadable" : failure.code(),
+                    failure == null ? "none" : FailureReason.tokenIn(failure.details()));
             steps.ended(StepKind.RE_ASK, stepKey, StepResult.FAILED);
             return Result.ok(first);
         }

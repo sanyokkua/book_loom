@@ -13,6 +13,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
@@ -25,6 +26,8 @@ import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.CallKindTotals;
+import ua.bookloom.pipeline.PrepSummary;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -46,6 +49,7 @@ final class ExportJobImpl implements ExportJob {
     private final ExportParts parts;
     private final @Nullable ExportCalls calls;
     private final ExportProgressListener progress;
+    private final CallLedger ledger;
     private final AtomicBoolean cancelled = new AtomicBoolean();
     private final AtomicBoolean stopEarly = new AtomicBoolean();
     private final AtomicBoolean writing = new AtomicBoolean();
@@ -54,8 +58,10 @@ final class ExportJobImpl implements ExportJob {
             final ExportRequest request,
             final ExportParts parts,
             @Nullable final ModelCalls calls,
-            final ExportProgressListener progress) {
+            final ExportProgressListener progress,
+            final CallLedger ledger) {
         this.request = Objects.requireNonNull(request, "request");
+        this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.parts = Objects.requireNonNull(parts, "parts");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.calls = calls == null ? null : new ExportCalls(calls, cancelled, stopEarly, progress);
@@ -63,6 +69,7 @@ final class ExportJobImpl implements ExportJob {
 
     @Override
     public Result<ExportReport> run() {
+        final long mark = ledger.mark();
         try {
             log.info(
                     "export starting project={} destination={} overwrite={} sideFiles={} consistencyPass={}",
@@ -77,6 +84,8 @@ final class ExportJobImpl implements ExportJob {
             return result;
         } catch (Throwable cause) {
             return Result.err(internalError("run the export", cause));
+        } finally {
+            PrepSummary.log("export", request.projectId(), CallKindTotals.of(ledger.since(mark)));
         }
     }
 

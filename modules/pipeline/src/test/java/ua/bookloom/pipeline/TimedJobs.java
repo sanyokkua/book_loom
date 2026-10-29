@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -46,7 +47,9 @@ final class TimedJobs {
                 ticks,
                 BatchDrafter.NO_BATCHING,
                 WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                RequestDefaultsSource.environmentOnly(),
+                CallLedger.none(),
+                "unknown");
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

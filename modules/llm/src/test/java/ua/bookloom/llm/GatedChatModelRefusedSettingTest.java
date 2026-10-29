@@ -323,6 +323,7 @@ class GatedChatModelRefusedSettingTest {
                 .filter(event -> event.getLevel() == Level.WARN)
                 .filter(event -> event.getFormattedMessage().contains("refused a setting"))
                 .filter(event -> event.getFormattedMessage().contains("temperature"))
+                .filter(event -> event.getFormattedMessage().contains("reason=unclassified"))
                 .count();
     }
 

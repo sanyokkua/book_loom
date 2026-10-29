@@ -164,8 +164,10 @@ Effective-context discovery and chunk budgeting are deferred. This client intent
 
 Retry lives in `:llm`, never in `:pipeline` or the UI:
 
-- Only **typed retryable errors** trigger a retry — `ErrorCode.timeout`, `rateLimited`, `unreachable`, `upstream` (5xx)
-  and `discoveryFailed`. `auth`, `modelNotFound`, `contextWindow`, `validation`, and `emptyCompletion` are not retried.
+- The **matched catalogue row's retry rule** decides (`#http-error-mapping`): `NONE`, `SAME` once, `NEW_SEED` once,
+  `BACKOFF`, or `AUTO_WAIT` (the run waits instead). A failure no row explains is retried only when its code is
+  retryable — `ErrorCode.timeout`, `rateLimited`, `unreachable`, `upstream` (5xx) and `discoveryFailed`; `auth`,
+  `modelNotFound`, `contextWindow`, `validation`, and `emptyCompletion` are not retried.
 - **Retry-After** is honored when present (header or body); otherwise exponential backoff with jitter.
 - The **InferenceGate is released during backoff / `Retry-After` sleeps** and **re-acquired per attempt**, so a sleeping
   call never holds the single-flight permit (see #repair-and-gate).
@@ -191,25 +193,100 @@ the project's own run is RUNNING, and its UI behavior is owned by the interactiv
 
 ## http-error-mapping {#http-error-mapping}
 
-Every transport/HTTP outcome maps to one typed `AppError` (`09_ERROR_HANDLING.md`):
+Every transport and HTTP outcome maps to one typed `AppError` (`09_ERROR_HANDLING.md`) through **one error catalogue
+read by meaning** (`llm/http/ErrorRows`, design D18 of `redesign-translation-pipeline`). The same words mean the same
+thing on every engine, whatever the HTTP status or the word order, so the status alone never decides when the body
+says more.
 
-| Condition                                              | ErrorCode                         | retryable |
-|--------------------------------------------------------|-----------------------------------|-----------|
-| connect refused / DNS / no route                       | `unreachable`                     | yes       |
-| socket/read timeout                                    | `timeout`                         | yes       |
-| 401 / 403                                              | `auth`                            | no        |
-| 404 model / unknown model in body                      | `modelNotFound`                   | no        |
-| 429                                                    | `rateLimited` (honor Retry-After) | yes       |
-| 5xx                                                    | `upstream`                        | yes       |
-| 400 context length exceeded                            | `contextWindow`                   | no        |
-| 200 but raw-empty/blank content (pre-sanitize)         | `emptyCompletion`                 | no        |
-| model listing/discovery failed                         | `discoveryFailed`                 | yes       |
-| bound/selected model not available at run or preflight | `modelUnavailable`                | no        |
-| missing credential at resolve or draft pre-check time  | `missingCredential`               | no        |
-| unparseable body / other                               | `internal`                        | no        |
+The order is fixed:
 
-`discoveryFailed` and `modelUnavailable` are defined in the `ErrorCode` enum (`09_ERROR_HANDLING.md`). A
-structured-output rejection is currently surfaced through the normal HTTP mapping; the downgrade path is deferred.
+1. **Transport first** — an interrupted call is `cancelled`, a socket or read timeout `timeout`, a refused connection,
+   an unknown host or another I/O failure `unreachable`.
+2. **Rows by body text** — the rows of Table A are tried in order; the **first row whose words the body holds** (and
+   whose statuses, when it names any, include the reply's) decides the code, the reason token and the retry rule. A
+   streamed error line (Ollama's `{"error":…}` inside the stream, an SSE `event: error`) is read through the same rows
+   that name no status; one no row explains is `upstream` with `unclassified`. A success whose body is only an error
+   object keeps the row it matches; with no row it is `validation` with `wrong-path`, or `upstream` with
+   `unclassified` for an SSE error event.
+3. **Status alone** (Table B) — for a reply no row explains, with the reason `unclassified`.
+
+The provider's own sentence reaches the log at TRACE only; the details carry the reason token and typed values
+(`09_ERROR_HANDLING.md#safe-details-allowlist`, `#failure-reasons`). The 15 `ErrorCode` constants are unchanged.
+
+**Table A — the rows, in the order they are tried.** "Any" status means the row matches by its words alone. Who is
+asked is what the run does with the failure after the client's own retries (`pipeline/run/PauseDecider`).
+
+| # | Row id | Status | Body words | ErrorCode | Reason | Retry | Who is asked |
+|---|---|---|---|---|---|---|---|
+| 1 | `ollama-host-forbidden` | 403 | empty body | `auth` | `host-forbidden` | NONE | the person |
+| 2 | `ollama-cloud-signin` | any | `"signin_url"` | `auth` | `cloud-signin` | NONE | the person |
+| 3 | `ollama-cloud-disabled` | any | `ollama cloud is disabled` | `auth` | `cloud-disabled` | NONE | the person |
+| 4 | `ollama-cloud-unreachable` | 502 | `cloud`, `remote model`, `ollama.com` or `bad gateway` | `upstream` | `cloud-unreachable` | BACKOFF | nobody: the run waits as for an outage |
+| 5 | `ollama-model-not-pulled` | any | `model … not found` in an `error` or `message` field | `modelNotFound` | `model-not-pulled` | NONE | the person |
+| 6 | `ollama-thinking-unsupported` | 400 | `does not support think(ing)` | `validation` | `thinking-unsupported` | NONE | nobody when the refused control can be dropped (the request is sent again without it, not as an attempt); else the person |
+| 7 | `ollama-think-level-invalid` | 400 | `invalid think value`, `think must be a boolean` | `validation` | `think-level-invalid` | NONE | as row 6 |
+| 8 | `ollama-option-type` | any | `option "…" must be of type`, `missing unit in duration` | `validation` | `option-type` | NONE | the person; a BookLoom fault, logged at ERROR once per model |
+| 9 | `ollama-server-busy` | any | `server busy` | `upstream` | `server-busy` | BACKOFF | nobody: the run waits as for an outage |
+| 10 | `ollama-out-of-memory` | any | `model requires … GiB but only … GiB are available` | `modelUnavailable` | `out-of-memory` | NONE | the person (never woken by itself) |
+| 11 | `ollama-repeat-limit` | any | `token repeat limit` | `upstream` | `repeat-limit` | NEW_SEED | nobody: after its one new-seed resend the segment is flagged |
+| 12 | `ollama-runner-crashed` | any | `model runner has unexpectedly stopped` | `upstream` | `runner-crashed` | SAME | nobody: the run waits as for an outage |
+| 13 | `lmstudio-terminated` | any | `terminated` as the `error` or `message` field | `upstream` | `terminated` | SAME | nobody: a second one waits as an outage |
+| 14 | `lmstudio-no-model-loaded` | any | `no model(s) (are/is) loaded` | `modelUnavailable` | `no-model-loaded` | AUTO_WAIT | nobody for six wakes, then the person |
+| 15 | `lmstudio-model-unloaded` | any | `model … unloaded`, `model … not loaded` | `modelUnavailable` | `model-unloaded` | AUTO_WAIT | as row 14 |
+| 16 | `lmstudio-context-exceeded` | any | `context size has been exceeded` | `contextWindow` | `context-overflow` | NONE | nobody: the segment is flagged |
+| 17 | `lmstudio-tokens-to-keep` | any | `tokens to keep … greater than the context length` | `contextWindow` | `context-overflow` | NONE | as row 16 |
+| 18 | `lmstudio-grammar-too-large` | any | `failed to parse grammar` | `validation` | `grammar-too-large` | NONE | the person |
+| 19 | `lmstudio-structured-unavailable` | 501 | `structured output is unavailable` | `validation` | `structured-unavailable` | NONE | the person |
+| 20 | `lmstudio-template-rejected` | any | `Jinja Exception` | `validation` | `template-rejected` | NONE | the person |
+| 21 | `lmstudio-engine-unreachable` | any | `Engine protocol predict request failed: fetch failed` | `upstream` | `engine-unreachable` | SAME | nobody: the run waits as for an outage |
+| 22 | `lmstudio-schema-invalid` | any | `JSON schema error`, `Invalid structured output configuration`, `Pointer '…' does not exist`, `Unable to generate parser`, `cannot resolve $ref` | `validation` | `schema-invalid` | NONE | the person |
+| 23 | `llama-exceed-context` | any | `exceed_context_size_error` (its typed `n_prompt_tokens` and `n_ctx` become the token counts) | `contextWindow` | `context-overflow` | NONE | nobody: the segment is flagged |
+| 24 | `llama-model-loading` | 503 | `Loading model` | `modelUnavailable` | `model-loading` | AUTO_WAIT | nobody: the run waits until `/health` no longer says loading |
+| 25 | `llama-schema-not-applied` | any | `unparsed peg-…`, `does not match the expected peg-native format` | `validation` | `schema-not-applied` | NONE | the person |
+| 26 | `context-words` | any | `context` and one of `exceed`, `greater than`, `too long`, `longer than`, in any order | `contextWindow` | `context-overflow` | NONE | nobody: the segment is flagged |
+| 27 | `context-code` | any | `context_length_exceeded` | `contextWindow` | `context-overflow` | NONE | as row 26 |
+| 28 | `context-n-ctx` | any | `n_ctx` | `contextWindow` | `context-overflow` | NONE | as row 26 |
+
+A context-overflow failure carries the prompt and window token counts when the provider stated them (`(696 tokens)`
+and `(512 tokens)` in its words, or the typed `n_prompt_tokens` and `n_ctx`), so the flag can say "696 of 512 tokens".
+A row that names Ollama matches by text alone until group 5 adds the engine mask, so the same words from another
+engine read the same way.
+
+**Table B — the status alone, for a reply no row explains.** Every failure here carries the reason `unclassified`.
+
+| Condition | ErrorCode | Retried by the client |
+|---|---|---|
+| connect refused, DNS failure, no route, other I/O failure | `unreachable` | yes |
+| socket or read timeout | `timeout` | yes, with a new seed and a lower cap (the timeout ladder) |
+| the call was interrupted | `cancelled` | no |
+| 401 or 403 | `auth` | no |
+| 404 on a chat call | `modelNotFound` | no |
+| 429 | `rateLimited` (Retry-After honoured) | yes |
+| 5xx | `upstream` | yes |
+| 400 or 422 | `validation` | no |
+| any other status | `internal` | no |
+| 200 whose reply cannot be read | `upstream` | yes |
+| 200 with raw-empty or blank content (before sanitising) | `emptyCompletion` | no |
+| a model listing that cannot be read | `discoveryFailed` | yes |
+| a bound or chosen model not offered at run or preflight | `modelUnavailable` | no |
+| a credential reference that resolves to nothing | `missingCredential` | no |
+
+**Retry rules.** The matched row's `RetryRule` decides whether `GatedChatModel` sends a failed request again, not the
+code's `isRetryable()`; a failure no row explains keeps the code's own rule, and `RetryPolicy` keeps the attempt
+counts, the backoff and the timeout ladder:
+
+- `NONE` — never sent again unchanged: the request must change or the person must act.
+- `SAME` — the same request once more, after a state check that the server answers at all; a server that does not
+  answer is handed to the run as an outage instead.
+- `NEW_SEED` — the same request once more with another seed (a seed the model refused stays dropped).
+- `BACKOFF` — the same request after growing pauses, within the attempt budget, honouring `Retry-After`.
+- `AUTO_WAIT` — not sent again by the client; the run waits for the server by itself (an unloaded or loading model).
+
+A request repeated without a setting the model refused is not an attempt. Every WARN line about a retried, given-up or
+refused call, or a flagged step, carries `reason=<token>` built from the typed reason (`09_ERROR_HANDLING.md#failure-reasons`),
+for example `gave up provider chat code=validation reason=grammar-too-large kind=TERM_READING`.
+
+`discoveryFailed` and `modelUnavailable` are defined in the `ErrorCode` enum (`09_ERROR_HANDLING.md`).
 
 ## credentials-as-reference {#credentials-as-reference}
 

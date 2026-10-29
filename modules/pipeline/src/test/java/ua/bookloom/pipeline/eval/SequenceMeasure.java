@@ -13,7 +13,9 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.project.Gender;
@@ -186,19 +188,25 @@ final class SequenceMeasure {
     }
 
     private static Map<String, SequenceMetrics.KindCost> costByKind(final List<ModelCallFinished> calls) {
-        final CallKindTotals totals = new CallKindTotals();
-        calls.forEach(totals::record);
+        final CallKindTotals totals =
+                CallKindTotals.of(calls.stream().map(SequenceMeasure::recordOf).toList());
         final Map<String, SequenceMetrics.KindCost> byName = new LinkedHashMap<>();
+        // The eval report's columns are numbers, so a figure no call reported is written as 0 there.
         totals.totals()
                 .forEach((kind, t) -> byName.put(
                         kind.name(),
                         new SequenceMetrics.KindCost(
                                 t.attempts(),
                                 t.failed(),
-                                t.promptTokens(),
-                                t.completionTokens(),
+                                t.promptTotal().orElse(0L),
+                                t.completionTotal().orElse(0L),
                                 t.elapsed().toMillis() / 1000.0)));
         return byName;
+    }
+
+    private static CallRecord recordOf(final ModelCallFinished call) {
+        return new CallRecord(
+                call.kind(), call.usage(), call.elapsed(), null, call.isAnswered() ? null : FailureReason.UNCLASSIFIED);
     }
 
     private static String learnedLine(final LexiconEntry entry) {

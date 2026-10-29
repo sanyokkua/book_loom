@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -230,7 +231,9 @@ final class TranslationJobTestSupport {
                 RunTicks.DAEMON,
                 BatchDrafter.NO_BATCHING,
                 WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                RequestDefaultsSource.environmentOnly(),
+                CallLedger.none(),
+                "unknown");
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */

@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
@@ -181,7 +182,9 @@ final class SoakRun {
                 },
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
                 WordValidator.none(),
-                RequestDefaultsSource.environmentOnly());
+                RequestDefaultsSource.environmentOnly(),
+                CallLedger.none(),
+                "unknown");
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

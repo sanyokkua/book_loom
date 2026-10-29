@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
@@ -55,6 +56,7 @@ public final class LlmModule extends AbstractModule {
         bind(ProviderClientFactory.class).in(Singleton.class);
         bind(ModelSettingsCache.class).in(Singleton.class);
         bind(RefusalMemory.class).in(Singleton.class);
+        bind(CallLedger.class).to(CallLedgerImpl.class).in(Singleton.class);
     }
 
     /** Provides shared retry decisions with production clock, random jitter, and a blocking sleeper. */

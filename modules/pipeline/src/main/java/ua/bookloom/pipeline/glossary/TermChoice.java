@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -198,13 +199,20 @@ public final class TermChoice {
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Term choice batch of {} failed code={}", batch.size(), error.code());
-            return Result.err(error);
+            return failed(batch.size(), Objects.requireNonNull(reply.error(), "error"));
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Term choice reply {}", content);
         return verdicts(content, batch);
+    }
+
+    private static Result<Choice> failed(final int batchSize, final AppError error) {
+        log.warn(
+                "Term choice batch of {} failed code={} reason={}",
+                batchSize,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
+        return Result.err(error);
     }
 
     private Result<Choice> verdicts(final String reply, final List<String> asked) {

@@ -286,7 +286,8 @@ class ChatModelFactoryImplTest {
                 retries,
                 new LlmModule().objectMapper(),
                 cache,
-                new RefusalMemory(cache));
+                new RefusalMemory(cache),
+                new CallLedgerImpl());
     }
 
     private void register(ProviderConfig config) {

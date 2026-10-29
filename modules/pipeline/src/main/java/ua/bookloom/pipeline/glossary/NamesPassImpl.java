@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -31,6 +32,8 @@ import ua.bookloom.api.pipeline.NamesPassReport;
 import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.CallKindTotals;
+import ua.bookloom.pipeline.PrepSummary;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
 import ua.bookloom.pipeline.glossary.TermReview.Reviewed;
@@ -67,8 +70,12 @@ public final class NamesPassImpl implements NamesPass {
     private final LexiconReading lexiconReading;
     private final Clock clock;
     private final RequestDefaultsSource requestDefaultsSource;
+    private final CallLedger ledger;
 
-    /** A names pass whose requests use the defaults the environment alone gives (the command line, tests). */
+    /**
+     * A names pass whose requests use the defaults the environment alone gives and whose calls are counted nowhere
+     * (tests).
+     */
     public NamesPassImpl(
             final GlossaryRepository glossary,
             final LexiconRepository lexicon,
@@ -95,7 +102,8 @@ public final class NamesPassImpl implements NamesPass {
                 suggestTargets,
                 lexiconReading,
                 clock,
-                RequestDefaultsSource.environmentOnly());
+                RequestDefaultsSource.environmentOnly(),
+                CallLedger.none());
     }
 
     /** The copies of both tables and the services built over them, for one project. */
@@ -110,8 +118,9 @@ public final class NamesPassImpl implements NamesPass {
             GlossaryServiceImpl glossaryService,
             LexiconServiceImpl lexiconService) {}
 
-    /** What one pass sends its calls through. */
-    private record Run(Stage stage, ChatModel model, NamesPassSteps counter, ModelCalls calls, Instant started) {}
+    /** What one pass sends its calls through, and the ledger's mark its calls are counted from. */
+    private record Run(
+            Stage stage, ChatModel model, NamesPassSteps counter, ModelCalls calls, Instant started, long mark) {}
 
     @Override
     public Result<NamesEstimate> estimate(final String projectId) {
@@ -142,7 +151,10 @@ public final class NamesPassImpl implements NamesPass {
                     final int window = ContextBudget.windowFor(detectedContext, model.contextWindowOverride());
                     log.debug("Names pass window={} detected={}", window, detectedContext);
                     final ModelCalls calls = stage.scans().calls(stoppable, counter, stage.book(), window);
-                    return execute(new Run(stage, stoppable, counter, calls, clock.instant()));
+                    final Run run = new Run(stage, stoppable, counter, calls, clock.instant(), ledger.mark());
+                    final Result<NamesPassReport> result = execute(run);
+                    PrepSummary.log("names", projectId, CallKindTotals.of(ledger.since(run.mark())));
+                    return result;
                 }));
     }
 

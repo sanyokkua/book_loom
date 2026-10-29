@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderVerifier;
@@ -32,6 +33,17 @@ public interface ProviderProbe {
     Result<Duration> probe();
 
     /**
+     * Probes the provider once, asking what the error the run paused on needs: a server still loading its model is
+     * asked whether it is done before its model list.
+     *
+     * @param pausedOn the error the run paused on; never null
+     * @return as {@link #probe()}
+     */
+    default Result<Duration> probe(final AppError pausedOn) {
+        return probe();
+    }
+
+    /**
      * The probe a run checks its provider with — the window's and the command line's alike: the connection and model
      * list stages, so it passes only when the server answers and still offers the run's model.
      *
@@ -42,8 +54,29 @@ public interface ProviderProbe {
     static ProviderProbe of(final ProviderVerifier verifier, final ModelSelection selection) {
         Objects.requireNonNull(verifier, "verifier");
         Objects.requireNonNull(selection, "selection");
-        return () -> verifier.verify(selection, VerificationPolicy.CONNECTION_AND_MODELS)
-                .flatMap(ProviderProbe::outcomeOf);
+        return new ProviderProbe() {
+            @Override
+            public Result<Duration> probe() {
+                return checked(verifier, selection, VerificationPolicy.CONNECTION_AND_MODELS);
+            }
+
+            @Override
+            public Result<Duration> probe(final AppError pausedOn) {
+                Objects.requireNonNull(pausedOn, "pausedOn");
+                final boolean loading = FailureReason.in(pausedOn.details())
+                        .filter(FailureReason.MODEL_LOADING::equals)
+                        .isPresent();
+                return checked(
+                        verifier,
+                        selection,
+                        loading ? VerificationPolicy.HEALTH_AND_MODELS : VerificationPolicy.CONNECTION_AND_MODELS);
+            }
+        };
+    }
+
+    private static Result<Duration> checked(
+            final ProviderVerifier verifier, final ModelSelection selection, final VerificationPolicy policy) {
+        return verifier.verify(selection, policy).flatMap(ProviderProbe::outcomeOf);
     }
 
     private static Result<Duration> outcomeOf(final VerificationReport report) {

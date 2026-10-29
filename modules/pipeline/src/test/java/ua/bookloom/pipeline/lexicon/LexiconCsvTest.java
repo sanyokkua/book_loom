@@ -28,6 +28,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.glossary.CsvRecords;
@@ -55,7 +56,8 @@ class LexiconCsvTest {
                 new DocumentModule(),
                 new InMemoryPersistenceModule(),
                 new PipelineModule(),
-                new ReviewModeTestModule());
+                new ReviewModeTestModule(),
+                new CallLedgerTestModule());
     }
 
     @BeforeEach

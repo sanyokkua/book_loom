@@ -16,7 +16,10 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatRequest;
@@ -29,6 +32,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** Scripted provider seams for a whole command run: a model that fails chosen drafts, a probe, a clock. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -49,6 +53,7 @@ final class CliRunFakes {
         private final ErrorCode failure;
         private final Map<String, String> translations;
         private final AtomicInteger drafts = new AtomicInteger();
+        private final AtomicReference<CallLedger> ledger = new AtomicReference<>(CallLedger.none());
 
         /**
          * @param failingDrafts the draft calls, counted from one, that answer {@code failure}
@@ -66,9 +71,27 @@ final class CliRunFakes {
             this.translations.putAll(replacements);
         }
 
+        /** Records every call it answers in {@code calls}, as the gated model records a provider's calls. */
+        ScriptedModels recordingInto(CallLedger calls) {
+            ledger.set(Objects.requireNonNull(calls, "calls"));
+            return this;
+        }
+
         @Override
         public Result<ChatModel> create(ModelSelection selection) {
-            return Result.ok(this::answer);
+            return Result.ok(this::recorded);
+        }
+
+        // A scripted reply reports no usage, as a server that sends no figures does.
+        private Result<ChatResponse> recorded(ChatRequest request) {
+            final Result<ChatResponse> result = answer(request);
+            final CallKind kind = request.callKind();
+            if (kind != null) {
+                Objects.requireNonNull(ledger.get(), "ledger")
+                        .record(new CallRecord(
+                                kind, null, Duration.ZERO, null, result.isOk() ? null : FailureReason.UNCLASSIFIED));
+            }
+            return result;
         }
 
         private Result<ChatResponse> answer(ChatRequest request) {

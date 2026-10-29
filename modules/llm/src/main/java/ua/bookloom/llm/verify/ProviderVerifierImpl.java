@@ -12,7 +12,9 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -117,6 +119,10 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private Result<VerificationReport> runStages(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config, ProviderClient client) {
         final List<StageOutcome> stages = new ArrayList<>(3);
+        if (policy == VerificationPolicy.HEALTH_AND_MODELS && isStillLoading(client, config)) {
+            stages.add(StageOutcomes.failed(VerificationStage.CONNECTION, loading(config, selection.modelId())));
+            return completed(selection, policy, stages);
+        }
         final StageOutcome connection = connectionStage(client, config);
         stages.add(connection);
         if (connection.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
@@ -124,10 +130,39 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         }
         final StageOutcome models = modelsStage(client, config, selection.modelId());
         stages.add(models);
-        if (models.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION_AND_MODELS) {
+        if (models.status() == StageStatus.FAILED
+                || policy == VerificationPolicy.CONNECTION_AND_MODELS
+                || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return completed(selection, policy, stages);
         }
         return verifyInferencePolicy(selection, policy, client, config, stages, models);
+    }
+
+    // A llama-server answers 503 on every route while it loads; its health route is the one that says when it is done.
+    private static boolean isStillLoading(ProviderClient client, ProviderConfig config) {
+        final boolean loading = client.isLoadingModel();
+        if (loading) {
+            log.debug("Provider health says the model is still loading provider={}", config.id());
+        } else {
+            log.info(
+                    "Provider health no longer says loading provider={} host={}",
+                    config.id(),
+                    config.baseUrl().getHost());
+        }
+        return loading;
+    }
+
+    private static AppError loading(ProviderConfig config, String modelId) {
+        return AppError.of(
+                ErrorCode.modelUnavailable,
+                "Provider is still loading the model",
+                "The server is loading the model and will answer when it is ready.",
+                SafeDetails.empty()
+                        .withReason(FailureReason.MODEL_LOADING)
+                        .withEndpoint(config.baseUrl())
+                        .withModelName(modelId)
+                        .render(),
+                null);
     }
 
     private StageOutcome connectionStage(ProviderClient client, ProviderConfig config) {

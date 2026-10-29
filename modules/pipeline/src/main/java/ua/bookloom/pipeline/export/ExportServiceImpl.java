@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -48,6 +49,20 @@ public final class ExportServiceImpl implements ExportService {
     private final GlossaryRepository glossary;
     private final RunRepository runs;
     private final Clock clock;
+    private final CallLedger ledger;
+
+    /** An export service whose consistency pass's calls are counted nowhere (tests). */
+    public ExportServiceImpl(
+            final ProjectRepository projects,
+            final SegmentRepository segments,
+            final OpenProjects openProjects,
+            final DocumentPort documents,
+            final ConsistencyPass consistencyPass,
+            final GlossaryRepository glossary,
+            final RunRepository runs,
+            final Clock clock) {
+        this(projects, segments, openProjects, documents, consistencyPass, glossary, runs, clock, CallLedger.none());
+    }
 
     @Override
     public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
@@ -110,7 +125,7 @@ public final class ExportServiceImpl implements ExportService {
         final ModelCalls calls = model == null ? null : shownCalls(project, model, progress);
         final ExportParts parts =
                 new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary, runs);
-        return Result.ok(new ExportJobImpl(request, parts, calls, progress));
+        return Result.ok(new ExportJobImpl(request, parts, calls, progress, ledger));
     }
 
     // The pass's calls are timed and shown as a run's are: each described call reaches the listener as a snapshot.

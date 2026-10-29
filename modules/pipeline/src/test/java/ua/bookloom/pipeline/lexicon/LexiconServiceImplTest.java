@@ -17,6 +17,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
@@ -32,7 +33,11 @@ class LexiconServiceImplTest {
     private static final String PROJECT = "p1";
 
     private final Injector injector = Guice.createInjector(
-            new DocumentModule(), new InMemoryPersistenceModule(), new PipelineModule(), new ReviewModeTestModule());
+            new DocumentModule(),
+            new InMemoryPersistenceModule(),
+            new PipelineModule(),
+            new ReviewModeTestModule(),
+            new CallLedgerTestModule());
     private final LexiconRepository real = injector.getInstance(LexiconRepository.class);
     private final Interleaved interleaved = new Interleaved(real);
     private final LexiconServiceImpl service = new LexiconServiceImpl(

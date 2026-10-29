@@ -7,15 +7,20 @@ import java.util.function.BiFunction;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttempt;
 import ua.bookloom.api.llm.CallAttemptListener;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.llm.CallRecorder.TimedCall;
+import ua.bookloom.llm.RetryChoice.Resend;
 import ua.bookloom.llm.gate.InferenceGate;
+import ua.bookloom.llm.http.RetryRule;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -38,6 +43,7 @@ public final class GatedChatModel implements ChatModel {
     private final String providerId;
     private final BiFunction<String, String, ModelSettings> settings;
     private final @org.jspecify.annotations.Nullable RefusalMemory refusals;
+    private final CallRecorder recorder;
 
     /** Captures the concrete provider client, model id, shared gate, and retry policy for each call. */
     public GatedChatModel(ProviderClient client, String modelId, InferenceGate gate, RetryPolicy retryPolicy) {
@@ -64,6 +70,20 @@ public final class GatedChatModel implements ChatModel {
             RetryPolicy retryPolicy,
             BiFunction<String, String, ModelSettings> settings,
             @org.jspecify.annotations.Nullable RefusalMemory refusals) {
+        this(client, providerId, modelId, gate, retryPolicy, settings, refusals, CallLedger.none());
+    }
+
+    /** As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger}. */
+    public GatedChatModel(
+            ProviderClient client,
+            String providerId,
+            String modelId,
+            InferenceGate gate,
+            RetryPolicy retryPolicy,
+            BiFunction<String, String, ModelSettings> settings,
+            @org.jspecify.annotations.Nullable RefusalMemory refusals,
+            CallLedger ledger) {
+        this.recorder = new CallRecorder(ledger, modelId);
         this.refusals = refusals;
         this.providerId = Objects.requireNonNull(providerId, "providerId");
         this.settings = Objects.requireNonNull(settings, "settings");
@@ -145,8 +165,10 @@ public final class GatedChatModel implements ChatModel {
         ChatRequest request = first;
         int attempt = 1;
         int timedOut = 0;
+        final EnumSet<FailureReason> resentOnce = EnumSet.noneOf(FailureReason.class);
         while (true) {
-            final AttemptResult outcome = attempt(request, new Tries(attempt, timedOut, attempts, downgraded));
+            final AttemptResult outcome =
+                    attempt(request, new Tries(attempt, timedOut, attempts, downgraded, resentOnce));
             if (outcome.refused()) {
                 // A refusal is not an attempt: the same attempt number goes out again, minus the refused setting.
                 original = SettingDrops.stripAll(original, downgraded);
@@ -154,46 +176,98 @@ public final class GatedChatModel implements ChatModel {
                 continue;
             }
             timedOut += outcome.timedOut() ? 1 : 0;
-            if (!outcome.retry()) {
+            if (outcome.resend() == Resend.NONE) {
                 return outcome.call();
             }
             if (!retryPolicy.sleep(outcome.delay())) {
                 return ProviderCallResult.withoutRetryAfter(cancelled());
             }
             attempt++;
-            request = outcome.timedOut()
-                    ? SettingDrops.stripAll(variedAfterTimeout(original, attempt), downgraded)
-                    : request;
+            final ChatRequest next = nextRequest(outcome, original, request, attempt, downgraded);
+            if (next == null) {
+                return outcome.call();
+            }
+            request = next;
         }
+    }
+
+    // The request the decision sends next, or null when a state check found the server not answering at all.
+    private @org.jspecify.annotations.Nullable ChatRequest nextRequest(
+            AttemptResult outcome,
+            ChatRequest original,
+            ChatRequest request,
+            int nextAttempt,
+            EnumSet<RejectedCapability> downgraded) {
+        return switch (outcome.resend()) {
+            case VARIED_AFTER_TIMEOUT -> SettingDrops.stripAll(variedAfterTimeout(original, nextAttempt), downgraded);
+            case NEW_SEED -> withNewSeed(request, nextAttempt, downgraded);
+            case SAME -> isAnswering(outcome.call(), request) ? request : null;
+            case BACKOFF -> request;
+            case NONE -> null;
+        };
+    }
+
+    // A looping model needs another random path; a seed the model refused stays dropped, so the resend is the same.
+    private ChatRequest withNewSeed(ChatRequest request, int nextAttempt, EnumSet<RejectedCapability> downgraded) {
+        final Integer seed = request.seed();
+        if (downgraded.contains(RejectedCapability.SEED)) {
+            log.debug(
+                    "New seed not sent: the model refused the seed setting model={} kind={}",
+                    modelId,
+                    request.callKind());
+        }
+        return SettingDrops.stripAll(request.withSeed(seed == null ? nextAttempt : seed + 1), downgraded);
+    }
+
+    // Sent again unchanged only to a server that answers at all; checked after the wait and outside the gate, so a
+    // server that went away is handed to the run as an outage instead of being sent the same body to fail on.
+    private boolean isAnswering(ProviderCallResult<ChatResponse> call, ChatRequest request) {
+        final AppError failed = call.result().error();
+        final String reason = failed == null ? "none" : FailureReason.tokenIn(failed.details());
+        final Result<Boolean> checked = client.probe().result();
+        if (checked.isOk()) {
+            log.debug(
+                    "State check passed before the resend model={} kind={} reason={}",
+                    modelId,
+                    request.callKind(),
+                    reason);
+            return true;
+        }
+        log.debug(
+                "No resend: state check failed reason={} probeCode={}",
+                reason,
+                Objects.requireNonNull(checked.error(), "probe error").code());
+        return false;
     }
 
     private AttemptResult attempt(ChatRequest request, Tries tries) {
         final int attempt = tries.attempt();
         final CallAttempt reported = reported(request, tries);
         logStarted(request, reported);
-        final Result<ProviderCallResult<ChatResponse>> gated = gate.run(() -> {
-            tries.listener().started(reported);
-            return Result.ok(client.chat(modelId, request));
-        });
+        final Result<TimedCall> gated =
+                CallRecorder.timed(gate, () -> tries.listener().started(reported), () -> client.chat(modelId, request));
         if (gated.isErr()) {
             return finished(ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(gated.error(), "gate error"))));
         }
-        final ProviderCallResult<ChatResponse> call = Objects.requireNonNull(gated.data(), "provider call");
+        final TimedCall timed = Objects.requireNonNull(gated.data(), "provider call");
+        final ProviderCallResult<ChatResponse> call = timed.call();
         final Result<ChatResponse> result = call.result();
         if (result.isOk()) {
-            logSucceeded(request, attempt);
+            recorder.record(request, attempt, timed);
+            recorder.logSucceeded(request, attempt);
             return finished(call);
         }
         final AppError error = Objects.requireNonNull(result.error(), "provider error");
         if (isNewRefusal(call, request, tries.downgraded())) {
             final RejectedCapability rejected = Objects.requireNonNull(call.rejectedCapability(), "refused setting");
             tries.downgraded().add(rejected);
-            noteRefusal(rejected);
-            return new AttemptResult(call, false, Duration.ZERO, false, true);
+            noteRefusal(rejected, error);
+            return new AttemptResult(call, Resend.NONE, Duration.ZERO, false, true);
         }
+        recorder.record(request, attempt, timed);
         tries.listener().failed(reported, error.code());
-        return failure(call, error, request, attempt, tries.timedOut());
+        return failure(call, error, request, tries);
     }
 
     // An attempt after the timeout budget is spent is the last one if it stalls too, which is what a waiting person
@@ -217,64 +291,58 @@ public final class GatedChatModel implements ChatModel {
                 request.maxOutputTokens());
     }
 
-    private void logSucceeded(ChatRequest request, int attempt) {
-        if (attempt > 1) {
-            log.info(
-                    "Provider chat answered on a retry model={} kind={} attempt={}",
-                    modelId,
-                    request.callKind(),
-                    attempt);
-        } else {
-            log.debug(
-                    "Provider chat attempt succeeded model={} kind={} attempt={}",
-                    modelId,
-                    request.callKind(),
-                    attempt);
-        }
-    }
-
     private AttemptResult failure(
-            ProviderCallResult<ChatResponse> call,
-            AppError error,
-            ChatRequest request,
-            int attempt,
-            int timedOutBefore) {
+            ProviderCallResult<ChatResponse> call, AppError error, ChatRequest request, Tries tries) {
+        final int attempt = tries.attempt();
         final boolean timedOut = error.code() == ErrorCode.timeout;
-        final boolean retry = timedOut
-                ? retryPolicy.shouldRetryTimeout(attempt, timedOutBefore + 1)
-                : retryPolicy.shouldRetry(error.code(), attempt);
-        if (!retry) {
-            logStopped(request, attempt, error);
-            return new AttemptResult(call, false, Duration.ZERO, timedOut, false);
+        final RetryChoice.Decision decision =
+                RetryChoice.decide(error, attempt, tries.timedOut(), tries.resentOnce(), retryPolicy);
+        if (decision.resend() == Resend.NONE) {
+            logStopped(request, attempt, error, decision);
+            return new AttemptResult(call, Resend.NONE, Duration.ZERO, timedOut, false);
+        }
+        final FailureReason reason = decision.reason();
+        if (reason != null && (decision.resend() == Resend.SAME || decision.resend() == Resend.NEW_SEED)) {
+            tries.resentOnce().add(reason);
         }
         final Duration delay = retryPolicy.delayBeforeRetry(attempt, call.retryAfter());
         log.warn(
-                "Retrying provider chat model={} kind={} failedAttempt={} nextAttempt={} code={} delay={} varied={}",
+                "Retrying provider chat model={} kind={} failedAttempt={} nextAttempt={} code={} reason={} rule={}"
+                        + " delay={} varied={}",
                 modelId,
                 request.callKind(),
                 attempt,
                 attempt + 1,
                 error.code(),
+                FailureReason.tokenIn(error.details()),
+                decision.rule(),
                 delay,
                 timedOut);
-        return new AttemptResult(call, true, delay, timedOut, false);
+        return new AttemptResult(call, decision.resend(), delay, timedOut, false);
     }
 
-    private void logStopped(ChatRequest request, int attempt, AppError error) {
-        if (error.code().isRetryable()) {
+    // Given up when its resends are spent or its row says a resend cannot help; an unmatched code that is never
+    // repeated (auth, a missing model) is the caller's to word, and a loading model's wait is the run's to log.
+    private void logStopped(ChatRequest request, int attempt, AppError error, RetryChoice.Decision decision) {
+        final String reason = FailureReason.tokenIn(error.details());
+        if (decision.isGaveUp() || decision.rule() == RetryRule.NONE) {
             log.warn(
-                    "Provider chat gave up model={} kind={} attempts={} code={}",
-                    modelId,
+                    "gave up provider chat code={} reason={} kind={} model={} attempts={} why={}",
+                    error.code(),
+                    reason,
                     request.callKind(),
+                    modelId,
                     attempt,
-                    error.code());
+                    decision.why());
         } else {
             log.debug(
-                    "Provider chat attempt stopped model={} kind={} attempt={} code={}",
+                    "Provider chat attempt stopped model={} kind={} attempt={} code={} reason={} why={}",
                     modelId,
                     request.callKind(),
                     attempt,
-                    error.code());
+                    error.code(),
+                    reason,
+                    decision.why());
         }
     }
 
@@ -292,21 +360,23 @@ public final class GatedChatModel implements ChatModel {
         return rejected != null && !downgraded.contains(rejected) && SettingDrops.without(request, rejected) != null;
     }
 
-    private void noteRefusal(RejectedCapability rejected) {
+    private void noteRefusal(RejectedCapability rejected, AppError error) {
         log.warn(
-                "Model refused a setting providerId={} model={} setting={} instead={}; the request is repeated"
-                        + " without it, not counted as an attempt",
+                "Model refused a setting providerId={} model={} setting={} instead={} code={} reason={}; the request"
+                        + " is repeated without it, not counted as an attempt",
                 providerId,
                 modelId,
                 rejected.settingName(),
-                rejected.insteadDid());
+                rejected.insteadDid(),
+                error.code(),
+                FailureReason.tokenIn(error.details()));
         if (refusals != null) {
             refusals.remember(providerId, modelId, rejected);
         }
     }
 
     private static AttemptResult finished(ProviderCallResult<ChatResponse> call) {
-        return new AttemptResult(call, false, Duration.ZERO, false, false);
+        return new AttemptResult(call, Resend.NONE, Duration.ZERO, false, false);
     }
 
     private static Result<ChatResponse> cancelled() {
@@ -314,10 +384,17 @@ public final class GatedChatModel implements ChatModel {
                 AppError.of(ErrorCode.cancelled, "Inference cancelled", "The provider retry wait was interrupted."));
     }
 
-    /** Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it. */
+    /**
+     * Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it, the
+     * settings dropped and the reasons whose one resend is spent.
+     */
     private record Tries(
-            int attempt, int timedOut, CallAttemptListener listener, EnumSet<RejectedCapability> downgraded) {}
+            int attempt,
+            int timedOut,
+            CallAttemptListener listener,
+            EnumSet<RejectedCapability> downgraded,
+            EnumSet<FailureReason> resentOnce) {}
 
     private record AttemptResult(
-            ProviderCallResult<ChatResponse> call, boolean retry, Duration delay, boolean timedOut, boolean refused) {}
+            ProviderCallResult<ChatResponse> call, Resend resend, Duration delay, boolean timedOut, boolean refused) {}
 }

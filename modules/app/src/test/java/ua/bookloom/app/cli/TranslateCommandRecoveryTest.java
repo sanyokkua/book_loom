@@ -21,6 +21,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
@@ -119,14 +120,11 @@ class TranslateCommandRecoveryTest {
                 .isEqualTo("RESUMED");
         assertThat(json.path("export").path("partial").asBoolean()).isFalse();
         assertThat(json.path("exitCode").asInt()).isEqualTo(0);
-        // The scripted models report no usage, so the pipeline's estimate of the reply tokens is what is counted.
+        // The scripted models report no usage, so the calls are counted and no token figure is written, never a 0.
         assertThat(json.path("modelCallsByKind").path("DRAFT").path("attempts").asInt())
                 .isPositive();
-        assertThat(json.path("modelCallsByKind")
-                        .path("DRAFT")
-                        .path("completionTokens")
-                        .asInt())
-                .isPositive();
+        assertThat(json.path("modelCallsByKind").path("DRAFT").has("completionTokens"))
+                .isFalse();
     }
 
     // A doubled word passes the run's gates as a note; the audit lists the segment, the console says so in one line
@@ -206,7 +204,10 @@ class TranslateCommandRecoveryTest {
                             binder.bind(RecoveryTimer.class).toInstance(clock::advanceBy);
                         }));
         return TranslateCommandTestFakes.commandOver(
-                core, models, new TranslateCommandTestFakes.RecordingProviderConfigs(), probe);
+                core,
+                models.recordingInto(core.getInstance(CallLedger.class)),
+                new TranslateCommandTestFakes.RecordingProviderConfigs(),
+                probe);
     }
 
     private static PrintStream print(ByteArrayOutputStream console) {

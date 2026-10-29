@@ -6,7 +6,10 @@ import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 
@@ -123,59 +126,98 @@ public final class PauseDecider {
     }
 
     /**
+     * Routes the error a model call answered, by its code and the reason its details carry.
+     *
+     * @param error the non-null error
+     * @return where the error sends the segment and the run
+     */
+    public static Route route(final AppError error) {
+        Objects.requireNonNull(error, "error");
+        return route(error.code(), FailureReason.in(error.details()).orElse(null));
+    }
+
+    /**
      * Routes the error a model call answered.
      *
      * @param code the non-null code of the error
+     * @param reason the error's reason, or {@code null} when its details name none
      * @return where the error sends the segment and the run
      */
-    public static Route route(final ErrorCode code) {
+    public static Route route(final ErrorCode code, @Nullable final FailureReason reason) {
         Objects.requireNonNull(code, "code");
+        // The provider already sent a looping request once more with a new seed; a pause would loop the same way.
         final Route route =
-                switch (code) {
-                    case emptyCompletion, contextWindow -> Route.FLAG_AT_ONCE;
-                    case cancelled -> Route.CANCELLED;
-                    case unreachable,
-                            timeout,
-                            auth,
-                            rateLimited,
-                            upstream,
-                            modelNotFound,
-                            modelUnavailable,
-                            missingCredential,
-                            validation,
-                            internal -> Route.PAUSE_OR_FAIL;
-                    case busy, discoveryFailed -> Route.FAIL;
-                };
-        log.debug("Routed model-call error code={} route={}", code, route);
+                code == ErrorCode.upstream && reason == FailureReason.REPEAT_LIMIT ? Route.FLAG_AT_ONCE : byCode(code);
+        log.debug("Routed model-call error code={} reason={} route={}", code, tokenOf(reason), route);
         return route;
+    }
+
+    private static Route byCode(final ErrorCode code) {
+        return switch (code) {
+            case emptyCompletion, contextWindow -> Route.FLAG_AT_ONCE;
+            case cancelled -> Route.CANCELLED;
+            case unreachable,
+                    timeout,
+                    auth,
+                    rateLimited,
+                    upstream,
+                    modelNotFound,
+                    modelUnavailable,
+                    missingCredential,
+                    validation,
+                    internal -> Route.PAUSE_OR_FAIL;
+            case busy, discoveryFailed -> Route.FAIL;
+        };
+    }
+
+    /**
+     * Classifies an error the run pauses on by how it recovers, by its code and the reason its details carry.
+     *
+     * @param error the non-null error
+     * @return how a pause on it gets going again
+     */
+    public static Recovery recovery(final AppError error) {
+        Objects.requireNonNull(error, "error");
+        return recovery(error.code(), FailureReason.in(error.details()).orElse(null));
     }
 
     /**
      * Classifies an error the run pauses on by how it recovers.
      *
      * @param code the non-null code of the error
+     * @param reason the error's reason, or {@code null} when its details name none
      * @return how a pause on it gets going again; {@link Recovery#PERSON} for a code that never pauses at all
      */
-    public static Recovery recovery(final ErrorCode code) {
+    public static Recovery recovery(final ErrorCode code, @Nullable final FailureReason reason) {
         Objects.requireNonNull(code, "code");
-        final Recovery recovery =
-                switch (code) {
-                    case unreachable, upstream, rateLimited -> Recovery.OUTAGE;
-                    case timeout -> Recovery.STALL;
-                    case internal -> Recovery.FAULT;
-                    case modelUnavailable -> Recovery.UNLOADED_MODEL;
-                    case auth,
-                            modelNotFound,
-                            missingCredential,
-                            validation,
-                            emptyCompletion,
-                            contextWindow,
-                            cancelled,
-                            busy,
-                            discoveryFailed -> Recovery.PERSON;
-                };
-        log.debug("Classified paused-on error code={} recovery={}", code, recovery);
+        // Waiting frees no memory, and a model that looped twice needs the person, not another wake.
+        final boolean personsOnly = (code == ErrorCode.modelUnavailable && reason == FailureReason.OUT_OF_MEMORY)
+                || (code == ErrorCode.upstream && reason == FailureReason.REPEAT_LIMIT);
+        final Recovery recovery = personsOnly ? Recovery.PERSON : byCodeRecovery(code);
+        log.debug("Classified paused-on error code={} reason={} recovery={}", code, tokenOf(reason), recovery);
         return recovery;
+    }
+
+    private static Recovery byCodeRecovery(final ErrorCode code) {
+        return switch (code) {
+            case unreachable, upstream, rateLimited -> Recovery.OUTAGE;
+            case timeout -> Recovery.STALL;
+            case internal -> Recovery.FAULT;
+            case modelUnavailable -> Recovery.UNLOADED_MODEL;
+            case auth,
+                    modelNotFound,
+                    missingCredential,
+                    validation,
+                    emptyCompletion,
+                    contextWindow,
+                    cancelled,
+                    busy,
+                    discoveryFailed -> Recovery.PERSON;
+        };
+    }
+
+    private static String tokenOf(@Nullable final FailureReason reason) {
+        return reason == null ? "none" : reason.token();
     }
 
     /**

@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.capability.ContextLengthProbe;
+import ua.bookloom.llm.capability.HealthProbe;
 import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
@@ -147,6 +148,11 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     @Override
     public Optional<Integer> contextLength(String modelId) {
         return new ContextLengthProbe(exchange, mapper).lmStudio(config, modelId);
+    }
+
+    @Override
+    public boolean isLoadingModel() {
+        return new HealthProbe(exchange).isLoading(config);
     }
 
     @Override
@@ -323,17 +329,11 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                     error.code());
             return Result.err(error);
         }
-        log.warn(
-                "OpenAI-compatible discovery degraded host={} originalCode={} code={}",
+        return Result.err(DiscoveryErrors.degraded(
+                "OpenAI-compatible",
                 config.baseUrl().getHost(),
-                error.code(),
-                ErrorCode.discoveryFailed);
-        return Result.err(AppError.of(
-                ErrorCode.discoveryFailed,
-                "Model discovery failed",
-                "The OpenAI-compatible model list could not be read.",
-                error.details(),
-                error.cause()));
+                error,
+                "The OpenAI-compatible model list could not be read."));
     }
 
     private AppError discoveryFailure(@Nullable Throwable cause) {

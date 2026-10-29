@@ -1,6 +1,10 @@
 package ua.bookloom.pipeline;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -31,6 +35,8 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.retry.RetryPolicy;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -40,6 +46,7 @@ final class WireMockProvider implements AutoCloseable {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String PROVIDER_ID = "wiremock";
+    private static final ModelSelection SELECTION = new ModelSelection(PROVIDER_ID, "test-model");
     private static final long WAIT_SECONDS = 5;
     private static final long POLL_MILLIS = 5;
 
@@ -76,6 +83,14 @@ final class WireMockProvider implements AutoCloseable {
 
     private List<ChatModel> chatModels(
             final Duration requestTimeout, final RetryPolicy.Sleeper sleeper, final int count) {
+        final ChatModelFactory factory = injector(requestTimeout, sleeper).getInstance(ChatModelFactory.class);
+        return IntStream.range(0, count)
+                .mapToObj(index ->
+                        Objects.requireNonNull(factory.create(SELECTION).data(), "chat model"))
+                .toList();
+    }
+
+    private Injector injector(final Duration requestTimeout, final RetryPolicy.Sleeper sleeper) {
         final URI base = URI.create(kind == ProviderKind.OLLAMA ? server.baseUrl() : server.baseUrl() + "/v1");
         final RetryPolicy policy = new RetryPolicy(Clock.systemUTC(), () -> 0.5, sleeper);
         final Injector injector =
@@ -83,12 +98,35 @@ final class WireMockProvider implements AutoCloseable {
                         .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
         injector.getInstance(ProviderConfigs.class)
                 .save(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout));
-        final ChatModelFactory factory = injector.getInstance(ChatModelFactory.class);
-        return IntStream.range(0, count)
-                .mapToObj(index -> Objects.requireNonNull(
-                        factory.create(new ModelSelection(PROVIDER_ID, "test-model"))
-                                .data(),
-                        "chat model"))
+        return injector;
+    }
+
+    /** The probe the window and the command line give a run, checking this server with the real verifier. */
+    ProviderProbe probe() {
+        return ProviderProbe.of(
+                injector(Duration.ofSeconds(WAIT_SECONDS), ignored -> {}).getInstance(ProviderVerifier.class),
+                SELECTION);
+    }
+
+    /** Answers the n-th GET of {@code path} (counting from one) with the n-th reply; the last answers every later one. */
+    void stubGet(final String path, final ResponseDefinitionBuilder... replies) {
+        for (int index = 0; index < replies.length; index++) {
+            final ScenarioMappingBuilder mapping = get(urlEqualTo(path))
+                    .inScenario("get " + path)
+                    .whenScenarioStateIs(index == 0 ? Scenario.STARTED : "get-" + index)
+                    .willReturn(replies[index]);
+            server.stubFor(index + 1 < replies.length ? mapping.willSetStateTo("get-" + (index + 1)) : mapping);
+        }
+    }
+
+    int getRequests(final String path) {
+        return server.findAll(getRequestedFor(urlEqualTo(path))).size();
+    }
+
+    /** Every request the server received, oldest first, as {@code METHOD path}. */
+    List<String> servedInOrder() {
+        return server.findAll(anyRequestedFor(anyUrl())).stream()
+                .map(request -> request.getMethod() + " " + request.getUrl())
                 .toList();
     }
 

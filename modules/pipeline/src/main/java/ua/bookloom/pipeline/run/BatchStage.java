@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
@@ -225,8 +226,11 @@ final class BatchStage {
             return drafter.reaskMissing(context, items, shown.segmentIds(), shown.sources(), shown.position(), first)
                     .map(merged -> BatchAttempt.answered(merged, first));
         }
-        if (PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE) {
-            log.warn("The batch call answered code={}; every segment is drafted on its own", error.code());
+        if (PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE) {
+            log.warn(
+                    "The batch call answered code={} reason={}; every segment is drafted on its own",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(
                     BatchAttempt.unavailable(items.stream().map(BatchItem::id).toList()));
         }

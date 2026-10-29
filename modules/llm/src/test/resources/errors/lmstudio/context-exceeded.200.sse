@@ -1,0 +1,3 @@
+event: error
+data: {"error":{"message":"Context size has been exceeded."},"message":"Context size has been exceeded."}
+

@@ -304,8 +304,10 @@ instead. `--report <file>` writes a JSON summary: provider, model, dial and name
 the run ended and why, every flagged segment with its reason and finding kinds, each outage, the names review counts and
 what the export wrote, source fallbacks included. `modelCallsByKind` in it holds, per call kind (draft, judge, directed
 fix …), the attempts and failures, prompt and completion tokens, the tokens the server says its cache served, and the
-elapsed, prompt-evaluation and generation seconds — counts and times only, never book text; the final `run summary`
-log line carries the same totals as `byKind[…]`. `--stop-after <n>` ends the run once `n` segments are decided
+elapsed, prompt-evaluation and generation seconds — counts and times only, never book text, each figure summed from
+what the calls reported (the call ledger) and left out when no call reported it; the final `run summary` log line
+carries the same totals as `byKind[…]`, and the names pass, the brief suggestion and the export each end with one
+`prep summary byKind[…] stage=… project=…` line in the same format. `--stop-after <n>` ends the run once `n` segments are decided
 (the partial export is written as for any stopped run), so a measurement can use part of a book.
 
 For LM Studio, an unknown requested model id can still yield a reply from the model currently loaded by the server.
@@ -673,7 +675,7 @@ The models differ, so the time column compares nothing about speed; it shows the
 
 The time before a call's first token (the provider's prompt evaluation, "prefill") is read from the provider's own
 timings: Ollama's `prompt_eval_duration`, LM Studio's `stats.time_to_first_token`. A provider that sends neither leaves
-the figure unknown (`-`), never zero. Read it in the final `run summary final ... byKind[...]` line of the log, per call
+the figure unknown (`–`), never zero; the same dash stands for any token or time figure no call of that kind reported. Read it in the final `run summary final ... byKind[...]` line of the log, per call
 kind: `ttftMs:` is the mean over the calls that reported it and `prefill:` is its share of those calls' wall time. The
 unattended command line's JSON report carries the same as `meanFirstTokenSeconds` and `prefillShare` under
 `modelCallsByKind`.
@@ -964,6 +966,17 @@ was recorded in commit dc00e4ab, and `ArmSegments` with `eval/arms/arm-2-segment
   the two close calls above are left for the owner to read.
 - *Also seen.* Both formats wrote Russian words on e4b and 26b (`Мост`, `Трость`), which is none of the four WRONG classes; e4b's
   `m08` has it in 1 of 3 JSON repeats and 3 of 3 markers repeats.
+
+**Task 3.4: LM Studio and llama-server error rows.** The fixtures under `modules/llm/src/test/resources/errors/lmstudio/`
+and `errors/llamacpp/` are named `<name>.<status>.json|sse` and hold only the server's own sentences. None of them was
+recorded from a running server in this task, so every status is, for now, taken from the research folder or chosen by
+decision. `terminated.400.json` and `terminated.200.json` are `{"error":"terminated"}` by decision (the research
+inferred the reply, it never reproduced it; the recording attempt of 2026-10-29 — three long chats with `lms unload` during the answer — got `400 {"error":"Model unloaded."}` every time and
+never `terminated`, so the `terminated` status stays by decision; the 400 `Model unloaded.` reply is the observed one), once as a 400 and once as a 200 so the row is proven to read the words whatever the status.
+`structured-unavailable.501.json` (the MLX engine's code wording) and `llamacpp/schema-not-applied.500.json` (the
+engine's source wording) are constructed. The rest follow the bodies the research lists for LM Studio and llama-server.
+`terminated` and `engine-unreachable` carry the code `upstream`; since task 3.5 their row's rule gets them one resend
+after a state check (the provider's reachability probe), and a second failure goes to the run as an outage.
 
 **Reference book `article-gravity` (task 1.11).** One invented science article (about 2,350 words of prose) in English, Ukrainian,
 Russian and French, each as Markdown, EPUB and FB2 (`modules/pipeline/src/test/resources/eval/datasets/article-gravity/`, with its own

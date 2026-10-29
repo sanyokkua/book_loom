@@ -255,7 +255,7 @@ public final class SegmentTranslator {
     private Result<DraftOutcome> decideModelError(final DraftAttempt attempt, final AppError error) {
         final Segment segment = attempt.segment();
         log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
-        return switch (PauseDecider.route(error.code())) {
+        return switch (PauseDecider.route(error)) {
             case FLAG_AT_ONCE -> DraftOutcomes.flaggedAtOnce(attempt, error, "model-error", "[]");
             case CANCELLED, PAUSE_OR_FAIL, FAIL -> DraftOutcomes.routed(segment, error, "model-error");
         };

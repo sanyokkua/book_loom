@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ModelInfo;
@@ -79,10 +80,12 @@ public final class ModelCatalogService implements ModelCatalog {
                     Objects.requireNonNull(result.data(), "model list").size());
             return;
         }
+        final AppError error = Objects.requireNonNull(result.error(), "error");
         log.warn(
-                "Model listing failed providerId={} code={}",
+                "Model listing failed providerId={} code={} reason={}",
                 providerId,
-                Objects.requireNonNull(result.error(), "error").code());
+                error.code(),
+                FailureReason.tokenIn(error.details()));
     }
 
     private static AppError internalError(String providerId, Throwable cause) {

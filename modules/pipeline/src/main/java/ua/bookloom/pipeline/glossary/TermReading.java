@@ -9,6 +9,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -190,7 +191,13 @@ public final class TermReading {
                 CallDescriptor.whole(PromptName.TERM_READING));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
-            log.warn("Term reading {} failed code={}", subject.term(), error.code());
+            // The term is a word of the book, so it stays out of the always-on run log.
+            log.trace("Term reading failed term={}", subject.term());
+            log.warn(
+                    "Term reading failed mentions={} code={} reason={}",
+                    subject.mentions(),
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
         return Result.ok(readingOf(Objects.requireNonNull(reply.data(), "reply"), subject, windows, frame));

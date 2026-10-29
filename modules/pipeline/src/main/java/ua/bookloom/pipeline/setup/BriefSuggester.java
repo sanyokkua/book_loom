@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.MetadataKey;
 import ua.bookloom.api.llm.ChatRequest;
@@ -167,6 +168,15 @@ final class BriefSuggester {
                 wholeStory));
     }
 
+    private static void logWindowFailed(final int window, final int windows, final AppError error) {
+        log.warn(
+                "Brief window {} of {} failed code={} reason={}; it counts as a window with no reading",
+                window,
+                windows,
+                error.code(),
+                FailureReason.tokenIn(error.details()));
+    }
+
     private Result<Readings> readWindows(
             final SetupBook book,
             final List<BookSample> windows,
@@ -191,11 +201,7 @@ final class BriefSuggester {
                 log.info("Brief suggestion stopped by the person at window {} of {}", index + 1, windows.size());
                 return Result.err(error);
             }
-            log.warn(
-                    "Brief window {} of {} failed with {}; it counts as a window with no reading",
-                    index + 1,
-                    windows.size(),
-                    error.code());
+            logWindowFailed(index + 1, windows.size(), error);
             failures.add(error);
             answers.add(null);
             languages.add(null);
@@ -252,7 +258,10 @@ final class BriefSuggester {
                 return Result.err(error);
             }
             steps.synthesisEnded(false);
-            log.warn("Brief synthesis failed with {}; genre, audience and voice stay uncertain", error.code());
+            log.warn(
+                    "Brief synthesis failed code={} reason={}; genre, audience and voice stay uncertain",
+                    error.code(),
+                    FailureReason.tokenIn(error.details()));
             return Result.ok(new Synthesis(null));
         }
         final JsonNode node = setup.json(Objects.requireNonNull(reply.data(), "reply"));

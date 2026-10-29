@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
  * The one place a self-heal call's raw model reply becomes a {@link RepairReply}, applying design D3 rules 2-3 to
@@ -29,8 +30,8 @@ public final class RepairReplies {
      * @param source the masked source the rewrite translates, whose own control characters the reply may keep
      * @param targetLanguage the BCP 47 tag whose quote marks a reply's control codes are mapped back to
      * @return a usable rewrite, a malformed reply, or content that flags the segment now, each wrapped in
-     *     {@link Result#ok}; the call's own error, unwrapped, when it was neither {@code emptyCompletion} nor
-     *     {@code contextWindow}
+     *     {@link Result#ok}; the call's own error, unwrapped, when {@link PauseDecider#route(AppError)} does not flag
+     *     it at once
      */
     public static Result<RepairReply> read(
             final Result<ChatResponse> reply,
@@ -58,7 +59,7 @@ public final class RepairReplies {
     }
 
     private static Result<RepairReply> routeCallFailure(final AppError error) {
-        return error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow
+        return PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE
                 ? Result.ok(new RepairReply.FlagNow(error))
                 : Result.err(error);
     }

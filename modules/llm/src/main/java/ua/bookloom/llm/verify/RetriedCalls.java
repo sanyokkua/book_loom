@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -42,19 +43,30 @@ final class RetriedCalls {
                 return call;
             }
             final Duration delay = retryPolicy.delayBeforeRetry(attempt, call.retryAfter());
-            log.warn(
-                    "Retrying provider verification provider={} stage={} failedAttempt={} nextAttempt={} code={} delay={}",
-                    providerId,
-                    stage,
-                    attempt,
-                    attempt + 1,
-                    failure.code(),
-                    delay);
+            logRetry(providerId, stage, attempt, failure, delay);
             if (!retryPolicy.sleep(delay)) {
                 return cancelled(stage);
             }
             attempt++;
         }
+    }
+
+    private static void logRetry(
+            final String providerId,
+            final VerificationStage stage,
+            final int attempt,
+            final AppError failure,
+            final Duration delay) {
+        log.warn(
+                "Retrying provider verification provider={} stage={} failedAttempt={} nextAttempt={} code={}"
+                        + " reason={} delay={}",
+                providerId,
+                stage,
+                attempt,
+                attempt + 1,
+                failure.code(),
+                FailureReason.tokenIn(failure.details()),
+                delay);
     }
 
     static <T> AppError error(final Result<T> result) {

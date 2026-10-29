@@ -175,6 +175,14 @@ Representative `ErrorCode` categories the surface must handle (non-exhaustive; t
 | Document    | placeholder-mismatch, reassembly-failed, export-validation-failed        | error dialog               |
 | Persistence | write-failed, single-instance-locked (`busy`)                            | error dialog               |
 
+**Reason tokens.** A provider failure also carries a reason token beside its code (`FailureReason`, rendered as
+`reason=<token>` in its details; `02_Architecture/09_ERROR_HANDLING.md#failure-reasons`): the code says how the run and
+the surface treat it, the token says what the person can do. The fifteen `ErrorCode` constants above stay true; a token
+never adds a code. Eight tokens a person meets in a run have words of their own in English and Ukrainian —
+`context-overflow` (with the prompt and window counts when the provider stated them), `repeat-limit`, `out-of-memory`,
+`model-not-pulled`, `host-forbidden`, `cloud-disabled`, `cloud-signin` and `terminated`; every other token is shown in
+the words of its code.
+
 Retryability comes from the code (`ErrorCode.isRetryable()`), and a retryable failure offers "Try again now". The
 unreachable-provider case is recovered by the run itself: it waits and retries, and shows the "Waiting for the AI model"
 banner with a countdown, until it gives up after 12 hours (Run states table). A failure that stops the run entirely

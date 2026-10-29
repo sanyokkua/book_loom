@@ -191,7 +191,7 @@ public final class StageRunner {
 
         private static Result<Result<ChatResponse>> keepUnreadable(final Result<ChatResponse> answer) {
             final AppError error = answer.error();
-            return error == null || PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
+            return error == null || PauseDecider.route(error) == PauseDecider.Route.FLAG_AT_ONCE
                     ? Result.ok(answer)
                     : Result.err(error);
         }

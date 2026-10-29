@@ -125,7 +125,7 @@ public final class CapabilityRejections {
 
     private static Map<RejectedCapability, Pattern> patterns() {
         final Map<RejectedCapability, Pattern> byCapability = new EnumMap<>(RejectedCapability.class);
-        byCapability.put(RejectedCapability.REASONING_CONTROL, pattern("think|reasoning_effort|reasoning"));
+        byCapability.put(RejectedCapability.REASONING_CONTROL, pattern("think(?:ing)?|reasoning_effort|reasoning"));
         byCapability.put(
                 RejectedCapability.STRUCTURED_OUTPUT,
                 pattern("format|response_format|json[ _-]?schema|structured[ _-]?output"));

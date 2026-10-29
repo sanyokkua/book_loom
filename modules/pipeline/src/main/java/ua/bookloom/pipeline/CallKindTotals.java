@@ -2,50 +2,125 @@ package ua.bookloom.pipeline;
 
 import java.time.Duration;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.ModelCallFinished;
 
 /**
- * Adds up what a run's model calls cost, by what each call was for, so a person can see whether the wall time goes to
- * evaluating prompts or to generating replies and which kind of call spends it. Fed one finished attempt at a time on
- * the job thread, which is the only thread that touches it; it holds counts and times, never text.
+ * Adds up what model calls cost, by what each call was for, so a person can see whether the wall time goes to
+ * evaluating prompts or to generating replies and which kind of call spends it. Each figure is summed only over the
+ * calls that reported it, and the count of those calls is kept beside the sum: a server that reports no cached tokens
+ * has no cached figure, never a zero. Built on one thread from a list of the ledger's records; it holds counts and
+ * times, never text.
  */
+@Slf4j
 public final class CallKindTotals {
 
     private final Map<CallKind, Mutable> byKind = new EnumMap<>(CallKind.class);
 
     /**
-     * What the calls of one kind cost in all.
+     * Sums a list of records.
+     *
+     * @param records the records, oldest first; never null
+     * @return the totals of the records' kinds
+     */
+    public static CallKindTotals of(final List<CallRecord> records) {
+        Objects.requireNonNull(records, "records");
+        final CallKindTotals totals = new CallKindTotals();
+        records.forEach(totals::record);
+        log.debug("Call totals summed records={} kinds={}", records.size(), totals.byKind.keySet());
+        return totals;
+    }
+
+    /**
+     * What the calls of one kind cost in all. Each sum is paired with the count of calls that reported the figure.
      *
      * @param attempts the attempts that went out, answered or failed
      * @param failed how many of them failed
-     * @param promptTokens the prompt tokens the provider reported, zero when it reported none
-     * @param completionTokens the completion tokens reported or estimated
      * @param elapsed the wall-clock time of all attempts
-     * @param promptEval the provider-reported prompt-evaluation time; zero when it reports none
-     * @param generation the provider-reported generation time, or the attempt's wall time when it reported none
-     * @param cachedPromptTokens the prompt tokens the provider says its cache served
-     * @param firstTokenCalls how many answered attempts the provider gave a prompt-evaluation time for, which is the
-     *     time before the first token
-     * @param firstTokenCallElapsed the wall-clock time of just those attempts, so the prefill share is not diluted by
+     * @param promptTokens the prompt tokens of the calls that reported them
+     * @param promptReported how many calls reported prompt tokens
+     * @param completionTokens the completion tokens of the calls that reported them
+     * @param completionReported how many calls reported completion tokens
+     * @param cachedPromptTokens the prompt tokens the provider says its cache served, over the calls that said
+     * @param cachedReported how many calls reported a cache figure
+     * @param cachedPromptBase the prompt tokens of just the calls that reported a cache figure, which the cached share
+     *     is taken of
+     * @param generation the generation time of the calls that reported it
+     * @param generationReported how many calls reported a generation time
+     * @param promptEval the time before the first token of the calls that had one: the time the call measured, else
+     *     the provider's prompt-evaluation time
+     * @param firstTokenCalls how many calls had a time before the first token
+     * @param firstTokenCallElapsed the wall-clock time of just those calls, so the prefill share is not diluted by
      *     calls that reported nothing
      */
     public record Totals(
             int attempts,
             int failed,
-            long promptTokens,
-            long completionTokens,
             Duration elapsed,
-            Duration promptEval,
-            Duration generation,
+            long promptTokens,
+            int promptReported,
+            long completionTokens,
+            int completionReported,
             long cachedPromptTokens,
+            int cachedReported,
+            long cachedPromptBase,
+            Duration generation,
+            int generationReported,
+            Duration promptEval,
             int firstTokenCalls,
             Duration firstTokenCallElapsed) {
+
+        /**
+         * The prompt tokens reported.
+         *
+         * @return the sum, or empty if no call reported them
+         */
+        public Optional<Long> promptTotal() {
+            return promptReported == 0 ? Optional.empty() : Optional.of(promptTokens);
+        }
+
+        /**
+         * The completion tokens reported.
+         *
+         * @return the sum, or empty if no call reported them
+         */
+        public Optional<Long> completionTotal() {
+            return completionReported == 0 ? Optional.empty() : Optional.of(completionTokens);
+        }
+
+        /**
+         * The prompt tokens served from the provider's cache.
+         *
+         * @return the sum, or empty if no call reported a cache figure
+         */
+        public Optional<Long> cachedTotal() {
+            return cachedReported == 0 ? Optional.empty() : Optional.of(cachedPromptTokens);
+        }
+
+        /**
+         * The generation time reported.
+         *
+         * @return the sum, or empty if no call reported one
+         */
+        public Optional<Duration> generationTotal() {
+            return generationReported == 0 ? Optional.empty() : Optional.of(generation);
+        }
+
+        /**
+         * The time before the first token, over the calls that had one.
+         *
+         * @return the sum, or empty if no call had one
+         */
+        public Optional<Duration> promptEvalTotal() {
+            return firstTokenCalls == 0 ? Optional.empty() : Optional.of(promptEval);
+        }
 
         /**
          * The mean time before the first token over the attempts that reported it.
@@ -67,27 +142,49 @@ public final class CallKindTotals {
             }
             return Optional.of((double) promptEval.toNanos() / firstTokenCallElapsed.toNanos());
         }
+
+        /**
+         * The share of the prompt tokens the cache served, over the calls that reported a cache figure.
+         *
+         * @return the share from 0 to 1, or empty when no call reported both a cache figure and its prompt tokens
+         */
+        public Optional<Double> cachedShare() {
+            return cachedReported == 0 || cachedPromptBase == 0
+                    ? Optional.empty()
+                    : Optional.of((double) cachedPromptTokens / cachedPromptBase);
+        }
     }
 
     /**
-     * Counts one finished attempt.
+     * Counts one call attempt: a failed one as an attempt and a failure only, an answered one with every figure it
+     * reported.
      *
-     * @param finished the attempt's announcement, answered or failed
+     * @param record the attempt's record
      */
-    public void record(final ModelCallFinished finished) {
-        Objects.requireNonNull(finished, "finished");
-        final Mutable totals = byKind.computeIfAbsent(finished.kind(), kind -> new Mutable());
+    public void record(final CallRecord record) {
+        Objects.requireNonNull(record, "record");
+        final Mutable totals = byKind.computeIfAbsent(record.callKind(), kind -> new Mutable());
         totals.attempts++;
-        totals.elapsed = totals.elapsed.plus(finished.elapsed());
-        if (!finished.isAnswered()) {
+        totals.elapsed = totals.elapsed.plus(record.wallTime());
+        if (record.isFailed()) {
             totals.failed++;
             return;
         }
-        final @Nullable TokenUsage usage = finished.usage();
-        if (usage == null) {
-            return;
+        totals.firstToken(firstTokenOf(record), record.wallTime());
+        final @Nullable TokenUsage usage = record.usage();
+        if (usage != null) {
+            totals.add(usage);
         }
-        totals.add(usage, finished.elapsed());
+    }
+
+    // The time the call measured itself wins; the provider's prompt-evaluation time stands in for it otherwise.
+    private static @Nullable Duration firstTokenOf(final CallRecord record) {
+        final Duration measured = record.timeToFirstToken();
+        if (measured != null) {
+            return measured;
+        }
+        final TokenUsage usage = record.usage();
+        return usage == null ? null : usage.promptEval();
     }
 
     /**
@@ -105,22 +202,47 @@ public final class CallKindTotals {
 
         int attempts;
         int failed;
-        long promptTokens;
-        long completionTokens;
-        long cachedPromptTokens;
         Duration elapsed = Duration.ZERO;
-        Duration promptEval = Duration.ZERO;
+        long promptTokens;
+        int promptReported;
+        long completionTokens;
+        int completionReported;
+        long cachedPromptTokens;
+        int cachedReported;
+        long cachedPromptBase;
         Duration generation = Duration.ZERO;
+        int generationReported;
+        Duration promptEval = Duration.ZERO;
         int firstTokenCalls;
         Duration firstTokenCallElapsed = Duration.ZERO;
 
-        void add(final TokenUsage usage, final Duration wall) {
-            promptTokens += usage.prompt() == null ? 0 : usage.prompt();
-            completionTokens += usage.completion() == null ? 0 : usage.completion();
-            cachedPromptTokens += usage.cachedPrompt() == null ? 0 : usage.cachedPrompt();
-            promptEval = promptEval.plus(usage.promptEval() == null ? Duration.ZERO : usage.promptEval());
-            generation = generation.plus(usage.generation() == null ? wall : usage.generation());
-            if (usage.promptEval() != null) {
+        void add(final TokenUsage usage) {
+            final Integer prompt = usage.prompt();
+            if (prompt != null) {
+                promptTokens += prompt;
+                promptReported++;
+            }
+            final Integer completion = usage.completion();
+            if (completion != null) {
+                completionTokens += completion;
+                completionReported++;
+            }
+            final Integer cached = usage.cachedPrompt();
+            if (cached != null) {
+                cachedPromptTokens += cached;
+                cachedReported++;
+                cachedPromptBase += prompt == null ? 0 : prompt;
+            }
+            final Duration generated = usage.generation();
+            if (generated != null) {
+                generation = generation.plus(generated);
+                generationReported++;
+            }
+        }
+
+        void firstToken(final @Nullable Duration firstToken, final Duration wall) {
+            if (firstToken != null) {
+                promptEval = promptEval.plus(firstToken);
                 firstTokenCalls++;
                 firstTokenCallElapsed = firstTokenCallElapsed.plus(wall);
             }
@@ -130,12 +252,17 @@ public final class CallKindTotals {
             return new Totals(
                     attempts,
                     failed,
-                    promptTokens,
-                    completionTokens,
                     elapsed,
-                    promptEval,
-                    generation,
+                    promptTokens,
+                    promptReported,
+                    completionTokens,
+                    completionReported,
                     cachedPromptTokens,
+                    cachedReported,
+                    cachedPromptBase,
+                    generation,
+                    generationReported,
+                    promptEval,
                     firstTokenCalls,
                     firstTokenCallElapsed);
         }

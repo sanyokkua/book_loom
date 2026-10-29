@@ -323,8 +323,8 @@ class DiagnosticsTranslationJobTest {
         assertThat(warning.getFormattedMessage())
                 .contains(
                         "stage=TRANSLATE",
-                        "reason=ON_ERROR",
-                        "errorCode=unreachable",
+                        "pauseReason=ON_ERROR",
+                        "errorCode=unreachable reason=none",
                         "accepted=0",
                         "flagged=0",
                         "pending=1");

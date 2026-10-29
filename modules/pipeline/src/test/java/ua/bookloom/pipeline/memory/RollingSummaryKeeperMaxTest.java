@@ -205,7 +205,7 @@ class RollingSummaryKeeperMaxTest {
         assertThat(logEvents.list)
                 .filteredOn(event -> event.getLevel() == Level.WARN)
                 .extracting(ILoggingEvent::getFormattedMessage)
-                .containsExactly("Summary call gave no summary, previous version kept code=" + code);
+                .containsExactly("Summary call gave no summary, previous version kept code=" + code + " reason=none");
     }
 
     // The run makes a failed summary call again once the person resumes, so the chapter must still be there to send.

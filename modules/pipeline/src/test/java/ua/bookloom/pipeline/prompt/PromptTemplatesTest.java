@@ -10,6 +10,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 
@@ -196,6 +197,7 @@ class PromptTemplatesTest {
         final var injector = Guice.createInjector(
                 new PipelineModule(),
                 new ReviewModeTestModule(),
+                new CallLedgerTestModule(),
                 new DocumentModule(),
                 new InMemoryPersistenceModule());
 

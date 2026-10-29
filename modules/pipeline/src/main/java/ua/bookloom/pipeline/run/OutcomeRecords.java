@@ -96,7 +96,7 @@ public final class OutcomeRecords {
     }
 
     private static QaFinding replyFinding(final AppError reason) {
-        return new QaFinding(reason.code().name(), Severity.HIGH, reason.message(), REPLY);
+        return new QaFinding(reason.code().name(), Severity.HIGH, FlagNotes.note(reason), REPLY);
     }
 
     private static Stream<ErrorCode> codeNamed(final String name) {

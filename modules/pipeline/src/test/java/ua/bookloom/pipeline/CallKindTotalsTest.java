@@ -5,102 +5,138 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.ModelCallFinished;
 
-/** Proves the per-kind totals keep each kind apart and treat a missing figure as zero rather than guessing. */
+/**
+ * Proves the per-kind totals keep each kind apart, sum only the figures the calls reported and average each figure
+ * over the calls that reported it, so a server that reports no cached tokens does not look as if it cached none.
+ */
 class CallKindTotalsTest {
 
-    private static ModelCallFinished answered(CallKind kind, long wallMillis, TokenUsage usage) {
-        return new ModelCallFinished(
-                "s1", kind, Duration.ofMillis(wallMillis), usage, 10, false, List.of("s1"), 1, null);
+    private static CallRecord answered(final CallKind kind, final long wallMillis, final TokenUsage usage) {
+        return new CallRecord(kind, usage, Duration.ofMillis(wallMillis), null, null);
     }
 
-    // Two drafts and a judge: each kind sums its own tokens and times and the other kind is untouched.
+    private static CallKindTotals.Totals of(final CallKindTotals totals, final CallKind kind) {
+        return Objects.requireNonNull(totals.totals().get(kind), "totals of " + kind);
+    }
+
+    // Two drafts and a review: each kind sums its own tokens and times and the other kind is untouched.
     @Test
     void record_twoKinds_sumsEachKindSeparately() {
-        final CallKindTotals totals = new CallKindTotals();
-        totals.record(answered(
-                CallKind.DRAFT, 3000, new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
-        totals.record(answered(
-                CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)));
-        totals.record(answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
+        final CallKindTotals totals = CallKindTotals.of(List.of(
+                answered(
+                        CallKind.DRAFT,
+                        3000,
+                        new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)),
+                answered(
+                        CallKind.DRAFT,
+                        2000,
+                        new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)),
+                answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
 
-        assertThat(totals.totals().get(CallKind.DRAFT)).isEqualTo(draftTotals());
-        assertThat(totals.totals().get(CallKind.REVIEW))
-                .isEqualTo(new CallKindTotals.Totals(
-                        1,
-                        0,
-                        500,
-                        20,
-                        Duration.ofMillis(1000),
-                        Duration.ZERO,
-                        Duration.ofMillis(800),
-                        0,
-                        0,
-                        Duration.ZERO));
+        final CallKindTotals.Totals draft = of(totals, CallKind.DRAFT);
+        assertThat(draft.attempts()).isEqualTo(2);
+        assertThat(draft.failed()).isZero();
+        assertThat(draft.elapsed()).isEqualTo(Duration.ofSeconds(5));
+        assertThat(draft.promptTotal()).contains(1500L);
+        assertThat(draft.completionTotal()).contains(150L);
+        assertThat(draft.cachedTotal()).contains(1100L);
+        assertThat(draft.generationTotal()).contains(Duration.ofSeconds(4));
+        assertThat(draft.promptEvalTotal()).contains(Duration.ofMillis(700));
+        final CallKindTotals.Totals review = of(totals, CallKind.REVIEW);
+        assertThat(review.attempts()).isEqualTo(1);
+        assertThat(review.promptTotal()).contains(500L);
+        assertThat(review.generationTotal()).contains(Duration.ofMillis(800));
+        assertThat(review.cachedTotal()).isEmpty();
+        assertThat(review.promptEvalTotal()).isEmpty();
     }
 
     // 15i.B2: the knowledge question is a kind of its own, so the run summary and the report give it its own line.
     @Test
     void record_bookKnowledgeCall_getsItsOwnKindLine() {
-        final CallKindTotals totals = new CallKindTotals();
-        totals.record(answered(CallKind.BOOK_KNOWLEDGE, 4000, new TokenUsage(300, 90, Duration.ofSeconds(3))));
-        totals.record(answered(CallKind.BRIEF_SUGGESTION, 9000, new TokenUsage(900, 200, Duration.ofSeconds(8))));
+        final CallKindTotals totals = CallKindTotals.of(List.of(
+                answered(CallKind.BOOK_KNOWLEDGE, 4000, new TokenUsage(300, 90, Duration.ofSeconds(3))),
+                answered(CallKind.BRIEF_SUGGESTION, 9000, new TokenUsage(900, 200, Duration.ofSeconds(8)))));
 
         assertThat(totals.totals()).containsOnlyKeys(CallKind.BOOK_KNOWLEDGE, CallKind.BRIEF_SUGGESTION);
-        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.BOOK_KNOWLEDGE))
-                        .elapsed())
-                .isEqualTo(Duration.ofSeconds(4));
-    }
-
-    private static CallKindTotals.Totals draftTotals() {
-        return new CallKindTotals.Totals(
-                2,
-                0,
-                1500,
-                150,
-                Duration.ofMillis(5000),
-                Duration.ofMillis(700),
-                Duration.ofMillis(4000),
-                1100,
-                2,
-                Duration.ofMillis(5000));
+        assertThat(of(totals, CallKind.BOOK_KNOWLEDGE).elapsed()).isEqualTo(Duration.ofSeconds(4));
     }
 
     // 15h.C5: the mean first-token time and its share count only the attempts that reported a prompt-evaluation time.
     @Test
     void record_firstTokenReported_meanAndShareOfOnlyThoseAttempts() {
-        final CallKindTotals totals = new CallKindTotals();
-        totals.record(answered(
-                CallKind.DRAFT, 3000, new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
-        totals.record(answered(
-                CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)));
-        totals.record(answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
+        final CallKindTotals totals = CallKindTotals.of(List.of(
+                answered(
+                        CallKind.DRAFT,
+                        3000,
+                        new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)),
+                answered(
+                        CallKind.DRAFT,
+                        2000,
+                        new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)),
+                answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
 
-        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.DRAFT)).meanFirstToken())
-                .contains(Duration.ofMillis(350));
-        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.DRAFT)).prefillShare())
-                .contains(0.14);
-        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.REVIEW)).meanFirstToken())
-                .isEmpty();
-        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.REVIEW)).prefillShare())
-                .isEmpty();
+        assertThat(of(totals, CallKind.DRAFT).meanFirstToken()).contains(Duration.ofMillis(350));
+        assertThat(of(totals, CallKind.DRAFT).prefillShare()).contains(0.14);
+        assertThat(of(totals, CallKind.REVIEW).meanFirstToken()).isEmpty();
+        assertThat(of(totals, CallKind.REVIEW).prefillShare()).isEmpty();
+    }
+
+    // A first-token time the call measured itself wins over the provider's prompt-evaluation time.
+    @Test
+    void record_measuredFirstToken_isUsedBeforeThePromptEvaluationTime() {
+        final CallKindTotals totals = CallKindTotals.of(List.of(new CallRecord(
+                CallKind.DRAFT,
+                new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), null),
+                Duration.ofMillis(4000),
+                Duration.ofMillis(1000),
+                null)));
+
+        assertThat(of(totals, CallKind.DRAFT).meanFirstToken()).contains(Duration.ofSeconds(1));
+        assertThat(of(totals, CallKind.DRAFT).prefillShare()).contains(0.25);
     }
 
     // A failed attempt counts as an attempt and a failure but adds no tokens; a reply with no usage adds only its time.
     @Test
     void record_failedAndUnreportedAttempts_countedWithoutTokens() {
-        final CallKindTotals totals = new CallKindTotals();
-        totals.record(new ModelCallFinished(
-                "s1", CallKind.DRAFT, Duration.ofSeconds(60), null, 0, false, List.of("s1"), 1, ErrorCode.timeout));
-        totals.record(new ModelCallFinished("s1", CallKind.DRAFT, Duration.ofSeconds(4), null, 10, false));
+        final CallKindTotals totals = CallKindTotals.of(List.of(
+                new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(60), null, FailureReason.UNCLASSIFIED),
+                new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(4), null, null)));
 
-        assertThat(totals.totals().get(CallKind.DRAFT))
-                .isEqualTo(new CallKindTotals.Totals(
-                        2, 1, 0, 0, Duration.ofSeconds(64), Duration.ZERO, Duration.ZERO, 0, 0, Duration.ZERO));
+        final CallKindTotals.Totals draft = of(totals, CallKind.DRAFT);
+        assertThat(draft.attempts()).isEqualTo(2);
+        assertThat(draft.failed()).isEqualTo(1);
+        assertThat(draft.elapsed()).isEqualTo(Duration.ofSeconds(64));
+        assertThat(draft.promptTotal()).isEmpty();
+        assertThat(draft.completionTotal()).isEmpty();
+        assertThat(draft.generationTotal()).isEmpty();
+        assertThat(draft.promptEvalTotal()).isEmpty();
+        assertThat(draft.cachedTotal()).isEmpty();
+    }
+
+    // Three drafts cached 100, 300 and nothing reported: the share is over the two that reported, 400 of 1,600.
+    @Test
+    void add_missingFigure_isNotCountedAsZero() {
+        final CallKindTotals totals = CallKindTotals.of(List.of(cached(100), cached(300), cached(null)));
+        final CallKindTotals none = CallKindTotals.of(List.of(cached(null)));
+        final CallKindTotals zero = CallKindTotals.of(List.of(cached(0)));
+
+        assertThat(of(totals, CallKind.DRAFT).cachedTotal()).contains(400L);
+        assertThat(of(totals, CallKind.DRAFT).cachedReported()).isEqualTo(2);
+        assertThat(of(totals, CallKind.DRAFT).cachedShare()).contains(0.25);
+        assertThat(of(none, CallKind.DRAFT).cachedTotal()).isEmpty();
+        assertThat(of(none, CallKind.DRAFT).cachedShare()).isEmpty();
+        assertThat(of(zero, CallKind.DRAFT).cachedTotal()).contains(0L);
+        assertThat(of(zero, CallKind.DRAFT).cachedShare()).contains(0.0);
+    }
+
+    private static CallRecord cached(final @Nullable Integer cachedPrompt) {
+        return answered(CallKind.DRAFT, 3000, new TokenUsage(800, 90, Duration.ofSeconds(2), null, cachedPrompt));
     }
 }
