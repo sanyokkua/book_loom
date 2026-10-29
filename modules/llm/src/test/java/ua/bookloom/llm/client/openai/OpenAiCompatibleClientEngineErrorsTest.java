@@ -69,6 +69,7 @@ class OpenAiCompatibleClientEngineErrorsTest {
         assertThat(error.code()).isEqualTo(ErrorCode.auth);
         assertThat(error.message()).isEqualTo(KEY_SENTENCE);
         assertThat(FailureReason.in(error.details())).contains(FailureReason.AUTH);
+        assertThat(ServerEngine.in(error.details())).contains(ServerEngine.UNSLOTH);
     }
 
     @Test

@@ -91,9 +91,17 @@ class SettingsProviderEngineScreenTest extends SettingsScreenTestBase {
 
     // An unknown server is said to be one, rather than shown as some engine it is not.
     @Test
-    void providerForm_genericServer_saysNotRecognised() {
+    void providerForm_genericServer_saysNotRecognised() throws TimeoutException {
+        configs.save(new ProviderConfig(
+                "office",
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create("http://127.0.0.1:8000/v1"),
+                Duration.ofSeconds(5),
+                Duration.ofSeconds(60)));
         openSettings();
-        onFx(() -> viewModel().editProvider("lmstudio"));
+        onFx(() -> viewModel().reloadProviders());
+        awaitFx(() -> viewModel().configOf("office").isPresent());
+        onFx(() -> viewModel().editProvider("office"));
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(text("settings-engine-line")).isEqualTo("Not recognised: generic OpenAI-compatible server");

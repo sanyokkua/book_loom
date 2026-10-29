@@ -15,7 +15,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.llm.ServerEngine;
 
@@ -120,6 +122,24 @@ class SafeDetailsTest {
 
         assertThat(details).isEqualTo("reason=engine-mismatch, endpointHost=127.0.0.1:11434, engine=LM_STUDIO");
         assertThat(ServerEngine.in(details)).contains(ServerEngine.LM_STUDIO);
+    }
+
+    // The window says which id a server lacks in its own words, so the id is read back from the details.
+    @ParameterizedTest
+    @CsvSource({
+        "'reason=model-not-listed, endpointHost=127.0.0.1:1234, model=gemma-4-e4b-typo, engine=LM_STUDIO', gemma-4-e4b-typo",
+        "'model=google/gemma-4-e4b', google/gemma-4-e4b",
+        "'httpStatus=404, model=a b, timeoutMs=5', a b"
+    })
+    void modelIn_renderedModel_isReadBack(final String details, final String model) {
+        assertThat(SafeDetails.modelIn(details)).contains(model);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"reason=auth", "endpointHost=example.com"})
+    void modelIn_noModel_isEmpty(final String details) {
+        assertThat(SafeDetails.modelIn(details)).isEmpty();
     }
 
     // IF any text could be passed as the engine, THEN a reply's words could reach a dialog through it.

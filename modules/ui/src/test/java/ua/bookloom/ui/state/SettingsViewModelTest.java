@@ -47,7 +47,7 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
                                 "http://localhost:1234/v1",
                                 "localhost:1234",
                                 "",
-                                ServerEngine.GENERIC));
+                                ServerEngine.LM_STUDIO));
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 

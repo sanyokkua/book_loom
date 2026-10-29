@@ -73,6 +73,7 @@ class ErrorWordsTest {
                 "TERMINATED",
                 "AUTH",
                 "WRONG_MODEL_SERVED",
+                "MODEL_NOT_LISTED",
                 "NOT_SUITABLE_STRUCTURED",
                 "NOT_SUITABLE_DOCUMENTS",
                 "ENGINE_MISMATCH",
@@ -104,6 +105,8 @@ class ErrorWordsTest {
                 "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить.",
                 "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить.",
                 "WRONG_MODEL_SERVED | Сервер відповів іншою моделлю, ніж обрано. Перевірте назву моделі.",
+                "MODEL_NOT_LISTED | Сервер не має моделі з таким ідентифікатором, тож нічого не надіслано. Оберіть"
+                        + " модель зі списку.",
                 "NOT_SUITABLE_STRUCTURED | Ця програма не підтримує структурованих відповідей, тому BookLoom не може нею"
                         + " користуватися.",
                 "NOT_SUITABLE_DOCUMENTS | Ця адреса веде розмову з документами, а не з моделлю."
@@ -140,6 +143,50 @@ class ErrorWordsTest {
                 null);
 
         assertThat(ErrorWords.message(UK, error)).isEqualTo(expected);
+    }
+
+    private static AppError engineFailure(final FailureReason reason, final ServerEngine engine) {
+        return AppError.of(
+                ErrorCode.modelNotFound,
+                "Model not found",
+                "The server has no model with the id gemma-4-e4b-typo. Check the model id.",
+                SafeDetails.empty()
+                        .withReason(reason)
+                        .withEndpoint(java.net.URI.create("http://127.0.0.1:1234/v1"))
+                        .withModelName("gemma-4-e4b-typo")
+                        .withEngine(engine.name())
+                        .render(),
+                null);
+    }
+
+    // LM Studio would answer an unlisted id with the loaded model, so the stop says so in either language.
+    @Test
+    void message_lmStudioModelNotListed_saysLmStudioHasNoModelInEnglish() {
+        assertThat(ErrorWords.message(EN, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.LM_STUDIO)))
+                .isEqualTo("LM Studio has no model \"gemma-4-e4b-typo\". It would answer with the model that is"
+                        + " loaded. Pick a model from the list.");
+    }
+
+    @Test
+    void message_lmStudioModelNotListed_saysLmStudioHasNoModelInUkrainian() {
+        assertThat(ErrorWords.message(UK, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.LM_STUDIO)))
+                .isEqualTo("LM Studio не має моделі «gemma-4-e4b-typo». Вона відповіла б моделлю, яку завантажено."
+                        + " Оберіть модель зі списку.");
+    }
+
+    // Unsloth's key is made in Unsloth's own settings; a refused sign-in names where.
+    @Test
+    void message_unslothAuthRefused_namesWhereTheKeyIsMade() {
+        assertThat(ErrorWords.message(UK, engineFailure(FailureReason.AUTH, ServerEngine.UNSLOTH)))
+                .isEqualTo("Unsloth потребує ключа API. Створіть його в Unsloth › Settings › API і впишіть тут назву"
+                        + " змінної середовища.");
+    }
+
+    // IF another engine's unlisted id got LM Studio's sentence, THEN it would claim a loaded model answers.
+    @Test
+    void message_unslothModelNotListedInEnglish_keepsTheFailuresOwnWords() {
+        assertThat(ErrorWords.message(EN, engineFailure(FailureReason.MODEL_NOT_LISTED, ServerEngine.UNSLOTH)))
+                .isEqualTo("The server has no model with the id gemma-4-e4b-typo. Check the model id.");
     }
 
     // Details that name no engine still give a whole sentence, never "— , а не".

@@ -41,6 +41,20 @@ public interface ModelCapabilities {
     }
 
     /**
+     * Whether the server will load the model on the first call with settings of its own, so the window a run budgets
+     * for may not be the one in use (LM Studio loads a model that is not in memory with its own defaults). Asked once
+     * when a run is about to start; it never stops the run.
+     *
+     * @param selection the provider and model a run will use; never {@code null}
+     * @return {@code true} if the server says the model is not loaded and loads it by itself, {@code false} when it is
+     *     loaded, the server does not say, or the question could not be answered
+     */
+    default boolean loadsWithOwnSettings(final ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        return false;
+    }
+
+    /**
      * The context length a run should size against, with any failure degraded to "unknown": a run never stops because
      * its model's window could not be read.
      *

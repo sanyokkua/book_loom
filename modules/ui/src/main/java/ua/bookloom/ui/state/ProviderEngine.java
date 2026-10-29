@@ -14,6 +14,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -54,6 +55,7 @@ public final class ProviderEngine {
     private final ReadOnlyBooleanWrapper unsuitable = new ReadOnlyBooleanWrapper(false);
     private final BooleanBinding offered;
     private final BooleanBinding lineShown;
+    private final VariantRemoval variants;
 
     // Counts the events that make a detection in flight meaningless (another provider, a newer detection); FX only.
     private long epoch;
@@ -83,6 +85,16 @@ public final class ProviderEngine {
         viewModel.adding().addListener((observed, was, now) -> reset("adding changed"));
         viewModel.tests().lastReport().addListener((observed, was, now) -> onReport(now));
         form.saves().addListener((observed, was, now) -> detectSaved());
+        variants = new VariantRemoval(viewModel, form);
+    }
+
+    /**
+     * The {@code @variant} removed from an LM Studio model id, said once under the model entry.
+     *
+     * @return the variant without its {@code @}, or empty while none was removed for the open provider
+     */
+    public ReadOnlyStringProperty removedVariant() {
+        return variants.removed();
     }
 
     /** The engine the last Save, Test or Detect again of the open provider found; {@code null} before any. */

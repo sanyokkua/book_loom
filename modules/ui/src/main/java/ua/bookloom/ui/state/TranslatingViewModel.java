@@ -303,17 +303,28 @@ public final class TranslatingViewModel {
 
     private void launch(final ModelSelection model, final boolean announce) {
         log.debug("launching the run with {}/{}", model.providerId(), model.modelId());
-        starter.start(model, failure -> finishPreparing(failure, announce));
+        starter.start(model, prepared -> finishPreparing(prepared, announce));
     }
 
-    /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */
-    private void finishPreparing(final @Nullable AppError failure, final boolean announce) {
+    /**
+     * Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned; a
+     * started run on a model the server loads with its own settings says so, without stopping anything.
+     */
+    private void finishPreparing(final RunStarter.Prepared prepared, final boolean announce) {
         Platform.runLater(() -> {
             preparing.set(false);
+            final AppError failure = prepared.failure();
             if (failure != null) {
                 route(failure);
-            } else if (announce) {
+                return;
+            }
+            if (announce) {
                 toasts.raise(ToastOccasion.RUN_STARTED);
+            }
+            log.debug(
+                    "run started: the model loads with the server's own settings {}", prepared.loadsWithOwnSettings());
+            if (prepared.loadsWithOwnSettings()) {
+                toasts.raise(ToastOccasion.MODEL_LOADS_OWN_SETTINGS);
             }
         });
     }

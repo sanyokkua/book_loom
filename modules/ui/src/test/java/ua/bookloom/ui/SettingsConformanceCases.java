@@ -26,7 +26,9 @@ final class SettingsConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#settings-summary", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
-                            new Part("#settings-summary", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
+                            new Part("#settings-summary", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
+                            // Where the text goes is a quiet line under the card, never a warning or a question.
+                            new Part("#settings-privacy-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             // Typing marks the footer in the warning text role, on the form card's surface.
             new Screen(
                     "SETTINGS_FORM_DIRTY",

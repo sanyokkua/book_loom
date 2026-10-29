@@ -8,6 +8,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
@@ -36,6 +37,9 @@ final class ProviderEngineSection {
     private final Label line = new Label();
     private final Label asking = new Label();
     private final Label unanswered = new Label();
+    private final Label unslothKey = Wrapped.label("", "hint");
+    private final Label unslothTools = Wrapped.label("", "hint");
+    private final VBox unslothHelp = new VBox(ROW_GAP, unslothKey, unslothTools);
     private final Banner offer;
     private final VBox box = new VBox(ROW_GAP);
     private final InvalidationListener onChange = observed -> show();
@@ -46,7 +50,7 @@ final class ProviderEngineSection {
         this.messages = Objects.requireNonNull(messages, "messages");
         offer = new Banner("settings-engine-offer", Tone.INFO, "i", "", messages.get(MessageKey.SETTINGS_OLLAMA_OFFER));
         box.setId("settings-engine");
-        box.getChildren().addAll(lineRow(), unansweredNote(), offerBanner());
+        box.getChildren().addAll(lineRow(), unansweredNote(), offerBanner(), unslothHelp());
         form.draft().addListener(new WeakInvalidationListener(onChange));
         engine.detection().addListener(new WeakInvalidationListener(onChange));
         engine.lineShown().addListener(new WeakInvalidationListener(onChange));
@@ -100,6 +104,16 @@ final class ProviderEngineSection {
         return offer;
     }
 
+    // Unsloth needs a key made in its own settings and has chat tools of its own; both are said where the engine is.
+    private VBox unslothHelp() {
+        unslothKey.setId("settings-unsloth-key-hint");
+        unslothKey.setText(messages.get(MessageKey.SETTINGS_UNSLOTH_KEY_HINT));
+        unslothTools.setId("settings-unsloth-tools");
+        unslothTools.setText(messages.get(MessageKey.SETTINGS_UNSLOTH_TOOLS));
+        unslothHelp.setId("settings-unsloth-help");
+        return unslothHelp;
+    }
+
     private Button button(final String id, final MessageKey text, final String style) {
         final Button button = new Button(messages.get(text));
         button.setId(id);
@@ -111,5 +125,6 @@ final class ProviderEngineSection {
     private void show() {
         final ProviderDraft draft = form.draft().get();
         line.setText(EngineWords.line(messages, draft.kind(), draft.engine()));
+        Visibility.show(unslothHelp, draft.engine().effective() == ServerEngine.UNSLOTH);
     }
 }

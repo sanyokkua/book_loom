@@ -23,6 +23,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -269,6 +270,8 @@ public final class SettingsController {
         // A disabled button shows no hover text, so the reason is a line beside it.
         deleteReason.visibleProperty().bind(busy);
         deleteReason.managedProperty().bind(busy);
+        // The form scrolls under it; the card's height must never squeeze the reason to "…".
+        Wrapped.wholeLines(deleteReason);
     }
 
     // Model work is under way and the open provider is the one it uses, or a run, even a paused one, uses it.

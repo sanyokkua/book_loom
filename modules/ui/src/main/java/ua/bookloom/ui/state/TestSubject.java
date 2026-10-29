@@ -1,8 +1,6 @@
 package ua.bookloom.ui.state;
 
-import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ServerEngine;
 
@@ -19,8 +17,6 @@ public record TestSubject(ProviderConfig config, String model, String name, bool
     /** The id a provider being added is tested under; it is never stored. */
     public static final String DRAFT_ID = "new-provider";
 
-    private static final Set<String> LOOPBACK_HOSTS = Set.of("localhost", "127.0.0.1", "::1", "[::1]");
-
     /** Rejects a missing part. */
     public TestSubject {
         Objects.requireNonNull(config, "config");
@@ -29,20 +25,15 @@ public record TestSubject(ProviderConfig config, String model, String name, bool
     }
 
     /**
-     * Whether the subject is Ollama or LM Studio on this computer, whose failure to answer means its app is not open.
+     * Whether the subject is Ollama or LM Studio on this computer, by the engine its requests are shaped for, whose
+     * failure to answer means its app is not open.
      *
      * @return {@code true} for an Ollama or LM Studio provider at a loopback address, {@code false} otherwise
      */
     public boolean isLocalProgram() {
-        final String host = config.baseUrl().getHost();
-        final boolean loopback = host != null && LOOPBACK_HOSTS.contains(host.toLowerCase(Locale.ROOT));
-        return loopback
-                && ModelAdvice.Server.of(
-                                config.kind(),
-                                config.id(),
-                                name,
-                                host + ":" + config.baseUrl().getPort())
-                        != ModelAdvice.Server.OTHER_OPENAI_COMPATIBLE;
+        final boolean loopback = LoopbackHosts.isLoopback(config.baseUrl().getHost());
+        final ServerEngine engine = config.effectiveEngine();
+        return loopback && (engine == ServerEngine.OLLAMA || engine == ServerEngine.LM_STUDIO);
     }
 
     /**

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ModelVariant;
@@ -223,13 +224,20 @@ public final class ModelIdCheck {
                 config.effectiveEngine(),
                 id,
                 ErrorCode.modelNotFound);
+        // LM Studio answers an unknown id with the loaded model, so the sentence says why the call was stopped.
+        final String message = config.effectiveEngine() == ServerEngine.LM_STUDIO
+                ? "LM Studio has no model \"" + id + "\". It would answer with the model that is loaded. Pick a model"
+                        + " from the list."
+                : engine + " has no model with the id " + id + ". Check the model id.";
         return AppError.of(
                 ErrorCode.modelNotFound,
                 "Model not found",
-                engine + " has no model with the id " + id + ". Check the model id.",
+                message,
                 SafeDetails.empty()
+                        .withReason(FailureReason.MODEL_NOT_LISTED)
                         .withEndpoint(config.baseUrl())
                         .withModelName(id)
+                        .withEngine(config.effectiveEngine().name())
                         .render(),
                 null);
     }

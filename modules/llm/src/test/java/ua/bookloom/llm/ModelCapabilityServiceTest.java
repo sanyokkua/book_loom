@@ -21,8 +21,10 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -201,5 +203,52 @@ class ModelCapabilityServiceTest {
         assertThat(configs.save(new ProviderConfig(id, kind, URI.create(baseUrl), TIMEOUT, TIMEOUT))
                         .isOk())
                 .isTrue();
+    }
+
+    private void registerLmStudio(final String id) {
+        assertThat(configs.save(new ProviderConfig(
+                                        id,
+                                        ProviderKind.OPENAI_COMPATIBLE,
+                                        URI.create(server.baseUrl() + "/v1"),
+                                        TIMEOUT,
+                                        TIMEOUT)
+                                .withEngine(ServerEngine.LM_STUDIO))
+                        .isOk())
+                .isTrue();
+    }
+
+    private void stubLmStudioList(final String state) {
+        server.stubFor(get(urlEqualTo("/api/v0/models"))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"google/gemma-4-e4b\",\"type\":\"llm\","
+                        + "\"state\":\"" + state + "\"}]}")));
+    }
+
+    // LM Studio loads a model that is not in memory with its own defaults, so Start says the window may differ.
+    @Test
+    void loadsWithOwnSettings_lmStudioModelNotLoaded_isTrue() {
+        registerLmStudio("lmstudio");
+        stubLmStudioList("not-loaded");
+
+        assertThat(capabilities.loadsWithOwnSettings(new ModelSelection("lmstudio", "google/gemma-4-e4b")))
+                .isTrue();
+    }
+
+    @Test
+    void loadsWithOwnSettings_lmStudioModelLoaded_isFalse() {
+        registerLmStudio("lmstudio");
+        stubLmStudioList("loaded");
+
+        assertThat(capabilities.loadsWithOwnSettings(new ModelSelection("lmstudio", "google/gemma-4-e4b")))
+                .isFalse();
+    }
+
+    // IF another engine were asked, THEN every Start would send a GET whose answer says nothing about loading.
+    @Test
+    void loadsWithOwnSettings_ollama_sendsNothingAndIsFalse() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+
+        assertThat(capabilities.loadsWithOwnSettings(new ModelSelection("ollama", "gemma4:e4b")))
+                .isFalse();
+        assertThat(server.getAllServeEvents()).isEmpty();
     }
 }

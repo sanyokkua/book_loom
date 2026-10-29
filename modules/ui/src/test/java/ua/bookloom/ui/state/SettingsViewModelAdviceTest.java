@@ -3,8 +3,15 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.state.ModelAdvice.Level;
 import ua.bookloom.ui.state.ModelAdvice.Note;
 
@@ -86,5 +93,33 @@ class SettingsViewModelAdviceTest extends SettingsViewModelTestBase {
         });
 
         assertThat(levels(viewModel)).isEmpty();
+    }
+
+    private void store(final String id, final String address, final ServerEngine engine) {
+        configs.save(new ProviderConfig(
+                        id,
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(address),
+                        Duration.ofSeconds(5),
+                        Duration.ofSeconds(60))
+                .withEngine(engine));
+    }
+
+    // IF LM Studio were told by its port, THEN a second engine detection would disagree with the stored one: LM Studio
+    // on another port would get no note and a generic server on LM Studio's port would get LM Studio's.
+    @ParameterizedTest
+    @CsvSource({"studio, http://127.0.0.1:5555/v1, LM_STUDIO, true", "office, http://127.0.0.1:1234/v1, GENERIC, false"
+    })
+    void modelNotes_lmStudioEngineOnAnotherPort_readsTheStoredEngine(
+            final String id, final String address, final ServerEngine engine, final boolean lmStudioNote) {
+        store(id, address, engine);
+        final SettingsViewModel viewModel = viewModel();
+
+        onFx(() -> {
+            viewModel.editProvider(id);
+            return null;
+        });
+
+        assertThat(levels(viewModel).contains(Level.INFO)).isEqualTo(lmStudioNote);
     }
 }

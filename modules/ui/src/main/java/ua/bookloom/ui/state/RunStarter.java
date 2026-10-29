@@ -102,48 +102,70 @@ public final class RunStarter {
     }
 
     /**
+     * How a preparation ended.
+     *
+     * @param failure the error that stopped the preparation, or {@code null} when the runner took the run
+     * @param loadsWithOwnSettings whether the server said it will load the model with settings of its own (LM Studio,
+     *     a model not in memory), so the window may differ from the one the run budgets for; never a reason to stop
+     */
+    public record Prepared(@Nullable AppError failure, boolean loadsWithOwnSettings) {}
+
+    /**
      * Prepares a run on the open book in the background and starts it. FX thread only, because it reads the open
      * book there.
      *
      * @param selection the provider and model to translate with
-     * @param whenPrepared told, on the background thread and exactly once, {@code null} when the runner took the run
-     *     or the error that stopped the preparation
+     * @param whenPrepared told, on the background thread and exactly once, how the preparation ended
      */
-    public void start(final ModelSelection selection, final Consumer<@Nullable AppError> whenPrepared) {
+    public void start(final ModelSelection selection, final Consumer<Prepared> whenPrepared) {
         Objects.requireNonNull(selection, "selection");
         Objects.requireNonNull(whenPrepared, "whenPrepared");
         final OpenedBook book = Objects.requireNonNull(current.book().get(), "an open book, checked by the caller");
         log.debug("run requested: project {}", book.projectId());
         final ActivityTracker.Handle preparing = activities.begin(ActivityKind.RUN_PREPARATION, null);
         preparing.indeterminate(fileNameOf(book));
-        final Consumer<@Nullable AppError> ending = failure -> {
+        final Consumer<Prepared> ending = prepared -> {
             Platform.runLater(preparing::end);
-            whenPrepared.accept(failure);
+            whenPrepared.accept(prepared);
         };
         try {
             executor.execute(() -> prepareOffThread(book, selection, ending));
         } catch (RejectedExecutionException rejected) {
             log.error("the run could not be submitted for preparation", rejected);
-            ending.accept(internalError(rejected));
+            ending.accept(new Prepared(internalError(rejected), false));
         }
     }
 
     private void prepareOffThread(
-            final OpenedBook book, final ModelSelection selection, final Consumer<@Nullable AppError> whenPrepared) {
+            final OpenedBook book, final ModelSelection selection, final Consumer<Prepared> whenPrepared) {
         log.debug("preparing a run on {}", Thread.currentThread().getName());
         AppError failure = null;
+        boolean loads = false;
         try {
             // Read once, here and not on the FX thread (the stored setting is a database read): the request, the
             // context and the pause points of this run must agree on one mode.
             final ReviewMode mode = reviewMode.get();
             log.debug("preparing the run with review mode {}", mode);
             failure = prepare(book, selection, mode);
+            loads = failure == null && loadsWithOwnSettings(selection);
         } catch (RuntimeException thrown) {
             log.error("preparing the run threw instead of returning a result", thrown);
             failure = internalError(thrown);
         } finally {
             // Also on an Error: the caller's busy flag must never outlive a preparation that will not publish anything.
-            whenPrepared.accept(failure);
+            whenPrepared.accept(new Prepared(failure, loads));
+        }
+    }
+
+    // Asked once the run is taken, so the answer never delays or stops it; a server that cannot say counts as no.
+    private boolean loadsWithOwnSettings(final ModelSelection selection) {
+        try {
+            final boolean loads = capabilities.loadsWithOwnSettings(selection);
+            log.debug("the server loads {} with its own settings: {}", selection.modelId(), loads);
+            return loads;
+        } catch (RuntimeException thrown) {
+            log.warn("whether the server loads the model by itself could not be asked; the run goes on", thrown);
+            return false;
         }
     }
 

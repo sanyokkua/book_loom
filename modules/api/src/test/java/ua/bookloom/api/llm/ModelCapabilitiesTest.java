@@ -41,4 +41,12 @@ class ModelCapabilitiesTest {
 
         assertThat(report.data()).isEqualTo(new ModelReport(4096, null));
     }
+
+    // A capability that cannot tell says the model needs no load of its own, so Start never shows a line by guess.
+    @Test
+    void loadsWithOwnSettings_default_isFalse() {
+        final ModelCapabilities capabilities = (provider, model) -> Result.ok(ContextLength.unknown());
+
+        assertThat(capabilities.loadsWithOwnSettings(SELECTION)).isFalse();
+    }
 }

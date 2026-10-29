@@ -787,7 +787,7 @@ Purpose: host the six settings tabs.
 Each tab's fields, defaults, and ranges are specified in `07_SETTINGS.md`. **Built today:** only the Providers tab is
 live; Models, Generation, Automation and Storage are not built, and nothing is remembered across a restart.
 **Planned — UI finalization + SQLite (S1–S5, H1, decisions 6–7):** all six tabs, with the contents below. Subtitle:
-"Your books stay on this computer. BookLoom sends your text only to the AI model you choose here." Keys are never saved, only
+"Your books stay private when you use a local model. BookLoom sends your text only to the AI model you choose here." Keys are never saved, only
 environment-variable names.
 
 **How changes are saved (H1).** **Providers** and **Models** save explicitly through a pinned form footer: "● Unsaved
@@ -870,6 +870,12 @@ detection with no answer, "The server does not answer, so the engine was not det
 as…** row (hidden for an app that cannot translate a book), the one-time inline offer of Ollama's own connection with
 **Use it** and **Keep as is**, and a fourth check row, **Test advanced features**, which reads "Advanced features
 (optional, uses the model)" until it runs and then one verdict line per check (`07_SETTINGS.md#providers-tab`).
+Also built: the engine help — the address hint `http://127.0.0.1:9931/v1` for llama-server, the Unsloth key hint and
+tools line under the address, LM Studio's "has no model" sentence on a failed id check, the one-time line under the
+model entry when an `@variant` was removed, and a notice at Start when LM Studio will load the model with its own
+settings; under the summary card the privacy line ("Your book stays private when you use a local model.", naming the
+host for a provider outside this computer) and, for LM Studio, the note about its server log; the neutral "cloud" label
+beside cloud models in the model list. No consent dialog or acknowledgement box.
 
 ### dialog-test-provider {#dialog-test-provider}
 

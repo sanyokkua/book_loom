@@ -18,7 +18,7 @@ folder. Rows marked *built* describe the code today.
 ## settings-tabs {#settings-tabs}
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
-(`mockups/README.md`, Settings). Its subtitle reads "Your books stay on this computer. BookLoom sends your text only to the AI
+(`mockups/README.md`, Settings). Its subtitle reads "Your books stay private when you use a local model. BookLoom sends your text only to the AI
 model you choose here." All six are built: Providers (form, checks, test dialog), Models, Generation, Appearance,
 Automation and Storage & logs.
 
@@ -82,6 +82,29 @@ dialog's request line is the route the engine was actually reached on (LM Studio
 |----------------------------|--------------|--------------------------|-----------------------------------------------------------------|-------------------------|
 | Treat this server as…      | enum, optional | As detected            | one of the six engines; not offered for an unusable app      | FR-PROV-03              |
 | Ollama's own connection offer | flag      | open                     | Keep as is declines it for good                               | FR-PROV-03              |
+
+**Engine help.** Each engine gets the help it needs, in the display language. **llama-server**: the empty address
+field shows the hint `http://127.0.0.1:9931/v1` (no fixed port; the address ends in `/v1`). **LM Studio**: when the id
+check stops a test or a start because LM Studio does not list the id, the result reads `LM Studio has no model
+"{id}". It would answer with the model that is loaded. Pick a model from the list.`; a typed `@variant` is removed from
+the model id once LM Studio's list was read (a passing models check) or the provider is saved, and one line under the
+model entry says `"@{variant}" was removed from the model id: it would load a second copy with default settings.`
+until the id is typed again; when a run starts on an LM Studio model that is not loaded, a notice says "LM Studio will
+load it with its own default settings; the window may differ." and the run goes on. **Unsloth**: under the address the
+key hint "Create a key in Unsloth › Settings › API and put its environment-variable name here, for example
+UNSLOTH_API_KEY." and "Unsloth's own chat tools (web search, code) are separate from BookLoom; BookLoom turns them off
+on every request."; a refused sign-in reads "Unsloth needs an API key. Create one in Unsloth › Settings › API and put
+its environment-variable name here." Each line follows the engine requests are shaped for (the person's choice, else
+the detected engine), never the port or the name.
+
+**Privacy.** Under the summary card one line says where the text goes: "Your book stays private when you use a local
+model." for a provider at `127.0.0.1`, `::1` or `localhost`, and for any other host "… With a provider outside this
+computer, the text you translate is sent to {host}." (for example `openrouter.ai`). For LM Studio a second line says
+"LM Studio keeps request text in its own server log unless you turn that off in LM Studio." Nothing is asked: there is
+no consent dialog and no acknowledgement box for any provider.
+
+**Cloud models.** In the Providers model list a model the provider runs on its own servers (an Ollama cloud model,
+`ModelInfo.cloud`) carries the neutral label "cloud"; every model stays listed and choosing one asks nothing.
 
 The effective context is **not** a provider setting: it is resolved per model (see `#models-tab` and
 `#generation-tab`).

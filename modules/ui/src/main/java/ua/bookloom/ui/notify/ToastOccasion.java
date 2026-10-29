@@ -21,6 +21,8 @@ public enum ToastOccasion {
     STORAGE_SET_ASIDE(Severity.WARNING, MessageKey.TOAST_STORAGE_SET_ASIDE),
     /** A translation started; progress is saved as it goes. */
     RUN_STARTED(Severity.INFO, MessageKey.TOAST_RUN_STARTED),
+    /** A run started on a model its server loads with settings of its own (LM Studio), so the window may differ. */
+    MODEL_LOADS_OWN_SETTINGS(Severity.INFO, MessageKey.TOAST_MODEL_LOADS_OWN_SETTINGS),
     /** A translation ended with nothing to review; the argument is the translated count. */
     RUN_FINISHED(Severity.SUCCESS, MessageKey.TOAST_RUN_FINISHED),
     /** A translation ended with segments to review; the arguments are the accepted and the flagged counts. */

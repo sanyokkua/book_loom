@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.DetailCounts;
 import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ServerEngine;
 
 /**
@@ -54,6 +55,10 @@ public final class ErrorWords {
      */
     public static String message(final Messages messages, final AppError error) {
         Objects.requireNonNull(error, "error");
+        final Optional<String> byEngine = engineWords(messages, error.details());
+        if (byEngine.isPresent()) {
+            return byEngine.get();
+        }
         if (keepsOwnWords(messages)) {
             return error.message();
         }
@@ -61,6 +66,28 @@ public final class ErrorWords {
                 FailureReason.in(error.details()).flatMap(why -> reasonWords(messages, why, error.details()));
         log.debug("failure {} worded by {}", error.code(), byReason.isPresent() ? "its reason" : "its code");
         return byReason.orElseGet(() -> messages.code(MessageKey.ERROR_CODE_MESSAGE, codeOf(error)));
+    }
+
+    // Two engines need words of their own in every language: LM Studio would answer an unlisted id with the loaded
+    // model,
+    // and Unsloth's key is made in its own settings. The details carry the reason, the engine and the id.
+    private static Optional<String> engineWords(final Messages messages, final @Nullable String details) {
+        final Optional<FailureReason> why = FailureReason.in(details);
+        final Optional<ServerEngine> engine = ServerEngine.in(details);
+        if (why.isEmpty() || engine.isEmpty()) {
+            return Optional.empty();
+        }
+        final FailureReason reason = why.get();
+        final ServerEngine server = engine.get();
+        final Optional<String> id = SafeDetails.modelIn(details);
+        log.debug("engine words for reason {} on {}: model named {}", reason.token(), server, id.isPresent());
+        if (reason == FailureReason.MODEL_NOT_LISTED && server == ServerEngine.LM_STUDIO && id.isPresent()) {
+            return Optional.of(messages.get(MessageKey.SETTINGS_LMSTUDIO_NO_MODEL, id.get()));
+        }
+        if (reason == FailureReason.AUTH && server == ServerEngine.UNSLOTH) {
+            return Optional.of(messages.get(MessageKey.SETTINGS_UNSLOTH_KEY_REFUSED));
+        }
+        return Optional.empty();
     }
 
     // A reason with no advice of its own (unclassified, or one the catalogue has no branch for yet) says less than the

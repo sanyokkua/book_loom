@@ -78,12 +78,7 @@ final class ModelField {
 
     private void build() {
         final ModelListing listing = viewModel.modelListing();
-        combo.setId("settings-model");
-        combo.setEditable(true);
-        combo.setPromptText(messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN));
-        combo.getStyleClass().add("w-model");
-        Tips.install(messages, combo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
-        combo.getItems().setAll(form.modelChoices());
+        configureCombo(listing);
         applyText(viewModel.draftModel().get());
         combo.getEditor().textProperty().addListener(onEntryText);
         viewModel.draftModel().addListener(new WeakChangeListener<>(onModel));
@@ -105,6 +100,16 @@ final class ModelField {
                                 listing.noListObtained()),
                         refusal(listing),
                         Wrapped.label(messages.get(MessageKey.SETTINGS_FORM_MODEL_HINT), "hint"));
+    }
+
+    private void configureCombo(final ModelListing listing) {
+        combo.setId("settings-model");
+        combo.setEditable(true);
+        combo.setPromptText(messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN));
+        combo.getStyleClass().add("w-model");
+        Tips.install(messages, combo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
+        combo.getItems().setAll(form.modelChoices());
+        combo.setCellFactory(list -> new ModelChoiceCell(listing, messages));
     }
 
     private HBox entryRow() {
@@ -142,7 +147,7 @@ final class ModelField {
     // A note is a sentence or two; it wraps under the entry rather than being cut at the card's edge.
     private void configureNote() {
         note.setId("settings-model-note");
-        note.setWrapText(true);
+        Wrapped.wholeLines(note);
         note.setMaxWidth(Double.MAX_VALUE);
     }
 

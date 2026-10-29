@@ -130,6 +130,12 @@ public enum FailureReason {
     WRONG_MODEL_SERVED("wrong-model-served"),
 
     /**
+     * A server that answers any model id with whatever model it has loaded does not list the model id in its own list,
+     * so no chat request is sent; the details carry the engine and the id, so the window can say which server lacks it.
+     */
+    MODEL_NOT_LISTED("model-not-listed"),
+
+    /**
      * The address belongs to an app whose server refuses the answer schema every translation call needs (GPT4All), so
      * the connection test stops it before any book text is sent.
      */

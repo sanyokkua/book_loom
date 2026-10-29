@@ -6,6 +6,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -77,6 +79,23 @@ public record SafeDetails(
 
     /** The shape of an enum constant's name, the only text the engine field takes. */
     private static final Pattern CONSTANT_NAME = Pattern.compile("[A-Z][A-Z_]{0,31}");
+
+    /** The rendered model field: its text runs to the next rendered key or the end. */
+    private static final Pattern MODEL_IN_DETAILS = Pattern.compile("(?:\\A|, )model=(.+?)(?=, [A-Za-z]+=|\\z)");
+
+    /**
+     * Reads back the model {@link #withModelName(String)} recorded, so the window can name the id in its own words.
+     *
+     * @param details the rendered details, or {@code null}
+     * @return the model id if the details name one, or empty if they do not
+     */
+    public static Optional<String> modelIn(@Nullable String details) {
+        if (details == null) {
+            return Optional.empty();
+        }
+        final Matcher found = MODEL_IN_DETAILS.matcher(details);
+        return found.find() ? Optional.of(found.group(1)) : Optional.empty();
+    }
 
     /**
      * Starts from no details at all.

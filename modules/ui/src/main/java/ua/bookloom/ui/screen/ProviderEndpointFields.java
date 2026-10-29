@@ -8,6 +8,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
@@ -19,6 +20,8 @@ import ua.bookloom.ui.state.ProviderForm;
  * endpoint overrides, the second off for Ollama.
  */
 final class ProviderEndpointFields {
+
+    private static final String LLAMA_SERVER_ADDRESS = "http://127.0.0.1:9931/v1";
 
     private final Messages messages;
     private final DraftText address;
@@ -97,6 +100,8 @@ final class ProviderEndpointFields {
 
     void show(final ProviderDraft draft) {
         address.show(draft);
+        // llama-server has no fixed port and its address ends in /v1, so its empty field shows a working shape.
+        address.node().setPromptText(draft.engine().effective() == ServerEngine.LLAMA_CPP ? LLAMA_SERVER_ADDRESS : "");
         modelsPath.show(draft);
         chatPath.show(draft);
         final boolean ollama = draft.kind() == ProviderKind.OLLAMA;

@@ -6,16 +6,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.state.ModelAdvice.Level;
 import ua.bookloom.ui.state.ModelAdvice.Note;
-import ua.bookloom.ui.state.ModelAdvice.Server;
 
-/** What the Providers tab says about a model and its server, decided from the model's name and the provider kind. */
+/** What the Providers tab says about a model and its server, decided from the model's name and the engine the provider's requests are shaped for. */
 class ModelAdviceTest {
 
-    private static List<Level> levels(final Server kind, final String model) {
+    private static List<Level> levels(final ServerEngine kind, final String model) {
         return ModelAdvice.notesFor(kind, model).stream().map(Note::level).toList();
     }
 
@@ -34,7 +32,7 @@ class ModelAdviceTest {
         "OLLAMA, '  gemma4:26b-mlx  ', RECOMMENDED",
     })
     void notesFor_ollamaModel_hasOneNoteOfTheMatchingLevel(
-            final Server kind, final String model, final Level expected) {
+            final ServerEngine kind, final String model, final Level expected) {
         assertThat(levels(kind, model)).containsExactly(expected);
     }
 
@@ -47,7 +45,7 @@ class ModelAdviceTest {
         "OLLAMA, gemma4:31b",
         "OLLAMA, ''",
     })
-    void notesFor_unknownOrBlankModelOnOllama_hasNoNote(final Server kind, final String model) {
+    void notesFor_unknownOrBlankModelOnOllama_hasNoNote(final ServerEngine kind, final String model) {
         assertThat(ModelAdvice.notesFor(kind, model)).isEmpty();
     }
 
@@ -57,31 +55,21 @@ class ModelAdviceTest {
         "LM_STUDIO, some-model",
         "LM_STUDIO, ''",
     })
-    void notesFor_lmStudioWithAnUnknownModel_hasTheServerNoteOnly(final Server kind, final String model) {
+    void notesFor_lmStudioWithAnUnknownModel_hasTheServerNoteOnly(final ServerEngine kind, final String model) {
         assertThat(levels(kind, model)).containsExactly(Level.INFO);
+    }
+
+    // IF LM Studio were told by its port, THEN a second detection would disagree with the stored engine.
+    @ParameterizedTest
+    @CsvSource({"GENERIC", "LLAMA_CPP", "UNSLOTH", "OPENROUTER"})
+    void notesFor_anotherEngine_hasNoLmStudioNote(final ServerEngine engine) {
+        assertThat(ModelAdvice.notesFor(engine, "some-model")).isEmpty();
     }
 
     // IF a generic OpenAI-compatible server got LM Studio's note, THEN it would be told something measured elsewhere.
     @Test
     void notesFor_otherOpenAiCompatibleServer_hasNoServerNote() {
-        assertThat(ModelAdvice.notesFor(Server.OTHER_OPENAI_COMPATIBLE, "some-model"))
-                .isEmpty();
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-        "OLLAMA, localhost:11434, ollama, Ollama, OLLAMA",
-        "OPENAI_COMPATIBLE, 127.0.0.1:1234, p-1, '', LM_STUDIO",
-        "OPENAI_COMPATIBLE, studio.local:8080, lmstudio, '', LM_STUDIO",
-        "OPENAI_COMPATIBLE, studio.local:8080, p-2, LM Studio (desk), LM_STUDIO",
-        "OPENAI_COMPATIBLE, api.example.com, p-3, QA Test, OTHER_OPENAI_COMPATIBLE",
-        "OPENAI_COMPATIBLE, localhost:12345, p-4, '', OTHER_OPENAI_COMPATIBLE",
-    })
-    void serverOf_row_isToldByKindPortAndName(
-            final ProviderKind kind, final String hostPort, final String id, final String name, final Server expected) {
-        assertThat(Server.of(
-                        new ProviderRow(id, kind, "http://" + hostPort + "/v1", hostPort, name, ServerEngine.GENERIC)))
-                .isEqualTo(expected);
+        assertThat(ModelAdvice.notesFor(ServerEngine.GENERIC, "some-model")).isEmpty();
     }
 
     // The model's own note comes first, then the server's.
@@ -93,18 +81,19 @@ class ModelAdviceTest {
         "openai/gpt-oss-20b, WARNING",
     })
     void notesFor_lmStudioWithAKnownModel_hasTheModelNoteThenTheServerNote(final String model, final Level first) {
-        assertThat(levels(Server.LM_STUDIO, model)).containsExactly(first, Level.INFO);
+        assertThat(levels(ServerEngine.LM_STUDIO, model)).containsExactly(first, Level.INFO);
     }
 
     @Test
     void notesFor_ollamaModelsOfDifferentKinds_pointAtDifferentWording() {
         final Note recommended =
-                ModelAdvice.notesFor(Server.OLLAMA, "gemma4:26b-mlx").get(0);
+                ModelAdvice.notesFor(ServerEngine.OLLAMA, "gemma4:26b-mlx").get(0);
         final Note minimum =
-                ModelAdvice.notesFor(Server.OLLAMA, "gemma4:e4b-mlx").get(0);
-        final Note tiny = ModelAdvice.notesFor(Server.OLLAMA, "gemma4:e2b-mlx").get(0);
+                ModelAdvice.notesFor(ServerEngine.OLLAMA, "gemma4:e4b-mlx").get(0);
+        final Note tiny =
+                ModelAdvice.notesFor(ServerEngine.OLLAMA, "gemma4:e2b-mlx").get(0);
         final Note reasoning =
-                ModelAdvice.notesFor(Server.OLLAMA, "gpt-oss:20b").get(0);
+                ModelAdvice.notesFor(ServerEngine.OLLAMA, "gpt-oss:20b").get(0);
 
         assertThat(List.of(recommended.text(), minimum.text(), tiny.text(), reasoning.text()))
                 .doesNotHaveDuplicates();

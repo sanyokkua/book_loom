@@ -2,8 +2,10 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
@@ -53,6 +55,7 @@ public final class ModelListing {
     private final ExecutorService executor;
     private final ObservableList<String> offered = FXCollections.observableArrayList();
     private final ObservableList<String> offeredView = FXCollections.unmodifiableObservableList(offered);
+    private final Set<String> cloud = new HashSet<>();
     private final ReadOnlyBooleanWrapper listing = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyBooleanWrapper noListObtained = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
@@ -101,6 +104,16 @@ public final class ModelListing {
      */
     public ObservableList<String> offered() {
         return offeredView;
+    }
+
+    /**
+     * Whether an offered model runs on a remote service (an Ollama cloud model), for the neutral label beside it.
+     *
+     * @param id an offered model id
+     * @return {@code true} if the provider listed the model as a cloud one, {@code false} otherwise; FX thread only
+     */
+    public boolean isCloud(final String id) {
+        return cloud.contains(Objects.requireNonNull(id, "id"));
     }
 
     /**
@@ -189,6 +202,7 @@ public final class ModelListing {
         epoch++;
         inFlightKey = null;
         offered.clear();
+        cloud.clear();
         noListObtained.set(false);
         refusal.set("");
         listing.set(false);
@@ -266,6 +280,9 @@ public final class ModelListing {
             log.debug("the provider lists no models: saying so in place");
             noListObtained.set(true);
         } else {
+            cloud.clear();
+            models.stream().filter(ModelInfo::cloud).map(ModelInfo::id).forEach(cloud::add);
+            log.debug("{} of the listed model(s) run in the cloud", cloud.size());
             offered.setAll(models.stream().map(ModelInfo::id).toList());
             noListObtained.set(false);
         }

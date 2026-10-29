@@ -1350,7 +1350,7 @@ function setSet(t) { if (ST.dirty && ['providers', 'models'].includes(ST.setting
 S.settings = () => `
 <div class="page">
 <h2 class="page-h">Settings</h2>
-<p class="page-sub">Your books stay on this computer. BookLoom sends your text only to the AI model you choose here.</p>
+<p class="page-sub">Your books stay private when you use a local model. BookLoom sends your text only to the AI model you choose here.</p>
 <div class="tabs">${[['providers', 'Providers'], ['models', 'Models'], ['generation', 'Generation'], ['appearance', 'Appearance'], ['automation', 'Automation'], ['storage', 'Storage & logs']].map(([k, t]) => `<span class="tab ${ST.settingsTab === k ? 'on' : ''}" tabindex="0" onclick="setSet('${k}')">${t}</span>`).join('')}</div>
 <div class="settings-fill">${SET[ST.settingsTab]()}</div></div>`;
 const SET = {};
@@ -1373,6 +1373,7 @@ SET.providers = () => {
     <div class="card-h"><h3>${ol ? 'Ollama' : 'LM Studio'}</h3><div class="gap8">${ol ? '<span class="badge b-ok">current</span>' : `<button class="btn btn-ghost btn-sm" onclick="${hasProgress() && !isFinished() ? "openDialog('changeDuringRun')" : "toast('ok','LM Studio is now used','From the next request.')"}">Use this one</button>`}<button class="btn btn-danger-outline btn-sm" onclick="openDialog('confirmDelete')">Delete…</button></div></div>
     <div class="card-b">
       <div class="summary-card"><span>✓</span><div class="grow"><b>${ol ? 'Your AI model: Ollama · gemma4:e4b' : 'This provider’s model: LM Studio · lapa-v0.1.2-instruct'} — ready</b><div class="small muted">Answers in about 1 second · 7 models available</div></div><button class="btn btn-secondary btn-sm" onclick="openDialog('test','inference')">Test</button><button class="btn btn-ghost btn-sm" onclick="ST.connOpen=true;rerender()">Change model</button></div>
+      <div class="hint" style="margin:6px 0 10px">Your book stays private when you use a local model.${ol ? '' : '<br>LM Studio keeps request text in its own server log unless you turn that off in LM Studio.'}</div>
       <details class="fold" ${ST.connOpen || ST.tech ? 'open' : ''}><summary>Connection details <span class="muted small" style="font-weight:400">— for another program, a server or a key</span></summary><div class="fold-b">
         <div class="grid2 collapse">
           ${fld('Name', `<input class="input w-name" ${dirtyOn} value="${ol ? 'Ollama' : 'LM Studio'}">`, 'A label for you; it does not change requests.')}
@@ -1389,7 +1390,7 @@ SET.providers = () => {
           ${fld('Inference endpoint (override)', `<input class="input mono w-url" ${dirtyOn} placeholder="${ol ? '/api/chat' : '/chat/completions'}" ${ol ? 'disabled' : ''}>`, ol ? 'Not used for Ollama — it has its own chat protocol.' : 'Empty: the standard path.')}
         </div>
         <div class="gap8">${fld('Connect timeout', `<input class="input w-num" ${dirtyOn} value="10 s">`)}${fld('Request timeout (at least)', `<input class="input w-num" ${dirtyOn} value="180 s">`, 'Long answers get more time by themselves.')}</div>
-        ${fld('Model', `<div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ol ? 'gemma4:e4b' : 'lapa-v0.1.2-instruct'}</option><option>gemma4:26b</option><option>gpt-oss:20b</option></select><button class="btn btn-secondary" title="Read the list of models again">↻</button></div>`, '7 models found · you can also type a model name. Settings for each model are on the Models tab.')}
+        ${fld('Model', `<div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ol ? 'gemma4:e4b' : 'lapa-v0.1.2-instruct'}</option><option>gemma4:26b</option><option>gpt-oss:20b</option>${ol ? '<option>gpt-oss:120b-cloud · cloud</option>' : ''}</select><button class="btn btn-secondary" title="Read the list of models again">↻</button></div>`, '7 models found · you can also type a model name. Settings for each model are on the Models tab.')}
         <div class="toggle-row">${sw(ST.customHeaders, `onclick="ST.customHeaders=!ST.customHeaders;rerender()"`)}<div class="tx">Use custom headers<small>Extra HTTP headers for gateways and proxies; a value may name an environment variable as <span class="mono">\${env:NAME}</span>.</small></div></div>
         ${ST.customHeaders ? `<div style="margin:0 0 10px 44px" class="w-url">${gridTable(['Header', 'Value', ''], [['<input class="input" value="X-Team">', '<input class="input" value="translation">', '×']], ['', '', '40px'])}<button class="linkbtn mt1">＋ Add header</button></div>` : ''}
         <div class="toggle-row">${sw(ST.customModels, `onclick="ST.customModels=!ST.customModels;rerender()"`)}<div class="tx">Use custom models<small>Type model names instead of using the program’s list.</small></div></div>

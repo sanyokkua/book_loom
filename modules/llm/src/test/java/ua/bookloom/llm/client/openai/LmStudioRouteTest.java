@@ -29,6 +29,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -154,6 +155,26 @@ class LmStudioRouteTest {
         assertThat(error.code()).isEqualTo(ErrorCode.modelNotFound);
         assertThat(error.message()).contains("google/gemma-4-26b-a4b-qatt");
         server.verify(0, postRequestedFor(anyUrl()));
+    }
+
+    // The window words the stop in its own language from the reason, the engine and the id in the details.
+    @Test
+    void chat_lmStudioIdNotListed_saysLmStudioHasNoModelWithReasonEngineAndId() {
+        stubList(MODEL_ID);
+
+        final AppError error = Objects.requireNonNull(
+                client(ServerEngine.LM_STUDIO)
+                        .chat("gemma-4-e4b-typo", request())
+                        .result()
+                        .error(),
+                "error");
+
+        assertThat(error.message())
+                .isEqualTo("LM Studio has no model \"gemma-4-e4b-typo\". It would answer with the model that is loaded."
+                        + " Pick a model from the list.");
+        assertThat(FailureReason.in(error.details())).contains(FailureReason.MODEL_NOT_LISTED);
+        assertThat(ServerEngine.in(error.details())).contains(ServerEngine.LM_STUDIO);
+        assertThat(SafeDetails.modelIn(error.details())).contains("gemma-4-e4b-typo");
     }
 
     @Test

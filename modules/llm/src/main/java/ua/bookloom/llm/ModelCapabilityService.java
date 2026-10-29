@@ -11,8 +11,11 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.api.llm.ServerEngine;
+import ua.bookloom.llm.engine.CheckedModelId;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 
@@ -52,6 +55,39 @@ public final class ModelCapabilityService implements ModelCapabilities {
         } catch (Throwable cause) {
             log.warn("Model report degraded to unknown providerId={} model={}", providerId, modelId, cause);
             return Result.ok(new ModelReport(null, null));
+        }
+    }
+
+    // Only LM Studio's own list says whether a model is in memory; asking any other server would be a GET for nothing.
+    @Override
+    public boolean loadsWithOwnSettings(ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        final Optional<ProviderConfig> config = configs.find(selection.providerId());
+        if (config.isEmpty() || config.get().effectiveEngine() != ServerEngine.LM_STUDIO) {
+            log.debug(
+                    "Model load question skipped providerId={} branch={}",
+                    selection.providerId(),
+                    config.isEmpty() ? "unknown-provider" : "not-lm-studio");
+            return false;
+        }
+        try {
+            final Result<CheckedModelId> checked = clients.create(config.get()).recheckModelId(selection.modelId());
+            final CheckedModelId found = checked.data();
+            final boolean loads = found != null && Boolean.FALSE.equals(found.loaded());
+            log.debug(
+                    "Model load question providerId={} model={} loaded={} loadsWithOwnSettings={}",
+                    selection.providerId(),
+                    selection.modelId(),
+                    found == null ? null : found.loaded(),
+                    loads);
+            return loads;
+        } catch (Throwable cause) {
+            log.warn(
+                    "Model load question degraded to no providerId={} model={}",
+                    selection.providerId(),
+                    selection.modelId(),
+                    cause);
+            return false;
         }
     }
 

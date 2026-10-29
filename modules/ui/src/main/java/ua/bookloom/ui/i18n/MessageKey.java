@@ -3830,6 +3830,28 @@ public enum MessageKey {
     SETTINGS_OLLAMA_OFFER_KEEP("settings.providers.ollamaOffer.keep"),
     /** Hover explanation of Keep as is. */
     SETTINGS_OLLAMA_OFFER_KEEP_TIP("settings.providers.ollamaOffer.keep.tip"),
+    /** Why a test or a start stopped: LM Studio does not list the id; &#123;0&#125; is the id. */
+    SETTINGS_LMSTUDIO_NO_MODEL("settings.providers.lmStudio.noModel"),
+    /** Said once when a typed LM Studio variant was removed from the model id; &#123;0&#125; is the variant. */
+    SETTINGS_LMSTUDIO_VARIANT_REMOVED("settings.providers.lmStudio.variantRemoved"),
+    /** Under the privacy line of an LM Studio provider: where LM Studio keeps request text. */
+    SETTINGS_LMSTUDIO_LOG("settings.providers.lmStudio.log"),
+    /** The key hint of a provider treated as Unsloth. */
+    SETTINGS_UNSLOTH_KEY_HINT("settings.providers.unsloth.keyHint"),
+    /** The line about Unsloth's own chat tools on a provider treated as Unsloth. */
+    SETTINGS_UNSLOTH_TOOLS("settings.providers.unsloth.tools"),
+    /** Why an Unsloth server refused the sign-in. */
+    SETTINGS_UNSLOTH_KEY_REFUSED("settings.providers.unsloth.keyRefused"),
+    /** The privacy line of a provider on this computer. */
+    SETTINGS_PRIVACY_LOCAL("settings.providers.privacy.local"),
+    /** The privacy line of a provider outside this computer; &#123;0&#125; is its host. */
+    SETTINGS_PRIVACY_REMOTE("settings.providers.privacy.remote"),
+    /** The neutral label beside a model that runs on a remote service. */
+    SETTINGS_MODEL_CLOUD("settings.providers.model.cloud"),
+    /** Hover explanation of the cloud label. */
+    SETTINGS_MODEL_CLOUD_TIP("settings.providers.model.cloud.tip"),
+    /** Raised at Start when LM Studio will load a model that is not loaded. */
+    TOAST_MODEL_LOADS_OWN_SETTINGS("toast.modelLoadsOwnSettings"),
     /** Label of the status metric. */
     SETTINGS_TEST_METRIC_STATUS("settings.test.metric.status"),
     /** Label of the time metric. */

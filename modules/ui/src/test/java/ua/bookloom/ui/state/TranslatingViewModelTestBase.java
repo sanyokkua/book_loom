@@ -14,6 +14,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.ModelCapabilities;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.EnglishMessages;
@@ -72,6 +74,9 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     protected TranslatingViewModel viewModel;
 
+    /** What the server says when a run starts: whether it loads the model with settings of its own (LM Studio). */
+    protected volatile boolean modelLoadsWithOwnSettings;
+
     @BeforeEach
     void setUpTranslatingFixtures() {
         toasts = new RecordingToasts();
@@ -124,6 +129,21 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new StructuredAnswers());
     }
 
+    // The model's window is unknown, and whether the server loads the model by itself is what the test scripted.
+    private ModelCapabilities capabilities() {
+        return new ModelCapabilities() {
+            @Override
+            public Result<ContextLength> contextLength(final String providerId, final String modelId) {
+                return Result.ok(ContextLength.unknown());
+            }
+
+            @Override
+            public boolean loadsWithOwnSettings(final ModelSelection selection) {
+                return modelLoadsWithOwnSettings;
+            }
+        };
+    }
+
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
         final RunStarter starter = new RunStarter(
@@ -135,7 +155,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor,
                 ScriptedProviderVerifier.idle(),
-                (providerId, modelId) -> Result.ok(ContextLength.unknown()),
+                capabilities(),
                 activities);
         viewModel = onFx(() -> new TranslatingViewModel(
                 mirror,

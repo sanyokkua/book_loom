@@ -78,6 +78,12 @@ public final class ScriptedModelCatalog implements ModelCatalog {
         answer = listOf(ids);
     }
 
+    /** From now on answers with {@code models}, cloud flags kept; a previously scripted failure no longer applies. */
+    public void respondWith(final ModelInfo... models) {
+        failure = null;
+        answer = Result.ok(List.of(models));
+    }
+
     /** From now on answers with {@code error}; a previously scripted exception no longer applies. */
     public void respondWith(final AppError error) {
         failure = null;

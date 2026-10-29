@@ -336,6 +336,10 @@ public final class HttpErrorMapper {
         SafeDetails details = SafeDetails.empty().withReason(mapping.reason()).withEndpoint(config.baseUrl());
         details = status == null ? details : details.withHttpStatus(status);
         details = modelName == null ? details : details.withModelName(modelName);
+        // A refused sign-in names the engine, so the window can say where that engine's key is made.
+        details = mapping.reason() == FailureReason.AUTH
+                ? details.withEngine(config.effectiveEngine().name())
+                : details;
         if (mapping.reason() == FailureReason.CONTEXT_OVERFLOW) {
             final SafeDetails overflow = details;
             details = TokenCounts.in(body)
