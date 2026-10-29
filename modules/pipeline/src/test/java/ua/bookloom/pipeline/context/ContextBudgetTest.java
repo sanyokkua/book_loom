@@ -33,14 +33,6 @@ class ContextBudgetTest {
         assertThat(ContextBudget.dynamicAllowance(window, 900)).isEqualTo(expected);
     }
 
-    // A quarter of the allowance, rounded up, so the block can never crowd out the previous pairs (half) or the next
-    // source (a quarter).
-    @ParameterizedTest
-    @CsvSource({"2000,500", "1078,270", "259,65", "1,1", "0,0"})
-    void relevantAllowance_allowance_isAQuarterRoundedUp(final int allowance, final int expected) {
-        assertThat(ContextBudget.relevantAllowance(allowance)).isEqualTo(expected);
-    }
-
     @ParameterizedTest
     @CsvSource(
             value = {

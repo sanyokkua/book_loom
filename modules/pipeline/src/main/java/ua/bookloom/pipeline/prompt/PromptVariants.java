@@ -8,9 +8,8 @@ import java.util.Objects;
  * setting can steer a release's prompts. Each field lives only until the task that settles its arm deletes it.
  *
  * @param languageRules which language rules a prompt states
- * @param batchFormat the batch draft's reply format arm 2 compares; nothing reads it until that arm runs
  */
-public record PromptVariants(LanguageRulesVariant languageRules, BatchFormatVariant batchFormat) {
+public record PromptVariants(LanguageRulesVariant languageRules) {
 
     /** The shipped prompts. */
     public static final PromptVariants DEFAULTS = new PromptVariants();
@@ -23,18 +22,9 @@ public record PromptVariants(LanguageRulesVariant languageRules, BatchFormatVari
         GENERIC_ONLY
     }
 
-    /** The batch draft's reply format. */
-    public enum BatchFormatVariant {
-        /** Numbered JSON items, as shipped. */
-        JSON,
-        /** One marked passage with a plain-text reply. */
-        MARKERS
-    }
-
     /** Rejects a missing choice. */
     public PromptVariants {
         Objects.requireNonNull(languageRules, "languageRules");
-        Objects.requireNonNull(batchFormat, "batchFormat");
     }
 
     /**
@@ -42,7 +32,7 @@ public record PromptVariants(LanguageRulesVariant languageRules, BatchFormatVari
      * injector sends exactly what the production one does.
      */
     public PromptVariants() {
-        this(LanguageRulesVariant.BUNDLED, BatchFormatVariant.JSON);
+        this(LanguageRulesVariant.BUNDLED);
     }
 
     /** {@code true} when every field is the shipped value. */

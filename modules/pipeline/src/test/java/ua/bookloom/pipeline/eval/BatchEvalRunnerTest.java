@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -23,11 +22,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /** The A/B machinery against scripted models: no real model, so its numbers can be checked by hand. */
 class BatchEvalRunnerTest {
-
-    @AfterEach
-    void clearBatchFormat() {
-        System.clearProperty("bookloom.batch.format");
-    }
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
 
@@ -141,28 +135,6 @@ class BatchEvalRunnerTest {
     // The batch-format gate (15i.X1) measures each arm through this runner: it sends what the job sends in that arm
     // (the eval path reads the same property) and reads the reply the way the job reads it.
     @Test
-    void run_markersFormat_sendsAMarkedPassageWithNoSchemaAndReadsTheMarkedReply() {
-        System.setProperty("bookloom.batch.format", "markers");
-        final List<ChatRequest> seen = new ArrayList<>();
-        final ModelCalls marked = (kind, segmentId, request) -> {
-            seen.add(request);
-            return Result.ok(
-                    new ChatResponse("⟦s1⟧ Один.\n\n⟦s2⟧ Два.\n\n⟦s3⟧ Три.\n\n⟦s4⟧ Чотири.", FinishReason.STOP));
-        };
-
-        final BatchEvalRow row =
-                new BatchEvalRunner(marked).run(BatchEvalCases.batches(4).getFirst());
-
-        assertThat(seen).singleElement().satisfies(request -> {
-            assertThat(request.responseFormat()).isNull();
-            assertThat(request.messages().get(1).content()).contains("⟦s1⟧ ", "⟦s4⟧ ");
-        });
-        assertThat(row.callFailed()).isFalse();
-        assertThat(row.missing()).isZero();
-        assertThat(row.extra()).isZero();
-    }
-
-    @Test
     void json_report_namesTheSuiteAndEveryCell() {
         final BatchEvalReport report =
                 new BatchEvalReport("m:1", new BatchEvalRunner(copying(id -> false)).runAll(List.of(8)));
@@ -187,12 +159,13 @@ class BatchEvalRunnerTest {
     }
 
     @Test
-    void runAdaptive_cleanModel_growsTheBatchAfterACleanStreak() {
-        final List<BatchEvalRow> rows =
-                new BatchEvalRunner(copying(id -> false)).runAdaptive(BatchDrafter.MIN_BATCHING_SIZE);
+    void runAdaptive_cleanModelAfterAnOmission_growsBackToTheStartOnly() {
+        final List<BatchEvalRow> rows = new BatchEvalRunner(copying(id -> id == 1)).runAdaptive(4);
 
-        assertThat(rows.getFirst().size()).isEqualTo(BatchDrafter.MIN_BATCHING_SIZE);
-        assertThat(rows.stream().mapToInt(BatchEvalRow::size)).anyMatch(size -> size > BatchDrafter.MIN_BATCHING_SIZE);
+        assertThat(rows.getFirst().size()).isEqualTo(4);
+        assertThat(rows.get(1).size()).isEqualTo(2);
+        assertThat(rows).extracting(BatchEvalRow::size).allMatch(size -> size <= 4);
+        assertThat(rows).extracting(BatchEvalRow::size).anyMatch(size -> size > 2);
     }
 
     @Test

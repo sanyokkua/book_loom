@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
 import ua.bookloom.pipeline.prompt.ReasoningPlan;
 
 /**
@@ -43,7 +42,6 @@ import ua.bookloom.pipeline.prompt.ReasoningPlan;
  * @param brief the brief preset or file and the overrides, {@code defaults} when none
  * @param suite the suite name
  * @param reasoning the thinking plan of the run, {@code off} or the calls that are on (15i.X2)
- * @param batchNotes whether the batch draft asked for a note before each target, {@code on} or {@code off} (15i.X2)
  * @param pipelineCommit the full SHA of the commit whose sources the run measured, {@code unknown} outside a repository
  * @param baselineOf the commit whose behaviour this run reproduces when it records a baseline, else null
  * @param dataset the dataset the run read, or null for a suite that has no manifest yet
@@ -66,7 +64,6 @@ record EvalProvenance(
         String brief,
         String suite,
         String reasoning,
-        String batchNotes,
         String pipelineCommit,
         @Nullable String baselineOf,
         @Nullable EvalDataset dataset,
@@ -96,7 +93,6 @@ record EvalProvenance(
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(suite, "suite");
         Objects.requireNonNull(reasoning, "reasoning");
-        Objects.requireNonNull(batchNotes, "batchNotes");
         Objects.requireNonNull(pipelineCommit, "pipelineCommit");
         Objects.requireNonNull(repeats, "repeats");
         aggregates = List.copyOf(aggregates);
@@ -165,7 +161,6 @@ record EvalProvenance(
                 suite,
                 ReasoningPlan.resolve(env, System.getProperty(ReasoningPlan.PROPERTY_NAME))
                         .token(),
-                BatchNotesSwitch.resolve(env, System.getProperty(BatchNotesSwitch.PROPERTY_NAME)) ? "on" : "off",
                 commit(root),
                 blankToNull(env.get("BOOKLOOM_EVAL_BASELINE_OF")),
                 datasetOf(suite),
@@ -215,7 +210,6 @@ record EvalProvenance(
                 brief,
                 suite,
                 reasoning,
-                batchNotes,
                 pipelineCommit,
                 baselineOf,
                 read,
@@ -261,7 +255,6 @@ record EvalProvenance(
         fields.put("brief", brief);
         fields.put("suite", suite);
         fields.put("reasoning", reasoning);
-        fields.put("batchNotes", batchNotes);
         fields.put("dataset", dataset);
         fields.put("judge", judge == null ? Map.of("mode", "none") : judgeJson(judge));
         fields.put("repeats", Map.of("k", repeats.k(), "seeds", repeats.seeds()));

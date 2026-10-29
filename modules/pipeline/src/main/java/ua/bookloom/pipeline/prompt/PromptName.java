@@ -51,18 +51,6 @@ public enum PromptName {
      */
     DRAFT_BATCH_JSON("draft-batch-json", "draft-batch-json", BatchSchema.SCHEMA, BatchSlots.USER),
 
-    /**
-     * The 15i.X1 marked-passage arm of the batch draft: the items are one passage whose items start at {@code ⟦sN⟧}
-     * markers, answered as plain text with the same markers, so there is no schema and no constrained decoding.
-     */
-    DRAFT_BATCH_MARKERS("draft-batch-markers", "draft-batch-markers", "", BatchSlots.MARKERS_USER),
-
-    /**
-     * The 15i.X1 passage-plus-items arm of the batch draft: the whole passage once as context, then the numbered items,
-     * answered as the JSON of {@link #DRAFT_BATCH_JSON} under its own schema and response-format name.
-     */
-    DRAFT_BATCH_DUAL("draft-batch-dual", "draft-batch-json", BatchSchema.SCHEMA, BatchSlots.DUAL_USER),
-
     /** The correction call after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(
             "structural-repair",

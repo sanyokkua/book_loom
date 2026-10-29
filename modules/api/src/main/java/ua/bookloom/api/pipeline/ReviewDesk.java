@@ -81,16 +81,6 @@ public interface ReviewDesk {
     }
 
     /**
-     * Skips a segment: nothing about it changes and it is not marked reviewed, and the record answered is the next
-     * flagged segment the queue moves on to.
-     *
-     * @param projectId the non-null project id
-     * @param segmentId the non-null segment id
-     * @return the next flagged segment's stored record, or the skipped segment's own when no other is flagged
-     */
-    Result<SegmentRecord> skip(String projectId, String segmentId);
-
-    /**
      * Applies a pending backward-revision proposal as the person's own edit.
      *
      * @param projectId the non-null project id

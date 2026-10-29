@@ -55,7 +55,7 @@ redone. Covers `FR-RESUME-*`, `FR-PERSIST-*`.
 ### uc-review-flagged {#uc-review-flagged}
 
 **Review flagged segments.** The user opens the Review queue, sees the small flagged list, inspects each segment side by
-side (source vs target, no diff), and accepts, edits, retries, retries-with-note, or skips it. Export remains available
+side (source vs target, no diff), and accepts, edits, retries, retries-with-note, or leaves it for later. Export remains available
 throughout. Covers `FR-REVIEW-*`.
 
 ### uc-manage-glossary {#uc-manage-glossary}

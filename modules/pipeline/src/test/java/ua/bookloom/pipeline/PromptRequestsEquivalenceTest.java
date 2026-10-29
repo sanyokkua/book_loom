@@ -162,7 +162,7 @@ class PromptRequestsEquivalenceTest {
     }
 
     @Test
-    void batchRequest_firstBatchWithKeyTerms_equalsTheRequestTheJobSends() {
+    void batchRequest_evalPath_equalsTheJobsRequest() {
         final ScriptedChatModel job = runBatchedJob(true);
         final ScriptedChatModel recording = answeringAnything();
         final EvalProject eval = EvalProject.of(setup(context(true, 0)), evalCalls(recording));

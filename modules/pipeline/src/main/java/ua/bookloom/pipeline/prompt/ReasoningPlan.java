@@ -33,11 +33,6 @@ public record ReasoningPlan(Map<PromptName, ReasoningLevel> levels, ReasoningLev
     private static final String OFF = "off";
     private static final String LOW = "low";
 
-    // The batch draft is one call kind in three formats (15i.X1): naming DRAFT_BATCH_JSON turns thinking on in all
-    // three.
-    private static final Set<PromptName> BATCH_ARMS =
-            EnumSet.of(PromptName.DRAFT_BATCH_MARKERS, PromptName.DRAFT_BATCH_DUAL);
-
     public ReasoningPlan {
         Objects.requireNonNull(levels, "levels");
         Objects.requireNonNull(base, "base");
@@ -102,18 +97,12 @@ public record ReasoningPlan(Map<PromptName, ReasoningLevel> levels, ReasoningLev
      * The level a call asks for.
      *
      * @param name the call; never null
-     * @return the call's named level, else the base; a batch format counts as {@code DRAFT_BATCH_JSON}
+     * @return the call's named level, else the base
      */
     public ReasoningLevel levelFor(final PromptName name) {
         Objects.requireNonNull(name, "name");
         final ReasoningLevel named = levels.get(name);
-        if (named != null) {
-            return named;
-        }
-        if (BATCH_ARMS.contains(name) && levels.containsKey(PromptName.DRAFT_BATCH_JSON)) {
-            return levels.get(PromptName.DRAFT_BATCH_JSON);
-        }
-        return base;
+        return named != null ? named : base;
     }
 
     /**

@@ -15,7 +15,6 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.batch.BatchDrafter;
-import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReply;
@@ -24,7 +23,6 @@ import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.batch.ProtocolLeak;
-import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
@@ -85,8 +83,7 @@ final class BatchEvalRunner {
     private BatchDrafter sizing(final int initialSize) {
         final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
         return new BatchDrafter(
-                new BatchPromptBuilder(
-                        EvalVariants.templates(), any.frame(), BatchFormat.current(), RelevantPairsSwitch.isOn()),
+                new BatchPromptBuilder(EvalVariants.templates(), any.frame()),
                 parser,
                 calls,
                 SOURCE,
@@ -121,7 +118,7 @@ final class BatchEvalRunner {
             return new Outcome(failed(items.size()), Optional.empty());
         }
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        final BatchReply parsed = parser.parse(response.content(), items, SOURCE, TARGET, BatchFormat.current());
+        final BatchReply parsed = parser.parse(response.content(), items, SOURCE, TARGET);
         return new Outcome(measured(project, items, response, parsed), Optional.of(parsed));
     }
 

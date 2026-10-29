@@ -61,7 +61,7 @@ class BatchDrafterTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
+                new BatchPromptBuilder(new PromptTemplates(), frame),
                 new BatchReplyParser(new ObjectMapper()),
                 recording,
                 "en",
@@ -122,7 +122,7 @@ class BatchDrafterTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
         return new BatchDrafter(
-                new BatchPromptBuilder(new PromptTemplates(), frame, BatchFormat.JSON, false),
+                new BatchPromptBuilder(new PromptTemplates(), frame),
                 new BatchReplyParser(new ObjectMapper()),
                 scripted,
                 "en",
@@ -298,20 +298,23 @@ class BatchDrafterTest {
                 .filteredOn(message -> message.startsWith("Batch recorded"))
                 .singleElement()
                 .asString()
-                .contains("outcome=FIRST_ONLY", "sent=2", "nextSize=10", "maxSize=16");
+                .contains("outcome=FIRST_ONLY", "sent=2", "nextSize=10", "ceiling=10");
     }
 
     @Test
     void record_threeCleanRepliesInARow_growTheSizeByOne() {
         final BatchDrafter drafter = drafter(reply(CLEAN), 8);
         final BatchReply clean = drafted(drafter, ITEMS);
+        final BatchDrafter failing = drafter(reply("  "), 8);
+        drafter.record(drafted(failing, ITEMS));
+        assertThat(drafter.size()).isEqualTo(4);
 
         drafter.record(clean);
         drafter.record(clean);
-        assertThat(drafter.size()).isEqualTo(8);
+        assertThat(drafter.size()).isEqualTo(4);
         drafter.record(clean);
 
-        assertThat(drafter.size()).isEqualTo(9);
+        assertThat(drafter.size()).isEqualTo(5);
     }
 
     @Test
@@ -330,15 +333,17 @@ class BatchDrafterTest {
     }
 
     @Test
-    void size_startingAtOne_growsOnlyAfterACleanStreak() {
+    void size_startOfOne_isNeverBatchedAndNeverGrows() {
         final BatchDrafter drafter = drafter(reply(CLEAN), BatchDrafter.NO_BATCHING);
         final BatchReply clean = drafted(drafter, ITEMS);
 
         drafter.record(clean);
         drafter.record(clean);
         drafter.record(clean);
+        drafter.record(clean);
 
-        assertThat(drafter.size()).isEqualTo(2);
+        assertThat(drafter.size()).isEqualTo(BatchDrafter.NO_BATCHING);
+        assertThat(drafter.startSize()).isEqualTo(BatchDrafter.NO_BATCHING);
     }
 
     @Test

@@ -18,7 +18,6 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.WhitespaceRestoration;
-import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -240,11 +239,7 @@ final class RealRunRunner {
                     "call failed: " + Objects.requireNonNull(reply.error()).code());
         }
         final BatchReply parsed = batchParser.parse(
-                Objects.requireNonNull(reply.data()).content(),
-                prepared.get().items(),
-                SOURCE,
-                TARGET,
-                BatchFormat.current());
+                Objects.requireNonNull(reply.data()).content(), prepared.get().items(), SOURCE, TARGET);
         return measured(batchCase, prepared.get().items().size(), parsed);
     }
 
@@ -272,8 +267,7 @@ final class RealRunRunner {
         return obeyedRow(
                 injectionCase,
                 items,
-                batchParser.parse(
-                        Objects.requireNonNull(reply.data()).content(), items, SOURCE, TARGET, BatchFormat.current()));
+                batchParser.parse(Objects.requireNonNull(reply.data()).content(), items, SOURCE, TARGET));
     }
 
     private static RealRunRow obeyedRow(

@@ -84,43 +84,17 @@ class EvalProvenanceTest {
         assertThat(p.dial()).isEqualTo("FAST");
     }
 
-    // The relevant-pairs gate (15i.T8) compares an `on` and an `off` report, so each says which it was.
+    // The thinking plan changes what a report measures, so each report says which it ran with.
     @Test
-    void capture_relevantPairsSwitch_isRecordedInTheBrief() {
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_RELEVANT_PAIRS", "off")).brief())
-                .isEqualTo("relevant_pairs=off");
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_RELEVANT_PAIRS", "on"))
-                        .brief())
-                .isEqualTo("preset=glass-harbour relevant_pairs=on");
-    }
-
-    // The batch-format gate (15i.X1) compares reports of three arms, so each says which format it measured.
-    @Test
-    void capture_batchFormatSwitch_isRecordedInTheBrief() {
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_BATCH_FORMAT", "markers")).brief())
-                .isEqualTo("batch_format=markers");
-        assertThat(provenance(Map.of("BOOKLOOM_EVAL_PRESET", "glass-harbour", "BOOKLOOM_EVAL_BATCH_FORMAT", "dual"))
-                        .brief())
-                .isEqualTo("preset=glass-harbour batch_format=dual");
-    }
-
-    // The thinking plan and the notes arm change what a report measures, so each report says which it ran with.
-    @Test
-    void capture_nothingSet_recordsThinkingAndNotesOff() {
-        final EvalProvenance p = provenance(Map.of());
-
-        assertThat(p.reasoning()).isEqualTo("off");
-        assertThat(p.batchNotes()).isEqualTo("off");
+    void capture_nothingSet_recordsThinkingOff() {
+        assertThat(provenance(Map.of()).reasoning()).isEqualTo("off");
     }
 
     @Test
-    void capture_reasoningPlanAndNotesSwitch_areRecorded() {
-        final EvalProvenance p = provenance(Map.of(
-                "BOOKLOOM_REASONING", "TERM_READING=on,DRAFT_BATCH_JSON=on",
-                "BOOKLOOM_BATCH_NOTES", "on"));
+    void capture_reasoningPlan_isRecorded() {
+        final EvalProvenance p = provenance(Map.of("BOOKLOOM_REASONING", "TERM_READING=on,DRAFT_BATCH_JSON=on"));
 
         assertThat(p.reasoning()).isEqualTo("DRAFT_BATCH_JSON=on,TERM_READING=on");
-        assertThat(p.batchNotes()).isEqualTo("on");
     }
 
     @Test
@@ -163,13 +137,12 @@ class EvalProvenanceTest {
     }
 
     @Test
-    void json_reasoningAndNotes_areFieldsOfTheProvenance() throws IOException {
-        final String json = provenance(Map.of("BOOKLOOM_REASONING", "REVIEWER=on", "BOOKLOOM_BATCH_NOTES", "on"))
-                .json();
+    void json_reasoning_isAFieldOfTheProvenance() throws IOException {
+        final String json =
+                provenance(Map.of("BOOKLOOM_REASONING", "REVIEWER=on")).json();
 
         final JsonNode node = new ObjectMapper().readTree(json);
         assertThat(node.get("reasoning").asText()).isEqualTo("REVIEWER=on");
-        assertThat(node.get("batchNotes").asText()).isEqualTo("on");
     }
 
     @Test

@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -52,6 +54,13 @@ class PromptNameTest {
         assertThat(name.callKind()).isEqualTo(kind);
         assertThat(name.responseFormatName()).isEqualTo(format);
         assertThat(name.temperature(false)).isEqualTo(temperature);
+    }
+
+    // Task 2.3: batches go out in one JSON format; the marked and dual batch prompts must not come back.
+    @ParameterizedTest
+    @ValueSource(strings = {"DRAFT_BATCH_" + "MARKERS", "DRAFT_BATCH_" + "DUAL"})
+    void values_retiredBatchPrompt_isNotAName(final String retired) {
+        assertThat(Arrays.stream(PromptName.values()).map(PromptName::name)).doesNotContain(retired);
     }
 
     @Test

@@ -16,7 +16,7 @@ images and fonts through a canonical-equal round trip.
 import card reports its format, declared language, cover and structure), describes it in the Book Brief (languages —
 any language the JDK can name, not only the 34 offered — tone, name/foreign-passage/footnote/unit policies, quality
 dial, who narrates, the "Also translate" switches), settles names and recurring terms on Names & style, starts the run
-on Translating, where the review panel lives (accept, edit, revert, skip, apply a proposal, retry with a note), and
+on Translating, where the review panel lives (accept, edit, revert, leave for later, apply a proposal, retry with a note), and
 writes the book from Export, which is its own action and not a job stage. A run is a pausable job over a **stored
 project**: it packs each unit into chunks, drafts, reviews and decides every segment through the acceptance rule and the
 quality loop, reuses translation memory, keeps a rolling summary and the glossary, pauses as the review mode says

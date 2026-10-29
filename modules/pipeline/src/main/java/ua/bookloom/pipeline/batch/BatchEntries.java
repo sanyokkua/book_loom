@@ -13,17 +13,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.ControlCharacters;
-import ua.bookloom.pipeline.prompt.BatchNotesSwitch;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 
 /**
  * Pulls the {@code (id, text)} entries out of a reply as the model wrote them, repeats and wrong ids included: what to
  * make of them is the parser's decision. Tolerant of what small models wrap around the payload — prose, a code fence,
  * a bare array instead of the object, a number for an id — and of a reply cut off in its
- * last entry, which simply never closes and so is never read. A {@code notes} string a model wrote before a target
- * (the 15i.X2 arm) is never an entry's text.
+ * last entry, which simply never closes and so is never read. A field it does not know, such as a {@code notes}
+ * string a model wrote before its target, is never an entry's text.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -37,11 +35,12 @@ final class BatchEntries {
         }
     }
 
+    // A notes field before the target is matched but not captured, so a cut reply with notes is still salvaged.
     // The string body is written unrolled with possessive runs ([^"\\]*+ then \\. and another run) rather than as a
     // loop over an alternation: Java matches a looped alternation by recursion, one frame per character, so a long
     // target (a capped model's 10,000 characters of one repeated phrase) overflowed the stack and failed the whole run.
     private static final Pattern JSON_ENTRY = Pattern.compile(
-            "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*(?:\"notes\"\\s*:\\s*\"([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)\"\\s*,\\s*)?\"target\"\\s*:\\s*\"([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)\"\\s*[,}]");
+            "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*(?:\"notes\"\\s*:\\s*\"[^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+\"\\s*,\\s*)?\"target\"\\s*:\\s*\"([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)\"\\s*[,}]");
 
     private final ObjectMapper mapper;
 
@@ -93,8 +92,7 @@ final class BatchEntries {
         final Matcher matcher = JSON_ENTRY.matcher(end.isPresent() ? reply.substring(0, end.getAsInt()) : reply);
         while (matcher.find()) {
             try {
-                final String text = mapper.readValue("\"" + matcher.group(4) + "\"", String.class);
-                traceNote(matcher.group(2), matcher.group(3));
+                final String text = mapper.readValue("\"" + matcher.group(3) + "\"", String.class);
                 entries.add(new Entry(matcher.group(2), ControlCharacters.stripSpacing(text)));
             } catch (JsonProcessingException ignored) {
                 log.debug("Skipped a batch entry whose text is not a JSON string id={}", matcher.group(2));
@@ -104,18 +102,10 @@ final class BatchEntries {
     }
 
     private static void entry(final JsonNode node, final List<Entry> entries) {
-        traceNote(node.path("id").asText().strip(), node.path("notes").asText(null));
         entries.add(new Entry(
                 node.path("id").asText().strip(),
                 ControlCharacters.stripSpacing(node.path("target").textValue()),
                 termsOf(node.path("terms"))));
-    }
-
-    /** A note of the notes arm is read to be dropped: it is no part of any outcome and is only logged, at TRACE. */
-    private static void traceNote(final String id, @Nullable final String note) {
-        if (note != null && !note.isBlank() && BatchNotesSwitch.isOn() && log.isTraceEnabled()) {
-            log.trace("Batch note id={} note={}", id, note);
-        }
     }
 
     /**

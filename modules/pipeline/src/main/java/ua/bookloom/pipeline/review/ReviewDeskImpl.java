@@ -98,15 +98,6 @@ public final class ReviewDeskImpl implements ReviewDesk {
     }
 
     @Override
-    public Result<SegmentRecord> skip(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
-        log.debug("skip project={} segment={} part={}", projectId, segmentId, ACTIONS);
-        return guarded(
-                "skip", segmentId, () -> actions.skip(projectId, segmentId).flatMap(next -> recordOf(projectId, next)));
-    }
-
-    @Override
     public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segmentId, "segmentId");
@@ -163,18 +154,8 @@ public final class ReviewDeskImpl implements ReviewDesk {
                 }));
     }
 
-    private Result<SegmentRecord> recordOf(final String projectId, final String segmentId) {
-        return segments.find(projectId, segmentId)
-                .flatMap(found -> found.map(Result::ok).orElseGet(() -> notFound(segmentId)));
-    }
-
     private Result<Project> projectOf(final String projectId) {
         return projects.find(projectId).flatMap(found -> found.map(Result::ok).orElseGet(() -> notStored()));
-    }
-
-    private static <T> Result<T> notFound(final String segmentId) {
-        return Result.err(AppError.of(
-                ErrorCode.validation, "Segment not found", "This project holds no segment " + segmentId + "."));
     }
 
     private static <T> Result<T> notStored() {

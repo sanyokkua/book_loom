@@ -38,7 +38,7 @@ class BatchEvalCasesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {4, 8, 12, 16})
+    @ValueSource(ints = {4, 8})
     void batches_everySize_holdsThatManyCasesAndTheRunNumbersTheItemsFromOne(final int size) {
         final List<Batch> batches = BatchEvalCases.batches(size);
 
@@ -80,5 +80,10 @@ class BatchEvalCasesTest {
         assertThat(first.context().draft().glossaryLines())
                 .singleElement()
                 .satisfies(line -> assertThat(line).matches("1: ⟦g\\d+⟧ → Зерубін, character, male"));
+    }
+
+    @Test
+    void sizes_sweep_isFourAndEight() {
+        assertThat(BatchEvalCases.SIZES).containsExactly(4, 8);
     }
 }

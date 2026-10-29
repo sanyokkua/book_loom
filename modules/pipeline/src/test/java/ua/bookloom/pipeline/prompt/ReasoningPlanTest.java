@@ -185,15 +185,6 @@ class ReasoningPlanTest {
         assertThat(plan.levelFor(PromptName.REVIEWER)).isEqualTo(ReasoningLevel.LOW);
     }
 
-    // The batch draft is one call in three formats: naming the JSON arm gives its level to the other two.
-    @Test
-    void levelFor_batchJsonNamedLow_coversTheOtherBatchFormats() {
-        final ReasoningPlan plan = ReasoningPlan.resolve(Map.of(ReasoningPlan.ENV_NAME, "DRAFT_BATCH_JSON=low"), null);
-
-        assertThat(plan.levelFor(PromptName.DRAFT_BATCH_MARKERS)).isEqualTo(ReasoningLevel.LOW);
-        assertThat(plan.levelFor(PromptName.DRAFT_BATCH_DUAL)).isEqualTo(ReasoningLevel.LOW);
-    }
-
     // The token reads back to the same plan, so two reports of one plan look alike.
     @ParameterizedTest
     @CsvSource(

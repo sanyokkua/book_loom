@@ -27,10 +27,8 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
-import ua.bookloom.pipeline.batch.BatchFormat;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
-import ua.bookloom.pipeline.batch.RelevantPairsSwitch;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -140,13 +138,7 @@ public final class EvalProject {
 
     private static RunSettings settingsOf(final BookBrief brief, final CallFrame frame, final int window) {
         return new RunSettings(
-                PROJECT,
-                ReviewMode.UNATTENDED,
-                DialParameters.of(brief.dial()),
-                frame,
-                brief.names(),
-                window,
-                RelevantPairsSwitch.isOn());
+                PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window);
     }
 
     /** A project whose brief is given instead of read from the environment; the case's narrator still applies. */
@@ -166,7 +158,7 @@ public final class EvalProject {
         final List<Segment> unit = new ArrayList<>(chunk);
         unit.addAll(segments(setup.after(), chunk.size()));
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, frame, BatchFormat.current(), settings.relevantPairs()),
+                new BatchPromptBuilder(TEMPLATES, frame),
                 new BatchReplyParser(MAPPER),
                 calls,
                 frame.sourceLanguage(),
@@ -357,7 +349,7 @@ public final class EvalProject {
             earlier.add(
                     new EarlierPair(segment(i, all.get(i).source()), all.get(i).target()));
         }
-        return requests.batch(slots, unit, earlier, List.of(), context.summary());
+        return requests.batch(slots, unit, earlier, context.summary());
     }
 
     /** The request of a prepared batch's one call. */

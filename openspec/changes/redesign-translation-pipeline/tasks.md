@@ -179,7 +179,7 @@ today's behaviour exactly. No product behaviour and no stored shape changes, so 
 
 Decides by a paired eval whether batches go out as JSON items or as marked text, deletes the loser and the `dual` experiment with their switches and prompts, removes the dead ceiling of 16 on the batch size, and removes the unused `ReviewDesk.skip`. The `terms` field and the key-term asks stay until the end of group 12 (arm 5b, task 12.9, measures them there). The profile's batch size does not exist yet, so the batch size starts at 8 as today and may only grow back to its start; group 10 makes the model profile's size the start (design D11). The database is not reset.
 
-- [ ] 2.1 Write the group's acceptance test and see it red. One JSON batch format must be the only format whatever the environment says, and a batch size that started at 8 must never exceed 8. → :pipeline (tests)
+- [x] 2.1 Write the group's acceptance test and see it red. One JSON batch format must be the only format whatever the environment says, and a batch size that started at 8 must never exceed 8. → :pipeline (tests)
   - **Satisfies:** "Draft consecutive segments in token-budgeted batches" (translation-pipeline), "Adapt the batch size to the replies" (translation-pipeline)
   - **Depends on:** group 1
   - **Read:** `BatchFormat` (`BOOKLOOM_BATCH_FORMAT`, property `bookloom.batch.format`), `BatchDrafter` (`DEFAULT_INITIAL_SIZE` 8, `MAX_SIZE` 16, `CLEAN_STREAK_TO_GROW` 3), `chunk/BatchSizeController`, `modules/pipeline/src/test/java/ua/bookloom/pipeline/WireMockProvider.java`, `BatchedJobs`, `BatchFormatJobTest` (the pattern), `batch/BatchDrafterTest`, design D11
@@ -187,7 +187,7 @@ Decides by a paired eval whether batches go out as JSON items or as marked text,
   - **Test first:** `BatchOneFormatWireMockTest.run_markersFormatRequestedByProperty_stillSendsTheJsonBatch` (WireMock, parameterised over the Ollama-native `/api/chat` and the OpenAI-compatible `/v1/chat/completions` dialects; the test sets the system property `bookloom.batch.format` to `markers` in `@BeforeEach` and clears it in `@AfterEach`; a six-paragraph invented book; the first recorded draft request has the response schema with `items` and numbered items, and no `⟦s1⟧` marker). `BatchDrafterCeilingTest.size_startedAtEightAfterThirtyCleanBatches_staysEight` (scripted `ModelCalls`). `BatchReplyParserTest.parse_itemWithUnknownNotesField_isStillRead` (a guard that passes today: the tolerant parser keeps ignoring unknown fields).
   - **Done when:** the first two tests fail (the markers request goes out; the size reaches 16); paste the failures.
 
-- [ ] 2.2 Run arm 2, the batch-format grade (which of two batch formats gives fewer wrong paragraphs): JSON items against marked text. Markers win only if they clearly give fewer wrong paragraphs, because JSON fits the structured-answer ladder and costs less to parse. → :pipeline (eval), docs
+- [x] 2.2 Run arm 2, the batch-format grade (which of two batch formats gives fewer wrong paragraphs): JSON items against marked text. Markers win only if they clearly give fewer wrong paragraphs, because JSON fits the structured-answer ladder and costs less to parse. → :pipeline (eval), docs
   - **Satisfies:** enabling work for design D11 (batch format) and D24 (arm 2)
   - **Depends on:** 2.1, and arm 1 of group 1 for the judge
   - **Excludes:** `dual` is not run (it is removed either way); `terms` is not part of this arm
@@ -196,7 +196,7 @@ Decides by a paired eval whether batches go out as JSON items or as marked text,
   - **Test first:** the arm's own record is the evidence; `ArmSegmentsTest.segments_armTwoList_holdsSixtyDistinctIds` checks the written list.
   - **Done when:** the winner is recorded in the three places and named in the first line of task 2.3's commit message.
 
-- [ ] 2.3 Delete the losing format, `dual`, their switches and prompts, and the notes and related-pairs experiments. One format means one parser, one prompt and one thing to keep byte-identical for the later context builder. → :pipeline
+- [x] 2.3 Delete the losing format, `dual`, their switches and prompts, and the notes and related-pairs experiments. One format means one parser, one prompt and one thing to keep byte-identical for the later context builder. → :pipeline
   - **Satisfies:** "Draft consecutive segments in token-budgeted batches" (translation-pipeline)
   - **Depends on:** 2.2
   - **Excludes:** `BatchSchema.SCHEMA` keeps its optional `terms` object and `batch/KeyTermAsks` stays (arm 5b at the end of group 12 decides them); the batch size ceiling (2.4)
@@ -207,7 +207,7 @@ Decides by a paired eval whether batches go out as JSON items or as marked text,
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft` — one JSON format, no format switch, no notes field, no related-pairs block.
   - **Done when:** `scripts/test-focused.sh --full-module` is green for `:pipeline`; the grep guard is green.
 
-- [ ] 2.4 Make the batch size's ceiling its start and delete `MAX_SIZE`. A small model must not be grown back to a batch size that drops formatting marks. → :pipeline
+- [x] 2.4 Make the batch size's ceiling its start and delete `MAX_SIZE`. A small model must not be grown back to a batch size that drops formatting marks. → :pipeline
   - **Satisfies:** "Adapt the batch size to the replies" (translation-pipeline; the profile's size becomes the start in group 10 — until then the start is 8)
   - **Depends on:** 2.3
   - **Excludes:** the dial's chunk cap (8/8/2) and Manual's one-segment path stay until group 10
@@ -218,7 +218,7 @@ Decides by a paired eval whether batches go out as JSON items or as marked text,
   - **Docs:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md` FR-ALGO-C4 — drafts go out as batches of ids; the size starts at its start value and never grows above it. `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md` FR-ALGO-09 — one JSON reply read per id; extra fields are tolerated (the optional `terms` object is removed by group 11).
   - **Done when:** the 2.1 size test and the controller tests are green.
 
-- [ ] 2.5 Remove `ReviewDesk.skip`, which nothing in the windows calls. The desk's "Leave for later" action replaces it, so the port should not offer an action no screen can reach. → :api, :pipeline
+- [x] 2.5 Remove `ReviewDesk.skip`, which nothing in the windows calls. The desk's "Leave for later" action replaces it, so the port should not offer an action no screen can reach. → :api, :pipeline
   - **Satisfies:** enabling work for design D25 (group 2 row); no requirement names `skip`
   - **Depends on:** group 1 only; can be done at any point after 2.1
   - **Read:** `modules/api/src/main/java/ua/bookloom/api/pipeline/ReviewDesk.java` (line ~91), `pipeline/review/ReviewDeskImpl.java` (line ~101), `pipeline/review/SegmentActions.java` (line ~119), `SegmentActionsTest` (skip cases near lines 278–302), `ReviewDeskImplTest` (near lines 89 and 187), every fake or recording implementation of `ReviewDesk` in `:ui` and `:app` tests, `grep -rn 'skip' docs/specification docs/Architecture.md`
@@ -226,7 +226,7 @@ Decides by a paired eval whether batches go out as JSON items or as marked text,
   - **Test first:** `ReviewDeskPortTest.port_methods_haveNoSkipAction` (reflection over the interface's methods, a guard so it is not added back); the existing desk tests for accept, edit, revert, apply proposal and retry stay green.
   - **Done when:** `./gradlew :api:check :pipeline:check :ui:fastTest` is green.
 
-- [ ] 2.6 Bring the equivalence test and the batch eval suite to the one format, then make the acceptance test green, run the gate and do the hand check. The prompt evals must send exactly what a running job sends, and the batch-size sweep must not offer sizes the code can no longer reach. → :pipeline (tests), scripts, docs
+- [x] 2.6 Bring the equivalence test and the batch eval suite to the one format, then make the acceptance test green, run the gate and do the hand check. The prompt evals must send exactly what a running job sends, and the batch-size sweep must not offer sizes the code can no longer reach. → :pipeline (tests), scripts, docs
   - **Satisfies:** "Draft consecutive segments in token-budgeted batches" (translation-pipeline), "Adapt the batch size to the replies" (translation-pipeline)
   - **Depends on:** 2.3, 2.4, 2.5
   - **Read:** `PromptRequestsEquivalenceTest`, `eval/BatchEvalCases.SIZES` (`4, 8, 12, 16`), `eval/BatchEvalRunner`, `BatchEvalRunnerTest`, `scripts/eval-matrix.sh` (`--batch-sizes`), `scripts/probe.sh`

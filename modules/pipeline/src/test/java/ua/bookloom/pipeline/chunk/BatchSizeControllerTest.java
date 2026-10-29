@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.chunk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -65,5 +66,18 @@ class BatchSizeControllerTest {
     @Test
     void constructor_initialAboveMaximum_isRejected() {
         assertThatThrownBy(() -> new BatchSizeController(1, 4, 5, 3)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void grow_afterHalving_stopsAtTheStartSize() {
+        final BatchSizeController controller = new BatchSizeController(1, 4, 4, 3);
+        controller.recordFailure(Failure.OMISSION);
+        assertThat(controller.size()).isEqualTo(2);
+
+        IntStream.range(0, 9).forEach(i -> controller.recordClean());
+        assertThat(controller.size()).isEqualTo(4);
+
+        IntStream.range(0, 3).forEach(i -> controller.recordClean());
+        assertThat(controller.size()).isEqualTo(4);
     }
 }

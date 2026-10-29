@@ -46,9 +46,6 @@ public final class PromptTemplates {
     private static final String LANGUAGE_RULES = "languageRules";
     private static final String TOKEN_RULES = "tokenRules";
     private static final String NO_TOKEN_RULES = "noTokenRules";
-    private static final String NOTES_RULE = "notesRule";
-    private static final String RELATED_PAIRS_NAME = "relatedPairsName";
-    private static final String RELATED_PAIRS_MENTION = "Related earlier pairs, ";
     private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
@@ -73,10 +70,7 @@ public final class PromptTemplates {
     private static LanguageRules variantRules(final PromptVariants variants) {
         Objects.requireNonNull(variants, "variants");
         if (!variants.isDefault()) {
-            log.debug(
-                    "Prompt variants differ from the defaults: languageRules={} batchFormat={}",
-                    variants.languageRules(),
-                    variants.batchFormat());
+            log.debug("Prompt variants differ from the defaults: languageRules={}", variants.languageRules());
         }
         return variants.rules();
     }
@@ -148,30 +142,9 @@ public final class PromptTemplates {
                 : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
     }
 
-    /**
-     * The system slot that adds the notes paragraph to the batch draft's rules (the 15i.X2 experiment).
-     *
-     * @param notes whether the batch asks for a note before each target
-     * @return never null; the slot value to pass as {@code extra}
-     */
-    public static Map<String, String> notesGate(final boolean notes) {
-        return Map.of(NOTES_RULE, notes ? GATE_OPEN : "");
-    }
-
-    /**
-     * The system slot that names the related-earlier-pairs block in the batch draft's context-only rule. Left empty when
-     * the run never shows the block, so the rule reads as it did before the block existed.
-     *
-     * @param relatedPairs whether the run's batches carry the block
-     * @return never null; the slot value to pass as {@code extra}
-     */
-    public static Map<String, String> relatedPairsGate(final boolean relatedPairs) {
-        return Map.of(RELATED_PAIRS_NAME, relatedPairs ? RELATED_PAIRS_MENTION : "");
-    }
-
     /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
     static boolean isRuleGate(final String slot) {
-        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot) || NOTES_RULE.equals(slot);
+        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot);
     }
 
     /**
@@ -258,12 +231,9 @@ public final class PromptTemplates {
         if (name.showsNameExamples()) {
             return rules.nameExamples(source, target);
         }
-        return switch (name) {
-            case DRAFT_BATCH_JSON -> BatchExamples.render(rules.batchExamples(source, target));
-            case DRAFT_BATCH_MARKERS -> BatchExamples.renderMarked(rules.batchExamples(source, target));
-            case DRAFT_BATCH_DUAL -> BatchExamples.renderDual(rules.batchExamples(source, target));
-            default -> rules.examples(source, target);
-        };
+        return name == PromptName.DRAFT_BATCH_JSON
+                ? BatchExamples.render(rules.batchExamples(source, target))
+                : rules.examples(source, target);
     }
 
     private static boolean declares(final PromptName name, final String slot) {

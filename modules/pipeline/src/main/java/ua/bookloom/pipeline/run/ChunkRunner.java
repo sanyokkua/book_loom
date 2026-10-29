@@ -72,7 +72,7 @@ public final class ChunkRunner {
      * @param stores the non-null stores the glossary and earlier decisions are read from
      * @param sinks the non-null places every decision goes
      * @param index the non-null index of the book the run started with, which a later close or import cannot change
-     * @param document the non-null book the index was built from, whose segments are located and offered as pairs
+     * @param document the non-null book the index was built from, whose segments are located
      */
     public ChunkRunner(
             final RunSteps steps,
@@ -97,15 +97,8 @@ public final class ChunkRunner {
                 settings.projectId(), analysis, steps.summary(), stores, index, sinks, calls, announced);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
         this.shortcuts = DraftShortcuts.forFrame(settings.frame());
-        this.batches = new BatchStage(
-                steps.batch(),
-                settings,
-                memory,
-                preceding,
-                BatchRelevance.of(settings, stores.segments(), sinks.pending(), index, document),
-                calls,
-                followUp::summary,
-                steps.calls());
+        this.batches =
+                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
         this.learning = new TermLearning(
                 stores, settings.projectId(), analysis, settings.frame().targetLanguage());
     }

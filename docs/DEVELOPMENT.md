@@ -167,7 +167,7 @@ footnote and unit policies, who narrates, the quality dial (Fast, Balanced, Max)
 file name the model can suggest. *Names & style*: the glossary and the recurring terms, each with search, Scan, Review
 with model, Translate and CSV import and export, or one "Prepare names automatically" pass with Undo all. *Translating*:
 start, pause, resume, stop; a live panel with every model call, the activity log, the provider-error banner with Retry
-now and Skip segment, and the review panel — accept, edit, revert, skip, apply a proposal, retry with a note — inside
+now and Skip segment, and the review panel — accept, edit, revert, leave for later, apply a proposal, retry with a note — inside
 the same screen. *Export*: Save to, the side files (glossary CSV, bilingual HTML, quality report), a consistency pass,
 and the export-complete dialog with a button that shows the written file in the file manager; a stopped or partial run
 can be exported, and what it did not translate stays in the source. Verify a provider on Settings (Providers: connection,
@@ -932,6 +932,39 @@ frozen with no tuning rounds (hash `d7b8b8ded24e`, file SHA-256
   `modules/pipeline/src/test/resources/eval/judge/calibration.json`.
 
 
+**Arm 2: batch format, JSON items against markers (task 2.2).** Translator `gemma4:e4b-mlx` on Ollama, Balanced, single-flight,
+K = 3 (seeds 1000-1002), then `gemma4:26b-mlx` once with K = 1; `dual` was not run. The format was chosen by the eval option
+that task 2.3 then removed with the property the job read. The arm's runner, judge screen and report classes (`ArmTwoRunner`,
+`ArmTwoReport`, `ArmTwoEvalTest`, `ArmTwoJudgeEvalTest`) and its `--suite arm2` were removed in task 2.3 too; the result below
+was recorded in commit dc00e4ab, and `ArmSegments` with `eval/arms/arm-2-segments.json` stay.
+
+- *Segments.* The 60 ids of `modules/pipeline/src/test/resources/eval/arms/arm-2-segments.json` (written before the run, checked by
+  `ArmSegmentsTest`): all 33 blocks of `mini-en` and all 17 of `mini-ru` (each needs a model call) and the first ten paragraphs of
+  the `sequence` book's chapter 1 (`sequence/book.md:1` to `:10`, the Markdown importer's block numbers; block 0 is the heading).
+  Each repeat runs the three books through the names pass, the job and the consistency pass (`--suite arm2`, `ArmTwoEvalTest`);
+  every repeat's stored target, with its marks, is kept in the run's `cases.jsonl`.
+- *Grading.* The judge (`gemma4:26b-mlx`, `bl-judge-1`, reasoning off; `ArmTwoJudgeEvalTest`) screened each paragraph and repeat
+  pairwise with the order swapped. On e4b 39 of 60 paragraphs differed in some repeat; the judge preferred JSON in 22 and markers in
+  18 paragraph-repeats and marked 29 paragraphs discordant. The agent read all 29 blind (`eval-score.py blind --all-repeats`, three
+  repeats of each side, the format hidden). A paragraph is WRONG for a format when 2 of its 3 repeats have a meaning error, an
+  omission, source-language residue or lost marks.
+- *Result on e4b.* WRONG: JSON 8, markers 8 (both wrong: `m01`, `m06`, `m10`, `m23`, `sequence:1`, `:4`, `:9`; JSON only `m32`,
+  a dagger for a stick; markers only `m21`, salt cod turned into a non-word). Two readings were close calls, one per side (JSON
+  `sequence:5`, "the whole street" read as "all the streets"; markers `m31`, "came about the nets" read as "came for the nets"); counted
+  either way the difference stays 0 or 1. No mark was lost in either format. Hard-gate failures in the first evaluation: JSON 3,
+  markers 3 (the same paragraph, `sequence:9`, in every repeat); flagged 3 and 3.
+- *Cost, reported and not weighed.* Per repeat over the three books: JSON 34 translation calls (0.57 per listed segment), 51 calls with
+  the names and consistency passes (0.86), 204 s (3.4 s per segment); markers 34 (0.57), 51 (0.85), 179 s (3.0 s). The first repeat of
+  each holds the model load.
+- *26b, K = 1.* 22 paragraphs differed, the judge marked 4 discordant and 1 unreadable; read blind: JSON 0 WRONG, markers 3 (`m18` a
+  garbled name, `m26` the meaning reversed, `sequence:9` the imp named "the faceless one"). Hard gates 1 and 1, flagged 0 and 0; JSON
+  39 translation calls and 335 s, markers 35 and 318 s. It does not reverse the e4b result.
+- *Decision rule.* Markers replace JSON only with at least 2 fewer WRONG paragraphs and no hard-gate count higher by 2 or more.
+  Markers have 0 fewer (e4b) and 3 more (26b), so **JSON stays**; task 2.3 deletes the markers and `dual` code. Codex was not asked;
+  the two close calls above are left for the owner to read.
+- *Also seen.* Both formats wrote Russian words on e4b and 26b (`Мост`, `Трость`), which is none of the four WRONG classes; e4b's
+  `m08` has it in 1 of 3 JSON repeats and 3 of 3 markers repeats.
+
 **Reference book `article-gravity` (task 1.11).** One invented science article (about 2,350 words of prose) in English, Ukrainian,
 Russian and French, each as Markdown, EPUB and FB2 (`modules/pipeline/src/test/resources/eval/datasets/article-gravity/`, with its own
 README). It holds what a translation must keep: code in four languages, a LaTeX block, two Mermaid diagrams, an ASCII diagram, tables
@@ -1231,16 +1264,19 @@ Calibration on 2026-10-02 (one sample per case, temperature as in production):
 `ollama ls` and `lms ls` show: gemma-4 e4b in every quant first, then e2b, 12b, 26b, gpt-oss, the two qwen3.8-27b builds, muse-glimmer
 and the rest). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
 
-**Batch A/B (15d.8).** `scripts/eval-matrix.sh --suite batch [--batch-sizes 4,8,12,16] --models "ollama:<id> lmstudio:<id>"`
+**Batch A/B (15d.8).** `scripts/eval-matrix.sh --suite batch [--batch-sizes 4,8] --models "ollama:<id> lmstudio:<id>"`
 sends batches of consecutive draft cases through the JSON batch protocol. Without `--batch-sizes` the size is the job's: the first
 batch has `BatchDrafter.DEFAULT_INITIAL_SIZE` cases and each reply goes to a production `BatchDrafter.record`, which halves the
-size on a lost numbering, an omission or a merge (not on a reply that answered only the first item or was cut at the length cap, 15i.T3) and grows it after a clean streak (the table then has a row per size reached);
+size on a lost numbering, an omission or a merge (not on a reply that answered only the first item or was cut at the length cap, 15i.T3) and grows it back after a clean streak, never above the start (the table then has a row per size reached);
 `--batch-sizes` fixes the old sweep. The draft cases include two invented long paragraphs (over 250 and over 400 characters,
 with numbers that must survive). It prints, per model and size: `idValid` (items
 answered under their id exactly once), `tokGate` (also kept their tokens in order), `omit`, `merge` and output tokens per
 item. It measures only; the batch size is chosen by reading the table (the tagged-block protocol it once compared was
 dropped after the first A/B, see `12_PROMPT_CATALOG.md#batch-draft`). A run's own draft calls per segment are
 `modelCallsByKind.DRAFT.attempts` over `run.segments` in the report JSON (a batch call and a single-segment fallback each count one).
+
+*History (removed in redesign task 2.3): batches now go out in one JSON format, so the switch, the eval option and the
+`markers` and `dual` arms below no longer exist. The text and the measurements are kept as the record of the experiment.*
 
 **Batch format arms (15i.X1, an experiment).** Three ways to send and read a batch sit behind one switch until the
 measurement picks one and the other two are removed. `BOOKLOOM_BATCH_FORMAT` (else the property `bookloom.batch.format`) names
@@ -1913,20 +1949,22 @@ set-but-missing directory is a hard failure. The last recorded corpus run is in
 ### Thinking per call and the notes arm (15i.X2) {#x2-arms}
 
 Published studies find that thinking does not help translation itself, so every call asks the model not to think, as it
-always did. Two switches let the eval measure where that is wrong; neither changes a run that does not set them.
+always did. The switch below lets the eval measure where that is wrong; it changes no run that does not set it. The notes
+arm's switch (a one-line `notes` string before each batch `target`, read only to be logged) was removed in redesign task
+2.3 with the related-pairs switch (15i.T8, off since its 2026-10-13 round missed its gate) and the batch-format switch; a
+reply that still carries a `notes` field is read as before, the field ignored.
 
 | Switch | Meaning | Eval wiring |
 |---|---|---|
 | `BOOKLOOM_REASONING="low"` or `"DRAFT_BATCH_JSON=on,TERM_READING=low"` (else `-Dbookloom.reasoning`) | a bare `off`, `low` or `on` sets the level of every call that is not named; `NAME=on\|low\|off` sets one `PromptName` call (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property). **Set, it replaces the stored Generation setting entirely; unset, the stored setting (`run.reasoning`, Off when nothing is stored) applies to every call.** `BOOKLOOM_SAMPLING` (`server`\|`tuned`) works the same way against `run.sampling` | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
-| `BOOKLOOM_BATCH_NOTES=on\|off` (else `-Dbookloom.batch.notes`, default off) | the batch draft writes a one-line `notes` string before each `target` (hard phrases and idioms); the code reads it only to log it at TRACE and never validates or stores it | `BOOKLOOM_EVAL_BATCH_NOTES`, `scripts/eval-matrix.sh --batch-notes on` |
 
 A call that thinks sends Ollama `think:true` (`"low"` at Low) and LM Studio `reasoning_effort:"medium"` (`"low"` at Low), and its output cap grows by 1,024
 tokens for the reasoning (a gpt-oss model gets that room once, thinking or not); the Ollama runaway line guard is sized
-from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` and `batchNotes`.
+from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` (reports made
+before task 2.3 also carry a `batchNotes` field).
 
 ```bash
 scripts/eval-matrix.sh --suite realrun --reasoning "REVIEWER=on" --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx"
-scripts/eval-matrix.sh --suite batch --batch-notes on --models "ollama:gemma4:e4b-mlx"
 scripts/eval-matrix.sh --suite names --reasoning "TERM_READING=on,TERM_SUMMARY=on,BRIEF_SYNTHESIS=on"
 ```
 

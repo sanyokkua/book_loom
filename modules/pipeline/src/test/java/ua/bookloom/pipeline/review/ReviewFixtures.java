@@ -307,7 +307,7 @@ public final class ReviewFixtures {
         service.updateBrief(id, brief);
         return new Desk(
                 id,
-                new SegmentActions(documents, openProjects, projects, segments, deferrals),
+                new SegmentActions(documents, openProjects, segments, deferrals),
                 new ReviewQueries(openProjects, projects, segments, deferrals),
                 segments,
                 deferrals,

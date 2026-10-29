@@ -26,8 +26,19 @@ import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind.Level;
  * @param graders each grader's verdict on the case
  * @param time the case's call times
  * @param tokens the case's token counts
+ * @param source the case's source text, or null when the dataset's own file holds it (a mini book's block)
+ * @param output the case's decided output in this repeat, or null when the report's output map holds it; an arm
+ *     keeps every repeat's output here, since its graders are read by hand on every repeat
  */
-record CaseRecord(String caseId, int repeat, int seed, List<Grader> graders, Time time, Tokens tokens) {
+record CaseRecord(
+        String caseId,
+        int repeat,
+        int seed,
+        List<Grader> graders,
+        Time time,
+        Tokens tokens,
+        @Nullable String source,
+        @Nullable String output) {
 
     static final String CALLS_DIR = "calls";
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -38,6 +49,17 @@ record CaseRecord(String caseId, int repeat, int seed, List<Grader> graders, Tim
         graders = List.copyOf(graders);
         Objects.requireNonNull(time, "time");
         Objects.requireNonNull(tokens, "tokens");
+    }
+
+    /** A case whose source and output the report's dataset and {@code outputs} hold. */
+    CaseRecord(
+            final String caseId,
+            final int repeat,
+            final int seed,
+            final List<Grader> graders,
+            final Time time,
+            final Tokens tokens) {
+        this(caseId, repeat, seed, graders, time, tokens, null, null);
     }
 
     /**
@@ -160,6 +182,12 @@ record CaseRecord(String caseId, int repeat, int seed, List<Grader> graders, Tim
         fields.put("time", time);
         fields.put("tokens", tokens);
         fields.put("replyRef", replyRef());
+        if (source != null) {
+            fields.put("source", source);
+        }
+        if (output != null) {
+            fields.put("output", output);
+        }
         try {
             return MAPPER.writeValueAsString(fields);
         } catch (JsonProcessingException e) {

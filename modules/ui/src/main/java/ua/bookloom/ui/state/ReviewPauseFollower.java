@@ -15,7 +15,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
  * What the person's side of a review pause does: selects the segment the pause names, tells the screen to show it, and
  * resumes the run once the desk has confirmed an Accept or a Save edit on that segment.
  *
- * <p>A singleton, because a pause can arrive while another screen is shown and the panel is built later. Skip, Revert
+ * <p>A singleton, because a pause can arrive while another screen is shown and the panel is built later. Revert
  * and Retry leave the run paused: the person may still want the title bar's or the screen's Resume. Only a decision on
  * the very segment the pause names continues the run, so accepting another row of the list does not.
  */

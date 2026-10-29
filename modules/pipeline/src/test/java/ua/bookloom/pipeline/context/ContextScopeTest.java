@@ -67,8 +67,7 @@ class ContextScopeTest {
                 assemble(chunk, 1, SIX).draftContext(),
                 assemble(chunk, 2, SIX).draftContext());
 
-        final DraftContext joined = BatchContexts.of(
-                        List.of("1", "2", "3"), perItem, List.of(), List.of(), null, List.of())
+        final DraftContext joined = BatchContexts.of(List.of("1", "2", "3"), perItem, List.of(), null, List.of())
                 .draft();
 
         assertThat(joined.glossaryLines())

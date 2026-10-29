@@ -172,15 +172,13 @@ public final class PromptRequests {
     }
 
     /**
-     * Makes the batch of the given slots. It is shown whole when its prompt fits the window; else without the relevant
-     * earlier pairs, else without the other optional context, else with fewer slots, the rest of which batch at their
+     * Makes the batch of the given slots. It is shown whole when its prompt fits the window; else without the optional
+     * context, else with fewer slots, the rest of which batch at their
      * own turn. Fewer than two slots is no batch.
      *
      * @param slots the segments that need a call, in document order, the first being the batch's first
      * @param unit the unit's segments, which decide the next source shown
      * @param earlier the unit's last earlier pairs before the first slot, oldest first
-     * @param relevant the accepted pairs from earlier in the book that share the batch's names, best first; shown only
-     *     when the run's switch is on, as many as fit their share of the allowance
      * @param summary the rolling summary's text, or {@code null}
      * @return the batch, or empty when not even two slots fit
      */
@@ -188,21 +186,12 @@ public final class PromptRequests {
             final List<BatchSlot> slots,
             final List<Segment> unit,
             final List<EarlierPair> earlier,
-            final List<EarlierPair> relevant,
             @Nullable final String summary) {
-        Objects.requireNonNull(relevant, "relevant");
-        log.debug(
-                "Preparing a batch slots={} earlier={} relevant={} summary={}",
-                slots.size(),
-                earlier.size(),
-                relevant.size(),
-                summary != null);
+        log.debug("Preparing a batch slots={} earlier={} summary={}", slots.size(), earlier.size(), summary != null);
         final List<BatchContext.Pair> pairs = fit.capPairs(pairsOf(earlier));
-        final List<BatchContext.Pair> related =
-                settings.relevantPairs() ? fit.capRelevant(pairsOf(relevant)) : List.of();
         List<BatchSlot> shown = slots;
         while (shown.size() >= BatchDrafter.MIN_BATCHING_SIZE) {
-            final PreparedBatch full = prepared(shown, unit, pairs, related, summary);
+            final PreparedBatch full = prepared(shown, unit, pairs, summary);
             final Optional<PreparedBatch> fitted = fitted(full);
             if (fitted.isPresent()) {
                 return fitted;
@@ -212,20 +201,10 @@ public final class PromptRequests {
         return Optional.empty();
     }
 
-    // What goes first when the window is short: the relevant pairs, then the rest of the optional context.
+    // What goes first when the window is short: the optional context.
     private Optional<PreparedBatch> fitted(final PreparedBatch full) {
         if (fit.fits(full.context(), full.items())) {
             return Optional.of(full);
-        }
-        if (!full.context().relevantPairs().isEmpty()) {
-            final PreparedBatch bare =
-                    new PreparedBatch(full.shown(), full.items(), BatchFit.withoutRelevant(full.context()));
-            if (fit.fits(bare.context(), bare.items())) {
-                log.debug(
-                        "Batch of {} fits only without its relevant pairs",
-                        full.shown().size());
-                return Optional.of(bare);
-            }
         }
         final PreparedBatch lean = new PreparedBatch(full.shown(), full.items(), BatchFit.lean(full.context()));
         if (fit.fits(lean.context(), lean.items())) {
@@ -266,7 +245,6 @@ public final class PromptRequests {
             final List<BatchSlot> shown,
             final List<Segment> unit,
             final List<BatchContext.Pair> pairs,
-            final List<BatchContext.Pair> related,
             @Nullable final String summary) {
         final List<BatchItem> items = itemsOf(shown);
         final List<DraftContext> perItem = shown.stream()
@@ -279,7 +257,6 @@ public final class PromptRequests {
         final BatchContext batch = new BatchContext(
                 merged(items, perItem),
                 pairs,
-                related,
                 fit.capNext(BatchFit.nextSourceAfter(unit, shown.getLast().segment())),
                 BatchFit.characters(perItem),
                 keyTerms);
@@ -294,8 +271,7 @@ public final class PromptRequests {
     }
 
     private static DraftContext merged(final List<BatchItem> items, final List<DraftContext> perItem) {
-        return BatchContexts.of(
-                        items.stream().map(BatchItem::id).toList(), perItem, List.of(), List.of(), null, List.of())
+        return BatchContexts.of(items.stream().map(BatchItem::id).toList(), perItem, List.of(), null, List.of())
                 .draft();
     }
 }

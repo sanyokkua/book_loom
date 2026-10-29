@@ -14,13 +14,12 @@
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--batch-format json|markers|dual] [--relevant-pairs on|off] [--reasoning NAME=on,...] [--batch-notes on|off] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8,12,16]
+#                          [--reasoning NAME=on,...] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
 #                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA]
-# --relevant-pairs on|off (15i.T8) switches the batch prompt's "Related earlier pairs" block for the run (unset keeps the
-# default, on); run --suite sequence once with each and compare the two reports (their provenance records relevant_pairs=).
 # --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
-# for the run (Ollama think:true, LM Studio reasoning_effort medium); unset leaves every call off. --batch-notes on asks the
-# batch draft for a one-line note before each target. The provenance of a report records both (reasoning=, batchNotes=).
+# for the run (Ollama think:true, LM Studio reasoning_effort medium); unset leaves every call off. The provenance of a
+# report records it (reasoning=). Batches go out in one JSON format (redesign task 2.3: no format, notes or related-pairs
+# switch is left).
 # --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
 # read only by the eval test classes; reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
@@ -84,9 +83,6 @@
 # the share of the English protected spans (URLs, DOIs, code identifiers) the exported Markdown keeps verbatim. Reports end
 # in -article-en-<target>-<dial>.json; the per-model timeout defaults to 5400 s, as for sequence. The three targets, K = 1:
 #   for T in uk ru fr; do BOOKLOOM_EVAL_PAIR_TARGET=$T BOOKLOOM_EVAL_DIAL=BALANCED scripts/eval-matrix.sh --suite article --repeats 1; done
-# --batch-format (15i.X1, an experiment) chooses how a batch is sent and answered: json = numbered items and a JSON reply (the
-# default), markers = one passage marked ⟦s1⟧ … with a plain-text reply and no schema, dual = the passage as context beside
-# the numbered items with a JSON reply. It reaches the code as BOOKLOOM_EVAL_BATCH_FORMAT and each report's provenance names it.
 # --repeats K (BOOKLOOM_EVAL_REPEATS) runs the dataset K times with seeds base+0..K-1 (1 in the inner loop, 3 for a decision);
 # --pair en-uk|ru-uk (BOOKLOOM_EVAL_PAIR)
 # picks the dataset's language pair; --baseline-of SHA (BOOKLOOM_EVAL_BASELINE_OF) records that the run reproduces the
@@ -131,10 +127,7 @@ BATCH_SIZES=""
 NAMES_POLICY=transliterate
 NARRATOR=unset
 NARRATOR_GENDER=male
-RELEVANT_PAIRS=""
-BATCH_FORMAT=
 REASONING=""
-BATCH_NOTES=""
 REPEATS=""
 PAIR=""
 BASELINE_OF=""
@@ -170,12 +163,7 @@ while [ $# -gt 0 ]; do
     --narrator) NARRATOR=$2; shift 2 ;;
     --names) NAMES_POLICY=$2; shift 2 ;;
     --narrator-gender) NARRATOR_GENDER=$2; shift 2 ;;
-    --relevant-pairs) RELEVANT_PAIRS=$2; shift 2 ;;
-    --batch-format)
-      case "$2" in json|markers|dual) BATCH_FORMAT=$2 ;; *) echo "--batch-format takes json, markers or dual" >&2; exit 2 ;; esac
-      shift 2 ;;
     --reasoning) REASONING=$2; shift 2 ;;
-    --batch-notes) BATCH_NOTES=$2; shift 2 ;;
     --repeats)
       case "$2" in ''|*[!0-9]*|0) echo "--repeats takes a positive whole number, not $2" >&2; exit 2 ;; *) REPEATS=$2 ;; esac
       shift 2 ;;
@@ -292,7 +280,7 @@ run_one() {
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_RELEVANT_PAIRS=$RELEVANT_PAIRS BOOKLOOM_EVAL_REASONING=$REASONING BOOKLOOM_EVAL_BATCH_NOTES=$BATCH_NOTES BOOKLOOM_EVAL_BATCH_FORMAT=$BATCH_FORMAT \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_REASONING=$REASONING \
     BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"

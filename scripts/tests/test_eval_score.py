@@ -312,6 +312,23 @@ class CalibrateTest(unittest.TestCase):
 
 
 class BlindTest(unittest.TestCase):
+    def test_blind_allRepeats_showsEveryRepeatOfTheOnlyCasesAndHidesTheArm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            def arm(name, word):
+                cases = [dict(case(c, True, k), source="src " + c, output="%s %s %d" % (word, c, k))
+                         for c in ("c0", "c1") for k in range(3)]
+                return write_run(tmp, name, 2, cases)
+            a, b = arm("a", "json"), arm("b", "markers")
+            out, key = str(Path(tmp) / "p.md"), str(Path(tmp) / "k.json")
+            run_main(["blind", a, b, "--out", out, "--key", key, "--seed", "5", "--all-repeats", "--only", "c1"])
+            text = Path(out).read_text()
+            self.assertIn("src c1", text)
+            self.assertIn("repeat 3: json c1 2", text)
+            self.assertIn("repeat 3: markers c1 2", text)
+            self.assertNotIn("c0", text)
+            self.assertNotIn("Option A", text)
+            self.assertEqual(["c1"], list(json.loads(Path(key).read_text())["pairs"]))
+
     def test_blind_sameSeed_givesTheSameShuffleAndAKeyFile(self):
         with tempfile.TemporaryDirectory() as tmp:
             a_cases = [case("c%d" % i, True) for i in range(8)]

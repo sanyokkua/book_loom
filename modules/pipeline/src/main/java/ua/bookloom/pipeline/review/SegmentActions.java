@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,13 +15,10 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
-import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.Deferral;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.WhitespaceRestoration;
@@ -50,12 +46,10 @@ public final class SegmentActions {
     private static final String ACCEPT = "accept";
     private static final String SAVE_EDIT = "save the edit";
     private static final String REVERT = "revert";
-    private static final String SKIP = "skip";
     private static final String APPLY_PROPOSAL = "apply the proposal";
 
     private final DocumentPort documents;
     private final OpenProjects openProjects;
-    private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
 
@@ -106,21 +100,6 @@ public final class SegmentActions {
         Objects.requireNonNull(segmentId, "segmentId");
         log.debug("revert project={} segment={}", projectId, segmentId);
         return load(REVERT, projectId, segmentId).flatMap(this::reverted);
-    }
-
-    /**
-     * Moves the queue on without touching the segment.
-     *
-     * @param projectId the non-null project id
-     * @param segmentId the non-null segment id
-     * @return the id of the next FLAGGED segment after this one in document order, wrapping to the first FLAGGED
-     *     one; the segment's own id when no other is FLAGGED; {@code validation} for an unknown id
-     */
-    public Result<String> skip(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
-        log.debug("skip project={} segment={}", projectId, segmentId);
-        return load(SKIP, projectId, segmentId).flatMap(this::skipped);
     }
 
     /**
@@ -226,27 +205,6 @@ public final class SegmentActions {
                 .map(withdrawn -> after);
     }
 
-    private Result<String> skipped(final SegmentRecord record) {
-        final Result<Optional<Project>> project = projects.find(record.projectId());
-        final Result<List<SegmentRecord>> all = segments.all(record.projectId());
-        if (project.isErr() || all.isErr()) {
-            return Result.err(Objects.requireNonNull(project.isErr() ? project.error() : all.error()));
-        }
-        if (Objects.requireNonNull(project.data()).isEmpty()) {
-            return refuse(SKIP, record.segmentId(), "This project is not stored.");
-        }
-        final Set<SegmentKind> kept =
-                project.data().get().brief().alsoTranslate().keptKinds();
-        final String next = nextFlagged(Objects.requireNonNull(all.data()), record.segmentId(), kept);
-        log.info(
-                "skip segment={} status={} reviewed={} next={}",
-                record.segmentId(),
-                record.status(),
-                record.reviewed(),
-                next);
-        return Result.ok(next);
-    }
-
     private Result<SegmentRecord> proposed(final SegmentRecord record) {
         if (record.status() != SegmentStatus.REVISED) {
             return wrongStatus(APPLY_PROPOSAL, record, "revised");
@@ -272,35 +230,6 @@ public final class SegmentActions {
                                 .withReviewed(true))
                 .flatMap(after ->
                         deferrals.resolve(record.projectId(), deferral.id()).map(resolved -> after));
-    }
-
-    private static String nextFlagged(
-            final List<SegmentRecord> all, final String segmentId, final Set<SegmentKind> kept) {
-        final int position = indexOf(all, segmentId);
-        final Optional<String> following = all.subList(position + 1, all.size()).stream()
-                .filter(record -> isListedFlagged(record, kept))
-                .map(SegmentRecord::segmentId)
-                .findFirst();
-        return following
-                .or(() -> all.stream()
-                        .filter(record -> isListedFlagged(record, kept))
-                        .map(SegmentRecord::segmentId)
-                        .filter(id -> !id.equals(segmentId))
-                        .findFirst())
-                .orElse(segmentId);
-    }
-
-    private static boolean isListedFlagged(final SegmentRecord record, final Set<SegmentKind> kept) {
-        return record.status() == SegmentStatus.FLAGGED && !record.isKeptAsSource(kept);
-    }
-
-    private static int indexOf(final List<SegmentRecord> all, final String segmentId) {
-        for (int index = 0; index < all.size(); index++) {
-            if (all.get(index).segmentId().equals(segmentId)) {
-                return index;
-            }
-        }
-        return all.size() - 1;
     }
 
     private static Optional<Segment> sourceOf(final Document document, final String segmentId) {

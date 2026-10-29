@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
-import ua.bookloom.pipeline.prompt.PromptVariants.BatchFormatVariant;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
 
 /**
@@ -39,7 +38,7 @@ public final class EvalVariants {
                 .map(String::strip)
                 .filter(text -> !text.isEmpty())
                 .toList()) {
-            variants = with(variants, part);
+            variants = with(part);
         }
         log.debug("Eval variants asked={} bound={}", asked, variants);
         return variants;
@@ -52,15 +51,14 @@ public final class EvalVariants {
                 .getInstance(PromptTemplates.class);
     }
 
-    private static PromptVariants with(final PromptVariants variants, final String field) {
+    private static PromptVariants with(final String field) {
         final String[] pair = field.split("=", 2);
         if (pair.length != 2) {
             throw new IllegalArgumentException(ENV + " wants field=VALUE, not " + field);
         }
         final String value = pair[1].strip();
         return switch (pair[0].strip()) {
-            case "languageRules" -> new PromptVariants(LanguageRulesVariant.valueOf(value), variants.batchFormat());
-            case "batchFormat" -> new PromptVariants(variants.languageRules(), BatchFormatVariant.valueOf(value));
+            case "languageRules" -> new PromptVariants(LanguageRulesVariant.valueOf(value));
             default -> throw new IllegalArgumentException(ENV + " names no field " + pair[0]);
         };
     }

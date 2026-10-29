@@ -29,7 +29,6 @@ public final class BatchContexts {
      * @param itemIds the non-null ids of the batch's items, in order
      * @param perItem the non-null context of each item, in the same order; its preceding targets are not used
      * @param precedingPairs the non-null chapter's last decided pairs before the batch, oldest first
-     * @param relevantPairs the non-null accepted pairs from earlier in the book that share the batch's names, best first
      * @param nextSource the plain source of the segment after the batch, or null at the end of the unit
      * @param characters the non-null who-is-who lines for the characters present
      * @return the context; the summary is the first non-blank one among the items'
@@ -38,7 +37,6 @@ public final class BatchContexts {
             final List<String> itemIds,
             final List<DraftContext> perItem,
             final List<BatchContext.Pair> precedingPairs,
-            final List<BatchContext.Pair> relevantPairs,
             @Nullable final String nextSource,
             final List<String> characters) {
         Objects.requireNonNull(itemIds, "itemIds");
@@ -61,11 +59,10 @@ public final class BatchContexts {
             suggested.addAll(context.suggestedLines());
             lexicon.addAll(context.lexiconLines());
         }
-        logJoined(itemIds.size(), glossary, memory, suggested, lexicon, precedingPairs, relevantPairs, nextSource);
+        logJoined(itemIds.size(), glossary, memory, suggested, lexicon, precedingPairs, nextSource);
         return new BatchContext(
                 new DraftContext(List.of(), summary, glossary, memory, suggested, lexicon),
                 precedingPairs,
-                relevantPairs,
                 nextSource,
                 characters,
                 List.of());
@@ -78,18 +75,16 @@ public final class BatchContexts {
             final List<String> suggested,
             final List<String> lexicon,
             final List<BatchContext.Pair> pairs,
-            final List<BatchContext.Pair> relevant,
             @Nullable final String nextSource) {
         log.debug(
                 "Joined batch context items={} glossaryLines={} memoryLines={} suggestedLines={} lexiconLines={}"
-                        + " pairs={} relevantPairs={} next={}",
+                        + " pairs={} next={}",
                 items,
                 glossary.size(),
                 memory.size(),
                 suggested.size(),
                 lexicon.size(),
                 pairs.size(),
-                relevant.size(),
                 nextSource != null);
     }
 }

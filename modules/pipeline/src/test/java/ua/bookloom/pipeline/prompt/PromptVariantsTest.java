@@ -11,7 +11,6 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
-import ua.bookloom.pipeline.prompt.PromptVariants.BatchFormatVariant;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
 
 /**
@@ -21,7 +20,7 @@ import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
 class PromptVariantsTest {
 
     @Test
-    void defaults_productionInjector_areBundledRulesAndJson() {
+    void defaults_productionInjector_areBundledRules() {
         final Injector injector = Guice.createInjector(
                 new PipelineModule(),
                 new ReviewModeTestModule(),
@@ -31,7 +30,6 @@ class PromptVariantsTest {
         final PromptVariants variants = injector.getInstance(PromptVariants.class);
 
         assertThat(variants.languageRules()).isEqualTo(LanguageRulesVariant.BUNDLED);
-        assertThat(variants.batchFormat()).isEqualTo(BatchFormatVariant.JSON);
         assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.bundled());
     }
 
@@ -43,7 +41,7 @@ class PromptVariantsTest {
                         new DocumentModule(),
                         new InMemoryPersistenceModule())
                 .with(binder -> binder.bind(PromptVariants.class)
-                        .toInstance(new PromptVariants(LanguageRulesVariant.GENERIC_ONLY, BatchFormatVariant.JSON))));
+                        .toInstance(new PromptVariants(LanguageRulesVariant.GENERIC_ONLY))));
 
         assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.genericOnly());
     }

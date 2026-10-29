@@ -118,6 +118,6 @@ class BatchSizeSignalJobTest {
                 .filteredOn(message -> message.startsWith("Batch answered"))
                 .first()
                 .asString()
-                .contains("segments=8", "nextSize=8", "maxSize=16");
+                .contains("segments=8", "nextSize=8", "ceiling=8");
     }
 }

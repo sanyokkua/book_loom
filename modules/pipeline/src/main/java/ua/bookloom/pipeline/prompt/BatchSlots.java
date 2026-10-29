@@ -18,24 +18,17 @@ final class BatchSlots {
             "memoryHint",
             "lexiconTerms",
             "characters",
-            "relevantPairs",
             "precedingPairs",
             "nextSource",
             "itemTokens",
             "extraInstruction");
 
-    /** The system message's slots, the same in every batch format. */
+    /** The system message's slots. */
     static final Slots SYSTEM = new Slots(
             Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-            Set.of("examples", "languageRules", "tokenRules", "noTokenRules", "notesRule", "relatedPairsName"));
+            Set.of("examples", "languageRules", "tokenRules", "noTokenRules"));
 
     static final Slots USER = new Slots(Set.of("items", "source", "target"), with(CONTEXT, "keyTerms"));
-
-    /** The marked arm has no JSON entries to carry a key term's rendering, so it never asks for one. */
-    static final Slots MARKERS_USER = new Slots(Set.of("items", "source", "target"), CONTEXT);
-
-    /** The dual arm shows the passage the items make once as context before the numbered items. */
-    static final Slots DUAL_USER = new Slots(Set.of("items", "passage", "source", "target"), with(CONTEXT, "keyTerms"));
 
     private static Set<String> with(final Set<String> base, final String extra) {
         final Set<String> all = new HashSet<>(base);

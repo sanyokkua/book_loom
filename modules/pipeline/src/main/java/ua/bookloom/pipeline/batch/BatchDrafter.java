@@ -22,6 +22,7 @@ import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptBreakdown;
+import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
  * Drafts several consecutive segments in one model call and reads the reply per id. It makes the call and judges the
@@ -49,9 +50,6 @@ public final class BatchDrafter {
     /** How many ids a readable reply must leave out before the missing ones are asked again together. */
     public static final int MIN_MISSING_TO_REASK = 2;
 
-    /** The ceiling of the adaptive size; the initial size is not a cap, and the token budget and the unit cut a batch further. */
-    public static final int MAX_SIZE = 16;
-
     static final int CLEAN_STREAK_TO_GROW = 3;
 
     /** How many first-item-only or cut replies in a row halve the size, because one of them says nothing but a habit does. */
@@ -63,6 +61,7 @@ public final class BatchDrafter {
     private final @Nullable String sourceLanguage;
     private final String targetLanguage;
     private final BatchSizeController size;
+    private final int startSize;
     private final KeyTermAsks keyTermAsks = new KeyTermAsks();
     private int stallStreak;
 
@@ -74,7 +73,7 @@ public final class BatchDrafter {
      * @param calls the non-null seam every call of the run goes through
      * @param sourceLanguage the source language tag, or null when the book declares none
      * @param targetLanguage the non-null target language tag
-     * @param initialSize the first batch size, from {@link #NO_BATCHING} to 16
+     * @param initialSize the first batch size, at least {@link #NO_BATCHING}; it is also the ceiling the size never grows above
      */
     public BatchDrafter(
             final BatchPromptBuilder prompts,
@@ -90,12 +89,18 @@ public final class BatchDrafter {
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
         // A run that batches never halves its way into no batching, which only an initial size of one asks for.
         final int min = initialSize < MIN_BATCHING_SIZE ? NO_BATCHING : MIN_BATCHING_SIZE;
-        this.size = new BatchSizeController(min, MAX_SIZE, initialSize, CLEAN_STREAK_TO_GROW);
+        this.size = new BatchSizeController(min, initialSize, initialSize, CLEAN_STREAK_TO_GROW);
+        this.startSize = initialSize;
     }
 
     /** The run's memory of whether its model answers the key-term block, which decides if the next prompt asks. */
     public KeyTermAsks keyTermAsks() {
         return keyTermAsks;
+    }
+
+    /** The size the run started at, which is also the most a batch may carry: halving may lower the size, growth stops here. */
+    public int startSize() {
+        return startSize;
     }
 
     /** The items the next batch may carry, before the token budget cuts it. */
@@ -163,7 +168,7 @@ public final class BatchDrafter {
                 position);
         final ChatRequest request = request(context, items);
         final CallDescriptor descriptor = new CallDescriptor(
-                prompts.format().promptName().resourceBaseName(),
+                PromptName.DRAFT_BATCH_JSON.resourceBaseName(),
                 position,
                 sources,
                 () -> prompts.sectionsFor(context, items));
@@ -178,7 +183,7 @@ public final class BatchDrafter {
         final List<String> ids = items.stream().map(BatchItem::id).toList();
         final BatchReply reply = response.content().isBlank()
                 ? BatchReply.unreadable(ids)
-                : parser.parse(response.content(), items, sourceLanguage, targetLanguage, prompts.format());
+                : parser.parse(response.content(), items, sourceLanguage, targetLanguage);
         calls.parsed(segmentIds, callItems(ids, segmentIds, reply));
         return Result.ok(reply.withCut(response.finishReason() == FinishReason.LENGTH));
     }
@@ -262,8 +267,7 @@ public final class BatchDrafter {
      *
      * @param context the non-null read-only context shown with the items
      * @param items the non-null items, at least one
-     * @return the request, asking for the batch schema unless the format answers in plain text, with the reply capped by the
-     *     items' size
+     * @return the request, asking for the batch schema, with the reply capped by the items' size
      */
     public ChatRequest request(final BatchContext context, final List<BatchItem> items) {
         return prompts.requestFor(prompts.messagesFor(context, items), items, false);
@@ -290,12 +294,12 @@ public final class BatchDrafter {
         }
         countStall(outcome);
         log.debug(
-                "Batch recorded outcome={} sent={} size={} nextSize={} maxSize={}",
+                "Batch recorded outcome={} sent={} size={} nextSize={} ceiling={}",
                 outcome,
                 reply.outcomes().size() - reply.count(ItemStatus.EXTRA),
                 before,
                 size.size(),
-                MAX_SIZE);
+                startSize);
     }
 
     // A stall alone says nothing, but a model that always stops after item one must still be able to shrink its batch.

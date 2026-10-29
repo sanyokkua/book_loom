@@ -908,7 +908,7 @@ Cancel, only when the project holds work: a run began or a later step is done) a
 window while a run or any activity is under way; confirming stops the work and closes). The safe answer is
 the default: **Cancel** (`#confirm-cancel`) is the default button and takes the focus, Escape and a click outside do
 nothing but close the card, and only the confirming button (`#confirm-yes`, worded for the action and in the danger
-look) runs the action. Review's Skip discards nothing and asks nothing. A card whose answer something waits on (the
+look) runs the action. Review's Leave for later discards nothing and asks nothing. A card whose answer something waits on (the
 open-another question while a run is stopping) keeps its buttons disabled until the answer is carried out. Control: `Dialog`. P6 reference: Confirm dialogs.
 
 ### dialog-confirm-delete {#dialog-confirm-delete}

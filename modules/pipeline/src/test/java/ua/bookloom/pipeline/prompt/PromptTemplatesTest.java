@@ -222,8 +222,8 @@ class PromptTemplatesTest {
     // An arm chooses the generic rules through the injector's binding, never through a variable src/main reads.
     @Test
     void render_genericOnlyVariant_statesOnlyTheGenericRules() {
-        final PromptTemplates templates = new PromptTemplates(new PromptVariants(
-                PromptVariants.LanguageRulesVariant.GENERIC_ONLY, PromptVariants.BatchFormatVariant.JSON));
+        final PromptTemplates templates =
+                new PromptTemplates(new PromptVariants(PromptVariants.LanguageRulesVariant.GENERIC_ONLY));
         final CallFrame frame = new CallFrame(
                 "en",
                 "uk",

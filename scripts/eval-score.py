@@ -6,7 +6,7 @@
   eval-score.py diff --paired A B [--history DIR]
   eval-score.py calibrate --items cal-1/items.json --labels cal-1/labels.json --judge RUN [--history DIR]
   eval-score.py show RUN CASE [--history DIR]
-  eval-score.py blind A B --out pairs.md --key key.json --seed N [--history DIR]
+  eval-score.py blind A B --out pairs.md --key key.json --seed N [--all-repeats] [--only IDS|@FILE] [--history DIR]
   eval-score.py baseline RUN --out eval/baseline/<suite>-<pair>-<model>-<dial>.json [--history DIR]
   eval-score.py selftest
 
@@ -532,8 +532,12 @@ def cmd_blind(args):
     history = history_dir(args.history)
     a, b = resolve(args.a, history), resolve(args.b, history)
     report_a, report_b = load(a), load(b)
-    first = {r["caseId"]: r for r in run_cases(a, report_a) if r.get("repeat", 0) == 0}
-    second = {r["caseId"]: r for r in run_cases(b, report_b) if r.get("repeat", 0) == 0}
+    only = wanted_cases(args.only)
+    if args.all_repeats:
+        first, second = repeat_outputs(a, report_a), repeat_outputs(b, report_b)
+    else:
+        first = {r["caseId"]: r for r in run_cases(a, report_a) if r.get("repeat", 0) == 0}
+        second = {r["caseId"]: r for r in run_cases(b, report_b) if r.get("repeat", 0) == 0}
     if not first and not second:
         print(NO_CASES)
         return
@@ -541,22 +545,52 @@ def cmd_blind(args):
     rng = random.Random(args.seed)
     key, lines = {}, ["# Blind pairs", ""]
     for case_id in sorted(set(first) & set(second)):
-        out_a, out_b = final_output(a, report_a, first[case_id]), final_output(b, report_b, second[case_id])
+        if only is not None and case_id not in only:
+            continue
+        if args.all_repeats:
+            (source, out_a), (_, out_b) = first[case_id], second[case_id]
+        else:
+            source = source_of(first[case_id], sources)
+            out_a, out_b = final_output(a, report_a, first[case_id]), final_output(b, report_b, second[case_id])
         if out_a is None or out_b is None or out_a == out_b:
             continue
         flip = rng.random() < 0.5
         shown = (("B", out_b), ("A", out_a)) if flip else (("A", out_a), ("B", out_b))
         key[case_id] = {"X": shown[0][0], "Y": shown[1][0]}
         lines.append("## " + case_id)
-        source = source_of(first[case_id], sources)
         if source:
             lines += ["Source:", "", source, ""]
-        lines += ["Option X:", "", shown[0][1], "", "Option Y:", "", shown[1][1], ""]
+        for label, (_, out) in zip(("X", "Y"), shown):
+            lines += ["Option %s:" % label, ""] + (repeat_lines(out) if args.all_repeats else [out]) + [""]
     with open(args.out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     with open(args.key, "w", encoding="utf-8") as f:
         json.dump({"seed": args.seed, "a": a, "b": b, "pairs": key}, f, indent=2, ensure_ascii=False)
     print("%d changed cases written to %s, key in %s" % (len(key), args.out, args.key))
+
+
+def wanted_cases(only):
+    """The case ids --only names (comma-separated, or @file with one id per line), or None for every case."""
+    if not only:
+        return None
+    if only.startswith("@"):
+        with open(only[1:], encoding="utf-8") as f:
+            return {line.strip() for line in f if line.strip()}
+    return {part.strip() for part in only.split(",") if part.strip()}
+
+
+def repeat_outputs(run, report):
+    """{case id: (source, [output of repeat 0, 1, ...])} from records that keep their own `output` (an arm's run)."""
+    by_case = {}
+    for record in run_cases(run, report):
+        if "output" in record:
+            source, outputs = by_case.setdefault(record["caseId"], (record.get("source"), {}))
+            outputs[record.get("repeat", 0)] = record["output"]
+    return {case_id: (source, [outputs[k] for k in sorted(outputs)]) for case_id, (source, outputs) in by_case.items()}
+
+
+def repeat_lines(outputs):
+    return ["repeat %d: %s" % (n + 1, out) for n, out in enumerate(outputs)]
 
 
 def refuse_baseline(provenance):
@@ -652,6 +686,9 @@ def main(argv=None):
     blind.add_argument("--out", required=True)
     blind.add_argument("--key", required=True)
     blind.add_argument("--seed", type=int, required=True)
+    blind.add_argument("--all-repeats", action="store_true",
+                       help="show every repeat's output (records that keep `output`, an arm's run), not repeat 0 only")
+    blind.add_argument("--only", help="case ids to show: comma-separated, or @file with one id per line")
     blind.add_argument("--history")
     base = sub.add_parser("baseline")
     base.add_argument("run")

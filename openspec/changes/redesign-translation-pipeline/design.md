@@ -475,6 +475,7 @@ task edits the delta requirement and this file's line; the result is written int
 ### D11 — Batch format and batch size
 
 - **Format (group 2).** Arm 2 grades JSON against markers on 60 segments. JSON is the expected winner and the default.
+  Arm 2 kept JSON: 8 WRONG paragraphs each on e4b (K = 3) and 0 against 3 on 26b, hard gates equal (D24).
   The loser and the dual format are deleted with their code (`BatchFormat` and `BOOKLOOM_BATCH_FORMAT`, `BatchMarkers`,
   `MarkerReplies`, `draft-batch-markers.*`, `draft-batch-dual.*`, `BatchExamples.renderMarked/renderDual`, the
   `PromptName` constants and slots) and the off switches (`BatchNotesSwitch`, `BatchSchema.SCHEMA_WITH_NOTES`,
@@ -1003,7 +1004,7 @@ task edits the delta requirement and this file's line; the result is written int
 | Arm | Group | Default (shipped) | Alternative | Rule | Result |
 |---|---|---|---|---|---|
 | 1 judge calibration | 1 (gates judge use from 2) | judge grades pairwise | judge as a screen only; every discordant case read by the agent with a Codex second opinion by hand | TPR and TNR ≥ 0.8 (Wilson lower bounds), position consistency ≥ 0.7 on the hidden test split | Failed on the Wilson bounds, reasoning off, rubric `bl-judge-1` (`d7b8b8ded24e`) frozen untuned, 59 of 60 items agreed: test TPR 4/4 (lower 0.510), TNR 9/9 (0.701), position consistency 0.818, tau-b 0.716, pairwise accuracy 11/11. The owner kept the rule: the judge is a screen only; `judge.calibration.passed` = false. Reasoning on loses items (`docs/DEVELOPMENT.md#redesign-arms`) |
-| 2 batch format | 2 | JSON items | markers | markers only with ≥ 2 fewer WRONG paragraphs and no hard-gate rise ≥ 2 | — |
+| 2 batch format | 2 | JSON items | markers | markers only with ≥ 2 fewer WRONG paragraphs and no hard-gate rise ≥ 2 | JSON stays. 60 segments (`eval/arms/arm-2-segments.json`), e4b K = 3: WRONG JSON 8, markers 8 of the 29 paragraphs the judge screen marked and the agent read blind; first-round hard gates 3 and 3; 0.57 translation calls and 3.4 s against 3.0 s per segment (reported, not weighed). 26b K = 1 does not reverse it: WRONG 0 against 3, hard gates 1 and 1 (`docs/DEVELOPMENT.md#redesign-arms`) |
 | 3a sampling | 6 | app temperature + explicit neutral penalties | vendor `top_k`/`top_p`/`min_p` as row data | vendor set only if no hard grader worse and token fidelity within noise | — |
 | 3b batch size | 6 (wired in 10) | 4 on small models; 8 on large | 8 on small models | 8 only if token fidelity, fallbacks and hard gates are no worse beyond noise | — |
 | 4a bare-name accuracy | 7 | a class's likely values may reach prompts (per 4b) | `NO_KNOWLEDGE_HINT` for the class | ≤ 5 % confidently wrong (confidence ≥ 0.7) of about 60 names and unisex names below 0.7 | — |
