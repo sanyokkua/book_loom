@@ -11,6 +11,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationStage;
@@ -47,7 +48,7 @@ final class InferenceStage {
         }
         final ChatResponse response = Objects.requireNonNull(call.result().data(), "chat response");
         if (call.rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
-            return content(response, first.request());
+            return content(response, first.request(), ProbeVerdicts.Outcome.REFUSED);
         }
         if (validStructuredProbe(response)) {
             return new InferenceProbe(
@@ -81,7 +82,10 @@ final class InferenceStage {
         if (plain.call().result().isErr()) {
             return failed(RetriedCalls.error(plain.call().result()), plain.request());
         }
-        return content(Objects.requireNonNull(plain.call().result().data(), "chat response"), plain.request());
+        return content(
+                Objects.requireNonNull(plain.call().result().data(), "chat response"),
+                plain.request(),
+                ProbeVerdicts.Outcome.IGNORED);
     }
 
     private Sent plainCall(
@@ -107,8 +111,12 @@ final class InferenceStage {
         return new InferenceProbe(StageOutcomes.inferenceFailure(failure), null, false, sent);
     }
 
-    private static InferenceProbe content(final ChatResponse response, final ChatRequest sent) {
-        final StageOutcome outcome = response.content().isBlank()
+    // Only a plain probe that answered tells how the schema was treated; an empty one tells nothing.
+    private static InferenceProbe content(
+            final ChatResponse response, final ChatRequest sent, final ProbeVerdicts.Outcome schema) {
+        final boolean blank = response.content().isBlank();
+        log.debug("Provider verification plain probe answered blank={} schema={}", blank, schema);
+        final StageOutcome outcome = blank
                 ? StageOutcomes.failed(
                         VerificationStage.INFERENCE,
                         AppError.of(
@@ -116,7 +124,7 @@ final class InferenceStage {
                                 "Empty completion",
                                 "The provider returned an empty response."))
                 : StageOutcomes.passed(VerificationStage.INFERENCE, STRUCTURED_OUTPUT_NOT_CONFIRMED);
-        return new InferenceProbe(outcome, response, false, sent);
+        return new InferenceProbe(outcome, response, false, sent, blank ? null : schema);
     }
 
     private boolean validStructuredProbe(final ChatResponse response) {

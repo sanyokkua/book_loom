@@ -19,5 +19,11 @@ public enum VerificationPolicy {
      * connection and models stages. Only the wake of a run paused on a loading model asks it, because a llama-server
      * answers {@code 503} on every route while it loads and its health route is the one that says when it is done.
      */
-    HEALTH_AND_MODELS
+    HEALTH_AND_MODELS,
+
+    /**
+     * Runs every stage of {@link #FULL}, then the Advanced features checks, whose verdicts are kept on the model's
+     * settings. Only the person asks for it; no other policy sends those calls.
+     */
+    ADVANCED
 }

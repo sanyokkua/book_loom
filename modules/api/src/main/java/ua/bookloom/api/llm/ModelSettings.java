@@ -128,6 +128,28 @@ public record ModelSettings(
     }
 
     /**
+     * Keeps everything but the check verdicts.
+     *
+     * @param verdicts the verdicts to keep; non-null
+     * @return a copy holding them
+     */
+    public ModelSettings withProbeVerdicts(final ProbeVerdicts verdicts) {
+        Objects.requireNonNull(verdicts, "verdicts");
+        return new ModelSettings(
+                providerId,
+                modelId,
+                temperatureChoice,
+                temperature,
+                contextWindow,
+                maxOutput,
+                outputField,
+                refused,
+                measuredSecondsPerSegment,
+                measuredFrom,
+                verdicts);
+    }
+
+    /**
      * Forgets one refusal.
      *
      * @param name the refused setting's name; non-null

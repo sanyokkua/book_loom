@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelSelection;
@@ -196,6 +198,58 @@ class ProviderVerifierImplEngineTest {
 
         assertThat(report.engine()).isNotNull();
         assertThat(stored("local").engine()).isEqualTo(ServerEngine.GENERIC);
+    }
+
+    @Test
+    void verify_gpt4allOwnedByHumanity_failsAtConnectionWithNotSuitableStructured() {
+        registerProvider("gpt4all", ProviderKind.OPENAI_COMPATIBLE, "/v1");
+        server.stubFor(get(urlEqualTo(OPENAI_MODELS_PATH))
+                .willReturn(okJson("{\"data\":[{\"id\":\"Llama 3 8B Instruct\",\"object\":\"model\","
+                        + "\"owned_by\":\"humanity\"}]}")));
+
+        final VerificationReport report =
+                report(verifier.verify(new ModelSelection("gpt4all", MODEL_ID), VerificationPolicy.FULL));
+
+        assertThat(report.stages()).extracting(StageOutcome::status).containsExactly(StageStatus.FAILED);
+        final AppError failure = error(report.stages().get(0));
+        assertThat(failure.code()).isEqualTo(ErrorCode.validation);
+        assertThat(FailureReason.in(failure.details())).contains(FailureReason.NOT_SUITABLE_STRUCTURED);
+        assertThat(failure.message())
+                .isEqualTo("This app does not support structured replies, so BookLoom cannot use it.");
+        server.verify(0, postRequestedFor(anyUrl()));
+        assertThat(stored("gpt4all").engine()).isEqualTo(ServerEngine.GENERIC);
+        assertThat(stored("gpt4all").engineVersion()).isNull();
+    }
+
+    @Test
+    void verify_anythingLlmOpenAiPath_failsAtConnectionWithNotSuitableDocuments() {
+        registerProvider("anything", ProviderKind.OPENAI_COMPATIBLE, "/api/v1/openai");
+        server.stubFor(get(urlEqualTo("/api/v1/openai/models"))
+                .willReturn(okJson("{\"data\":[{\"id\":\"my-workspace\",\"object\":\"model\"}]}")));
+
+        final VerificationReport report =
+                report(verifier.verify(new ModelSelection("anything", MODEL_ID), VerificationPolicy.FULL));
+
+        assertThat(report.stages()).extracting(StageOutcome::status).containsExactly(StageStatus.FAILED);
+        final AppError failure = error(report.stages().get(0));
+        assertThat(failure.code()).isEqualTo(ErrorCode.validation);
+        assertThat(FailureReason.in(failure.details())).contains(FailureReason.NOT_SUITABLE_DOCUMENTS);
+        assertThat(failure.message()).isEqualTo("This address chats with documents, not with a model.");
+        server.verify(0, postRequestedFor(anyUrl()));
+        assertThat(stored("anything").engine()).isEqualTo(ServerEngine.GENERIC);
+    }
+
+    @Test
+    void verify_anythingLlmAskingForAKey_stillFailsWithNotSuitableDocuments() {
+        registerProvider("anything", ProviderKind.OPENAI_COMPATIBLE, "/api/v1/openai");
+        server.stubFor(get(urlEqualTo("/api/v1/openai/models"))
+                .willReturn(aResponse().withStatus(403).withBody("{\"error\":\"No valid api key found.\"}")));
+
+        final VerificationReport report =
+                report(verifier.verify(new ModelSelection("anything", MODEL_ID), VerificationPolicy.CONNECTION));
+
+        assertThat(FailureReason.in(error(report.stages().get(0)).details()))
+                .contains(FailureReason.NOT_SUITABLE_DOCUMENTS);
     }
 
     private void stubLlamaServer() {

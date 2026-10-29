@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.engine.CheckedModelId;
+import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
 
 /** Internal boundary implemented by each provider-specific HTTP dialect. */
 public interface ProviderClient {
@@ -84,6 +85,22 @@ public interface ProviderClient {
      */
     default ProviderClient forChecks() {
         return this;
+    }
+
+    /**
+     * Sends one Advanced features check through the checks' shaping (what it asks for is sent). A client that cannot
+     * read reasoning from its replies, or name another switch, sends the request as its checks do.
+     *
+     * @param offSwitch the thinking switch to send in place of the engine's, or null for the engine's own
+     * @return the answer with what it showed of reasoning, or the failure, with any refused setting named
+     */
+    default ProviderCallResult<CheckReply> checkChat(
+            String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
+        final ProviderCallResult<ChatResponse> call = forChecks().chat(modelId, request);
+        return new ProviderCallResult<>(
+                call.result().map(response -> new CheckReply(response, CheckReply.Reasoning.UNKNOWN)),
+                call.retryAfter(),
+                call.rejectedCapability());
     }
 
     /**

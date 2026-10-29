@@ -37,6 +37,7 @@ final class EngineShaping {
     private final EngineFacts facts;
     private final Function<String, ProbeVerdicts> verdicts;
     private final boolean checking;
+    private final @Nullable OffSwitch forced;
 
     /**
      * Binds the shaping to one provider.
@@ -46,15 +47,35 @@ final class EngineShaping {
      */
     EngineShaping(
             ProviderConfig config, EngineFacts facts, Function<String, ProbeVerdicts> verdicts, boolean checking) {
+        this(config, facts, verdicts, checking, null);
+    }
+
+    private EngineShaping(
+            ProviderConfig config,
+            EngineFacts facts,
+            Function<String, ProbeVerdicts> verdicts,
+            boolean checking,
+            @Nullable OffSwitch forced) {
         this.config = Objects.requireNonNull(config, "config");
         this.facts = Objects.requireNonNull(facts, "facts");
         this.verdicts = Objects.requireNonNull(verdicts, "verdicts");
         this.checking = checking;
+        this.forced = forced;
         this.traits = EngineTraits.of(config.effectiveEngine(), config.engineVersion());
     }
 
     EngineShaping forChecks() {
-        return new EngineShaping(config, facts, verdicts, true);
+        return new EngineShaping(config, facts, verdicts, true, null);
+    }
+
+    /**
+     * The Advanced features check's shaping: it sends what it asks for and, when a switch is named, that switch in
+     * place of the engine's, since trying each switch in turn is how the thinking check finds the one that works.
+     *
+     * @param offSwitch the switch to send, or null for the engine's own
+     */
+    EngineShaping forCheck(@Nullable OffSwitch offSwitch) {
+        return new EngineShaping(config, facts, verdicts, true, offSwitch);
     }
 
     /** Whether only {@code max_tokens} limits the answer, whatever cap field the model's settings chose. */
@@ -146,6 +167,10 @@ final class EngineShaping {
 
     // The field this engine switches thinking with for this model, or null when none can be sent.
     private @Nullable OffSwitch resolved(String modelId) {
+        if (forced != null) {
+            log.debug("Reasoning switch named by a check provider={} model={} field={}", config.id(), modelId, forced);
+            return forced;
+        }
         return switch (traits.offSwitch()) {
             case TEMPLATE_KWARG -> facts.readsEnableThinking(config, modelId) ? OffSwitch.TEMPLATE_KWARG : null;
             case PROBED ->

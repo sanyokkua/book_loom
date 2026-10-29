@@ -43,6 +43,7 @@ public final class CheckSentences {
             case CONNECTION -> connection(messages, chip, providerName);
             case MODELS -> models(messages, chip, modelChosen);
             case INFERENCE -> inference(messages, chip);
+            case ADVANCED -> Optional.empty();
         };
     }
 
@@ -127,6 +128,7 @@ public final class CheckSentences {
                     case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION;
                     case MODELS -> MessageKey.SETTINGS_STAGE_MODELS;
                     case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE;
+                    case ADVANCED -> MessageKey.SETTINGS_STAGE_ADVANCED;
                 });
     }
 }

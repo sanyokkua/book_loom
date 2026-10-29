@@ -49,6 +49,7 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
             case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION;
             case MODELS -> MessageKey.SETTINGS_STAGE_MODELS;
             case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE;
+            case ADVANCED -> MessageKey.SETTINGS_STAGE_ADVANCED;
         };
     }
 }

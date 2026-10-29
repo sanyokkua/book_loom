@@ -159,6 +159,7 @@ public final class TestDetails {
                                 ? MessageKey.SETTINGS_TEST_VERDICT_MODELS
                                 : MessageKey.SETTINGS_TEST_VERDICT_MODELS_LISTED);
             case INFERENCE -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_INFERENCE);
+            case ADVANCED -> messages.get(MessageKey.SETTINGS_TEST_VERDICT_ADVANCED);
         };
     }
 
@@ -212,6 +213,8 @@ public final class TestDetails {
                 case CONNECTION -> figures.add(metric("server", MessageKey.SETTINGS_TEST_METRIC_SERVER, none()));
                 case MODELS -> modelsFigures(figures);
                 case INFERENCE -> inferenceFigures(figures);
+                // The Advanced features stage's own figures, one per check, come with its rows.
+                case ADVANCED -> {}
             }
             return figures;
         }

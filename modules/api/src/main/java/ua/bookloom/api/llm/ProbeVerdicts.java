@@ -63,4 +63,20 @@ public record ProbeVerdicts(
     public static ProbeVerdicts none() {
         return new ProbeVerdicts(null, null, null, null);
     }
+
+    /**
+     * Lays newer verdicts over these: a check that ran replaces what was kept for it, one that did not run leaves the
+     * kept verdict, so a recognised engine's two checks never erase a generic server's earlier four.
+     *
+     * @param newer the verdicts just found; non-null, null parts for checks that did not run
+     * @return the combined verdicts
+     */
+    public ProbeVerdicts mergedWith(final ProbeVerdicts newer) {
+        Objects.requireNonNull(newer, "newer");
+        return new ProbeVerdicts(
+                newer.answerSchema() != null ? newer.answerSchema() : answerSchema,
+                newer.thinkingSwitch() != null ? newer.thinkingSwitch() : thinkingSwitch,
+                newer.extraSamplers() != null ? newer.extraSamplers() : extraSamplers,
+                newer.capField() != null ? newer.capField() : capField);
+    }
 }

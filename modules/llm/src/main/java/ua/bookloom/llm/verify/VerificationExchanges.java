@@ -3,6 +3,7 @@ package ua.bookloom.llm.verify;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -66,6 +67,24 @@ final class VerificationExchanges {
         return chatUrl == null ? built : withUrl(built, chatUrl);
     }
 
+    /**
+     * The Advanced features stage's exchange: several calls, so no single body is shown; 5.8 gives the stage its rows.
+     *
+     * @param chatUrl the address the client posts chats to, or null when the client cannot say
+     */
+    static VerificationExchange advanced(
+            final ProviderConfig config, final StageOutcome outcome, final @Nullable URI chatUrl) {
+        final VerificationExchange built = build(
+                VerificationStage.ADVANCED,
+                config,
+                outcome,
+                "",
+                Objects.requireNonNullElse(outcome.note(), ""),
+                null,
+                false);
+        return chatUrl == null ? built : withUrl(built, chatUrl);
+    }
+
     private static VerificationExchange withUrl(final VerificationExchange exchange, final URI url) {
         final String shown = USER_INFO.matcher(url.toString()).replaceFirst("$1");
         return new VerificationExchange(
@@ -90,7 +109,7 @@ final class VerificationExchanges {
             final String responseBody,
             final @Nullable TokenUsage usage,
             final boolean structured) {
-        final boolean post = stage == VerificationStage.INFERENCE;
+        final boolean post = stage == VerificationStage.INFERENCE || stage == VerificationStage.ADVANCED;
         final String headers = RequestHeaders.masked(config).entrySet().stream()
                 .map(header -> header.getKey() + ": " + header.getValue())
                 .collect(Collectors.joining("\n"));
@@ -141,7 +160,8 @@ final class VerificationExchanges {
                 switch (stage) {
                     case CONNECTION -> ollama ? "/api/version" : EndpointPaths.modelsPath(config, "/models");
                     case MODELS -> EndpointPaths.modelsPath(config, ollama ? "/api/tags" : "/models");
-                    case INFERENCE -> EndpointPaths.chatPath(config, ollama ? "/api/chat" : "/chat/completions");
+                    case INFERENCE, ADVANCED ->
+                        EndpointPaths.chatPath(config, ollama ? "/api/chat" : "/chat/completions");
                 };
         // A user name or password in a stored address never reaches the dialog or the curl line copied from it.
         final String base = USER_INFO

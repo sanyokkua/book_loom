@@ -3,6 +3,7 @@ package ua.bookloom.api.llm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -211,5 +212,21 @@ class ModelSettingsTest {
         final ModelSettings base = ModelSettings.defaults("ollama", "gemma");
 
         assertThat(base.withoutRefusal("temperature")).isEqualTo(base);
+    }
+
+    @Test
+    void withProbeVerdicts_mergedWithANewerSchemaVerdict_keepsTheOlderCapVerdict() {
+        final Instant earlier = Instant.parse("2026-10-28T09:00:00Z");
+        final Instant later = Instant.parse("2026-10-29T09:00:00Z");
+        final ProbeVerdicts.Verdict cap = new ProbeVerdicts.Verdict(ProbeVerdicts.Outcome.HONOURED, "test", earlier);
+        final ProbeVerdicts.Verdict schema = new ProbeVerdicts.Verdict(ProbeVerdicts.Outcome.REFUSED, "test", later);
+        final ModelSettings base =
+                ModelSettings.defaults("ollama", "gemma").withProbeVerdicts(new ProbeVerdicts(null, null, null, cap));
+
+        final ModelSettings merged =
+                base.withProbeVerdicts(base.probeVerdicts().mergedWith(new ProbeVerdicts(schema, null, null, null)));
+
+        assertThat(merged.probeVerdicts()).isEqualTo(new ProbeVerdicts(schema, null, null, cap));
+        assertThat(merged.outputField()).isEqualTo(OutputLengthField.MAX_TOKENS);
     }
 }

@@ -211,7 +211,8 @@ final class ProviderChecks {
 
     private void showResults() {
         final ProviderTest running = viewModel.tests().running().get();
-        for (final VerificationStage stage : VerificationStage.values()) {
+        // Only the stages with a row on this grid; the Advanced features stage gets its row with its button (5.8).
+        for (final VerificationStage stage : results.keySet()) {
             final Label result = Objects.requireNonNull(results.get(stage));
             final VBox cell = Objects.requireNonNull(cells.get(stage));
             final Optional<StageChip> found = viewModel.tests().stages().stream()

@@ -50,6 +50,19 @@ public final class EngineDetector {
     }
 
     /**
+     * Whether the address alone shows an app that chats over the person's documents (AnythingLLM's OpenAI path), so
+     * the connection test can refuse it even when the server would not answer without a key.
+     *
+     * @param config the provider description; non-null
+     * @return {@code true} if the base path is AnythingLLM's OpenAI path and no engine was chosen, {@code false}
+     *     otherwise
+     */
+    public static boolean isDocumentsAddress(final ProviderConfig config) {
+        Objects.requireNonNull(config, "config");
+        return config.engineChoice() == null && BaseUrlRoot.isAnythingLlm(config);
+    }
+
+    /**
      * Detects the engine at the provider's address.
      *
      * @param config the provider description; its "Treat this server as..." choice, when set, is the answer

@@ -49,6 +49,7 @@ import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Verifying an unsaved provider description: signed in, never registered, nothing leaked. */
@@ -381,7 +382,8 @@ class ProviderVerifierImplDraftTest {
                 new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}),
                 mapper,
                 System::nanoTime,
-                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)));
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
+                new FakeModelSettingsRepository());
     }
 
     private static VerificationReport report(Result<VerificationReport> result) {

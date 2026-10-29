@@ -129,6 +129,18 @@ public enum FailureReason {
      */
     WRONG_MODEL_SERVED("wrong-model-served"),
 
+    /**
+     * The address belongs to an app whose server refuses the answer schema every translation call needs (GPT4All), so
+     * the connection test stops it before any book text is sent.
+     */
+    NOT_SUITABLE_STRUCTURED("not-suitable-structured"),
+
+    /**
+     * The address chats over the person's documents rather than with a model (AnythingLLM's OpenAI path), so the
+     * connection test stops it before any book text is sent.
+     */
+    NOT_SUITABLE_DOCUMENTS("not-suitable-documents"),
+
     /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
     UNCLASSIFIED("unclassified");
 

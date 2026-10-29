@@ -32,6 +32,7 @@ import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** A failed stage that was answered by the server keeps the status it answered with, for the test dialog. */
@@ -69,7 +70,8 @@ class ProviderVerifierFailureStatusTest {
                 new RetryPolicy(CLOCK, () -> 0.5, delay -> {}),
                 mapper,
                 System::nanoTime,
-                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)));
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
+                new FakeModelSettingsRepository());
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()

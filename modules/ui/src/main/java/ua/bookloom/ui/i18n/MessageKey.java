@@ -870,6 +870,8 @@ public enum MessageKey {
     SETTINGS_TEST_MODELS_TIP("settings.test.models.tip"),
     /** Label of the action that also asks the chosen model for a short answer. */
     SETTINGS_TEST_INFERENCE("settings.test.inference"),
+    /** Label of the optional check of what the server honours for the chosen model (its button comes with 5.8). */
+    SETTINGS_TEST_ADVANCED("settings.test.advanced"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_INFERENCE}. */
     SETTINGS_TEST_INFERENCE_TIP("settings.test.inference.tip"),
     /** A duration under one second; argument 0 is the whole milliseconds. */
@@ -886,6 +888,8 @@ public enum MessageKey {
     SETTINGS_STAGE_MODELS("settings.stage.models"),
     /** Name of the third check stage: does the model answer a short request. */
     SETTINGS_STAGE_INFERENCE("settings.stage.inference"),
+    /** Name of the optional fourth check stage: what the server honours for the chosen model. */
+    SETTINGS_STAGE_ADVANCED("settings.stage.advanced"),
     /** Outcome word of a stage that passed. */
     SETTINGS_STATUS_PASSED("settings.status.passed"),
     /** Outcome word of a stage that passed with a limitation. */
@@ -3736,6 +3740,8 @@ public enum MessageKey {
     SETTINGS_TEST_VERDICT_MODELS_SOFT("settings.test.verdict.modelsSoft"),
     /** Verdict of a passed inference test. */
     SETTINGS_TEST_VERDICT_INFERENCE("settings.test.verdict.inference"),
+    /** Verdict of a passed Advanced features check. */
+    SETTINGS_TEST_VERDICT_ADVANCED("settings.test.verdict.advanced"),
     /** Verdict and reason of a test of Ollama or LM Studio on this computer that nothing answered: the app is closed. */
     SETTINGS_TEST_NOT_OPEN("settings.test.notOpen"),
     /** Verdict of a failed test; 0 is the reason. */
@@ -3772,6 +3778,8 @@ public enum MessageKey {
     SETTINGS_STAGE_MODELS_TIP("settings.stage.models.tip"),
     /** Hover explanation of the inference test's switch in the test dialog's footer. */
     SETTINGS_STAGE_INFERENCE_TIP("settings.stage.inference.tip"),
+    /** Hover explanation of the Advanced features check's switch in the test dialog's footer. */
+    SETTINGS_STAGE_ADVANCED_TIP("settings.stage.advanced.tip"),
     /** Label of the status metric. */
     SETTINGS_TEST_METRIC_STATUS("settings.test.metric.status"),
     /** Label of the time metric. */

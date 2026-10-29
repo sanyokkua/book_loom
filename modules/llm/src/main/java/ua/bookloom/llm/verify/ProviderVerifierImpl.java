@@ -2,6 +2,7 @@ package ua.bookloom.llm.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,8 +18,8 @@ import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.EngineDetection;
-import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -28,6 +29,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderCallResult;
@@ -46,10 +48,13 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final LongSupplier nanoTime;
     private final EngineRegistry engines;
     private final EngineStage engineStage;
+    private final AdvancedStage advanced;
+    private final ModelsStage models;
 
     /**
-     * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, and the engine
-     * detection that stores what it finds on the saved provider.
+     * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, the engine
+     * detection that stores what it finds on the saved provider, and the models' settings, where the check verdicts
+     * are kept.
      */
     @Inject
     public ProviderVerifierImpl(
@@ -59,7 +64,8 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             RetryPolicy retryPolicy,
             ObjectMapper mapper,
             LongSupplier nanoTime,
-            EngineRegistry engines) {
+            EngineRegistry engines,
+            ModelSettingsRepository settings) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
         this.calls = new RetriedCalls(gate, retryPolicy);
@@ -67,6 +73,9 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.engines = Objects.requireNonNull(engines, "engines");
         this.engineStage = new EngineStage(engines);
+        this.models = new ModelsStage(calls);
+        this.advanced =
+                new AdvancedStage(calls, mapper, Objects.requireNonNull(settings, "settings"), Clock.systemUTC());
     }
 
     @Override
@@ -164,7 +173,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private static boolean detectsEngine(ProviderConfig config, VerificationPolicy policy, boolean draft) {
         final boolean detect =
                 switch (policy) {
-                    case FULL, CONNECTION -> true;
+                    case FULL, ADVANCED, CONNECTION -> true;
                     case CONNECTION_AND_MODELS -> draft;
                     case PREFLIGHT, HEALTH_AND_MODELS -> false;
                 };
@@ -200,8 +209,30 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return completed(selection, policy, stages, connection.engine());
         }
-        stages.add(inferenceStage(client.forChecks(), config, selection.modelId()));
+        final StageOutcome inference = inferenceStage(client.forChecks(), config, selection.modelId());
+        stages.add(inference);
+        if (policy == VerificationPolicy.ADVANCED && inference.status() != StageStatus.FAILED) {
+            stages.add(advancedStage(config, connection.engine(), selection.modelId()));
+        }
         return completed(selection, policy, stages, connection.engine());
+    }
+
+    // The checks are chosen by the engine this Test just found, which the cached client does not know yet.
+    private StageOutcome advancedStage(ProviderConfig config, @Nullable EngineDetection found, String modelId) {
+        final ProviderConfig checked = found == null || found.source() != EngineDetection.Source.DETECTED
+                ? config
+                : config.withEngine(found.engine(), config.engineChoice(), found.version());
+        log.debug(
+                "Provider verification advanced stage engine provider={} stored={} found={}",
+                config.id(),
+                config.effectiveEngine(),
+                checked.effectiveEngine());
+        final ProviderClient client = clients.createUncached(checked);
+        final long start = nanoTime.getAsLong();
+        final StageOutcome outcome = advanced.run(client, checked, modelId).withElapsed(since(start));
+        return StageOutcomes.withExchange(
+                outcome,
+                VerificationExchanges.advanced(config, outcome, client.chatUrl().orElse(null)));
     }
 
     // A llama-server answers 503 on every route while it loads; its health route is the one that says when it is done.
@@ -243,7 +274,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     private StageOutcome modelsStage(ProviderClient client, ProviderConfig config, String modelId) {
         final long start = nanoTime.getAsLong();
-        final ModelsProbe probe = verifyModels(client, config.id(), modelId);
+        final ModelsProbe probe = models.run(client, config.id(), modelId);
         final StageOutcome outcome = probe.outcome().withElapsed(since(start));
         return StageOutcomes.withExchange(outcome, VerificationExchanges.models(config, outcome, probe.ids()));
     }
@@ -252,6 +283,10 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         final long start = nanoTime.getAsLong();
         final InferenceProbe probe = inference.run(client, config.id(), modelId);
         final StageOutcome outcome = probe.outcome().withElapsed(since(start));
+        final ProbeVerdicts.Outcome schema = probe.schema();
+        if (schema != null) {
+            advanced.keepSchema(config.id(), modelId, schema);
+        }
         return StageOutcomes.withExchange(
                 outcome,
                 VerificationExchanges.inference(
@@ -278,54 +313,6 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return call.result().isErr()
                 ? StageOutcomes.failed(VerificationStage.CONNECTION, error(call.result()))
                 : StageOutcomes.passed(VerificationStage.CONNECTION);
-    }
-
-    private ModelsProbe verifyModels(ProviderClient client, String providerId, String modelId) {
-        log.debug("Provider verification models stage started provider={} model={}", providerId, modelId);
-        if (!modelId.isBlank() && client.checksModelIds()) {
-            final Optional<ModelsProbe> checked = IdCheckStage.probe(client, providerId, modelId);
-            if (checked.isPresent()) {
-                return checked.orElseThrow();
-            }
-        }
-        final ProviderCallResult<List<ModelInfo>> call =
-                callWithRetry(client::listModels, VerificationStage.MODELS, providerId);
-        if (call.result().isErr()) {
-            final AppError failure = error(call.result());
-            return new ModelsProbe(
-                    failure.code() == ErrorCode.discoveryFailed
-                            ? StageOutcomes.softPass(failure, 0)
-                            : StageOutcomes.failed(VerificationStage.MODELS, failure),
-                    List.of());
-        }
-        return listedModels(Objects.requireNonNull(call.result().data(), "model list"), providerId, modelId);
-    }
-
-    private ModelsProbe listedModels(List<ModelInfo> models, String providerId, String modelId) {
-        if (models.isEmpty()) {
-            log.debug("Provider verification models stage soft pass provider={} reason=empty-list", providerId);
-            return new ModelsProbe(StageOutcomes.softPass(null, 0), List.of());
-        }
-        // With no model chosen yet the question is only whether the list can be read; it is answered by the count.
-        final boolean selectedModelListed =
-                modelId.isBlank() || models.stream().map(ModelInfo::id).anyMatch(modelId::equals);
-        log.debug(
-                "Provider verification models stage decision provider={} selectedModel={} listedCount={} found={}",
-                providerId,
-                modelId,
-                models.size(),
-                selectedModelListed);
-        final StageOutcome outcome = StageOutcomes.withCount(
-                selectedModelListed
-                        ? StageOutcomes.passed(VerificationStage.MODELS)
-                        : StageOutcomes.failed(
-                                VerificationStage.MODELS,
-                                AppError.of(
-                                        ErrorCode.modelUnavailable,
-                                        "Model unavailable",
-                                        "The selected model is not available from this provider.")),
-                models.size());
-        return new ModelsProbe(outcome, models.stream().map(ModelInfo::id).toList());
     }
 
     private <T> ProviderCallResult<T> callWithRetry(

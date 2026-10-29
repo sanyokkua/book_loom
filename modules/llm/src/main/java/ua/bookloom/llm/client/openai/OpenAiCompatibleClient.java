@@ -26,6 +26,7 @@ import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.engine.CheckedModelId;
 import ua.bookloom.llm.engine.EngineFacts;
+import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
 import ua.bookloom.llm.engine.ModelIdCheck;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
@@ -33,6 +34,7 @@ import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
 import ua.bookloom.llm.provider.CapabilityRejections;
+import ua.bookloom.llm.provider.CheckReply;
 import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
@@ -118,6 +120,56 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     @Override
     public ProviderClient forChecks() {
         return new OpenAiCompatibleClient(config, exchange, mapper, nanoTime, shaping.forChecks(), route, idCheck);
+    }
+
+    // A check is sent once as asked: no raised cap after a reply spent on reasoning, since that reply is the finding.
+    @Override
+    public ProviderCallResult<CheckReply> checkChat(
+            String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        log.debug(
+                "OpenAI-compatible check started provider={} model={} responseFormatPresent={} offSwitch={}",
+                config.id(),
+                modelId,
+                request.responseFormat() != null,
+                offSwitch == null ? "engine" : offSwitch.wireName());
+        try {
+            final OpenAiCompatibleClient checker = new OpenAiCompatibleClient(
+                    config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck);
+            final Result<CheckedModelId> checked = idCheck.check(modelId);
+            if (checked.isErr()) {
+                return ProviderCallResult.withoutRetryAfter(
+                        Result.err(Objects.requireNonNull(checked.error(), "error")));
+            }
+            return checker.sendCheck(
+                    Objects.requireNonNull(checked.data(), "checked").sentId(), request);
+        } catch (Throwable failure) {
+            return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("check", modelId, failure)));
+        }
+    }
+
+    private ProviderCallResult<CheckReply> sendCheck(String modelId, ChatRequest request) {
+        final Result<ParsedFormat> parsed = requestMapper.parseFormat(request.responseFormat(), modelId);
+        final Result<String> body =
+                parsed.flatMap(format -> requestMapper.serializeRequest(modelId, request, format.format()));
+        if (body.isErr()) {
+            return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(body.error(), "error")));
+        }
+        final long startNanos = nanoTime.getAsLong();
+        final ProviderCallResult<HttpReply> call =
+                postChat(modelId, Objects.requireNonNull(body.data(), "body"), request);
+        final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - startNanos);
+        final HttpReply reply = call.result().data();
+        if (reply == null) {
+            final AppError error = Objects.requireNonNull(call.result().error(), "error");
+            logOutcome("check", modelId, error);
+            return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
+        }
+        final CheckReply.Reasoning reasoning = ReasoningSign.in(mapper, reply.body());
+        return new ProviderCallResult<>(
+                replies.read(modelId, reply, elapsed).map(response -> new CheckReply(response, reasoning)),
+                call.retryAfter());
     }
 
     @Override

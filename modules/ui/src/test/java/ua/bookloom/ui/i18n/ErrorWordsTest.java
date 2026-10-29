@@ -72,6 +72,8 @@ class ErrorWordsTest {
                 "TERMINATED",
                 "AUTH",
                 "WRONG_MODEL_SERVED",
+                "NOT_SUITABLE_STRUCTURED",
+                "NOT_SUITABLE_DOCUMENTS",
                 "UNCLASSIFIED"
             })
     void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
@@ -99,7 +101,10 @@ class ErrorWordsTest {
                 "CLOUD_SIGNIN | Увійдіть в Ollama, щоб користуватися цією хмарною моделлю, і спробуйте ще раз.",
                 "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить.",
                 "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить.",
-                "WRONG_MODEL_SERVED | Сервер відповів іншою моделлю, ніж обрано. Перевірте назву моделі."
+                "WRONG_MODEL_SERVED | Сервер відповів іншою моделлю, ніж обрано. Перевірте назву моделі.",
+                "NOT_SUITABLE_STRUCTURED | Ця програма не підтримує структурованих відповідей, тому BookLoom не може нею"
+                        + " користуватися.",
+                "NOT_SUITABLE_DOCUMENTS | Ця адреса веде розмову з документами, а не з моделлю."
             })
     void message_ukrainianDisplay_wordsEachNewReasonToken(final FailureReason reason, final String expected) {
         final AppError error = AppError.of(
