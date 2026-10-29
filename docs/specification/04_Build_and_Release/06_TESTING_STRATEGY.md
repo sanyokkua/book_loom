@@ -267,7 +267,7 @@ behaviour of commit `79ffede6` are in `eval/baseline/`. Nothing in the repositor
 
 **The local judge is a screen, not a grader.** The judge is `gemma4:26b-mlx` run locally through `:llm`, pairwise with the
 order swapped. Its calibration `cal-1` (60 invented items, rubric `bl-judge-1`) failed the Wilson lower-bound rule on the
-hidden test split (TPR 0.510, TNR 0.701), so every case it marks discordant is read by the agent with a Codex second
+hidden test split (Wilson lower bounds TPR 0.510, TNR 0.701; both observed rates were 1.0), so every case it marks discordant is read by the agent with a Codex second
 opinion by hand and reports carry `judge.calibration.passed = false`; the result is in `docs/DEVELOPMENT.md#redesign-arms`.
 
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from

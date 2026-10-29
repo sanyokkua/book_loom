@@ -990,7 +990,7 @@ task edits the delta requirement and this file's line; the result is written int
   prompt reading, TTFT, generation; `null` when missing) and tokens. Prompts and replies go to
   `.temporary_context/eval-history/<runId>/`.
 - **`PromptVariants`** (`pipeline.prompt`, record bound in `PipelineModule` to its defaults): the only way an arm
-  selects a prompt alternative (test injectors bind another value). It replaces the eval environment switches in group
+  selects a prompt alternative (test injectors bind another value). It replaces `BOOKLOOM_EVAL_RULES` in group
   1, `BOOKLOOM_EVAL_RULES` (`LanguageRules.forEnvironment`) among them. Each field is deleted by the task that settles its arm;
   task 14.7 deletes the last fields (`reviewer`, and `languageRules`, the generic-only rules switch the eval keeps until
   then) with the record, and group 17 checks it is gone. Arms 3a and 3b are
@@ -1035,7 +1035,7 @@ A removal lands only when its replacement's gate is green; no runtime switch shi
 
 | Group | Removed | Replaced by | Gate first |
 |---|---|---|---|
-| 1 | `BOOKLOOM_EVAL_RULES` (`LanguageRules.forEnvironment`) and the other eval environment switches | `PromptVariants` | the `pseudo` dry run's complete version-2 report |
+| 1 | `BOOKLOOM_EVAL_RULES` (`LanguageRules.forEnvironment`); the other switches stay until their groups | `PromptVariants` | the `pseudo` dry run's complete version-2 report |
 | 2 | losing batch format, `DUAL`, `BOOKLOOM_BATCH_FORMAT`, notes and relevant-pairs switches (`BatchNotesSwitch`, `SCHEMA_WITH_NOTES`, `RelevantPairsSwitch`, `RelevantPairs`, `BatchRelevance`), `BatchExamples.renderMarked/renderDual`; `BatchDrafter.MAX_SIZE` and growth above the start; `ReviewDesk.skip`, `ReviewDeskImpl.skip`, `SegmentActions.skip` and their tests | the winning format; the start size as ceiling; "Leave for later" | arm 2 |
 | 6 | `BOOKLOOM_REASONING`, `SamplingMode`/`BOOKLOOM_SAMPLING`, `SamplingProfile` global modes, `AppSetting.REASONING`/`SAMPLING`, `OllamaReasoning`'s name rule, `ReplySanitizer`, `ReasoningHeadroom`; Generation's Thinking and Sampling; `ContextBudget.windowFor`, `ContextBudget.DEFAULT_WINDOW`, `TokenBudget.EFFECTIVE_CONTEXT` | profile, `ReasoningScrubber`, reserve, Models tab overrides; `ModelWindow` | WireMock contract tests, both dialects |
 | 10 | directed-fix rounds (`runRounds`, `attemptRound`, `decideEvaluated`, `RoundRunner`, `RoundEvaluator`, `RoundOutcome`, `RoundStep`, `Resumption`), `SoftFix` call, `placeholder-repair.user`, `repairRounds` (dial and segment); `ForeignWordCheck`, `ForeignWords`, `foreignWords`; `CheckName.hardGate`, `SoftFindings.FIXABLE`; `DialParameters.chunkCap`, `MANUAL_CHUNK_CAP`, the 2,000-token cap | the one repair, `NeverWorse`, computed residue, `CheckName.level`, profile batch size | group 10 acceptance test; mini K = 1 floors |
@@ -1079,7 +1079,7 @@ settings must be entered again. `persistence-sqlite.md` needs no change.
 | `DatasetManifest`, `CaseRecord`, report v2 | `EvalProvenance`, `EvalRow`, `eval/sequence/manifest.json` | `:pipeline` tests | 1 |
 | `SeededModel`, `EvalRepeats` | `EvalCase`; `JudgementFakeModel` stays a scripted fake | `:pipeline` tests | 1 |
 | `JudgeRunner`, `JudgeRubric`, `JudgeReplyParser` | `JudgementRunner`, `JudgementSuites`, `ReplyJudge` | `:pipeline` tests | 1 |
-| `PromptVariants` | replaces the eval env switches (`LanguageRules.forEnvironment`, `BatchFormat`) in 1; deleted with its last field | `:pipeline` | 1–14 |
+| `PromptVariants` | replaces `BOOKLOOM_EVAL_RULES` (`LanguageRules.forEnvironment`) in 1; deleted with its last field | `:pipeline` | 1–14 |
 | batch size ceiling = start | `BatchSizeController`, `BatchDrafter` | `:pipeline` | 2, 10 |
 | `ErrorRow` list, reason tokens | `HttpErrorMapper.classifyBadRequest`, `api: FailureReason`, `CapabilityRejections` | `:llm`, `:api` | 3 |
 | `RetryRule` | replaces `ErrorCode.isRetryable()` as `GatedChatModel`'s retry decision; `RetryPolicy` keeps counts and backoff | `:llm` | 3 |

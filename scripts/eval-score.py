@@ -49,6 +49,8 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATASETS_DIR = os.path.join(ROOT, "modules", "pipeline", "src", "test", "resources", "eval", "datasets")
+NO_CASES = "no per-case graders; use plain diff"
 PROVENANCE_KEYS = ["gitSha", "gitDirty", "promptHash", "model", "label", "provider", "window", "dial", "brief", "suite"]
 # Substrings of a metric's last path part; the first match decides. Lower is better for these.
 LOWER = ("falsepositive", "falsenegative", "omission", "merge", "tooshort", "leaked", "callfailure", "failed", "repeated",
@@ -318,14 +320,22 @@ def repeat_aggregates(report):
 
 
 def grader_band(report):
-    """Noise band of the grader pass rate: from the repeats' cases, else the recorded provenance."""
-    band = noise_band(repeat_aggregates(report)[0])
-    if band is not None:
-        return band
+    """Noise band of the grader pass rate: what the Java side recorded in provenance, else the repeats' cases."""
     provenance = report.get("provenance", {})
     if provenance.get("noiseBand") is not None:
         return provenance["noiseBand"]
-    return noise_band(provenance.get("aggregates") or [])
+    band = noise_band(provenance.get("aggregates") or [])
+    if band is not None:
+        return band
+    return noise_band(repeat_aggregates(report)[0])
+
+
+DATASET_KEYS = ["id", "rootHash", "labelsHash"]
+
+
+def dataset_diff(pa, pb):
+    da, db = pa.get("dataset") or {}, pb.get("dataset") or {}
+    return ["  dataset.%-9s %s -> %s" % (k, da.get(k), db.get(k)) for k in DATASET_KEYS if da.get(k) != db.get(k)]
 
 
 def paired_report(ra, rb):
@@ -333,7 +343,8 @@ def paired_report(ra, rb):
     a, b = per_case(ra), per_case(rb)
     shared = sorted(set(a) & set(b))
     out = ["paired on %d cases (A only %d, B only %d)" % (len(shared), len(set(a) - set(b)), len(set(b) - set(a)))]
-    provenance_lines = provenance_diff(ra.get("provenance", {}), rb.get("provenance", {}))
+    provenance_lines = (provenance_diff(ra.get("provenance", {}), rb.get("provenance", {}))
+                        + dataset_diff(ra.get("provenance", {}), rb.get("provenance", {})))
     out.append("what changed:" if provenance_lines else "what changed: nothing recorded")
     out.extend(provenance_lines)
     counts, significant, moved, lost = {}, False, False, False
@@ -379,11 +390,17 @@ def cmd_paired(args):
     a, b = resolve(args.a, history), resolve(args.b, history)
     ra, rb = load(a), load(b)
     ra["cases"], rb["cases"] = run_cases(a, ra), run_cases(b, rb)
+    if not ra["cases"] and not rb["cases"]:
+        print("A: " + a + "\nB: " + b + "\n" + NO_CASES)
+        return
     if version_of(ra) != version_of(rb):
         raise SystemExit("cannot compare a version-%s report with a version-%s report; rerun the older suite" % (
             version_of(ra), version_of(rb)))
     if version_of(ra) != REPORT_VERSION:
         raise SystemExit("--paired needs version-%d reports, got version %s" % (REPORT_VERSION, version_of(ra)))
+    id_a, id_b = ((r.get("provenance", {}).get("dataset") or {}).get("id") for r in (ra, rb))
+    if id_a != id_b:
+        raise SystemExit("cannot compare runs of different datasets (A %s, B %s)" % (id_a, id_b))
     print("A: " + a + "\nB: " + b)
     print("\n".join(paired_report(ra, rb)))
 
@@ -468,19 +485,33 @@ def calls_of(run, record):
     return read_json(path)
 
 
+def dataset_sources(report):
+    """{block id: text} of the report's dataset in the repo's eval datasets, empty when it is not a book dataset."""
+    dataset_id = (report.get("provenance", {}).get("dataset") or {}).get("id")
+    path = os.path.join(DATASETS_DIR, dataset_id or "", "book.json")
+    if not dataset_id or not os.path.isfile(path):
+        return {}
+    return {b["id"]: b["text"] for b in read_json(path).get("blocks", []) if "id" in b and "text" in b}
+
+
+def source_of(record, sources):
+    return record.get("source") or sources.get(record["caseId"])
+
+
 def cmd_show(args):
     run = resolve(args.run, history_dir(args.history))
     report = load(run)
     records = [r for r in run_cases(run, report) if r["caseId"] == args.case]
     if not records:
         raise SystemExit("no case %s in %s" % (args.case, run))
+    source = source_of(records[0], dataset_sources(report))
+    if source:
+        print("source: " + source)
+    target = report.get("outputs", {}).get(args.case)
+    if target is not None:
+        print("target (repeat 0): " + target)
     for record in records:
         print("== case %s repeat %s seed %s" % (record["caseId"], record.get("repeat"), record.get("seed")))
-        if record.get("source"):
-            print("source: " + record["source"])
-        target = report.get("outputs", {}).get(record["caseId"])
-        if target is not None:
-            print("target: " + target)
         for g in record.get("graders", []):
             print("grader %-28s %-5s %s" % (g["id"], g.get("level", ""), "pass" if g["passed"] else "FAIL"))
         print("time %s tokens %s" % (record.get("time"), record.get("tokens")))
@@ -503,6 +534,10 @@ def cmd_blind(args):
     report_a, report_b = load(a), load(b)
     first = {r["caseId"]: r for r in run_cases(a, report_a) if r.get("repeat", 0) == 0}
     second = {r["caseId"]: r for r in run_cases(b, report_b) if r.get("repeat", 0) == 0}
+    if not first and not second:
+        print(NO_CASES)
+        return
+    sources = dataset_sources(report_a)
     rng = random.Random(args.seed)
     key, lines = {}, ["# Blind pairs", ""]
     for case_id in sorted(set(first) & set(second)):
@@ -513,7 +548,7 @@ def cmd_blind(args):
         shown = (("B", out_b), ("A", out_a)) if flip else (("A", out_a), ("B", out_b))
         key[case_id] = {"X": shown[0][0], "Y": shown[1][0]}
         lines.append("## " + case_id)
-        source = first[case_id].get("source")
+        source = source_of(first[case_id], sources)
         if source:
             lines += ["Source:", "", source, ""]
         lines += ["Option X:", "", shown[0][1], "", "Option Y:", "", shown[1][1], ""]

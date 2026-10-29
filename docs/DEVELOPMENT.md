@@ -939,7 +939,7 @@ with code cells, raw HTML, GitHub alerts, a local and a remote image, DOI/ISBN/U
 (Latin, German, French, Ukrainian) that stay in their language with a gloss. The English was written by an Opus agent; the
 Ukrainian, Russian and French were translated by Opus agents. Each translation was reviewed by three Codex models
 (`gpt-6-luna` and `gpt-6.1-terra` at reasoning `none`, `gpt-6.1-sol` at `low`, the lowest it accepts) on invented text only, by hand. An editor applied a finding when two
-reviewers agreed or it was clearly right and logged every decision (applied/rejected, who, why). Result: Ukrainian 14 of 37 findings
+reviewers agreed or it was clearly right and logged every decision (applied/rejected, who, why). Baseline files carry `gitDirty: true` (the tree had uncommitted test and doc work); `src/main` did not change between the measured commit and the group end. Result: Ukrainian 14 of 37 findings
 applied, Russian 7 of 17, French 6 of 11 (plus one own fix). The English source was then reviewed once (Sol) and
 corrected (two arithmetic fixes, 8.73 and 0.0275 %, wording, unverifiable DOIs/ISBN replaced by fictional ones) and the same edits were
 carried into all three translations. Fixed decisions: HTML comments and the metadata footer stay English in every language, contents
@@ -1069,7 +1069,7 @@ Whole suites cost hours, so a prompt change is iterated in minutes and confirmed
 2. **Quick**: `scripts/eval-matrix.sh --quick` (`BOOKLOOM_EVAL_QUICK=1`) runs ten prompt cases (`QuickEval.PROMPT_CASES`,
    no defects corpus), the realrun cases marked `"quick": true`, one invented book for `names`, and `mini` in place of
    `sequence`. `--book-file <path>` runs one owner book of the names and gold suites.
-3. **Mini**: `scripts/eval-matrix.sh --suite mini` (the invented 28-block book, end to end).
+3. **Mini**: `scripts/eval-matrix.sh --suite mini` (the invented 33-block book, end to end).
 4. **One full run per suite** to confirm, on e4b (the default model; `--all-models` restores the list).
 5. **26b once**, at the end of a change.
 

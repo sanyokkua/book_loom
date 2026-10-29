@@ -347,3 +347,84 @@ class BlindTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def dataset_run(tmp, name, dataset, cases, outputs=None, **provenance):
+    base = {"version": 2, "suite": "mini", "model": {"id": "m"}, "dataset": dataset}
+    base.update(provenance)
+    path = Path(tmp) / name
+    report = {"provenance": base, "cases": cases, "outputs": outputs or {}}
+    path.write_text(json.dumps(report), encoding="utf-8")
+    return str(path)
+
+
+class SourceLookupTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        folder = Path(self.tmp.name) / "datasets" / "mini-x"
+        folder.mkdir(parents=True)
+        (folder / "book.json").write_text(json.dumps({"blocks": [{"id": "c0", "text": "Source of c0"}]}), encoding="utf-8")
+        self.old = SCORE.DATASETS_DIR
+        SCORE.DATASETS_DIR = str(Path(self.tmp.name) / "datasets")
+        self.addCleanup(setattr, SCORE, "DATASETS_DIR", self.old)
+
+    def test_show_caseWithoutSource_readsItFromTheDatasetOnceWithTargetLabel(self):
+        path = dataset_run(self.tmp.name, "a.json", {"id": "mini-x"}, [case("c0", True, 0), case("c0", True, 1)], {"c0": "T"})
+        text = run_main(["show", path, "c0"])
+        self.assertEqual(1, text.count("source: Source of c0"))
+        self.assertEqual(1, text.count("target (repeat 0): T"))
+        self.assertEqual(2, text.count("== case c0"))
+
+    def test_blind_caseWithoutSource_includesTheDatasetSource(self):
+        a = dataset_run(self.tmp.name, "a.json", {"id": "mini-x"}, [case("c0", True)], {"c0": "one"})
+        b = dataset_run(self.tmp.name, "b.json", {"id": "mini-x"}, [case("c0", True)], {"c0": "two"})
+        out, key = str(Path(self.tmp.name) / "p.md"), str(Path(self.tmp.name) / "k.json")
+        run_main(["blind", a, b, "--out", out, "--key", key, "--seed", "1"])
+        self.assertIn("Source of c0", Path(out).read_text())
+
+    def test_blind_runsWithoutCases_saysUsePlainDiff(self):
+        a = dataset_run(self.tmp.name, "a.json", {"id": "mini-x"}, [])
+        out, key = str(Path(self.tmp.name) / "p.md"), str(Path(self.tmp.name) / "k.json")
+        text = run_main(["blind", a, a, "--out", out, "--key", key, "--seed", "1"])
+        self.assertIn("no per-case graders; use plain diff", text)
+
+
+class NoiseBandProvenanceTest(unittest.TestCase):
+    def test_graderBand_provenanceNoiseBand_winsOverCases(self):
+        report = {"provenance": {"noiseBand": 0.0385}, "cases": [case("c0", True, 0), case("c0", False, 1)]}
+        self.assertEqual(0.0385, SCORE.grader_band(report))
+
+    def test_graderBand_provenanceAggregates_winOverCases(self):
+        report = {"provenance": {"aggregates": [0.9, 0.8]}, "cases": [case("c0", True, 0), case("c0", False, 1)]}
+        self.assertAlmostEqual(0.1, SCORE.grader_band(report))
+
+    def test_graderBand_realBaselines_printRecordedBands(self):
+        base = Path(SCORE.ROOT) / "modules/pipeline/src/test/resources/eval/baseline"
+        for name, band in (("mini-ru-uk-gemma4_e4b-mlx-max.json", "0.0385"), ("mini-en-uk-gemma4_e4b-mlx-balanced.json", "0.0175")):
+            path = str(base / name)
+            self.assertIn("grader pass rate " + band, run_main(["diff", "--paired", path, path]))
+
+
+class DatasetCompareTest(unittest.TestCase):
+    def test_diff_paired_differentDatasetId_isRefused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = dataset_run(tmp, "a.json", {"id": "d1"}, [case("c0", True)])
+            b = dataset_run(tmp, "b.json", {"id": "d2"}, [case("c0", True)])
+            with self.assertRaises(SystemExit) as raised:
+                run_main(["diff", "--paired", a, b])
+            self.assertIn("d1", str(raised.exception))
+
+    def test_diff_paired_changedHashes_areListedUnderWhatChanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = dataset_run(tmp, "a.json", {"id": "d1", "rootHash": "r1", "labelsHash": "l1"}, [case("c0", True)])
+            b = dataset_run(tmp, "b.json", {"id": "d1", "rootHash": "r2", "labelsHash": "l2"}, [case("c0", True)])
+            text = run_main(["diff", "--paired", a, b])
+            self.assertIn("rootHash", text)
+            self.assertIn("r1 -> r2", text)
+            self.assertIn("l1 -> l2", text)
+
+    def test_diff_paired_runsWithoutCases_saysUsePlainDiff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = dataset_run(tmp, "a.json", {"id": "d1"}, [])
+            self.assertIn("no per-case graders; use plain diff", run_main(["diff", "--paired", a, a]))

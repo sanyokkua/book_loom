@@ -90,7 +90,7 @@
 # --repeats K (BOOKLOOM_EVAL_REPEATS) runs the dataset K times with seeds base+0..K-1 (1 in the inner loop, 3 for a decision);
 # --pair en-uk|ru-uk (BOOKLOOM_EVAL_PAIR)
 # picks the dataset's language pair; --baseline-of SHA (BOOKLOOM_EVAL_BASELINE_OF) records that the run reproduces the
-# baseline of that commit. These four are read only by the eval test classes. BOOKLOOM_EVAL_QUANT is read from the server
+# baseline of that commit. These three are read only by the eval test classes. BOOKLOOM_EVAL_QUANT is read from the server
 # for each model (Ollama /api/show details.quantization_level, LM Studio /api/v0/models quantization) and reported in the
 # run's model block; it stays empty when the server does not say. Statistics and the judge calibration: scripts/eval-score.py.
 # THE BASELINE SET (redesign task 1.10): the recorded behaviour of commit 79ffede6, the measure of every later group.
@@ -194,7 +194,7 @@ VARIANTS=""
 if [ "$QUICK" = 1 ]; then
   export BOOKLOOM_EVAL_QUICK=1
   if [ "$SUITE" = sequence ]; then
-    echo "-- --quick: the sequence suite is replaced by mini (the invented 28-block book)"
+    echo "-- --quick: the sequence suite is replaced by mini (the invented 33-block book)"
     SUITE=mini
   fi
   if [ "$SUITE" = names ] && [ -z "${BOOKLOOM_EVAL_BOOK:-}" ]; then export BOOKLOOM_EVAL_BOOK=mayday; fi
