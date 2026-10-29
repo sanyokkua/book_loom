@@ -1,13 +1,16 @@
 package ua.bookloom.llm.provider;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.engine.CheckedModelId;
 
 /** Internal boundary implemented by each provider-specific HTTP dialect. */
 public interface ProviderClient {
@@ -81,6 +84,37 @@ public interface ProviderClient {
      */
     default ProviderClient forChecks() {
         return this;
+    }
+
+    /**
+     * Whether this client checks a model id against the server's own list before a chat call, because its server
+     * would answer an id it does not have with another model.
+     *
+     * @return {@code true} if ids are checked, {@code false} otherwise
+     */
+    default boolean checksModelIds() {
+        return false;
+    }
+
+    /**
+     * Checks a model id against the server's own list again, as the Test's models stage does, keeping the result for
+     * the session's chat calls.
+     *
+     * @param modelId the model id as stored or typed; never null
+     * @return the check, or {@code modelNotFound} naming the id when the list does not hold it; a client that checks
+     *     no id answers {@link CheckedModelId.Verdict#NOT_CHECKED}
+     */
+    default Result<CheckedModelId> recheckModelId(String modelId) {
+        return Result.ok(new CheckedModelId(modelId, null, CheckedModelId.Verdict.NOT_CHECKED, List.of(), null));
+    }
+
+    /**
+     * The full address the next chat call is posted to, for the Test dialog's request line.
+     *
+     * @return the address with no credentials in it, or empty when this client cannot say
+     */
+    default Optional<URI> chatUrl() {
+        return Optional.empty();
     }
 
     /** Identifies the wire dialect implemented by this client. */

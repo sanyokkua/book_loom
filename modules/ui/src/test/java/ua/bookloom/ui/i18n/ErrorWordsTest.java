@@ -71,6 +71,7 @@ class ErrorWordsTest {
                 "CLOUD_SIGNIN",
                 "TERMINATED",
                 "AUTH",
+                "WRONG_MODEL_SERVED",
                 "UNCLASSIFIED"
             })
     void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
@@ -97,7 +98,8 @@ class ErrorWordsTest {
                         + " оберіть локальну модель.",
                 "CLOUD_SIGNIN | Увійдіть в Ollama, щоб користуватися цією хмарною моделлю, і спробуйте ще раз.",
                 "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить.",
-                "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить."
+                "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить.",
+                "WRONG_MODEL_SERVED | Сервер відповів іншою моделлю, ніж обрано. Перевірте назву моделі."
             })
     void message_ukrainianDisplay_wordsEachNewReasonToken(final FailureReason reason, final String expected) {
         final AppError error = AppError.of(

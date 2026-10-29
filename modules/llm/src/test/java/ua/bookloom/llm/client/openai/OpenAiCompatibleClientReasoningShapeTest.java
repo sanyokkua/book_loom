@@ -40,7 +40,8 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientReasoningShapeTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String REPLY = """
             {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
             """;
@@ -110,8 +111,8 @@ class OpenAiCompatibleClientReasoningShapeTest {
     void chat_thinkingUnspecified_omitsTheEffortAndKeepsTheCap() {
         client().chat(MODEL_ID, request(300, null));
 
-        assertThat(server.getAllServeEvents())
-                .extracting(event -> event.getRequest().getBodyAsString())
+        assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
+                .extracting(request -> request.getBodyAsString())
                 .allSatisfy(body ->
                         assertThat(body).doesNotContain("reasoning_effort").contains("\"max_tokens\":300"));
     }
@@ -131,8 +132,8 @@ class OpenAiCompatibleClientReasoningShapeTest {
                                 null,
                                 null));
 
-        assertThat(server.getAllServeEvents())
-                .extracting(event -> event.getRequest().getBodyAsString())
+        assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
+                .extracting(request -> request.getBodyAsString())
                 .allSatisfy(body -> assertThat(body)
                         .contains("\"reasoning_effort\":\"medium\"")
                         .doesNotContain("max_tokens"));

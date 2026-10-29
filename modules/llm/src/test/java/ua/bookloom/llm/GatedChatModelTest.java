@@ -45,7 +45,8 @@ import ua.bookloom.llm.retry.RetryPolicy;
 /** Exercises retries and gate placement against the real OpenAI-compatible HTTP boundary. */
 class GatedChatModelTest {
 
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String OLLAMA_CHAT_PATH = "/api/chat";
     private static final String MODEL_ID = "test-model";
     private static final String REPLY =
@@ -269,7 +270,8 @@ class GatedChatModelTest {
             start.countDown();
             awaitRequestCount(1);
             Thread.sleep(100);
-            assertThat(server.getAllServeEvents()).hasSize(1);
+            // The model-id check's one GET of the server's list is not a chat call.
+            assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH)))).hasSize(1);
             assertThat(first.get(3, TimeUnit.SECONDS).isOk()).isTrue();
             assertThat(second.get(3, TimeUnit.SECONDS).isOk()).isTrue();
             server.verify(2, postRequestedFor(urlEqualTo(CHAT_PATH)));
@@ -366,10 +368,14 @@ class GatedChatModelTest {
 
     private void awaitRequestCount(int expected) throws InterruptedException {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-        while (System.nanoTime() < deadline && server.getAllServeEvents().size() < expected) {
+        while (System.nanoTime() < deadline && chatRequests() < expected) {
             Thread.sleep(10);
         }
-        assertThat(server.getAllServeEvents()).hasSize(expected);
+        assertThat(chatRequests()).isEqualTo(expected);
+    }
+
+    private int chatRequests() {
+        return server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))).size();
     }
 
     private static ChatRequest request() {

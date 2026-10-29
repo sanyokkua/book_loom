@@ -253,7 +253,12 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         final InferenceProbe probe = inference.run(client, config.id(), modelId);
         final StageOutcome outcome = probe.outcome().withElapsed(since(start));
         return StageOutcomes.withExchange(
-                outcome, VerificationExchanges.inference(config, probe, client.requestBody(modelId, probe.sent())));
+                outcome,
+                VerificationExchanges.inference(
+                        config,
+                        probe,
+                        client.requestBody(modelId, probe.sent()),
+                        client.chatUrl().orElse(null)));
     }
 
     private Duration since(long startNanos) {
@@ -277,6 +282,12 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     private ModelsProbe verifyModels(ProviderClient client, String providerId, String modelId) {
         log.debug("Provider verification models stage started provider={} model={}", providerId, modelId);
+        if (!modelId.isBlank() && client.checksModelIds()) {
+            final Optional<ModelsProbe> checked = IdCheckStage.probe(client, providerId, modelId);
+            if (checked.isPresent()) {
+                return checked.orElseThrow();
+            }
+        }
         final ProviderCallResult<List<ModelInfo>> call =
                 callWithRetry(client::listModels, VerificationStage.MODELS, providerId);
         if (call.result().isErr()) {

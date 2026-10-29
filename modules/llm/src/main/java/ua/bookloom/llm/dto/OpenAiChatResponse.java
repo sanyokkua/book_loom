@@ -92,9 +92,11 @@ public record OpenAiChatResponse(
      *
      * @param timeToFirstToken nullable time before the first token, which is the prompt evaluation
      * @param generationTime nullable time spent generating the completion
+     * @param tokensPerSecond nullable generation rate, which gives the generation time when only the rate is sent
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Stats(
             @JsonProperty("time_to_first_token") @Nullable Double timeToFirstToken,
-            @JsonProperty("generation_time") @Nullable Double generationTime) {}
+            @JsonProperty("generation_time") @Nullable Double generationTime,
+            @JsonProperty("tokens_per_second") @Nullable Double tokensPerSecond) {}
 }

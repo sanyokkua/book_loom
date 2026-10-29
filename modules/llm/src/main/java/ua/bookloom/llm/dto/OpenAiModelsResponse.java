@@ -25,7 +25,26 @@ public record OpenAiModelsResponse(
      * One OpenAI-compatible model entry.
      *
      * @param id nullable because a malformed listing may omit an entry's identifier
+     * @param type the kind of model, which only LM Studio's own listing gives ({@code llm}, {@code vlm},
+     *     {@code embeddings}); null elsewhere
+     * @param state whether LM Studio has the model in memory ({@code loaded}, {@code not-loaded}); null elsewhere
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Model(@JsonProperty("id") @Nullable String id) {}
+    public record Model(
+            @JsonProperty("id") @Nullable String id,
+            @JsonProperty("type") @Nullable String type,
+            @JsonProperty("state") @Nullable String state) {
+
+        /** The kind LM Studio gives a model that turns text into vectors and cannot chat. */
+        public static final String EMBEDDINGS = "embeddings";
+
+        /**
+         * Whether the listing itself says this entry is an embedding model.
+         *
+         * @return {@code true} if the entry's type is {@code embeddings}, {@code false} otherwise
+         */
+        public boolean isEmbedding() {
+            return EMBEDDINGS.equals(type);
+        }
+    }
 }

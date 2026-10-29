@@ -1,5 +1,6 @@
 package ua.bookloom.llm.verify;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -42,10 +43,19 @@ final class VerificationExchanges {
         return build(VerificationStage.MODELS, config, outcome, "", String.join("\n", listedIds), null, false);
     }
 
+    /**
+     * The inference stage's exchange.
+     *
+     * @param chatUrl the address the client posted the chat to (LM Studio's own route or the OpenAI one), or null
+     *     when the client cannot say and the address is built from the description
+     */
     static VerificationExchange inference(
-            final ProviderConfig config, final InferenceProbe probe, final String requestBody) {
+            final ProviderConfig config,
+            final InferenceProbe probe,
+            final String requestBody,
+            final @Nullable URI chatUrl) {
         final ChatResponse response = probe.response();
-        return build(
+        final VerificationExchange built = build(
                 VerificationStage.INFERENCE,
                 config,
                 probe.outcome(),
@@ -53,6 +63,23 @@ final class VerificationExchanges {
                 response == null ? "" : response.content(),
                 response == null ? null : response.usage(),
                 probe.structured());
+        return chatUrl == null ? built : withUrl(built, chatUrl);
+    }
+
+    private static VerificationExchange withUrl(final VerificationExchange exchange, final URI url) {
+        final String shown = USER_INFO.matcher(url.toString()).replaceFirst("$1");
+        return new VerificationExchange(
+                exchange.method(),
+                shown,
+                exchange.requestBody(),
+                exchange.responseBody(),
+                exchange.httpStatus(),
+                exchange.firstTokenMs(),
+                exchange.tokensPerSecond(),
+                exchange.structured(),
+                exchange.requestHeaders(),
+                exchange.promptTokens(),
+                exchange.completionTokens());
     }
 
     private static VerificationExchange build(

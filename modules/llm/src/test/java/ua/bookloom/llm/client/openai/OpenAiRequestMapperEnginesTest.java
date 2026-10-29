@@ -241,11 +241,12 @@ class OpenAiRequestMapperEnginesTest {
 
     // A call that leaves reasoning alone asks for no switch, so llama-server is not asked about its template.
     @Test
-    void chat_llamaServerNoReasoningLevel_sendsNoSwitchAndReadsNoProps() throws IOException {
+    void chat_llamaServerNoReasoningLevel_sendsNoSwitchAndReadsPropsOnlyForTheRouterCheck() throws IOException {
         final JsonNode body = sentBody(client(ServerEngine.LLAMA_CPP), "qwen3.5-4b", request(null, null, null));
 
         assertThat(body.has("chat_template_kwargs")).isFalse();
-        server.verify(0, getRequestedFor(urlEqualTo("/props")));
+        // One read of /props tells whether the server is a router whose ids are checked; no per-model read follows.
+        server.verify(1, getRequestedFor(urlEqualTo("/props")));
     }
 
     @Test

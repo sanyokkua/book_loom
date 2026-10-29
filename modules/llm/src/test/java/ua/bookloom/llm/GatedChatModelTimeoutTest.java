@@ -35,7 +35,8 @@ import ua.bookloom.llm.retry.RetryPolicy;
 /** Proves a capability-downgraded retry keeps the expected-output-scaled timeout of the original request. */
 class GatedChatModelTimeoutTest {
 
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String MODEL_ID = "test-model";
     private static final String REPLY =
             "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";

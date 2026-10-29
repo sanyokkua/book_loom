@@ -1,7 +1,7 @@
 package ua.bookloom.llm.client.openai;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -16,39 +16,37 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.capability.HealthProbe;
 import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
-import ua.bookloom.llm.dto.OpenAiChatResponse;
+import ua.bookloom.llm.engine.CheckedModelId;
 import ua.bookloom.llm.engine.EngineFacts;
+import ua.bookloom.llm.engine.ModelIdCheck;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RequestTimeouts;
-import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
-import ua.bookloom.llm.response.ReplySanitizer;
 
 /**
  * Implements the shared OpenAI-shaped models and chat endpoints. The provider's engine chooses the reasoning switch and
  * the cap field ({@link EngineShaping}), and a reply whose cap a thinking model spent on reasoning is asked for once
- * more with a raised cap ({@link ReasoningBudget}).
+ * more with a raised cap ({@link ReasoningBudget}). Where the engine answers any id with its loaded model, the id is
+ * first checked against the server's own list ({@link ModelIdCheck}); LM Studio's chat goes to its own route
+ * ({@link ChatRoute}).
  */
 @Slf4j
 public final class OpenAiCompatibleClient implements ProviderClient {
     private static final String MODELS_PATH = "/models";
-    private static final String CHAT_PATH = "/chat/completions";
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
@@ -56,6 +54,9 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     private final OpenAiRequestMapper requestMapper;
     private final EngineShaping shaping;
     private final OpenAiModelList models;
+    private final OpenAiReplyReader replies;
+    private final ChatRoute route;
+    private final ModelIdCheck idCheck;
 
     /**
      * Binds one client to an endpoint with no stored check verdicts and its own session facts, so a server no engine
@@ -79,21 +80,34 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             LongSupplier nanoTime,
             EngineFacts facts,
             Function<String, ProbeVerdicts> verdicts) {
-        this(config, exchange, mapper, nanoTime, new EngineShaping(config, facts, verdicts, false));
+        this(
+                config,
+                exchange,
+                mapper,
+                nanoTime,
+                new EngineShaping(config, facts, verdicts, false),
+                new ChatRoute(config, exchange, mapper),
+                new ModelIdCheck(config, exchange, mapper, facts));
     }
 
+    // The Test's copy shares the session's route and id checks, so a fallback or a check made by one is the other's.
     private OpenAiCompatibleClient(
             ProviderConfig config,
             HttpExchange exchange,
             ObjectMapper mapper,
             LongSupplier nanoTime,
-            EngineShaping shaping) {
+            EngineShaping shaping,
+            ChatRoute route,
+            ModelIdCheck idCheck) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.shaping = Objects.requireNonNull(shaping, "shaping");
-        this.models = new OpenAiModelList(config, mapper);
+        this.route = Objects.requireNonNull(route, "route");
+        this.idCheck = Objects.requireNonNull(idCheck, "idCheck");
+        this.models = new OpenAiModelList(config, mapper, exchange);
+        this.replies = new OpenAiReplyReader(config, mapper);
         this.requestMapper = new OpenAiRequestMapper(
                 config,
                 mapper,
@@ -103,7 +117,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public ProviderClient forChecks() {
-        return new OpenAiCompatibleClient(config, exchange, mapper, nanoTime, shaping.forChecks());
+        return new OpenAiCompatibleClient(config, exchange, mapper, nanoTime, shaping.forChecks(), route, idCheck);
     }
 
     @Override
@@ -129,6 +143,10 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 config.id(),
                 config.baseUrl().getHost());
         try {
+            final Optional<Result<List<ModelInfo>>> native0 = models.lmStudioList();
+            if (native0.isPresent()) {
+                return ProviderCallResult.withoutRetryAfter(native0.orElseThrow());
+            }
             final ProviderCallResult<HttpReply> call = get(CallPurpose.DISCOVERY, null);
             final Result<HttpReply> result = call.result();
             if (result.isErr()) {
@@ -156,16 +174,24 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 request.maxOutputTokens() == null ? "none" : request.maxOutputTokens(),
                 request.responseFormat() != null);
         try {
-            return chatWithParsedFormat(modelId, shaping.proved(modelId, request));
+            final Result<CheckedModelId> checked = idCheck.check(modelId);
+            if (checked.isErr()) {
+                return ProviderCallResult.withoutRetryAfter(
+                        Result.err(Objects.requireNonNull(checked.error(), "error")));
+            }
+            final String sentId =
+                    Objects.requireNonNull(checked.data(), "checked").sentId();
+            return chatWithParsedFormat(sentId, shaping.proved(sentId, request));
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
         }
     }
 
     @Override
-    public String requestBody(String modelId, ChatRequest asked) {
-        Objects.requireNonNull(modelId, "modelId");
+    public String requestBody(String typedId, ChatRequest asked) {
+        Objects.requireNonNull(typedId, "typedId");
         Objects.requireNonNull(asked, "asked");
+        final String modelId = idCheck.kept(typedId).map(CheckedModelId::sentId).orElse(typedId);
         try {
             final ChatRequest request = shaping.proved(modelId, asked);
             final Result<ParsedFormat> parsed = requestMapper.parseFormat(request.responseFormat(), modelId);
@@ -184,6 +210,21 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                     failure.getClass().getSimpleName());
             return "";
         }
+    }
+
+    @Override
+    public Result<CheckedModelId> recheckModelId(String modelId) {
+        return idCheck.recheck(Objects.requireNonNull(modelId, "modelId"));
+    }
+
+    @Override
+    public boolean checksModelIds() {
+        return idCheck.applies();
+    }
+
+    @Override
+    public Optional<URI> chatUrl() {
+        return Optional.of(route.url());
     }
 
     @Override
@@ -241,7 +282,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         if (raised.isPresent()) {
             return exchangeChat(modelId, raised.get(), format, false);
         }
-        return new ProviderCallResult<>(readChatResponse(modelId, reply, elapsed), call.retryAfter());
+        return new ProviderCallResult<>(replies.read(modelId, reply, elapsed), call.retryAfter());
     }
 
     @Override
@@ -252,7 +293,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
-        final Result<HttpReply> response = exchange.post(chatConfig, EndpointPaths.chatPath(config, CHAT_PATH), body);
+        final Result<HttpReply> response = route.post(chatConfig, body);
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
@@ -262,72 +303,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
     }
 
-    private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply, Duration elapsed) {
-        try {
-            final OpenAiChatResponse decoded = mapper.readValue(reply.body(), OpenAiChatResponse.class);
-            if (decoded == null) {
-                return unreadableChatResponse(requestedModel, null);
-            }
-            return chatResponse(requestedModel, reply, decoded, elapsed);
-        } catch (JsonProcessingException failure) {
-            return unreadableChatResponse(requestedModel, failure);
-        }
-    }
-
-    private Result<ChatResponse> chatResponse(
-            String requestedModel, HttpReply reply, OpenAiChatResponse decoded, Duration elapsed) {
-        if (decoded.choices() == null
-                || decoded.choices().isEmpty()
-                || decoded.choices().getFirst() == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        final OpenAiChatResponse.Message message = decoded.choices().getFirst().message();
-        if (message == null || message.content() == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        if (message.content().isBlank()) {
-            return emptyCompletion(requestedModel, reply);
-        }
-        logModelMismatch(requestedModel, decoded.model());
-        final FinishReason finishReason =
-                finishReason(decoded.choices().getFirst().finishReason());
-        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
-        log.debug(
-                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
-                config.baseUrl().getHost(),
-                requestedModel,
-                reply.status(),
-                reply.body().length(),
-                finishReason,
-                usage);
-        return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
-    }
-
-    private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {
-        log.debug(
-                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} code={}",
-                config.baseUrl().getHost(),
-                modelId,
-                reply.status(),
-                reply.body().length(),
-                ErrorCode.emptyCompletion);
-        return Result.err(AppError.of(
-                ErrorCode.emptyCompletion,
-                "Model returned an empty response",
-                "The OpenAI-compatible provider completed the request without response text.",
-                details(modelId),
-                null));
-    }
-
-    private void logModelMismatch(String requestedModel, @Nullable String answeredModel) {
-        if (answeredModel != null && !requestedModel.equals(answeredModel)) {
-            log.warn(
-                    "OpenAI-compatible provider answered with a different model requested={} answered={}",
-                    SafeDetails.empty().withModelName(requestedModel).render(),
-                    SafeDetails.empty().withModelName(answeredModel).render());
-        }
-    }
-
     private ProviderCallResult<HttpReply> get(CallPurpose purpose, @Nullable String modelId) {
         final Result<HttpReply> response = exchange.get(config, EndpointPaths.modelsPath(config, MODELS_PATH));
         if (response.isErr()) {
@@ -335,10 +310,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
         return ProviderCallResult.fromHttpReply(HttpErrorMapper.map(reply, config, purpose, modelId), reply);
-    }
-
-    private Result<ChatResponse> unreadableChatResponse(String modelId, @Nullable Throwable cause) {
-        return Result.err(UnreadableReply.error(config, modelId, cause));
     }
 
     private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {
@@ -370,13 +341,5 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 config.baseUrl().getHost(),
                 modelId != null,
                 error == null ? "none" : error.code());
-    }
-
-    private static FinishReason finishReason(@Nullable String wireReason) {
-        return switch (wireReason == null ? "" : wireReason) {
-            case "stop" -> FinishReason.STOP;
-            case "length" -> FinishReason.LENGTH;
-            default -> FinishReason.OTHER;
-        };
     }
 }

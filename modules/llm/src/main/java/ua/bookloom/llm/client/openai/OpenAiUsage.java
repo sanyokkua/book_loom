@@ -14,23 +14,43 @@ final class OpenAiUsage {
 
     private static final double NANOS_PER_SECOND = 1_000_000_000.0;
 
-    /** The figures the server reported, or null when it reported no token count; {@code elapsed} stands in for the generation time. */
+    /**
+     * The figures the server reported; {@code elapsed} stands in for a generation time the server did not give.
+     *
+     * @return the usage, or null when the server reported neither a token count nor LM Studio's own timing
+     */
     static @Nullable TokenUsage of(
             final OpenAiChatResponse.@Nullable Usage usage,
             final OpenAiChatResponse.@Nullable Stats stats,
             final Duration elapsed) {
-        if (usage == null || (usage.promptTokens() == null && usage.completionTokens() == null)) {
+        final boolean counted = usage != null && (usage.promptTokens() != null || usage.completionTokens() != null);
+        final Double firstToken = stats == null ? null : stats.timeToFirstToken();
+        if (!counted && firstToken == null) {
             return null;
         }
-        final Double generation = stats == null ? null : stats.generationTime();
-        final Double firstToken = stats == null ? null : stats.timeToFirstToken();
-        final OpenAiChatResponse.PromptTokensDetails details = usage.promptTokensDetails();
+        final Integer completion = usage == null ? null : usage.completionTokens();
+        final OpenAiChatResponse.PromptTokensDetails details = usage == null ? null : usage.promptTokensDetails();
+        final Duration generation = generation(stats, completion);
         return new TokenUsage(
-                usage.promptTokens(),
-                usage.completionTokens(),
-                generation == null ? elapsed : seconds(generation),
+                usage == null ? null : usage.promptTokens(),
+                completion,
+                generation == null ? elapsed : generation,
                 firstToken == null ? null : seconds(firstToken),
                 details == null ? null : details.cachedTokens());
+    }
+
+    // LM Studio's generation time, else the time its rate gives for the counted tokens; null when it says neither.
+    private static @Nullable Duration generation(
+            final OpenAiChatResponse.@Nullable Stats stats, final @Nullable Integer completion) {
+        if (stats == null) {
+            return null;
+        }
+        final Double time = stats.generationTime();
+        if (time != null) {
+            return seconds(time);
+        }
+        final Double rate = stats.tokensPerSecond();
+        return rate == null || completion == null || rate <= 0 ? null : seconds(completion / rate);
     }
 
     private static Duration seconds(final double value) {

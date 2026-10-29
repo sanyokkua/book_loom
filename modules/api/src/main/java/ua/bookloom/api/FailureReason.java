@@ -123,6 +123,12 @@ public enum FailureReason {
     /** The server wrote more tokens than the answer cap allowed and stopped by itself, so it ignores the cap. */
     CAP_IGNORED("cap-ignored"),
 
+    /**
+     * A server that answers any model id with whatever model it has loaded wrote the reply with another model than the
+     * one asked for; the reply is not kept, and the person checks the model id.
+     */
+    WRONG_MODEL_SERVED("wrong-model-served"),
+
     /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
     UNCLASSIFIED("unclassified");
 

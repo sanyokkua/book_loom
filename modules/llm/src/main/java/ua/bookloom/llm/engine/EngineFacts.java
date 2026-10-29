@@ -64,6 +64,21 @@ public final class EngineFacts {
     }
 
     /**
+     * Whether a llama-server is a router, which loads whichever listed model an id names, so the id is checked
+     * against its list first. Read from the same {@code /props} reply the template check reads.
+     *
+     * @param config the llama-server provider; non-null
+     * @return {@code true} if its {@code /props} says {@code "role":"router"}, {@code false} otherwise
+     */
+    public boolean isRouter(final ProviderConfig config) {
+        Objects.requireNonNull(config, "config");
+        final boolean router = known(config, config.id() + KEY_SEPARATOR + config.baseUrl(), PROPS)
+                .router();
+        log.debug("Engine facts router check provider={} router={}", config.id(), router);
+        return router;
+    }
+
+    /**
      * Forgets what was read about a provider, so its next call reads the server again.
      *
      * @param providerId the provider's id; non-null

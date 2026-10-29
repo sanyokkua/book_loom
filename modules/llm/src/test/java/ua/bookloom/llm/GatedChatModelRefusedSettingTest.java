@@ -66,13 +66,14 @@ class GatedChatModelRefusedSettingTest {
     private static final String PROVIDER = "office";
     private static final String MODEL = "gpt-oss:20b";
     private static final String OTHER_MODEL = "gemma4:e4b";
-    private static final String OPENAI_REPLY = "{\"model\":\"m\",\"choices\":[{\"message\":{\"role\":\"assistant\","
-            + "\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}";
+    // No "model" field: LM Studio refuses a reply that names another model than the one asked for.
+    private static final String OPENAI_REPLY =
+            "{\"choices\":[{\"message\":{\"role\":\"assistant\"," + "\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}";
     private static final String OLLAMA_REPLY =
             "{\"model\":\"m\",\"message\":{\"content\":\"ok\"},\"done\":true,\"done_reason\":\"stop\"}";
     private static final String TEMPERATURE_REFUSAL =
             "{\"error\":\"Unsupported parameter: 'temperature' is not supported with this model\"}";
-    private static final String CSV = "OPENAI_COMPATIBLE, /v1, /v1/chat/completions";
+    private static final String CSV = "OPENAI_COMPATIBLE, /v1, /api/v0/chat/completions";
     private static final String CSV_OLLAMA = "OLLAMA, '', /api/chat";
     private static final Duration WAIT = Duration.ofSeconds(5);
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-20T12:00:00Z"), ZoneOffset.UTC);
@@ -165,7 +166,7 @@ class GatedChatModelRefusedSettingTest {
     // IF the server refuses the reasoning control asked for at Low, THEN the repeat lacks it and later calls do too.
     @ParameterizedTest
     @CsvSource({
-        "OPENAI_COMPATIBLE, /v1, /v1/chat/completions, reasoning_effort, \"reasoning_effort\":\"low\"",
+        "OPENAI_COMPATIBLE, /v1, /api/v0/chat/completions, reasoning_effort, \"reasoning_effort\":\"low\"",
         "OLLAMA, '', /api/chat, think, \"think\":\"low\""
     })
     void chat_lowReasoningRefused_repeatAndLaterCallsLackTheControl(

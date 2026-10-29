@@ -44,7 +44,8 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientReasoningTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));

@@ -54,7 +54,8 @@ import ua.bookloom.llm.http.HttpExchange;
 class OpenAiCompatibleClientTest {
 
     private static final String MODEL_ID = "google/gemma-4-e4b";
-    private static final String CHAT_PATH = "/v1/chat/completions";
+    // LM Studio's own route, where its chat goes first.
+    private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String MODELS_PATH = "/v1/models";
     private static final String SCHEMA = """
             {"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
@@ -151,17 +152,19 @@ class OpenAiCompatibleClientTest {
 
     @Test
     void chat_modelMismatchUsesReplyAndEmitsOneWarnNamingBothModels() {
-        stubChat("""
-                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
-                """);
-        final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiCompatibleClient.class);
+        // A generic server: the reply is used (LM Studio refuses it, LmStudioRouteTest).
+        server.stubFor(post(urlEqualTo("/v1/chat/completions")).willReturn(okJson("""
+                        {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
+                        """)));
+        final Logger logger = (Logger) LoggerFactory.getLogger(OpenAiReplyReader.class);
         final ListAppender<ILoggingEvent> appender = new ListAppender<>();
         appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
         appender.start();
         logger.addAppender(appender);
 
         try {
-            final Result<ChatResponse> result = client().chat("google/gemma-4-e4b-typo", messageOnlyRequest())
+            final Result<ChatResponse> result = client(ServerEngine.GENERIC)
+                    .chat("google/gemma-4-e4b-typo", messageOnlyRequest())
                     .result();
             assertThat(result.isOk())
                     .as("OpenAI-compatible chat result: " + result.error())
@@ -335,6 +338,18 @@ class OpenAiCompatibleClientTest {
 
     private OpenAiCompatibleClient client() {
         return client(URI.create(server.baseUrl() + "/v1"), Duration.ofSeconds(2));
+    }
+
+    private OpenAiCompatibleClient client(ServerEngine engine) {
+        final ProviderConfig config = new ProviderConfig(
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(engine);
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 
     private OpenAiCompatibleClient client(URI endpoint, Duration requestTimeout) {

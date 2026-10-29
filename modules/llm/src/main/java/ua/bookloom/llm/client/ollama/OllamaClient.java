@@ -298,12 +298,13 @@ public final class OllamaClient implements ProviderClient {
                 return Result.err(discoveryFailure(null));
             }
             final List<ModelInfo> models = response.models().stream()
-                    .map(model -> new ModelInfo(Objects.requireNonNull(model.name(), "model name")))
+                    .map(model -> new ModelInfo(Objects.requireNonNull(model.name(), "model name"), model.isCloud()))
                     .toList();
             log.debug(
-                    "Ollama discovery outcome host={} modelCount={} code=none",
+                    "Ollama discovery outcome host={} modelCount={} cloudCount={} code=none",
                     config.baseUrl().getHost(),
-                    models.size());
+                    models.size(),
+                    models.stream().filter(ModelInfo::cloud).count());
             return Result.ok(models);
         } catch (JsonProcessingException failure) {
             return Result.err(discoveryFailure(failure));

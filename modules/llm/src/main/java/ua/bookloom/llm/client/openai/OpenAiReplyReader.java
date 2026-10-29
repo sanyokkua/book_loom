@@ -1,0 +1,165 @@
+package ua.bookloom.llm.client.openai;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.Locale;
+import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelVariant;
+import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.llm.dto.OpenAiChatResponse;
+import ua.bookloom.llm.engine.EngineTraits;
+import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.http.UnreadableReply;
+import ua.bookloom.llm.response.ReplySanitizer;
+
+/**
+ * Reads one OpenAI-shaped chat reply into a response. Where the engine answers any id with its loaded model (LM Studio,
+ * Unsloth), a reply that names another model than the one asked for is refused: a translation the chosen model did not
+ * write is not kept.
+ */
+@Slf4j
+final class OpenAiReplyReader {
+
+    private final ProviderConfig config;
+    private final ObjectMapper mapper;
+    private final boolean servesUnknownModel;
+
+    OpenAiReplyReader(final ProviderConfig config, final ObjectMapper mapper) {
+        this.config = Objects.requireNonNull(config, "config");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.servesUnknownModel = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
+                .servesUnknownModel();
+    }
+
+    Result<ChatResponse> read(final String requestedModel, final HttpReply reply, final Duration elapsed) {
+        try {
+            final OpenAiChatResponse decoded = mapper.readValue(reply.body(), OpenAiChatResponse.class);
+            if (decoded == null) {
+                return unreadable(requestedModel, null);
+            }
+            return response(requestedModel, reply, decoded, elapsed);
+        } catch (JsonProcessingException failure) {
+            return unreadable(requestedModel, failure);
+        }
+    }
+
+    private Result<ChatResponse> response(
+            final String requestedModel,
+            final HttpReply reply,
+            final OpenAiChatResponse decoded,
+            final Duration elapsed) {
+        if (decoded.choices() == null
+                || decoded.choices().isEmpty()
+                || decoded.choices().getFirst() == null) {
+            return unreadable(requestedModel, null);
+        }
+        final OpenAiChatResponse.Message message = decoded.choices().getFirst().message();
+        if (message == null || message.content() == null) {
+            return unreadable(requestedModel, null);
+        }
+        if (message.content().isBlank()) {
+            return emptyCompletion(requestedModel, reply);
+        }
+        final @Nullable AppError wrongModel = checkedModel(requestedModel, decoded.model());
+        if (wrongModel != null) {
+            return Result.err(wrongModel);
+        }
+        final FinishReason finishReason =
+                finishReason(decoded.choices().getFirst().finishReason());
+        final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
+        log.debug(
+                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
+                config.baseUrl().getHost(),
+                requestedModel,
+                reply.status(),
+                reply.body().length(),
+                finishReason,
+                usage);
+        return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
+    }
+
+    // Where any id is served, a reply another model wrote is refused; elsewhere the mismatch is only named.
+    private @Nullable AppError checkedModel(final String requestedModel, final @Nullable String answered) {
+        if (answered == null || isSameModel(requestedModel, answered)) {
+            return null;
+        }
+        if (servesUnknownModel) {
+            return wrongModel(requestedModel, answered);
+        }
+        log.warn(
+                "OpenAI-compatible provider answered with a different model requested={} answered={}",
+                SafeDetails.empty().withModelName(requestedModel).render(),
+                SafeDetails.empty().withModelName(answered).render());
+        return null;
+    }
+
+    // A server may name the model with another letter case, with its variant, or with its publisher in front of the id.
+    private static boolean isSameModel(final String requested, final String answered) {
+        final String asked = ModelVariant.of(requested).id().toLowerCase(Locale.ROOT);
+        final String named = ModelVariant.of(answered).id().toLowerCase(Locale.ROOT);
+        return asked.equals(named) || asked.endsWith("/" + named) || named.endsWith("/" + asked);
+    }
+
+    private AppError wrongModel(final String requested, final String answered) {
+        final String engine = config.effectiveEngine().label();
+        log.warn(
+                "Reply written by another model reason={} provider={} engine={} requested={} answered={}",
+                FailureReason.WRONG_MODEL_SERVED.token(),
+                config.id(),
+                config.effectiveEngine(),
+                requested,
+                answered);
+        return AppError.of(
+                ErrorCode.modelNotFound,
+                "Another model answered",
+                engine + " answered with " + answered + ", not " + requested + ". Check the model id.",
+                SafeDetails.empty()
+                        .withReason(FailureReason.WRONG_MODEL_SERVED)
+                        .withEndpoint(config.baseUrl())
+                        .withModelName(requested)
+                        .render(),
+                null);
+    }
+
+    private Result<ChatResponse> emptyCompletion(final String modelId, final HttpReply reply) {
+        log.debug(
+                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} code={}",
+                config.baseUrl().getHost(),
+                modelId,
+                reply.status(),
+                reply.body().length(),
+                ErrorCode.emptyCompletion);
+        return Result.err(AppError.of(
+                ErrorCode.emptyCompletion,
+                "Model returned an empty response",
+                "The OpenAI-compatible provider completed the request without response text.",
+                SafeDetails.empty()
+                        .withEndpoint(config.baseUrl())
+                        .withModelName(modelId)
+                        .render(),
+                null));
+    }
+
+    private Result<ChatResponse> unreadable(final String modelId, final @Nullable Throwable cause) {
+        return Result.err(UnreadableReply.error(config, modelId, cause));
+    }
+
+    private static FinishReason finishReason(final @Nullable String wireReason) {
+        return switch (wireReason == null ? "" : wireReason) {
+            case "stop" -> FinishReason.STOP;
+            case "length" -> FinishReason.LENGTH;
+            default -> FinishReason.OTHER;
+        };
+    }
+}

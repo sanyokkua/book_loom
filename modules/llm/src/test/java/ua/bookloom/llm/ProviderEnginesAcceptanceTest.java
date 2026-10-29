@@ -50,8 +50,9 @@ class ProviderEnginesAcceptanceTest {
     private static final String PROVIDER_ID = "engine-under-test";
     private static final String PROBE_MODEL = "probe-model";
     private static final String CHAT_PATH = "/v1/chat/completions";
+    // No "model" field: Unsloth refuses a reply that names another model than the one asked for.
     private static final String CHAT_REPLY =
-            "{\"model\":\"m\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}";
+            "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}";
     private static final String UNSLOTH_KEY_VARIABLE = "UNSLOTH_API_KEY";
     private static final String UNSLOTH_KEY = "sk-test-0000";
     private static final int OUTPUT_CAP = 512;
@@ -69,7 +70,8 @@ class ProviderEnginesAcceptanceTest {
         storage = new LlmTestStorageModule(configs);
         server.stubFor(post(urlEqualTo(CHAT_PATH)).willReturn(okJson(CHAT_REPLY)));
         server.stubFor(get(urlEqualTo("/v1/models"))
-                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"probe-model\",\"object\":\"model\"}]}")));
+                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"probe-model\",\"object\":\"model\"},"
+                        + "{\"id\":\"unsloth-model\",\"object\":\"model\"}]}")));
     }
 
     @AfterEach
