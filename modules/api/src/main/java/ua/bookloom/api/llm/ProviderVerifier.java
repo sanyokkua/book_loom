@@ -37,4 +37,17 @@ public interface ProviderVerifier {
         return Result.err(AppError.of(
                 ErrorCode.internal, "Not supported", "This verifier cannot check a description that is not saved."));
     }
+
+    /**
+     * Detects the server engine again, as the person's Detect again asks: the "Treat this server as..." choice is
+     * dropped and the probes decide; a declined Ollama offer stays declined. A provider saved with the same kind and
+     * address gets the engine stored. No model is called, so the inference gate is not taken.
+     *
+     * @param config the provider description to probe, saved or not
+     * @return the engine found, or the error that kept the server from being asked (unreachable, missing credential)
+     */
+    default Result<EngineDetection> detectEngine(ProviderConfig config) {
+        return Result.err(
+                AppError.of(ErrorCode.internal, "Not supported", "This verifier cannot detect a server's engine."));
+    }
 }

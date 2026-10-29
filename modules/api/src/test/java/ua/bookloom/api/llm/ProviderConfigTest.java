@@ -118,6 +118,52 @@ class ProviderConfigTest {
     }
 
     @Test
+    void detectedAgain_choiceAndDeclinedOfferSet_dropsChoiceAndKeepsDeclined() {
+        final ProviderConfig kept = declinedWithChoice();
+
+        final ProviderConfig again = kept.detectedAgain(ServerEngine.OLLAMA, "0.40.11");
+
+        assertThat(again.engine()).isEqualTo(ServerEngine.OLLAMA);
+        assertThat(again.engineVersion()).isEqualTo("0.40.11");
+        assertThat(again.engineChoice()).isNull();
+        assertThat(again.nativeOfferDeclined()).isTrue();
+        assertThat(again.effectiveEngine()).isEqualTo(ServerEngine.OLLAMA);
+    }
+
+    @Test
+    void withEngine_detectedEngineOnly_keepsChoiceVersionAndDeclined() {
+        final ProviderConfig kept = declinedWithChoice();
+
+        final ProviderConfig changed = kept.withEngine(ServerEngine.LM_STUDIO);
+
+        assertThat(changed.engine()).isEqualTo(ServerEngine.LM_STUDIO);
+        assertThat(changed.engineChoice()).isEqualTo(ServerEngine.LLAMA_CPP);
+        assertThat(changed.engineVersion()).isEqualTo("1.0");
+        assertThat(changed.nativeOfferDeclined()).isTrue();
+    }
+
+    private static ProviderConfig declinedWithChoice() {
+        return new ProviderConfig(
+                "local",
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create("http://localhost:11434/v1"),
+                Duration.ofSeconds(3),
+                Duration.ofSeconds(40),
+                null,
+                ProviderAuth.NONE,
+                null,
+                null,
+                null,
+                null,
+                Map.of(),
+                List.of(),
+                ServerEngine.GENERIC,
+                ServerEngine.LLAMA_CPP,
+                "1.0",
+                true);
+    }
+
+    @Test
     void convenienceConstructor_kindDecidesTheDefaultEngine() {
         assertThat(providerConfig().engine()).isEqualTo(ServerEngine.OLLAMA);
         assertThat(providerConfig().withBaseUrl(URI.create("http://h/v1")).nativeOfferDeclined())

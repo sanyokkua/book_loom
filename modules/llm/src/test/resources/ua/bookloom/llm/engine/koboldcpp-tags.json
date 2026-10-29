@@ -1,0 +1,12 @@
+{
+  "models": [
+    {
+      "name": "koboldcpp/Mara",
+      "model": "koboldcpp/Mara",
+      "details": {
+        "format": "gguf",
+        "family": "koboldcpp"
+      }
+    }
+  ]
+}

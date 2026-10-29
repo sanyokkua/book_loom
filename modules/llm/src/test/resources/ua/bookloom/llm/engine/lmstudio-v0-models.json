@@ -1,0 +1,71 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "mistralai/ministral-3-14b-reasoning",
+      "object": "model",
+      "type": "llm",
+      "publisher": "mistralai",
+      "arch": "mistral3",
+      "compatibility_type": "gguf",
+      "quantization": "Q4_K_M",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    },
+    {
+      "id": "mamaylm-gemma-3-12b-it-v2.0",
+      "object": "model",
+      "type": "llm",
+      "publisher": "INSAIT-Institute",
+      "arch": "gemma3",
+      "compatibility_type": "gguf",
+      "quantization": "Q4_K_M",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    },
+    {
+      "id": "lapa-v0.1.2-instruct",
+      "object": "model",
+      "type": "llm",
+      "publisher": "lapa-llm",
+      "arch": "gemma3",
+      "compatibility_type": "gguf",
+      "quantization": "Q4_K_M",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-qat",
+      "object": "model",
+      "type": "llm",
+      "publisher": "google",
+      "arch": "gemma4",
+      "compatibility_type": "mlx",
+      "quantization": "4bit",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    },
+    {
+      "id": "google/gemma-4-e4b",
+      "object": "model",
+      "type": "llm",
+      "publisher": "google",
+      "arch": "gemma4",
+      "compatibility_type": "mlx",
+      "quantization": "4bit",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    },
+    {
+      "id": "text-embedding-nomic-embed-text-v1.5",
+      "object": "model",
+      "type": "embedding",
+      "publisher": "nomic-ai",
+      "arch": null,
+      "compatibility_type": "gguf",
+      "quantization": "Q4_K_M",
+      "state": "not-loaded",
+      "max_context_length": 32768
+    }
+  ]
+}

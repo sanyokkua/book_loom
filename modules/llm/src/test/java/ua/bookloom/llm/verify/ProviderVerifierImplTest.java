@@ -111,8 +111,9 @@ class ProviderVerifierImplTest {
                 .extracting(StageOutcome::status)
                 .containsExactly(StageStatus.PASSED, StageStatus.PASSED, StageStatus.PASSED);
         assertThat(report.isPassed()).isTrue();
-        server.verify(1, getRequestedFor(urlEqualTo(OLLAMA_VERSION_PATH)));
-        server.verify(1, getRequestedFor(urlEqualTo(OLLAMA_TAGS_PATH)));
+        // Each route once for its stage and once for the engine detection a Test runs.
+        server.verify(2, getRequestedFor(urlEqualTo(OLLAMA_VERSION_PATH)));
+        server.verify(2, getRequestedFor(urlEqualTo(OLLAMA_TAGS_PATH)));
         server.verify(1, postRequestedFor(urlEqualTo(OLLAMA_CHAT_PATH)));
     }
 
@@ -167,7 +168,8 @@ class ProviderVerifierImplTest {
         assertThat(report.stages().get(1).note()).isEqualTo("model list unavailable");
         assertThat(error(report.stages().get(1)).code()).isEqualTo(ErrorCode.discoveryFailed);
         assertThat(retryDelays).containsExactly(Duration.ofMillis(500), Duration.ofSeconds(1));
-        server.verify(4, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
+        // One probe, three discovery attempts, and the engine detection's one model-list read.
+        server.verify(5, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
         server.verify(1, postRequestedFor(urlEqualTo(OPENAI_CHAT_PATH)));
     }
 

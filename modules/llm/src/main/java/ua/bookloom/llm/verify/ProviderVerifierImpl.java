@@ -10,11 +10,13 @@ import java.util.Optional;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -26,6 +28,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
@@ -41,8 +44,13 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final RetriedCalls calls;
     private final InferenceStage inference;
     private final LongSupplier nanoTime;
+    private final EngineRegistry engines;
+    private final EngineStage engineStage;
 
-    /** Shares the provider registry, real dialect clients, process-wide gate, retry policy, and time source. */
+    /**
+     * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, and the engine
+     * detection that stores what it finds on the saved provider.
+     */
     @Inject
     public ProviderVerifierImpl(
             ProviderConfigs providerConfigs,
@@ -50,12 +58,15 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             InferenceGate gate,
             RetryPolicy retryPolicy,
             ObjectMapper mapper,
-            LongSupplier nanoTime) {
+            LongSupplier nanoTime,
+            EngineRegistry engines) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
         this.calls = new RetriedCalls(gate, retryPolicy);
         this.inference = new InferenceStage(calls, Objects.requireNonNull(mapper, "mapper"));
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.engines = Objects.requireNonNull(engines, "engines");
+        this.engineStage = new EngineStage(engines);
     }
 
     @Override
@@ -85,10 +96,35 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             log.warn("Provider connection check refused unknown provider={} code={}", providerId, error.code());
             return Result.err(error);
         }
-        final ProviderClient client = clients.create(configured.orElseThrow());
-        final StageOutcome connection = timed(() -> verifyConnection(client, providerId));
-        log.info("Provider connection check finished provider={} stage={}", providerId, stageSummary(connection));
-        return Result.ok(new VerificationReport(List.of(connection)));
+        final ProviderConfig config = configured.orElseThrow();
+        final ProviderClient client = clients.create(config);
+        final EngineStage.Checked connection =
+                engineStage.check(config, timed(() -> verifyConnection(client, providerId)));
+        log.info(
+                "Provider connection check finished provider={} stage={}",
+                providerId,
+                stageSummary(connection.outcome()));
+        return Result.ok(new VerificationReport(List.of(connection.outcome()), connection.engine()));
+    }
+
+    @Override
+    public Result<EngineDetection> detectEngine(ProviderConfig config) {
+        Objects.requireNonNull(config, "config");
+        log.info(
+                "Provider engine detection asked again provider={} host={}",
+                config.id(),
+                config.baseUrl().getHost());
+        try {
+            return engines.detectAgain(config);
+        } catch (RuntimeException failure) {
+            log.error("Provider engine detection failed unexpectedly provider={}", config.id(), failure);
+            return Result.err(AppError.of(
+                    ErrorCode.internal,
+                    "Engine detection failed",
+                    "The server's engine could not be detected.",
+                    null,
+                    failure));
+        }
     }
 
     @Override
@@ -108,34 +144,64 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             log.warn("Draft provider verification refused provider={} code={}", draft.id(), refusal.code());
             return Result.err(refusal);
         }
-        return runStages(new ModelSelection(draft.id(), modelId), policy, draft, clients.createUncached(draft));
+        return runStages(
+                new ModelSelection(draft.id(), modelId),
+                policy,
+                draft,
+                clients.createUncached(draft),
+                detectsEngine(draft, policy, true));
     }
 
     private Result<VerificationReport> verifyConfigured(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config) {
-        return runStages(selection, policy, config, clients.create(config));
+        return runStages(selection, policy, config, clients.create(config), detectsEngine(config, policy, false));
+    }
+
+    // Only the person's Test asks which engine answers: the window's three Test buttons check a description
+    // (connection, connection and models, full), and a saved provider is tested whole or for its connection. A run's
+    // recovery probe (connection and models, health and models) and the command line's preflight never detect, so
+    // nothing is sent at a start or in the background.
+    private static boolean detectsEngine(ProviderConfig config, VerificationPolicy policy, boolean draft) {
+        final boolean detect =
+                switch (policy) {
+                    case FULL, CONNECTION -> true;
+                    case CONNECTION_AND_MODELS -> draft;
+                    case PREFLIGHT, HEALTH_AND_MODELS -> false;
+                };
+        log.debug(
+                "Provider verification engine detection provider={} policy={} draft={} detect={}",
+                config.id(),
+                policy,
+                draft,
+                detect);
+        return detect;
     }
 
     private Result<VerificationReport> runStages(
-            ModelSelection selection, VerificationPolicy policy, ProviderConfig config, ProviderClient client) {
+            ModelSelection selection,
+            VerificationPolicy policy,
+            ProviderConfig config,
+            ProviderClient client,
+            boolean detect) {
         final List<StageOutcome> stages = new ArrayList<>(3);
         if (policy == VerificationPolicy.HEALTH_AND_MODELS && isStillLoading(client, config)) {
             stages.add(StageOutcomes.failed(VerificationStage.CONNECTION, loading(config, selection.modelId())));
-            return completed(selection, policy, stages);
+            return completed(selection, policy, stages, null);
         }
-        final StageOutcome connection = connectionStage(client, config);
-        stages.add(connection);
-        if (connection.status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
-            return completed(selection, policy, stages);
+        final EngineStage.Checked connection = connectionStage(client, config, detect);
+        stages.add(connection.outcome());
+        if (connection.outcome().status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
+            return completed(selection, policy, stages, connection.engine());
         }
         final StageOutcome models = modelsStage(client, config, selection.modelId());
         stages.add(models);
         if (models.status() == StageStatus.FAILED
                 || policy == VerificationPolicy.CONNECTION_AND_MODELS
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
-            return completed(selection, policy, stages);
+            return completed(selection, policy, stages, connection.engine());
         }
-        return verifyInferencePolicy(selection, policy, client, config, stages, models);
+        stages.add(inferenceStage(client, config, selection.modelId()));
+        return completed(selection, policy, stages, connection.engine());
     }
 
     // A llama-server answers 503 on every route while it loads; its health route is the one that says when it is done.
@@ -165,9 +231,14 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 null);
     }
 
-    private StageOutcome connectionStage(ProviderClient client, ProviderConfig config) {
-        final StageOutcome outcome = timed(() -> verifyConnection(client, config.id()));
-        return StageOutcomes.withExchange(outcome, VerificationExchanges.connection(config, outcome));
+    private EngineStage.Checked connectionStage(ProviderClient client, ProviderConfig config, boolean detect) {
+        final StageOutcome timedOutcome = timed(() -> verifyConnection(client, config.id()));
+        final EngineStage.Checked checked =
+                detect ? engineStage.check(config, timedOutcome) : new EngineStage.Checked(timedOutcome, null);
+        final StageOutcome outcome = checked.outcome();
+        return new EngineStage.Checked(
+                StageOutcomes.withExchange(outcome, VerificationExchanges.connection(config, outcome)),
+                checked.engine());
     }
 
     private StageOutcome modelsStage(ProviderClient client, ProviderConfig config, String modelId) {
@@ -246,23 +317,6 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return new ModelsProbe(outcome, models.stream().map(ModelInfo::id).toList());
     }
 
-    private Result<VerificationReport> verifyInferencePolicy(
-            ModelSelection selection,
-            VerificationPolicy policy,
-            ProviderClient client,
-            ProviderConfig config,
-            List<StageOutcome> stages,
-            StageOutcome models) {
-        final String providerId = config.id();
-        log.debug(
-                "Provider verification inference decision provider={} policy={} modelsStatus={} run=true",
-                providerId,
-                policy,
-                models.status());
-        stages.add(inferenceStage(client, config, selection.modelId()));
-        return completed(selection, policy, stages);
-    }
-
     private <T> ProviderCallResult<T> callWithRetry(
             Supplier<ProviderCallResult<T>> operation, VerificationStage stage, String providerId) {
         return calls.run(operation, stage, providerId);
@@ -298,13 +352,17 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     }
 
     private Result<VerificationReport> completed(
-            ModelSelection selection, VerificationPolicy policy, List<StageOutcome> outcomes) {
-        final VerificationReport report = new VerificationReport(outcomes);
+            ModelSelection selection,
+            VerificationPolicy policy,
+            List<StageOutcome> outcomes,
+            @Nullable EngineDetection engine) {
+        final VerificationReport report = new VerificationReport(outcomes, engine);
         log.info(
-                "Provider verification finished provider={} model={} policy={} stages={}",
+                "Provider verification finished provider={} model={} policy={} engine={} stages={}",
                 selection.providerId(),
                 selection.modelId(),
                 policy,
+                engine == null ? "none" : engine.engine(),
                 outcomes.stream().map(ProviderVerifierImpl::stageSummary).toList());
         return Result.ok(report);
     }

@@ -1,0 +1,15 @@
+{
+  "build_info": "b11669-620d2225c",
+  "role": "model",
+  "model_path": "qwen3.5-4b-Q4_K_M.gguf",
+  "n_ctx": 16384,
+  "chat_template": "{% if enable_thinking %}<think>{% endif %}{{ messages }}",
+  "chat_template_caps": {
+    "supports_system_role": true,
+    "supports_tools": true,
+    "supports_parallel_tool_calls": true,
+    "supports_preserve_reasoning": true,
+    "supports_string_content": true,
+    "supports_typed_content": false
+  }
+}

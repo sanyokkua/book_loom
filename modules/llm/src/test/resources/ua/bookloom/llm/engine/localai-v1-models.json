@@ -1,0 +1,13 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "mara-7b",
+      "object": "model"
+    },
+    {
+      "id": "phi-2",
+      "object": "model"
+    }
+  ]
+}

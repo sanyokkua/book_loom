@@ -24,6 +24,8 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.llm.engine.EngineDetector;
+import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -56,17 +58,17 @@ class ProviderVerifierFailureStatusTest {
 
     private StageOutcome stageOf(final ProviderConfig config, final int stageIndex) {
         final var mapper = new LlmModule().objectMapper();
-        final var factory = new ProviderClientFactory(
-                new HttpExchange(new HttpClients(), System::nanoTime, Map.<String, String>of()::get),
-                mapper,
-                System::nanoTime);
+        final var exchange = new HttpExchange(new HttpClients(), System::nanoTime, Map.<String, String>of()::get);
+        final var factory = new ProviderClientFactory(exchange, mapper, System::nanoTime);
+        final var configs = new FakeProviderConfigs();
         final var verifier = new ProviderVerifierImpl(
-                new FakeProviderConfigs(),
+                configs,
                 factory,
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, delay -> {}),
                 mapper,
-                System::nanoTime);
+                System::nanoTime,
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper)));
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()
