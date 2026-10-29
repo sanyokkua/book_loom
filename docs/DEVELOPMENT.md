@@ -2256,3 +2256,35 @@ times mid-sentence was imported, the Book Brief set to Russian -> Ukrainian (Ukr
 the target alphabet, foreign text kept as is), and Names & style opened and Scan pressed. The glossary held only
 `Мирослава`; none of the three sentence starters was proposed. The gate (`./gradlew clean build check spotlessCheck`)
 was green; it took 15 min 36 s, against the roughly 4 min the manual cites, because `:ui:test` ran long (it completed).
+
+### Redesign live checks {#redesign-live-checks}
+
+Task 5.9: the detection matrix and each engine's wire rules, checked against real servers (the falsifier of ADR-0047).
+Run with `./gradlew :llm:liveLocal`; every case is tagged `liveLocal`, reads its address from a variable and is skipped
+when the variable is unset. The cases: `EngineDetectionLiveTest` (`BOOKLOOM_LIVE_OLLAMA_URL`,
+`BOOKLOOM_LIVE_LMSTUDIO_URL`, `BOOKLOOM_LIVE_LLAMACPP_URL`, `BOOKLOOM_LIVE_PROXY_URL` with the expected constant in
+`BOOKLOOM_LIVE_PROXY_ENGINE`), `LlamaCppLiveTest` (`BOOKLOOM_LIVE_LLAMACPP_URL`, optional `..._MODEL`),
+`UnslothLiveTest` (`BOOKLOOM_LIVE_UNSLOTH_URL` with its `/v1`, and the key itself in `BOOKLOOM_LIVE_UNSLOTH_KEY`), plus
+the engine cases added to `OllamaLiveTest` and `LmStudioLiveTest`. The live tests assert what the server's replies
+show; the request fields themselves (`enable_thinking`, `enable_tools`, `reasoning_effort`) are proven on the wire by
+`ProviderEnginesAcceptanceTest`.
+
+Result of 2026-10-29 on the owner's machine (log `.temporary_context/59-live.log`): Ollama 0.40.13 at
+`http://127.0.0.1:11434` (model `gemma4:e4b-mlx`) and LM Studio at `http://127.0.0.1:1234` (model
+`google/gemma-4-e4b`), plus a throwaway reverse proxy (a Python forwarder on `127.0.0.1:9090` to LM Studio).
+
+| Address | Saved as | Engine detected |
+|---|---|---|
+| `http://127.0.0.1:11434` | Ollama | OLLAMA 0.40.13 |
+| `http://127.0.0.1:11434/v1` | OpenAI-compatible | OLLAMA 0.40.13, native offer made |
+| `http://localhost:1234/v1` | OpenAI-compatible | LM Studio |
+| `http://localhost:1234` | OpenAI-compatible | LM Studio |
+| `http://127.0.0.1:9090/v1` (proxy to LM Studio) | OpenAI-compatible | LM Studio |
+
+Zero wrong detections. LM Studio: a listed id answers, `no-such-model-zzz` is refused with "LM Studio has no model".
+Skipped (not installed): llama-server (5 cases, among them the gpt-oss-style `low`), Unsloth (3).
+29 cases ran: 20 passed, 8 skipped, 1 failed. The failure, `OllamaLiveTest.chat_sameSystemPromptTwice_secondReplyReportsCachedPromptTokens`, is
+not an engine case: Ollama 0.40.13 serves the second call from its cache (prompt evaluation drops from 2.1 s to 0.03 s)
+but reports the same `prompt_eval_count`, so there is no cached-token figure to read (15h.C5 relied on one).
+
+Known red (not an engine case): `OllamaLiveTest.chat_sameSystemPromptTwice_secondReplyReportsCachedPromptTokens` (15h.C5) fails on Ollama 0.40.13 because the server serves the second identical call from its cache (prompt evaluation about 2.1 s to 0.03 s) but reports the same `prompt_eval_count` and no cached-token figure. The test is kept as the falsifier of the cached-token reading; the owner decides whether to relax it. `liveLocal` is never part of `check`.

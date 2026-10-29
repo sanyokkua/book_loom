@@ -14,16 +14,19 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.testing.LiveServers;
 
 /** Proves the native client against a configured, real local Ollama service. */
 @Tag("liveLocal")
@@ -181,6 +184,23 @@ class OllamaLiveTest {
                 .result();
         assertThat(result.isOk()).as("Ollama chat result: " + result.error()).isTrue();
         return Objects.requireNonNull(result.data(), "chat response");
+    }
+
+    // The engine is OLLAMA through the native address and through the /v1 shim, and a chat through /v1 answers.
+    @Test
+    void detectEngine_nativeAndV1Paths_bothReadOllama() {
+        final String origin = Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_OLLAMA_URL"));
+        for (final ProviderKind kind : List.of(ProviderKind.OLLAMA, ProviderKind.OPENAI_COMPATIBLE)) {
+            final String address = kind == ProviderKind.OLLAMA ? origin : origin.replaceAll("/+$", "") + "/v1";
+            final ProviderConfig config = LiveServers.provider("ollama-live", kind, address, null);
+
+            final Result<EngineDetection> result = LiveServers.verifier(config).detectEngine(config);
+
+            assertThat(result.isOk()).as(address + ": " + result.error()).isTrue();
+            assertThat(Objects.requireNonNull(result.data()).engine())
+                    .as(address)
+                    .isEqualTo(ServerEngine.OLLAMA);
+        }
     }
 
     private static OllamaClient client() {

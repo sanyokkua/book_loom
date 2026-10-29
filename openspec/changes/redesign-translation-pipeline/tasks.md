@@ -523,7 +523,7 @@ selects fields, error rows and routes. OpenRouter is detected here but speaks th
   - **Done when:** tests are green and `scripts/ci-linux-ui.sh` passes for the changed screen.
     - Built as follows (fold into the specs in 5.10): a new `FailureReason.MODEL_NOT_LISTED` carries the LM Studio no-model sentence (`WRONG_MODEL_SERVED` keeps its own); the "loads with its own settings" line is an INFO toast right after Start (`ModelCapabilities.loadsWithOwnSettings`), never blocking; the typed `@variant` is stripped after a passing models check or Save, not while typing; Detect again and Keep as is are draft edits kept on Save; the cloud label is built in the Providers `ModelField` only (the Models tab chooser keeps ids only; the `ollama.com` host label is not built); `.claude/rules/offline-and-privacy.md` still needs the privacy wording (5.10).
 
-- [ ] 5.9 Add one env-gated `liveLocal` test per engine so the detection matrix and each engine's wire rules are checked against real servers. A fake can only prove what its author expected; this is the falsifier check of ADR-0047. → :llm
+- [x] 5.9 Add one env-gated `liveLocal` test per engine so the detection matrix and each engine's wire rules are checked against real servers. A fake can only prove what its author expected; this is the falsifier check of ADR-0047. → :llm
   - **Satisfies:** enabling work for design D17 (live checks; no requirement of its own)
   - **Depends on:** 5.3–5.7
   - **Read:** design.md D17; llm tests `client/ollama/OllamaLiveTest`, `client/openai/LmStudioLiveTest`, `ModelCatalogLiveTest`; `.claude/rules/testing.md` (liveLocal section); the owner's models for the live runs: Ollama `gemma4:e4b-mlx`, LM Studio `google/gemma-4-e4b`

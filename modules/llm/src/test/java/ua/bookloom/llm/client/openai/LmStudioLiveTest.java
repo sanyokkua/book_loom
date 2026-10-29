@@ -3,8 +3,10 @@ package ua.bookloom.llm.client.openai;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.inject.Injector;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -14,15 +16,21 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelInfo;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
+import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.testing.LiveServers;
 
 /** Proves the OpenAI-compatible client against a configured, real LM Studio service. */
 @Tag("liveLocal")
@@ -146,6 +154,36 @@ class LmStudioLiveTest {
         assertThat(response.usage().prompt()).isGreaterThan(0);
         assertThat(response.usage().completion()).isGreaterThan(0);
         assertThat(response.usage().generation()).isPositive();
+    }
+
+    // The engine is LM_STUDIO, the chat goes by LM Studio's route, and an id nobody listed is refused by name.
+    @Test
+    void engineAndModelIdCheck_realLmStudio_detectsRoutesAndRefusesAnUnknownId() {
+        final ProviderConfig config = LiveServers.provider(
+                "lmstudio-live",
+                ProviderKind.OPENAI_COMPATIBLE,
+                System.getenv("BOOKLOOM_LIVE_LMSTUDIO_URL").replaceAll("/+$", "") + "/v1",
+                null);
+        final Injector injector = LiveServers.injector(config, Map.of());
+        final ProviderVerifier verifier = injector.getInstance(ProviderVerifier.class);
+
+        final Result<EngineDetection> detected = verifier.detectEngine(config);
+        assertThat(detected.isOk()).as("detection: " + detected.error()).isTrue();
+        assertThat(Objects.requireNonNull(detected.data()).engine()).isEqualTo(ServerEngine.LM_STUDIO);
+
+        verifier.verify(new ModelSelection("lmstudio-live", modelId()), VerificationPolicy.FULL);
+        final Result<ChatResponse> listed =
+                LiveServers.chatModel(injector, "lmstudio-live", modelId()).chat(LiveServers.draft(ReasoningLevel.OFF));
+        assertThat(listed.isOk()).as("listed id: " + listed.error()).isTrue();
+
+        final String unknown = "no-such-model-zzz";
+        verifier.verify(new ModelSelection("lmstudio-live", unknown), VerificationPolicy.FULL);
+        final Result<ChatResponse> refused =
+                LiveServers.chatModel(injector, "lmstudio-live", unknown).chat(LiveServers.draft(ReasoningLevel.OFF));
+        assertThat(refused.isErr())
+                .as("unknown id must not be answered by the loaded model")
+                .isTrue();
+        assertThat(Objects.requireNonNull(refused.error()).message()).contains("LM Studio has no model");
     }
 
     private static OpenAiCompatibleClient client() {
