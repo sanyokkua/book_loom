@@ -42,6 +42,7 @@ import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.engine.EngineDetector;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -380,7 +381,7 @@ class ProviderVerifierImplDraftTest {
                 new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}),
                 mapper,
                 System::nanoTime,
-                new EngineRegistry(configs, new EngineDetector(exchange, mapper)));
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)));
     }
 
     private static VerificationReport report(Result<VerificationReport> result) {

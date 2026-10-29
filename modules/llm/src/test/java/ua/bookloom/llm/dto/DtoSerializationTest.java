@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -119,6 +120,34 @@ class DtoSerializationTest {
                 effort));
 
         assertThat(body.has("reasoning_effort")).isEqualTo(expectedPresent);
+    }
+
+    // An engine's every-call fields sit at the top level of the body, never under a field of their own.
+    @Test
+    void openAiChatRequest_alwaysSend_writesTheFieldsAtTheTopLevel() {
+        final JsonNode body = mapper().valueToTree(new OpenAiChatRequest(
+                "mara-7b",
+                List.of(new OpenAiChatRequest.Message("user", "hello")),
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Map.of("enable_tools", false)));
+
+        assertThat(body.path("enable_tools").isBoolean()).isTrue();
+        assertThat(body.path("enable_tools").asBoolean(true)).isFalse();
+        assertThat(body.has("alwaysSend")).isFalse();
+        assertThat(body.has("chat_template_kwargs")).isFalse();
     }
 
     // The native thinking control is top-level and remains absent unless a caller explicitly requests it.

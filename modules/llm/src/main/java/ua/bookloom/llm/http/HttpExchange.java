@@ -247,7 +247,11 @@ public final class HttpExchange {
         log.debug("Joining provider endpoint host={} routePath={}", baseUrl.getHost(), path);
         final String basePath =
                 baseUrl.getPath() == null ? "" : baseUrl.getPath().replaceFirst("/+$", "");
-        final String routePath = path.replaceFirst("^/+", "");
+        final String route = path.replaceFirst("^/+", "");
+        // A route may carry a query (llama-server's /props?model=<id>); the URI encodes each part on its own.
+        final int queryStart = route.indexOf('?');
+        final String routePath = queryStart < 0 ? route : route.substring(0, queryStart);
+        final String query = queryStart < 0 ? null : route.substring(queryStart + 1);
         try {
             return new URI(
                     baseUrl.getScheme(),
@@ -255,7 +259,7 @@ public final class HttpExchange {
                     baseUrl.getHost(),
                     baseUrl.getPort(),
                     basePath + "/" + routePath,
-                    null,
+                    query,
                     null);
         } catch (URISyntaxException failure) {
             throw new IllegalArgumentException("Provider endpoint path is invalid.", failure);

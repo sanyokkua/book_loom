@@ -1,9 +1,12 @@
 package ua.bookloom.llm.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
@@ -25,6 +28,11 @@ import org.jspecify.annotations.Nullable;
  * @param topK optional number of kept tokens, omitted when absent
  * @param minP optional minimum relative probability, omitted when absent
  * @param repeatPenalty optional penalty on recently seen tokens, omitted when absent
+ * @param chatTemplateKwargs optional variables handed to llama-server's chat template, such as
+ *     {@code enable_thinking}; omitted when absent
+ * @param enableThinking optional top-level thinking switch Unsloth reads; omitted when absent
+ * @param reasoning optional reasoning object, sent only to a server whose check proved it; omitted when absent
+ * @param alwaysSend fields the engine needs on every call, written at the top level of the body; never null
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatRequest(
@@ -40,7 +48,11 @@ public record OpenAiChatRequest(
         @JsonProperty("top_p") @Nullable Double topP,
         @JsonProperty("top_k") @Nullable Integer topK,
         @JsonProperty("min_p") @Nullable Double minP,
-        @JsonProperty("repeat_penalty") @Nullable Double repeatPenalty) {
+        @JsonProperty("repeat_penalty") @Nullable Double repeatPenalty,
+        @JsonProperty("chat_template_kwargs") @Nullable Map<String, Object> chatTemplateKwargs,
+        @JsonProperty("enable_thinking") @Nullable Boolean enableThinking,
+        @JsonProperty("reasoning") @Nullable Map<String, Object> reasoning,
+        @JsonIgnore Map<String, Object> alwaysSend) {
 
     /** A request with no sampling controls beyond temperature, so the server's own defaults apply. */
     public OpenAiChatRequest(
@@ -65,14 +77,31 @@ public record OpenAiChatRequest(
                 null,
                 null,
                 null,
-                null);
+                null,
+                null,
+                null,
+                null,
+                Map.of());
     }
 
-    /** Rejects incomplete requests and protects the message order from caller mutation. */
+    /** Rejects incomplete requests and protects the message order and the extra fields from caller mutation. */
     public OpenAiChatRequest {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(messages, "messages");
         messages = List.copyOf(messages);
+        chatTemplateKwargs = chatTemplateKwargs == null ? null : Map.copyOf(chatTemplateKwargs);
+        reasoning = reasoning == null ? null : Map.copyOf(reasoning);
+        alwaysSend = Map.copyOf(Objects.requireNonNull(alwaysSend, "alwaysSend"));
+    }
+
+    /**
+     * The engine's every-call fields, written beside the named ones.
+     *
+     * @return the fields; never null, empty when the engine needs none
+     */
+    @JsonAnyGetter
+    public Map<String, Object> alwaysSendFields() {
+        return alwaysSend;
     }
 
     /**

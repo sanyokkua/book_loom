@@ -44,6 +44,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -336,7 +337,8 @@ class OpenAiCompatibleClientTest {
 
     private OpenAiCompatibleClient client(URI endpoint, Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
-                "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout);
+                        "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout)
+                .withEngine(ServerEngine.LM_STUDIO);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }

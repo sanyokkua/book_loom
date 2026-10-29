@@ -25,13 +25,15 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 
 /**
- * Thinking per call (15i.X2) at the OpenAI-compatible HTTP seam (LM Studio): a call with thinking on states a
+ * Thinking per call (15i.X2) at the OpenAI-compatible HTTP seam (LM Studio, whose engine switches thinking by
+ * {@code reasoning_effort}): a call with thinking on states a
  * {@code reasoning_effort} and gets room in {@code max_tokens} for its reasoning, a call with it off sends today's
  * request unchanged.
  */
@@ -151,11 +153,12 @@ class OpenAiCompatibleClientReasoningShapeTest {
 
     private OpenAiCompatibleClient client() {
         final ProviderConfig config = new ProviderConfig(
-                "lmstudio",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                        "lmstudio",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(ServerEngine.LM_STUDIO);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }

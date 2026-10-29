@@ -45,6 +45,7 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.SamplingParams;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -73,6 +74,7 @@ class GatedChatModelRefusedSettingTest {
             "{\"error\":\"Unsupported parameter: 'temperature' is not supported with this model\"}";
     private static final String CSV = "OPENAI_COMPATIBLE, /v1, /v1/chat/completions";
     private static final String CSV_OLLAMA = "OLLAMA, '', /api/chat";
+    private static final Duration WAIT = Duration.ofSeconds(5);
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-20T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
@@ -112,7 +114,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_temperatureRefused_repeatAndLaterCallsLackIt(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
+        stubSequence(kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), ok());
         final GatedChatModel model = model(kind, basePath, MODEL);
 
         final Result<ChatResponse> first = model.chat(request(ReasoningLevel.OFF));
@@ -131,7 +133,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_topPRefused_repeatKeepsTemperatureAndMessages(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, "{\"error\":\"unknown field top_p\"}"), ok());
+        stubSequence(kind, chatPath, new Reply(400, "{\"error\":\"unknown field top_p\"}"), ok());
 
         final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
@@ -149,7 +151,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV_OLLAMA})
     void chat_ollamaTemperatureRefused_repeatKeepsContextAndThink(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
+        stubSequence(kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), ok());
 
         final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
@@ -172,7 +174,7 @@ class GatedChatModelRefusedSettingTest {
             final String chatPath,
             final String field,
             final String sentFirst) {
-        stubSequence(kind, chatPath, reply(400, "{\"error\":\"unknown field " + field + "\"}"), ok());
+        stubSequence(kind, chatPath, new Reply(400, "{\"error\":\"unknown field " + field + "\"}"), ok());
         final GatedChatModel model = model(kind, basePath, OTHER_MODEL);
 
         final Result<ChatResponse> first = model.chat(request(ReasoningLevel.LOW));
@@ -194,7 +196,7 @@ class GatedChatModelRefusedSettingTest {
         stubSequence(
                 kind,
                 chatPath,
-                reply(400, "{\"error\":\"max_tokens is not supported, use max_completion_tokens\"}"),
+                new Reply(400, "{\"error\":\"max_tokens is not supported, use max_completion_tokens\"}"),
                 ok());
         final GatedChatModel model = model(kind, basePath, MODEL);
 
@@ -233,7 +235,8 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_refusalThenTwoUpstreamFaults_succeedsAfterFourRequestsWithoutCountingTheRepeat(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), reply(503, "{}"), reply(503, "{}"), ok());
+        stubSequence(
+                kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), new Reply(503, "{}"), new Reply(503, "{}"), ok());
 
         final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF), listener);
 
@@ -254,7 +257,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_afterRestart_firstRequestLacksTheRefusedTemperature(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
+        stubSequence(kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), ok());
         model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         final Result<ChatResponse> afterRestart = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
@@ -268,7 +271,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_otherModelOfTheSameProvider_stillSendsItsTemperature(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
+        stubSequence(kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), ok());
         model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         model(kind, basePath, OTHER_MODEL).chat(request(ReasoningLevel.OFF));
@@ -309,7 +312,7 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_temperatureRefused_logsOneWarningAndNoneForTheRememberedOne(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
+        stubSequence(kind, chatPath, new Reply(400, TEMPERATURE_REFUSAL), ok());
 
         model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
         final long afterFirst = refusalWarnings();
@@ -342,10 +345,6 @@ class GatedChatModelRefusedSettingTest {
                             .withBody(reply.body() == null ? okBody : reply.body()))
                     .willSetStateTo(last ? "step " + step : "step " + (step + 1)));
         });
-    }
-
-    private static Reply reply(final int status, final String body) {
-        return new Reply(status, body);
     }
 
     private static Reply ok() {
@@ -383,17 +382,16 @@ class GatedChatModelRefusedSettingTest {
 
     private GatedChatModel model(final ProviderKind kind, final String basePath, final String modelId) {
         final ProviderConfig config = new ProviderConfig(
-                "test", kind, URI.create(server.baseUrl() + basePath), Duration.ofSeconds(5), Duration.ofSeconds(5));
-        final ProviderClientFactory clients = new ProviderClientFactory(
-                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
-        final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, ignored -> {});
+                        "test", kind, URI.create(server.baseUrl() + basePath), WAIT, WAIT)
+                .withEngine(kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.LM_STUDIO);
+        final HttpExchange exchange = new HttpExchange(new HttpClients());
         final ModelSettingsCache cache = new ModelSettingsCache(repository);
         return new GatedChatModel(
-                clients.create(config),
+                new ProviderClientFactory(exchange, new LlmModule().objectMapper(), System::nanoTime).create(config),
                 PROVIDER,
                 modelId,
                 new InferenceGate(),
-                retryPolicy,
+                new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
                 cache::current,
                 new RefusalMemory(cache));
     }

@@ -5,11 +5,14 @@ import com.google.inject.Inject;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.llm.client.ollama.OllamaClient;
 import ua.bookloom.llm.client.openai.OpenAiCompatibleClient;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.http.HttpExchange;
 
 /** Creates one dialect client per provider configuration id so client state cannot leak across providers. */
@@ -19,14 +22,52 @@ public final class ProviderClientFactory {
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
     private final LongSupplier nanoTime;
+    private final EngineFacts facts;
+    private final BiFunction<String, String, ProbeVerdicts> verdicts;
     private final ConcurrentMap<String, CachedClient> clients = new ConcurrentHashMap<>();
 
-    /** Shares the configured HTTP exchange, tolerant mapper, and time source across all clients created by this factory. */
-    @Inject
+    /** As the injected form, with its own session facts and no stored check verdicts. */
     public ProviderClientFactory(HttpExchange exchange, ObjectMapper mapper, LongSupplier nanoTime) {
+        this(
+                exchange,
+                mapper,
+                nanoTime,
+                new EngineFacts(exchange, mapper),
+                (providerId, modelId) -> ProbeVerdicts.none());
+    }
+
+    /**
+     * Shares the configured HTTP exchange, tolerant mapper, time source, the session's engine facts and the models'
+     * stored settings across all clients created by this factory.
+     */
+    @Inject
+    public ProviderClientFactory(
+            HttpExchange exchange,
+            ObjectMapper mapper,
+            LongSupplier nanoTime,
+            EngineFacts facts,
+            ModelSettingsCache settings) {
+        this(
+                exchange,
+                mapper,
+                nanoTime,
+                facts,
+                (providerId, modelId) -> Objects.requireNonNull(settings, "settings")
+                        .current(providerId, modelId)
+                        .probeVerdicts());
+    }
+
+    private ProviderClientFactory(
+            HttpExchange exchange,
+            ObjectMapper mapper,
+            LongSupplier nanoTime,
+            EngineFacts facts,
+            BiFunction<String, String, ProbeVerdicts> verdicts) {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.facts = Objects.requireNonNull(facts, "facts");
+        this.verdicts = Objects.requireNonNull(verdicts, "verdicts");
     }
 
     /** Returns the cached dialect client for a provider id, constructing it once on the first lookup. */
@@ -61,7 +102,9 @@ public final class ProviderClientFactory {
         log.debug("Creating provider client id={} kind={}", config.id(), config.kind());
         return switch (config.kind()) {
             case OLLAMA -> new OllamaClient(config, exchange, mapper);
-            case OPENAI_COMPATIBLE -> new OpenAiCompatibleClient(config, exchange, mapper, nanoTime);
+            case OPENAI_COMPATIBLE ->
+                new OpenAiCompatibleClient(
+                        config, exchange, mapper, nanoTime, facts, modelId -> verdicts.apply(config.id(), modelId));
         };
     }
 

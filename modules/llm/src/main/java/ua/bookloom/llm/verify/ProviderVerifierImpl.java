@@ -200,7 +200,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return completed(selection, policy, stages, connection.engine());
         }
-        stages.add(inferenceStage(client, config, selection.modelId()));
+        stages.add(inferenceStage(client.forChecks(), config, selection.modelId()));
         return completed(selection, policy, stages, connection.engine());
     }
 

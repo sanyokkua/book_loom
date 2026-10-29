@@ -25,6 +25,7 @@ import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.engine.EngineDetector;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.engine.EngineRegistry;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -68,7 +69,7 @@ class ProviderVerifierFailureStatusTest {
                 new RetryPolicy(CLOCK, () -> 0.5, delay -> {}),
                 mapper,
                 System::nanoTime,
-                new EngineRegistry(configs, new EngineDetector(exchange, mapper)));
+                new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)));
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()

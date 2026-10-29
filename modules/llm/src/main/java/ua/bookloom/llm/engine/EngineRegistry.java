@@ -16,7 +16,8 @@ import ua.bookloom.api.llm.ProviderConfigs;
 /**
  * Detects a provider's engine and keeps it on the saved provider, so reading it later needs no network. Only a saved
  * provider with the same kind and address gets it stored: a description being edited is reported, not saved, and an
- * app that cannot translate a book is never stored as the engine.
+ * app that cannot translate a book is never stored as the engine. A detection also forgets what the session read
+ * about the server's model, so the next call reads it afresh.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -24,6 +25,7 @@ public final class EngineRegistry {
 
     private final ProviderConfigs providerConfigs;
     private final EngineDetector detector;
+    private final EngineFacts facts;
 
     /**
      * Detects as Save and Test do: the person's "Treat this server as..." choice stays and, when set, is the answer.
@@ -35,6 +37,7 @@ public final class EngineRegistry {
         Objects.requireNonNull(config, "config");
         log.debug("Engine detection for a test or save provider={}", config.id());
         final Result<EngineDetection> found = detector.detect(config);
+        facts.forget(config.id());
         storeFound(config, found, false);
         return found;
     }
@@ -51,6 +54,7 @@ public final class EngineRegistry {
         log.debug("Engine detection asked again provider={} choiceDropped={}", config.id(), config.engineChoice());
         final ProviderConfig probed = config.withEngine(config.engine(), null, config.engineVersion());
         final Result<EngineDetection> found = detector.detect(probed);
+        facts.forget(config.id());
         storeFound(config, found, true);
         return found;
     }

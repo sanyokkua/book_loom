@@ -1,10 +1,10 @@
 package ua.bookloom.llm.client.ollama;
 
-import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** How Ollama's native request words the reasoning control and the answer cap. */
@@ -24,7 +24,7 @@ final class OllamaReasoning {
         return switch (reasoningEnabled) {
             case ON -> true;
             case LOW -> "low";
-            case OFF -> modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? "low" : false;
+            case OFF -> EngineTraits.reasonsAtLowest(modelId) ? "low" : false;
         };
     }
 
@@ -35,6 +35,6 @@ final class OllamaReasoning {
     static @Nullable Integer withReasoningHeadroom(
             final String modelId, final @Nullable Integer cap, final @Nullable ReasoningLevel reasoningEnabled) {
         final boolean thinks = reasoningEnabled != null && reasoningEnabled.isThinking();
-        return thinks || modelId.toLowerCase(Locale.ROOT).contains("gpt-oss") ? ReasoningHeadroom.raise(cap) : cap;
+        return thinks || EngineTraits.reasonsAtLowest(modelId) ? ReasoningHeadroom.raise(cap) : cap;
     }
 }

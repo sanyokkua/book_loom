@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -57,6 +58,7 @@ public final class LlmModule extends AbstractModule {
         bind(ModelSettingsCache.class).in(Singleton.class);
         bind(RefusalMemory.class).in(Singleton.class);
         bind(BuiltWrongLog.class).in(Singleton.class);
+        bind(EngineFacts.class).in(Singleton.class);
         bind(CallLedger.class).to(CallLedgerImpl.class).in(Singleton.class);
     }
 

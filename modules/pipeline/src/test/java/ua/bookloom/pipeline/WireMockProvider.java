@@ -36,6 +36,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.retry.RetryPolicy;
@@ -96,8 +97,11 @@ final class WireMockProvider implements AutoCloseable {
         final Injector injector =
                 Guice.createInjector(Modules.override(new LlmModule(), new InMemoryPersistenceModule())
                         .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
+        // The OpenAI-compatible stand-in is LM Studio: a recognised engine gets the schema and the reasoning switch on
+        // every call, where a generic server would get only what a check had proved.
         injector.getInstance(ProviderConfigs.class)
-                .save(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout));
+                .save(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout)
+                        .withEngine(kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.LM_STUDIO));
         return injector;
     }
 

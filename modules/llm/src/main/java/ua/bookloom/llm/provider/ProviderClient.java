@@ -73,6 +73,16 @@ public interface ProviderClient {
         return false;
     }
 
+    /**
+     * This client as the Test's checks use it: they send the fields they ask for, because a check is how a server
+     * earns a field that a run's calls send only once it is proved.
+     *
+     * @return the client for checks; this client when its calls are never narrowed
+     */
+    default ProviderClient forChecks() {
+        return this;
+    }
+
     /** Identifies the wire dialect implemented by this client. */
     ProviderKind kind();
 }

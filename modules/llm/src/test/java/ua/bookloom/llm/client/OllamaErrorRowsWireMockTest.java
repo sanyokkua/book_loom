@@ -33,6 +33,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.client.ollama.OllamaClient;
 import ua.bookloom.llm.client.openai.OpenAiCompatibleClient;
@@ -269,11 +270,12 @@ class OllamaErrorRowsWireMockTest {
     private ProviderConfig config(final String dialect) {
         final boolean isNative = NATIVE.equals(dialect);
         return new ProviderConfig(
-                "p",
-                isNative ? ProviderKind.OLLAMA : ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + (isNative ? "" : "/v1")),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                        "p",
+                        isNative ? ProviderKind.OLLAMA : ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + (isNative ? "" : "/v1")),
+                        Duration.ofSeconds(2),
+                        Duration.ofSeconds(2))
+                .withEngine(ServerEngine.OLLAMA);
     }
 
     private static ProviderClient client(final ProviderConfig config) {
