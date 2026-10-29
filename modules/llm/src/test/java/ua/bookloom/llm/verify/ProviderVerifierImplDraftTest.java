@@ -35,6 +35,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
@@ -371,7 +372,11 @@ class ProviderVerifierImplDraftTest {
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     private ProviderVerifierImpl verifier(Map<String, String> env) {

@@ -292,7 +292,8 @@ class GatedChatModelRefusedSettingTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted")),
                 null,
-                null));
+                null,
+                ua.bookloom.api.llm.ProbeVerdicts.none()));
         stubSequence(kind, chatPath, ok());
 
         final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));

@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** Behaviour every {@link ProviderConfigs} adapter must show, whatever it starts with. */
 public abstract class ProviderConfigsContractTest {
@@ -55,6 +56,36 @@ public abstract class ProviderConfigsContractTest {
 
         assertThat(configs().find("contract-same")).contains(replacement);
         assertThat(configs().all()).hasSize(before);
+    }
+
+    @Test
+    void save_providerWithEngineChoiceVersionAndDeclinedOffer_roundTrips() {
+        final ProviderConfig base = sample("contract-engine");
+        final ProviderConfig engine = new ProviderConfig(
+                base.id(),
+                base.kind(),
+                base.baseUrl(),
+                base.connectTimeout(),
+                base.requestTimeout(),
+                null,
+                base.auth(),
+                null,
+                null,
+                null,
+                null,
+                base.headers(),
+                base.customModels(),
+                ServerEngine.OLLAMA,
+                ServerEngine.LLAMA_CPP,
+                "0.40.11",
+                true);
+
+        configs().save(engine);
+
+        final ProviderConfig found = configs().find("contract-engine").orElseThrow();
+        assertThat(found).isEqualTo(engine);
+        assertThat(found.effectiveEngine()).isEqualTo(ServerEngine.LLAMA_CPP);
+        assertThat(found.nativeOfferDeclined()).isTrue();
     }
 
     @Test

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
@@ -65,7 +66,8 @@ class SqliteModelSettingsContractTest extends ModelSettingsContractTest {
                 OutputLengthField.MAX_COMPLETION_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out")),
                 2.5,
-                MeasuredFrom.TEST);
+                MeasuredFrom.TEST,
+                ProbeVerdicts.none());
         repository.save(saved);
 
         db.close();

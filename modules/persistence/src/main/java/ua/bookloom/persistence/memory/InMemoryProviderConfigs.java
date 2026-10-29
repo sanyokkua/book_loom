@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** Process-local provider registry seeded with the two local server presets. */
 @Slf4j
@@ -26,7 +27,10 @@ public final class InMemoryProviderConfigs implements ProviderConfigs {
     @Inject
     public InMemoryProviderConfigs() {
         configs.put("ollama", preset("ollama", ProviderKind.OLLAMA, "http://localhost:11434"));
-        configs.put("lmstudio", preset("lmstudio", ProviderKind.OPENAI_COMPATIBLE, "http://localhost:1234/v1"));
+        configs.put(
+                "lmstudio",
+                preset("lmstudio", ProviderKind.OPENAI_COMPATIBLE, "http://localhost:1234/v1")
+                        .withEngine(ServerEngine.LM_STUDIO));
         log.debug("Provider registry initialized presetIds=ollama,lmstudio");
     }
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** What counts as the same thing being tested: a name does not, an address does. */
 class TestSubjectTest {
@@ -28,7 +29,11 @@ class TestSubjectTest {
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     private static TestSubject subject(final String name, final String address, final String model) {

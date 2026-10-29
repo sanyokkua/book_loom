@@ -90,6 +90,40 @@ class ProviderConfigTest {
         assertThat(config.customModels()).containsExactly("a");
     }
 
+    @Test
+    void effectiveEngine_choiceSet_winsOverDetected() {
+        final ProviderConfig detected = providerConfig();
+
+        assertThat(detected.effectiveEngine()).isEqualTo(ServerEngine.OLLAMA);
+        assertThat(new ProviderConfig(
+                                "local",
+                                ProviderKind.OPENAI_COMPATIBLE,
+                                URI.create("http://localhost:1234/v1"),
+                                Duration.ofSeconds(3),
+                                Duration.ofSeconds(40),
+                                null,
+                                ProviderAuth.NONE,
+                                null,
+                                null,
+                                null,
+                                null,
+                                Map.of(),
+                                List.of(),
+                                ServerEngine.OLLAMA,
+                                ServerEngine.LLAMA_CPP,
+                                "1.0",
+                                false)
+                        .effectiveEngine())
+                .isEqualTo(ServerEngine.LLAMA_CPP);
+    }
+
+    @Test
+    void convenienceConstructor_kindDecidesTheDefaultEngine() {
+        assertThat(providerConfig().engine()).isEqualTo(ServerEngine.OLLAMA);
+        assertThat(providerConfig().withBaseUrl(URI.create("http://h/v1")).nativeOfferDeclined())
+                .isFalse();
+    }
+
     @SuppressWarnings("NullAway")
     @Test
     void nullId_isRejected() {

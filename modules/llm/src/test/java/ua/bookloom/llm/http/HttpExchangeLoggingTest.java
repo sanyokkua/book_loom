@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** Credential and header values never reach a log line at any level; a missing variable is named, never valued. */
 class HttpExchangeLoggingTest {
@@ -133,7 +134,11 @@ class HttpExchangeLoggingTest {
                 null,
                 null,
                 headers,
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     private String everythingLogged() {

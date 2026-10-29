@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TemperatureChoice;
@@ -132,7 +133,17 @@ class OpenAiCompatibleClientOutputFieldTest {
     private static ModelSettings settings(
             @Nullable Integer window, @Nullable Integer maxOutput, OutputLengthField field) {
         return new ModelSettings(
-                "lmstudio", MODEL, TemperatureChoice.CHOOSE, null, window, maxOutput, field, List.of(), null, null);
+                "lmstudio",
+                MODEL,
+                TemperatureChoice.CHOOSE,
+                null,
+                window,
+                maxOutput,
+                field,
+                List.of(),
+                null,
+                null,
+                ProbeVerdicts.none());
     }
 
     private static ChatRequest request(@Nullable Integer cap) {

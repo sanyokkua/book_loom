@@ -72,7 +72,11 @@ public record TestSubject(ProviderConfig config, String model, String name, bool
                 config.modelsPath(),
                 config.chatPath(),
                 config.headers(),
-                config.customModels());
+                config.customModels(),
+                config.engine(),
+                config.engineChoice(),
+                config.engineVersion(),
+                config.nativeOfferDeclined());
         return new Key(unnamed, model.strip(), stored);
     }
 }

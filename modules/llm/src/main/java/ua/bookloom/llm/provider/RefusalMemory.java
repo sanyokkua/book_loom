@@ -117,7 +117,8 @@ public final class RefusalMemory {
                 current.outputField(),
                 rows,
                 current.measuredSecondsPerSegment(),
-                current.measuredFrom());
+                current.measuredFrom(),
+                current.probeVerdicts());
     }
 
     private static @org.jspecify.annotations.Nullable ErrorCode errorCode(final Result<ModelSettings> saved) {

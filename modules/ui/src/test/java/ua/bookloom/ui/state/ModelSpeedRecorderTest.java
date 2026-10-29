@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.ui.FxTestBase;
@@ -101,7 +102,8 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 ModelSettings.defaults("ollama", "gemma").outputField(),
                 List.of(REFUSED),
                 null,
-                null));
+                null,
+                ProbeVerdicts.none()));
 
         record(1234, MeasuredFrom.TEST);
 
@@ -134,7 +136,8 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 base.outputField(),
                 List.of(REFUSED),
                 null,
-                null);
+                null,
+                ProbeVerdicts.none());
     }
 
     // IF the store were touched on the FX thread, THEN the window would stall on a slow disk.

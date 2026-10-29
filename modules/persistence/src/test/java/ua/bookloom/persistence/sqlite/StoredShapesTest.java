@@ -57,6 +57,15 @@ class StoredShapesTest {
     }
 
     @Test
+    void fingerprint_afterEngineFields_differsFromTheStoredOne() {
+        final String described = StoredShapes.describe(StoredShapes.ROOTS);
+        final String withoutNewFields = described.replace("engineChoice:", "").replace("probeVerdicts:", "");
+
+        assertThat(described).contains("engineChoice:", "engineVersion:", "nativeOfferDeclined:", "probeVerdicts:");
+        assertThat(withoutNewFields).isNotEqualTo(described);
+    }
+
+    @Test
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);
     }

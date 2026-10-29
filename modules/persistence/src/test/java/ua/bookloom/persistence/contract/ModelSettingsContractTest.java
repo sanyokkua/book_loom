@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
@@ -28,7 +29,35 @@ public abstract class ModelSettingsContractTest {
                 OutputLengthField.MAX_COMPLETION_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out")),
                 2.5,
-                MeasuredFrom.TEST);
+                MeasuredFrom.TEST,
+                ProbeVerdicts.none());
+    }
+
+    @Test
+    void save_modelSettingsWithSchemaVerdictHonouredFromTest_roundTrips() {
+        final ProbeVerdicts.Verdict verdict = new ProbeVerdicts.Verdict(
+                ProbeVerdicts.Outcome.HONOURED, "test", java.time.Instant.parse("2026-10-29T10:00:00Z"));
+        final ModelSettings base = sample("ollama", "verdicts");
+        final ModelSettings withVerdict = new ModelSettings(
+                base.providerId(),
+                base.modelId(),
+                base.temperatureChoice(),
+                base.temperature(),
+                base.contextWindow(),
+                base.maxOutput(),
+                base.outputField(),
+                base.refused(),
+                base.measuredSecondsPerSegment(),
+                base.measuredFrom(),
+                new ProbeVerdicts(verdict, null, null, null));
+
+        repository().save(withVerdict);
+
+        final ModelSettings found =
+                repository().find("ollama", "verdicts").data().orElseThrow();
+        assertThat(found.probeVerdicts().answerSchema()).isEqualTo(verdict);
+        assertThat(found.probeVerdicts().capField()).isNull();
+        assertThat(found).isEqualTo(withVerdict);
     }
 
     @Test
@@ -147,7 +176,8 @@ public abstract class ModelSettingsContractTest {
                         base.outputField(),
                         List.of(base.refused().get(0), topP),
                         base.measuredSecondsPerSegment(),
-                        base.measuredFrom()));
+                        base.measuredFrom(),
+                        ProbeVerdicts.none()));
 
         repository().update("ollama", "gemma", stored -> stored.withoutRefusal("temperature"));
 
@@ -176,7 +206,8 @@ public abstract class ModelSettingsContractTest {
                         s.outputField(),
                         rows,
                         s.measuredSecondsPerSegment(),
-                        s.measuredFrom());
+                        s.measuredFrom(),
+                        ProbeVerdicts.none());
             }));
             final var speed = pool.submit(() ->
                     repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(0.9, MeasuredFrom.RUN)));

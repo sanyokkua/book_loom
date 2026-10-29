@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigRules;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -355,11 +356,19 @@ public record ProviderDraft(
                 nullIfBlank(modelsPath),
                 nullIfBlank(chatPath),
                 extra,
-                customModels.stream()
-                        .map(String::strip)
-                        .filter(value -> !value.isEmpty())
-                        .distinct()
-                        .toList());
+                cleanedCustomModels(),
+                kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.GENERIC,
+                null,
+                null,
+                false);
+    }
+
+    private List<String> cleanedCustomModels() {
+        return customModels.stream()
+                .map(String::strip)
+                .filter(value -> !value.isEmpty())
+                .distinct()
+                .toList();
     }
 
     private @Nullable URI parseAddress() {

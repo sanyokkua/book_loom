@@ -66,3 +66,4 @@ explicitly — read them before planning work.
 | ADR-0043 | Application state in SQLite as JSON documents; no schema migrations before release     | DD-20               |
 | ADR-0044 | Look for a local AI program once, by itself, at first launch (amends ADR-0010)        | DD-01               |
 | ADR-0045 | Review is an in-window dialog; the review mode is a stored setting                    | DD-45               |
+| ADR-0047 | Server engines and model profiles; the engine is stored on the provider (ADR-0046 is reserved, unused) | DD-01, DD-20 |

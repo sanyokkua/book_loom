@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
@@ -65,7 +66,8 @@ class RefusalMemoryTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
                 null,
-                null));
+                null,
+                ProbeVerdicts.none()));
 
         final boolean stored = memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
@@ -116,7 +118,8 @@ class RefusalMemoryTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
                 null,
-                null));
+                null,
+                ProbeVerdicts.none()));
         memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
         final ChatRequest stripped = memory.withoutRemembered(request(0.7), cache.current(PROVIDER, MODEL));
@@ -140,7 +143,8 @@ class RefusalMemoryTest {
                 withRow.outputField(),
                 List.of(),
                 null,
-                null));
+                null,
+                ProbeVerdicts.none()));
 
         final ChatRequest kept = memory.withoutRemembered(request(0.2), cache.current(PROVIDER, MODEL));
 
@@ -159,7 +163,8 @@ class RefusalMemoryTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("frequency_penalty", DAY, "omitted")),
                 null,
-                null));
+                null,
+                ProbeVerdicts.none()));
 
         assertThat(memory.remembered(cache.current(PROVIDER, MODEL))).isEmpty();
     }

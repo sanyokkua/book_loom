@@ -29,7 +29,8 @@ class ModelSettingsTest {
                 OutputLengthField.MAX_TOKENS,
                 refused,
                 null,
-                null);
+                null,
+                ProbeVerdicts.none());
     }
 
     @Test
@@ -152,7 +153,8 @@ class ModelSettingsTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
                 seconds,
-                from);
+                from,
+                ProbeVerdicts.none());
     }
 
     @Test

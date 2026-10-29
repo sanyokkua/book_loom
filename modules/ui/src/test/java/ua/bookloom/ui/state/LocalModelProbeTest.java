@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.RecordingModelCatalog;
 import ua.bookloom.ui.dialog.RecordingModelPickPrompt;
@@ -142,6 +143,15 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
     }
 
     @Test
+    void runFirstLaunch_tagsProbeAnswers_storesEngineOllama() {
+        catalog.answering(OLLAMA, "gemma4:e4b");
+
+        firstLaunch(probe());
+
+        assertThat(configs.saved()).extracting(ProviderConfig::engine).containsExactly(ServerEngine.OLLAMA);
+    }
+
+    @Test
     void runFirstLaunch_onlyLmStudioAnswersWithOneModel_savesItAndChoosesItsModel() {
         catalog.answering(LM_STUDIO, "qwen3:8b");
         final LocalModelProbe probe = probe();
@@ -150,11 +160,12 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
 
         assertThat(configs.saved())
                 .containsExactly(new ProviderConfig(
-                        "lmstudio",
-                        ProviderKind.OPENAI_COMPATIBLE,
-                        URI.create(LM_STUDIO),
-                        ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                        ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
+                                "lmstudio",
+                                ProviderKind.OPENAI_COMPATIBLE,
+                                URI.create(LM_STUDIO),
+                                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                                ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
+                        .withEngine(ServerEngine.LM_STUDIO));
         assertThat(storedModel()).contains(LM_QWEN);
         assertThat(onFx(() -> viewModel.selection())).contains(LM_QWEN);
         assertThat(outcome(probe)).isEqualTo(new ProbeOutcome.Found(LM_QWEN, true));

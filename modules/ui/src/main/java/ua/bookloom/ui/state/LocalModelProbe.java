@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -127,9 +128,10 @@ public final class LocalModelProbe {
     private void look(final boolean atFirstLaunch) {
         log.info("local AI program look starting, first launch {}", atFirstLaunch);
         try {
-            final Optional<Answered> ollama =
-                    ask(OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS).filter(this::isSameProgram);
-            final Optional<Answered> lmStudio = ask(LM_STUDIO_ID, ProviderKind.OPENAI_COMPATIBLE, LM_STUDIO_ADDRESS)
+            final Optional<Answered> ollama = ask(OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS, ServerEngine.OLLAMA)
+                    .filter(this::isSameProgram);
+            final Optional<Answered> lmStudio = ask(
+                            LM_STUDIO_ID, ProviderKind.OPENAI_COMPATIBLE, LM_STUDIO_ADDRESS, ServerEngine.LM_STUDIO)
                     .filter(this::isSameProgram);
             log.info("look finished: ollama={} lmstudio={}", count(ollama), count(lmStudio));
             ollama.ifPresent(this::save);
@@ -147,7 +149,8 @@ public final class LocalModelProbe {
         return answered.map(found -> Integer.toString(found.models().size())).orElse("none");
     }
 
-    private Optional<Answered> ask(final String id, final ProviderKind kind, final URI address) {
+    private Optional<Answered> ask(
+            final String id, final ProviderKind kind, final URI address, final ServerEngine engine) {
         log.debug("asking {}", address);
         final ProviderConfig draft = new ProviderConfig(id, kind, address, LOOK_CONNECT_TIMEOUT, LOOK_REQUEST_TIMEOUT);
         final Result<List<ModelInfo>> listed = catalog.listModels(draft);
@@ -167,11 +170,12 @@ public final class LocalModelProbe {
         }
         return Optional.of(new Answered(
                 new ProviderConfig(
-                        id,
-                        kind,
-                        address,
-                        ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
-                        ProviderConfig.DEFAULT_REQUEST_TIMEOUT),
+                                id,
+                                kind,
+                                address,
+                                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                                ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
+                        .withEngine(engine),
                 models));
     }
 

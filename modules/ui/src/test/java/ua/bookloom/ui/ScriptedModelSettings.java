@@ -13,6 +13,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 
 /** A hand-written {@link ModelSettingsRepository} that keeps what a test stored per provider and model in memory. */
@@ -97,7 +98,8 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
                 base.outputField(),
                 List.of(),
                 secondsPerSegment,
-                source);
+                source,
+                ProbeVerdicts.none());
         stored.put(providerId + "/" + modelId, seeded);
     }
 

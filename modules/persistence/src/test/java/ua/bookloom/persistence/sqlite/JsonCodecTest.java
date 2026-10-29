@@ -19,10 +19,12 @@ import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
@@ -244,7 +246,11 @@ class JsonCodecTest {
                 "/models",
                 "/chat/completions",
                 Map.of("Authorization", "Bearer ${env:LMS_KEY}"),
-                List.of("custom-a", "custom-b"));
+                List.of("custom-a", "custom-b"),
+                ServerEngine.LM_STUDIO,
+                ServerEngine.LLAMA_CPP,
+                "0.3.9",
+                true);
     }
 
     private static ModelSettings modelSettings() {
@@ -258,6 +264,16 @@ class JsonCodecTest {
                 OutputLengthField.MAX_COMPLETION_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 2, 3), "omitted it")),
                 1.6,
-                MeasuredFrom.TEST);
+                MeasuredFrom.TEST,
+                new ProbeVerdicts(
+                        new ProbeVerdicts.Verdict(
+                                ProbeVerdicts.Outcome.HONOURED, "test", Instant.parse("2026-10-29T10:00:00Z")),
+                        new ProbeVerdicts.ThinkingVerdict(
+                                "think",
+                                new ProbeVerdicts.Verdict(
+                                        ProbeVerdicts.Outcome.IGNORED, "test", Instant.parse("2026-10-29T10:00:01Z"))),
+                        null,
+                        new ProbeVerdicts.Verdict(
+                                ProbeVerdicts.Outcome.REFUSED, "test", Instant.parse("2026-10-29T10:00:02Z"))));
     }
 }

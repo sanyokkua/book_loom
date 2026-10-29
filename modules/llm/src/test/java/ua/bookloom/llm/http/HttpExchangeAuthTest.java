@@ -28,6 +28,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.ClosedPorts;
 
 /** Sign-in headers on the wire: what is sent, what is refused before any request, and what never leaks. */
@@ -192,7 +193,11 @@ class HttpExchangeAuthTest {
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
 
         final Result<HttpReply> result =
                 exchange(Map.of(KEY_VARIABLE, KEY_VALUE)).get(closed, "/models");
@@ -284,7 +289,11 @@ class HttpExchangeAuthTest {
                 null,
                 null,
                 headers,
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     private static AppError error(Result<HttpReply> result) {

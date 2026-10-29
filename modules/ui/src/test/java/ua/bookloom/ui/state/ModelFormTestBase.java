@@ -13,6 +13,7 @@ import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.AfterEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.ui.EnglishMessages;
@@ -130,6 +131,7 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
                         s.outputField(),
                         List.of(refusal),
                         s.measuredSecondsPerSegment(),
-                        s.measuredFrom()));
+                        s.measuredFrom(),
+                        ProbeVerdicts.none()));
     }
 }

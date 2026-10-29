@@ -15,6 +15,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -307,6 +308,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 2), "omitted")),
                 null,
-                null);
+                null,
+                ProbeVerdicts.none());
     }
 }

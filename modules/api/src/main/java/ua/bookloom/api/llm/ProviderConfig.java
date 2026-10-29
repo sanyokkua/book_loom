@@ -26,6 +26,10 @@ import org.jspecify.annotations.Nullable;
  * @param chatPath the chat path replacing the dialect's default (not allowed for Ollama), or null
  * @param headers extra headers; a credential-like header's value must be a {@code ${env:NAME}} reference
  * @param customModels model names added to the discovered list
+ * @param engine the server engine detected on Save, Test or Detect again; never read from a port
+ * @param engineChoice the person's "Treat this server as..." choice that detection never overwrites, or null
+ * @param engineVersion the version the server reported, or null when it did not say
+ * @param nativeOfferDeclined whether the person kept an OpenAI-compatible Ollama as is; detection never clears it
  */
 public record ProviderConfig(
         String id,
@@ -40,7 +44,11 @@ public record ProviderConfig(
         @Nullable String modelsPath,
         @Nullable String chatPath,
         Map<String, String> headers,
-        List<String> customModels) {
+        List<String> customModels,
+        ServerEngine engine,
+        @Nullable ServerEngine engineChoice,
+        @Nullable String engineVersion,
+        boolean nativeOfferDeclined) {
 
     /** Default time allowed to establish a provider connection. */
     public static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
@@ -56,6 +64,7 @@ public record ProviderConfig(
         Objects.requireNonNull(connectTimeout, "connectTimeout");
         Objects.requireNonNull(requestTimeout, "requestTimeout");
         Objects.requireNonNull(auth, "auth");
+        Objects.requireNonNull(engine, "engine");
         headers = Map.copyOf(Objects.requireNonNull(headers, "headers"));
         customModels = List.copyOf(Objects.requireNonNull(customModels, "customModels"));
     }
@@ -80,7 +89,11 @@ public record ProviderConfig(
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     /**
@@ -103,7 +116,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -126,7 +143,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -149,7 +170,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -172,7 +197,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -195,7 +224,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -218,7 +251,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -241,7 +278,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -264,7 +305,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -287,7 +332,11 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
     }
 
     /**
@@ -310,6 +359,37 @@ public record ProviderConfig(
                 modelsPath,
                 chatPath,
                 headers,
-                customModels);
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
+    }
+
+    /** Returns a copy with only the detected engine changed. */
+    public ProviderConfig withEngine(final ServerEngine engine) {
+        return new ProviderConfig(
+                id,
+                kind,
+                baseUrl,
+                connectTimeout,
+                requestTimeout,
+                displayName,
+                auth,
+                apiKeyHeader,
+                credentialRef,
+                modelsPath,
+                chatPath,
+                headers,
+                customModels,
+                engine,
+                engineChoice,
+                engineVersion,
+                nativeOfferDeclined);
+    }
+
+    /** Returns the person's choice when set, else the detected engine. */
+    public ServerEngine effectiveEngine() {
+        return engineChoice != null ? engineChoice : engine;
     }
 }

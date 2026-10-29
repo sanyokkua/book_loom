@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TemperatureChoice;
@@ -75,7 +76,17 @@ class GatedChatModelStoredCapTest {
         server.stubFor(post(urlEqualTo(chatPath))
                 .willReturn(aResponse().withStatus(200).withBody(reply)));
         repository.save(new ModelSettings(
-                PROVIDER, MODEL, TemperatureChoice.CHOOSE, null, null, 128, field, List.of(), null, null));
+                PROVIDER,
+                MODEL,
+                TemperatureChoice.CHOOSE,
+                null,
+                null,
+                128,
+                field,
+                List.of(),
+                null,
+                null,
+                ProbeVerdicts.none()));
 
         model(kind, basePath).chat(uncapped());
 

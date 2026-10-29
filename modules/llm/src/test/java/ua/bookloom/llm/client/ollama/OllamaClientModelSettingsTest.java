@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TemperatureChoice;
@@ -125,7 +126,18 @@ class OllamaClientModelSettingsTest {
             @Nullable Integer window,
             @Nullable Integer maxOutput,
             OutputLengthField field) {
-        return new ModelSettings("ollama", MODEL, choice, temperature, window, maxOutput, field, List.of(), null, null);
+        return new ModelSettings(
+                "ollama",
+                MODEL,
+                choice,
+                temperature,
+                window,
+                maxOutput,
+                field,
+                List.of(),
+                null,
+                null,
+                ProbeVerdicts.none());
     }
 
     private static ChatRequest request(double temperature, int cap) {

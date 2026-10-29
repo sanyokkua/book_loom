@@ -39,6 +39,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
@@ -208,7 +209,11 @@ class ProviderEnginesAcceptanceTest {
                 null,
                 null,
                 Map.of(),
-                List.of());
+                List.of(),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false);
     }
 
     private void register(final ProviderConfig config) {

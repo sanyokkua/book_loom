@@ -14,6 +14,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** The list of models the Models tab offers: every provider's, each model once, and never read on the FX thread. */
 class ModelRosterTest extends SettingsViewModelTestBase {
@@ -68,7 +69,11 @@ class ModelRosterTest extends SettingsViewModelTestBase {
                 base.modelsPath(),
                 base.chatPath(),
                 base.headers(),
-                List.of(names)));
+                List.of(names),
+                ServerEngine.GENERIC,
+                null,
+                null,
+                false));
     }
 
     // IF only the selected provider were read, THEN a model of the other one could never be given its own settings.

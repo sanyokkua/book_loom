@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.ui.ScriptedModelCapabilities;
@@ -115,7 +116,8 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
                 OutputLengthField.MAX_TOKENS,
                 List.<RefusedSetting>of(),
                 null,
-                null);
+                null,
+                ProbeVerdicts.none());
     }
 
     Button press(final String id) {

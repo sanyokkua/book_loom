@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.pipeline.CallKind;
@@ -157,7 +158,18 @@ class GatedChatModelSettingsTest {
             @Nullable final Integer window,
             @Nullable final Integer maxOutput,
             final OutputLengthField field) {
-        return new ModelSettings(PROVIDER, MODEL, choice, temperature, window, maxOutput, field, List.of(), null, null);
+        return new ModelSettings(
+                PROVIDER,
+                MODEL,
+                choice,
+                temperature,
+                window,
+                maxOutput,
+                field,
+                List.of(),
+                null,
+                null,
+                ProbeVerdicts.none());
     }
 
     private static ChatRequest request(final Double temperature, @Nullable final Integer cap) {

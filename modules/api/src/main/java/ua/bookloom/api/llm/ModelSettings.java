@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
  * @param measuredSecondsPerSegment the measured speed in seconds per segment, or null when never measured; positive
  *     when set
  * @param measuredFrom where the speed was measured; null exactly when the speed is null
+ * @param probeVerdicts what the advanced check found; non-null, with null parts for what was never checked
  */
 public record ModelSettings(
         String providerId,
@@ -29,7 +30,8 @@ public record ModelSettings(
         OutputLengthField outputField,
         List<RefusedSetting> refused,
         @Nullable Double measuredSecondsPerSegment,
-        @Nullable MeasuredFrom measuredFrom) {
+        @Nullable MeasuredFrom measuredFrom,
+        ProbeVerdicts probeVerdicts) {
 
     /** The lowest temperature a person may fix. */
     public static final double MIN_TEMPERATURE = 0.0;
@@ -42,6 +44,7 @@ public record ModelSettings(
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(temperatureChoice, "temperatureChoice");
         Objects.requireNonNull(outputField, "outputField");
+        Objects.requireNonNull(probeVerdicts, "probeVerdicts");
         refused = List.copyOf(Objects.requireNonNull(refused, "refused"));
         requireTemperatureMatchesChoice(temperatureChoice, temperature);
         requirePositive(contextWindow, "contextWindow");
@@ -67,7 +70,8 @@ public record ModelSettings(
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
                 null,
-                null);
+                null,
+                ProbeVerdicts.none());
     }
 
     /**
@@ -89,7 +93,8 @@ public record ModelSettings(
                 outputField,
                 refused,
                 secondsPerSegment,
-                from);
+                from,
+                probeVerdicts);
     }
 
     /**
@@ -118,7 +123,8 @@ public record ModelSettings(
                 field,
                 refused,
                 measuredSecondsPerSegment,
-                measuredFrom);
+                measuredFrom,
+                probeVerdicts);
     }
 
     /**
@@ -139,7 +145,8 @@ public record ModelSettings(
                 outputField,
                 refused.stream().filter(r -> !r.name().equals(name)).toList(),
                 measuredSecondsPerSegment,
-                measuredFrom);
+                measuredFrom,
+                probeVerdicts);
     }
 
     private static void requireTemperatureMatchesChoice(

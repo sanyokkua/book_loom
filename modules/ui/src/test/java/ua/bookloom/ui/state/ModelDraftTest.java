@@ -13,6 +13,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
+import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -221,7 +222,8 @@ class ModelDraftTest {
                 OutputLengthField.MAX_TOKENS,
                 List.of(refusal),
                 1.5,
-                MeasuredFrom.RUN);
+                MeasuredFrom.RUN,
+                ProbeVerdicts.none());
 
         final ModelSettings written =
                 saved(ModelDraft.of(DEFAULTS).withChoice(TemperatureChoice.OMIT).apply(current));
