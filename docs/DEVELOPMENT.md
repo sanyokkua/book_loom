@@ -1040,8 +1040,8 @@ real Ollama model (`BOOKLOOM_EVAL_MODEL`, default `gemma4:e4b-mlx`; `BOOKLOOM_EV
 repair: it parses, its tokens are intact with every pair around words (gate), it is in Cyrillic, it holds the case's
 marker (a glossary rendering, a correct drop cap, a translated instruction, a name's uninflected dictionary form), and
 the reviewer leaves a good candidate alone and asks for a change to a bad one (an edit whose quote is in the text, or a rewrite; an edit that quotes nothing is a harmless hallucination). The table lands in
-`modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95%, gate 90% or review separation
-80%.
+`modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95% or gate 90%
+or a defect threshold.
 
 *How the eval builds a request (15e.1).* An eval sends what the app sends. Each case becomes an `EvalProject`
 (test side): its glossary entries and recurring terms go into the in-memory stores, its segments form one unit with the
