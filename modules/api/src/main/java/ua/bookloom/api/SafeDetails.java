@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
@@ -16,7 +17,7 @@ import org.jspecify.annotations.Nullable;
  * expandable panel in the UI and written to the log file, so anything reaching it has left the process's control.
  * The allowlist — a failure reason token, HTTP status, endpoint host, model name, timeout, attempt count, QA finding
  * names, the expected/observed placeholder multisets, a folder's own name and the prompt and window token counts of
- * a prompt that did not fit — is therefore enforced twice over: it is exactly this record's
+ * a prompt that did not fit, the engine found at an address — is therefore enforced twice over: it is exactly this record's
  * <strong>component set</strong>, and it is exactly its <strong>method set</strong>. There is deliberately no
  * {@code withMessage(String)}, no {@code withException(...)}, and no {@code append(...)}, so a stack trace, a
  * response body, or an {@code Authorization} header has no syntax to arrive by.
@@ -53,6 +54,8 @@ import org.jspecify.annotations.Nullable;
  * @param promptTokens the tokens a request needed, as the provider stated them for a prompt that did not fit, or
  *     {@code null}
  * @param windowTokens the tokens the model's window holds, as the provider stated them, or {@code null}
+ * @param engine the {@code ServerEngine} constant name of the server found at the address, or {@code null}; only
+ *     an upper-case constant name is taken, so no reply text can arrive through it
  */
 public record SafeDetails(
         @Nullable String reason,
@@ -66,10 +69,14 @@ public record SafeDetails(
         @Nullable String observedPlaceholders,
         @Nullable String folderName,
         @Nullable Integer promptTokens,
-        @Nullable Integer windowTokens) {
+        @Nullable Integer windowTokens,
+        @Nullable String engine) {
 
     /** Most QA finding names rendered before the remainder is summarised as a count. */
     private static final int MAX_FINDINGS = 10;
+
+    /** The shape of an enum constant's name, the only text the engine field takes. */
+    private static final Pattern CONSTANT_NAME = Pattern.compile("[A-Z][A-Z_]{0,31}");
 
     /**
      * Starts from no details at all.
@@ -77,7 +84,7 @@ public record SafeDetails(
      * @return an instance with every allowlisted field absent
      */
     public static SafeDetails empty() {
-        return new SafeDetails(null, null, null, null, null, null, null, null, null, null, null, null);
+        return new SafeDetails(null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     /**
@@ -99,7 +106,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -129,7 +137,8 @@ public record SafeDetails(
                         observedPlaceholders,
                         folderName,
                         promptTokens,
-                        windowTokens);
+                        windowTokens,
+                        engine);
     }
 
     /**
@@ -152,7 +161,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -175,7 +185,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -198,7 +209,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -230,7 +242,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -277,7 +290,8 @@ public record SafeDetails(
                 SafeText.observed(observed),
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -300,7 +314,8 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 promptTokens,
-                windowTokens);
+                windowTokens,
+                engine);
     }
 
     /**
@@ -326,7 +341,8 @@ public record SafeDetails(
                         observedPlaceholders,
                         SafeText.flatten(name.toString()),
                         promptTokens,
-                        windowTokens);
+                        windowTokens,
+                        engine);
     }
 
     /**
@@ -354,7 +370,38 @@ public record SafeDetails(
                 observedPlaceholders,
                 folderName,
                 prompt,
-                window);
+                window,
+                engine);
+    }
+
+    /**
+     * Records which engine answers at the provider's address, so a test can name it in any display language. The
+     * root package takes the constant's name, not the {@code ua.bookloom.api.llm.ServerEngine} type, so it does not
+     * depend on a sub-package that depends on it.
+     *
+     * @param engineName the engine constant's {@code name()}, such as {@code LM_STUDIO}
+     * @return a copy carrying the engine
+     * @throws IllegalArgumentException if the name is not an upper-case constant name
+     */
+    public SafeDetails withEngine(String engineName) {
+        Objects.requireNonNull(engineName, "engineName");
+        if (!CONSTANT_NAME.matcher(engineName).matches()) {
+            throw new IllegalArgumentException("engine must be a constant name");
+        }
+        return new SafeDetails(
+                reason,
+                httpStatus,
+                endpointHost,
+                modelName,
+                timeoutMillis,
+                attempt,
+                qaFindings,
+                expectedPlaceholders,
+                observedPlaceholders,
+                folderName,
+                promptTokens,
+                windowTokens,
+                engineName);
     }
 
     /**
@@ -366,7 +413,7 @@ public record SafeDetails(
      * @return the rendered detail string, or {@code null} when no field is set
      */
     public @Nullable String render() {
-        final List<String> parts = new ArrayList<>(12);
+        final List<String> parts = new ArrayList<>(13);
         append(parts, "reason", reason);
         append(parts, "httpStatus", httpStatus);
         append(parts, "endpointHost", endpointHost);
@@ -379,6 +426,7 @@ public record SafeDetails(
         append(parts, "folder", folderName);
         append(parts, "promptTokens", promptTokens);
         append(parts, "windowTokens", windowTokens);
+        append(parts, "engine", engine);
         return parts.isEmpty() ? null : String.join(", ", parts);
     }
 

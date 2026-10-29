@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * The safe-details allowlist — the privacy half of the error envelope.
@@ -40,7 +41,8 @@ class SafeDetailsTest {
             "observedPlaceholders",
             "folderName",
             "promptTokens",
-            "windowTokens");
+            "windowTokens",
+            "engine");
 
     // WHEN a failure carries technical detail, the system SHALL
     // populate AppError.details only from the allowlisted fields: HTTP status, endpoint host, model name, timeout,
@@ -105,6 +107,26 @@ class SafeDetailsTest {
                 .as("no allowlisted field may be populated from a throwable")
                 .allSatisfy(method ->
                         assertThat(Stream.of(method.getParameterTypes())).noneMatch(Throwable.class::isAssignableFrom));
+    }
+
+    // The window names the engine in its own language, so the details carry the engine and nothing a reply wrote.
+    @Test
+    void withEngine_constantName_isRenderedAndReadBack() {
+        final String details = SafeDetails.empty()
+                .withReason(FailureReason.ENGINE_MISMATCH)
+                .withEndpoint(URI.create("http://127.0.0.1:11434"))
+                .withEngine("LM_STUDIO")
+                .render();
+
+        assertThat(details).isEqualTo("reason=engine-mismatch, endpointHost=127.0.0.1:11434, engine=LM_STUDIO");
+        assertThat(ServerEngine.in(details)).contains(ServerEngine.LM_STUDIO);
+    }
+
+    // IF any text could be passed as the engine, THEN a reply's words could reach a dialog through it.
+    @ParameterizedTest
+    @ValueSource(strings = {"lm studio", "LM_STUDIO, model=x", "", "Ollama"})
+    void withEngine_notAConstantName_isRefused(final String name) {
+        assertThatThrownBy(() -> SafeDetails.empty().withEngine(name)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // A value passed to the wrong field cannot be prevented by an API, but its blast radius can be bounded: a newline

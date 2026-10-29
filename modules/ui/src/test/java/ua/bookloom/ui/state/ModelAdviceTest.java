@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.state.ModelAdvice.Level;
 import ua.bookloom.ui.state.ModelAdvice.Note;
 import ua.bookloom.ui.state.ModelAdvice.Server;
@@ -78,7 +79,8 @@ class ModelAdviceTest {
     })
     void serverOf_row_isToldByKindPortAndName(
             final ProviderKind kind, final String hostPort, final String id, final String name, final Server expected) {
-        assertThat(Server.of(new ProviderRow(id, kind, "http://" + hostPort + "/v1", hostPort, name)))
+        assertThat(Server.of(
+                        new ProviderRow(id, kind, "http://" + hostPort + "/v1", hostPort, name, ServerEngine.GENERIC)))
                 .isEqualTo(expected);
     }
 

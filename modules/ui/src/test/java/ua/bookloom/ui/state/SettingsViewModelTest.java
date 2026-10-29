@@ -34,13 +34,20 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> List.copyOf(viewModel.providers())))
                 .containsExactly(
-                        new ProviderRow("ollama", ProviderKind.OLLAMA, "http://localhost:11434", "localhost:11434", ""),
+                        new ProviderRow(
+                                "ollama",
+                                ProviderKind.OLLAMA,
+                                "http://localhost:11434",
+                                "localhost:11434",
+                                "",
+                                ServerEngine.OLLAMA),
                         new ProviderRow(
                                 "lmstudio",
                                 ProviderKind.OPENAI_COMPATIBLE,
                                 "http://localhost:1234/v1",
                                 "localhost:1234",
-                                ""));
+                                "",
+                                ServerEngine.GENERIC));
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 

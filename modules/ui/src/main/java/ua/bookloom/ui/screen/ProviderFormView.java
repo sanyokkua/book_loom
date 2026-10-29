@@ -20,6 +20,7 @@ import ua.bookloom.ui.dialog.ProviderTestDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -50,12 +51,13 @@ final class ProviderFormView {
     ProviderFormView(
             final SettingsViewModel viewModel,
             final ProviderForm form,
+            final ProviderEngine engine,
             final Messages messages,
             final ProviderTestDialog dialog) {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(viewModel, "viewModel");
-        connection = new ProviderConnectionSection(form, messages);
+        connection = new ProviderConnectionSection(form, engine, messages);
         extras = new ProviderExtrasSection(form, messages);
         model = new ModelField(viewModel, form, messages);
         buildFold(new ProviderChecks(viewModel, messages, dialog));

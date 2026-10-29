@@ -870,7 +870,7 @@ public enum MessageKey {
     SETTINGS_TEST_MODELS_TIP("settings.test.models.tip"),
     /** Label of the action that also asks the chosen model for a short answer. */
     SETTINGS_TEST_INFERENCE("settings.test.inference"),
-    /** Label of the optional check of what the server honours for the chosen model (its button comes with 5.8). */
+    /** Label of the button of the optional check of what the server honours for the chosen model. */
     SETTINGS_TEST_ADVANCED("settings.test.advanced"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_INFERENCE}. */
     SETTINGS_TEST_INFERENCE_TIP("settings.test.inference.tip"),
@@ -3780,6 +3780,56 @@ public enum MessageKey {
     SETTINGS_STAGE_INFERENCE_TIP("settings.stage.inference.tip"),
     /** Hover explanation of the Advanced features check's switch in the test dialog's footer. */
     SETTINGS_STAGE_ADVANCED_TIP("settings.stage.advanced.tip"),
+    /** Hover explanation of the Advanced features check's button. */
+    SETTINGS_TEST_ADVANCED_TIP("settings.test.advanced.tip"),
+    /** Title of the test dialog for the Advanced features check, and the line beside its button before it runs. */
+    SETTINGS_TEST_ADVANCED_TITLE("settings.test.advanced.title"),
+    /** Name of one Advanced features check, selected by its note token; &#123;1&#125; is the token. */
+    SETTINGS_ADVANCED_CHECK("settings.providers.advanced.check"),
+    /** How the server treated a setting an Advanced features check sent, selected by the outcome; &#123;1&#125; is the word. */
+    SETTINGS_ADVANCED_OUTCOME("settings.providers.advanced.outcome"),
+    /** Value of the thinking check when a request field turned reasoning off; &#123;0&#125; is the field. */
+    SETTINGS_ADVANCED_SWITCH("settings.providers.advanced.switch"),
+    /** Value of the thinking check when no request field turned reasoning off. */
+    SETTINGS_ADVANCED_NO_SWITCH("settings.providers.advanced.noSwitch"),
+    /** Value of the answer-cap check when no field limits the answer. */
+    SETTINGS_ADVANCED_NO_CAP("settings.providers.advanced.noCap"),
+    /** One verdict line of the Advanced features check: &#123;0&#125; the check, &#123;1&#125; what was found. */
+    SETTINGS_ADVANCED_LINE("settings.providers.advanced.line"),
+    /** The line under the address: &#123;0&#125; the engine found, &#123;1&#125; the connection. */
+    SETTINGS_ENGINE_DETECTED("settings.providers.engine.detected"),
+    /** The line under the address with the version the server reported: &#123;0&#125; engine, &#123;1&#125; version, &#123;2&#125; connection. */
+    SETTINGS_ENGINE_DETECTED_VERSION("settings.providers.engine.detectedVersion"),
+    /** The line under the address when the server matches no known engine. */
+    SETTINGS_ENGINE_UNKNOWN("settings.providers.engine.unknown"),
+    /** An engine's name, selected by its constant; &#123;1&#125; is the constant. */
+    SETTINGS_ENGINE_NAME("settings.providers.engine.name"),
+    /** How the provider is reached, selected by its kind's constant. */
+    SETTINGS_ENGINE_CONNECTION("settings.providers.engine.connection"),
+    /** Button beside the line under the address that asks the server again which engine it is. */
+    SETTINGS_ENGINE_DETECT("settings.providers.engine.detect"),
+    /** Hover explanation of Detect again. */
+    SETTINGS_ENGINE_DETECT_TIP("settings.providers.engine.detect.tip"),
+    /** Shown while Detect again waits for the server. */
+    SETTINGS_ENGINE_DETECTING("settings.providers.engine.detecting"),
+    /** Shown when Detect again got no answer; the line keeps its last text. */
+    SETTINGS_ENGINE_UNANSWERED("settings.providers.engine.unanswered"),
+    /** Label of the choice that names the engine of a server. */
+    SETTINGS_TREAT_AS("settings.providers.treatAs"),
+    /** Hover explanation of Treat this server as. */
+    SETTINGS_TREAT_AS_TIP("settings.providers.treatAs.tip"),
+    /** The choice of Treat this server as that keeps the detected engine. */
+    SETTINGS_TREAT_AS_DETECTED("settings.providers.treatAs.detected"),
+    /** The one-time offer when Ollama answers behind an OpenAI-compatible provider. */
+    SETTINGS_OLLAMA_OFFER("settings.providers.ollamaOffer"),
+    /** Button of the offer that switches to Ollama's own connection. */
+    SETTINGS_OLLAMA_OFFER_USE("settings.providers.ollamaOffer.use"),
+    /** Hover explanation of Use it. */
+    SETTINGS_OLLAMA_OFFER_USE_TIP("settings.providers.ollamaOffer.use.tip"),
+    /** Button of the offer that keeps the OpenAI-compatible connection. */
+    SETTINGS_OLLAMA_OFFER_KEEP("settings.providers.ollamaOffer.keep"),
+    /** Hover explanation of Keep as is. */
+    SETTINGS_OLLAMA_OFFER_KEEP_TIP("settings.providers.ollamaOffer.keep.tip"),
     /** Label of the status metric. */
     SETTINGS_TEST_METRIC_STATUS("settings.test.metric.status"),
     /** Label of the time metric. */

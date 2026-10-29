@@ -51,7 +51,9 @@ final class SettingsConformanceCases {
                     List.of(
                             new Part("#settings-connection", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#settings-connection", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#settings-form-address", Kind.BORDER, "input-border", "#988462", "#7d949e"))),
+                            new Part("#settings-form-address", Kind.BORDER, "input-border", "#988462", "#7d949e"),
+                            // The engine found at the address is a quiet line under it, not a status badge.
+                            new Part("#settings-engine-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "SETTINGS_DELETE_DIALOG",
                     ViewNames.SETTINGS,

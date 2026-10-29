@@ -37,7 +37,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 
 /**
- * Runs the three provider tests against what the Providers form holds — the description as typed, saved or not — and
+ * Runs the provider tests against what the Providers form holds — the description as typed, saved or not — and
  * holds the findings of the last one. Nothing is registered or stored for a test, except the seconds per segment a
  * passing inference test of a saved provider measured.
  *
@@ -69,6 +69,7 @@ public final class ProviderTestRunner {
     private final ActivityTracker activities;
     private final ObjectBinding<@Nullable ActivityKind> inferenceBlocker;
     private final ReadOnlyObjectWrapper<@Nullable ActivityKind> blockedBy = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable VerificationReport> lastReport = new ReadOnlyObjectWrapper<>();
     private @Nullable Future<?> inFlight;
     private ActivityTracker.@Nullable Handle handle;
 
@@ -124,11 +125,7 @@ public final class ProviderTestRunner {
         this.subject.addListener((observed, was, now) -> onSubjectChanged(was, now));
     }
 
-    /**
-     * Whether a test is running and its report has not arrived.
-     *
-     * @return a read-only property
-     */
+    /** Whether a test is running and its report has not arrived. */
     public ReadOnlyBooleanProperty checking() {
         return checking.getReadOnlyProperty();
     }
@@ -174,6 +171,15 @@ public final class ProviderTestRunner {
     }
 
     /**
+     * The report of the last test that answered, which carries the engine its connection stage found.
+     *
+     * @return a read-only property holding {@code null} while a test runs and before any answered
+     */
+    public ReadOnlyObjectProperty<@Nullable VerificationReport> lastReport() {
+        return lastReport.getReadOnlyProperty();
+    }
+
+    /**
      * The findings of the last test: the stages it covers, in stage order, once there is a report.
      *
      * @return a read-only list, empty before any report, after a provider or model change and while a test runs
@@ -210,6 +216,7 @@ public final class ProviderTestRunner {
                 test,
                 target.config().id());
         stages.clear();
+        lastReport.set(null);
         checkRefusal.set("");
         checkEpoch++;
         running.set(test);
@@ -237,8 +244,9 @@ public final class ProviderTestRunner {
                 && activities.conflictFor(kindOf(test)).isEmpty();
     }
 
+    // Model work: a translating run refuses it before any call, a paused one lets it run.
     private static ActivityKind kindOf(final ProviderTest test) {
-        return test == ProviderTest.INFERENCE ? ActivityKind.PROVIDER_INFERENCE_TEST : ActivityKind.PROVIDER_CHECK;
+        return test.needsModel() ? ActivityKind.PROVIDER_INFERENCE_TEST : ActivityKind.PROVIDER_CHECK;
     }
 
     private void refreshBlocked() {
@@ -355,6 +363,7 @@ public final class ProviderTestRunner {
                 .toList();
         chips.forEach(TestChips::log);
         stages.setAll(chips);
+        lastReport.set(report);
         keepSpeed(test, target, chips);
         if (chips.stream().allMatch(TestChips::isPass)) {
             log.info("provider test {} passed", test);

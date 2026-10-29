@@ -3,7 +3,10 @@ package ua.bookloom.ui.state;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationStage;
 
-/** The three questions a person can ask of the selected provider, each cumulative over the ones before it. */
+/**
+ * The questions a person can ask of the selected provider, each cumulative over the ones before it; the last one is
+ * optional and is never started by the others.
+ */
 public enum ProviderTest {
     /** Asks whether the server answers at all; needs no model, so it can be asked before one is chosen. */
     CONNECTION(VerificationPolicy.CONNECTION, VerificationStage.CONNECTION, false),
@@ -15,7 +18,14 @@ public enum ProviderTest {
     MODELS(VerificationPolicy.CONNECTION_AND_MODELS, VerificationStage.MODELS, false),
 
     /** Also asks whether the chosen model returns a usable answer to a short request. */
-    INFERENCE(VerificationPolicy.FULL, VerificationStage.INFERENCE, true);
+    INFERENCE(VerificationPolicy.FULL, VerificationStage.INFERENCE, true),
+
+    /**
+     * Also asks, with a few short calls of invented text, which request fields the server honours for the chosen
+     * model (the answer schema, the thinking switch, the extra samplers, the answer cap); the verdicts are kept on the
+     * model.
+     */
+    ADVANCED(VerificationPolicy.ADVANCED, VerificationStage.ADVANCED, true);
 
     private final VerificationPolicy policy;
     private final VerificationStage lastStage;
@@ -48,7 +58,7 @@ public enum ProviderTest {
     /**
      * Whether the test cannot run until a model is chosen.
      *
-     * @return {@code true} only for the inference test
+     * @return {@code true} for the tests that call the model
      */
     public boolean needsModel() {
         return needsModel;

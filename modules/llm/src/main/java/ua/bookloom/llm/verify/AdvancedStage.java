@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.AdvancedCheck;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
@@ -108,28 +109,28 @@ final class AdvancedStage {
                         capField);
     }
 
-    // Machine words for the stage's note and the log; the dialog's own words for each verdict come with its rows.
+    // Machine words for the stage's note and the log (AdvancedCheck); the window words each pair in its own language.
     private static String note(final AdvancedChecks.Findings found) {
         final ProbeVerdicts verdicts = found.verdicts();
         final List<String> parts = new ArrayList<>(4);
-        add(parts, "structured answers", verdicts.answerSchema());
+        add(parts, AdvancedCheck.SCHEMA, verdicts.answerSchema());
         final ProbeVerdicts.ThinkingVerdict thinking = verdicts.thinkingSwitch();
         if (thinking != null) {
             final String named = thinking.switchName();
-            parts.add(
-                    "reasoning off: " + (named == null ? word(thinking.verdict().outcome()) : named));
+            parts.add(AdvancedCheck.THINKING.pair(
+                    named == null ? word(thinking.verdict().outcome()) : named));
         }
-        add(parts, "top_k/min_p", verdicts.extraSamplers());
+        add(parts, AdvancedCheck.SAMPLERS, verdicts.extraSamplers());
         if (verdicts.capField() != null) {
             final OutputLengthField field = found.capField();
-            parts.add("answer cap: " + (field == null ? "none" : field.wireName()));
+            parts.add(AdvancedCheck.CAP.pair(field == null ? AdvancedCheck.NO_FIELD : field.wireName()));
         }
-        return String.join("; ", parts);
+        return String.join(AdvancedCheck.SEPARATOR, parts);
     }
 
-    private static void add(final List<String> parts, final String name, final @Nullable Verdict verdict) {
+    private static void add(final List<String> parts, final AdvancedCheck check, final @Nullable Verdict verdict) {
         if (verdict != null) {
-            parts.add(name + ": " + word(verdict.outcome()));
+            parts.add(check.pair(word(verdict.outcome())));
         }
     }
 

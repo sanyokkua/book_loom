@@ -177,10 +177,6 @@ final class ProviderTestView {
     private void buildFooter() {
         card.getButtonTypes().clear();
         for (final VerificationStage each : VerificationStage.values()) {
-            // The Advanced features stage gets its tab with its Test button (5.8); until then the footer is unchanged.
-            if (each == VerificationStage.ADVANCED) {
-                continue;
-            }
             final ButtonType type = new ButtonType(CheckSentences.stageName(messages, each), ButtonBar.ButtonData.LEFT);
             card.getButtonTypes().add(type);
             final Button tab = (Button) card.lookupButton(type);
@@ -258,7 +254,7 @@ final class ProviderTestView {
             case CONNECTION -> MessageKey.SETTINGS_TEST_CONNECTION;
             case MODELS -> MessageKey.SETTINGS_TEST_MODELS;
             case INFERENCE -> MessageKey.SETTINGS_TEST_INFERENCE;
-            case ADVANCED -> MessageKey.SETTINGS_TEST_ADVANCED;
+            case ADVANCED -> MessageKey.SETTINGS_TEST_ADVANCED_TITLE;
         };
     }
 

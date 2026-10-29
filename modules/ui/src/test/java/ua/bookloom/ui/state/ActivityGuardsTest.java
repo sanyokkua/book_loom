@@ -7,6 +7,8 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.ScriptedModelSettings;
@@ -89,14 +91,7 @@ class ActivityGuardsTest extends ReviewViewModelTestBase {
     void providerTests_whileTheRunTranslates_holdInferenceAndKeepConnection() {
         buildViewModel();
         chooseModel(MODEL);
-        onFx(() -> new ProviderForm(
-                settings,
-                new FakeProviderConfigs(),
-                new ScriptedModelSettings(),
-                new MemorySettings(),
-                name -> false,
-                new TechnicalDetails(new MemorySettings(), Runnable::run, Runnable::run),
-                new DirectExecutor()));
+        openForm();
 
         setRunState(RunState.RUNNING);
 
@@ -106,6 +101,57 @@ class ActivityGuardsTest extends ReviewViewModelTestBase {
         assertThat(onFx(() ->
                         settings.tests().available(ProviderTest.CONNECTION).get()))
                 .isTrue();
+    }
+
+    // IF the Advanced features stage ran during a run, THEN its calls would queue behind the run's in the one gate and
+    // time out; it is refused the way the inference test is, before the verifier is asked.
+    @Test
+    void advancedStage_runTranslating_refusedBeforeAnyCall() {
+        buildViewModel();
+        chooseModel(MODEL);
+        openForm();
+        setRunState(RunState.RUNNING);
+        final String typedModel = onFx(
+                () -> settings.testedSubject().get().map(TestSubject::model).orElse(""));
+
+        final boolean started = onFx(() -> settings.tests().run(ProviderTest.ADVANCED));
+
+        assertThat(typedModel).as("only the run holds the stage back").isEqualTo(MODEL);
+        assertThat(started).isFalse();
+        assertThat(settingsVerifier.callCount()).isZero();
+        assertThat(onFx(() -> settings.tests().blockedBy().get())).isEqualTo(ActivityKind.TRANSLATION);
+    }
+
+    // A paused run holds no model call, so the stage runs then, with its own depth, and no second refusal exists.
+    @Test
+    void advancedStage_runPaused_runs() throws InterruptedException {
+        buildViewModel();
+        chooseModel(MODEL);
+        openForm();
+        setRunState(RunState.RUNNING);
+        setRunState(RunState.PAUSED);
+
+        final boolean started = onFx(() -> settings.tests().run(ProviderTest.ADVANCED));
+        settingsVerifier.awaitEntered();
+
+        assertThat(started).isTrue();
+        assertThat(settingsVerifier.policies()).containsExactly(VerificationPolicy.ADVANCED);
+        assertThat(settingsVerifier.selections())
+                .extracting(ModelSelection::modelId)
+                .containsExactly(MODEL);
+    }
+
+    // The form publishes what a test is run against, with the model typed in it; without one no model test is offered.
+    private void openForm() {
+        press(() -> settings.draftModel().set(MODEL));
+        onFx(() -> new ProviderForm(
+                settings,
+                new FakeProviderConfigs(),
+                new ScriptedModelSettings(),
+                new MemorySettings(),
+                name -> false,
+                new TechnicalDetails(new MemorySettings(), Runnable::run, Runnable::run),
+                new DirectExecutor()));
     }
 
     // IF the message did not name the work, THEN a person could not tell what to wait for.

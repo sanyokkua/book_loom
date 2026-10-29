@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * What a provider test is run against: the description as the form holds it, saved or not.
@@ -45,7 +46,7 @@ public record TestSubject(ProviderConfig config, String model, String name, bool
     }
 
     /**
-     * What makes a finding stale: everything but the name.
+     * What makes a finding stale: everything but the name and what a detection found.
      *
      * @param config the description without its display name
      * @param model the model, stripped
@@ -73,10 +74,12 @@ public record TestSubject(ProviderConfig config, String model, String name, bool
                 config.chatPath(),
                 config.headers(),
                 config.customModels(),
-                config.engine(),
+                // What a detection finds, and a declined offer, change no request a finding came from; the person's
+                // engine choice does.
+                ServerEngine.GENERIC,
                 config.engineChoice(),
-                config.engineVersion(),
-                config.nativeOfferDeclined());
+                null,
+                false);
         return new Key(unnamed, model.strip(), stored);
     }
 }

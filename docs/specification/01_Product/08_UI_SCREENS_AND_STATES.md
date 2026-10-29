@@ -865,14 +865,20 @@ model-ID entry** (a free-text field used when the server has no discovery endpoi
 slots only: translator and judge/helper (no embedding). Controls: `Dialog` with `TextField`/`ComboBox`/editable
 `ComboBox` and three test `Button`s each showing a per-stage result. **Planned:** the form lives in Settings ›
 Providers (the Connection details fold, `#screen-settings`); the tests open `#dialog-test-provider`. P6 reference: Add
-provider dialog.
+provider dialog. Built: under the address the detected-engine line with **Detect again** beside it (and, after a
+detection with no answer, "The server does not answer, so the engine was not detected again."), the **Treat this server
+as…** row (hidden for an app that cannot translate a book), the one-time inline offer of Ollama's own connection with
+**Use it** and **Keep as is**, and a fourth check row, **Test advanced features**, which reads "Advanced features
+(optional, uses the model)" until it runs and then one verdict line per check (`07_SETTINGS.md#providers-tab`).
 
 ### dialog-test-provider {#dialog-test-provider}
 
 **Planned (S2).** Test connection / models / inference: a verdict banner first ("The model replied correctly.
 Translation can start."); the request line (method and full URL, Copy as curl with the key hidden); three columns —
 **Body** (request JSON) \| **Status / Time / First token / Speed / Tokens / Structured** \| **Response** (JSON), each
-pane scrolling inside its column so the banner never overlaps; footer: switch between the three tests · Close. Built
+pane scrolling inside its column so the banner never overlaps; footer: switch between the tests · Close. The request
+line is the route the engine was actually reached on. The Advanced features dialog has no request line; its middle
+column lists one verdict per check it ran. Built
 today the Providers tab shows the three tests' measured values inline.
 
 ### dialog-provider-binding {#dialog-provider-binding}

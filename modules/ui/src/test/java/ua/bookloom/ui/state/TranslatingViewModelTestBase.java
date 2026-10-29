@@ -66,6 +66,10 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected ImportViewModel imports;
     protected BookBriefViewModel brief;
     protected SettingsViewModel settings;
+
+    /** The verifier behind {@link #settings}; it answers every check with an empty report and records the calls. */
+    protected final ScriptedProviderVerifier settingsVerifier = ScriptedProviderVerifier.idle();
+
     protected TranslatingViewModel viewModel;
 
     @BeforeEach
@@ -96,13 +100,14 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new DirectExecutor(),
                 new ActivityTracker(new StateMirror())));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
-        settings = onFx(() -> newSettings(activities));
+        settings = onFx(() -> newSettings(activities, settingsVerifier));
     }
 
-    private static SettingsViewModel newSettings(final ActivityTracker activities) {
+    private static SettingsViewModel newSettings(
+            final ActivityTracker activities, final ScriptedProviderVerifier verifier) {
         return new SettingsViewModel(
                 new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
+                verifier,
                 new ModelListing(
                         ScriptedModelCatalog.idle(),
                         new RecordingToasts(),

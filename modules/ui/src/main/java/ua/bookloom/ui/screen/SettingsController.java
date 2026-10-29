@@ -30,6 +30,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 import ua.bookloom.ui.state.ProviderInUse;
 import ua.bookloom.ui.state.ProviderRow;
@@ -49,6 +50,7 @@ public final class SettingsController {
 
     private final SettingsViewModel viewModel;
     private final ProviderForm form;
+    private final ProviderEngine engine;
     private final Messages messages;
     private final ConfirmPrompt confirm;
     private final ProviderTestDialog testDialog;
@@ -123,6 +125,7 @@ public final class SettingsController {
      *
      * @param viewModel the state this screen shows
      * @param form what the open provider's form holds, saves and deletes
+     * @param engine the engine found at the open provider's address, and the person's corrections of it
      * @param messages the catalogue the built rows are worded from
      * @param confirm the question asked before a provider is deleted
      * @param testDialog the card that shows what a test sent and got back
@@ -138,6 +141,7 @@ public final class SettingsController {
     public SettingsController(
             final SettingsViewModel viewModel,
             final ProviderForm form,
+            final ProviderEngine engine,
             final Messages messages,
             final ConfirmPrompt confirm,
             final ProviderTestDialog testDialog,
@@ -148,6 +152,7 @@ public final class SettingsController {
             final ProviderInUse inUse) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.form = Objects.requireNonNull(form, "form");
+        this.engine = Objects.requireNonNull(engine, "engine");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
@@ -161,7 +166,7 @@ public final class SettingsController {
     @FXML
     void initialize() {
         log.debug("building the settings screen");
-        formView = new ProviderFormView(viewModel, form, messages, testDialog);
+        formView = new ProviderFormView(viewModel, form, engine, messages, testDialog);
         rowList = new ProviderRowList(viewModel, messages, providerList, this::open);
         formBody.getChildren().setAll(formView.node());
         installTips();

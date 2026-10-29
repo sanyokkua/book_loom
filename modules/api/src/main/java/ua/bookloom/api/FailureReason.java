@@ -141,6 +141,12 @@ public enum FailureReason {
      */
     NOT_SUITABLE_DOCUMENTS("not-suitable-documents"),
 
+    /**
+     * A provider saved as Ollama's own connection is answered by another engine (LM Studio, llama-server, …), whose
+     * name the details carry through {@link SafeDetails#withEngine}, so the test can say which one it is.
+     */
+    ENGINE_MISMATCH("engine-mismatch"),
+
     /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
     UNCLASSIFIED("unclassified");
 

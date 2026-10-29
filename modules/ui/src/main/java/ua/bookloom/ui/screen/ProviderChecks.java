@@ -32,7 +32,7 @@ import ua.bookloom.ui.state.TestDetails;
 import ua.bookloom.ui.state.TestSubject;
 
 /**
- * The three checks of the open provider as a grid: a button, the sentence the last run found and a Details link for
+ * The checks of the open provider as a grid: a button, the sentence the last run found and a Details link for
  * each. They run against the values in the form, saved or not, and change nothing; they are off while the form holds
  * something the rules refuse.
  */
@@ -77,6 +77,7 @@ final class ProviderChecks {
         addRow(0, ProviderTest.CONNECTION, "settings-test-connection", MessageKey.SETTINGS_TEST_CONNECTION);
         addRow(1, ProviderTest.MODELS, "settings-test-models", MessageKey.SETTINGS_TEST_MODELS);
         addRow(2, ProviderTest.INFERENCE, "settings-test-inference", MessageKey.SETTINGS_TEST_INFERENCE);
+        addRow(3, ProviderTest.ADVANCED, "settings-test-advanced", MessageKey.SETTINGS_TEST_ADVANCED);
         viewModel.tests().stages().addListener(new WeakInvalidationListener(onFindings));
         viewModel.tests().running().addListener(new WeakInvalidationListener(onFindings));
         viewModel.testedSubject().addListener(new WeakInvalidationListener(onFindings));
@@ -198,7 +199,15 @@ final class ProviderChecks {
             case CONNECTION -> MessageKey.SETTINGS_TEST_CONNECTION_TIP;
             case MODELS -> MessageKey.SETTINGS_TEST_MODELS_TIP;
             case INFERENCE -> MessageKey.SETTINGS_TEST_INFERENCE_TIP;
+            case ADVANCED -> MessageKey.SETTINGS_TEST_ADVANCED_TIP;
         };
+    }
+
+    // The optional stage says before it runs that it is optional and uses the model.
+    private static MessageKey notRunOf(final VerificationStage stage) {
+        return stage == VerificationStage.ADVANCED
+                ? MessageKey.SETTINGS_TEST_ADVANCED_TITLE
+                : MessageKey.SETTINGS_CHECK_NOT_RUN;
     }
 
     private TestDetails.Subject tested() {
@@ -211,7 +220,6 @@ final class ProviderChecks {
 
     private void showResults() {
         final ProviderTest running = viewModel.tests().running().get();
-        // Only the stages with a row on this grid; the Advanced features stage gets its row with its button (5.8).
         for (final VerificationStage stage : results.keySet()) {
             final Label result = Objects.requireNonNull(results.get(stage));
             final VBox cell = Objects.requireNonNull(cells.get(stage));
@@ -223,7 +231,7 @@ final class ProviderChecks {
             } else if (found.isPresent()) {
                 chipRows.fill(result, found.get(), tested(), cell);
             } else {
-                chipRows.plain(result, messages.get(MessageKey.SETTINGS_CHECK_NOT_RUN), cell);
+                chipRows.plain(result, messages.get(notRunOf(stage)), cell);
             }
         }
         log.debug("check results redrawn, running {}", running);

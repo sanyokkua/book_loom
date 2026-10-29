@@ -84,6 +84,9 @@ class ProviderVerifierImplEngineTest {
         assertThat(error(report.stages().get(0)).code()).isEqualTo(ErrorCode.validation);
         assertThat(error(report.stages().get(0)).message())
                 .isEqualTo("The server at this address is llama-server, not Ollama.");
+        // The window words the sentence in another language from the reason and the engine the details carry.
+        assertThat(FailureReason.in(error(report.stages().get(0)).details())).contains(FailureReason.ENGINE_MISMATCH);
+        assertThat(ServerEngine.in(error(report.stages().get(0)).details())).contains(ServerEngine.LLAMA_CPP);
         assertThat(engine(report).engine()).isEqualTo(ServerEngine.LLAMA_CPP);
     }
 

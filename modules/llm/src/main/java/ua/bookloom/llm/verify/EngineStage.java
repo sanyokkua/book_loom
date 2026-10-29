@@ -94,7 +94,11 @@ final class EngineStage {
                 ErrorCode.validation,
                 "Not an Ollama server",
                 "The server at this address is " + found.label() + ", not Ollama.",
-                SafeDetails.empty().withEndpoint(config.baseUrl()).render(),
+                SafeDetails.empty()
+                        .withReason(FailureReason.ENGINE_MISMATCH)
+                        .withEndpoint(config.baseUrl())
+                        .withEngine(found.name())
+                        .render(),
                 null);
         return withElapsed(StageOutcomes.failed(VerificationStage.CONNECTION, error), connection);
     }

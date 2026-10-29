@@ -712,13 +712,17 @@ this computer. BookLoom sends your text only to the AI model you choose here."
 | List actions | There is no Edit button: a click on a row opens that provider for editing. Add reads **+ New provider** | — |
 | **Summary card** | "Your AI model: Ollama · gemma4:e4b — ready ✓ · Answers in about 1 second · 7 models available" · Test · Change model | new; from `ProviderTestRunner` results |
 | **Connection details** (fold) | The GoText form, unchanged: Name · Kind (Ollama / OpenAI-compatible) · Sign-in (None · Bearer token · API-key header + header name; **key from environment variable**, "set" / "not set") · Address · **Models endpoint** and **Inference endpoint** overrides (the inference one disabled for Ollama, with the reason) · Connect and request timeouts (number widths) · Model (list + ↻, or typed) · Use custom headers (Header \| Value, values may be `${env:NAME}`) · Use custom models (chips) · **Checks** in plain words ("Ollama answers (41 ms)", "7 models found — the chosen one is there", "The model replied in 1.2 s") with **Details** | new `ProviderConfig` fields (`displayName`, `auth`, `credentialRef`, `modelsPath`, `chatPath`, `headers`); header injection in `:llm` `HttpExchange`; `ProviderVerifierImpl` takes an unsaved config |
+| **Server engine** (under the address) | "Detected: Ollama 0.12.6 · native connection" or "Not recognised: generic OpenAI-compatible server" · **Detect again** (no model request) · **Treat this server as…** (As detected and six engines; hidden for an app that cannot translate a book) · the one-time offer "This is Ollama. Use Ollama's own connection (recommended)? …" with **Use it** · **Keep as is** (demo switch "Ollama behind /v1") | `ProviderEngine`, `ProviderEngineSection`, `ProviderTreatAsField`; `ProviderConfig.engine`/`engineChoice`/`nativeOfferDeclined` |
+| **Test advanced features** (fourth check) | "Advanced features (optional, uses the model)" until it runs, then one verdict line per check; refused while a translation is translating, like Test inference | `ProviderTest.ADVANCED`, `EngineWords.verdictLines` |
 
 #### Dialog · Test connection / models / inference (S2)
 - A verdict banner first ("The model replied correctly. Translation can start.").
 - The request line (method and full URL, Copy as curl with the key hidden).
 - Three columns: **Body** (request JSON) \| **Status / Time / First token / Speed / Tokens / Structured** \|
   **Response** (JSON). Each pane scrolls inside its column, so the banner never overlaps.
-- Footer: switch between the three tests · Close. Copy feedback ("Copied as curl — the key is hidden.", "Copied.")
+- The request line is the route the engine was actually reached on (LM Studio: `/api/v0/chat/completions`). The
+  Advanced features dialog has no request line; its middle column lists one verdict per check.
+- Footer: switch between the tests · Close. Copy feedback ("Copied as curl — the key is hidden.", "Copied.")
   stays in the dialog's footer; the earlier toast is superseded. The Server row reads "—" because the probe does not
   report the server's name.
 

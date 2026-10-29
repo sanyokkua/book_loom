@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.DetailCounts;
 import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * The words a failure is shown in.
@@ -26,7 +27,8 @@ import ua.bookloom.api.FailureReason;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ErrorWords {
 
-    // The selector of a reason's words that show the prompt and window counts, and of words that do not.
+    // The selector of a reason's words that show the prompt and window counts, and of words that do not; the second is
+    // also the engine argument when the details name none.
     private static final String COUNTED = "counted";
     private static final String NOT_COUNTED = "none";
 
@@ -63,8 +65,8 @@ public final class ErrorWords {
 
     // A reason with no advice of its own (unclassified, or one the catalogue has no branch for yet) says less than the
     // code does, so the code's words are kept instead of the catalogue's catch-all. Every reason is given the prompt
-    // and window counts its details hold, as {2} counted or none, {3} and {4}; only a branch that shows them reads
-    // them.
+    // and window counts its details hold, as {2} counted or none, {3} and {4}, and the engine found at the address as
+    // {5}; only a branch that shows them reads them.
     private static Optional<String> reasonWords(
             final Messages messages, final FailureReason why, final @Nullable String details) {
         if (why == FailureReason.UNCLASSIFIED) {
@@ -73,12 +75,16 @@ public final class ErrorWords {
         final OptionalInt prompt = DetailCounts.promptTokensIn(details);
         final OptionalInt window = DetailCounts.windowTokensIn(details);
         final boolean counted = prompt.isPresent() && window.isPresent();
+        final String engine = ServerEngine.in(details)
+                .map(found -> messages.code(MessageKey.SETTINGS_ENGINE_NAME, found.name()))
+                .orElse(NOT_COUNTED);
         final String words = messages.code(
                 MessageKey.ERROR_REASON_MESSAGE,
                 why.token(),
                 counted ? COUNTED : NOT_COUNTED,
                 prompt.orElse(0),
-                window.orElse(0));
+                window.orElse(0),
+                engine);
         final String catchAll = messages.get(MessageKey.ERROR_REASON_MESSAGE, "other", why.token());
         final boolean ownAdvice = !words.equals(catchAll);
         log.debug("reason {} has its own advice: {} counted={}", why.token(), ownAdvice, counted);

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.AdvancedCheck;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
@@ -213,10 +214,18 @@ public final class TestDetails {
                 case CONNECTION -> figures.add(metric("server", MessageKey.SETTINGS_TEST_METRIC_SERVER, none()));
                 case MODELS -> modelsFigures(figures);
                 case INFERENCE -> inferenceFigures(figures);
-                // The Advanced features stage's own figures, one per check, come with its rows.
-                case ADVANCED -> {}
+                case ADVANCED -> advancedFigures(figures);
             }
             return figures;
+        }
+
+        // One verdict line per check the stage ran: "Structured answers: honoured".
+        private void advancedFigures(final List<Metric> figures) {
+            AdvancedCheck.read(chip.note())
+                    .forEach((check, value) -> figures.add(new Metric(
+                            check.token(),
+                            messages.code(MessageKey.SETTINGS_ADVANCED_CHECK, check.token()),
+                            EngineWords.valueWords(messages, check, value))));
         }
 
         private void modelsFigures(final List<Metric> figures) {

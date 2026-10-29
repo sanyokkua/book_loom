@@ -52,4 +52,10 @@
          the export screen's keys. Follow-up: split the registry, for instance a sealed `MessageKey` interface with one
          enum per screen area, and remove this exemption then. Scoped to this one file. -->
     <suppress files="[\\/]ua[\\/]bookloom[\\/]ui[\\/]i18n[\\/]MessageKey\.java" checks="FileLength"/>
+    <!-- `SafeDetails` is the safe-details allowlist expressed as a record: its component set IS the allowlist, and
+         each `with…` method copies every component, so each allowed field costs a component, a copy line in every
+         wither and a method of its own. The thirteenth field (the engine found at an address, so the window can name
+         it in Ukrainian) took it from 391 to ~430 lines. Splitting the record would split the allowlist the type
+         exists to keep in one place. Scoped to this one file. -->
+    <suppress files="[\\/]ua[\\/]bookloom[\\/]api[\\/]SafeDetails\.java" checks="FileLength"/>
 </suppressions>

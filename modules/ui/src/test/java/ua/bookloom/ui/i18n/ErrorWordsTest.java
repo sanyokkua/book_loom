@@ -12,6 +12,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** The words a failure is shown in: its own in English, the catalogue's by reason or by code otherwise. */
 class ErrorWordsTest {
@@ -74,6 +75,7 @@ class ErrorWordsTest {
                 "WRONG_MODEL_SERVED",
                 "NOT_SUITABLE_STRUCTURED",
                 "NOT_SUITABLE_DOCUMENTS",
+                "ENGINE_MISMATCH",
                 "UNCLASSIFIED"
             })
     void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
@@ -115,6 +117,36 @@ class ErrorWordsTest {
                 null);
 
         assertThat(ErrorWords.message(UK, error)).isEqualTo(expected);
+    }
+
+    // IF the Ukrainian sentence could not name the engine, THEN a person would only learn that the server is "not
+    // Ollama"; the engine comes from the details as a constant, never from the server's words.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "LM_STUDIO | Сервер за цією адресою — LM Studio, а не Ollama.",
+                "LLAMA_CPP | Сервер за цією адресою — llama-server, а не Ollama."
+            })
+    void message_ukrainianEngineMismatch_namesTheEngineFound(final ServerEngine found, final String expected) {
+        final AppError error = AppError.of(
+                ErrorCode.validation,
+                "Not an Ollama server",
+                "The server at this address is " + found.label() + ", not Ollama.",
+                SafeDetails.empty()
+                        .withReason(FailureReason.ENGINE_MISMATCH)
+                        .withEngine(found.name())
+                        .render(),
+                null);
+
+        assertThat(ErrorWords.message(UK, error)).isEqualTo(expected);
+    }
+
+    // Details that name no engine still give a whole sentence, never "— , а не".
+    @Test
+    void message_ukrainianEngineMismatchWithoutEngine_saysNotOllama() {
+        assertThat(ErrorWords.message(UK, withReason(FailureReason.ENGINE_MISMATCH)))
+                .isEqualTo("Сервер за цією адресою — не Ollama.");
     }
 
     // Ukrainian counts take one, few or many forms: 1 and 21 токена, 2 токенів, 5 токенів.

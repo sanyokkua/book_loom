@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -43,7 +44,7 @@ public final class CheckSentences {
             case CONNECTION -> connection(messages, chip, providerName);
             case MODELS -> models(messages, chip, modelChosen);
             case INFERENCE -> inference(messages, chip);
-            case ADVANCED -> Optional.empty();
+            case ADVANCED -> advanced(messages, chip);
         };
     }
 
@@ -96,6 +97,14 @@ public final class CheckSentences {
         final Duration elapsed = chip.elapsed();
         return chip.status() == StageStatus.PASSED && elapsed != null
                 ? Optional.of(messages.get(MessageKey.SETTINGS_CHECK_INFERENCE_OK, durationText(messages, elapsed)))
+                : Optional.empty();
+    }
+
+    // One line per check the stage ran, so a passed stage says what the server honours rather than only "passed".
+    private static Optional<String> advanced(final Messages messages, final StageChip chip) {
+        final List<String> lines = EngineWords.verdictLines(messages, chip.note());
+        return chip.status() == StageStatus.PASSED && !lines.isEmpty()
+                ? Optional.of(String.join("\n", lines))
                 : Optional.empty();
     }
 

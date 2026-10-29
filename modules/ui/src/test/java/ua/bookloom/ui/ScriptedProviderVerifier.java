@@ -9,7 +9,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderVerifier;
@@ -38,6 +41,9 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     private final List<String> connectionCalls = new CopyOnWriteArrayList<>();
     private final List<DraftCall> drafts = new CopyOnWriteArrayList<>();
     private final AtomicInteger calls = new AtomicInteger();
+    private final List<ProviderConfig> detections = new CopyOnWriteArrayList<>();
+    private volatile Result<EngineDetection> detection =
+            Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "The server did not answer."));
 
     private ScriptedProviderVerifier(final @Nullable Result<VerificationReport> answer) {
         this.answer = answer;
@@ -81,6 +87,26 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         final CountDownLatch latch = new CountDownLatch(1);
         unreleased.addLast(latch);
         gate = latch;
+    }
+
+    /** From now on answers Detect again with {@code next}; until then it answers that the server does not answer. */
+    public void detectWith(final Result<EngineDetection> next) {
+        detection = next;
+    }
+
+    /**
+     * Records the description and answers with the scripted detection at once. A detection asks no model, so it is
+     * not counted in {@link #callCount()} and is never held.
+     */
+    @Override
+    public Result<EngineDetection> detectEngine(final ProviderConfig config) {
+        detections.add(config);
+        return detection;
+    }
+
+    /** Every description Detect again was asked about, oldest first. */
+    public List<ProviderConfig> detections() {
+        return List.copyOf(detections);
     }
 
     /** Records the provider id and answers as {@code verify} does, holding and throwing the same way. */

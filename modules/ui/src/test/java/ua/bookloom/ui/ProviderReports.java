@@ -26,6 +26,18 @@ public final class ProviderReports {
         return Result.ok(new VerificationReport(List.of(connection(), models(), inference())));
     }
 
+    /**
+     * A report of the Advanced features test: the three stages passed, then the optional stage with its note.
+     *
+     * @param note the verdicts in the verifier's machine words, such as {@code schema=honoured; thinking=think}
+     * @return the four stages, the last one passed without an exchange of its own
+     */
+    public static Result<VerificationReport> advancedPassed(final String note) {
+        final StageOutcome advanced = new StageOutcome(
+                VerificationStage.ADVANCED, StageStatus.PASSED, null, note, Duration.ofMillis(3400), null, null);
+        return Result.ok(new VerificationReport(List.of(connection(), models(), inference(), advanced)));
+    }
+
     /** A report of Test connection alone that nothing answered, the way a closed local program fails it. */
     public static Result<VerificationReport> connectionNotAnswered() {
         return Result.ok(new VerificationReport(List.of(new StageOutcome(

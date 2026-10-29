@@ -3,15 +3,21 @@ package ua.bookloom.ui.screen;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ProviderDraft;
+import ua.bookloom.ui.state.ProviderEngine;
 import ua.bookloom.ui.state.ProviderForm;
 
-/** Where the provider listens: the address and the two endpoint overrides, the second off for Ollama. */
+/**
+ * Where the provider listens: the address with the engine found there under it, "Treat this server as…", and the two
+ * endpoint overrides, the second off for Ollama.
+ */
 final class ProviderEndpointFields {
 
     private final Messages messages;
@@ -20,9 +26,16 @@ final class ProviderEndpointFields {
     private final DraftText chatPath;
     private final Label addressWarning = new Label();
     private final Label chatNote = new Label();
+    private final ProviderEngineSection engineSection;
+    private final ProviderEngine engine;
+    private final FormGrid.Row treatAsRow;
+    private final InvalidationListener onSuitability = observed -> showTreatAs();
 
-    ProviderEndpointFields(final ProviderForm form, final Messages messages, final FormGrid grid) {
+    ProviderEndpointFields(
+            final ProviderForm form, final ProviderEngine engine, final Messages messages, final FormGrid grid) {
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.engine = Objects.requireNonNull(engine, "engine");
+        engineSection = new ProviderEngineSection(form, engine, messages);
         address = new DraftText(
                 form,
                 messages,
@@ -47,16 +60,31 @@ final class ProviderEndpointFields {
                 MessageKey.SETTINGS_FORM_CHAT_PATH_TIP,
                 ProviderDraft::chatPath,
                 ProviderDraft::withChatPath);
+        treatAsRow = rows(form, grid);
+    }
+
+    // The address with the engine under it, then the engine's name, then the two path overrides.
+    private FormGrid.Row rows(final ProviderForm form, final FormGrid grid) {
         grid.row(messages.get(MessageKey.SETTINGS_FORM_ADDRESS), addressBox());
+        final FormGrid.Row treatAs = grid.row(
+                messages.get(MessageKey.SETTINGS_TREAT_AS), new ProviderTreatAsField(form, engine, messages).node());
         grid.row(messages.get(MessageKey.SETTINGS_FORM_MODELS_PATH), modelsPath.cell());
         grid.row(messages.get(MessageKey.SETTINGS_FORM_CHAT_PATH), chatBox());
+        engine.unsuitable().addListener(new WeakInvalidationListener(onSuitability));
+        treatAs.show(!engine.unsuitable().get());
+        return treatAs;
     }
 
     private VBox addressBox() {
         addressWarning.setId("settings-form-address-warning");
         addressWarning.getStyleClass().add("hint-warn");
         addressWarning.setWrapText(true);
-        return new VBox(4, address.cell(), addressWarning);
+        return new VBox(4, address.cell(), addressWarning, engineSection.node());
+    }
+
+    // An app that cannot translate a book is not offered an engine name: no name makes it usable.
+    private void showTreatAs() {
+        treatAsRow.show(!engine.unsuitable().get());
     }
 
     private VBox chatBox() {

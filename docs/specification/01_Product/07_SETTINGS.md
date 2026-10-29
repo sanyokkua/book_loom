@@ -57,6 +57,32 @@ body, status, time, first token, speed, response).
 | Custom headers             | list (name, value) | empty              | values may be `${env:NAME}` references, never literal secrets | FR-PROV-03              |
 | Custom models              | list         | empty                    | extra model ids offered in the model list                     | FR-MODEL-02             |
 
+**Server engine.** Under the address one line names the program found there: "Detected: Ollama 0.40.11 · native
+connection", "Detected: llama-server b11669 · OpenAI-compatible", or "Not recognised: generic OpenAI-compatible
+server". It is read from the shape of the server's replies on Save, on a test and on **Detect again** (beside the line;
+a few GETs, never a model request, so it also works while a translation runs; with no answer the line keeps its text
+and says the server does not answer). **Treat this server as…** (As detected · Ollama · LM Studio · llama-server ·
+Unsloth · OpenRouter · generic OpenAI-compatible) names the engine when detection is wrong, for example behind a proxy;
+detection never overwrites it, Detect again clears it, and it is not offered for an app that cannot translate a book
+(GPT4All, AnythingLLM's documents path). When Ollama answers a provider saved as OpenAI-compatible, the form offers once
+"This is Ollama. Use Ollama's own connection (recommended)? It keeps the window, overflow and sampling controls." —
+**Use it** switches the kind to Ollama and drops `/v1` from the address, **Keep as is** only declines the offer, which
+never returns (also after Detect again); both are kept on Save. A server on another port or another computer on the
+network is added by hand: the person picks the provider type and the engine is read from the replies. The first-launch
+look (ADR-0044) covers only the two default loopback addresses.
+
+**Advanced features (optional, uses the model).** A fourth check, never started by the other three, sends a few short
+requests with invented text and lists one verdict per check it ran: a recognised engine runs two (structured answers,
+turning reasoning off), a generic server or OpenRouter four ("Structured answers: honoured", "Turning reasoning off:
+works with reasoning_effort", "top_k/min_p: ignored", "Answer cap: max_tokens"). The verdicts are kept on the model.
+Like Test inference it is refused while a translation is translating and runs while the run is paused. The test
+dialog's request line is the route the engine was actually reached on (LM Studio's `/api/v0/chat/completions`).
+
+| Setting                    | Type         | Default                  | Validation                                                    | Requirement             |
+|----------------------------|--------------|--------------------------|-----------------------------------------------------------------|-------------------------|
+| Treat this server as…      | enum, optional | As detected            | one of the six engines; not offered for an unusable app      | FR-PROV-03              |
+| Ollama's own connection offer | flag      | open                     | Keep as is declines it for good                               | FR-PROV-03              |
+
 The effective context is **not** a provider setting: it is resolved per model (see `#models-tab` and
 `#generation-tab`).
 
