@@ -1,11 +1,12 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-22
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-10-29
 **Cross-references:** `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
-`docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`
+`docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
+`docs/adr/ADR-0047-server-engines-and-model-profiles.md`
 
 # LLM Integration
 
-`:llm` owns everything about talking to a model: the provider abstraction, model discovery, inference, response
+`:llm` owns everything about talking to a model: the provider abstraction, server-engine detection, model discovery, inference, response
 sanitization and tolerant parsing, the single-flight gate, retry, HTTP→typed-error mapping, credential resolution, and
 provider verification. It is FX-free and reaches the network only through `java.net.http.HttpClient`. Signatures below
 are Java-ish contracts in `ua.bookloom.api.llm` (ports) and `ua.bookloom.llm` (impl).
@@ -28,7 +29,7 @@ model without sending a request until its first `chat` call.
 
 The public provider-facing API has three ports. `ChatModelFactory` resolves a selected provider/model pair;
 `ProviderConfigs` registers and finds provider descriptions; and `ProviderVerifier` runs the connection, models and
-inference checks. Callers outside `:llm` use these ports and never branch on a wire dialect.
+inference checks and detects the server engine. Callers outside `:llm` use these ports and never branch on a wire dialect.
 
 ```java
 public interface ProviderConfigs {
@@ -38,15 +39,19 @@ public interface ProviderConfigs {
 }
 public interface ProviderVerifier {
     Result<VerificationReport> verify(ModelSelection selection, VerificationPolicy policy);
+    Result<EngineDetection> detectEngine(ProviderConfig config);   // no gate permit: a GET is not inference
 }
 public record ProviderConfig(
     String id, ProviderKind kind, URI baseUrl, Duration connectTimeout, Duration requestTimeout,
     String displayName, ProviderAuth auth, String apiKeyHeader, String credentialRef,
-    String modelsPath, String chatPath, Map<String, String> headers, List<String> customModels
+    String modelsPath, String chatPath, Map<String, String> headers, List<String> customModels,
+    ServerEngine engine, @Nullable ServerEngine engineChoice, @Nullable String engineVersion,
+    boolean nativeOfferDeclined
 ) {}
 ```
 
-(shown without nullability; the five-argument form builds a provider with no sign-in.) `HttpExchange` builds each request's headers from it through `RequestHeaders`: the JSON headers, the extra headers with `${env:NAME}` resolved, then the sign-in header last. Both clients choose their model-list and chat path through `EndpointPaths`.
+(shown without nullability; the five-argument form builds a provider with no sign-in and the engine `GENERIC`.)
+`effectiveEngine()` is the person's `engineChoice`, else the detected `engine`. `HttpExchange` builds each request's headers from it through `RequestHeaders`: the JSON headers, the extra headers with `${env:NAME}` resolved, then the sign-in header last. Both clients choose their model-list and chat path through `EndpointPaths`.
 
 The per-dialect `ProviderClient` is an internal `:llm` interface, not a public port. It supplies `probe()`,
 `listModels()`, `chat(modelId, request)` and `kind()` to the factory and verifier. `probe()` is a lightweight
@@ -58,30 +63,33 @@ while caller-visible streaming remains deferred.
 ### client-implementations {#client-implementations}
 
 Two concrete clients implement the internal interface, both returning the same `ChatResponse` / `ModelInfo` types so
-the pipeline stays dialect-agnostic:
+the pipeline stays dialect-agnostic. The provider **kind** is the transport and chooses the client; the **server
+engine** (see #server-engines) selects the fields, error rows and routes inside it, through one traits record that the
+OpenAI-compatible request mapper reads, so no per-engine client exists:
 
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
   `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
   call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
   provides them. It sends `think` (`false`, `"low"` or `true`) only when the request carries a reasoning level, and deliberately sends no `num_ctx`, `keep_alive`, or `/api/show` request in this change.
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
-  `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other
+  `/chat/completions` for inference relative to the configured base URL. It covers LM Studio, llama-server, Unsloth and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
-  `response_format` only when requested, and `reasoning_effort` (`none`, `low` or `medium`) when the request carries a reasoning level (Ollama's
-  and LM Studio's `/v1` both honour it). A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
+  `response_format` only when requested and, on a generic server, only after a stored check verdict shows it is honoured. The reasoning control is the engine's own off switch
+  (`reasoning_effort:"none"`, `chat_template_kwargs.enable_thinking:false`, or top-level `enable_thinking:false`), a gpt-oss id always gets `reasoning_effort:"low"`, and a generic server gets none until a check has proved a switch. The cap
+  goes out as `max_tokens` (and only that on Ollama's `/v1` path, whatever field the model's settings choose) or `max_completion_tokens`; LM Studio, llama-server and Unsloth carry
+  their neutral samplers explicitly, and Unsloth carries `"enable_tools":false` on every call. A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
   is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
 
 ### provider-factory {#provider-factory}
 
 `ProviderClientFactory` is internal to `:llm`: it switches exhaustively on `ProviderConfig.kind()` and caches one
 client per provider-config id. Only `OLLAMA` and `OPENAI_COMPATIBLE` ship; another dialect requires a new enum value and
-internal client without changing callers of the three public ports.
+internal client without changing callers of the three public ports. A client is built with the provider's effective
+engine, so a changed engine (Detect again, "Treat this server as…") gives the next call a client built from the new one.
 
 ### provider-profile {#provider-profile}
 
-There is no per-kind profile type or capability cache; `ProviderConfig` carries only endpoint and timeouts. Provider configuration is deliberately minimal while
-persistence, credentials, reasoning control, structured-output capability detection and context-window sizing remain
-future work.
+There is no per-kind profile type or capability cache; `ProviderConfig` carries the endpoint, the timeouts, the sign-in and the engine fields. What an engine changes is computed on demand by `EngineTraits.of(engine, version)` (a Java switch, never stored): the cap field, the off switch, the extra samplers, the fields always sent and whether the server answers an unknown model id with whatever is loaded; traits join the record with the task that first reads them. The checks a server has passed are kept on the model's settings as `ProbeVerdicts`; the model-profile resolution (engine traits, server facts, name reading, built-in row, the person's override; ADR-0047) is built in later groups of the same change.
 
 ### provider-config {#provider-config}
 
@@ -89,9 +97,69 @@ future work.
 
 ```java
 public record ProviderConfig(
-    String id, ProviderKind kind, URI baseUrl, Duration connectTimeout, Duration requestTimeout
+    String id, ProviderKind kind, URI baseUrl, Duration connectTimeout, Duration requestTimeout,
+    ServerEngine engine, @Nullable ServerEngine engineChoice, @Nullable String engineVersion,
+    boolean nativeOfferDeclined
+    /* plus displayName, auth, apiKeyHeader, credentialRef, modelsPath, chatPath, headers, customModels */
 ) {}
 ```
+
+## server-engines {#server-engines}
+
+`ServerEngine` is `OLLAMA`, `LM_STUDIO`, `LLAMA_CPP`, `OPENROUTER`, `UNSLOTH` or `GENERIC` (`:api`, `llm/`). It is
+decided by `llm/engine/EngineDetector` and only when the person saves or tests a provider or presses Detect again
+(never at start-up or in the background): a saved provider under the `FULL` and `CONNECTION` policies, a draft also under
+`CONNECTION_AND_MODELS`, `verifyConnection` always; the run's own recovery probe and `PREFLIGHT` never detect. A draft
+whose id, kind and address match a saved provider stores the result on it. Detection also runs after a connection
+failure unless it was `unreachable`, `timeout`, `missingCredential`, `cancelled` or `auth`.
+
+- **Probes.** At most 7 body-checked GETs, each with a 2 s connect and read timeout, no body, no book text, and the key
+  only when the provider has one. The root is found by stripping a trailing `/`, `/v1`, `/api` or `/api/v1`. Step 0 is
+  the host rules (`openrouter.ai` is OpenRouter; `ollama.com` is Ollama; `api.openai.com` and other hosted OpenAI-shaped APIs are
+  generic; Anthropic and Gemini hosts are reported as not supported yet, reachable through OpenRouter); step 1
+  `root/api/version`, `root/api/tags`, `root/v1/models` (Ollama only when the version body is `{"version":"x.y.z"}`, the tags body is
+  `{"models":[…]}`, no row carries a fake marker — `details.family` `koboldcpp`, `details.format` `sglang`, a digest
+  starting `sha256:sglang` — and every `/v1/models` row that is listed has `owned_by`; an unanswered or 404 `/v1/models`
+  keeps the hit); step 2 `root/health` and `root/props` (llama-server by `Server: llama.cpp`, or `{"status":"ok"}` with
+  a `build_info` of the form `b<digits>-…`; `"role":"router"` sets the router flag; a `503 Loading model` is a loading
+  llama-server); step 2b `root/api/health` (Unsloth); step 3 `root/api/v0/models` shaped as a list with
+  `compatibility_type` (LM Studio); step 4 `base/models` signals (OpenRouter fields, `owned_by` `library` for Ollama's
+  `/v1`, `organization_owner` for LM Studio's, `unsloth-studio`), reusing the step-1 reply when the base path is
+  `root/v1`. A hit needs the expected body, never a status or a port. Nothing recognised is `GENERIC`, the family named
+  at DEBUG only.
+- **Refused servers.** GPT4All (`/v1/models` rows with `"owned_by":"humanity"`, reason `not-suitable-structured`) and
+  AnythingLLM (a base path ending `/api/v1/openai`, read from the address before any GET, reason
+  `not-suitable-documents`) fail the connection stage with `validation`, no engine stored and no chat request sent.
+  `EngineDetection.suitability` is `OK`, `NOT_SUITABLE` or `NOT_SUPPORTED_YET` (Anthropic and Gemini hosts: a hint, not a refusal).
+- **Mismatch and the offer.** An Ollama-native provider whose address a recognised non-Ollama engine answers fails the
+  connection stage naming the engine (a generic answer does not count). When Ollama answers behind an
+  `OPENAI_COMPATIBLE` provider the detection carries `offerNativeConnection`; Keep as is sets `nativeOfferDeclined` and
+  nothing else, a detection never offers while that flag is set, and nothing is ever switched by itself. Detect again
+  clears `engineChoice`, never `nativeOfferDeclined`.
+- **Log.** INFO `engine detected provider=<id> engine=LLAMA_CPP version=b11669 probes=3 source=detected|override`
+  (host only, never a path, query or key); DEBUG per probe with status and whether the body shape matched.
+- **Facts.** `EngineFacts` is session memory read lazily by one GET on the first call that needs it (so an engine named
+  by "Treat this server as…" works without a Test), forgotten by a Test or Detect again: today only llama-server's
+  template variable and a router's per-id `/props?model=<id>`; an unreadable `/props` means no kwarg, and a router's
+  `n_ctx:0` is never a window. Other facts (Ollama's runner, LM Studio's allowed reasoning options) are read by the
+  first task whose request field depends on them.
+- **LM Studio route.** The body the `/v1` path would carry is posted, unstreamed, to `<root>/api/v0/chat/completions`;
+  the reply's `stats.time_to_first_token`, `tokens_per_second` and `generation_time` fill the call's timings
+  (`TokenUsage.promptEval` holds the time to first token). A reply whose body is not JSON or is `{"error":"Unexpected
+  endpoint…"}`, with status 2xx, 404 or 405, makes `<baseUrl>/chat/completions` the route for that provider for the
+  session (INFO once); a plain-text 401, 403, 429 or 5xx does not switch.
+- **Model id safety.** For engines whose traits say the server answers an unknown id with whatever is loaded (LM Studio,
+  Unsloth) and for a llama-server router, `engine/ModelIdCheck` reads the server's own list once on the first chat call
+  per provider and model (cached) and ends an unlisted id with `modelNotFound` and reason `model-not-listed` before any
+  chat request (the run pauses on it); the Test's models stage uses the same class; a list that cannot be read lets the
+  call go ahead. A typed LM Studio `@variant` suffix is removed (`ModelVariant`; the Providers form strips the stored id
+  after a passing models check or Save, not while typing). A reply whose `model` names another model than the one
+  requested on such an engine ends with `modelNotFound` and reason `wrong-model-served` (the comparison ignores case, a
+  variant and a publisher prefix).
+- **Check verdicts.** `ModelSettings.probeVerdicts` holds one nullable verdict each for the answer schema, the thinking
+  switch, the extra samplers and the cap field (outcome honoured, ignored or refused; source `test`; time), written
+  through `ModelSettingsRepository.update` so a refusal recorded meanwhile survives. They are earned by the optional
+  Advanced features stage (see #three-stage-verification).
 
 ## chat-contracts {#chat-contracts}
 
@@ -151,9 +219,13 @@ Both clients share one construction contract:
 
 ## model-discovery {#model-discovery}
 
-`listModels()` reads `/api/tags` for Ollama and `/models` for OpenAI-compatible providers. Discovery is a convenience:
+`listModels()` reads `/api/tags` for Ollama, `/api/v0/models` for LM Studio and `<baseUrl>/models` otherwise. Discovery is a convenience:
 the verifier records a discovery failure or empty list as a soft pass, then verifies a manually entered model through
-an inference round trip. Provider editing, persisted model slots and capability profiles belong to later work.
+an inference round trip. Lists are chat-only: an entry whose own listing shows an embedding kind (LM Studio `type`
+`embeddings`) is dropped, and an Ollama entry whose name ends `:cloud` or `-cloud`, or that carries `remote_host` in
+`/api/tags`, gets `ModelInfo.cloud = true` (a neutral label, nothing hidden, no consent; an Ollama behind an
+OpenAI-compatible provider is labelled by name suffix only). Dropping sidecar files and other kinds that only the name
+or `/api/show` reveals belongs to the model-profile work of a later group.
 
 ## effective-context {#effective-context}
 
@@ -247,10 +319,23 @@ asked is what the run does with the failure after the client's own retries (`pip
 | 27 | `context-code` | any | `context_length_exceeded` | `contextWindow` | `context-overflow` | NONE | as row 26 |
 | 28 | `context-n-ctx` | any | `n_ctx` | `contextWindow` | `context-overflow` | NONE | as row 26 |
 
+Engine-limited rows (group 5): each `ErrorRow` carries a set of engines (empty means every engine) and the mapper
+passes the provider's effective engine. Two rows are limited to Unsloth and tried before the status rows: a `401`
+(also with an empty body) with `authentication_error` is `auth` with reason `auth` and the sentence "Unsloth needs an
+API key. Create one in Unsloth › Settings › API and put its environment-variable name here."; a `400` for a
+`response_format` it cannot enforce is `validation` with reason `structured-unavailable`, handled as a refused setting
+(the schema is dropped for that model by `RefusalMemory`; there is no separate rung). An error envelope whose `code` is
+an integer (`{"error":{"code":400,…}}`, `{"object":"error","code":400,…}`) is read like the string form. A cap the
+server ignores is not an error: an OpenAI-compatible reply with more completion tokens than the request's cap (for a
+thinking call, the cap plus the 1,024-token reasoning headroom) and a normal finish writes one WARN with reason
+`cap-ignored` per provider and model and the reply is used. The id and swapped-model guards add two `modelNotFound`
+outcomes that come from BookLoom's own checks, not from a server body: `model-not-listed` (the typed id is not in the
+server's own list) and `wrong-model-served` (the reply names another model).
+
 A context-overflow failure carries the prompt and window token counts when the provider stated them (`(696 tokens)`
 and `(512 tokens)` in its words, or the typed `n_prompt_tokens` and `n_ctx`), so the flag can say "696 of 512 tokens".
-A row that names Ollama matches by text alone until group 5 adds the engine mask, so the same words from another
-engine read the same way.
+The rows that name an engine in their id match by text alone unless an engine set limits them, so the same words from
+another engine read the same way.
 
 **Table B — the status alone, for a reply no row explains.** Every failure here carries the reason `unclassified`.
 
@@ -295,19 +380,39 @@ A credential is held as an environment-variable name. `RequestHeaders` resolves 
 ## three-stage-verification {#three-stage-verification}
 
 The built `ProviderVerifier` verifies a selected provider/model pair in three ordered stages, returning a
-`VerificationReport` with each outcome. The add/edit-provider UI is future work.
+`VerificationReport` with each outcome, and an optional fourth stage the person asks for.
 
 1. **Connection** — the dedicated `probe()` reaches the configured base URL (`/api/version` for Ollama and `/models`
    for OpenAI-compatible providers). It proves reachability independently of listing, so Connection and Models are
-   genuinely separable stages. Every stage sends the description's sign-in headers. An unsaved description is verified through `ProviderVerifier.verify(ProviderConfig, model, policy)` on an uncached client and listed through `ModelCatalog.listModels(ProviderConfig)`; neither registers anything.
-2. **Models** — a non-empty list must contain the selected model; absence is `modelUnavailable`. A discovery failure
-   or empty list is a soft pass, allowing inference to establish availability for a manually entered model.
+   genuinely separable stages. Every stage sends the description's sign-in headers. The stage also runs engine
+   detection (#server-engines): it fails an Ollama-native provider whose address a recognised non-Ollama engine
+   answers, and refuses GPT4All and AnythingLLM with `validation` before any chat request. An unsaved description is verified through `ProviderVerifier.verify(ProviderConfig, model, policy)` on an uncached client and listed through `ModelCatalog.listModels(ProviderConfig)`; neither registers anything.
+2. **Models** — a non-empty list must contain the selected model; absence is `modelUnavailable`. Where any id is served
+   (LM Studio, Unsloth, a llama-server router) the id is checked against the server's own list through
+   `engine/ModelIdCheck` and an unlisted one fails with `modelNotFound` (reason `model-not-listed`) naming the id. A
+   discovery failure or empty list is a soft pass, allowing inference to establish availability for a manually entered model.
 3. **Inference** — a minimal `chat` round-trip against the chosen model returns non-empty content; proves the model
    actually generates. For a manually entered model this round trip is the availability check; `modelNotFound` maps to
-   `modelUnavailable`. `FULL` performs this stage; `PREFLIGHT` performs it only after a Models soft pass.
+   `modelUnavailable`. `FULL` performs this stage; `PREFLIGHT` performs it only after a Models soft pass. When the
+   plain-probe fallback runs, the schema verdict (refused or ignored, source `test`) is stored on the model.
+4. **Advanced** (`VerificationStage.ADVANCED`, policy `ADVANCED` = `FULL` then this stage; never part of another
+   policy) — `llm/verify/AdvancedChecks` runs up to four short checks through the same gate and the request mapper, each
+   with invented text and at most 64 output tokens: C1 answer schema (honoured only when the reply is exactly the one
+   allowed value; free text is ignored, a 400 is refused; never retried as `json_object`), C2 thinking off (the
+   engine's switch, then `reasoning_effort:"none"`, then `chat_template_kwargs.enable_thinking:false`, then
+   `reasoning:{enabled:false}`; honoured when the reasoning field is empty and `reasoning_tokens` is 0; the first
+   switch that works is stored), C3 extra samplers (two calls at temperature 1.5 with `top_k:1`, honoured when the
+   replies match), C4 the cap field (a count to 100 with `max_completion_tokens:16`; the field that limits
+   `completion_tokens` to about 16 with finish `length`, also stored as the model's output field). A recognised engine
+   runs C1 and C2; a generic server runs all four; the Ollama-native kind runs C1 through `format` and C2 as one
+   `think:false` call. The checks use an uncached client built with the engine this Test just detected, and send what
+   they ask for even on a generic server (a check is how a verdict is earned). Verdicts are saved through
+   `ModelSettingsRepository.update` with source `test`; those of an unsaved draft are keyed by its ids and apply once a
+   provider with that id is saved. In the window the stage is registered as a provider inference test, so it is refused
+   while a run translates and runs while the run is paused.
 
 Stages run in order and short-circuit on a hard failure, surfacing the typed `AppError` for that stage. Verification
-uses the shared blocking gate and retry policy; interactive bounded-wait diagnostics belong to the future provider UI.
+uses the shared blocking gate and retry policy; engine detection takes no gate permit (a GET is not inference).
 
 ## per-project-binding {#per-project-binding}
 

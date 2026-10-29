@@ -9,6 +9,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -186,21 +188,18 @@ class OllamaLiveTest {
         return Objects.requireNonNull(result.data(), "chat response");
     }
 
-    // The engine is OLLAMA through the native address and through the /v1 shim, and a chat through /v1 answers.
-    @Test
-    void detectEngine_nativeAndV1Paths_bothReadOllama() {
+    // The engine is OLLAMA through the native address and through the /v1 shim.
+    @ParameterizedTest
+    @CsvSource({"OLLAMA, ''", "OPENAI_COMPATIBLE, /v1"})
+    void detectEngine_nativeAndV1Paths_bothReadOllama(final ProviderKind kind, final String suffix) {
         final String origin = Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_OLLAMA_URL"));
-        for (final ProviderKind kind : List.of(ProviderKind.OLLAMA, ProviderKind.OPENAI_COMPATIBLE)) {
-            final String address = kind == ProviderKind.OLLAMA ? origin : origin.replaceAll("/+$", "") + "/v1";
-            final ProviderConfig config = LiveServers.provider("ollama-live", kind, address, null);
+        final String address = origin.replaceAll("/+$", "") + suffix;
+        final ProviderConfig config = LiveServers.provider("ollama-live", kind, address, null);
 
-            final Result<EngineDetection> result = LiveServers.verifier(config).detectEngine(config);
+        final Result<EngineDetection> result = LiveServers.verifier(config).detectEngine(config);
 
-            assertThat(result.isOk()).as(address + ": " + result.error()).isTrue();
-            assertThat(Objects.requireNonNull(result.data()).engine())
-                    .as(address)
-                    .isEqualTo(ServerEngine.OLLAMA);
-        }
+        assertThat(result.isOk()).as(address + ": " + result.error()).isTrue();
+        assertThat(Objects.requireNonNull(result.data()).engine()).as(address).isEqualTo(ServerEngine.OLLAMA);
     }
 
     private static OllamaClient client() {

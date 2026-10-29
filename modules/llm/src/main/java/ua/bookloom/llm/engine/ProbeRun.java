@@ -52,12 +52,18 @@ final class ProbeRun {
         return Optional.ofNullable(rootModels);
     }
 
-    /** The base's model list: the root's {@code /v1/models} reply when the base is the root or its {@code /v1}. */
+    /**
+     * The base's model list: the root's {@code /v1/models} reply when the base is the root or its {@code /v1}, or when
+     * the Ollama step already asked for it, so a base below another prefix never takes an eighth GET.
+     */
     Optional<HttpReply> baseModels() {
-        log.debug("Engine model-list probe reuses root reply={}", address.baseIsRootV1());
-        return address.baseIsRootV1()
-                ? rootModels()
-                : send(address.base(), EndpointPaths.modelsPath(address.base(), "models"));
+        final boolean reuse = address.baseIsRootV1() || rootModelsAsked;
+        log.debug(
+                "Engine model-list probe reuses root reply={} baseIsRootV1={} rootAsked={}",
+                reuse,
+                address.baseIsRootV1(),
+                rootModelsAsked);
+        return reuse ? rootModels() : send(address.base(), EndpointPaths.modelsPath(address.base(), "models"));
     }
 
     /** How many GETs were sent. */

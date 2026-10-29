@@ -27,14 +27,14 @@ import ua.bookloom.llm.http.HttpReply;
  *
  * <p>The steps, in order: Ollama ({@code /api/version}, {@code /api/tags}, and {@code /v1/models} rows that all carry
  * {@code owned_by}), llama-server ({@code /health}, {@code /props}), Unsloth ({@code /api/health}), LM Studio
- * ({@code /api/v0/models}), then the base's model list. That is at most {@value #MAX_PROBES} GETs when the base is the
- * root or its {@code /v1}, whose {@code /v1/models} reply the last step reuses; a base below another prefix takes one
- * GET more for its own model list.
+ * ({@code /api/v0/models}), then the base's model list. That is at most {@value #MAX_PROBES} GETs for any base: the
+ * last step reuses the root's {@code /v1/models} reply when the base is the root or its {@code /v1}, and also when the
+ * Ollama step already asked for it, so a base below another prefix asks for its own list only when that left a GET.
  */
 @Slf4j
 public final class EngineDetector {
 
-    /** The most GETs a detection sends when the base address is the server's root or its {@code /v1}. */
+    /** The most GETs a detection sends, whatever the base address. */
     public static final int MAX_PROBES = 7;
 
     private final HttpExchange exchange;
@@ -60,6 +60,17 @@ public final class EngineDetector {
     public static boolean isDocumentsAddress(final ProviderConfig config) {
         Objects.requireNonNull(config, "config");
         return config.engineChoice() == null && BaseUrlRoot.isAnythingLlm(config);
+    }
+
+    /**
+     * The engine a model-list row's {@code owned_by} names, by the same table detection reads the rows with, so a
+     * listing alone can tell LM Studio from another server at its port without another request.
+     *
+     * @param owner the row's {@code owned_by}, or null when the row has none
+     * @return the engine named, or null when the value names none or a generic server
+     */
+    public static @Nullable ServerEngine ownerEngine(final @Nullable String owner) {
+        return ReplyShapes.ownerEngine(owner);
     }
 
     /**

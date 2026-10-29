@@ -50,11 +50,13 @@ final class CallRecorder {
     void succeeded(final ChatRequest request, final int attempt, final TimedCall timed) {
         record(request, attempt, timed);
         logSucceeded(request, attempt);
+        // A client that sent the call again with a raised cap is measured against that cap, not the caller's.
+        final ChatRequest sent = Objects.requireNonNullElse(timed.call().sent(), request);
         capIgnored.noteIfIgnored(
                 providerId,
                 modelId,
                 kind,
-                request,
+                sent,
                 Objects.requireNonNull(timed.call().result().data(), "reply"));
     }
 

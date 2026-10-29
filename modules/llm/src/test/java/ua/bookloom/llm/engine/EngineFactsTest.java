@@ -2,17 +2,21 @@ package ua.bookloom.llm.engine;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.jsonResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import java.net.URI;
 import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ServerEngine;
@@ -26,6 +30,9 @@ class EngineFactsTest {
     private static final String PROPS = """
             {"build_info":"b11669-620d2225c","role":"model","chat_template":"{% if enable_thinking %}{% endif %}"}
             """;
+
+    private static final String LOADING = "{\"error\":{\"code\":503,\"message\":\"Loading model\"}}";
+    private static final int SERVICE_UNAVAILABLE = 503;
 
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
@@ -66,6 +73,37 @@ class EngineFactsTest {
         facts.forget("llama");
 
         facts.readsEnableThinking(config, "qwen3.5-4b");
+
+        server.verify(2, getRequestedFor(urlEqualTo("/props")));
+    }
+
+    // llama-server answers 503 "Loading model" on every route while it loads: that is no answer about the template.
+    @Test
+    void readsEnableThinking_loadingThenReady_doesNotKeepTheLoadingReply() {
+        server.stubFor(get(urlEqualTo("/props"))
+                .inScenario("loading")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(jsonResponse(LOADING, SERVICE_UNAVAILABLE))
+                .willSetStateTo("ready"));
+        server.stubFor(get(urlEqualTo("/props"))
+                .inScenario("loading")
+                .whenScenarioStateIs("ready")
+                .willReturn(okJson(PROPS)));
+
+        final boolean whileLoading = facts.readsEnableThinking(config, "qwen3.5-4b");
+
+        assertThat(whileLoading).isFalse();
+        assertThat(facts.readsEnableThinking(config, "qwen3.5-4b")).isTrue();
+        server.verify(2, getRequestedFor(urlEqualTo("/props")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {404, 500, 503})
+    void isRouter_propsNotOk_isAskedAgainNextTime(final int status) {
+        server.stubFor(get(urlEqualTo("/props")).willReturn(jsonResponse("{\"role\":\"router\"}", status)));
+
+        facts.isRouter(config);
+        facts.isRouter(config);
 
         server.verify(2, getRequestedFor(urlEqualTo("/props")));
     }

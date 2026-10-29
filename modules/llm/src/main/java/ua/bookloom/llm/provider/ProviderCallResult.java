@@ -5,17 +5,44 @@ import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.llm.http.HttpReply;
 
-/** Internal provider outcome that keeps response retry advice alongside the unchanged public result envelope. */
+/**
+ * Internal provider outcome that keeps response retry advice alongside the unchanged public result envelope.
+ *
+ * @param result the typed outcome
+ * @param retryAfter the server's {@code Retry-After} value, or null when it sent none
+ * @param rejectedCapability the request setting the server refused, or null
+ * @param sent the request the client actually sent when it changed the caller's (a cap raised after the reasoning
+ *     spent it), or null when the caller's request was sent as it is; what the reply is measured against
+ */
 public record ProviderCallResult<T>(
         Result<T> result,
         @Nullable String retryAfter,
-        @Nullable RejectedCapability rejectedCapability) {
+        @Nullable RejectedCapability rejectedCapability,
+        @Nullable ChatRequest sent) {
 
     /** Enforces a present typed result while keeping an optional server retry hint internal to {@code :llm}. */
     public ProviderCallResult {
         Objects.requireNonNull(result, "result");
+    }
+
+    /** Keeps the callers whose request is sent as it is. */
+    public ProviderCallResult(
+            Result<T> result, @Nullable String retryAfter, @Nullable RejectedCapability rejectedCapability) {
+        this(result, retryAfter, rejectedCapability, null);
+    }
+
+    /**
+     * The same outcome, saying which request was actually sent.
+     *
+     * @param request the request the client sent in place of the caller's; non-null
+     * @return a copy carrying {@code request} as {@link #sent()}
+     */
+    public ProviderCallResult<T> sentAs(ChatRequest request) {
+        return new ProviderCallResult<>(
+                result, retryAfter, rejectedCapability, Objects.requireNonNull(request, "request"));
     }
 
     /** Preserves existing callers that have no provider capability metadata. */

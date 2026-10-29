@@ -49,7 +49,8 @@ final class AdvancedStage {
         log.debug("Provider verification advanced stage started provider={} model={}", config.id(), modelId);
         final AdvancedChecks.Sender sender = (request, offSwitch) ->
                 calls.run(() -> client.checkChat(modelId, request, offSwitch), VerificationStage.ADVANCED, config.id());
-        final AdvancedChecks.Findings found = new AdvancedChecks(config, mapper, sender, clock.instant()).run();
+        final AdvancedChecks.Findings found =
+                new AdvancedChecks(config, modelId, mapper, sender, clock.instant()).run();
         keep(config.id(), modelId, found.verdicts(), found.capField());
         final String note = note(found);
         log.info(

@@ -2,7 +2,6 @@ package ua.bookloom.llm.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,14 +67,14 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             ModelSettingsRepository settings) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
-        this.calls = new RetriedCalls(gate, retryPolicy);
+        this.calls = new RetriedCalls(gate, Objects.requireNonNull(retryPolicy, "retryPolicy"));
         this.inference = new InferenceStage(calls, Objects.requireNonNull(mapper, "mapper"));
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.engines = Objects.requireNonNull(engines, "engines");
         this.engineStage = new EngineStage(engines);
         this.models = new ModelsStage(calls);
         this.advanced =
-                new AdvancedStage(calls, mapper, Objects.requireNonNull(settings, "settings"), Clock.systemUTC());
+                new AdvancedStage(calls, mapper, Objects.requireNonNull(settings, "settings"), retryPolicy.clock());
     }
 
     @Override
@@ -202,34 +201,41 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         if (connection.outcome().status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
             return completed(selection, policy, stages, connection.engine());
         }
-        final StageOutcome models = modelsStage(client, config, selection.modelId());
+        final ProviderConfig detected = detectedConfig(config, connection.engine());
+        final ProviderClient asDetected = detected.equals(config) ? client : clients.createUncached(detected);
+        final StageOutcome models = modelsStage(asDetected, detected, selection.modelId());
         stages.add(models);
         if (models.status() == StageStatus.FAILED
                 || policy == VerificationPolicy.CONNECTION_AND_MODELS
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return completed(selection, policy, stages, connection.engine());
         }
-        final StageOutcome inference = inferenceStage(client.forChecks(), config, selection.modelId());
+        final StageOutcome inference = inferenceStage(asDetected.forChecks(), detected, selection.modelId());
         stages.add(inference);
         if (policy == VerificationPolicy.ADVANCED && inference.status() != StageStatus.FAILED) {
-            stages.add(advancedStage(config, connection.engine(), selection.modelId()));
+            stages.add(advancedStage(detected, selection.modelId()));
         }
         return completed(selection, policy, stages, connection.engine());
     }
 
-    // The checks are chosen by the engine this Test just found, which the cached client does not know yet.
-    private StageOutcome advancedStage(ProviderConfig config, @Nullable EngineDetection found, String modelId) {
-        final ProviderConfig checked = found == null || found.source() != EngineDetection.Source.DETECTED
+    // The models, inference and advanced stages are shaped by the engine this Test just found (an LM Studio id check,
+    // its variant removal, its route), which neither the description being tested nor the cached client knows yet.
+    private static ProviderConfig detectedConfig(ProviderConfig config, @Nullable EngineDetection found) {
+        final ProviderConfig detected = found == null || found.source() != EngineDetection.Source.DETECTED
                 ? config
                 : config.withEngine(found.engine(), config.engineChoice(), found.version());
         log.debug(
-                "Provider verification advanced stage engine provider={} stored={} found={}",
+                "Provider verification stages engine provider={} stored={} found={}",
                 config.id(),
                 config.effectiveEngine(),
-                checked.effectiveEngine());
-        final ProviderClient client = clients.createUncached(checked);
+                detected.effectiveEngine());
+        return detected;
+    }
+
+    private StageOutcome advancedStage(ProviderConfig config, String modelId) {
+        final ProviderClient client = clients.createUncached(config);
         final long start = nanoTime.getAsLong();
-        final StageOutcome outcome = advanced.run(client, checked, modelId).withElapsed(since(start));
+        final StageOutcome outcome = advanced.run(client, config, modelId).withElapsed(since(start));
         return StageOutcomes.withExchange(
                 outcome,
                 VerificationExchanges.advanced(config, outcome, client.chatUrl().orElse(null)));

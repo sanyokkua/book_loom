@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -128,10 +129,14 @@ public final class LocalModelProbe {
     private void look(final boolean atFirstLaunch) {
         log.info("local AI program look starting, first launch {}", atFirstLaunch);
         try {
-            final Optional<Answered> ollama = ask(OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS, ServerEngine.OLLAMA)
+            final Optional<Answered> ollama = ask(
+                            OLLAMA_ID, ProviderKind.OLLAMA, OLLAMA_ADDRESS, rows -> ServerEngine.OLLAMA)
                     .filter(this::isSameProgram);
             final Optional<Answered> lmStudio = ask(
-                            LM_STUDIO_ID, ProviderKind.OPENAI_COMPATIBLE, LM_STUDIO_ADDRESS, ServerEngine.LM_STUDIO)
+                            LM_STUDIO_ID,
+                            ProviderKind.OPENAI_COMPATIBLE,
+                            LM_STUDIO_ADDRESS,
+                            LocalModelProbe::rowsEngine)
                     .filter(this::isSameProgram);
             log.info("look finished: ollama={} lmstudio={}", count(ollama), count(lmStudio));
             ollama.ifPresent(this::save);
@@ -149,8 +154,23 @@ public final class LocalModelProbe {
         return answered.map(found -> Integer.toString(found.models().size())).orElse("none");
     }
 
+    // Ollama's /api/tags list is read by its own shape, so a list that parsed is Ollama's. Port 1234 is only LM
+    // Studio's default: another server can answer there, so the rows' own owner decides; rows naming none are generic.
+    private static ServerEngine rowsEngine(final List<ModelInfo> rows) {
+        final ServerEngine named = rows.stream()
+                .map(ModelInfo::ownerEngine)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(ServerEngine.GENERIC);
+        log.debug("local AI program at port 1234 named by its rows: {}", named);
+        return named;
+    }
+
     private Optional<Answered> ask(
-            final String id, final ProviderKind kind, final URI address, final ServerEngine engine) {
+            final String id,
+            final ProviderKind kind,
+            final URI address,
+            final Function<List<ModelInfo>, ServerEngine> engineOf) {
         log.debug("asking {}", address);
         final ProviderConfig draft = new ProviderConfig(id, kind, address, LOOK_CONNECT_TIMEOUT, LOOK_REQUEST_TIMEOUT);
         final Result<List<ModelInfo>> listed = catalog.listModels(draft);
@@ -161,9 +181,8 @@ public final class LocalModelProbe {
                     Objects.requireNonNull(listed.error(), "error").code());
             return Optional.empty();
         }
-        final List<String> models = Objects.requireNonNull(listed.data(), "data").stream()
-                .map(ModelInfo::id)
-                .toList();
+        final List<ModelInfo> rows = Objects.requireNonNull(listed.data(), "data");
+        final List<String> models = rows.stream().map(ModelInfo::id).toList();
         if (models.isEmpty()) {
             log.debug("{} answered with no models", id);
             return Optional.empty();
@@ -175,7 +194,7 @@ public final class LocalModelProbe {
                                 address,
                                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT)
-                        .withEngine(engine),
+                        .withEngine(engineOf.apply(rows)),
                 models));
     }
 

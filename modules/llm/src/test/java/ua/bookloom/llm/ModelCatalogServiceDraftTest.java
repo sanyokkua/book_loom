@@ -146,6 +146,22 @@ class ModelCatalogServiceDraftTest {
         server.verify(0, postRequestedFor(anyUrl()));
     }
 
+    // The first-launch look tells the program at port 1234 by its rows: each row says which engine its owner names.
+    @Test
+    void listModels_openAiDraftRowsWithOwners_carryTheEngineEachOwnerNames() {
+        server.stubFor(get(urlEqualTo("/v1/models"))
+                .willReturn(okJson("{\"data\":[{\"id\":\"google/gemma-4-e4b\",\"owned_by\":\"organization_owner\"},"
+                        + "{\"id\":\"qwen3:8b\",\"owned_by\":\"library\"},{\"id\":\"mara-7b\",\"owned_by\":\"llamacpp\"},"
+                        + "{\"id\":\"lapa\"}]}")));
+
+        final Result<List<ModelInfo>> result =
+                catalog(Map.of(KEY_VARIABLE, KEY_VALUE)).listModels(openAiDraft("lmstudio"));
+
+        assertThat(Objects.requireNonNull(result.data(), "models"))
+                .extracting(ModelInfo::ownerEngine)
+                .containsExactly(ServerEngine.LM_STUDIO, ServerEngine.OLLAMA, null, null);
+    }
+
     // IF a listing that failed were retried, THEN a closed program would be asked twice and the look could not promise
     // one call per address.
     @Test

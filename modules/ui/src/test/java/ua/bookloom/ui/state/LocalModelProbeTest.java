@@ -8,6 +8,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ServerEngine;
@@ -151,9 +152,29 @@ class LocalModelProbeTest extends LocalModelProbeTestBase {
         assertThat(configs.saved()).extracting(ProviderConfig::engine).containsExactly(ServerEngine.OLLAMA);
     }
 
+    // IF anything answering at port 1234 were stored as LM Studio, THEN a llama-server there would be sent LM
+    // Studio's fields and routes; only rows LM Studio's own owner marks prove it.
+    @Test
+    void runFirstLaunch_llamaServerShapedRowsAtLmStudioPort_storesGenericNotLmStudio() {
+        catalog.answeringRows(LM_STUDIO, new ModelInfo("qwen3:8b", false, null));
+
+        firstLaunch(probe());
+
+        assertThat(configs.saved()).extracting(ProviderConfig::engine).containsExactly(ServerEngine.GENERIC);
+    }
+
+    @Test
+    void runFirstLaunch_ollamaRowsAtLmStudioPort_storesTheEngineTheRowsName() {
+        catalog.answeringRows(LM_STUDIO, new ModelInfo("qwen3:8b", false, ServerEngine.OLLAMA));
+
+        firstLaunch(probe());
+
+        assertThat(configs.saved()).extracting(ProviderConfig::engine).containsExactly(ServerEngine.OLLAMA);
+    }
+
     @Test
     void runFirstLaunch_onlyLmStudioAnswersWithOneModel_savesItAndChoosesItsModel() {
-        catalog.answering(LM_STUDIO, "qwen3:8b");
+        catalog.answeringRows(LM_STUDIO, new ModelInfo("qwen3:8b", false, ServerEngine.LM_STUDIO));
         final LocalModelProbe probe = probe();
 
         firstLaunch(probe);

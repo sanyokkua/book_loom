@@ -1,6 +1,15 @@
 # ADR-0010 — Enforce an offline invariant: the only outbound call is user-triggered inference
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect **Amended by:** ADR-0044
+**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect **Amended by:** ADR-0044, ADR-0047
+
+> **Amendment (ADR-0047).** The offline rule below is unchanged: no background or unsolicited network call, and the
+> only outbound calls are the user-triggered ones (now including the short engine-detection GETs that run when the
+> person saves or tests a provider or presses Detect again). What changes is the promise made to the person: BookLoom is
+> **private when used with local models**. With a provider outside this computer, the text being translated is sent to
+> that provider's host, which is the person's own choice and responsibility; BookLoom shows the host, adds no consent
+> step, and never says the text always stays on this computer. Read the sentences "content never leaves the machine"
+> below in that sense: they describe BookLoom's own behaviour and a local model, not what a remote provider does with
+> text the person sent it. The body below is kept as the record of the original decision.
 
 ## Context and problem statement
 
@@ -113,6 +122,7 @@ Cons:
 ## Links
 
 - Design decisions: DD-01 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-01-local-first-offline`)
+- Related ADRs: ADR-0044 (first-launch local listing), ADR-0047 (server engines; privacy wording)
 - Spec clauses: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`,
   `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`,
   `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`

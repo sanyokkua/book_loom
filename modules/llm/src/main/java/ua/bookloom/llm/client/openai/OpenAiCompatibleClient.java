@@ -307,7 +307,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 true);
     }
 
-    // A reply whose cap a thinking model spent on reasoning is asked for once more with a raised cap, never twice.
+    // A reply whose cap a thinking model spent on reasoning is asked for once more with a raised cap, never twice; the
+    // outcome names the request sent (ReasoningBudget logs the raise), so the reply is measured against its cap.
     private ProviderCallResult<ChatResponse> exchangeChat(
             String modelId,
             ChatRequest request,
@@ -332,7 +333,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         final Optional<ChatRequest> raised =
                 mayRaiseCap ? ReasoningBudget.raisedAfter(mapper, reply.body(), request) : Optional.empty();
         if (raised.isPresent()) {
-            return exchangeChat(modelId, raised.get(), format, false);
+            return exchangeChat(modelId, raised.get(), format, false).sentAs(raised.get());
         }
         return new ProviderCallResult<>(replies.read(modelId, reply, elapsed), call.retryAfter());
     }

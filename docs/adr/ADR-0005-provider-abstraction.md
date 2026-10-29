@@ -1,6 +1,13 @@
 # ADR-0005 — Provider abstraction with two client implementations (Ollama-native + OpenAI-compatible)
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect **Amended by:** ADR-0047
+
+> **Amendment (ADR-0047).** The decision below stands: the provider kind stays the transport, with exactly two clients,
+> and Ollama keeps its native client. What ADR-0047 adds is a detected, stored **server engine** on the provider
+> (Ollama, LM Studio, llama-server, OpenRouter, Unsloth, generic OpenAI-compatible) that selects request fields, error
+> rows and routes inside those two clients, so no third client is built for a new engine. The "model slots" of the
+> profile read in this ADR are one model per use, chosen on the Models tab, not fixed slots on the provider. The body
+> below is kept as the record of the original decision.
 
 ## Context and problem statement
 
@@ -126,7 +133,8 @@ Cons:
   DD-10 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-10-single-provider-impl`), DD-32
   (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-32-two-clients-abstraction`), DD-38
   (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-38-manual-model-id`)
-- Related ADRs: ADR-0012 (per-project provider/model binding), ADR-0013 (response-handling contract)
+- Related ADRs: ADR-0012 (per-project provider/model binding), ADR-0013 (response-handling contract), ADR-0047 (server
+  engines)
 - Spec clauses: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
   `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`, `docs/specification/05_Dependencies/03_LICENSING.md`
 - Stories: none yet

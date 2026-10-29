@@ -48,6 +48,12 @@ public final class RecordingModelCatalog implements ModelCatalog {
         return this;
     }
 
+    /** From now on the draft with this base address lists these rows, each with what its owner names. */
+    public RecordingModelCatalog answeringRows(final String address, final ModelInfo... rows) {
+        byAddress.put(Objects.requireNonNull(address, "address"), Result.ok(List.of(rows)));
+        return this;
+    }
+
     /** From now on the draft with this base address fails with {@code error}. */
     public RecordingModelCatalog failing(final String address, final AppError error) {
         byAddress.put(Objects.requireNonNull(address, "address"), Result.err(error));

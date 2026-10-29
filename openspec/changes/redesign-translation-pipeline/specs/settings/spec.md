@@ -513,7 +513,7 @@ WHEN the llm-provider capability makes its one offer of Ollama's own connection,
 
 ### Requirement: Say that LM Studio has no model with the typed id
 
-WHEN the llm-provider capability's id check stops a test or a start because LM Studio does not list the model id, the application SHALL show `LM Studio has no model "{id}". It would answer with the model that is loaded. Pick a model from the list.`
+WHEN the llm-provider capability's id check stops a test, or ends the first call of a run (which pauses), because LM Studio does not list the model id (reason `model-not-listed`), the application SHALL show `LM Studio has no model "{id}". It would answer with the model that is loaded. Pick a model from the list.`
 
 **Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio answers with whatever is loaded when the id is wrong, so a book could be translated by the wrong model without anyone noticing; the screen says why it stopped. The check itself is the llm-provider capability's "Check the model id against the server's own list where any id is served".
 
@@ -529,7 +529,7 @@ WHEN the llm-provider capability's id check stops a test or a start because LM S
 
 ### Requirement: Say that a typed LM Studio variant was removed
 
-WHEN the llm-provider capability removes a typed `@variant` from an LM Studio model id, the Providers form SHALL say once `"@{variant}" was removed from the model id: it would load a second copy with default settings.`
+WHEN the llm-provider capability removes a typed `@variant` from an LM Studio model id (after a passing models check or Save, not while typing), the Providers form SHALL say once `"@{variant}" was removed from the model id: it would load a second copy with default settings.`
 
 **Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: the person typed something and BookLoom changed it, so the screen says what was changed and why. The removal itself is the llm-provider capability's "Never send an LM Studio quant variant".
 
@@ -540,14 +540,14 @@ WHEN the llm-provider capability removes a typed `@variant` from an LM Studio mo
 
 ### Requirement: Say at Start that LM Studio will load a model with its own settings
 
-WHEN Start is about to run on an LM Studio model that is not loaded, the application SHALL show the line "LM Studio will load it with its own default settings; the window may differ." and SHALL NOT block Start.
+WHEN a run has just started on an LM Studio model that is not loaded, the application SHALL show the line "LM Studio will load it with its own default settings; the window may differ." as an information toast (never blocking).
 
-**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio loads a model on first use with settings of its own, so the window BookLoom budgets for may not be the one in use. The person hears it before the run.
+**Source**: `docs/specification/01_Product/07_SETTINGS.md#providers-tab`, `design.md#d17--server-engines-detection-and-traits`. In plain words: LM Studio loads a model on first use with settings of its own, so the window BookLoom budgets for may not be the one in use. The person hears it as the run starts.
 
-#### Scenario: A model that is not loaded
+#### Scenario: Toast shown after Start
 
-- **WHEN** Start is about to run on the LM Studio model `google/gemma-4-e4b` and it is not loaded
-- **THEN** the line "LM Studio will load it with its own default settings; the window may differ." is shown and Start stays available
+- **WHEN** a run has just started on the LM Studio model `google/gemma-4-e4b` and it is not loaded
+- **THEN** the line "LM Studio will load it with its own default settings; the window may differ." appears as an information toast and the run is not held
 
 #### Scenario: A loaded model shows no such line
 

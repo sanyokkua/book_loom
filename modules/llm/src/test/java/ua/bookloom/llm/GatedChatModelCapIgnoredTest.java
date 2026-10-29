@@ -2,6 +2,7 @@ package ua.bookloom.llm;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,6 +12,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -33,6 +35,7 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
@@ -106,6 +109,34 @@ class GatedChatModelCapIgnoredTest {
         assertThat(warnings()).isEmpty();
     }
 
+    // The client sent the call again with four times the cap after the reasoning spent it; the reply is measured
+    // against that raised cap (400 plus the reasoning room = 1424), not the first one (1124). Ollama's /v1 keeps the
+    // reasoning control, so both requests think.
+    @Test
+    void chat_capRaisedAfterReasoningSpentIt_measuresTheReplyAgainstTheRaisedCap() {
+        server.stubFor(post(urlEqualTo(PATH))
+                .inScenario("raised")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(okJson("{\"model\":\"m\",\"choices\":[{\"message\":{\"content\":\"\","
+                        + "\"reasoning_content\":\"thinking\"},\"finish_reason\":\"length\"}],"
+                        + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":100}}"))
+                .willSetStateTo("second"));
+        server.stubFor(post(urlEqualTo(PATH))
+                .inScenario("raised")
+                .whenScenarioStateIs("second")
+                .willReturn(okJson(reply(1200, "stop"))));
+
+        final Result<ChatResponse> answered =
+                model("model-a", new CapIgnoredLog(), ServerEngine.OLLAMA).chat(request(ReasoningLevel.ON));
+
+        assertThat(answered.data())
+                .isNotNull()
+                .extracting(ChatResponse::content)
+                .isEqualTo("done");
+        server.verify(2, postRequestedFor(urlEqualTo(PATH)));
+        assertThat(warnings()).isEmpty();
+    }
+
     private List<String> warnings() {
         return logged.list.stream()
                 .filter(event -> event.getLevel() == Level.WARN)
@@ -135,12 +166,17 @@ class GatedChatModelCapIgnoredTest {
     }
 
     private GatedChatModel model(final String modelId, final CapIgnoredLog capIgnored) {
+        return model(modelId, capIgnored, ServerEngine.GENERIC);
+    }
+
+    private GatedChatModel model(final String modelId, final CapIgnoredLog capIgnored, final ServerEngine engine) {
         final ProviderConfig config = new ProviderConfig(
-                "test",
-                ProviderKind.OPENAI_COMPATIBLE,
-                URI.create(server.baseUrl() + "/v1"),
-                Duration.ofSeconds(5),
-                Duration.ofSeconds(5));
+                        "test",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/v1"),
+                        Duration.ofSeconds(5),
+                        Duration.ofSeconds(5))
+                .withEngine(engine);
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         return new GatedChatModel(

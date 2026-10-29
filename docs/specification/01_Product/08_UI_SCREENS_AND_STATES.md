@@ -784,9 +784,7 @@ Purpose: host the six settings tabs.
 |---------|------------------------------|------------------------------------------------------------------------------|
 | Tabs    | `TabPane` (`#settingsTab`)   | Providers / Models / Generation / Appearance / Automation / Storage & logs |
 
-Each tab's fields, defaults, and ranges are specified in `07_SETTINGS.md`. **Built today:** only the Providers tab is
-live; Models, Generation, Automation and Storage are not built, and nothing is remembered across a restart.
-**Planned — UI finalization + SQLite (S1–S5, H1, decisions 6–7):** all six tabs, with the contents below. Subtitle:
+Each tab's fields, defaults, and ranges are specified in `07_SETTINGS.md`. **Built:** all six tabs, kept in SQLite across a restart (finalize 7.1–7.4), with the contents below; the Providers tab also shows the detected server engine (`07_SETTINGS.md#providers-tab`). Subtitle:
 "Your books stay private when you use a local model. BookLoom sends your text only to the AI model you choose here." Keys are never saved, only
 environment-variable names.
 

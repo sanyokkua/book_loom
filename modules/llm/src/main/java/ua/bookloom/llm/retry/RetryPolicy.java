@@ -42,6 +42,15 @@ public final class RetryPolicy {
         this.sleeper = Objects.requireNonNull(sleeper, "sleeper");
     }
 
+    /**
+     * The injected clock, shared so a verification's stored verdict times read the same seam as its retry waits.
+     *
+     * @return the clock this policy was built with; never null
+     */
+    public Clock clock() {
+        return clock;
+    }
+
     /** Whether this typed error may be retried within the three-attempt total budget. */
     public boolean shouldRetry(ErrorCode code, int failedAttempt) {
         Objects.requireNonNull(code, "code");

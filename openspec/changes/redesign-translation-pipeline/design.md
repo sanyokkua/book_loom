@@ -702,10 +702,11 @@ task edits the delta requirement and this file's line; the result is written int
   `base/models` signals, else GENERIC. A hit needs the expected body, never a status or a port. An app that cannot
   translate a book is refused at the connection stage (`validation`, no engine stored, no chat sent): GPT4All by
   `/v1/models` rows with `"owned_by":"humanity"` (reason `not-suitable-structured`), AnythingLLM by a base path
-  `/api/v1/openai` (reason `not-suitable-documents`). `EngineTraits.of(engine, version)`: a Java switch giving
-  `capField`, `offSwitch`, `reasoningFields`, `extraSamplers`, `windowControl`, `timingsSource`, `cachedTokens`,
-  `errorQuirks`, `servesUnknownModel`, `alwaysSend`; computed, never stored. `EngineFacts` (session memory): Ollama
-  runner, llama-server template caps, loaded window, router models. Group 5 makes `ui: state/ModelAdvice` (and its
+  `/api/v1/openai` (reason `not-suitable-documents`). `EngineTraits.of(engine, version)`: a Java switch holding
+  `capField`, `offSwitch` (without THINK), `extraSamplers`, `alwaysSend` and `servesUnknownModel` (the others join with
+  the task that first reads them); computed, never stored. `EngineFacts` (session memory) holds only llama-server's
+  template variable (plus a router's per-id `/props?model=<id>`), read lazily on the first call that needs it and
+  forgotten by Test or Detect again (Ollama runner and LM Studio `allowed_options` are left to group 6). Group 5 makes `ui: state/ModelAdvice` (and its
   readers `ModelNotesFollower`, `TestSubject`) read the provider's effective engine and deletes its port-and-word guess
   (`LM_STUDIO_PORT` ":1234", `LM_STUDIO_WORD`, the `Server` enum), so two engine detections never coexist; group 15
   deletes the rest of `ModelAdvice`.
@@ -714,14 +715,16 @@ task edits the delta requirement and this file's line; the result is written int
   and `min_p` 0 where server defaults are not neutral (LM Studio, llama-server, Unsloth); Unsloth gets
   `{"enable_tools":false}` on every call; a `cap-ignored` post-check (WARN once per provider and model).
 - **LM Studio.** Chat on `/api/v0/chat/completions`, non-stream, falling back to `/v1` for the session on a non-JSON or
-  "Unexpected endpoint" reply; the model id is checked against `/api/v0/models` at Test and Start; `@variant` is
-  stripped. Settings shows two separate messages: no model with the typed id, and the typed variant was removed.
+  "Unexpected endpoint" reply; the model id is checked against `/api/v0/models` at the Test's models stage and on the first chat call per provider and
+  model (`ModelIdCheck`; unlisted -> `modelNotFound` reason `model-not-listed`, the run pauses; unreadable list -> the call
+  goes ahead); `@variant` is stripped for LM Studio only, by the form after a passing models check or Save. Settings shows two separate messages: no model with the typed id, and the typed variant was removed.
 - **Ollama added as OpenAI-compatible.** A one-time offer "Use Ollama's own connection"; never switched by itself;
-  Keep as is sets `nativeOfferDeclined` and nothing else.
+  Keep as is sets `nativeOfferDeclined` and nothing else. Keep as is and Detect again are draft edits, kept on Save.
+  `Suitability.NOT_SUPPORTED_YET` marks Anthropic and Gemini hosts (not refused; reachable through OpenRouter).
 - **Model lists.** Chat models only (embeddings and other kinds dropped); Ollama cloud models carry a neutral "cloud"
   label (owner decision D-6).
 - **Canaries.** An optional "Advanced features" stage of Test checks the off switch, schema, extra samplers and cap
-  field; results go to `ModelSettings.probeVerdicts: ProbeVerdicts` (group 5).
+  field; the ADVANCED stage lives in `llm/verify`; results go to `ModelSettings.probeVerdicts: ProbeVerdicts` (group 5).
 - **Settings › Providers.** The "Detected: …" line, the override, Detect again, the Advanced stage, the Unsloth key and
   tools help; EN/UK words.
 - **Privacy wording.** "Private when used with local models", never "always local" (owner decision D-5), in the UI
@@ -747,7 +750,7 @@ task edits the delta requirement and this file's line; the result is written int
   `runner-crashed`, `out-of-memory`, `repeat-limit`, `no-model-loaded`, `model-unloaded`, `wrong-model-served`,
   `grammar-too-large`, `terminated`, `empty-structured`, `schema-cut-short`, `system-role-unsupported`,
   `stream-truncated`, `output-field`, `auth`, `cap-ignored`, `unclassified`, `not-suitable-structured`,
-  `not-suitable-documents` (group 5), and later the cloud, OpenRouter and Unsloth tokens).
+  `not-suitable-documents`, `model-not-listed`, `engine-mismatch` (group 5), and later the cloud, OpenRouter and Unsloth tokens).
 - **Staging.** Group 3: the rows matched by body text (Ollama, LM Studio, llama-server). Its first step records the
   real LM Studio `terminated` reply (a recorded body or one live call) and writes the fixture from it; `terminated` is
   `upstream`, retried once after a state check, a second one an outage. Group 5: the LM Studio id check, `cap-ignored`,

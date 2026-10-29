@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:ui`, `:persistence`), QA **Last
-Updated:** 2026-10-19 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+Updated:** 2026-10-29 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`, `docs/specification/01_Product/09_THEMING.md`,
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`, `docs/specification/mockups/README.md` (Settings,
 decisions 6-7, H1)
@@ -19,7 +19,7 @@ folder. Rows marked *built* describe the code today.
 
 The Settings screen has six tabs (`TabPane`): **Providers, Models, Generation, Appearance, Automation, Storage & logs**
 (`mockups/README.md`, Settings). Its subtitle reads "Your books stay private when you use a local model. BookLoom sends your text only to the AI
-model you choose here." All six are built: Providers (form, checks, test dialog), Models, Generation, Appearance,
+model you choose here." (never that the text always stays on this computer; ADR-0047). All six are built: Providers (form, checks, test dialog), Models, Generation, Appearance,
 Automation and Storage & logs.
 
 **How changes are saved (H1, planned).**
@@ -34,7 +34,8 @@ Automation and Storage & logs.
 
 ## providers-tab {#providers-tab}
 
-*Planned — UI finalization + SQLite.* Today the list is two read-only presets and the tab runs the three tests.
+*Built (finalize 7.1a and 7.1b; the engine rows, 5.8 of `redesign-translation-pipeline`).* The tab runs the three tests
+and the optional Advanced features check.
 
 The tab is a list | form split that stays side by side at every width. The detail has a header (the provider's name,
 "current" or **Use this one**, **Delete…** with a confirmation), a **summary card** ("Your AI model: Ollama · gemma4:e4b
@@ -67,7 +68,7 @@ detection never overwrites it, Detect again clears it, and it is not offered for
 (GPT4All, AnythingLLM's documents path). When Ollama answers a provider saved as OpenAI-compatible, the form offers once
 "This is Ollama. Use Ollama's own connection (recommended)? It keeps the window, overflow and sampling controls." —
 **Use it** switches the kind to Ollama and drops `/v1` from the address, **Keep as is** only declines the offer, which
-never returns (also after Detect again); both are kept on Save. A server on another port or another computer on the
+never returns (also after Detect again); both are draft edits kept on Save. A server on another port or another computer on the
 network is added by hand: the person picks the provider type and the engine is read from the replies. The first-launch
 look (ADR-0044) covers only the two default loopback addresses.
 
@@ -85,11 +86,11 @@ dialog's request line is the route the engine was actually reached on (LM Studio
 
 **Engine help.** Each engine gets the help it needs, in the display language. **llama-server**: the empty address
 field shows the hint `http://127.0.0.1:9931/v1` (no fixed port; the address ends in `/v1`). **LM Studio**: when the id
-check stops a test or a start because LM Studio does not list the id, the result reads `LM Studio has no model
-"{id}". It would answer with the model that is loaded. Pick a model from the list.`; a typed `@variant` is removed from
-the model id once LM Studio's list was read (a passing models check) or the provider is saved, and one line under the
+check stops a test (the models stage) or the first call of a run because LM Studio does not list the id, the result reads `LM Studio has no model
+"{id}". It would answer with the model that is loaded. Pick a model from the list.` (a run pauses on that first call, ending with `modelNotFound`, reason `model-not-listed`); a typed `@variant` is removed from
+the model id once LM Studio's list was read (a passing models check) or the provider is saved, not while typing, and one line under the
 model entry says `"@{variant}" was removed from the model id: it would load a second copy with default settings.`
-until the id is typed again; when a run starts on an LM Studio model that is not loaded, a notice says "LM Studio will
+until the id is typed again; right after a run starts on an LM Studio model that is not loaded, a toast (information, never blocking) says "LM Studio will
 load it with its own default settings; the window may differ." and the run goes on. **Unsloth**: under the address the
 key hint "Create a key in Unsloth › Settings › API and put its environment-variable name here, for example
 UNSLOTH_API_KEY." and "Unsloth's own chat tools (web search, code) are separate from BookLoom; BookLoom turns them off
@@ -103,8 +104,9 @@ computer, the text you translate is sent to {host}." (for example `openrouter.ai
 "LM Studio keeps request text in its own server log unless you turn that off in LM Studio." Nothing is asked: there is
 no consent dialog and no acknowledgement box for any provider.
 
-**Cloud models.** In the Providers model list a model the provider runs on its own servers (an Ollama cloud model,
-`ModelInfo.cloud`) carries the neutral label "cloud"; every model stays listed and choosing one asks nothing.
+**Cloud models.** In the Providers model list and its model field a model the provider runs on its own servers (an Ollama
+cloud model, `ModelInfo.cloud`) carries the neutral label "cloud"; every model stays listed and choosing one asks
+nothing. (The Models tab chooser lists ids only.)
 
 The effective context is **not** a provider setting: it is resolved per model (see `#models-tab` and
 `#generation-tab`).
@@ -116,7 +118,8 @@ providers** (with ↻ Refresh) and a form for the picked one. **Each model keeps
 means BookLoom picks the value per task.** The tab also shows what was found out from the program: how much the model
 can read at once (and, for Ollama only, how much is loaded now — read from `/api/ps`) and whether it gave a structured
 answer in this session's last inference test (else "not checked yet"). While Use context window is off, the field shows the
-loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint. Save is
+loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint (an Ollama
+reached through an OpenAI-compatible provider also always receives `max_tokens`, whatever the stored choice). Save is
 an update that keeps a refusal recorded meanwhile; **Send again** acts at once and leaves unsaved typing alone; changing
 model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollama?".
 
@@ -243,5 +246,5 @@ that writes book text, prompts and model replies to the log
 | ID             | Requirement                                                                                                             |
 |----------------|-----------------------------------------------------------------------------------------------------------------------|
 | FR-SETTINGS-V1 | Any setting entered outside its range is rejected with an inline validation message; the prior valid value is retained. |
-| FR-SETTINGS-V2 | Settings persist to the typed KV store and reload on next launch (*planned — UI finalization + SQLite*; secrets are stored as references only). |
+| FR-SETTINGS-V2 | Settings persist to the typed KV store and reload on next launch (built, ADR-0043; secrets are stored as references only). |
 | FR-SETTINGS-V3 | A UI-language change takes effect only after an application restart (see `10_I18N_AND_ACCESSIBILITY.md`).               |

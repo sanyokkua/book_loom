@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.dto.OllamaTagsResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse.Model;
+import ua.bookloom.llm.engine.EngineDetector;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.provider.DiscoveryErrors;
@@ -81,7 +82,7 @@ final class OpenAiModelList {
             }
             final List<ModelInfo> models = response.data().stream()
                     .filter(model -> !Objects.requireNonNull(model, "model").isEmbedding())
-                    .map(model -> modelInfo(Objects.requireNonNull(model.id(), "model id")))
+                    .map(this::modelInfo)
                     .toList();
             log.debug(
                     "OpenAI-compatible discovery outcome host={} modelCount={} leftOut={} code=none",
@@ -94,8 +95,12 @@ final class OpenAiModelList {
         }
     }
 
-    private ModelInfo modelInfo(String id) {
-        return new ModelInfo(id, config.effectiveEngine() == ServerEngine.OLLAMA && OllamaTagsResponse.isCloudName(id));
+    private ModelInfo modelInfo(Model model) {
+        final String id = Objects.requireNonNull(model.id(), "model id");
+        return new ModelInfo(
+                id,
+                config.effectiveEngine() == ServerEngine.OLLAMA && OllamaTagsResponse.isCloudName(id),
+                EngineDetector.ownerEngine(model.ownedBy()));
     }
 
     private boolean invalidModel(@Nullable Model model) {

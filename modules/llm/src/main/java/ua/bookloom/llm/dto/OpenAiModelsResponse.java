@@ -28,12 +28,14 @@ public record OpenAiModelsResponse(
      * @param type the kind of model, which only LM Studio's own listing gives ({@code llm}, {@code vlm},
      *     {@code embeddings}); null elsewhere
      * @param state whether LM Studio has the model in memory ({@code loaded}, {@code not-loaded}); null elsewhere
+     * @param ownedBy the row's {@code owned_by}, which names the serving engine on several servers; null when absent
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Model(
             @JsonProperty("id") @Nullable String id,
             @JsonProperty("type") @Nullable String type,
-            @JsonProperty("state") @Nullable String state) {
+            @JsonProperty("state") @Nullable String state,
+            @JsonProperty("owned_by") @Nullable String ownedBy) {
 
         /** The kind LM Studio gives a model that turns text into vectors and cannot chat. */
         public static final String EMBEDDINGS = "embeddings";

@@ -61,6 +61,7 @@ class AdvancedChecksTest {
 
     private static final String PROVIDER = "office";
     private static final String MODEL = "mara-7b";
+    private static final String GPT_OSS = "gpt-oss-20b";
     private static final String CHAT = "/v1/chat/completions";
     private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-10-29T12:00:00Z"), ZoneOffset.UTC);
 
@@ -155,6 +156,24 @@ class AdvancedChecksTest {
                         .withRequestBody(containing("Think step by step"))
                         .withRequestBody(containing("\"reasoning_effort\":\"none\"")));
         server.verify(0, postRequestedFor(urlEqualTo(CHAT)).withRequestBody(containing("\"reasoning\":{")));
+    }
+
+    // A gpt-oss id is always sent reasoning_effort "low", whatever switch is named, so one call says all there is.
+    @Test
+    void thinkingOff_gptOssId_sendsOneCallAndStoresTheEffortSwitch() {
+        server.stubFor(get(urlEqualTo("/v1/models"))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":[{\"id\":\"gpt-oss-20b\",\"object\":\"model\"}]}")));
+        server.stubFor(chatContaining("Think step by step")
+                .atPriority(4)
+                .willReturn(okJson(reply("42", "stop", 30, "Adding the two numbers."))));
+
+        report(VerificationPolicy.ADVANCED, GPT_OSS);
+
+        final ProbeVerdicts.ThinkingVerdict thinking = verdicts(GPT_OSS).thinkingSwitch();
+        assertThat(thinking).isNotNull();
+        assertThat(thinking.switchName()).isEqualTo("reasoning_effort");
+        assertThat(thinking.verdict().outcome()).isEqualTo(Outcome.HONOURED);
+        server.verify(1, postRequestedFor(urlEqualTo(CHAT)).withRequestBody(containing("Think step by step")));
     }
 
     @Test
@@ -269,7 +288,11 @@ class AdvancedChecksTest {
     }
 
     private VerificationReport report(final VerificationPolicy policy) {
-        final Result<VerificationReport> result = verifier().verify(new ModelSelection(PROVIDER, MODEL), policy);
+        return report(policy, MODEL);
+    }
+
+    private VerificationReport report(final VerificationPolicy policy, final String model) {
+        final Result<VerificationReport> result = verifier().verify(new ModelSelection(PROVIDER, model), policy);
         assertThat(result.isOk()).as("result: " + result.error()).isTrue();
         return Objects.requireNonNull(result.data(), "report");
     }
@@ -294,7 +317,11 @@ class AdvancedChecksTest {
     }
 
     private ProbeVerdicts verdicts() {
-        return Objects.requireNonNull(settings.find(PROVIDER, MODEL).data(), "found")
+        return verdicts(MODEL);
+    }
+
+    private ProbeVerdicts verdicts(final String model) {
+        return Objects.requireNonNull(settings.find(PROVIDER, model).data(), "found")
                 .map(ModelSettings::probeVerdicts)
                 .orElse(ProbeVerdicts.none());
     }

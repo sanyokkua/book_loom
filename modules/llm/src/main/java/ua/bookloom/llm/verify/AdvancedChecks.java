@@ -72,6 +72,7 @@ final class AdvancedChecks {
     private static final String COUNT_PROMPT = "Count from 1 to 100, separated by spaces.";
 
     private final ProviderConfig config;
+    private final String modelId;
     private final ObjectMapper mapper;
     private final Sender sender;
     private final Instant now;
@@ -80,11 +81,18 @@ final class AdvancedChecks {
     /**
      * Binds the checks to one model.
      *
+     * @param modelId the model checked; a gpt-oss id is always asked by effort, so its thinking check is one call
      * @param sender sends one check through the gate
      * @param now the time every verdict of this run carries
      */
-    AdvancedChecks(final ProviderConfig config, final ObjectMapper mapper, final Sender sender, final Instant now) {
+    AdvancedChecks(
+            final ProviderConfig config,
+            final String modelId,
+            final ObjectMapper mapper,
+            final Sender sender,
+            final Instant now) {
         this.config = Objects.requireNonNull(config, "config");
+        this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.sender = Objects.requireNonNull(sender, "sender");
         this.now = Objects.requireNonNull(now, "now");
@@ -128,6 +136,9 @@ final class AdvancedChecks {
         if (config.kind() == ProviderKind.OLLAMA) {
             return nativeThinking();
         }
+        if (EngineTraits.reasonsAtLowest(modelId)) {
+            return effortThinking();
+        }
         boolean ignored = false;
         for (final OffSwitch offSwitch : switches()) {
             final ProviderCallResult<CheckReply> call =
@@ -150,6 +161,23 @@ final class AdvancedChecks {
             ignored = ignored || failed == null;
         }
         return new ThinkingVerdict(null, verdict(ignored ? Outcome.IGNORED : Outcome.REFUSED));
+    }
+
+    // A gpt-oss id is sent reasoning_effort "low" whatever switch is named (it cannot stop reasoning), so trying the
+    // other switches would send the same body again: one call says whether the server accepts the effort field.
+    private @Nullable ThinkingVerdict effortThinking() {
+        log.debug(
+                "Advanced thinking check provider={} model={} gpt-oss: only reasoning_effort is checked, the other"
+                        + " switches would send the same body",
+                config.id(),
+                modelId);
+        final ProviderCallResult<CheckReply> call =
+                send(request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), OffSwitch.REASONING_EFFORT);
+        if (call.result().isOk()) {
+            return new ThinkingVerdict(OffSwitch.REASONING_EFFORT.wireName(), verdict(Outcome.HONOURED));
+        }
+        final Outcome outcome = refusedOrStop("thinking", call);
+        return outcome == null ? null : new ThinkingVerdict(null, verdict(outcome));
     }
 
     // Ollama's own API has one switch, think, which its client always sends; the check says whether it was accepted.

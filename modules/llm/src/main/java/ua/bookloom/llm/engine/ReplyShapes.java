@@ -139,6 +139,12 @@ final class ReplyShapes {
                 .orElseGet(() -> Found.of(ServerEngine.GENERIC));
     }
 
+    /** The engine an {@code owned_by} value names, or null for a value that names none or a generic server. */
+    static @Nullable ServerEngine ownerEngine(final @Nullable String owner) {
+        final Found found = owner == null ? null : OWNERS.get(owner);
+        return found == null || found.engine() == ServerEngine.GENERIC ? null : found.engine();
+    }
+
     private Optional<JsonNode> parsed(final HttpReply reply) {
         try {
             return Optional.ofNullable(mapper.readTree(reply.body()));

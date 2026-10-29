@@ -98,7 +98,9 @@ class LmStudioLiveTest {
         assertThat(result.isOk())
                 .as("LM Studio model-list result: " + result.error())
                 .isTrue();
-        assertThat(Objects.requireNonNull(result.data(), "models")).contains(new ModelInfo(modelId()));
+        assertThat(Objects.requireNonNull(result.data(), "models"))
+                .extracting(ModelInfo::id)
+                .contains(modelId());
     }
 
     // A strict schema reply must survive production reply sanitisation and remain parseable JSON.

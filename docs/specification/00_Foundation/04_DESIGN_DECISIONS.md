@@ -14,7 +14,7 @@ realized.
 ### DD-01 — Local-first, offline by default
 
 **Decision:** The application runs fully offline; the only outbound traffic is user-triggered provider communication —
-inference, model discovery, and verification — with the configured local or OpenAI-compatible provider, plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. **Why:** Book
+inference, model discovery, verification and server-engine detection — with the configured local or OpenAI-compatible provider (private when used with local models; with a remote provider the text goes to the host the user chose, ADR-0047), plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. **Why:** Book
 content and translations must stay under the user's control; there is no account or backend. **Consequences:** No
 telemetry, analytics, background updates, or remote crash reporting; an offline invariant must be enforced and testable.
 **ADR:** ADR-0010 **Requirements:** FR-INFER-01, NFR-OFFLINE-01, NFR-PRIV-01.
@@ -100,8 +100,8 @@ FR-INFER-02.
 
 **Decision:** A `ChatModel` port + `ChatModelFactory` (over the internal `ProviderClient` seam and its `ProviderClientFactory`) hide two concrete client implementations selected by provider
 **kind** (`OLLAMA | OPENAI_COMPATIBLE`): an **Ollama-native** client (Ollama's own `/api/*` and native `options`) and an
-**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). A `ProviderConfig` carries the
-endpoint and timeouts (credential and model details are planned). The abstraction already admits future providers (e.g. Gemini, Claude)
+**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). The kind is the transport (two clients); the detected server engine (`ServerEngine`, ADR-0047) selects request fields, error rows and routes, so no client per engine. `ProviderConfig` also carries engine, engineChoice, engineVersion and nativeOfferDeclined. A `ProviderConfig` carries the
+endpoint and timeouts. The abstraction already admits future providers (e.g. Gemini, Claude)
 as new implementations without changing callers; those are not implemented in this scope. **Why:** Ollama's
 OpenAI-compatible endpoint does not fully honour options such as num_ctx, so Ollama needs its native API; other servers
 are well served by the OpenAI-compatible client. **Consequences:** Two client classes behind one interface plus a
@@ -330,7 +330,7 @@ future providers (Gemini, Claude, …) can be added as new implementations witho
 in this scope. **Why:** Ollama's OpenAI-compatible endpoint is not fully faithful (e.g. `num_ctx`), so Ollama uses its
 native API; all other servers use the OpenAI-compatible client. **Consequences:** Callers never branch on vendor; adding
 a provider is adding an implementation. **ADR:** ADR-0005 **Requirements:** FR-PROV-02, FR-PROV-03, FR-INFER-01.
-(Extends DD-10.)
+The kind is the transport (two clients); the detected server engine (`ServerEngine`, ADR-0047) selects request fields, error rows and routes, so no client per engine. `ProviderConfig` also carries engine, engineChoice, engineVersion and nativeOfferDeclined. (Extends DD-10.)
 
 ## dd-33-response-handling {#dd-33-response-handling}
 

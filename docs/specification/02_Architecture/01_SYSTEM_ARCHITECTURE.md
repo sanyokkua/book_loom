@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-10-29
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
 `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
 `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`
@@ -6,7 +6,7 @@
 # System Architecture
 
 BookLoom is a local-first, offline desktop application that translates whole books (EPUB, FB2, Markdown, TXT) using a
-general-purpose Large Language Model the user runs locally (Ollama or LM Studio) or reaches through any
+general-purpose Large Language Model the user runs locally (Ollama, LM Studio, llama-server or Unsloth) or reaches through any
 OpenAI-compatible endpoint. This document fixes the layered structure, the module graph and its dependency direction,
 and the four architectural invariants every other document inherits.
 
@@ -21,7 +21,7 @@ at `ua.bookloom.<module>`. Work flows through four horizontal layers:
   translate→QA→judge→repair loop, glossary/TM/summary consistency stack, prompt building. Pure Java, no UI, no direct
   HTTP or SQL.
 - **Domain services** (`:document`, `:llm`, `:persistence`) — document parsing/masking/repackaging, provider abstraction
-  and inference, and durable storage. Each owns exactly one concern and exposes it through a `:api` port.
+  (two clients over a detected server engine) and inference, and durable storage. Each owns exactly one concern and exposes it through a `:api` port.
 - **Foundation** (`:api`, `:util`) — contracts (interfaces, records, enums, `Result<T>`, `AppError`, `ErrorCode`) and
   framework-free helpers.
 
@@ -65,9 +65,11 @@ exact bytes — DD-43) is a release gate. Model detail: `03_DOCUMENT_MODEL.md`.
 ### offline {#offline}
 
 **Invariant:** the only outbound network traffic the application ever makes is **user-triggered provider
-communication** — inference, model discovery, and verification — with the provider the user configured (a local
-Ollama/LM Studio endpoint or an OpenAI-compatible URL), plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. No telemetry, no update checks, no analytics, no background
-fetch. Startup, import, parsing, QA, persistence, and export are fully local. See
+communication** — inference, model discovery, verification and server-engine detection (a few short GETs when a provider is saved or tested, ADR-0047) — with the provider the user configured (a local
+Ollama/LM Studio/llama-server endpoint or an OpenAI-compatible URL), plus one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, one silent model listing of exactly http://127.0.0.1:11434 (Ollama /api/tags) and http://127.0.0.1:1234/v1 (LM Studio /models); no other address, no prompt or book text, nothing answering is not an error, never repeated by itself, desktop window only, only :llm holds HTTP code; every later check is user-triggered. No telemetry, no update checks, no analytics, no background
+fetch. Startup, import, parsing, QA, persistence, and export are fully local. BookLoom is **private when used with
+local models**: with a provider outside this computer, the text being translated goes to that provider's host, which is
+the user's choice and is shown to them. See
 `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (`NFR-OFFLINE-*`).
 
 ### single-flight-inference {#single-flight-inference}
@@ -89,7 +91,7 @@ flowchart TD
     end
     subgraph Services
         DOC[":document<br/>parse · mask · reassemble · repackage"]
-        LLM[":llm<br/>Provider · discovery · inference · gate · retry"]
+        LLM[":llm<br/>Provider · engines · discovery · inference · gate · retry"]
         PERS[":persistence<br/>SQLite · JDBI · JSON documents · settings KV"]
     end
     subgraph Foundation
@@ -115,7 +117,7 @@ flowchart TD
     LLM --> UTIL
     PERS --> API
     UTIL --> API
-    LLM -. "user-triggered provider communication only<br/>(inference · discovery · verification) + first-launch local listing (ADR-0044)" .-> EXT
+    LLM -. "user-triggered provider communication only<br/>(inference · discovery · verification · engine detection) + first-launch local listing (ADR-0044)" .-> EXT
 
     style API fill:#e7d6c0,stroke:#a58075
     style EXT fill:#b2babd,stroke:#3a4a52

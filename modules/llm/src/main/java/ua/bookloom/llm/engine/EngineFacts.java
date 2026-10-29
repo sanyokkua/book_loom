@@ -21,8 +21,8 @@ import ua.bookloom.llm.http.HttpReply;
  * the {@code enable_thinking} variable, which decides whether the off switch can be sent at all. A router reads it per
  * model id from {@code /props?model=<id>}. It is read by one GET of {@code /props} on the first call that needs it, so
  * a server named by "Treat this server as..." works without a Test, and a Test forgets it so the next call reads afresh.
- * An unreadable {@code /props} means no kwarg; a reply that is not answered at all is not kept, so a later call asks
- * again. The Ollama runner and LM Studio's reasoning options join it when a request field depends on them.
+ * An unreadable {@code /props} means no kwarg; a reply that is not answered at all, or not answered with HTTP 200 (a
+ * llama-server still loading its model answers 503 on every route), is not kept, so a later call asks again. The Ollama runner and LM Studio's reasoning options join it when a request field depends on them.
  */
 @Slf4j
 @Singleton
@@ -31,6 +31,7 @@ public final class EngineFacts {
     private static final Pattern READS_ENABLE_THINKING = Pattern.compile("\\benable_thinking\\b");
     private static final String PROPS = "props";
     private static final char KEY_SEPARATOR = '\u0000';
+    private static final int HTTP_OK = 200;
 
     private final HttpExchange exchange;
     private final ReplyShapes shapes;
@@ -100,7 +101,8 @@ public final class EngineFacts {
         return read.orElse(Props.NONE);
     }
 
-    // Empty when the server did not answer at all; an answer that is not llama-server's props reads as "no kwarg".
+    // Empty when the server did not answer at all or not with 200; a 200 that is not llama-server's props reads as
+    // "no kwarg" and is kept.
     private Optional<Props> read(final ProviderConfig config, final String path) {
         final Optional<ProviderConfig> root = BaseUrlRoot.of(config).map(BaseUrlRoot::root);
         if (root.isEmpty()) {
@@ -115,9 +117,13 @@ public final class EngineFacts {
                     Objects.requireNonNull(reply.error(), "error").code());
             return Optional.empty();
         }
-        final Props found = shapes.object(Optional.ofNullable(reply.data()))
-                .map(EngineFacts::props)
-                .orElse(Props.NONE);
+        final HttpReply answered = Objects.requireNonNull(reply.data(), "reply");
+        if (answered.status() != HTTP_OK) {
+            log.debug("Engine facts not kept provider={} status={}", config.id(), answered.status());
+            return Optional.empty();
+        }
+        final Props found =
+                shapes.object(Optional.of(answered)).map(EngineFacts::props).orElse(Props.NONE);
         log.info(
                 "facts read engine={} runner=none templateReads={} router={} perModel={}",
                 ServerEngine.LLAMA_CPP,

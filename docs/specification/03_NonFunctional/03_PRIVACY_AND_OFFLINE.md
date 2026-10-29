@@ -1,26 +1,29 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-10-29
 **Cross-references:** `docs/specification/03_NonFunctional/01_QUALITY_ATTRIBUTES.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`
 
 # Privacy and Offline
 
-Privacy is the product promise and the top-ranked quality attribute (`01_QUALITY_ATTRIBUTES.md#priorities`). Everything
-stays on the user's machine; the expected outbound traffic is the user's own **user-triggered provider communication** —
-inference, model discovery, and verification — with the provider they configured, plus one documented exception: on the
-very first launch only, one silent model listing of two fixed local addresses (ADR-0044, below). Opening, translating
-and exporting a book never require the network. Any other network use must be optional, safe (nothing a document names
-is fetched — a DOCTYPE is answered from a bundled entity list), and must degrade without an error when the network or
-the resource is unavailable.
+Privacy is the product promise and the top-ranked quality attribute (`01_QUALITY_ATTRIBUTES.md#priorities`). BookLoom is
+**private when used with local models**: with a local model, everything stays on the user's machine. The expected
+outbound traffic is the user's own **user-triggered provider communication** — inference, model discovery, verification,
+and the short server-engine detection that runs when a provider is saved or tested (ADR-0047) — with the provider they
+configured, plus one documented exception: on the very first launch only, one silent model listing of two fixed local
+addresses (ADR-0044, below). When the configured provider is outside this computer, the text being translated is sent to
+that provider's host; the host is shown to the user, the choice is the user's own, and no consent step is added
+(ADR-0010 as amended by ADR-0047). Opening, translating and exporting a book never require the network. Any other
+network use must be optional, safe (nothing a document names is fetched — a DOCTYPE is answered from a bundled entity
+list), and must degrade without an error when the network or the resource is unavailable.
 
 ## offline-invariant {#offline-invariant}
 
 | ID             | Requirement                                                                                                                                                                                                                                          |
 |----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | NFR-OFFLINE-01 | Import, parsing, masking, QA, glossary/TM/summary, persistence, review, and export function with **no network connection**.                                                                                                                          |
-| NFR-OFFLINE-02 | The **only** outbound network traffic the application makes is **user-triggered provider communication** — an inference, model-discovery, or verification request — to the configured provider (local Ollama/LM Studio or an OpenAI-compatible URL), plus the one exception in NFR-OFFLINE-05. |
+| NFR-OFFLINE-02 | The **only** outbound network traffic the application makes is **user-triggered provider communication** — an inference, model-discovery, verification or server-engine-detection request — to the configured provider (local Ollama/LM Studio/llama-server or an OpenAI-compatible URL), plus the one exception in NFR-OFFLINE-05. |
 | NFR-OFFLINE-03 | No background, scheduled, or startup network activity: no update check, no license check, no telemetry beacon, no crash upload, no font/asset CDN fetch — except the first-launch listing of NFR-OFFLINE-05.                                       |
-| NFR-OFFLINE-04 | Provider verification (connection/models/inference) counts as user-triggered — it runs only when the user clicks Test or starts a run. Every check after the first-launch listing is user-triggered.                                                 |
+| NFR-OFFLINE-04 | Provider verification (connection/models/inference) and engine detection count as user-triggered — they run only when the user clicks Test, Save or Detect again, or starts a run. Every check after the first-launch listing is user-triggered.   |
 | NFR-OFFLINE-05 | The one exception (ADR-0044): on the very first launch only (a fresh database counts), after the window is shown, the desktop window makes one silent model listing of exactly `http://127.0.0.1:11434` (Ollama `/api/tags`) and `http://127.0.0.1:1234/v1` (LM Studio `/models`). No other address is tried and no prompt or book text is sent; nothing answering is not an error; it is never repeated by itself and never runs in the command line. Only `:llm` holds the HTTP code. |
 
 The offline invariant is enforced in review and by an ArchUnit rule limiting `java.net.http` usage to `:llm`, plus the
@@ -46,8 +49,8 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 
 | ID          | Requirement                                                                                                                                                                                   |
 |-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| NFR-PRIV-08 | Book content leaves the machine only as the body of a user-triggered inference request to the user's chosen endpoint — nowhere else. For a local provider it never leaves the machine at all. The first-launch listing (NFR-OFFLINE-05) carries no book text. |
-| NFR-PRIV-09 | The user always sees which provider/endpoint is current before a run (Settings + the Translating screen), so any outbound destination is explicit and chosen (the first-launch listing of NFR-OFFLINE-05 excepted).                                 |
+| NFR-PRIV-08 | Book content leaves the machine only as the body of a user-triggered inference request to the user's chosen endpoint — nowhere else. For a local provider it never leaves the machine at all; for a provider outside this computer the text goes to that provider's host, which is the user's responsibility. The wording shown to the user is "private when used with local models", never that the text always stays on this computer, and no consent dialog or checkbox is added. Engine detection sends no body and no book text; an engine that runs tools of its own is told to turn them off on every call (Unsloth: `enable_tools:false`). The first-launch listing (NFR-OFFLINE-05) carries no book text. |
+| NFR-PRIV-09 | The user always sees which provider/endpoint is current before a run (Settings + the Translating screen), and the provider area names the host the text is sent to, so any outbound destination is explicit and chosen (the first-launch listing of NFR-OFFLINE-05 excepted). |
 
 ## verification {#verification}
 

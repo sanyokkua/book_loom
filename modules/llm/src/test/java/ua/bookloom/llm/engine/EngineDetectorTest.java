@@ -329,17 +329,30 @@ class EngineDetectorTest {
                 .allSatisfy(event -> assertThat(event.getRequest().getBody()).isEmpty());
     }
 
-    // A base below another prefix (Docker's /engines/llama.cpp/v1) cannot reuse the root's /v1/models reply, so its
-    // own model list is the one extra GET.
+    // A base below another prefix (Docker's /engines/llama.cpp/v1) whose root already answered /v1/models in the Ollama
+    // step reuses that reply for the model list, so even this path stays within seven GETs.
     @Test
-    void detect_baseBelowAnotherPrefix_takesAtMostEightGets() {
+    void detect_baseBelowAnotherPrefixAfterRootModels_reusesTheRootReplyWithinSevenGets() {
         RecordedServers.LOCALAI.stub(server);
 
         final EngineDetection detection = detected(provider(ProviderKind.OPENAI_COMPATIBLE, "/engines/llama.cpp/v1"));
 
-        assertThat(detection.probes()).isEqualTo(EngineDetector.MAX_PROBES + 1);
+        assertThat(detection.probes()).isEqualTo(EngineDetector.MAX_PROBES);
+        assertThat(server.getAllServeEvents()).hasSize(EngineDetector.MAX_PROBES);
+        server.verify(0, getRequestedFor(urlEqualTo("/engines/llama.cpp/v1/models")));
+        server.verify(1, getRequestedFor(urlEqualTo("/v1/models")));
+    }
+
+    // When the Ollama step never asked the root's /v1/models, the base's own list is read.
+    @Test
+    void detect_baseBelowAnotherPrefixWithoutRootModels_readsTheBaseList() {
+        server.stubFor(get(urlEqualTo("/engines/llama.cpp/v1/models")).willReturn(RecordedServers.json(VLLM_MODELS)));
+
+        final EngineDetection detection = detected(provider(ProviderKind.OPENAI_COMPATIBLE, "/engines/llama.cpp/v1"));
+
+        assertThat(detection.engine()).isEqualTo(ServerEngine.GENERIC);
+        assertThat(detection.probes()).isLessThanOrEqualTo(EngineDetector.MAX_PROBES);
         server.verify(1, getRequestedFor(urlEqualTo("/engines/llama.cpp/v1/models")));
-        server.verify(1, getRequestedFor(urlEqualTo("/api/version")));
     }
 
     private EngineDetection detected(final ProviderConfig config) {
