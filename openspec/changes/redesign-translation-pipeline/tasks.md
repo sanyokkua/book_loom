@@ -316,7 +316,7 @@ Makes provider failures classified by the meaning of the reply's text, whatever 
 
 Ships data and the loaders that read it. A per-language file of short grammar words (function words) lets code tell Russian words left in a Ukrainian text without any list written for one pair; the rule keys let every language declare its name endings, past-tense endings, negation words and conventions as data. No stored shape changes. The behaviour that reads this data is built later (groups 7 and 10); each task here says which requirement its data serves.
 
-- [ ] 4.1 Write the group's acceptance test, the homograph test, and add the `FunctionWords` loader; see the test red. A word both Russian and Ukrainian use (`просто`) must not be counted as a Russian word left in a Ukrainian text, and the test must fail if the Ukrainian file lacks it. → :pipeline
+- [x] 4.1 Write the group's acceptance test, the homograph test, and add the `FunctionWords` loader; see the test red. A word both Russian and Ukrainian use (`просто`) must not be counted as a Russian word left in a Ukrainian text, and the test must fail if the Ukrainian file lacks it. → :pipeline
   - **Satisfies:** "Count source-only function words in a target as untranslated residue" (quality-gates; the data side — the check itself is group 10)
   - **Depends on:** group 1
   - **Read:** design D7 "Function words" and "Tests"; `pipeline/glossary/StopWords` (a bundled-list loader to imitate), `pipeline/checks/package-info.java`; the six homographs both languages use are listed in the test below, so nothing else is needed
@@ -325,7 +325,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Log:** DEBUG on each file loaded with word count; DEBUG on a missing file.
   - **Done when:** `FunctionWordsHomographTest` fails (no files yet, so `что` is missing) and the in-memory test passes; paste the failure.
 
-- [ ] 4.2 Record the licence check, choose one open source, and add the function-word files and their attribution. Words copied from a list are only usable if the list's licence allows it and the file says where they came from. → :pipeline (resources), docs
+- [x] 4.2 Record the licence check, choose one open source, and add the function-word files and their attribution. Words copied from a list are only usable if the list's licence allows it and the file says where they came from. → :pipeline (resources), docs
   - **Satisfies:** "Count source-only function words in a target as untranslated residue" (quality-gates; the data side)
   - **Depends on:** 4.1
   - **Read:** design D7 "Function words"; `docs/DEVELOPMENT.md#redesign-arms` (add a section `#redesign-language-data` for this task's records)
@@ -334,7 +334,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules` — the new file kind, the licence and attribution note, the rule that a word both languages use goes into the target's file.
   - **Done when:** `FunctionWordsHomographTest` is green (first green of the group acceptance test); the licence record is committed.
 
-- [ ] 4.3 Split the language-file key `functionWords` into `negationWords` and `moodWords`, and make its readers read their union. "Function words" now means only the new file kind, and the negation check of group 10 needs the negations on their own. → :pipeline
+- [x] 4.3 Split the language-file key `functionWords` into `negationWords` and `moodWords`, and make its readers read their union. "Function words" now means only the new file kind, and the negation check of group 10 needs the negations on their own. → :pipeline
   - **Satisfies:** "Tell the model about the language pair from one language-rules map" (translation-pipeline), "Doubt a segment that lost two or more negations" (quality-gates; the negation words it reads), "Count source-only function words in a target as untranslated residue" (quality-gates; keeps the two meanings apart)
   - **Depends on:** 4.2
   - **Read:** design D7 "Split" (this replaces an earlier idea of renaming the key to `polarityWords`); `prompt/languages/ru.properties` (`functionWords=бы б не ни никогда нигде никто ничего же ли`) and `uk.properties` (`functionWords=би б не ні ніколи ніде ніхто нічого ж же та`), the only files with the key; `prompt/LanguageRules.functionWords` (reads `wordsOf(targetTag, "functionWords")`), `heal/ReviewResolver` (line ~78), `context/LexiconFilter`, `reviewer/EditApplier`, `EditVerifier`, `EditGuards`, `CriterionFit`, `WordChange` (parameters named `functionWords`), `prompt/LanguageRulesTest` (near line 242), `LanguageFilesTest.KEY`, `CriterionFitTest`
@@ -342,7 +342,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Test first:** `LanguageRulesTest.negationAndMoodWords_languageWithLists_holdsTheUnion` (parameterised: `uk` holds `би` and `не`, `ru` holds `бы` and `не`); `negationWords_ukrainian_holdsOnlyTheNegations` (`не ні ніколи ніде ніхто нічого`, no `би`); `negationAndMoodWords_languageWithoutLists_isEmpty`; `LanguageFilesTest.file_everyKey_isOneTheAssemblerReads` fails if the old key remains (a negative row: a file with `functionWords` is rejected) and `file_negationAndMoodWords_shareNoWord`.
   - **Done when:** `scripts/test-focused.sh --full-module` is green for `:pipeline`; `grep -rn 'functionWords' modules/pipeline/src` prints nothing.
 
-- [ ] 4.4 Make the name scan's stop words read the function-word file plus the scan-only extras, add the Russian and Ukrainian title files, and add `forbiddenLetters`, `informalAddress`, `formalAddress` and `honorifics` to `ru.properties`. One function-word list per language must serve both the residue check and the name scan, so a Russian book's capitalised sentence starters do not look like names, and a Russian target needs the same checks Ukrainian has. → :pipeline
+- [x] 4.4 Make the name scan's stop words read the function-word file plus the scan-only extras, add the Russian and Ukrainian title files, and add `forbiddenLetters`, `informalAddress`, `formalAddress` and `honorifics` to `ru.properties`. One function-word list per language must serve both the residue check and the name scan, so a Russian book's capitalised sentence starters do not look like names, and a Russian target needs the same checks Ukrainian has. → :pipeline
   - **Satisfies:** "Propose names by a deterministic scan when the glossary is empty" (glossary; the stop-word and title data it reads), "Keep a speech's form of address from changing between informal and formal" (quality-gates; the address forms), "Offer the apostrophe, quotation-mark and default-address choices the target language sets" (book-brief; the address forms Russian sets)
   - **Depends on:** 4.3
   - **Read:** design D7 "One function-word list per language"; `pipeline/glossary/StopWords` (`DIRECTORY`, `TITLES_DIRECTORY`; stop words exist for de, en, es, fr, pl, uk; titles only en; its Javadoc on given names), `glossary/stopwords/*.txt` and `titles/en.txt` (the format), `given-names-en.txt`, `checks/FunctionWords` (4.1), `prompt/languages/uk.properties` (`forbiddenLetters`, `informalAddress`, `formalAddress`), `ru.properties`, `NoSourceLanguageReadersTest`, `ProjectNamesTest`
@@ -351,7 +351,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms` — the stop words come from the function-word file plus scan-only extras; title files for ru and uk.
   - **Done when:** the tests are green.
 
-- [ ] 4.5 Add the name-form rule data: `nameParadigms`, `nameAlternations`, `nounEndings`, `clippedVocative` and `femSurnameMap`. Name forms differ by language, so how a name inflects is data in each language's file, read the same way for every language. → :pipeline (resources)
+- [x] 4.5 Add the name-form rule data: `nameParadigms`, `nameAlternations`, `nounEndings`, `clippedVocative` and `femSurnameMap`. Name forms differ by language, so how a name inflects is data in each language's file, read the same way for every language. → :pipeline (resources)
   - **Satisfies:** "Group the inflected forms of a name into one lemma entry" (glossary; the Russian source table), "Generate the forms of a target from the target language's name table" (glossary; the Ukrainian target table with its vocative), "Group recurring terms by their stem" (glossary; the noun endings)
   - **Depends on:** 4.3
   - **Excludes:** the readers `NameForms.candidates` and `NameForms.forms` and their round-trip tests (group 7); this task fixes the data shapes and tests only that every row parses
@@ -361,7 +361,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules` — the new keys and the row shapes.
   - **Done when:** the tests are green.
 
-- [ ] 4.6 Add the remaining rule keys: past-tense endings, `addressPositions`, `stripStressMarks`, the declared `conventions` with the hard g for Ukrainian, and `readingExample`. Each language states what it needs as data, so no language is special in code. → :pipeline (resources)
+- [x] 4.6 Add the remaining rule keys: past-tense endings, `addressPositions`, `stripStressMarks`, the declared `conventions` with the hard g for Ukrainian, and `readingExample`. Each language states what it needs as data, so no language is special in code. → :pipeline (resources)
   - **Satisfies:** "Read past-tense verbs after a name as gender evidence" (glossary; the endings), "Strip stress marks from every candidate before any check counts" (quality-gates; the flag), "Remove stress marks from every target the application takes in" (glossary; the flag), "Strip stress marks from the written translation where the target language asks for it" (export; the flag), "Offer a choice for each convention the target language declares" (book-brief; the declaration)
   - **Depends on:** 4.5
   - **Excludes:** the readers (groups 7, 10) and the Book Brief row (group 7)
@@ -371,7 +371,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules` — the full key table (new rows) and the `conventions` shape.
   - **Done when:** the tests are green; `LanguageFilesTest` accepts every shipped key.
 
-- [ ] 4.7 Add the pair data for the two eval pairs: pair examples, one name example per name policy, and `negationCounts`. The model shows most from a sentence in the very pair it translates, and the suggestion call needs a different example for each policy. → :pipeline (resources)
+- [x] 4.7 Add the pair data for the two eval pairs: pair examples, one name example per name policy, and `negationCounts`. The model shows most from a sentence in the very pair it translates, and the suggestion call needs a different example for each policy. → :pipeline (resources)
   - **Satisfies:** "Show the language pair's own examples, else an illustration of the target language" (translation-pipeline; the data), "Tell the model about the language pair from one language-rules map" (translation-pipeline)
   - **Depends on:** 4.6
   - **Excludes:** reading `nameExample.<policy>` in the prompts (group 7 changes the suggestion prompt); `outputRatio` stays unset for ru→uk until `mini-ru` and the closing run measure it (a data edit later)
@@ -381,7 +381,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules` — the pair keys `nameExample.<policy>`, `outputRatio`, `negationCounts`.
   - **Done when:** the tests are green; the existing prompt golden tests (`DraftPromptGoldenTest`, `PromptShapeTest`) stay green or are updated with the reason stated.
 
-- [ ] 4.8 Replay the computed Russian-to-Ukrainian function-word set on the owner's real book, locally, and record the precision that fixes the residue level. The check must not raise a false alarm often, and only a real book shows how often it would. → :pipeline (a local replay, nothing committed but the record), docs
+- [x] 4.8 Replay the computed Russian-to-Ukrainian function-word set on the owner's real book, locally, and record the precision that fixes the residue level. The check must not raise a false alarm often, and only a real book shows how often it would. → :pipeline (a local replay, nothing committed but the record), docs
   - **Satisfies:** "Count source-only function words in a target as untranslated residue" (quality-gates; the level the pair's replay fixes)
   - **Depends on:** 4.2
   - **Excludes:** changing the level in the requirement or the code — if the precision is below 0.9, a group 10 task sets NOTE and edits the requirement (design D12); this task only records the number
@@ -390,7 +390,7 @@ Ships data and the loaders that read it. A per-language file of short grammar wo
   - **Test first:** the replay is the evidence; `FunctionWordsTest.sourceOnly_russianToUkrainian_isNotEmptyAndHoldsNoHomograph` re-asserts the committed data the replay used.
   - **Done when:** the precision and recall counts are recorded; the book's text is not in the repository (`git status` shows nothing outside `docs/DEVELOPMENT.md` and `design.md`).
 
-- [ ] 4.9 Fix the docs, run the gate and do the hand check. The group changes how a Russian book is scanned for names, so the check is made on a Russian book in the running app. → :pipeline, docs
+- [x] 4.9 Fix the docs, run the gate and do the hand check. The group changes how a Russian book is scanned for names, so the check is made on a Russian book in the running app. → :pipeline, docs
   - **Satisfies:** "Propose names by a deterministic scan when the glossary is empty" (glossary), "Count source-only function words in a target as untranslated residue" (quality-gates)
   - **Depends on:** 4.1–4.8
   - **Read:** the **Docs** bullets of 4.2 and 4.4–4.7; `docs/specification/01_Product/12_PROMPT_CATALOG.md`

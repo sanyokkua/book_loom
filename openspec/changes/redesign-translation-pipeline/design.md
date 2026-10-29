@@ -532,6 +532,11 @@ task edits the delta requirement and this file's line; the result is written int
   least 12 words left in the source language is blocked by the unchanged wrong-language-paragraph finding (the 60 %
   script share, or for a same-script pair the 30 % source-only share).
   If group 4's replay measures precision below 0.9, a group-10 task sets the level to NOTE and edits the requirement.
+  **Result (task 4.8, 2026-10-29):** replay of the committed ru->uk set (217 words) on the owner's 1,280-paragraph
+  ru->uk run: 5 paragraphs flagged, 5 of them in tier A or B (precision 1.00), 5 of 38 tier-A paragraphs flagged (recall
+  0.13). Level stays REPAIR. The first pass flagged 22 (precision 0.36); 14 of those were valid Ukrainian words the set
+  wrongly held (inflected possessives, `он`, `во`, `потом` as the noun, `тем`, the ordinal `другого`), and the data was
+  corrected, not the rule. Five flagged paragraphs is a small sample.
 - **Wiring.** `FindingKind` gains `TERMINAL_MARK`, `ADDRESS_PARITY`, `FUNCTION_WORD_RESIDUE` and loses the foreign-word
   kind; `qa/CheckName` gains the three matching constants with their levels and loses `FOREIGN_WORD`;
   `qa/TextCheckGates` (exhaustive switch) follows. Three new check names (`terminal-mark`, `address-parity`,

@@ -58,7 +58,7 @@ final class TermLearning {
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
     private final String projectId;
-    private final Set<String> functionWords;
+    private final Set<String> stopWords;
     private final List<Pair> held = new ArrayList<>();
 
     TermLearning(final RunStores stores, final String projectId) {
@@ -84,7 +84,7 @@ final class TermLearning {
         this.lexicon = stores.lexicon();
         this.glossary = stores.glossary();
         this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.functionWords = StopWords.bundled(targetLanguage).orElse(Set.of());
+        this.stopWords = StopWords.bundled(targetLanguage).orElse(Set.of());
     }
 
     /**
@@ -158,7 +158,7 @@ final class TermLearning {
         unnamed.forEach(entry -> learner.trackName(entry.term()));
         pairs.forEach(pair -> learner.observe(pair.source(), pair.target()));
         final Set<String> excluded = new HashSet<>(wordsOf(names.data()));
-        excluded.addAll(functionWords);
+        excluded.addAll(stopWords);
         final List<LexiconEntry> affected = tracked.stream()
                 .filter(entry -> everyTerm || named(entry.term(), pairs))
                 .toList();

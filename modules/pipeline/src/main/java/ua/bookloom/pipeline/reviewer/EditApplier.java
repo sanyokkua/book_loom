@@ -54,7 +54,7 @@ public final class EditApplier {
      * Applies the verified edits of one segment, also knowing the target language's function words and refusing a gender
      * or agreement edit toward a gender that is only suggested.
      *
-     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     * @param negationAndMoodWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
      *     language lists none
      * @param guess the suggested genders an edit may not enforce; never null
      * @return the edited text and what became of every edit
@@ -65,7 +65,7 @@ public final class EditApplier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings,
-            final Set<String> functionWords,
+            final Set<String> negationAndMoodWords,
             final GenderGuess guess) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edits, "edits");
@@ -84,7 +84,7 @@ public final class EditApplier {
                 noOps++;
                 continue;
             }
-            switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords, guess)) {
+            switch (verifier.verify(text, edit, checker, baseline, renderings, negationAndMoodWords, guess)) {
                 case Verification.Verified verified -> {
                     text = verified.edited();
                     applied.add(edit);

@@ -40,7 +40,7 @@ final class EditGuards {
      * @param candidate the text before the edit, masked; never null
      * @param edited the text after the edit, masked; never null
      * @param renderings the glossary renderings of the chunk; never null
-     * @param functionWords the target language's function words; never null, may be empty
+     * @param negationAndMoodWords the target language's function words; never null, may be empty
      * @param guess the genders of the chunk that are only suggested; never null
      * @return why the edit is refused, or empty when it passes every guard
      */
@@ -49,11 +49,11 @@ final class EditGuards {
             final String candidate,
             final String edited,
             final Collection<String> renderings,
-            final Set<String> functionWords,
+            final Set<String> negationAndMoodWords,
             final GenderGuess guess) {
         final String before = DisplayText.of(candidate);
         final String after = DisplayText.of(edited);
-        final Optional<FailureReason> reason = firstOf(edit, before, after, renderings, functionWords, guess);
+        final Optional<FailureReason> reason = firstOf(edit, before, after, renderings, negationAndMoodWords, guess);
         log.debug("Edit guards criterion={} refusal={}", edit.criterion().wire(), reason.orElse(null));
         return reason;
     }
@@ -63,7 +63,7 @@ final class EditGuards {
             final String before,
             final String after,
             final Collection<String> renderings,
-            final Set<String> functionWords,
+            final Set<String> negationAndMoodWords,
             final GenderGuess guess) {
         if (TextChecks.doubledWords(after) > TextChecks.doubledWords(before)) {
             return Optional.of(FailureReason.DOUBLED_WORD);
@@ -82,7 +82,7 @@ final class EditGuards {
                         edit.quote().strip(), edit.replacement().strip(), renderings)) {
             return Optional.of(FailureReason.GLOSSARY_RENDERING);
         }
-        if (edit.criterion() == ReviewCriterion.MEANING && swapsContentWord(edit, renderings, functionWords)) {
+        if (edit.criterion() == ReviewCriterion.MEANING && swapsContentWord(edit, renderings, negationAndMoodWords)) {
             return Optional.of(FailureReason.MEANING_SWAP);
         }
         if (isGenderEdit(edit.criterion()) && guess.isFavoured(before, after)) {
@@ -145,9 +145,9 @@ final class EditGuards {
     // A word of the quote that has no counterpart in the replacement, replaced by a word that has none in the quote and
     // that no glossary rendering dictates: the icebreaker that became a glacier.
     private static boolean swapsContentWord(
-            final ReviewEdit edit, final Collection<String> renderings, final Set<String> functionWords) {
-        final List<String> quoted = contentWords(edit.quote(), functionWords);
-        final List<String> replaced = contentWords(edit.replacement(), functionWords);
+            final ReviewEdit edit, final Collection<String> renderings, final Set<String> negationAndMoodWords) {
+        final List<String> quoted = contentWords(edit.quote(), negationAndMoodWords);
+        final List<String> replaced = contentWords(edit.replacement(), negationAndMoodWords);
         final List<String> dropped = quoted.stream()
                 .filter(word -> replaced.stream().noneMatch(other -> WordChange.sharesContentStem(word, other)))
                 .toList();
@@ -164,9 +164,9 @@ final class EditGuards {
                 .anyMatch(known -> WordChange.sharesContentStem(word, known));
     }
 
-    private static List<String> contentWords(final String text, final Set<String> functionWords) {
+    private static List<String> contentWords(final String text, final Set<String> negationAndMoodWords) {
         return WordChange.words(text).stream()
-                .filter(word -> word.length() >= MIN_SWAP_WORD && !functionWords.contains(word))
+                .filter(word -> word.length() >= MIN_SWAP_WORD && !negationAndMoodWords.contains(word))
                 .toList();
     }
 }

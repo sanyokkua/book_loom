@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.prompt;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -318,14 +319,21 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
-     * The particles and negations of a target language that carry mood or polarity, from its {@code functionWords} key,
-     * so a reviewer edit that only fixes agreement can be held to leaving them alone without hard-coding a language.
+     * The particles and negations a target language uses for mood or polarity: its {@code negationWords} and
+     * {@code moodWords} keys together, so an agreement-only reviewer edit can be held to leaving them alone.
      *
      * @param targetTag the non-null target language tag
      * @return the lower-case words; never null, empty when the language lists none
      */
-    public Set<String> functionWords(final String targetTag) {
-        return Set.copyOf(wordsOf(targetTag, "functionWords"));
+    public Set<String> negationAndMoodWords(final String targetTag) {
+        final Set<String> words = new HashSet<>(negationWords(targetTag));
+        words.addAll(wordsOf(targetTag, "moodWords"));
+        return Set.copyOf(words);
+    }
+
+    /** The negations of a target language, from its {@code negationWords} key; empty when none are listed. */
+    public Set<String> negationWords(final String targetTag) {
+        return Set.copyOf(wordsOf(targetTag, "negationWords"));
     }
 
     /**

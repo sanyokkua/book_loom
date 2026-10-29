@@ -44,7 +44,7 @@ final class CriterionFit {
     /**
      * Checks one edit against its criterion, knowing the target language's function words.
      *
-     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     * @param negationAndMoodWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
      *     language lists none, which skips that one rule
      * @return {@code true} when the change fits the criterion or the criterion is one code cannot read off the change
      */
@@ -52,7 +52,7 @@ final class CriterionFit {
             final ReviewEdit edit,
             final String candidate,
             final Collection<String> renderings,
-            final Set<String> functionWords) {
+            final Set<String> negationAndMoodWords) {
         final String quote = edit.quote().strip();
         final String replacement = edit.replacement().strip();
         return switch (edit.criterion()) {
@@ -66,7 +66,7 @@ final class CriterionFit {
                 keepsMostOfQuote(quote, replacement)
                         && !changesNameForm(quote, replacement, renderings)
                         && WordChange.changesOnlyEndings(quote, replacement)
-                        && !WordChange.changesFunctionWords(quote, replacement, functionWords);
+                        && !WordChange.changesNegationAndMoodWords(quote, replacement, negationAndMoodWords);
             case MEANING ->
                 keepsMostOfQuote(quote, replacement)
                         && !changesNameForm(quote, replacement, renderings)

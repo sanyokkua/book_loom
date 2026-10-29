@@ -123,6 +123,34 @@ falls back to — languages are open, so any tag the JDK can name keeps working.
 file, the pair's file and `generic.properties` are ever opened; the section is built once per pair and reused, so the
 system message is byte-identical for every call of a run.
 
+**Function-word files.** A second file kind sits beside the rules: `checks/function-words/<language>.txt` (resources of
+`:pipeline`), one lower-case grammar word per line (articles, prepositions, conjunctions, pronouns, particles,
+auxiliaries; no content words), for en uk ru de es fr pl cs sk hr sl pt. The words a source language has and the target
+does not (`FunctionWords.sourceOnly`, computed per pair, no curated pair list) are the source-language residue a check
+can count. A word both languages use goes into the target's own file, because it is a target word. The lists come from
+stopwords-iso (MIT); the source, commits and attribution are in the folder's `ATTRIBUTION` file and in
+`docs/DEVELOPMENT.md#redesign-language-data`. A language with no file gives an empty set, so the check is off for it.
+
+**Rule keys for names, tense and conventions** (any language file may set them; an absent key means "nothing declared"):
+
+| Key | Shape | Meaning |
+|---|---|---|
+| `negationWords`, `moodWords` | space-separated words | Negations; mood particles. No word is in both. They replace the old `functionWords` key; "function words" now means only the function-word files. |
+| `nameParadigms.N` | `<ending>\|<gender>: <endings of the other cases>`; `<ending>\|<gender>>voc: <ending>` for the vocative; `C` is a consonant; `indeclinable\|any: <endings>` is the closed class that never changes | How a name declines: the source file's rows are read backwards to find a form's nominative, the target file's rows generate the case forms and the vocative. |
+| `nameAlternations` | `о/е>і fleeting-е` | Vowel changes in a closed syllable and a fleeting vowel. |
+| `nounEndings` | endings | Stripped from a noun to find its stem. |
+| `clippedVocative`, `femSurnameMap` | `ending>replacement` pairs (`∅` is nothing) | A vocative that clips a name; a man's surname ending and the woman's form. |
+| `pastFemale`, `pastMale`, `pastMaleIrregular`, `shortAdjFemale`, `shortAdjMale` | endings or words | Past-tense verbs and short adjectives that show a gender (gender evidence after a name). |
+| `addressPositions` | words | Words that put a person in a clause as the one spoken to. |
+| `stripStressMarks` | `true` | The language's text is stripped of stress marks (ru, uk). |
+| `conventions`, `convention.<name>.choices`, `convention.<name>.default` | names; values; the default | A convention the target declares for the Book Brief; uk declares `hardG` (`г ґ`, default `г`). |
+| `readingExample`, `readingExample.answer` | an invented sentence; the JSON answer `{"quote","usage","gender"}` | The worked example of the names-pass reading. |
+| `honorifics`, `forbiddenLetters`, `informalAddress`, `formalAddress` | words, letters | ru now sets them as uk does. |
+
+Pair files (`pairs/<source>-<target>.properties`) may also set `nameExample.<policy>` (`TRANSLITERATE`, `TRANSLATE`,
+`KEEP_ORIGINAL`; the single `nameExample` stays as the fallback), `outputRatio` and `negationCounts` (`true` only for
+a pair whose double negation matches, ru→uk).
+
 | Key (all optional except in `generic`) | Where it is used |
 |---|---|
 | `quotes`, `dialogue`, `apostrophe`, `hyphen`, `ellipsis`, `agreement`, `address`, `numbers`, `dates`, `names` | one labelled line each, in the target's block and the pair's block |
@@ -333,6 +361,12 @@ through the same quality loop as a single draft. A segment kept as it is, an aux
 and a segment larger than the chunk budget are never in a batch.
 
 ### recurring-terms {#recurring-terms}
+
+The name scan's **stop words** of a language are its function-word file (`checks/function-words/<language>.txt`,
+`#language-rules`) plus the scan-only extras in `glossary/stopwords/<language>.txt` (interjections; the spelled numbers of
+`alone/`); a word that is also a common first name (`may`, `will`) is in neither. A language needs only its function-word
+file and its `glossary/titles/<language>.txt` (ru and uk have one), so a Russian book's capitalised sentence starters
+(`Она`, `Но`, `Тогда`) are never proposed as names.
 
 The lexicon (15d.9) keeps a book's recurring common words and titles (`master`, `imp`, `Mr`) to one rendering each, without
 making them glossary entries. Four prompt-facing parts:

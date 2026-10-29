@@ -2226,3 +2226,33 @@ BOOKLOOM_AUDIT_SOURCE=<source book> BOOKLOOM_AUDIT_EXPORT=<exported book> [BOOKL
 
 It prints `AUDIT <segment id> <locator> [checks]` lines, and `AUDIT-NAME` lines naming the glossary words a segment
 lost. It treats every written segment as accepted, so segments the run had flagged are listed too.
+
+### Redesign language data {#redesign-language-data}
+
+Records of group 4 (`language-data`) of the `redesign-translation-pipeline` change.
+
+**Function-word source (task 4.2).** The lists come from stopwords-iso (https://github.com/stopwords-iso, one repository
+per language), licence MIT (copyright 2016 Gene Diaz; read in the `LICENSE` file of the `stopwords-ru` repository
+before any file was used), downloaded on 2026-10-29 with the owner's approval; the commits are listed in
+`pipeline/src/main/resources/ua/bookloom/pipeline/checks/function-words/ATTRIBUTION`, which also carries the attribution
+text. Covered: en uk ru de es fr pl cs sk hr sl pt. Lucene's stop sets (Apache-2.0) were not used. The raw lists mix
+content words with function words, so each was trimmed to function words; `ru.txt` and `uk.txt` were rewritten from the
+source and extended, and every word both languages use (the six homographs and the others the computed ru->uk set
+showed) sits in `uk.txt`.
+
+**Replay of the ru->uk function-word set (task 4.8, 2026-10-29, commit of the data files after this change).** The
+computed ru->uk source-only set (217 words) was applied, whole word, lower case, a one-letter word only before a
+lower-case word, to the 1,280 target paragraphs of the owner's ru->uk run (hand tiers from the research: 38 tier A, 36
+tier B). Result: 5 paragraphs flagged, 5 in tier A or B (precision 1.00), 5 of 38 tier-A paragraphs flagged (recall
+0.13). The decision rule (precision at least 0.9) keeps the level at REPAIR. The first pass flagged 22 paragraphs with
+precision 0.36: 14 hits were valid Ukrainian words that the first draft of the files wrongly held (plural forms of the
+possessives, `он`, `во`, `потом` as the noun, `тем`, the ordinal `другого`); the files were corrected and the rule was
+not touched. The book's text is not in the repository; the script lives in the git-ignored `.temporary_context/replay-4-8/`.
+Five flagged paragraphs is a small sample, and recall is low by design: the set catches stray function words, not nouns.
+
+**Group 4 hand check (task 4.9, 2026-10-29).** Run in the real window with an isolated data folder (`BOOKLOOM_DATA_DIR`):
+an invented five-line Russian TXT with `Она`, `Но` and `Тогда` starting sentences and the invented name `Мирослава` three
+times mid-sentence was imported, the Book Brief set to Russian -> Ukrainian (Ukrainian defaults offered: names spelled in
+the target alphabet, foreign text kept as is), and Names & style opened and Scan pressed. The glossary held only
+`Мирослава`; none of the three sentence starters was proposed. The gate (`./gradlew clean build check spotlessCheck`)
+was green; it took 15 min 36 s, against the roughly 4 min the manual cites, because `:ui:test` ran long (it completed).

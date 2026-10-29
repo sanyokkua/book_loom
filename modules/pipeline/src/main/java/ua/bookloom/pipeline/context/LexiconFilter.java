@@ -14,17 +14,17 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
  * model happened to write, not the word to keep. Without it the lexicon would teach the model to use {@code програму}
  * for every {@code program}.
  *
- * @param functionWords the lower-cased source-language function words; never null
+ * @param negationAndMoodWords the lower-cased source-language function words; never null
  * @param obliqueEndings the endings of the target language's oblique case forms; never null, empty for no preference
  */
-public record LexiconFilter(Set<String> functionWords, List<String> obliqueEndings) {
+public record LexiconFilter(Set<String> negationAndMoodWords, List<String> obliqueEndings) {
 
     /** The filter that admits everything, for a caller that knows no languages. */
     public static final LexiconFilter NONE = new LexiconFilter(Set.of(), List.of());
 
     /** Copies both collections. */
     public LexiconFilter {
-        functionWords = Set.copyOf(Objects.requireNonNull(functionWords, "functionWords"));
+        negationAndMoodWords = Set.copyOf(Objects.requireNonNull(negationAndMoodWords, "negationAndMoodWords"));
         obliqueEndings = List.copyOf(Objects.requireNonNull(obliqueEndings, "obliqueEndings"));
     }
 
@@ -50,7 +50,7 @@ public record LexiconFilter(Set<String> functionWords, List<String> obliqueEndin
      */
     public boolean admits(final String term, final String rendering) {
         final String key = term.strip().toLowerCase(Locale.ROOT);
-        if (functionWords.contains(key)) {
+        if (negationAndMoodWords.contains(key)) {
             return false;
         }
         final String word = rendering.strip().toLowerCase(Locale.ROOT);

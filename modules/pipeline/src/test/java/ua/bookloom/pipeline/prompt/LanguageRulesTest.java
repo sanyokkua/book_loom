@@ -238,15 +238,21 @@ class LanguageRulesTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"uk,би", "uk,не", "ru,бы"})
-    void functionWords_languageWithAList_holdsItsParticles(final String tag, final String word) {
-        assertThat(LanguageRules.bundled().functionWords(tag)).contains(word);
+    @CsvSource({"uk,би", "uk,не", "ru,бы", "ru,не"})
+    void negationAndMoodWords_languageWithLists_holdsTheUnion(final String tag, final String word) {
+        assertThat(LanguageRules.bundled().negationAndMoodWords(tag)).contains(word);
+    }
+
+    @Test
+    void negationWords_ukrainian_holdsOnlyTheNegations() {
+        assertThat(LanguageRules.bundled().negationWords("uk"))
+                .containsExactlyInAnyOrder("не", "ні", "ніколи", "ніде", "ніхто", "нічого");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"en", "pl", "xx"})
-    void functionWords_languageWithoutAList_isEmpty(final String tag) {
-        assertThat(LanguageRules.bundled().functionWords(tag)).isEmpty();
+    void negationAndMoodWords_languageWithoutLists_isEmpty(final String tag) {
+        assertThat(LanguageRules.bundled().negationAndMoodWords(tag)).isEmpty();
     }
 
     @ParameterizedTest

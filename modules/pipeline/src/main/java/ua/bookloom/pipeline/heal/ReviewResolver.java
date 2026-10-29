@@ -74,8 +74,8 @@ final class ReviewResolver {
         };
     }
 
-    private Set<String> functionWords() {
-        return LanguageRules.bundled().functionWords(settings.frame().targetLanguage());
+    private Set<String> negationAndMoodWords() {
+        return LanguageRules.bundled().negationAndMoodWords(settings.frame().targetLanguage());
     }
 
     private Result<Resolution> applyEdits(
@@ -90,7 +90,7 @@ final class ReviewResolver {
                 text -> blockersOf(outcome, text),
                 baseline,
                 renderings(),
-                functionWords(),
+                negationAndMoodWords(),
                 GuessedGenders.of(settings));
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
         final List<QaFinding> findings = withIgnored(

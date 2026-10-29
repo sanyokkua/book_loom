@@ -55,7 +55,7 @@ public final class EditVerifier {
      * suggested.
      *
      * @param renderings the glossary renderings (targets) of the chunk, which a terminology edit may use; never null
-     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     * @param negationAndMoodWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
      *     language lists none
      * @param guess the suggested genders an edit may not enforce; never null
      * @return the verification, as above
@@ -66,7 +66,7 @@ public final class EditVerifier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings,
-            final Set<String> functionWords,
+            final Set<String> negationAndMoodWords,
             final GenderGuess guess) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edit, "edit");
@@ -80,7 +80,7 @@ public final class EditVerifier {
         if (occurrences == 0) {
             return new Verification.Ignored("the quote is not in the candidate");
         }
-        final Optional<Verification> unfit = unfit(edit, candidate, renderings, functionWords);
+        final Optional<Verification> unfit = unfit(edit, candidate, renderings, negationAndMoodWords);
         if (unfit.isPresent()) {
             return unfit.get();
         }
@@ -94,7 +94,7 @@ public final class EditVerifier {
         final Verification checked = checkEdited(candidate, edited, checker, baseline);
         // The placeholders and the checks answer first; the guards then hold the result to a stricter standard.
         return checked instanceof Verification.Verified
-                ? guarded(checked, edit, candidate, edited, renderings, functionWords, guess)
+                ? guarded(checked, edit, candidate, edited, renderings, negationAndMoodWords, guess)
                 : checked;
     }
 
@@ -104,9 +104,9 @@ public final class EditVerifier {
             final String candidate,
             final String edited,
             final List<String> renderings,
-            final Set<String> functionWords,
+            final Set<String> negationAndMoodWords,
             final GenderGuess guess) {
-        return EditGuards.refusal(edit, candidate, edited, renderings, functionWords, guess)
+        return EditGuards.refusal(edit, candidate, edited, renderings, negationAndMoodWords, guess)
                 .<Verification>map(EditVerifier::failed)
                 .orElse(checked);
     }
@@ -142,12 +142,12 @@ public final class EditVerifier {
             final ReviewEdit edit,
             final String candidate,
             final List<String> renderings,
-            final Set<String> functionWords) {
+            final Set<String> negationAndMoodWords) {
         // The quote is the candidate's own text: an edit may keep a control character the book holds, never bring one.
         if (ControlCharacters.addsControl(edit.quote(), edit.replacement())) {
             return Optional.of(new Verification.Ignored("the replacement holds control characters"));
         }
-        if (!CriterionFit.fits(edit, candidate, renderings, functionWords)) {
+        if (!CriterionFit.fits(edit, candidate, renderings, negationAndMoodWords)) {
             return Optional.of(new Verification.Ignored(
                     "the change does not fit its criterion " + edit.criterion().wire()));
         }

@@ -18,17 +18,19 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.checks.FunctionWords;
 import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.util.lang.Languages;
 
 /**
- * The bundled list, per language, of the words that are often capitalised but never a name — function words,
- * interjections and the like — read from {@code stopwords/<language>.txt} beside this class. A language with no list,
- * and a book whose language is not known, read every bundled list together: a function word of any bundled language is
- * then never a name, and no language is assumed. Nothing is ever fetched.
+ * The words, per language, that are often capitalised but never a name: the language's function-word file (the one
+ * list the residue check shares, see {@link FunctionWords}) plus the scan-only extras — interjections and the like —
+ * read from {@code stopwords/<language>.txt} beside this class. A language with neither, and a book whose language is
+ * not known, read every bundled list together: a function word of any bundled language is then never a name, and no
+ * language is assumed. Nothing is ever fetched.
  *
- * <p>A list is kept small on purpose: a word that is also a common first name ({@code May}, {@code Will}) is left to
- * the lower-case-share rule, which sees how the book itself writes the word.
+ * <p>A word that is also a listed first name ({@code May}, {@code Will}) is not a stop word and is left to the
+ * lower-case-share rule, which sees how the book itself writes the word.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -46,11 +48,55 @@ public final class StopWords {
      * The stop words of a book's language.
      *
      * @param languageTag the BCP 47 tag of the book's source language, or null when it is not known
-     * @return the lower-cased words of that language's list; of every bundled list together when the language is
-     *     unknown or has none
+     * @return the lower-cased words of that language's function-word file and extras; of every bundled language
+     *     together when the language is unknown or has neither
      */
     public static Set<String> of(@Nullable final String languageTag) {
-        return listFor(DIRECTORY, languageTag);
+        final Optional<String> own = languageOf(languageTag).filter(StopWords::hasStopList);
+        log.debug("Stop words for language tag {} read from {}", languageTag, own.orElse("every bundled list"));
+        return own.map(StopWords::stopWordsOf).orElseGet(StopWords::everyStopWords);
+    }
+
+    private static boolean hasStopList(final String language) {
+        return hasList(DIRECTORY, language) || !FunctionWords.of(language).isEmpty();
+    }
+
+    private static Set<String> stopWordsOf(final String language) {
+        return LOADED.computeIfAbsent(DIRECTORY + language, _ -> {
+            final Set<String> words = new HashSet<>(FunctionWords.of(language));
+            if (hasList(DIRECTORY, language)) {
+                words.addAll(load(DIRECTORY, language));
+            }
+            words.removeIf(
+                    word -> GivenNames.genderOf(capitalised(word), language).isPresent());
+            log.debug("Stop words for language {}: {}", language, words.size());
+            return Set.copyOf(words);
+        });
+    }
+
+    private static Set<String> everyStopWords() {
+        final Set<String> known = LOADED.get(DIRECTORY + EVERY_LANGUAGE);
+        if (known != null) {
+            return known;
+        }
+        final Set<String> words = new HashSet<>();
+        Languages.all().stream()
+                .map(language -> Locale.forLanguageTag(language.tag()).getLanguage())
+                .distinct()
+                .filter(StopWords::hasStopList)
+                .forEach(language -> words.addAll(stopWordsOf(language)));
+        log.debug("Every bundled stop-word list holds {} words", words.size());
+        final Set<String> built = Set.copyOf(words);
+        LOADED.putIfAbsent(DIRECTORY + EVERY_LANGUAGE, built);
+        return built;
+    }
+
+    private static String capitalised(final String word) {
+        final int first = word.codePointAt(0);
+        return new StringBuilder()
+                .appendCodePoint(Character.toTitleCase(first))
+                .append(word.substring(Character.charCount(first)))
+                .toString();
     }
 
     /**
@@ -130,9 +176,7 @@ public final class StopWords {
      * @return the lower-cased words of that language's own list, or empty when none is bundled
      */
     public static Optional<Set<String>> bundled(@Nullable final String languageTag) {
-        return languageOf(languageTag)
-                .filter(language -> hasList(DIRECTORY, language))
-                .map(language -> LOADED.computeIfAbsent(DIRECTORY + language, _ -> load(DIRECTORY, language)));
+        return languageOf(languageTag).filter(StopWords::hasStopList).map(StopWords::stopWordsOf);
     }
 
     private static Set<String> load(final String directory, final String language) {

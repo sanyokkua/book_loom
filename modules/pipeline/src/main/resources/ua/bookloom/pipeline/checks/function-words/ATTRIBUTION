@@ -1,0 +1,17 @@
+Function-word lists for BookLoom
+================================
+
+Source: stopwords-iso (https://github.com/stopwords-iso), one repository per language, "stopwords-<lang>", file
+stopwords-<lang>.txt on the master branch, downloaded 2026-10-29. Languages: en uk ru de es fr pl cs sk hr sl pt.
+Commits used: en ccc8898188, uk 83b24b92ff, ru e1779aae6f, de d3826f11cd, es 622c17231f, fr 069f556be8, pl 723fe9b896,
+cs e93e103f19, sk bd3c61983b, hr 56d5bfcc64, sl 5474e42f16, pt 84249b7ca3.
+
+Licence: MIT. Copyright (c) 2016 Gene Diaz. Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software; the above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software. The Software is provided "as is", without warranty of any kind.
+
+Changes: each list was trimmed to function words (articles, prepositions, conjunctions, pronouns, particles,
+auxiliaries); content words were removed, and English "may" and "will" because they are also first names the name scan must not treat as stop words. The uk and ru lists were rewritten from the source list and extended with
+function words the source lacks. A word both Russian and Ukrainian use is in uk.txt, because it is a Ukrainian word.

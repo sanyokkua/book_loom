@@ -11,10 +11,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
@@ -36,9 +38,11 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|functionWords|translit|namesInflect|firstPersonPronouns|firstPersonPast|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|moodWords|translit|namesInflect|firstPersonPronouns|firstPersonPast|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
-                    + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
+                    + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+"
+                    + "|nameParadigms\\.\\d+|convention\\.[A-Za-z]+\\.(choices|default)|readingExample(\\.answer)?"
+                    + "|nameExample\\.(TRANSLATE|TRANSLITERATE|KEEP_ORIGINAL))");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
 
     static Properties file(final String resource) throws IOException {
@@ -65,6 +69,102 @@ class LanguageFilesTest {
         assertThat(properties.stringPropertyNames())
                 .contains("status", "quotes", "agreement", "pitfalls.1", "reviewerChecks.1", "sourceNotes.1");
         assertThat(properties.getProperty("status")).isIn("tested", "untested");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"languages/ru.properties", "languages/uk.properties"})
+    void file_negationAndMoodWords_shareNoWord(final String resource) throws IOException {
+        final Properties properties = file(resource);
+        final Set<String> negations =
+                Set.of(properties.getProperty("negationWords").split(" "));
+        final Set<String> moods = Set.of(properties.getProperty("moodWords").split(" "));
+        assertThat(negations).doesNotContainAnyElementsOf(moods);
+    }
+
+    @Test
+    void file_russianTarget_statesForbiddenLettersAndAddressForms() throws IOException {
+        final Properties properties = file("languages/ru.properties");
+        assertThat(properties.getProperty("forbiddenLetters")).isEqualTo("іїєґ");
+        assertThat(properties.getProperty("informalAddress")).contains("ты", "тебе");
+        assertThat(properties.getProperty("formalAddress")).contains("Вы", "Вам");
+        assertThat(properties.getProperty("honorifics")).contains("г-н", "д-р");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"nameParadigz.1", "nameParadigms", "functionWords", "convention.hardG.other"})
+    void key_madeUpOrMalformed_isRejected(final String key) {
+        assertThat(KEY.matcher(key).matches()).isFalse();
+    }
+
+    @Test
+    void conventions_ukrainian_declaresHardGWithDefaultGe() throws IOException {
+        final Properties uk = file("languages/uk.properties");
+        assertThat(uk.getProperty("conventions")).isEqualTo("hardG");
+        assertThat(uk.getProperty("convention.hardG.choices")).isEqualTo("г ґ");
+        assertThat(uk.getProperty("convention.hardG.default")).isEqualTo("г");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "ru", "fr", "hr", "pl", "cs", "sl", "sk", "es", "pt", "de"})
+    void conventions_languageWithoutTheKey_declaresNone(final String tag) throws IOException {
+        assertThat(file("languages/" + tag + ".properties").getProperty("conventions"))
+                .isNull();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "ru", "uk", "fr", "hr", "pl", "cs", "sl", "sk", "es", "pt", "de"})
+    void stripStressMarks_onlyRussianAndUkrainian_setIt(final String tag) throws IOException {
+        final String value = file("languages/" + tag + ".properties").getProperty("stripStressMarks");
+        assertThat(value).isEqualTo(Set.of("ru", "uk").contains(tag) ? "true" : null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ru", "uk"})
+    void pastEndings_russianAndUkrainian_stateFemaleAndMale(final String tag) throws IOException {
+        final Properties properties = file("languages/" + tag + ".properties");
+        assertThat(properties.getProperty("pastFemale")).contains("ла");
+        assertThat(properties.getProperty("pastMale")).isNotBlank();
+        assertThat(properties.getProperty("pastMaleIrregular")).isNotBlank();
+        assertThat(properties.getProperty("shortAdjFemale")).contains("рада");
+        assertThat(properties.getProperty("shortAdjMale")).contains("рад");
+        assertThat(properties.getProperty("addressPositions")).startsWith("у ");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "ru", "uk"})
+    void readingExample_enRuUk_parsesAsAQuoteUsageGenderAnswer(final String tag) throws IOException {
+        final Properties properties = file("languages/" + tag + ".properties");
+        final var answer = new ObjectMapper().readTree(properties.getProperty("readingExample.answer"));
+        assertThat(properties.getProperty("readingExample")).startsWith(tag.equals("en") ? "Window:" : "");
+        assertThat(answer.get("quote").asText()).isNotBlank();
+        assertThat(answer.get("usage").asText()).isEqualTo("person");
+        assertThat(answer.get("gender").asText()).isEqualTo("female");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "ru-uk,TRANSLITERATE",
+        "ru-uk,TRANSLATE",
+        "ru-uk,KEEP_ORIGINAL",
+        "en-uk,TRANSLITERATE",
+        "en-uk,TRANSLATE",
+        "en-uk,KEEP_ORIGINAL"
+    })
+    void nameExamples_ruUkAndEnUk_holdOnePerPolicy(final String pair, final String policy) throws IOException {
+        final Properties properties = file("languages/pairs/" + pair + ".properties");
+        assertThat(properties.getProperty("nameExample." + policy)).contains("A valid reply:\n{\"suggestions\":[");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ru-uk", "en-uk", "uk-ru", "pl-uk"})
+    void negationCounts_ruUkOnly_isSet(final String pair) throws IOException {
+        final String value = file("languages/pairs/" + pair + ".properties").getProperty("negationCounts");
+        assertThat(value).isEqualTo(pair.equals("ru-uk") ? "true" : null);
+    }
+
+    @Test
+    void key_oldFunctionWordsKey_isRejected() {
+        assertThat(KEY.matcher("functionWords").matches()).isFalse();
     }
 
     @ParameterizedTest

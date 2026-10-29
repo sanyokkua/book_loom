@@ -61,11 +61,12 @@ final class WordChange {
     }
 
     /** Whether the function words of the quote and the replacement differ; never when the language lists none. */
-    static boolean changesFunctionWords(final String quote, final String replacement, final Set<String> functionWords) {
-        if (functionWords.isEmpty()) {
+    static boolean changesNegationAndMoodWords(
+            final String quote, final String replacement, final Set<String> negationAndMoodWords) {
+        if (negationAndMoodWords.isEmpty()) {
             return false;
         }
-        return !function(quote, functionWords).equals(function(replacement, functionWords));
+        return !function(quote, negationAndMoodWords).equals(function(replacement, negationAndMoodWords));
     }
 
     /** Whether the replacement brings in at most one new word, or only words the known text already holds. */
@@ -88,8 +89,11 @@ final class WordChange {
         return common >= Math.min(shorter, Math.max(MIN_CONTENT_STEM, Math.ceil(MIN_STEM_SHARE * shorter)));
     }
 
-    private static List<String> function(final String text, final Set<String> functionWords) {
-        return words(text).stream().filter(functionWords::contains).sorted().toList();
+    private static List<String> function(final String text, final Set<String> negationAndMoodWords) {
+        return words(text).stream()
+                .filter(negationAndMoodWords::contains)
+                .sorted()
+                .toList();
     }
 
     private static boolean sharesStem(final String quoted, final String replaced) {
