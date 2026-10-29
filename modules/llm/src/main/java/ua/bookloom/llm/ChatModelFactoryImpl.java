@@ -40,6 +40,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final RefusalMemory refusals;
     private final CallLedger ledger;
     private final BuiltWrongLog builtWrong;
+    private final CapIgnoredLog capIgnored;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -91,7 +92,8 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 modelSettings::current,
                 refusals,
                 ledger,
-                builtWrong);
+                builtWrong,
+                capIgnored);
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

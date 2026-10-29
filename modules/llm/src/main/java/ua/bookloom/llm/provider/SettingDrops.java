@@ -59,10 +59,12 @@ public final class SettingDrops {
             return null;
         }
         return request.withSampling(new SamplingParams(
-                setting == RejectedCapability.TOP_P ? null : s.topP(),
-                setting == RejectedCapability.TOP_K ? null : s.topK(),
-                setting == RejectedCapability.MIN_P ? null : s.minP(),
-                setting == RejectedCapability.REPEAT_PENALTY ? null : s.repeatPenalty()));
+                        setting == RejectedCapability.TOP_P ? null : s.topP(),
+                        setting == RejectedCapability.TOP_K ? null : s.topK(),
+                        setting == RejectedCapability.MIN_P ? null : s.minP(),
+                        setting == RejectedCapability.REPEAT_PENALTY ? null : s.repeatPenalty(),
+                        s.withheld())
+                .withWithheld(setting.settingName()));
     }
 
     /**
@@ -78,8 +80,25 @@ public final class SettingDrops {
         for (final RejectedCapability setting : settings) {
             final ChatRequest next = without(stripped, setting);
             stripped = next == null ? stripped : next;
+            stripped = isSampler(setting) ? withheld(stripped, setting) : stripped;
         }
         return stripped;
+    }
+
+    // A refusal remembered from an earlier call still holds when this request never carried the control: the engine's
+    // neutral stand-in for it is not sent either.
+    private static ChatRequest withheld(final ChatRequest request, final RejectedCapability setting) {
+        final SamplingParams sampling = request.samplingOrNone();
+        return sampling.withheld().contains(setting.settingName())
+                ? request
+                : request.withSampling(sampling.withWithheld(setting.settingName()));
+    }
+
+    private static boolean isSampler(final RejectedCapability setting) {
+        return switch (setting) {
+            case TOP_P, TOP_K, MIN_P, REPEAT_PENALTY -> true;
+            default -> false;
+        };
     }
 
     private static ChatRequest withSeed(final ChatRequest r, final @Nullable Integer seed) {

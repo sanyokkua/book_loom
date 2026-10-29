@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** The catalogue's shape: unique row names, one meaning per reason, and words matched in any order. */
 class ErrorRowsTest {
@@ -39,7 +40,7 @@ class ErrorRowsTest {
                 "the context window was exceeded by the request"
             })
     void contextRow_verbFirstAndContextFirst_bothMatch(final String body) {
-        assertThat(ErrorRows.match(400, body))
+        assertThat(ErrorRows.match(400, body, ServerEngine.GENERIC))
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("context-words"));
     }
 
@@ -54,19 +55,20 @@ class ErrorRowsTest {
                 "context canceled: the wait exceeded the limit"
             })
     void contextRow_deadlineOrTimeoutWording_isNoOverflow(final String body) {
-        assertThat(ErrorRows.match(500, body)).isEmpty();
-        assertThat(ErrorRows.matchText(body)).isEmpty();
+        assertThat(ErrorRows.match(500, body, ServerEngine.GENERIC)).isEmpty();
+        assertThat(ErrorRows.matchText(body, ServerEngine.GENERIC)).isEmpty();
     }
 
     // A proxy's own 502 page says nothing about Ollama's cloud; the status alone decides it.
     @Test
     void match_plainBadGatewayPage_isNoCloudRow() {
-        assertThat(ErrorRows.match(502, "<html>502 Bad Gateway</html>")).isEmpty();
+        assertThat(ErrorRows.match(502, "<html>502 Bad Gateway</html>", ServerEngine.GENERIC))
+                .isEmpty();
     }
 
     @Test
     void match_wordsNoRowKnows_isEmpty() {
-        assertThat(ErrorRows.match(400, "{\"error\":\"invalid option: temperature\"}"))
+        assertThat(ErrorRows.match(400, "{\"error\":\"invalid option: temperature\"}", ServerEngine.GENERIC))
                 .isEmpty();
     }
 
@@ -99,34 +101,38 @@ class ErrorRowsTest {
                 "500|does not match the expected peg-native format|llama-schema-not-applied"
             })
     void match_engineWords_selectsTheRow(int status, String body, String expectedId) {
-        assertThat(ErrorRows.match(status, body))
+        assertThat(ErrorRows.match(status, body, ServerEngine.GENERIC))
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo(expectedId));
     }
 
     // "Loading model" in a non-503 reply is no loading signal; the row names the status.
     @Test
     void match_loadingModelWithAnotherStatus_isNotTheLoadingRow() {
-        assertThat(ErrorRows.match(400, "Loading model")).isEmpty();
+        assertThat(ErrorRows.match(400, "Loading model", ServerEngine.GENERIC)).isEmpty();
     }
 
     // IF "No models loaded" were read by the unloaded row, THEN the two reasons would swap places.
     @Test
     void match_noModelsLoaded_comesBeforeModelUnloaded() {
-        assertThat(ErrorRows.match(400, "No models loaded; the model is not loaded"))
+        assertThat(ErrorRows.match(400, "No models loaded; the model is not loaded", ServerEngine.GENERIC))
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("lmstudio-no-model-loaded"));
     }
 
     // IF the broad context words won, THEN the LM Studio advice to reload with a larger context would never show.
     @Test
     void match_lmStudioOverflow_comesBeforeTheContextWords() {
-        assertThat(ErrorRows.match(400, "Context size has been exceeded. The context is too long"))
+        assertThat(ErrorRows.match(
+                        400, "Context size has been exceeded. The context is too long", ServerEngine.GENERIC))
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("lmstudio-context-exceeded"));
     }
 
     // IF the schema row won, THEN an oversized grammar would read as a bad schema.
     @Test
     void match_grammarAndSchemaWords_grammarWins() {
-        assertThat(ErrorRows.match(400, "JSON schema error; Failed to initialize samplers: failed to parse grammar"))
+        assertThat(ErrorRows.match(
+                        400,
+                        "JSON schema error; Failed to initialize samplers: failed to parse grammar",
+                        ServerEngine.GENERIC))
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("lmstudio-grammar-too-large"));
     }
 }

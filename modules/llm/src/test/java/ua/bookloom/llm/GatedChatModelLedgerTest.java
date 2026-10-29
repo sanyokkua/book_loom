@@ -224,6 +224,7 @@ class GatedChatModelLedgerTest {
                 ModelSettings::defaults,
                 null,
                 ledger,
-                new BuiltWrongLog());
+                new BuiltWrongLog(),
+                new CapIgnoredLog());
     }
 }

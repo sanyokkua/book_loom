@@ -16,18 +16,33 @@ import ua.bookloom.api.llm.ServerEngine;
  * @param capField which cap fields the engine honours
  * @param offSwitch the request field that switches the engine's thinking off
  * @param alwaysSend fields merged into every chat body; never null, empty when none
+ * @param extraSamplers the neutral sampler values, by the engine's own field names, sent when the request carries no
+ *     value of that sampler; never null, empty where the engine's defaults are neutral already
  * @param servesUnknownModel whether the engine answers an id it does not list with whatever model it has loaded
  */
 public record EngineTraits(
-        CapField capField, OffSwitch offSwitch, Map<String, Object> alwaysSend, boolean servesUnknownModel) {
+        CapField capField,
+        OffSwitch offSwitch,
+        Map<String, Object> alwaysSend,
+        Map<String, Object> extraSamplers,
+        boolean servesUnknownModel) {
 
     private static final String GPT_OSS = "gpt-oss";
+    // These engines' own defaults are not neutral (a repeat penalty above 1, a top_k of 40), so each value is sent.
+    private static final Map<String, Object> NEUTRAL_REPEAT_PENALTY = neutral("repeat_penalty");
+    private static final Map<String, Object> NEUTRAL_REPETITION_PENALTY = neutral("repetition_penalty");
+    private static final Map<String, Object> TOOLS_OFF = Map.of("enable_tools", false);
 
     /** Copies the always-sent fields so a caller cannot change them later. */
     public EngineTraits {
         Objects.requireNonNull(capField, "capField");
         Objects.requireNonNull(offSwitch, "offSwitch");
         alwaysSend = Map.copyOf(Objects.requireNonNull(alwaysSend, "alwaysSend"));
+        extraSamplers = Map.copyOf(Objects.requireNonNull(extraSamplers, "extraSamplers"));
+    }
+
+    private static Map<String, Object> neutral(final String penaltyField) {
+        return Map.of("top_p", 1.0, "top_k", 0, "min_p", 0.0, penaltyField, 1.0);
     }
 
     /**
@@ -41,11 +56,16 @@ public record EngineTraits(
         Objects.requireNonNull(engine, "engine");
         return switch (engine) {
             // Ollama's OpenAI path ignores max_completion_tokens, so a call capped that way would run uncapped.
-            case OLLAMA -> new EngineTraits(CapField.MAX_TOKENS_ONLY, OffSwitch.REASONING_EFFORT, Map.of(), false);
-            case LM_STUDIO -> new EngineTraits(CapField.EITHER, OffSwitch.REASONING_EFFORT, Map.of(), true);
-            case LLAMA_CPP -> new EngineTraits(CapField.EITHER, OffSwitch.TEMPLATE_KWARG, Map.of(), false);
-            case UNSLOTH -> new EngineTraits(CapField.EITHER, OffSwitch.ENABLE_THINKING, Map.of(), true);
-            case OPENROUTER, GENERIC -> new EngineTraits(CapField.EITHER, OffSwitch.PROBED, Map.of(), false);
+            case OLLAMA ->
+                new EngineTraits(CapField.MAX_TOKENS_ONLY, OffSwitch.REASONING_EFFORT, Map.of(), Map.of(), false);
+            case LM_STUDIO ->
+                new EngineTraits(CapField.EITHER, OffSwitch.REASONING_EFFORT, Map.of(), NEUTRAL_REPEAT_PENALTY, true);
+            case LLAMA_CPP ->
+                new EngineTraits(CapField.EITHER, OffSwitch.TEMPLATE_KWARG, Map.of(), NEUTRAL_REPEAT_PENALTY, false);
+            case UNSLOTH ->
+                new EngineTraits(
+                        CapField.EITHER, OffSwitch.ENABLE_THINKING, TOOLS_OFF, NEUTRAL_REPETITION_PENALTY, true);
+            case OPENROUTER, GENERIC -> new EngineTraits(CapField.EITHER, OffSwitch.PROBED, Map.of(), Map.of(), false);
         };
     }
 

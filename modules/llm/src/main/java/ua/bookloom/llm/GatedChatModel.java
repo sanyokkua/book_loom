@@ -80,12 +80,14 @@ public final class GatedChatModel implements ChatModel {
                 settings,
                 refusals,
                 CallLedger.none(),
-                new BuiltWrongLog());
+                new BuiltWrongLog(),
+                new CapIgnoredLog());
     }
 
     /**
-     * As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger} and writing
-     * a BookLoom fault's ERROR line once per model through {@code builtWrong}.
+     * As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger}, writing a
+     * BookLoom fault's ERROR line once per model through {@code builtWrong} and a server's ignored answer cap's WARN
+     * once per model through {@code capIgnored}.
      */
     public GatedChatModel(
             ProviderClient client,
@@ -96,9 +98,9 @@ public final class GatedChatModel implements ChatModel {
             BiFunction<String, String, ModelSettings> settings,
             @org.jspecify.annotations.Nullable RefusalMemory refusals,
             CallLedger ledger,
-            BuiltWrongLog builtWrong) {
+            BuiltWrongLog builtWrong,
+            CapIgnoredLog capIgnored) {
         this.builtWrong = Objects.requireNonNull(builtWrong, "builtWrong");
-        this.recorder = new CallRecorder(ledger, modelId);
         this.refusals = refusals;
         this.providerId = Objects.requireNonNull(providerId, "providerId");
         this.settings = Objects.requireNonNull(settings, "settings");
@@ -106,6 +108,7 @@ public final class GatedChatModel implements ChatModel {
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+        this.recorder = new CallRecorder(ledger, providerId, modelId, client.kind(), capIgnored);
     }
 
     @Override
@@ -250,8 +253,7 @@ public final class GatedChatModel implements ChatModel {
         final ProviderCallResult<ChatResponse> call = timed.call();
         final Result<ChatResponse> result = call.result();
         if (result.isOk()) {
-            recorder.record(request, attempt, timed);
-            recorder.logSucceeded(request, attempt);
+            recorder.succeeded(request, attempt, timed);
             return finished(call);
         }
         final AppError error = Objects.requireNonNull(result.error(), "provider error");

@@ -211,6 +211,7 @@ class GatedChatModelLogTest {
                 ModelSettings::defaults,
                 null,
                 CallLedger.none(),
-                builtWrong);
+                builtWrong,
+                new CapIgnoredLog());
     }
 }

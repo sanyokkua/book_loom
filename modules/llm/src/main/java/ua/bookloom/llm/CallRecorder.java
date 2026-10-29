@@ -12,6 +12,7 @@ import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -27,11 +28,34 @@ final class CallRecorder {
     private static final String NOT_REPORTED = "-";
 
     private final CallLedger ledger;
+    private final String providerId;
     private final String modelId;
+    private final ProviderKind kind;
+    private final CapIgnoredLog capIgnored;
 
-    CallRecorder(final CallLedger ledger, final String modelId) {
+    CallRecorder(
+            final CallLedger ledger,
+            final String providerId,
+            final String modelId,
+            final ProviderKind kind,
+            final CapIgnoredLog capIgnored) {
         this.ledger = Objects.requireNonNull(ledger, "ledger");
+        this.providerId = Objects.requireNonNull(providerId, "providerId");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
+        this.kind = Objects.requireNonNull(kind, "kind");
+        this.capIgnored = Objects.requireNonNull(capIgnored, "capIgnored");
+    }
+
+    /** Records an answered attempt, logs it, and notes once per model when the server ignored the answer cap. */
+    void succeeded(final ChatRequest request, final int attempt, final TimedCall timed) {
+        record(request, attempt, timed);
+        logSucceeded(request, attempt);
+        capIgnored.noteIfIgnored(
+                providerId,
+                modelId,
+                kind,
+                request,
+                Objects.requireNonNull(timed.call().result().data(), "reply"));
     }
 
     /**

@@ -89,6 +89,7 @@ class OpenAiCompatibleClientTest {
                           "stream":false,
                           "temperature":0.2,
                           "reasoning_effort":"none",
+                          "top_p":1.0,"top_k":0,"min_p":0.0,"repeat_penalty":1.0,
                           "response_format":{"type":"json_schema","json_schema":{"name":"draft","strict":true,"schema":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}}}
                         }
                         """))
@@ -105,7 +106,8 @@ class OpenAiCompatibleClientTest {
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
                 .withRequestBody(equalToJson("""
-                        {"model":"google/gemma-4-e4b","messages":[{"role":"user","content":"hello"}],"stream":false}
+                        {"model":"google/gemma-4-e4b","messages":[{"role":"user","content":"hello"}],"stream":false,
+                         "top_p":1.0,"top_k":0,"min_p":0.0,"repeat_penalty":1.0}
                         """))
                 .withoutHeader("Authorization"));
     }

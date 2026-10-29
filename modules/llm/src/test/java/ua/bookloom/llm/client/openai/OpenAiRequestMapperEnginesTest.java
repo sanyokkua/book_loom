@@ -17,11 +17,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
@@ -34,6 +37,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.SamplingParams;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.LlmModule;
@@ -41,6 +45,8 @@ import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.provider.ProviderClient;
+import ua.bookloom.llm.provider.RejectedCapability;
+import ua.bookloom.llm.provider.SettingDrops;
 
 /** Each engine's request fields at the OpenAI-compatible HTTP seam: one mapper, one traits row per engine (D17). */
 class OpenAiRequestMapperEnginesTest {
@@ -240,6 +246,90 @@ class OpenAiRequestMapperEnginesTest {
 
         assertThat(body.has("chat_template_kwargs")).isFalse();
         server.verify(0, getRequestedFor(urlEqualTo("/props")));
+    }
+
+    @Test
+    void serializeRequest_llamaServer_sendsFourSamplersNeutral() throws IOException {
+        final JsonNode body = sentBody(client(ServerEngine.LLAMA_CPP), MODEL_ID, request(null, null, null));
+
+        assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
+        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
+        assertThat(body.path("repeat_penalty").asDouble(-1)).isEqualTo(1.0);
+        assertThat(body.has("repetition_penalty")).isFalse();
+    }
+
+    @Test
+    void serializeRequest_lmStudio_sendsFourSamplersNeutralUnderRepeatPenalty() throws IOException {
+        final JsonNode body = sentBody(client(ServerEngine.LM_STUDIO), MODEL_ID, request(null, null, null));
+
+        assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
+        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
+        assertThat(body.path("repeat_penalty").asDouble(-1)).isEqualTo(1.0);
+    }
+
+    @Test
+    void serializeRequest_unsloth_sendsEnableToolsFalseAndRepetitionPenalty() throws IOException {
+        final JsonNode body = sentBody(client(ServerEngine.UNSLOTH), MODEL_ID, request(null, null, null));
+
+        assertThat(body.path("enable_tools").isBoolean()).isTrue();
+        assertThat(body.path("enable_tools").asBoolean(true)).isFalse();
+        assertThat(body.path("repetition_penalty").asDouble(-1)).isEqualTo(1.0);
+        assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
+        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
+        assertThat(body.has("repeat_penalty")).isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ServerEngine.class,
+            names = {"OLLAMA", "GENERIC", "OPENROUTER"})
+    void serializeRequest_enginesWithNeutralDefaults_sendNoExtraSamplers(final ServerEngine engine) throws IOException {
+        final JsonNode body = sentBody(client(engine), MODEL_ID, request(null, null, null));
+
+        assertThat(body.has("top_p")).isFalse();
+        assertThat(body.has("top_k")).isFalse();
+        assertThat(body.has("min_p")).isFalse();
+        assertThat(body.has("repeat_penalty")).isFalse();
+        assertThat(body.has("repetition_penalty")).isFalse();
+        assertThat(body.has("enable_tools")).isFalse();
+    }
+
+    @Test
+    void serializeRequest_ollamaOpenAi_sendsNoExtraSamplers() throws IOException {
+        final JsonNode body = sentBody(client(ServerEngine.OLLAMA), MODEL_ID, request(null, null, null));
+
+        assertThat(body.has("top_p")).isFalse();
+        assertThat(body.has("top_k")).isFalse();
+        assertThat(body.has("min_p")).isFalse();
+        assertThat(body.has("repeat_penalty")).isFalse();
+    }
+
+    @Test
+    void serializeRequest_unslothWithExplicitSamplers_keepsTheRequestsOwnValues() throws IOException {
+        final ChatRequest explicit = request(null, null, null).withSampling(new SamplingParams(0.8, 20, null, 1.1));
+
+        final JsonNode body = sentBody(client(ServerEngine.UNSLOTH), MODEL_ID, explicit);
+
+        assertThat(body.path("top_p").asDouble(-1)).isEqualTo(0.8);
+        assertThat(body.path("top_k").asInt(-1)).isEqualTo(20);
+        assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
+        assertThat(body.path("repeat_penalty").asDouble(-1)).isEqualTo(1.1);
+        assertThat(body.has("repetition_penalty")).isFalse();
+    }
+
+    // A setting the model refused is dropped from the request and marked withheld, so its stand-in is not sent either.
+    @Test
+    void serializeRequest_refusedTopK_isNotSentAsNeutralEither() throws IOException {
+        final ChatRequest refused = request(null, null, null).withSampling(new SamplingParams(null, 20, null, null));
+        final ChatRequest dropped = SettingDrops.stripAll(refused, EnumSet.of(RejectedCapability.TOP_K));
+
+        final JsonNode body = sentBody(client(ServerEngine.LM_STUDIO), MODEL_ID, dropped);
+
+        assertThat(body.has("top_k")).isFalse();
+        assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
     }
 
     private JsonNode sentBody(final ProviderClient client, final String model, final ChatRequest request)

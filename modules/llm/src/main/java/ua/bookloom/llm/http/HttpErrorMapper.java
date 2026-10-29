@@ -86,7 +86,7 @@ public final class HttpErrorMapper {
 
     private static Result<HttpReply> failedReply(
             HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
-        final Mapping mapping = classify(reply, purpose, modelName);
+        final Mapping mapping = classify(reply, config, purpose, modelName);
         final AppError error = statusError(mapping, reply.status(), reply.body(), config, modelName);
         log.debug(
                 "HTTP error mapping selected row={} purpose={} code={} reason={} host={} status={}",
@@ -127,7 +127,7 @@ public final class HttpErrorMapper {
                 errorText.length(),
                 modelName != null);
         log.trace("Streamed error text={}", errorText);
-        final Mapping mapping = ErrorRows.matchText(errorText)
+        final Mapping mapping = ErrorRows.matchText(errorText, config.effectiveEngine())
                 .map(row -> Mapping.of(row, errorText, modelName))
                 .orElseGet(() -> Mapping.plain(
                         ErrorCode.upstream,
@@ -200,7 +200,7 @@ public final class HttpErrorMapper {
     private static AppError errorOnlySuccess(
             HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         traceBody(reply);
-        final Mapping mapping = ErrorRows.match(reply.status(), reply.body())
+        final Mapping mapping = ErrorRows.match(reply.status(), reply.body(), config.effectiveEngine())
                 .map(row -> Mapping.of(row, reply.body(), modelName))
                 .orElseGet(() -> unknownSuccessError(reply, config));
         final AppError error = statusError(mapping, reply.status(), reply.body(), config, modelName);
@@ -262,11 +262,12 @@ public final class HttpErrorMapper {
         return status >= HTTP_SUCCESS_MIN && status <= HTTP_SUCCESS_MAX;
     }
 
-    private static Mapping classify(HttpReply reply, CallPurpose purpose, @Nullable String modelName) {
+    private static Mapping classify(
+            HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         traceBody(reply);
         final int status = reply.status();
         // A refused sign-in is the news even when its body also says a model is missing.
-        final Optional<ErrorRow> row = ErrorRows.match(status, reply.body())
+        final Optional<ErrorRow> row = ErrorRows.match(status, reply.body(), config.effectiveEngine())
                 .filter(found -> !(isAuthStatus(status) && found.code() == ErrorCode.modelNotFound));
         if (row.isPresent()) {
             return Mapping.of(row.get(), reply.body(), modelName);

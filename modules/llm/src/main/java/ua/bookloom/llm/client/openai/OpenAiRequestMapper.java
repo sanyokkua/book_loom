@@ -114,7 +114,7 @@ final class OpenAiRequestMapper {
                 reasoning.kwargs(),
                 reasoning.enableThinking(),
                 reasoning.reasoning(),
-                shaping.alwaysSend());
+                shaping.everyCallFields(request.samplingOrNone()));
     }
 
     // The model's stored choice of max_completion_tokens is kept only where the engine honours it.

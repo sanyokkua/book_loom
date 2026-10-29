@@ -58,6 +58,7 @@ public final class LlmModule extends AbstractModule {
         bind(ModelSettingsCache.class).in(Singleton.class);
         bind(RefusalMemory.class).in(Singleton.class);
         bind(BuiltWrongLog.class).in(Singleton.class);
+        bind(CapIgnoredLog.class).in(Singleton.class);
         bind(EngineFacts.class).in(Singleton.class);
         bind(CallLedger.class).to(CallLedgerImpl.class).in(Singleton.class);
     }

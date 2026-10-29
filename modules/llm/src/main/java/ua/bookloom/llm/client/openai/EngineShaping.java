@@ -1,5 +1,6 @@
 package ua.bookloom.llm.client.openai;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.SamplingParams;
 import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
@@ -60,8 +62,32 @@ final class EngineShaping {
         return traits.capField() == EngineTraits.CapField.MAX_TOKENS_ONLY;
     }
 
-    Map<String, Object> alwaysSend() {
-        return traits.alwaysSend();
+    /**
+     * The fields the engine needs on every call: its always-sent fields and the neutral value of each sampler the
+     * request leaves unset.
+     */
+    Map<String, Object> everyCallFields(SamplingParams sampling) {
+        final Map<String, Object> fields = new HashMap<>(traits.alwaysSend());
+        traits.extraSamplers().forEach((name, value) -> {
+            if (!isCarried(name, sampling)) {
+                fields.put(name, value);
+            }
+        });
+        log.debug("Fields sent on every call provider={} fields={}", config.id(), fields.keySet());
+        return fields;
+    }
+
+    // The request's own value wins, and so does a refusal; the penalty counts under either engine's name.
+    private static boolean isCarried(String field, SamplingParams sampling) {
+        final boolean stated =
+                switch (field) {
+                    case "top_p" -> sampling.topP() != null;
+                    case "top_k" -> sampling.topK() != null;
+                    case "min_p" -> sampling.minP() != null;
+                    default -> sampling.repeatPenalty() != null;
+                };
+        final String wireName = field.equals("repetition_penalty") ? "repeat_penalty" : field;
+        return stated || sampling.withheld().contains(wireName);
     }
 
     /**

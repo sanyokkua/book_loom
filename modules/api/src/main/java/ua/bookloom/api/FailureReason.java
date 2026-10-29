@@ -117,6 +117,12 @@ public enum FailureReason {
     /** The server could not apply the schema to the model's reply; the reply is not the shape that was asked for. */
     SCHEMA_NOT_APPLIED("schema-not-applied"),
 
+    /** The server refused the sign-in: it needs an API key, or the one given is wrong. */
+    AUTH("auth"),
+
+    /** The server wrote more tokens than the answer cap allowed and stopped by itself, so it ignores the cap. */
+    CAP_IGNORED("cap-ignored"),
+
     /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
     UNCLASSIFIED("unclassified");
 

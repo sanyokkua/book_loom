@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * The error catalogue: one ordered list of rows read by the meaning of a reply's words. The engines' own rows come
@@ -19,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 final class ErrorRows {
 
     static final List<ErrorRow> ORDERED = Stream.of(
-                    OllamaRows.ROWS, LmStudioRows.ROWS, LlamaServerRows.ROWS, ContextRows.ROWS)
+                    UnslothRows.ROWS, OllamaRows.ROWS, LmStudioRows.ROWS, LlamaServerRows.ROWS, ContextRows.ROWS)
             .flatMap(List::stream)
             .toList();
 
@@ -28,12 +29,15 @@ final class ErrorRows {
      *
      * @param status the reply's HTTP status
      * @param body the reply's body; searched, never logged here
+     * @param engine the effective engine of the provider that answered; rows tied to other engines are skipped
      * @return the first matching row if one explains the reply, or empty if none does
      */
-    static Optional<ErrorRow> match(final int status, final String body) {
+    static Optional<ErrorRow> match(final int status, final String body, final ServerEngine engine) {
         Objects.requireNonNull(body, "body");
-        final Optional<ErrorRow> found =
-                ORDERED.stream().filter(row -> row.matches(status, body)).findFirst();
+        Objects.requireNonNull(engine, "engine");
+        final Optional<ErrorRow> found = ORDERED.stream()
+                .filter(row -> row.matches(status, body, engine))
+                .findFirst();
         found.ifPresentOrElse(
                 row -> log.debug(
                         "error row matched id={} reason={} code={} status={}",
@@ -50,13 +54,16 @@ final class ErrorRows {
      * particular statuses is not considered.
      *
      * @param text the error line's text; searched, never logged here
+     * @param engine the effective engine of the provider that answered
      * @return the first matching row if one explains the text, or empty if none does
      */
-    static Optional<ErrorRow> matchText(final String text) {
+    static Optional<ErrorRow> matchText(final String text, final ServerEngine engine) {
         Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(engine, "engine");
         final Optional<ErrorRow> found = ORDERED.stream()
-                .filter(row ->
-                        row.statuses().isEmpty() && row.body().matcher(text).find())
+                .filter(row -> row.appliesTo(engine)
+                        && row.statuses().isEmpty()
+                        && row.body().matcher(text).find())
                 .findFirst();
         found.ifPresentOrElse(
                 row -> log.debug(

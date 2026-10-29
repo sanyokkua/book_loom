@@ -288,7 +288,8 @@ class ChatModelFactoryImplTest {
                 cache,
                 new RefusalMemory(cache),
                 new CallLedgerImpl(),
-                new BuiltWrongLog());
+                new BuiltWrongLog(),
+                new CapIgnoredLog());
     }
 
     private void register(ProviderConfig config) {

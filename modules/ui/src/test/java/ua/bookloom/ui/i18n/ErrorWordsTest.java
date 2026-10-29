@@ -70,6 +70,7 @@ class ErrorWordsTest {
                 "CLOUD_DISABLED",
                 "CLOUD_SIGNIN",
                 "TERMINATED",
+                "AUTH",
                 "UNCLASSIFIED"
             })
     void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
@@ -95,7 +96,8 @@ class ErrorWordsTest {
                 "CLOUD_DISABLED | Хмарні моделі Ollama вимкнено на цьому комп’ютері. Увімкніть їх в Ollama або"
                         + " оберіть локальну модель.",
                 "CLOUD_SIGNIN | Увійдіть в Ollama, щоб користуватися цією хмарною моделлю, і спробуйте ще раз.",
-                "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить."
+                "TERMINATED | Сервер розірвав з’єднання, поки відповідав. Спробуйте ще раз за мить.",
+                "AUTH | Сервер вимагає ключ API. Укажіть у налаштуваннях провайдера назву змінної середовища, що його містить."
             })
     void message_ukrainianDisplay_wordsEachNewReasonToken(final FailureReason reason, final String expected) {
         final AppError error = AppError.of(

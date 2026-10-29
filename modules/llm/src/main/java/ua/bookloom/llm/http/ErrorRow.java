@@ -5,11 +5,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.llm.ServerEngine;
 
 /**
  * One row of the error catalogue: what a provider's reply means, read from its words in any order, whatever the status.
  *
  * @param id the stable row name written to DEBUG diagnostics; unique across the catalogue
+ * @param engines the server engines the row applies to; empty means every engine
  * @param statuses the HTTP statuses the row applies to; empty means any status
  * @param body the words that identify the meaning, searched anywhere in the body
  * @param code the typed classification returned to callers
@@ -20,6 +22,7 @@ import ua.bookloom.api.FailureReason;
  */
 record ErrorRow(
         String id,
+        Set<ServerEngine> engines,
         Set<Integer> statuses,
         Pattern body,
         ErrorCode code,
@@ -28,8 +31,22 @@ record ErrorRow(
         String title,
         String message) {
 
+    /** A row that applies to every engine. */
+    ErrorRow(
+            String id,
+            Set<Integer> statuses,
+            Pattern body,
+            ErrorCode code,
+            FailureReason reason,
+            RetryRule retry,
+            String title,
+            String message) {
+        this(id, Set.of(), statuses, body, code, reason, retry, title, message);
+    }
+
     ErrorRow {
         Objects.requireNonNull(id, "id");
+        engines = Set.copyOf(Objects.requireNonNull(engines, "engines"));
         statuses = Set.copyOf(Objects.requireNonNull(statuses, "statuses"));
         Objects.requireNonNull(body, "body");
         Objects.requireNonNull(code, "code");
@@ -44,10 +61,17 @@ record ErrorRow(
      *
      * @param status the reply's HTTP status
      * @param text the reply's body
-     * @return {@code true} if the status is one the row applies to and the body holds its words, {@code false} otherwise
+     * @param engine the effective engine of the provider that answered
+     * @return {@code true} if the engine and the status are ones the row applies to and the body holds its words,
+     *     {@code false} otherwise
      */
-    boolean matches(final int status, final String text) {
-        return (statuses.isEmpty() || statuses.contains(status))
+    boolean matches(final int status, final String text, final ServerEngine engine) {
+        return appliesTo(engine)
+                && (statuses.isEmpty() || statuses.contains(status))
                 && body.matcher(text).find();
+    }
+
+    boolean appliesTo(final ServerEngine engine) {
+        return engines.isEmpty() || engines.contains(engine);
     }
 }
