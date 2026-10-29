@@ -18,9 +18,9 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * One JSON batch format whatever the environment asks for (redesign group 2): with the retired
- * {@code bookloom.batch.format=markers} property set, the request that reaches the wire is still the numbered JSON
- * batch, in both dialects. {@code BOOKLOOM_BATCH_FORMAT} must be unset, because it wins over the property.
+ * One JSON batch format whatever is left set from before (redesign group 2): the retired
+ * {@code bookloom.batch.format=markers} property is set, and nothing reads it any more, so the request that reaches the
+ * wire is still the numbered JSON batch, in both dialects.
  */
 class BatchOneFormatWireMockTest {
 

@@ -19,12 +19,15 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
@@ -49,6 +52,7 @@ class GatedChatModelLogTest {
     private static final String REPEAT_LIMIT = "{\"error\":\"token repeat limit reached " + BODY_MARK + "\"}";
     private static final String GRAMMAR_TOO_LARGE =
             "{\"error\":\"Failed to initialize samplers: failed to parse grammar " + BODY_MARK + "\"}";
+    private static final String OPTION_TYPE = "{\"error\":\"option \\\"stop\\\" must be of type array\"}";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-29T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
@@ -102,6 +106,63 @@ class GatedChatModelLogTest {
         assertThat(linesAtOrAbove(Level.DEBUG)).noneMatch(line -> line.contains(BODY_MARK));
     }
 
+    // A request the server says BookLoom built wrong is a BookLoom bug: one ERROR line per model, however often it
+    // comes back, so a book's run shows it once.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "OLLAMA|''|/api/chat|500|" + OPTION_TYPE + "|option-type",
+                "OPENAI_COMPATIBLE|/v1|/v1/chat/completions|400|" + GRAMMAR_TOO_LARGE + "|grammar-too-large",
+                "OPENAI_COMPATIBLE|/v1|/v1/chat/completions|400|{\"error\":\"JSON schema error: bad\"}|schema-invalid"
+            })
+    void chat_builtWrongTwiceForOneModel_logsOneErrorLine(
+            final ProviderKind kind,
+            final String basePath,
+            final String chatPath,
+            final int status,
+            final String body,
+            final String reason) {
+        server.stubFor(post(urlEqualTo(chatPath))
+                .willReturn(aResponse().withStatus(status).withBody(body)));
+        final GatedChatModel model = model(kind, basePath);
+
+        model.chat(request(CallKind.DRAFT));
+        model.chat(request(CallKind.DRAFT));
+
+        assertThat(errors())
+                .singleElement()
+                .satisfies(line -> assertThat(line)
+                        .isEqualTo("Provider rejected a request BookLoom built wrong reason=" + reason
+                                + " provider=test model=test-model"));
+    }
+
+    // The factory shares one log across the models it makes: a model made again keeps its line, another model earns
+    // its own.
+    @Test
+    void chat_optionTypeOnTwoModelsSharingTheLog_logsOneErrorPerModel() {
+        server.stubFor(post(urlEqualTo("/api/chat"))
+                .willReturn(aResponse().withStatus(500).withBody(OPTION_TYPE)));
+        final BuiltWrongLog shared = new BuiltWrongLog();
+
+        model(ProviderKind.OLLAMA, "", "model-a", shared).chat(request(CallKind.DRAFT));
+        model(ProviderKind.OLLAMA, "", "model-a", shared).chat(request(CallKind.DRAFT));
+        model(ProviderKind.OLLAMA, "", "model-b", shared).chat(request(CallKind.DRAFT));
+
+        assertThat(errors())
+                .containsExactly(
+                        "Provider rejected a request BookLoom built wrong reason=option-type provider=test model=model-a",
+                        "Provider rejected a request BookLoom built wrong reason=option-type provider=test"
+                                + " model=model-b");
+    }
+
+    private List<String> errors() {
+        return logged.list.stream()
+                .filter(event -> event.getLevel() == Level.ERROR)
+                .map(ILoggingEvent::getFormattedMessage)
+                .toList();
+    }
+
     private List<String> warnings() {
         return logged.list.stream()
                 .filter(event -> event.getLevel() == Level.WARN)
@@ -132,14 +193,24 @@ class GatedChatModelLogTest {
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {
+        return model(kind, basePath, "test-model", new BuiltWrongLog());
+    }
+
+    private GatedChatModel model(
+            final ProviderKind kind, final String basePath, final String modelId, final BuiltWrongLog builtWrong) {
         final ProviderConfig config = new ProviderConfig(
                 "test", kind, URI.create(server.baseUrl() + basePath), Duration.ofSeconds(5), Duration.ofSeconds(5));
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         return new GatedChatModel(
                 clients.create(config),
-                "test-model",
+                "test",
+                modelId,
                 new InferenceGate(),
-                new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}));
+                new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
+                ModelSettings::defaults,
+                null,
+                CallLedger.none(),
+                builtWrong);
     }
 }

@@ -39,6 +39,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final ModelSettingsCache modelSettings;
     private final RefusalMemory refusals;
     private final CallLedger ledger;
+    private final BuiltWrongLog builtWrong;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -77,15 +78,20 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 registered.id(),
                 registered.kind(),
                 selection.modelId());
-        return Result.ok(new GatedChatModel(
+        return Result.ok(gated(registered, selection.modelId()));
+    }
+
+    private ChatModel gated(ProviderConfig registered, String modelId) {
+        return new GatedChatModel(
                 clientFactory.create(registered),
                 registered.id(),
-                selection.modelId(),
+                modelId,
                 gate,
                 retryPolicy,
                 modelSettings::current,
                 refusals,
-                ledger));
+                ledger,
+                builtWrong);
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

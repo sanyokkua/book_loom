@@ -43,6 +43,27 @@ class ErrorRowsTest {
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("context-words"));
     }
 
+    // IF a Go client's deadline ("context deadline exceeded") read as an overflow, THEN an outage would flag the
+    // segment and never be retried.
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{\"error\":\"Post \\\"http://127.0.0.1:1/completion\\\": context deadline exceeded\"}",
+                "context deadline exceeded (Client.Timeout exceeded while awaiting headers)",
+                "the request context timed out and exceeded its budget",
+                "context canceled: the wait exceeded the limit"
+            })
+    void contextRow_deadlineOrTimeoutWording_isNoOverflow(final String body) {
+        assertThat(ErrorRows.match(500, body)).isEmpty();
+        assertThat(ErrorRows.matchText(body)).isEmpty();
+    }
+
+    // A proxy's own 502 page says nothing about Ollama's cloud; the status alone decides it.
+    @Test
+    void match_plainBadGatewayPage_isNoCloudRow() {
+        assertThat(ErrorRows.match(502, "<html>502 Bad Gateway</html>")).isEmpty();
+    }
+
     @Test
     void match_wordsNoRowKnows_isEmpty() {
         assertThat(ErrorRows.match(400, "{\"error\":\"invalid option: temperature\"}"))

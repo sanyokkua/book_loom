@@ -20,9 +20,11 @@ final class ContextRows {
     private static final String TITLE = "Request exceeds the model context window";
     private static final String MESSAGE = "The request is too large for the selected model.";
 
-    // Two lookaheads, so "context ... exceeds" and "request ... exceeds the available context" both match.
+    // Two lookaheads, so "context ... exceeds" and "request ... exceeds the available context" both match. A deadline,
+    // a timeout or a cancellation is an outage worded alike (Go's "context deadline exceeded"), never an overflow.
     private static final Pattern CONTEXT_WORDS = Pattern.compile(
-            "\\A(?=.*\\bcontext\\b)(?=.*\\b(?:exceed(?:s|ed|ing)?|greater\\s+than|too\\s+long|longer\\s+than)\\b)",
+            "\\A(?!.*\\b(?:deadline|timed?\\s*out|cancel))(?=.*\\bcontext\\b)"
+                    + "(?=.*\\b(?:exceed(?:s|ed|ing)?|greater\\s+than|too\\s+long|longer\\s+than)\\b)",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     private static final Pattern CONTEXT_CODE = Pattern.compile("context_length_exceeded", Pattern.CASE_INSENSITIVE);
     private static final Pattern N_CTX = Pattern.compile("\\bn_ctx\\b");

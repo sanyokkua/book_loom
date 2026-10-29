@@ -302,17 +302,17 @@ class GatedChatModelRefusedSettingTest {
         assertThat(bodies(chatPath).get(0)).doesNotContain("temperature");
     }
 
-    // One warning when the refusal happens, none when the remembered refusal is applied to the next call.
+    // A sampler refusal warns once per model: one warning when it happens, none when the remembered refusal is applied
+    // to the next call, even on a new model object (the factory makes one per run).
     @ParameterizedTest
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_temperatureRefused_logsOneWarningAndNoneForTheRememberedOne(
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubSequence(kind, chatPath, reply(400, TEMPERATURE_REFUSAL), ok());
-        final GatedChatModel model = model(kind, basePath, MODEL);
 
-        model.chat(request(ReasoningLevel.OFF));
+        model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
         final long afterFirst = refusalWarnings();
-        model.chat(request(ReasoningLevel.OFF));
+        model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
 
         assertThat(afterFirst).isEqualTo(1);
         assertThat(refusalWarnings()).isEqualTo(1);

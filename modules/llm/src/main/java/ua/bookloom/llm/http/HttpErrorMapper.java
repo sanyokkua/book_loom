@@ -88,7 +88,6 @@ public final class HttpErrorMapper {
             HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         final Mapping mapping = classify(reply, purpose, modelName);
         final AppError error = statusError(mapping, reply.status(), reply.body(), config, modelName);
-        OnceLogged.bugIfFirst(mapping.reason(), config, modelName);
         log.debug(
                 "HTTP error mapping selected row={} purpose={} code={} reason={} host={} status={}",
                 mapping.row(),
@@ -135,7 +134,6 @@ public final class HttpErrorMapper {
                         "stream-error",
                         "Provider server error",
                         "Ollama stopped the reply with an error."));
-        OnceLogged.bugIfFirst(mapping.reason(), config, modelName);
         return statusError(mapping, null, errorText, config, modelName);
     }
 

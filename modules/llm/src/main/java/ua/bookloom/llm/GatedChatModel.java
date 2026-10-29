@@ -44,6 +44,7 @@ public final class GatedChatModel implements ChatModel {
     private final BiFunction<String, String, ModelSettings> settings;
     private final @org.jspecify.annotations.Nullable RefusalMemory refusals;
     private final CallRecorder recorder;
+    private final BuiltWrongLog builtWrong;
 
     /** Captures the concrete provider client, model id, shared gate, and retry policy for each call. */
     public GatedChatModel(ProviderClient client, String modelId, InferenceGate gate, RetryPolicy retryPolicy) {
@@ -70,10 +71,22 @@ public final class GatedChatModel implements ChatModel {
             RetryPolicy retryPolicy,
             BiFunction<String, String, ModelSettings> settings,
             @org.jspecify.annotations.Nullable RefusalMemory refusals) {
-        this(client, providerId, modelId, gate, retryPolicy, settings, refusals, CallLedger.none());
+        this(
+                client,
+                providerId,
+                modelId,
+                gate,
+                retryPolicy,
+                settings,
+                refusals,
+                CallLedger.none(),
+                new BuiltWrongLog());
     }
 
-    /** As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger}. */
+    /**
+     * As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger} and writing
+     * a BookLoom fault's ERROR line once per model through {@code builtWrong}.
+     */
     public GatedChatModel(
             ProviderClient client,
             String providerId,
@@ -82,7 +95,9 @@ public final class GatedChatModel implements ChatModel {
             RetryPolicy retryPolicy,
             BiFunction<String, String, ModelSettings> settings,
             @org.jspecify.annotations.Nullable RefusalMemory refusals,
-            CallLedger ledger) {
+            CallLedger ledger,
+            BuiltWrongLog builtWrong) {
+        this.builtWrong = Objects.requireNonNull(builtWrong, "builtWrong");
         this.recorder = new CallRecorder(ledger, modelId);
         this.refusals = refusals;
         this.providerId = Objects.requireNonNull(providerId, "providerId");
@@ -122,10 +137,8 @@ public final class GatedChatModel implements ChatModel {
                     case VALUE -> stored.temperature();
                     case OMIT -> null;
                 };
-        final Integer requestCap = request.maxOutputTokens();
-        final Integer maxOutput = stored.maxOutput();
-        final Integer cap = capped(requestCap, maxOutput);
-        final OutputLengthField field = outputField(request, stored);
+        final Integer cap = StoredLimits.capped(request.maxOutputTokens(), stored.maxOutput());
+        final OutputLengthField field = StoredLimits.outputField(request, stored);
         if (refusals != null) {
             downgraded.addAll(refusals.remembered(stored));
         }
@@ -140,23 +153,6 @@ public final class GatedChatModel implements ChatModel {
                 field,
                 downgraded);
         return SettingDrops.stripAll(request.withModelSettings(temperature, cap, field), downgraded);
-    }
-
-    // The person's limit caps a call that states none; where both exist the smaller wins.
-    private static @org.jspecify.annotations.Nullable Integer capped(
-            @org.jspecify.annotations.Nullable Integer requestCap,
-            @org.jspecify.annotations.Nullable Integer maxOutput) {
-        if (requestCap == null) {
-            return maxOutput;
-        }
-        return maxOutput == null ? requestCap : Integer.valueOf(Math.min(requestCap, maxOutput));
-    }
-
-    private static @org.jspecify.annotations.Nullable OutputLengthField outputField(
-            ChatRequest request, ModelSettings stored) {
-        return request.outputField() == null && stored.outputField() != OutputLengthField.MAX_TOKENS
-                ? stored.outputField()
-                : request.outputField();
     }
 
     private ProviderCallResult<ChatResponse> callWithTransportRetry(
@@ -259,6 +255,7 @@ public final class GatedChatModel implements ChatModel {
             return finished(call);
         }
         final AppError error = Objects.requireNonNull(result.error(), "provider error");
+        builtWrong.noteIfFirst(providerId, modelId, error);
         if (isNewRefusal(call, request, tries.downgraded())) {
             final RejectedCapability rejected = Objects.requireNonNull(call.rejectedCapability(), "refused setting");
             tries.downgraded().add(rejected);
@@ -384,10 +381,8 @@ public final class GatedChatModel implements ChatModel {
                 AppError.of(ErrorCode.cancelled, "Inference cancelled", "The provider retry wait was interrupted."));
     }
 
-    /**
-     * Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it, the
-     * settings dropped and the reasons whose one resend is spent.
-     */
+    // Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it, the
+    // settings dropped and the reasons whose one resend is spent.
     private record Tries(
             int attempt,
             int timedOut,

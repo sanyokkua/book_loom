@@ -34,7 +34,8 @@ final class OllamaRows {
     // Each row says who is asked: the person for host, sign-in, cloud, memory and model; nobody for the rest (a
     // BookLoom fault for option-type, a passing fault for busy, repeat and crash).
     static final List<ErrorRow> ROWS = List.of(
-            // Ollama's Host guard answers 403 with no body at all; the engine is not known until group 5.
+            // Ollama's Host guard answers 403 with no body at all. Engine-blind until group 5 adds the engine mask:
+            // an empty 403 from any server reads as host-forbidden (task 3.3 tests both dialects, /v1 included).
             new ErrorRow(
                     "ollama-host-forbidden",
                     Set.of(FORBIDDEN),
@@ -61,15 +62,18 @@ final class OllamaRows {
                     "Ollama cloud models are off",
                     "Ollama cloud models are turned off on this computer. Turn them on in Ollama, or choose a local"
                             + " model."),
+            // Only cloud words: a proxy's own "502 Bad Gateway" page is an ordinary outage the status decides.
             new ErrorRow(
                     "ollama-cloud-unreachable",
                     Set.of(BAD_GATEWAY),
-                    Pattern.compile("\\b(?:cloud|remote\\s+model|ollama\\.com|bad\\s+gateway)\\b", FLAGS),
+                    Pattern.compile("\\b(?:cloud|remote\\s+model|ollama\\.com)\\b", FLAGS),
                     ErrorCode.upstream,
                     FailureReason.CLOUD_UNREACHABLE,
                     RetryRule.BACKOFF,
                     "Ollama cloud is unreachable",
                     "Ollama could not reach its cloud service. Check the internet connection and try again."),
+            // Engine-blind until group 5 adds the engine mask: another server's "model … not found" in an error field
+            // also reads as model-not-pulled, with Ollama's pull advice.
             new ErrorRow(
                     "ollama-model-not-pulled",
                     Set.of(),

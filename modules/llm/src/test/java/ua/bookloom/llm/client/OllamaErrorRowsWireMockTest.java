@@ -5,11 +5,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
@@ -21,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +24,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
@@ -220,46 +213,6 @@ class OllamaErrorRowsWireMockTest {
         return Stream.of(
                 Arguments.of(OOM_TEXT, ErrorCode.modelUnavailable, FailureReason.OUT_OF_MEMORY),
                 Arguments.of("the lantern-keeper refused", ErrorCode.upstream, FailureReason.UNCLASSIFIED));
-    }
-
-    @Test
-    void map_optionTypeTwiceForOneModel_logsOneErrorAndAnotherModelOneMore() {
-        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        final Logger logger = (Logger) LoggerFactory.getLogger("ua.bookloom.llm.http.OnceLogged");
-        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
-        appender.start();
-        logger.addAppender(appender);
-        try {
-            final String first = "model-" + UUID.randomUUID();
-            optionTypeFailure(first);
-            optionTypeFailure(first);
-            assertThat(errorLines(appender)).hasSize(1);
-            optionTypeFailure("model-" + UUID.randomUUID());
-            assertThat(errorLines(appender)).hasSize(2);
-            assertThat(errorLines(appender))
-                    .allSatisfy(line -> assertThat(line)
-                            .startsWith("Provider rejected a request BookLoom built wrong reason=option-type")
-                            .doesNotContain("stop"));
-        } finally {
-            logger.detachAppender(appender);
-            appender.stop();
-        }
-    }
-
-    private static List<String> errorLines(final ListAppender<ILoggingEvent> appender) {
-        return appender.list.stream()
-                .filter(event -> event.getLevel() == Level.ERROR)
-                .map(ILoggingEvent::getFormattedMessage)
-                .toList();
-    }
-
-    private void optionTypeFailure(final String model) {
-        final ProviderConfig config = config(NATIVE);
-        HttpErrorMapper.map(
-                new HttpReply(500, Map.of(), OllamaErrorTable.fixture("option-type", 500)),
-                config,
-                HttpErrorMapper.CallPurpose.CHAT,
-                model);
     }
 
     @ParameterizedTest

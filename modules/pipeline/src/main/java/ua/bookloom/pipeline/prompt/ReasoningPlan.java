@@ -188,7 +188,7 @@ public record ReasoningPlan(Map<PromptName, ReasoningLevel> levels, ReasoningLev
      * Whether a call thinks.
      *
      * @param name the call; never null
-     * @return {@code true} if the plan turns thinking on for it; a batch format counts as {@code DRAFT_BATCH_JSON}
+     * @return {@code true} if the plan turns thinking on for it, {@code false} otherwise
      */
     public boolean isOn(final PromptName name) {
         Objects.requireNonNull(name, "name");

@@ -977,6 +977,11 @@ never `terminated`, so the `terminated` status stays by decision; the 400 `Model
 engine's source wording) are constructed. The rest follow the bodies the research lists for LM Studio and llama-server.
 `terminated` and `engine-unreachable` carry the code `upstream`; since task 3.5 their row's rule gets them one resend
 after a state check (the provider's reachability probe), and a second failure goes to the run as an outage.
+Two Ollama rows are still engine-blind until group 5 adds the engine mask to `ErrorRow`: `ollama-host-forbidden`
+(an empty `403`) and `ollama-model-not-pulled` (`model … not found` in an error field) match those words from any
+server, because task 3.3 proves them on both dialects, `/v1` included; they are not gated on `ProviderKind`. The
+context row ignores deadline, timeout and cancel wording (Go's `context deadline exceeded` is an outage), and
+`ollama-cloud-unreachable` needs cloud words, so a proxy's plain `502 Bad Gateway` page stays `upstream`/`unclassified`.
 
 **Reference book `article-gravity` (task 1.11).** One invented science article (about 2,350 words of prose) in English, Ukrainian,
 Russian and French, each as Markdown, EPUB and FB2 (`modules/pipeline/src/test/resources/eval/datasets/article-gravity/`, with its own

@@ -132,8 +132,6 @@ class BatchEvalRunnerTest {
                 .satisfies(request -> assertThat(request.responseFormat()).isNotNull());
     }
 
-    // The batch-format gate (15i.X1) measures each arm through this runner: it sends what the job sends in that arm
-    // (the eval path reads the same property) and reads the reply the way the job reads it.
     @Test
     void json_report_namesTheSuiteAndEveryCell() {
         final BatchEvalReport report =

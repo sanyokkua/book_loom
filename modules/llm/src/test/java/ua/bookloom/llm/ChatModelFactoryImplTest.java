@@ -287,7 +287,8 @@ class ChatModelFactoryImplTest {
                 new LlmModule().objectMapper(),
                 cache,
                 new RefusalMemory(cache),
-                new CallLedgerImpl());
+                new CallLedgerImpl(),
+                new BuiltWrongLog());
     }
 
     private void register(ProviderConfig config) {

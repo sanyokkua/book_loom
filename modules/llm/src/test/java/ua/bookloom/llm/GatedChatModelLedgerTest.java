@@ -223,6 +223,7 @@ class GatedChatModelLedgerTest {
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
                 ModelSettings::defaults,
                 null,
-                ledger);
+                ledger,
+                new BuiltWrongLog());
     }
 }

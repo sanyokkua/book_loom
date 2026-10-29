@@ -258,8 +258,7 @@ class HttpErrorMapperTest {
                         ErrorCode.modelUnavailable),
                 chatStatus(400, "{\"error\":\"model 'gemma' is not loaded\"}", ErrorCode.modelUnavailable),
                 // Rows read the words whatever the status and purpose (task 3.4), so a DISCOVERY 400 that says the
-                // model
-                // is unloaded is modelUnavailable now; before, a guard limited this meaning to chat calls.
+                // model is unloaded is modelUnavailable now; before, a guard limited this meaning to chat calls.
                 statusCase(
                         400,
                         "{\"error\":\"Model unloaded\"}",
