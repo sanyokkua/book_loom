@@ -332,7 +332,7 @@ States: **populated** (grouped list), **search without a match**, and **empty / 
 "Translate a book on your own computer" with **How it works** in four steps (choose a book · check the languages · let
 it translate · save the translated book; "your original file is never changed"), the **AI-model line** (found ✓ —
 "AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)" — or **No AI model
-found**: "Ollama is not open. Open the Ollama app, then press Try again." with [Try again] and "I use another
+found**: "BookLoom could not choose an AI model by itself. Press Try again, or choose the AI program and model in Settings." with [Try again] and "I use another
 program…", which opens Settings; while Try again looks, the line reads "Looking for an AI program on this computer…"
 with Try again off, and when it finds nothing again it adds "Still nothing answered."), and **＋ New translation**.
 

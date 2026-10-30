@@ -124,7 +124,8 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
 
         awaitCardContains("No AI model found");
         assertThat(textOf(CARD))
-                .contains("Ollama is not open. Open the Ollama app, then press Try again.")
+                .contains(
+                        "BookLoom could not choose an AI model by itself. Press Try again, or choose the AI program and model in Settings.")
                 .doesNotContain("ready ✓");
         assertThat(((Button) node("projects-empty-tryagain")).getText()).isEqualTo("Try again");
         assertThat(((Button) node("projects-empty-tryagain")).isDisabled()).isFalse();

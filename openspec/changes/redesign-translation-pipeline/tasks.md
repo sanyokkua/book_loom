@@ -531,7 +531,7 @@ selects fields, error rows and routes. OpenRouter is detected here but speaks th
   - **Test first:** the tests themselves are the checks; before the run, confirm with the variables unset that `./gradlew :llm:test` still passes with them skipped.
   - **Done when:** the Ollama and LM Studio live tests ran on the owner's machine with a recorded result (zero wrong detections), and the others skip cleanly.
 
-- [ ] 5.10 Make the acceptance test green, fix the clauses this group made wrong, run the whole gate and do the hand check. → :llm, :ui, docs
+- [x] 5.10 Make the acceptance test green, fix the clauses this group made wrong, run the whole gate and do the hand check. → :llm, :ui, docs
   - **Satisfies:** enabling work for design D17 (closes the group)
   - **Depends on:** 5.1–5.9
   - **Read:** `AGENTS.md#where-it-stands` is edited only in group 17; the clauses to fix are listed in the Change bullet

@@ -415,7 +415,7 @@ banner (L3), the live panel's line and the markers of the current call's segment
   - After that, every check is user-triggered (Settings tests, "Try again").
 - **Empty Projects** shows the result:
   - "AI model: Ollama · gemma4:e4b — ready ✓ (found on this computer when BookLoom first opened)";
-  - or **No AI model found**: "Ollama is not open. Open the Ollama app, then press Try again." [Try again] and "I use
+  - or **No AI model found**: "BookLoom could not choose an AI model by itself. Press Try again, or choose the AI program and model in Settings." [Try again] and "I use
     another program…" (opens Settings).
 - **Settings › Providers** opens with the same **summary card** ("Your AI model: Ollama · gemma4:e4b — ready ✓
   [Test] [Change model]").
