@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
+import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProbeVerdicts.Outcome;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -105,6 +106,51 @@ class AdvancedChecksReasoningTest {
         assertThat(found.thinkingSwitch()).isNotNull();
         assertThat(found.extraSamplers()).isNull();
         assertThat(found.capField()).isNull();
+    }
+
+    @Test
+    void cap_genericServerThinkingModelSpendsSixteenTokens_isHonouredForTheFieldTried() {
+        useGenericEngine();
+        server.stubFor(post(urlEqualTo(CHAT))
+                .withRequestBody(containing("Count from 1 to 100"))
+                .atPriority(1)
+                .willReturn(okJson(reply("", "length", ",\"reasoning\":\"Thinking Process: 1.\""))));
+
+        verifier().verify(new ModelSelection(PROVIDER, MODEL), VerificationPolicy.ADVANCED);
+
+        final ModelSettings stored = storedSettings();
+        assertThat(Objects.requireNonNull(stored.probeVerdicts().capField()).outcome())
+                .isEqualTo(Outcome.HONOURED);
+        assertThat(stored.outputField()).isEqualTo(OutputLengthField.MAX_COMPLETION_TOKENS);
+    }
+
+    @Test
+    void cap_genericServerEmptyReplyThatStoppedNormally_givesNoVerdict() {
+        useGenericEngine();
+        server.stubFor(post(urlEqualTo(CHAT))
+                .withRequestBody(containing("Count from 1 to 100"))
+                .atPriority(1)
+                .willReturn(okJson(reply("", "stop", ""))));
+
+        verifier().verify(new ModelSelection(PROVIDER, MODEL), VerificationPolicy.ADVANCED);
+
+        assertThat(storedSettings().probeVerdicts().capField()).isNull();
+    }
+
+    private void useGenericEngine() {
+        final ProviderConfig base = new ProviderConfig(
+                PROVIDER,
+                ProviderKind.OPENAI_COMPATIBLE,
+                URI.create(server.baseUrl() + "/v1"),
+                Duration.ofSeconds(2),
+                Duration.ofSeconds(5));
+        assertThat(configs.save(base.withEngine(ServerEngine.GENERIC, ServerEngine.GENERIC, null))
+                        .isOk())
+                .isTrue();
+    }
+
+    private ModelSettings storedSettings() {
+        return Objects.requireNonNull(settings.find(PROVIDER, MODEL).data()).orElseThrow();
     }
 
     private static String reply(final String content, final String finish, final String extra) {

@@ -68,15 +68,15 @@ final class OpenAiReplyReader {
         if (message == null || message.content() == null) {
             return unreadable(requestedModel, null);
         }
+        final FinishReason finishReason =
+                finishReason(decoded.choices().getFirst().finishReason());
         if (message.content().isBlank()) {
-            return emptyCompletion(requestedModel, reply);
+            return emptyCompletion(requestedModel, reply, finishReason);
         }
         final @Nullable AppError wrongModel = checkedModel(requestedModel, decoded.model());
         if (wrongModel != null) {
             return Result.err(wrongModel);
         }
-        final FinishReason finishReason =
-                finishReason(decoded.choices().getFirst().finishReason());
         final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
         log.debug(
                 "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
@@ -132,7 +132,8 @@ final class OpenAiReplyReader {
                 null);
     }
 
-    private Result<ChatResponse> emptyCompletion(final String modelId, final HttpReply reply) {
+    private Result<ChatResponse> emptyCompletion(
+            final String modelId, final HttpReply reply, final FinishReason finishReason) {
         log.debug(
                 "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} code={}",
                 config.baseUrl().getHost(),
@@ -140,14 +141,15 @@ final class OpenAiReplyReader {
                 reply.status(),
                 reply.body().length(),
                 ErrorCode.emptyCompletion);
+        SafeDetails details = SafeDetails.empty();
+        if (finishReason == FinishReason.LENGTH) {
+            details = details.withReason(FailureReason.CAP_SPENT);
+        }
         return Result.err(AppError.of(
                 ErrorCode.emptyCompletion,
                 "Model returned an empty response",
                 "The OpenAI-compatible provider completed the request without response text.",
-                SafeDetails.empty()
-                        .withEndpoint(config.baseUrl())
-                        .withModelName(modelId)
-                        .render(),
+                details.withEndpoint(config.baseUrl()).withModelName(modelId).render(),
                 null));
     }
 

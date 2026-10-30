@@ -230,7 +230,7 @@ final class AdvancedChecks {
     private CapFinding cap() {
         final ProviderCallResult<CheckReply> completion = capCall(OutputLengthField.MAX_COMPLETION_TOKENS);
         final CheckReply reply = completion.result().data();
-        if (reply != null && isLimited(reply.response())) {
+        if (reply != null ? isLimited(reply.response()) : isSpentOnReasoning(completion)) {
             return new CapFinding(verdict(Outcome.HONOURED), OutputLengthField.MAX_COMPLETION_TOKENS);
         }
         final Outcome outcome = reply != null ? Outcome.IGNORED : refusedOrStop("cap", completion);
@@ -246,6 +246,16 @@ final class AdvancedChecks {
 
     private ProviderCallResult<CheckReply> capCall(final OutputLengthField field) {
         return send(request(COUNT_PROMPT, null, null, null, field), null);
+    }
+
+    // A thinking model may use all 16 tokens on reasoning; the server then stopped it at the cap with no text.
+    private static boolean isSpentOnReasoning(final ProviderCallResult<CheckReply> call) {
+        final AppError failure = call.result().error();
+        return failure != null
+                && failure.code() == ErrorCode.emptyCompletion
+                && FailureReason.in(failure.details())
+                        .filter(FailureReason.CAP_SPENT::equals)
+                        .isPresent();
     }
 
     private static boolean isLimited(final ChatResponse response) {

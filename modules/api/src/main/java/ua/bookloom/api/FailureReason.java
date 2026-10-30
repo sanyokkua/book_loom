@@ -124,6 +124,12 @@ public enum FailureReason {
     CAP_IGNORED("cap-ignored"),
 
     /**
+     * The server stopped the reply at the answer cap before any text was written, as a thinking model does when
+     * reasoning uses the whole cap; the cap was honoured, the reply is empty.
+     */
+    CAP_SPENT("cap-spent"),
+
+    /**
      * A server that answers any model id with whatever model it has loaded wrote the reply with another model than the
      * one asked for; the reply is not kept, and the person checks the model id.
      */
