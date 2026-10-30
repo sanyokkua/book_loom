@@ -36,6 +36,7 @@ import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
 import ua.bookloom.llm.provider.CheckReply;
 import ua.bookloom.llm.provider.ProviderCallResult;
+import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /**
  * The Advanced features checks of one model: short calls with invented text that find out what the server honours.
@@ -122,7 +123,7 @@ final class AdvancedChecks {
     // Honoured only when the reply is exactly the one value the schema allows; a free-text 200 is ignored and is never
     // asked again as json_object, since that would prove nothing about the schema.
     private @Nullable Verdict schema() {
-        final ProviderCallResult<CheckReply> call = send(request(SCHEMA_PROMPT, SCHEMA, null, null, null), null);
+        final ProviderCallResult<CheckReply> call = sendWithRoom(request(SCHEMA_PROMPT, SCHEMA, null, null, null));
         final CheckReply reply = call.result().data();
         if (reply == null) {
             return verdictOf(refusedOrStop("schema", call));
@@ -211,11 +212,11 @@ final class AdvancedChecks {
     // At a hot temperature two replies differ unless top_k 1 is honoured and the model picks its likeliest token.
     private @Nullable Verdict samplers() {
         final SamplingParams greedy = new SamplingParams(null, GREEDY, null, null);
-        final ProviderCallResult<CheckReply> first = send(request(SAMPLE_PROMPT, null, null, greedy, null), null);
+        final ProviderCallResult<CheckReply> first = sendWithRoom(request(SAMPLE_PROMPT, null, null, greedy, null));
         if (first.result().isErr()) {
             return verdictOf(refusedOrStop("samplers", first));
         }
-        final ProviderCallResult<CheckReply> second = send(request(SAMPLE_PROMPT, null, null, greedy, null), null);
+        final ProviderCallResult<CheckReply> second = sendWithRoom(request(SAMPLE_PROMPT, null, null, greedy, null));
         if (second.result().isErr()) {
             return verdictOf(refusedOrStop("samplers", second));
         }
@@ -290,6 +291,33 @@ final class AdvancedChecks {
 
     private static String content(final ProviderCallResult<CheckReply> call) {
         return Objects.requireNonNull(call.result().data(), "reply").response().content();
+    }
+
+    // A thinking model may spend the whole cap on reasoning and answer nothing; that says nothing about the field
+    // checked, so the call is made once more with the room reasoning needs (ReasoningHeadroom), never twice.
+    private ProviderCallResult<CheckReply> sendWithRoom(final ChatRequest request) {
+        final ProviderCallResult<CheckReply> first = send(request, null);
+        final AppError failure = first.result().error();
+        if (failure == null || failure.code() != ErrorCode.emptyCompletion) {
+            return first;
+        }
+        log.debug("Advanced check answered nothing provider={}; asking once more with reasoning headroom", config.id());
+        return send(withCap(request, ReasoningHeadroom.raise(request.maxOutputTokens())), null);
+    }
+
+    private static ChatRequest withCap(final ChatRequest request, final @Nullable Integer cap) {
+        return new ChatRequest(
+                request.messages(),
+                request.temperature(),
+                request.responseFormat(),
+                request.reasoningEnabled(),
+                request.contextWindow(),
+                request.expectedOutputTokens(),
+                cap,
+                request.seed(),
+                request.callKind(),
+                request.sampling(),
+                request.outputField());
     }
 
     private ProviderCallResult<CheckReply> send(final ChatRequest request, final @Nullable OffSwitch offSwitch) {
