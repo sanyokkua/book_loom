@@ -81,7 +81,7 @@ final class BriefEvidenceRow {
         return switch (evidence.basis()) {
             case KNOWLEDGE -> messages.get(MessageKey.BRIEF_EVIDENCE_KNOWLEDGE);
             case MEASURED -> messages.get(MessageKey.BRIEF_EVIDENCE_MEASURED);
-            case PASSAGES, UNCERTAIN ->
+            case PASSAGES, UNCERTAIN, LIKELY ->
                 evidence.quotes().isEmpty() || !evidence.isKept()
                         ? messages.get(MessageKey.BRIEF_EVIDENCE_AGREED, evidence.agreeing(), evidence.samples())
                         : messages.get(

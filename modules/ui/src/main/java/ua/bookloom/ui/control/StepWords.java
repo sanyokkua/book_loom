@@ -107,6 +107,7 @@ final class StepWords {
         return switch (stage) {
             case SCAN -> MessageKey.PROGRESS_NAMES_STEP_SCAN;
             case NAMES -> MessageKey.PROGRESS_NAMES_STEP_NAMES;
+            case NAMES_KNOWLEDGE -> MessageKey.PROGRESS_NAMES_STEP_NAMES_KNOWLEDGE;
             case TERMS_SCAN -> MessageKey.PROGRESS_NAMES_STEP_TERMS_SCAN;
             case TERMS_REVIEW -> MessageKey.PROGRESS_NAMES_STEP_TERMS_REVIEW;
             case TERMS_READ -> MessageKey.PROGRESS_NAMES_STEP_TERMS_READ;

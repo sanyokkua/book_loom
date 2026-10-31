@@ -64,7 +64,7 @@ class TermReviewChangesTest {
         glossary.add(well);
         glossary.add(hale);
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
 
         final EntryChanges<GlossaryEntry> changes = Objects.requireNonNull(review.review(
                                 PROJECT,

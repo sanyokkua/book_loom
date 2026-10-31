@@ -96,7 +96,8 @@ public abstract class GlossaryPutAllContractTest extends ProjectFindersContractT
                 true,
                 false,
                 "a note",
-                MeaningChoice.PENDING);
+                MeaningChoice.PENDING,
+                null);
     }
 
     private static GlossaryEntry entry(final String id, final String term, final String target) {

@@ -16,26 +16,39 @@ public final class BriefSynthesisSchema {
     /** The five audiences the synthesis chooses from, as the brief stores them. */
     static final List<String> AUDIENCES = List.of("adult", "young adult", "children", "general", "academic");
 
+    // The narrator's gender with the quote that shows it and the name in that quote, which the code checks.
+    private static final String NARRATOR = """
+            {"type":"object","properties":{"gender":{"type":"string","enum":["male","female"]},\
+            "quote":{"type":"string"},"name":{"type":"string"}},\
+            "required":["gender","quote","name"],"additionalProperties":false}""";
+
+    /** The three registers the synthesis chooses from, in the brief suggestion's words. */
+    static final List<String> REGISTERS = List.of("formal", "neutral", "casual");
+
     /**
-     * Genre, audience and voice, each with its basis before its value, so the model names what a value stands on
-     * before it decides it. The genre is one of the forty {@link Genre} names and the audience one of
-     * {@link #AUDIENCES}, or empty, so a structured-output server can return nothing the brief cannot hold.
+     * Genre, audience, voice and register, each with its basis before its value, so the model names what a value
+     * stands on before it decides it, and the narrator's most probable gender with the quote and the name that show
+     * it. The genre is one of the forty {@link Genre} names, the audience one of {@link #AUDIENCES} and the register one
+     * of {@link #REGISTERS}, with no empty value, so the model always gives its most probable one (owner decision
+     * D-11) and a structured-output server can return nothing the brief cannot hold.
      */
     public static final String SCHEMA = """
             {"type":"object","properties":{\
             "genre":%s,\
             "audience":%s,\
-            "voice":%s},\
-            "required":["genre","audience","voice"],\
+            "voice":%s,\
+            "register":%s,\
+            "narrator":%s},\
+            "required":["genre","audience","voice","register","narrator"],\
             "additionalProperties":false}""".formatted(
                     field(choice(Arrays.stream(Genre.values()).map(Genre::english))),
                     field(choice(AUDIENCES.stream())),
-                    field("{\"type\":\"string\"}"));
+                    field("{\"type\":\"string\"}"),
+                    field(choice(REGISTERS.stream())),
+                    NARRATOR);
 
     private static String choice(final Stream<String> names) {
-        final String listed = Stream.concat(Stream.of(""), names)
-                .map(name -> "\"" + name + "\"")
-                .collect(Collectors.joining(","));
+        final String listed = names.map(name -> "\"" + name + "\"").collect(Collectors.joining(","));
         return "{\"type\":\"string\",\"enum\":[" + listed + "]}";
     }
 

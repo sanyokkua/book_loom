@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.book;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.repeated;
@@ -17,12 +18,14 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NameKnowledge;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 
-/** The characters Start asks about: unknown gender, named often enough, most mentioned first. */
+/** The characters Start asks about: a gender nobody settled, named often enough, least confident first. */
 class UnknownGendersTest {
 
     private GlossaryService service;
@@ -58,10 +61,13 @@ class UnknownGendersTest {
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
 
-        assertThat(asked).containsExactly(new UnknownGender("Dane", 7), new UnknownGender("Ember", 5));
+        assertThat(asked)
+                .extracting(UnknownGender::term, UnknownGender::mentions, UnknownGender::offered)
+                .containsExactly(tuple("Dane", 7, Gender.UNKNOWN), tuple("Ember", 5, Gender.UNKNOWN));
     }
 
-    // A guessed gender is shown in the table yet still asks the person to confirm it, so Start names it as such.
+    // A guessed gender is shown in the table yet still asks the person to confirm it, so Start names it as such; a
+    // character with no gender at all is less sure than a guess, so it comes first.
     @Test
     void unknownGenders_suggestedGender_isListedAsSuggestedAndConfirmedOnesAreNot() {
         openProjects.put(
@@ -79,7 +85,68 @@ class UnknownGendersTest {
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
 
-        assertThat(asked).containsExactly(new UnknownGender("Dane", 5, true), new UnknownGender("Ember", 5, false));
+        assertThat(asked)
+                .extracting(
+                        UnknownGender::term, UnknownGender::suggested, UnknownGender::offered, UnknownGender::origin)
+                .containsExactly(
+                        tuple("Ember", false, Gender.UNKNOWN, null), tuple("Dane", true, Gender.MALE, Origin.LIKELY));
+    }
+
+    // IF the most mentioned came first, THEN a sure guess would bury the doubtful one the person should look at; the
+    // least confident comes first, each with its likely value offered (glossary "Ask at Start for the genders nobody
+    // has settled").
+    @Test
+    void start_lowConfidenceFirst_withLikelyPreselected() {
+        openProjects.put(
+                PROJECT,
+                book(
+                        List.of(
+                                "Mira Holt waved. ".repeat(30) + "Ivar sat. ".repeat(12),
+                                "Tobin ran. ".repeat(3) + "Wren sang. ".repeat(40)),
+                        "Title"));
+        add("Mira Holt", TermType.CHARACTER, Gender.UNKNOWN, Gender.FEMALE, 0.9);
+        add("Ivar", TermType.CHARACTER, Gender.UNKNOWN, Gender.MALE, 0.55);
+        add("Tobin", TermType.CHARACTER, Gender.UNKNOWN, Gender.MALE, 0.8);
+        service.add(GlossaryEntry.of("p1:Wren", PROJECT, "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withGenderFrom(Gender.FEMALE, Origin.BOOK));
+
+        final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
+
+        assertThat(asked)
+                .extracting(
+                        UnknownGender::term,
+                        UnknownGender::mentions,
+                        UnknownGender::entryId,
+                        UnknownGender::offered,
+                        UnknownGender::origin,
+                        UnknownGender::confidence)
+                .containsExactly(
+                        tuple("Ivar", 12, "p1:Ivar", Gender.MALE, Origin.LIKELY, 0.55),
+                        tuple("Mira Holt", 30, "p1:Mira Holt", Gender.FEMALE, Origin.LIKELY, 0.9));
+    }
+
+    // A rule and a model that disagree are both shown, the rule's value chosen.
+    @Test
+    void unknownGenders_ruleTheModelDisagreesWith_offersTheRuleAndNamesTheModel() {
+        openProjects.put(PROJECT, book(List.of("Ivar sat. ".repeat(6)), "Title"));
+        service.add(NameKnowledgeReplies.recorded(
+                GlossaryEntry.of("p1:Ivar", PROJECT, "Ivar", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withGenderFrom(Gender.MALE, Origin.RULE),
+                new NameKnowledge(Gender.FEMALE, TermType.CHARACTER, null, 0.8)));
+
+        final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
+
+        assertThat(asked)
+                .extracting(UnknownGender::offered, UnknownGender::origin, UnknownGender::modelGender)
+                .containsExactly(tuple(Gender.MALE, Origin.RULE, Gender.FEMALE));
+    }
+
+    private void add(
+            final String term, final TermType type, final Gender gender, final Gender likely, final double confidence) {
+        service.add(NameKnowledgeReplies.recorded(
+                        GlossaryEntry.of("p1:" + term, PROJECT, term, null, type, gender, false),
+                        new NameKnowledge(likely, type, null, confidence))
+                .withGenderFrom(likely, Origin.LIKELY));
     }
 
     @Test

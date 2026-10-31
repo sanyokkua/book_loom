@@ -97,8 +97,8 @@ class SetupAssistantSynthesisRequestTest {
         assertThat(Objects.requireNonNull(request.responseFormat()).jsonSchema())
                 .isEqualTo(BriefSynthesisSchema.SCHEMA);
         assertThat(request.temperature()).isEqualTo(0.0);
-        assertThat(request.expectedOutputTokens()).isEqualTo(160);
-        assertThat(request.maxOutputTokens()).isEqualTo(320);
+        assertThat(request.expectedOutputTokens()).isEqualTo(240);
+        assertThat(request.maxOutputTokens()).isEqualTo(480);
         assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
     }
 

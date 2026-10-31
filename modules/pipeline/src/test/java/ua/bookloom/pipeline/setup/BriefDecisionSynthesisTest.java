@@ -101,9 +101,10 @@ class BriefDecisionSynthesisTest {
         assertThat(decided.evidence().describe()).isEqualTo("from what the model knows of this book");
     }
 
-    // IF a cited knowledge counted when the book is unknown, THEN an invented book would get the model's guess.
+    // IF a cited knowledge counted when the book is unknown, THEN an invented book would get the model's guess as a
+    // fact; it is kept as likely.
     @Test
-    void synthesized_basisKnowledgeButTheBookIsUnknown_isEmptyAndUncertain() {
+    void synthesized_basisKnowledgeButTheBookIsUnknown_isKeptAsLikely() {
         final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
@@ -111,13 +112,14 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "x"),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
     }
 
     // IF the model could cite knowledge for a value the knowledge does not hold, THEN the citation would prove nothing.
     @Test
-    void synthesized_basisKnowledgeThatSaysAnotherGenre_isEmptyAndUncertain() {
+    void synthesized_basisKnowledgeThatSaysAnotherGenre_isKeptAsLikely() {
         final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", true, "", "Mystery"),
@@ -125,8 +127,9 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "x"),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
     }
 
     @Test
@@ -161,7 +164,7 @@ class BriefDecisionSynthesisTest {
     }
 
     @Test
-    void synthesized_oneWindowWithAQuoteAndKnowledgeThatDisagrees_isEmptyAndUncertain() {
+    void synthesized_oneWindowWithAQuoteAndKnowledgeThatDisagrees_isKeptAsLikely() {
         final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
@@ -169,13 +172,14 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "a slow village mystery"),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
     }
 
-    // IF one window of four could decide, THEN a single odd stretch of the book would set the genre.
+    // IF one window of four could decide, THEN a single odd stretch of the book would set the genre unmarked.
     @Test
-    void synthesized_oneWindowOfFourAlone_isEmptyAndUncertainWithItsCount() {
+    void synthesized_oneWindowOfFourAlone_isKeptAsLikelyWithItsCount() {
         final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "2", "Mystery"),
@@ -183,8 +187,9 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "a slow village mystery"),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
         assertThat(decided.evidence().agreeing()).isEqualTo(1);
         assertThat(decided.evidence().samples()).isEqualTo(4);
     }
@@ -206,7 +211,7 @@ class BriefDecisionSynthesisTest {
     // IF a story of one and a half windows read as one window counted as the whole book, THEN one cited reading of a
     // stretch of it would set the genre alone.
     @Test
-    void synthesized_oneWindowThatIsNotTheWholeStory_isEmptyAndUncertain() {
+    void synthesized_oneWindowThatIsNotTheWholeStory_isKeptAsLikely() {
         final Text decided = BriefDecision.synthesized(
                 BriefField.GENRE,
                 synthesis("genre", false, "1", "Mystery"),
@@ -214,8 +219,9 @@ class BriefDecisionSynthesisTest {
                 windows(says(BriefField.GENRE, "a slow village mystery", Q1)),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
     }
 
     // IF a cited window counted whatever it read, THEN a "Thriller" could stand on two windows that read "fantasy"
@@ -229,8 +235,9 @@ class BriefDecisionSynthesisTest {
                 windows(says(BriefField.GENRE, "fantasy", Q1), says(BriefField.GENRE, "romance", Q2), nothing()),
                 false);
 
-        assertThat(decided.value()).isNull();
-        assertThat(decided.evidence().isKept()).isFalse();
+        assertThat(decided.value()).isEqualTo("Thriller");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
+        assertThat(decided.evidence().quotes()).isEmpty();
         assertThat(decided.evidence().agreeing()).isZero();
     }
 
@@ -258,7 +265,8 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "a slow village mystery"),
                 false);
 
-        assertThat(decided.value()).isNull();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
         assertThat(decided.evidence().agreeing()).isEqualTo(1);
     }
 
@@ -271,7 +279,8 @@ class BriefDecisionSynthesisTest {
                 readings(BriefField.GENRE, "a slow village mystery"),
                 false);
 
-        assertThat(decided.value()).isNull();
+        assertThat(decided.value()).isEqualTo("Mystery");
+        assertThat(decided.evidence().basis()).isEqualTo(Basis.LIKELY);
         assertThat(decided.evidence().agreeing()).isEqualTo(1);
     }
 

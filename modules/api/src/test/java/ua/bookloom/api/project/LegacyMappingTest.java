@@ -94,6 +94,7 @@ class LegacyMappingTest {
                 false,
                 true,
                 "  ",
+                null,
                 null);
 
         assertThat(entry.targetOrigin()).isEqualTo(Origin.USER);

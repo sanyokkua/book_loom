@@ -17,7 +17,8 @@ class TermFactsTest {
             value = {
                 "CHARACTER, FEMALE, USER, 'character, female'",
                 "CHARACTER, MALE, BOOK, 'character, male'",
-                "CHARACTER, FEMALE, LIKELY, 'character, likely female'",
+                "CHARACTER, FEMALE, LIKELY, character",
+                "CHARACTER, MALE, RULE, 'character, male'",
                 "CHARACTER, UNKNOWN, null, 'character, unknown'",
                 "PLACE, NEUTER, USER, place",
                 "TERM, MALE, LIKELY, term",

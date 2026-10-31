@@ -22,4 +22,4 @@ Reports of the passages read, each with the passage's quote:
 {{reports}}
 </Input>
 
-Return one JSON object with the fields genre, audience and voice, each with basis (knowledge, passages) and then value.
+Return one JSON object with the fields genre, audience, voice and register, each with basis (knowledge, passages) and then value, and the field narrator with gender, quote and name.

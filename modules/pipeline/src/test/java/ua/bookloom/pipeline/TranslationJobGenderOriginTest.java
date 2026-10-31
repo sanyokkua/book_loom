@@ -51,18 +51,18 @@ class TranslationJobGenderOriginTest {
         return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
 
-    // IF the draft saw a guess worded like a fact, THEN the model would build on a first-name list's mistake; "likely"
-    // still helps it keep the agreement when the guess is right.
+    // IF the draft saw a guess, THEN a wrong one would spread over every paragraph the character is in; the draft is
+    // shown the name alone (design D5).
     @Test
-    void run_genderOnlySuggested_theDraftIsShownItAsLikely() {
+    void run_genderOnlySuggested_theDraftIsShownTheNameAlone() {
         final ScriptedChatModel model = replies(MASCULINE);
         final TestProject project = chisel(QualityDial.FAST, entry -> entry.withSuggestedGender(Gender.FEMALE));
 
         report(TranslationJobTestSupport.job(project, model).run());
 
         assertThat(userMessage(model.requests().getFirst()))
-                .contains("Chisel — likely female")
-                .doesNotContain("Chisel — female");
+                .contains("Chisel → Чизел (character)")
+                .doesNotContain("female");
     }
 
     @Test

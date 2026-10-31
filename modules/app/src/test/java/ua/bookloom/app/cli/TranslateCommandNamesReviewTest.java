@@ -180,6 +180,11 @@ class TranslateCommandNamesReviewTest {
         }
 
         @Override
+        public Result<List<GlossaryEntry>> answerGenders(final String projectId, final Map<String, Gender> answers) {
+            return real.answerGenders(projectId, answers);
+        }
+
+        @Override
         public Result<GlossaryEntry> add(final GlossaryEntry entry) {
             return real.add(entry);
         }

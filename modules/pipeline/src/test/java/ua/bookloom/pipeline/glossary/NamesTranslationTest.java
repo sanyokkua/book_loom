@@ -61,6 +61,7 @@ class NamesTranslationTest {
                 false,
                 false,
                 null,
+                null,
                 null);
     }
 
@@ -119,8 +120,10 @@ class NamesTranslationTest {
         final Result<GlossaryReviewReport> report = ReviewCommit.apply(
                 glossary,
                 "p1",
-                List.of(),
-                List.of(new Suggestion(proved, "Вельк"), new Suggestion(entryOf("Hale"), "Гейл")),
+                new ReviewCommit.Answers(
+                        List.of(),
+                        List.of(),
+                        List.of(new Suggestion(proved, "Вельк"), new Suggestion(entryOf("Hale"), "Гейл"))),
                 "en",
                 List.of());
 

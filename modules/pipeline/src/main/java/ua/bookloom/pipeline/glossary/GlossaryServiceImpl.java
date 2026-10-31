@@ -31,6 +31,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.Project;
@@ -126,6 +127,31 @@ public final class GlossaryServiceImpl implements GlossaryService {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(answers, "answers");
         return guarded("answerMeaning", projectId, () -> MeaningQuestions.answer(glossary, projectId, answers));
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> answerGenders(final String projectId, final Map<String, Gender> answers) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(answers, "answers");
+        return guarded(
+                "answerGenders",
+                projectId,
+                () -> glossary.all(projectId).flatMap(held -> {
+                    final List<GlossaryEntry> stored = new ArrayList<>();
+                    for (final GlossaryEntry entry : held.stream()
+                            .filter(asked -> answers.containsKey(asked.id()))
+                            .toList()) {
+                        final Gender answer = Objects.requireNonNull(answers.get(entry.id()), "answer");
+                        log.debug("Gender answer entryId={} gender={}", entry.id(), answer);
+                        final Result<GlossaryEntry> updated = updateEntry(entry.withGender(answer));
+                        if (updated.isErr()) {
+                            return Result.err(Objects.requireNonNull(updated.error(), "error"));
+                        }
+                        stored.add(Objects.requireNonNull(updated.data(), "updated"));
+                    }
+                    log.info("Gender answers project={} asked={} stored={}", projectId, answers.size(), stored.size());
+                    return Result.ok(List.copyOf(stored));
+                }));
     }
 
     @Override

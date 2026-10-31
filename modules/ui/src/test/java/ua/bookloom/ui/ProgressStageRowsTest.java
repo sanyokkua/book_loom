@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.state.ActivityKind;
 
 /**
- * The names pass in the progress dialog lists its eight stages, not its requests: each row has the stage's own name and
+ * The names pass in the progress dialog lists its nine stages, not its requests: each row has the stage's own name and
  * a count of the requests it sent, and a stage not started says so. No stage knows its total up front, so a count
  * never reads "of N".
  */
@@ -20,6 +20,7 @@ class ProgressStageRowsTest extends ProgressWorkTestBase {
     private static final List<String> EN_NAMES = List.of(
             "Find candidates in the book",
             "Decide the names",
+            "Ask the likely gender and kind of the other names",
             "Find repeated words",
             "Clean up repeated words",
             "Read repeated words in context",
@@ -30,6 +31,7 @@ class ProgressStageRowsTest extends ProgressWorkTestBase {
     private static final List<String> UK_NAMES = List.of(
             "Знайти кандидатів у книжці",
             "Визначити імена",
+            "Запитати ймовірну стать і вид решти імен",
             "Знайти слова, що повторюються",
             "Прибрати зайві повторювані слова",
             "Прочитати повторювані слова в контексті",
@@ -41,20 +43,20 @@ class ProgressStageRowsTest extends ProgressWorkTestBase {
         final var names = begin(ActivityKind.NAMES_PASS);
         feed(names, PassEvents.upTo(requests, running, 49));
         await(this::isDialogShown);
-        await(() -> drawnRows() == 8);
+        await(() -> drawnRows() == 9);
     }
 
     private List<String> names() {
-        return IntStream.range(0, 8).mapToObj(this::stepName).toList();
+        return IntStream.range(0, 9).mapToObj(this::stepName).toList();
     }
 
     private List<String> results() {
-        return IntStream.range(0, 8).mapToObj(this::stepResult).toList();
+        return IntStream.range(0, 9).mapToObj(this::stepResult).toList();
     }
 
-    // IF the list showed one row per request, THEN a 40-request pass would bury its eight steps.
+    // IF the list showed one row per request, THEN a 40-request pass would bury its nine steps.
     @Test
-    void stageRows_namesPassAtFifthStep_showsEightRowsAndCounts() throws TimeoutException {
+    void stageRows_namesPassAtFifthStep_showsNineRowsAndCounts() throws TimeoutException {
         passAtStage(new int[] {0, 6, 0, 3, 25}, 4);
 
         assertThat(names()).containsExactlyElementsOf(EN_NAMES);
@@ -65,6 +67,7 @@ class ProgressStageRowsTest extends ProgressWorkTestBase {
                         "no request",
                         "3 requests",
                         "25 requests so far",
+                        "Not started",
                         "Not started",
                         "Not started",
                         "Not started");

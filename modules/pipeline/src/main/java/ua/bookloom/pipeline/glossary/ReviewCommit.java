@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NameKnowledge;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
@@ -64,13 +65,32 @@ final class ReviewCommit {
         return kept;
     }
 
+    /**
+     * What a finished review writes, in this order.
+     *
+     * @param verdicts the verdicts of the review's calls
+     * @param known the entries the name-knowledge stage answered, each holding its answer; it is applied again to the
+     *     entry as it is now
+     * @param suggestions the suggested targets
+     */
+    record Answers(List<Verdict> verdicts, List<GlossaryEntry> known, List<Suggestion> suggestions) {
+
+        /** Copies the lists. */
+        Answers {
+            verdicts = List.copyOf(verdicts);
+            known = List.copyOf(known);
+            suggestions = List.copyOf(suggestions);
+        }
+    }
+
     static Result<GlossaryReviewReport> apply(
             final GlossaryRepository glossary,
             final String projectId,
-            final List<Verdict> verdicts,
-            final List<Suggestion> suggestions,
+            final Answers answers,
             @Nullable final String sourceLanguage,
             final List<String> bookTexts) {
+        final List<Verdict> verdicts = answers.verdicts();
+        final List<Suggestion> suggestions = answers.suggestions();
         final Result<List<GlossaryEntry>> current = glossary.all(projectId);
         if (current.isErr()) {
             return Result.err(Objects.requireNonNull(current.error(), "error"));
@@ -78,7 +98,7 @@ final class ReviewCommit {
         final Map<String, GlossaryEntry> byId = new HashMap<>(Objects.requireNonNull(current.data(), "current").stream()
                 .collect(Collectors.toMap(GlossaryEntry::id, Function.identity())));
         final Tally tally = Tally.empty();
-        final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally)
+        final Result<Boolean> applied = applyAll(glossary, byId, answers, tally)
                 .flatMap(done -> GivenNames.seedHeld(glossary, projectId, sourceLanguage)
                         .flatMap(seeded -> PronounGender.seedHeld(glossary, projectId, bookTexts, sourceLanguage))
                         .flatMap(seeded -> ClusterGender.reconcile(glossary, projectId, sourceLanguage))
@@ -133,16 +153,21 @@ final class ReviewCommit {
     private static Result<Boolean> applyAll(
             final GlossaryRepository glossary,
             final Map<String, GlossaryEntry> byId,
-            final List<Verdict> verdicts,
-            final List<Suggestion> suggestions,
+            final Answers answers,
             final Tally tally) {
-        for (final Verdict verdict : verdicts) {
+        for (final Verdict verdict : answers.verdicts()) {
             final Result<Boolean> applied = applyVerdict(glossary, byId, verdict, tally);
             if (applied.isErr()) {
                 return applied;
             }
         }
-        for (final Suggestion suggestion : suggestions) {
+        for (final GlossaryEntry known : answers.known()) {
+            final Result<Boolean> applied = applyKnowledge(glossary, byId, known, tally);
+            if (applied.isErr()) {
+                return applied;
+            }
+        }
+        for (final Suggestion suggestion : answers.suggestions()) {
             final Result<Boolean> applied = applySuggestion(glossary, byId, suggestion, tally);
             if (applied.isErr()) {
                 return applied;
@@ -177,6 +202,29 @@ final class ReviewCommit {
         }
         log.debug("Glossary review sets entry {} type={} gender={}", now.id(), guessed.type(), guessed.gender());
         return store(glossary, byId, guessed).map(stored -> tally.updated().add(now.id()));
+    }
+
+    // A likely answer for a bare name, applied to the entry as it is now: a value the person, the book or a rule set
+    // meanwhile is kept, and the answer is recorded either way.
+    private static Result<Boolean> applyKnowledge(
+            final GlossaryRepository glossary,
+            final Map<String, GlossaryEntry> byId,
+            final GlossaryEntry known,
+            final Tally tally) {
+        final GlossaryEntry now = byId.get(known.id());
+        final NameKnowledge answer = known.knowledge();
+        if (now == null || answer == null) {
+            log.debug("Glossary review name knowledge for entry {} dropped: gone or not answered", known.id());
+            return Result.ok(false);
+        }
+        final GlossaryEntry next = NameKnowledgeReplies.applyTo(now, answer);
+        if (next.equals(now)) {
+            log.debug("Glossary review name knowledge for entry {} changes nothing", now.id());
+            return Result.ok(false);
+        }
+        log.debug(
+                "Glossary review name knowledge for entry {}: type={} gender={}", now.id(), next.type(), next.gender());
+        return store(glossary, byId, next).map(stored -> tally.updated().add(now.id()));
     }
 
     private static Result<Boolean> applySuggestion(

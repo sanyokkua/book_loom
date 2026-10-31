@@ -61,7 +61,11 @@ class ProjectIndexReadsTest {
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
 
-        assertThat(asked).containsExactly(new UnknownGender("Dane", 7), new UnknownGender("Ember", 5));
+        assertThat(asked)
+                .extracting(UnknownGender::term, UnknownGender::mentions)
+                .containsExactly(
+                        org.assertj.core.api.Assertions.tuple("Dane", 7),
+                        org.assertj.core.api.Assertions.tuple("Ember", 5));
         assertThat(openProjects.hasIndex(PROJECT)).isTrue();
     }
 

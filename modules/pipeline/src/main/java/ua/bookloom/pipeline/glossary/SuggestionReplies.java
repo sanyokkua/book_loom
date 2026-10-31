@@ -3,9 +3,12 @@ package ua.bookloom.pipeline.glossary;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -165,7 +168,19 @@ final class SuggestionReplies {
      * @param refused the renderings refused by the name rules, each with the entry it was for; the
      *     caller asks about them once more
      */
-    record Replies(List<Suggestion> kept, List<Refusal> refused) {}
+    record Replies(List<Suggestion> kept, List<Refusal> refused) {
+
+        /** The refusals by entry id, leaving out an entry the same reply also answered acceptably. */
+        Map<String, Refusal> refusedNotAnswered() {
+            final Set<String> answered = new HashSet<>();
+            kept.forEach(suggestion -> answered.add(suggestion.entry().id()));
+            final Map<String, Refusal> open = new LinkedHashMap<>();
+            refused.stream()
+                    .filter(refusal -> !answered.contains(refusal.entry().id()))
+                    .forEach(refusal -> open.putIfAbsent(refusal.entry().id(), refusal));
+            return open;
+        }
+    }
 
     /**
      * A rendering the reply gave and the rules refused.

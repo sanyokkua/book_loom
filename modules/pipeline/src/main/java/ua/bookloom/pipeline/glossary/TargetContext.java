@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.glossary;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,6 +35,20 @@ public record TargetContext(List<GlossaryEntry> held, Map<String, Reading> readi
      */
     public TargetContext(final List<GlossaryEntry> held, final Map<String, Reading> readings) {
         this(held, readings, Set.of());
+    }
+
+    /**
+     * The held entries with each asked one standing in for its held version, so a cluster is read from what the call
+     * knows.
+     *
+     * @param asked the entries a call asks about; never null
+     * @return the held entries, then the asked ones not held, each id once; never null
+     */
+    public List<GlossaryEntry> heldWith(final List<GlossaryEntry> asked) {
+        final Map<String, GlossaryEntry> byId = new LinkedHashMap<>();
+        held.forEach(entry -> byId.put(entry.id(), entry));
+        asked.forEach(entry -> byId.put(entry.id(), entry));
+        return List.copyOf(byId.values());
     }
 
     /**

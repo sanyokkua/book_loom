@@ -3479,6 +3479,8 @@ public enum MessageKey {
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_NAMES("progress.names.step.names"),
     /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_NAMES_KNOWLEDGE("progress.names.step.namesKnowledge"),
+    /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_SCAN("progress.names.step.termsScan"),
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_REVIEW("progress.names.step.termsReview"),

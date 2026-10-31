@@ -43,6 +43,7 @@ class GlossaryEntryTest {
                 false,
                 false,
                 null,
+                null,
                 null);
 
         assertThat(entry.isSuggested()).isFalse();

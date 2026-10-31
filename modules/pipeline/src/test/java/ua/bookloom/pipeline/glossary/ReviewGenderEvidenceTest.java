@@ -73,7 +73,7 @@ class ReviewGenderEvidenceTest {
                 "Wren woke. She yawned.",
                 "Wren hid. She waited.",
                 "Wren sang. She smiled."));
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(NO_SUGGESTIONS));
+        final ScriptedChatModel model = ReviewModels.scripted().answer(reply(NO_SUGGESTIONS));
 
         review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 
@@ -103,7 +103,7 @@ class ReviewGenderEvidenceTest {
         final String verdict = "{\"verdicts\":[{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"person\","
                 + "\"gender\":\"" + gender + "\",\"windows\":[" + window + "],\"evidence\":\"\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdict)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdict)).answer(reply(NO_SUGGESTIONS));
 
         review.review(
                 PROJECT, GlossaryTestSegments.of(List.of(paragraph)), FRAME, POLICY, QualityDial.FAST, calls(model));
@@ -148,7 +148,7 @@ class ReviewGenderEvidenceTest {
     @CsvSource({"female,FEMALE,BOOK", "unknown,MALE,LIKELY"})
     void scan_proposalGender_neverOverridesTheReview(
             final String reviewGender, final Gender expected, final Origin expectedOrigin) {
-        final ScriptedChatModel model = new ScriptedChatModel()
+        final ScriptedChatModel model = ReviewModels.scripted()
                 .answer(reply("{\"terms\":[{\"term\":\"Justine\",\"type\":\"person\",\"gender\":\"male\"}]}"));
         final String verdict = "{\"verdicts\":[{\"term\":\"Justine\",\"verdict\":\"name\",\"type\":\"person\","
                 + "\"gender\":\"" + reviewGender + "\",\"windows\":[1],\"evidence\":\"\"}]}";
@@ -231,7 +231,7 @@ class ReviewGenderEvidenceTest {
                 + "{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\","
                 + "\"windows\":[1]}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
         review.review(PROJECT, book, FRAME, POLICY, QualityDial.FAST, calls(model));
 

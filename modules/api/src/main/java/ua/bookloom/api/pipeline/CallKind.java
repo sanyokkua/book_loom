@@ -51,5 +51,8 @@ public enum CallKind {
     TERM_READING,
 
     /** A recurring-term call: the model chooses which candidate words a translator must render the same way. */
-    TERM_CHOICE
+    TERM_CHOICE,
+
+    /** A names call: the model gives the most probable gender and kind of bare names, with no book text (design D5). */
+    NAME_KNOWLEDGE
 }

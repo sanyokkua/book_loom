@@ -16,6 +16,7 @@ import ua.bookloom.pipeline.glossary.NamesPlan.Minutes;
 /**
  * The calls a names pass will send, counted before the first one (15i.N8, 15i review): the names reading of the dial's
  * plan, the batched review of the open names it does not read, one summary per name read at Max (an upper bound), the
+ * bare-name knowledge of the names nobody settled (one call per {@value NameKnowledgeCalls#NAME_KNOWLEDGE_BATCH}), the
  * recurring terms (the batch choice over the model scan's pool past the words read one by one, those words, a quarter
  * of the rest as the words the choice keeps — the share the 2026-10-13 rounds kept at most — and the key terms
  * reviewed), and the renderings of names and terms with one further call per batch for refused renderings. Every call
@@ -54,7 +55,8 @@ final class NamesPassEstimate {
                 (int) open.stream().filter(entry -> !read.contains(entry.id())).count();
         final int names = plan.estimatedCalls()
                 + Math.ceilDiv(unread, TermReview.BATCH_SIZE)
-                + (dial == QualityDial.MAX ? read.size() : 0);
+                + (dial == QualityDial.MAX ? read.size() : 0)
+                + Math.ceilDiv(NameKnowledgeCalls.askedOf(open).size(), NameKnowledgeCalls.NAME_KNOWLEDGE_BATCH);
         final int terms = termCalls(story, dial, language);
         final int renderings = RENDERING_CALLS_PER_BATCH
                 * (Math.ceilDiv(open.size(), SuggestTargets.SUGGEST_BATCH)

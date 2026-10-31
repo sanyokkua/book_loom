@@ -5,6 +5,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.glossary.LexiconReadingSchema;
+import ua.bookloom.pipeline.glossary.NameKnowledgeSchema;
 import ua.bookloom.pipeline.glossary.TermChoiceSchema;
 import ua.bookloom.pipeline.glossary.TermReadingSchema;
 import ua.bookloom.pipeline.setup.BookKnowledgeSchema;
@@ -145,6 +146,20 @@ public enum PromptName {
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("terms"), Set.of())),
+
+    /**
+     * The most probable gender and kind of bare names, with no book text (design D5): a batch of names a call, at
+     * temperature zero because the same name must get the same answer.
+     */
+    NAME_KNOWLEDGE(
+            "name-knowledge",
+            CallKind.NAME_KNOWLEDGE,
+            "name-knowledge",
+            NameKnowledgeSchema.SCHEMA,
+            0.0,
+            null,
+            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("names"), Set.of())),
 
     /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
     FILE_NAME(

@@ -38,7 +38,8 @@ public final class ReasoningChoice {
             CallKind.REVIEW_TERMS,
             CallKind.SUGGEST_TARGETS,
             CallKind.TERM_READING,
-            CallKind.TERM_CHOICE);
+            CallKind.TERM_CHOICE,
+            CallKind.NAME_KNOWLEDGE);
     private static final Set<String> OFF_WORDS = Set.of("false", "off", "none");
 
     /**

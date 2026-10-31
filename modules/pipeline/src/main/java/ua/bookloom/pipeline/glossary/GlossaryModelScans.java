@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -169,10 +170,17 @@ public final class GlossaryModelScans {
         return termReview.decide(projectId, book.story(), book.frame(), book.names(), book.dial(), calls);
     }
 
-    /** The names pass's translate step: a rendering for each entry, knowing the held glossary and the readings. */
+    /**
+     * The names pass's translate step: a rendering for each entry, knowing the held glossary and the readings; each
+     * batch's count of renderings the target's rules refused twice goes to {@code rejected}.
+     */
     Result<List<SuggestionReplies.Suggestion>> suggestFor(
-            final List<GlossaryEntry> entries, final TargetContext context, final Book book, final ModelCalls calls) {
-        return suggestTargets.suggest(entries, book.story(), book.frame(), book.names(), calls, context);
+            final List<GlossaryEntry> entries,
+            final TargetContext context,
+            final Book book,
+            final ModelCalls calls,
+            final IntConsumer rejected) {
+        return suggestTargets.suggest(entries, book.story(), book.frame(), book.names(), calls, context, rejected);
     }
 
     Result<Book> book(final String projectId) {

@@ -39,6 +39,8 @@ import org.jspecify.annotations.Nullable;
  * @param meaning a note on what the term means, or null
  * @param meaningChoice how a name whose meaning the book plays on is rendered, or null when the book does not play on
  *     it (or nobody was asked)
+ * @param knowledge what the model answered for the bare name ({@link NameKnowledge}), or null when never asked; every
+ *     copy keeps it
  */
 public record GlossaryEntry(
         String id,
@@ -57,7 +59,8 @@ public record GlossaryEntry(
         boolean genderSeedTried,
         boolean noGenderEvidence,
         @Nullable String meaning,
-        @Nullable MeaningChoice meaningChoice) {
+        @Nullable MeaningChoice meaningChoice,
+        @Nullable NameKnowledge knowledge) {
 
     /** Validates the parts and normalises the ones that cannot hold together. */
     public GlossaryEntry {
@@ -118,6 +121,7 @@ public record GlossaryEntry(
                 Origin.USER,
                 false,
                 false,
+                null,
                 null,
                 null);
     }
@@ -341,7 +345,8 @@ public record GlossaryEntry(
                 genderSeedTried,
                 noGenderEvidence,
                 newMeaning,
-                newChoice);
+                newChoice,
+                knowledge);
     }
 
     private GlossaryEntry copyTarget(
@@ -385,7 +390,8 @@ public record GlossaryEntry(
                 newSeedTried,
                 newNoEvidence,
                 meaning,
-                meaningChoice);
+                meaningChoice,
+                knowledge);
     }
 
     private static @Nullable String blankAsNull(@Nullable final String text) {

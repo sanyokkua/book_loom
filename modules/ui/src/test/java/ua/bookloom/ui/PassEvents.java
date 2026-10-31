@@ -14,7 +14,7 @@ import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.state.StepLog;
 
 /**
- * The events a names pass announces, built by hand: eight stage rows and one request step per call labelled with the
+ * The events a names pass announces, built by hand: nine stage rows and one request step per call labelled with the
  * stage that sent it, request indexes counted across the whole pass.
  */
 // Checkstyle parses source text before Lombok runs, so it cannot see the private constructor (ADR-0024).
@@ -24,7 +24,15 @@ public final class PassEvents {
 
     /** The stage codes of a names pass, in order. */
     public static final List<String> CODES = List.of(
-            "scan", "names", "terms-scan", "terms-review", "terms-read", "names-translate", "terms-translate", "write");
+            "scan",
+            "names",
+            "names-knowledge",
+            "terms-scan",
+            "terms-review",
+            "terms-read",
+            "names-translate",
+            "terms-translate",
+            "write");
 
     /**
      * The events of a pass that has finished the stages before {@code running} and sits in stage {@code running}.

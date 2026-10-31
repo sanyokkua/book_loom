@@ -37,18 +37,30 @@ class BriefSynthesisSchemaTest {
     }
 
     @Test
-    void schema_isAnObjectOfGenreAudienceAndVoiceAllRequiredAndNothingMore() throws java.io.IOException {
+    void schema_isAnObjectOfTheFiveFieldsAllRequiredAndNothingMore() throws java.io.IOException {
         final JsonNode schema = schema();
 
         assertThat(schema.path("type").asText()).isEqualTo("object");
         assertThat(schema.path("additionalProperties").asBoolean(true)).isFalse();
-        assertThat(names(schema.path("properties"))).containsExactly("genre", "audience", "voice");
-        assertThat(texts(schema.path("required"))).containsExactlyInAnyOrder("genre", "audience", "voice");
+        assertThat(names(schema.path("properties")))
+                .containsExactly("genre", "audience", "voice", "register", "narrator");
+        assertThat(texts(schema.path("required")))
+                .containsExactlyInAnyOrder("genre", "audience", "voice", "register", "narrator");
+    }
+
+    // The model always gives its most probable narrator gender, so the schema offers no empty or unknown gender.
+    @Test
+    void schema_narrator_isAGenderOfTwoWithItsQuoteAndName() throws java.io.IOException {
+        final JsonNode narrator = schema().path("properties").path("narrator");
+
+        assertThat(names(narrator.path("properties"))).containsExactly("gender", "quote", "name");
+        assertThat(texts(narrator.path("properties").path("gender").path("enum")))
+                .containsExactly("male", "female");
     }
 
     // IF the value came first, THEN the model would pick a label and then look for a reason to cite.
     @ParameterizedTest
-    @ValueSource(strings = {"genre", "audience", "voice"})
+    @ValueSource(strings = {"genre", "audience", "voice", "register"})
     void schema_eachField_holdsItsBasisBeforeItsValue(final String field) throws java.io.IOException {
         final JsonNode object = schema().path("properties").path(field);
 
@@ -59,7 +71,7 @@ class BriefSynthesisSchemaTest {
 
     // The basis is what the code checks: whether the field stands on what the model knows, and which passages.
     @ParameterizedTest
-    @ValueSource(strings = {"genre", "audience", "voice"})
+    @ValueSource(strings = {"genre", "audience", "voice", "register"})
     void schema_eachBasis_isTheKnowledgeFlagAndTheCitedPassageNumbers(final String field) throws java.io.IOException {
         final JsonNode basis =
                 schema().path("properties").path(field).path("properties").path("basis");
@@ -78,25 +90,28 @@ class BriefSynthesisSchemaTest {
     }
 
     @Test
-    void schema_genreValue_isOneOfTheFortyNamesOrEmpty() throws java.io.IOException {
+    void schema_genreValue_isOneOfTheFortyNamesAndNeverEmpty() throws java.io.IOException {
         final List<String> genres = texts(schema().path("properties")
                 .path("genre")
                 .path("properties")
                 .path("value")
                 .path("enum"));
 
-        assertThat(genres).hasSize(41).contains("", "Literary fiction", "Gothic novel", "Graphic novel");
+        assertThat(genres)
+                .hasSize(40)
+                .contains("Literary fiction", "Gothic novel", "Graphic novel")
+                .doesNotContain("");
     }
 
     @Test
-    void schema_audienceValue_isOneOfTheFiveWordsOrEmpty() throws java.io.IOException {
+    void schema_audienceValue_isOneOfTheFiveWordsAndNeverEmpty() throws java.io.IOException {
         final List<String> audiences = texts(schema().path("properties")
                 .path("audience")
                 .path("properties")
                 .path("value")
                 .path("enum"));
 
-        assertThat(audiences).containsExactlyInAnyOrder("", "adult", "young adult", "children", "general", "academic");
+        assertThat(audiences).containsExactlyInAnyOrder("adult", "young adult", "children", "general", "academic");
     }
 
     @Test

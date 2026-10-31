@@ -88,7 +88,7 @@ class ContextPackageAssemblerTest {
                         List.of("Moreau (character, male)")));
     }
 
-    // Only a character has a gender line, and a guessed gender is worded as likely (15i.T1).
+    // Only a character has a gender line, and a guessed gender is left out of it (design D5).
     private static Stream<Arguments> genderLineCases() {
         return Stream.of(
                 Arguments.of(
@@ -107,11 +107,11 @@ class ContextPackageAssemblerTest {
                         "Milton was quiet.",
                         List.of("⟦g0⟧ → Мілтон, place")),
                 Arguments.of(
-                        "a character whose gender is only suggested is a likely one",
+                        "a character whose gender is only suggested has no gender on its line",
                         List.of(ContextFixtures.entry("Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN, false)
                                 .withSuggestedGender(Gender.MALE)),
                         "Hale opened the door.",
-                        List.of("Hale → Гейл (character, likely male)")));
+                        List.of("Hale → Гейл (character)")));
     }
 
     @Test

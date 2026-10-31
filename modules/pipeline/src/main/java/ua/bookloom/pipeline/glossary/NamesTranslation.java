@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.glossary;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntConsumer;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ final class NamesTranslation {
      * @param reviewed what the names step left: the readings of the entries read and the ids verified as names; never
      *     null
      * @param calls the seam every model call goes through; never null
+     * @param rejected receives the count of suggested renderings the target's rules refused; never null
      * @return the report of what was suggested and the glossary after, or the first failed call's or glossary access's
      *     error
      */
@@ -46,7 +48,8 @@ final class NamesTranslation {
             final String projectId,
             final Book book,
             final Reviewed reviewed,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final IntConsumer rejected) {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(scans, "scans");
         Objects.requireNonNull(reviewed, "reviewed");
@@ -64,12 +67,11 @@ final class NamesTranslation {
             }
             final TargetContext context = new TargetContext(held, reviewed.readings(), reviewed.verified());
             final String language = book.frame().analysisLanguage();
-            return scans.suggestFor(open, context, book, calls)
+            return scans.suggestFor(open, context, book, calls, rejected)
                     .flatMap(suggestions -> ReviewCommit.apply(
                             glossary,
                             projectId,
-                            List.of(),
-                            suggestions,
+                            new ReviewCommit.Answers(List.of(), List.of(), suggestions),
                             language,
                             book.story().visibleTexts()))
                     .flatMap(report -> afterSuggestions(glossary, projectId, book, reviewed)

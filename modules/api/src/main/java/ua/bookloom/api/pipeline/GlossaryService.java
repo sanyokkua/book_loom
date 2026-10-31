@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
 
@@ -108,6 +109,18 @@ public interface GlossaryService {
      * @return the entries the answers changed, as stored
      */
     Result<List<GlossaryEntry>> answerMeaning(String projectId, Map<String, MeaningChoice> answers);
+
+    /**
+     * Stores the genders the person confirmed or changed in the Start question about characters nobody settled
+     * (glossary "Ask at Start for the genders nobody has settled"): each answer becomes the person's value, even one
+     * that only confirms the offered rule's or likely value. A row the person left alone is not in the map and stays a
+     * hint. No model is called.
+     *
+     * @param projectId the non-null project id
+     * @param answers the non-null gender per entry id; an id the glossary no longer holds is skipped
+     * @return the entries the answers changed, as stored
+     */
+    Result<List<GlossaryEntry>> answerGenders(String projectId, Map<String, Gender> answers);
 
     /**
      * Adds a glossary entry.

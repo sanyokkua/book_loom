@@ -25,7 +25,8 @@ import ua.bookloom.pipeline.glossary.PronounGender;
 
 /**
  * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
- * names whose gender is known, so a model never has to guess a pronoun or a verb ending from a name alone. A character
+ * names whose gender the person set or the book proved, so a model never has to guess a pronoun or a verb ending from a
+ * name alone; a character whose gender only a rule or the model's guess gave is listed by its name alone. A character
  * the segment does not name is never listed, so the sheet stays as short as the scene. A short name that is part of a
  * character's full name ("Danny" of "Danny Vosk", by {@link NameClusters}), and has no gender of its own or the same
  * one, shares that character's line (15i.N2), and the pronouns the scene shows are listed only when they agree with the
@@ -45,9 +46,9 @@ public final class InjectedCharacters {
      *     evidence; null reads no pronoun, so the code gives no gender evidence
      * @return one line per present character of known gender, in glossary order, with the pronouns the text shows
      *     after the name when they agree with its gender ({@code Lyra — female (she ×2)}), a short name folded into its
-     *     full name's line ({@code Danny Vosk (also Danny) — male}), and a gender that was only suggested worded as
-     *     {@code Lyra — likely female} so that nothing holds a text to it (15i.T1); never null, empty when none is
-     *     present
+     *     full name's line ({@code Danny Vosk (also Danny) — male}), and a gender only a rule or the model's guess gave
+     *     left out ({@code Lyra}), because the checks hold the text to every gender a line states (design D5); never
+     *     null, empty when none is present
      */
     public static List<String> select(
             final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
@@ -133,8 +134,14 @@ public final class InjectedCharacters {
                 .toList();
         final String name =
                 shortNames.isEmpty() ? full.term() : full.term() + " (also " + String.join(", ", shortNames) + ")";
-        final String likely = full.genderOrigin() == Origin.LIKELY ? CharacterNames.LIKELY + " " : "";
-        final String line = name + " — " + likely + full.gender().name().toLowerCase(Locale.ROOT);
+        if (!isStated(full)) {
+            log.debug(
+                    "Character sheet: entry {} is listed by name only, its gender origin {}",
+                    full.id(),
+                    full.genderOrigin());
+            return name;
+        }
+        final String line = name + " — " + full.gender().name().toLowerCase(Locale.ROOT);
         PronounGender.Evidence evidence = PronounGender.of(full, texts, sourceLanguage);
         for (final GlossaryEntry shorter : named) {
             if (!shorter.equals(full)) {
@@ -143,6 +150,14 @@ public final class InjectedCharacters {
         }
         final String agreeing = evidence.compactAgreeing(full.gender());
         return agreeing.isEmpty() ? line : line + " (" + agreeing + ")";
+    }
+
+    // The one switch point for a gender on the sheet: the checks read every gender a line states as one to hold the
+    // text to, so only the person's and the book's are stated; a rule's or a likely gender lists the name alone (a
+    // rule's still reaches the model on the glossary line). Arm 4b (task 7.8) decides whether a likely hint may return.
+    private static boolean isStated(final GlossaryEntry entry) {
+        final Origin origin = entry.genderOrigin();
+        return origin != null && origin.isEnforced();
     }
 
     /**

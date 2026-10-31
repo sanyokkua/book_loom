@@ -40,6 +40,7 @@ final class SnapshotTerms {
                         false,
                         false,
                         null,
+                        null,
                         null))
                 .toList();
     }

@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.UnknownGender;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
 
@@ -39,6 +40,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final CountDownLatch release = new CountDownLatch(1);
     private final List<String> unknownGenderCalls = new CopyOnWriteArrayList<>();
     private final List<Map<String, MeaningChoice>> meaningAnswers = new CopyOnWriteArrayList<>();
+    private final List<Map<String, Gender>> genderAnswers = new CopyOnWriteArrayList<>();
     private volatile List<UnknownGender> unknownGenders = List.of();
     private volatile List<GlossaryEntry> meaningQuestions = List.of();
     private volatile boolean holding;
@@ -184,6 +186,18 @@ public final class ScriptedGlossaryService implements GlossaryService {
     @Override
     public Result<List<GlossaryEntry>> answerMeaning(final String projectId, final Map<String, MeaningChoice> answers) {
         meaningAnswers.add(Map.copyOf(answers));
+        return Result.ok(List.of());
+    }
+
+    /** Every {@code answerGenders} call's answers, in order. */
+    public List<Map<String, Gender>> genderAnswers() {
+        return List.copyOf(genderAnswers);
+    }
+
+    // Answered at once, like the meaning question: the answers are what a test of the Start question checks.
+    @Override
+    public Result<List<GlossaryEntry>> answerGenders(final String projectId, final Map<String, Gender> answers) {
+        genderAnswers.add(Map.copyOf(answers));
         return Result.ok(List.of());
     }
 

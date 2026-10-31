@@ -22,7 +22,7 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 
 /**
  * The brief's synthesis call at the HTTP seam, in both dialects (15i.B4): after the one window of a short untitled
- * book, the second request carries temperature zero, the 320-token cap and the synthesis schema in the dialect's own
+ * book, the second request carries temperature zero, the 480-token cap and the synthesis schema in the dialect's own
  * fields, with each field's basis before its value; its reply becomes the suggested genre.
  */
 class BriefSynthesisWireMockTest {
@@ -86,8 +86,9 @@ class BriefSynthesisWireMockTest {
             assertThat(provider.chatRequests()).isEqualTo(2);
             final JsonNode body = json(provider.chatBodies().get(1));
             assertThat(body.path("options").path("temperature").asDouble(-1)).isEqualTo(0.0);
-            assertThat(body.path("options").path("num_predict").asInt()).isEqualTo(320);
-            assertThat(names(body.path("format").path("properties"))).containsExactly("genre", "audience", "voice");
+            assertThat(body.path("options").path("num_predict").asInt()).isEqualTo(480);
+            assertThat(names(body.path("format").path("properties")))
+                    .containsExactly("genre", "audience", "voice", "register", "narrator");
             assertThat(names(
                             body.path("format").path("properties").path("genre").path("properties")))
                     .containsExactly("basis", "value");
@@ -104,7 +105,7 @@ class BriefSynthesisWireMockTest {
             assertThat(provider.chatRequests()).isEqualTo(2);
             final JsonNode body = json(provider.chatBodies().get(1));
             assertThat(body.path("temperature").asDouble(-1)).isEqualTo(0.0);
-            assertThat(body.path("max_tokens").asInt()).isEqualTo(320);
+            assertThat(body.path("max_tokens").asInt()).isEqualTo(480);
             final JsonNode format = body.path("response_format").path("json_schema");
             assertThat(format.path("name").asText()).isEqualTo("brief-synthesis");
             assertThat(names(format.path("schema")

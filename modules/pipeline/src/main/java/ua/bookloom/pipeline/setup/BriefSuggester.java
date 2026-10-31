@@ -27,7 +27,6 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.glossary.PastTenseReader;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
@@ -50,8 +49,8 @@ final class BriefSuggester {
 
     // Six fields, each a quote of up to fifteen words, a value and a confidence, the narrator's name and the language.
     private static final int WINDOW_TOKENS = 512;
-    // Three fields of a basis and a value; the longest is a voice of twelve words.
-    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(160, 320);
+    // Four fields of a basis and a value, the longest a voice of twelve words, and the narrator with a quote.
+    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(240, 480);
     private static final List<BriefField> SYNTHESIZED =
             List.of(BriefField.GENRE, BriefField.AUDIENCE, BriefField.VOICE);
     // The prompt's own text is English whatever the book's language.
@@ -154,10 +153,14 @@ final class BriefSuggester {
         return Result.ok(decided(
                 book,
                 read,
-                Objects.requireNonNull(synthesis.data(), "synthesis").reply(),
+                new Synthesized(
+                        Objects.requireNonNull(synthesis.data(), "synthesis").reply(), windows, genders),
                 known,
                 wholeStory));
     }
+
+    /** The synthesis reply with the windows and the check its narrator quote is held to. */
+    private record Synthesized(@Nullable JsonNode reply, List<BookSample> windows, NarratorGenderEvidence genders) {}
 
     private static void logWindowFailed(final int window, final int windows, final AppError error) {
         log.warn(
@@ -278,51 +281,27 @@ final class BriefSuggester {
     private static BriefSuggestion decided(
             final SetupBook book,
             final Readings read,
-            final @Nullable JsonNode synthesis,
+            final Synthesized synthesized,
             final Knowledge known,
             final boolean wholeStory) {
+        final JsonNode synthesis = synthesized.reply();
         final List<@Nullable Map<BriefField, Answer>> answers = read.answers();
         final NarratorHint detected =
                 NarratorDetector.detect(book.document(), book.languageOf()).orElse(null);
         final Decided<NarratorPerson> person = BriefDecision.narrator(detected, answers);
-        final Map<BriefField, Text> synthesized = new EnumMap<>(BriefField.class);
-        SYNTHESIZED.forEach(field ->
-                synthesized.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
+        final Map<BriefField, Text> fields = new EnumMap<>(BriefField.class);
+        SYNTHESIZED.forEach(
+                field -> fields.put(field, BriefDecision.synthesized(field, synthesis, known, answers, wholeStory)));
         final String language = book.project().brief().sourceLanguage() == null
                 ? BriefDecision.languageProposal(read.languages())
                 : null;
         final Decided<Gender> answered = BriefDecision.narratorGender(person.value(), answers);
         final Decided<Gender> gender = person.value() == NarratorPerson.THIRD
                 ? answered
-                : fromSource(book).orElse(answered);
+                : NarratorGenderOrder.of(book, answered, synthesis, synthesized.windows(), synthesized.genders());
         final BriefSuggestion suggestion =
-                suggestion(BriefDecision.register(answers), person, gender, synthesized, language);
+                suggestion(BriefDecision.register(answers, synthesis), person, gender, fields, language);
         return aligned(book, suggestion, answers.size());
-    }
-
-    // The narrator's own past forms in the source's narration: a verified count is the book's evidence and replaces
-    // the model's answer; a language with no gendered past forms counts nothing, and the later steps decide.
-    private static Optional<Decided<Gender>> fromSource(final SetupBook book) {
-        final String language = book.languageOf();
-        final PastTenseReader reader = PastTenseReader.of(language);
-        if (reader == null) {
-            log.debug("Narrator not read from the source language={}: no gendered past forms", language);
-            return Optional.empty();
-        }
-        final PastTenseReader.FirstPersonCount count =
-                reader.firstPerson(NarratorDetector.paragraphsOf(book.document()));
-        log.info(
-                "Narrator from source language={} forms={} agreeing={} verified={}",
-                language,
-                count.forms(),
-                count.agreeing(),
-                count.verified());
-        if (!count.verified()) {
-            return Optional.empty();
-        }
-        return Optional.of(new Decided<>(
-                count.gender(),
-                new FieldEvidence(FieldEvidence.Basis.MEASURED, count.quotes(), count.agreeing(), count.forms())));
     }
 
     private static BriefSuggestion suggestion(

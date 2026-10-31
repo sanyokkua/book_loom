@@ -65,7 +65,8 @@ class BookRunnerOfflineTest {
     }
 
     // Counts of dataset version 2: the scan gives Ilsabet, Dorrin and Tobin Reed a likely gender from the book, so the
-    // names pass reads them and the segments naming them wait on a confirmed gender.
+    // names pass reads them and the segments naming them wait on a confirmed gender. The pseudo model answers no bare
+    // name, so the name-knowledge stage asks its batch once and once more (two of the six names-pass calls).
     @ParameterizedTest
     @CsvSource({
         "/dial,FAST",
@@ -76,7 +77,7 @@ class BookRunnerOfflineTest {
         "/segments,39",
         "/flaggedSegments,31",
         "/calls/briefSuggestion,2",
-        "/calls/names,4",
+        "/calls/names,6",
         "/characters/verified,0",
         "/characters/suggested,3",
         "/characters/none,0",

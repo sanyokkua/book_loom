@@ -228,6 +228,7 @@ public final class ScanEntries {
                 base.genderSeedTried(),
                 base.noGenderEvidence(),
                 base.meaning(),
-                base.meaningChoice());
+                base.meaningChoice(),
+                base.knowledge());
     }
 }

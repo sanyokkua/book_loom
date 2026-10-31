@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.prompt.AddressTerms;
@@ -41,7 +42,8 @@ final class NarratorGenderEvidence {
     /**
      * Prepares the check for one book.
      *
-     * @param glossary the book's glossary entries; only characters of a known gender are used
+     * @param glossary the book's glossary entries; only characters whose gender the person set, the book proved or a
+     *     rule gave are used, never a model's guess
      * @param languageTag the source language's tag, which chooses the first-name list and the address terms; null when it is not known, then
      *     neither is used
      */
@@ -51,6 +53,7 @@ final class NarratorGenderEvidence {
         this.people = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER)
                 .filter(entry -> isKnown(entry.gender()))
+                .filter(NarratorGenderEvidence::isProof)
                 .toList();
         this.addressTerms = languageTag == null ? Map.of() : AddressTerms.of(languageTag);
         this.firstPersonPronouns =
@@ -60,6 +63,12 @@ final class NarratorGenderEvidence {
                 languageTag,
                 people.size(),
                 addressTerms.size());
+    }
+
+    // A model's guess is no proof of anybody's gender: a narrator verified by a likely glossary gender would be a
+    // guess wearing the book's name. A rule's gender stands, as a listed first name does.
+    private static boolean isProof(final GlossaryEntry entry) {
+        return entry.hasConfirmedGender() || entry.genderOrigin() == Origin.RULE;
     }
 
     /**

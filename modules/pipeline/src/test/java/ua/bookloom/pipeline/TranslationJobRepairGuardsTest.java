@@ -164,24 +164,24 @@ class TranslationJobRepairGuardsTest {
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);
     }
 
-    // IF the reviewer's edit toward a suggested gender were applied, THEN the reviewer would enforce the guess that the
-    // checks no longer do: the edit becomes a low note and the draft stays.
+    // A gender only suggested never reaches the reviewer (design D5): its sheet names Chisel alone, so the reviewer
+    // holds the text to no guess, and its edit is verified like any other.
     @Test
-    void run_reviewerEditsTowardAGenderOnlySuggested_leavesALowNoteAndTheDraft() {
+    void run_reviewerOfAGenderOnlySuggested_isNotShownTheGuess() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(FIX, answer(targetReply(FEMININE)))
                 .answerTo(REVIEW, answer(GENDER_EDIT));
         final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withSuggestedGender(Gender.FEMALE));
 
         report(job(project, model).run());
 
         assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
-        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(MASCULINE);
+        assertThat(model.requests().getLast().messages().getLast().content())
+                .contains("Chisel")
+                .doesNotContain("female");
         assertThat(stored(project, "Book.txt:0").findings())
-                .filteredOn(finding -> finding.kind().equals("ignored-edit"))
-                .singleElement()
-                .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
+                .extracting(finding -> finding.kind())
+                .doesNotContain("ignored-edit");
     }
 
     // The same edit toward a gender the person set is applied, before and after the task.

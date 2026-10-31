@@ -67,7 +67,7 @@ class TermReviewTest {
     void review_verdicts_removeTheCommonWordFillTypeAndGenderAndLeaveThePersonsWork() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -99,7 +99,7 @@ class TermReviewTest {
         final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                 + "\"gender\":\"unknown\",\"evidence\":\"" + evidence + "\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -114,7 +114,7 @@ class TermReviewTest {
         final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                 + "\"gender\":\"unknown\",\"evidence\":\"“HE knew it well…”\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -124,7 +124,7 @@ class TermReviewTest {
     @Test
     void review_request_listsOnlyOpenTermsWithCountPronounsAndNumberedWindows() {
         heldGlossary();
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"verdicts\":[]}"));
+        final ScriptedChatModel model = ReviewModels.scripted().answer(reply("{\"verdicts\":[]}"));
 
         reviewed(calls(model));
 
@@ -165,7 +165,7 @@ class TermReviewTest {
                         glossary.add(entry("p1:x" + index, "Xa" + index, null, TermType.OTHER, Gender.UNKNOWN, false)));
         final List<GlossaryEntry> before = glossary.all(PROJECT).data();
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
-        final ScriptedChatModel model = new ScriptedChatModel()
+        final ScriptedChatModel model = ReviewModels.scripted()
                 .answer(reply("{\"verdicts\":[{\"term\":\"Xa0\",\"verdict\":\"not-a-name\",\"type\":\"other\","
                         + "\"gender\":\"unknown\"}]}"))
                 .answer(Result.err(failure));
@@ -180,7 +180,7 @@ class TermReviewTest {
     @Test
     void review_nothingOpen_makesNoCall() {
         glossary.add(entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true));
-        final ScriptedChatModel model = new ScriptedChatModel();
+        final ScriptedChatModel model = ReviewModels.scripted();
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -203,7 +203,7 @@ class TermReviewTest {
     void review_suggestions_fillTheOpenTargetsAsSuggestionsAndCountThem() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -225,7 +225,7 @@ class TermReviewTest {
     void review_suggestionRequest_listsTheSurvivorsWithTheirVerdictsTypeAndTwoSentences() {
         heldGlossary();
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -253,7 +253,7 @@ class TermReviewTest {
         glossary.add(suggested("p1:hale", "Hale", "Хейл", TermType.CHARACTER, Gender.MALE));
         glossary.add(entry("p1:moreau", "Moreau", "Мору", TermType.CHARACTER, Gender.FEMALE, false));
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
+                ReviewModels.scripted().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -270,7 +270,7 @@ class TermReviewTest {
         final List<GlossaryEntry> before = glossary.all(PROJECT).data();
         final AppError failure = AppError.of(ErrorCode.timeout, "Too slow", "The provider did not answer in time.");
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(VERDICTS)).answer(Result.err(failure));
+                ReviewModels.scripted().answer(reply(VERDICTS)).answer(Result.err(failure));
 
         final Result<GlossaryReviewReport> report = reviewed(calls(model));
 
@@ -286,7 +286,7 @@ class TermReviewTest {
                 + "{\"term\":\"Victoria Station\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"},"
                 + "{\"term\":\"Florence\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 
@@ -307,7 +307,7 @@ class TermReviewTest {
                 + "{\"term\":\"John\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"male\"},"
                 + "{\"term\":\"Mary\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\"}]}";
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+                ReviewModels.scripted().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
 
         reviewed(calls(model));
 

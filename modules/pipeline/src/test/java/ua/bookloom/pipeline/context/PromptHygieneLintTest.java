@@ -92,6 +92,7 @@ class PromptHygieneLintTest {
             Map.entry("sourceLanguage", "English (en)"),
             Map.entry("targetLanguage", "Ukrainian (uk)"),
             Map.entry("existingTerms", "Milton"),
+            Map.entry("names", "- Hale\n- Moreau"),
             Map.entry("terms", "Hale (3 uses) — Hale and Moreau opened the old door."),
             Map.entry("term", "Hale — 7 mentions — pronouns after it: he ×4"),
             Map.entry("windows", "[1] [[Hale]] and Moreau opened the old door.\nHe went in first."),

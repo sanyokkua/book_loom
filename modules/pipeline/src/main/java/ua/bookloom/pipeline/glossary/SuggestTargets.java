@@ -4,13 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -129,6 +128,18 @@ public final class SuggestTargets {
             final NamePolicy policy,
             final ModelCalls calls,
             final TargetContext context) {
+        return suggest(entries, story, frame, policy, calls, context, refused -> {});
+    }
+
+    /** As the six-argument {@code suggest}, telling each batch's count of renderings refused twice to {@code rejected}. */
+    Result<List<Suggestion>> suggest(
+            final List<GlossaryEntry> entries,
+            final BookSlice story,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls,
+            final TargetContext context,
+            final IntConsumer rejected) {
         Objects.requireNonNull(entries, "entries");
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
@@ -141,7 +152,8 @@ public final class SuggestTargets {
                 .toList();
         final SuggestionGroups groups = SuggestionGroups.of(asked, policy, SUGGEST_BATCH);
         logStart(policy, entries.size(), kept.size(), groups);
-        final Result<List<Suggestion>> answered = askAll(groups, new Setting(story, frame, policy, calls, context));
+        final Result<List<Suggestion>> answered =
+                askAll(groups, new Setting(story, frame, policy, calls, context, rejected));
         if (answered.isErr()) {
             log.warn("Glossary suggestions failed; nothing is suggested");
             return answered;
@@ -174,8 +186,8 @@ public final class SuggestTargets {
         final List<Suggestion> answered = new ArrayList<>();
         for (final Map.Entry<NamePolicy, List<GlossaryEntry>> group :
                 groups.byPolicy().entrySet()) {
-            final Setting setting =
-                    new Setting(base.story(), base.frame(), group.getKey(), base.calls(), base.context());
+            final Setting setting = new Setting(
+                    base.story(), base.frame(), group.getKey(), base.calls(), base.context(), base.rejected());
             final Result<List<Suggestion>> asked = ask(group.getValue(), setting, groups);
             if (asked.isErr()) {
                 return asked;
@@ -215,7 +227,12 @@ public final class SuggestTargets {
 
     /** What every call of one suggestion run shares. */
     private record Setting(
-            BookSlice story, CallFrame frame, NamePolicy policy, ModelCalls calls, TargetContext context) {}
+            BookSlice story,
+            CallFrame frame,
+            NamePolicy policy,
+            ModelCalls calls,
+            TargetContext context,
+            IntConsumer rejected) {}
 
     /** What one run asks and checks with, built once for all its batches. */
     private record Run(
@@ -260,8 +277,7 @@ public final class SuggestTargets {
                                 "examples",
                                 templates.nameExamples(frame, setting.policy())))
                 .strip();
-        final List<GlossaryEntry> glossary =
-                glossaryWith(asked, setting.context().held());
+        final List<GlossaryEntry> glossary = setting.context().heldWith(asked);
         final NameClusters clusters = NameClusters.of(glossary, setting.story().index(), frame.analysisLanguage());
         return new Run(
                 setting,
@@ -271,14 +287,6 @@ public final class SuggestTargets {
                 SuggestionScripts.required(frame),
                 new TargetValidator(frame, setting.policy(), setting.context()),
                 ClusterAgreement.over(clusters, setting.context().held(), asked));
-    }
-
-    // The held entries, each asked one standing in for its held version: a cluster is read from what the call knows.
-    private static List<GlossaryEntry> glossaryWith(final List<GlossaryEntry> asked, final List<GlossaryEntry> held) {
-        final Map<String, GlossaryEntry> byId = new LinkedHashMap<>();
-        held.forEach(entry -> byId.put(entry.id(), entry));
-        asked.forEach(entry -> byId.put(entry.id(), entry));
-        return List.copyOf(byId.values());
     }
 
     private static Map<String, Evidence> evidenceOf(final BookSlice story, final List<GlossaryEntry> asked) {
@@ -297,7 +305,7 @@ public final class SuggestTargets {
         }
         final Replies replies = Objects.requireNonNull(first.data(), "replies");
         final List<Suggestion> kept = new ArrayList<>(replies.kept());
-        final Map<String, Refusal> refused = refusedOf(replies);
+        final Map<String, Refusal> refused = replies.refusedNotAnswered();
         if (refused.isEmpty()) {
             return Result.ok(kept);
         }
@@ -311,19 +319,9 @@ public final class SuggestTargets {
         final List<Suggestion> retried =
                 Objects.requireNonNull(second.data(), "replies").kept();
         log.info("Suggestion batch {}: {} of {} refused renderings replaced", index, retried.size(), refused.size());
+        run.setting().rejected().accept(Math.max(0, refused.size() - retried.size()));
         kept.addAll(retried);
         return Result.ok(kept);
-    }
-
-    // The refusals of a reply by entry id, leaving out an entry the same reply also answered acceptably.
-    private static Map<String, Refusal> refusedOf(final Replies replies) {
-        final Set<String> answered = new HashSet<>();
-        replies.kept().forEach(suggestion -> answered.add(suggestion.entry().id()));
-        final Map<String, Refusal> refused = new LinkedHashMap<>();
-        replies.refused().stream()
-                .filter(refusal -> !answered.contains(refusal.entry().id()))
-                .forEach(refusal -> refused.putIfAbsent(refusal.entry().id(), refusal));
-        return refused;
     }
 
     private Result<Replies> exchange(

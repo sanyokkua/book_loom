@@ -68,7 +68,7 @@ class ProgressResultsTest extends ProgressResultsTestBase {
     // IF the Steps tab were missing, THEN a person could not see where the minutes of the pass went.
     @Test
     void tabs_opened_areChangesThenSteps() {
-        show(ofPass(new int[] {0, 6, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
+        show(ofPass(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
 
         final TabPane tabs = (TabPane) required("results-tabs");
 
@@ -79,15 +79,15 @@ class ProgressResultsTest extends ProgressResultsTestBase {
                 .isZero();
     }
 
-    // IF the Steps tab listed requests, THEN a pass of forty calls would bury its eight stages.
+    // IF the Steps tab listed requests, THEN a pass of forty calls would bury its nine stages.
     @Test
-    void tabs_stepsSelected_listsTheEightStepsWithTheirCounts() {
-        show(ofPass(new int[] {0, 6, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
+    void tabs_stepsSelected_listsTheNineStepsWithTheirCounts() {
+        show(ofPass(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0}, added(0, "Mid")));
 
         selectTab(1);
 
         final ListView<?> steps = (ListView<?>) required("results-steps");
-        assertThat(ThemeTestSupport.onFx(() -> steps.getItems().size())).isEqualTo(8);
+        assertThat(ThemeTestSupport.onFx(() -> steps.getItems().size())).isEqualTo(9);
         assertThat(texts())
                 .contains(
                         "Find candidates in the book",

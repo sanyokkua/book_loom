@@ -1,10 +1,12 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
@@ -172,10 +174,44 @@ public record BriefSuggestion(
             final List<String> pending = proof == null || proof.isKept() ? List.of() : proof.quotes();
             return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.NONE, pending);
         }
-        if (proof == null || !proof.isKept() || proof.quotes().isEmpty()) {
+        if (proof == null
+                || !proof.isKept()
+                || proof.isLikely()
+                || proof.quotes().isEmpty()) {
             return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.SUGGESTED, List.of());
         }
         return new Narrator(narrator, narratorGender, Narrator.GenderOrigin.VERIFIED, proof.quotes());
+    }
+
+    /**
+     * The brief fields this suggestion fills with only the model's most probable value, which the brief marks likely
+     * until the person confirms or changes them ({@code specs/book-brief/spec.md} "Mark a suggested field likely unless
+     * its basis holds"): a field whose evidence is {@link FieldEvidence.Basis#LIKELY}, and the narrator when its gender
+     * is only suggested.
+     *
+     * @return never null; empty when every filled field stands on a basis the code checked
+     */
+    public Set<ua.bookloom.api.project.BriefField> likelyFields() {
+        final Set<ua.bookloom.api.project.BriefField> likely = EnumSet.noneOf(ua.bookloom.api.project.BriefField.class);
+        evidence.forEach((field, proof) -> {
+            if (proof.isLikely()) {
+                likely.add(briefFieldOf(field));
+            }
+        });
+        if (narrator != NarratorPerson.UNSPECIFIED && suggestedNarrator().hasSuggestedGender()) {
+            likely.add(ua.bookloom.api.project.BriefField.NARRATOR);
+        }
+        return Set.copyOf(likely);
+    }
+
+    private static ua.bookloom.api.project.BriefField briefFieldOf(final BriefField field) {
+        return switch (field) {
+            case GENRE -> ua.bookloom.api.project.BriefField.GENRE;
+            case REGISTER -> ua.bookloom.api.project.BriefField.REGISTER;
+            case VOICE -> ua.bookloom.api.project.BriefField.VOICE_ERA;
+            case AUDIENCE -> ua.bookloom.api.project.BriefField.AUDIENCE;
+            case NARRATOR, NARRATOR_GENDER -> ua.bookloom.api.project.BriefField.NARRATOR;
+        };
     }
 
     private static boolean contradicts(final NarratorPerson person, final String voice) {

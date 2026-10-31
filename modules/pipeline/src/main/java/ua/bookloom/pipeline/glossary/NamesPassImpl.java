@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -114,9 +115,15 @@ public final class NamesPassImpl implements NamesPass {
             GlossaryServiceImpl glossaryService,
             LexiconServiceImpl lexiconService) {}
 
-    /** What one pass sends its calls through, and the ledger's mark its calls are counted from. */
+    /** What one pass calls through, the ledger mark its calls count from, and its refused renderings' count. */
     private record Run(
-            Stage stage, ChatModel model, NamesPassSteps counter, ModelCalls calls, Instant started, long mark) {}
+            Stage stage,
+            ChatModel model,
+            NamesPassSteps counter,
+            ModelCalls calls,
+            Instant started,
+            long mark,
+            AtomicInteger rejected) {}
 
     @Override
     public Result<NamesEstimate> estimate(final String projectId) {
@@ -147,7 +154,8 @@ public final class NamesPassImpl implements NamesPass {
                     final int window = ModelWindows.of(model, detectedContext);
                     log.debug("Names pass window={} detected={}", window, detectedContext);
                     final ModelCalls calls = stage.scans().calls(stoppable, counter, stage.book(), window);
-                    final Run run = new Run(stage, stoppable, counter, calls, clock.instant(), ledger.mark());
+                    final Run run = new Run(
+                            stage, stoppable, counter, calls, clock.instant(), ledger.mark(), new AtomicInteger());
                     final Result<NamesPassReport> result = execute(run);
                     PrepSummary.log("names", projectId, CallKindTotals.of(ledger.since(run.mark())));
                     return result;
@@ -214,6 +222,8 @@ public final class NamesPassImpl implements NamesPass {
                             NamesPassStage.NAMES.code(),
                             () -> stage.scans().decide(stage.projectId(), stage.book(), run.calls()));
                 })
+                .flatMap(reviewed -> step(run, NamesPassStage.NAMES_KNOWLEDGE.code(), () -> knowledge(run))
+                        .map(known -> reviewed))
                 .flatMap(reviewed -> readTerms(run)
                         .flatMap(read -> translate(run, reviewed))
                         .flatMap(translated -> finish(run, reviewed)));
@@ -229,6 +239,16 @@ public final class NamesPassImpl implements NamesPass {
                 estimate.minutesLow(),
                 estimate.minutesHigh());
         return estimate.calls();
+    }
+
+    // The bare names nobody settled, asked after the readings so the book's and the rules' values are in; the
+    // answers go to the staged copy as likely values (design D5).
+    private Result<Integer> knowledge(final Run run) {
+        final Stage stage = run.stage();
+        return new NameKnowledgeCalls(templates, mapper)
+                .applied(stage.names().entries(), stage.book().frame(), run.calls())
+                .flatMap(applied -> stage.names().putAll(stage.projectId(), applied))
+                .map(List::size);
     }
 
     // The recurring terms: the held ones without a rendering are read first, so a term the model drops is not asked
@@ -265,7 +285,13 @@ public final class NamesPassImpl implements NamesPass {
                         run,
                         NamesPassStage.NAMES_TRANSLATE.code(),
                         () -> NamesTranslation.run(
-                                stage.names(), stage.scans(), projectId, stage.book(), reviewed, run.calls()))
+                                stage.names(),
+                                stage.scans(),
+                                projectId,
+                                stage.book(),
+                                reviewed,
+                                run.calls(),
+                                run.rejected()::addAndGet))
                 .flatMap(locked -> step(
                         run,
                         NamesPassStage.TERMS_TRANSLATE.code(),
@@ -298,6 +324,7 @@ public final class NamesPassImpl implements NamesPass {
                     terms.changed().size(),
                     run.counter().calls(),
                     elapsed);
+            NamesPassCounts.write(stage.names().entries(), run.rejected().get());
             return new NamesPassReport(names, terms, run.counter().calls(), elapsed, untranslated(stage));
         });
     }

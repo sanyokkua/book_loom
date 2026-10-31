@@ -11,11 +11,12 @@ class NamesPassStageTest {
     // IF the order differed from the buttons' order, THEN the dialog would list steps in a sequence the pass never
     // runs.
     @Test
-    void codes_inOrder_areTheEightPassStages() {
+    void codes_inOrder_areTheNinePassStages() {
         assertThat(Arrays.stream(NamesPassStage.values()).map(NamesPassStage::code))
                 .containsExactly(
                         "scan",
                         "names",
+                        "names-knowledge",
                         "terms-scan",
                         "terms-review",
                         "terms-read",

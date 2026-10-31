@@ -27,10 +27,11 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
  * detector cannot tell, the narrator are kept by a strict majority of all the windows read, so a window whose answer
  * was refused counts against every value; the narrator's person is the detector's when it answers, because it counted
  * every chapter; the narrator's gender is kept from verified votes when none contradicts another, one being enough. The
- * genre, audience and voice come from the one synthesis call and stand only on a basis the code checks: two cited
- * windows whose reading of the field says the value, accepted knowledge of the book that agrees with the value, or one
- * cited window when that knowledge agrees or that one window holds every line of the story. Anything else is empty and
- * uncertain.
+ * genre, audience and voice come from the one synthesis call and stand unmarked only on a basis the code checks: two
+ * cited windows whose reading of the field says the value, accepted knowledge of the book that agrees with the value,
+ * or one cited window when that knowledge agrees or that one window holds every line of the story. Any other value the
+ * synthesis gave is kept as the model's most probable one and marked likely; only a field the synthesis gave no valid
+ * value is empty and uncertain. A register with no majority takes the synthesis's register the same way.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -60,21 +61,39 @@ final class BriefDecision {
     record Text(@Nullable String value, FieldEvidence evidence) {}
 
     /**
-     * The register by a strict majority of the windows read.
+     * The register by a strict majority of the windows read; without one, the synthesis's most probable register,
+     * marked likely.
      *
      * @param windows each window's verified answers, null for a window whose reply could not be read
-     * @return the register, neutral and uncertain when no value has a strict majority
+     * @param synthesis the synthesis reply, or null when the call failed, was skipped or its reply could not be read
+     * @return the register; the synthesis's and likely when no value has a strict majority; neutral and uncertain when
+     *     the synthesis gave none either
      */
-    static Decided<Register> register(final List<@Nullable Map<BriefField, Answer>> windows) {
+    static Decided<Register> register(
+            final List<@Nullable Map<BriefField, Answer>> windows, final @Nullable JsonNode synthesis) {
         final Text word = majority(BriefField.REGISTER, windows);
+        final Text decided = word.value() == null ? likelyRegister(word.evidence(), synthesis) : word;
         final Register register =
-                switch (word.value() == null ? "" : word.value()) {
+                switch (decided.value() == null ? "" : decided.value()) {
                     case "formal" -> Register.FORMAL_LITERARY;
                     case "casual" -> Register.CASUAL;
                     default -> Register.NEUTRAL;
                 };
-        logged(BriefField.REGISTER, register, word.evidence());
-        return new Decided<>(register, word.evidence());
+        logged(BriefField.REGISTER, register, decided.evidence());
+        return new Decided<>(register, decided.evidence());
+    }
+
+    // A split register takes the synthesis's most probable word, so it is filled and marked likely, not left neutral.
+    private static Text likelyRegister(final FieldEvidence split, final @Nullable JsonNode synthesis) {
+        final JsonNode node = synthesis == null ? null : synthesis.get(BriefReplies.wireName(BriefField.REGISTER));
+        final String value =
+                node == null ? "" : node.path("value").asText("").strip().toLowerCase(Locale.ROOT);
+        if (!BriefSynthesisSchema.REGISTERS.contains(value)) {
+            log.debug("Register split and the synthesis gave no register");
+            return new Text(null, split);
+        }
+        log.debug("Register split: the synthesis's {} is kept as likely", value);
+        return new Text(value, likely(split.agreeing(), split.samples()));
     }
 
     /**
@@ -167,7 +186,8 @@ final class BriefDecision {
      * @param windows each window's verified answers, in passage order, null for an unreadable one
      * @param wholeStory whether the one window read holds every line of the story, so a single cited reading of it
      *     stands for the whole book
-     * @return the value with its basis, or null and uncertain
+     * @return the value with its basis; the value marked likely when no basis holds; or null and uncertain when the
+     *     synthesis gave no valid value
      */
     static Text synthesized(
             final BriefField field,
@@ -197,12 +217,12 @@ final class BriefDecision {
                 knowledgeAgrees,
                 wholeStory);
         final Basis basis = basisOf(cited.size(), wholeStory, knowledgeCited, knowledgeAgrees);
-        final FieldEvidence evidence = basis == Basis.UNCERTAIN
-                ? uncertain(cited.size(), samples)
+        final FieldEvidence evidence = basis == Basis.LIKELY
+                ? likely(cited.size(), samples)
                 : new FieldEvidence(basis, quotesOf(field, cited, windows), cited.size(), samples);
-        log.info("Brief field {} decided: kept={} {}", field, evidence.isKept(), evidence.describe());
+        log.info("Brief field {} decided: {}", field, evidence.describe());
         log.trace("Brief field {} value '{}'", field, value);
-        return new Text(evidence.isKept() ? value : null, evidence);
+        return new Text(value, evidence);
     }
 
     /**
@@ -233,7 +253,7 @@ final class BriefDecision {
         if (knowledgeAgrees && (knowledgeCited || cited == 1)) {
             return Basis.KNOWLEDGE;
         }
-        return cited == 1 && wholeStory ? Basis.PASSAGES : Basis.UNCERTAIN;
+        return cited == 1 && wholeStory ? Basis.PASSAGES : Basis.LIKELY;
     }
 
     // The value in the brief's own words, or null for an empty one or one outside the field's list or length.
@@ -346,6 +366,11 @@ final class BriefDecision {
 
     private static void logged(final BriefField field, final Object value, final FieldEvidence evidence) {
         log.info("Brief field {} decided: {} {}", field, value, evidence.describe());
+    }
+
+    // The model's most probable value with no basis the code could check: kept, shown as likely, quoting nothing.
+    private static FieldEvidence likely(final int agreeing, final int samples) {
+        return new FieldEvidence(Basis.LIKELY, List.of(), Math.min(agreeing, samples), samples);
     }
 
     private static FieldEvidence uncertain(final int agreeing, final int samples) {

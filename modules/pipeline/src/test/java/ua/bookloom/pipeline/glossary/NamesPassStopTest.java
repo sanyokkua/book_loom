@@ -108,12 +108,12 @@ class NamesPassStopTest extends NamesPassTestBase {
     // words, and two rendering batches each for names and terms with their re-asks — 17 calls, one to two minutes
     // at Balanced's 3.5-5.7 s a call (15i.M1).
     @Test
-    void estimate_seededBookAtBalanced_isSeventeenCallsAndOneToTwoMinutes() {
+    void estimate_seededBookAtBalanced_isEighteenCallsAndTwoMinutes() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         final Result<NamesEstimate> estimate = fixture.pass().estimate(PROJECT);
 
-        assertThat(estimate.data()).isEqualTo(new NamesEstimate(17, 1, 2));
+        assertThat(estimate.data()).isEqualTo(new NamesEstimate(18, 2, 2));
     }
 
     @Test

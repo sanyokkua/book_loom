@@ -77,7 +77,7 @@ class ContextPackageReplayTest {
     // IF a snapshot line forgot the gender was only a guess, THEN a retry would show the model the guess as the
     // person's word (15i.T1).
     @Test
-    void replay_snapshotWithASuggestedGender_showsItAsLikelyAndAPlaceWithNoGender() {
+    void replay_snapshotWithASuggestedGender_leavesTheGuessOutAndAPlaceWithNoGender() {
         final ContextSnapshot snapshot = new ContextSnapshot(
                 List.of(),
                 List.of(
@@ -91,7 +91,6 @@ class ContextPackageReplayTest {
         final DraftContext replayed =
                 ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, List.of()), segment);
 
-        assertThat(replayed.glossaryLines())
-                .containsExactly("Hale → Хейл (character, likely male)", "Milton → Мілтон (place)");
+        assertThat(replayed.glossaryLines()).containsExactly("Hale → Хейл (character)", "Milton → Мілтон (place)");
     }
 }

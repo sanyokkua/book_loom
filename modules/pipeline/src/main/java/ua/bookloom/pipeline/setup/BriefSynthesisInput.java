@@ -14,7 +14,8 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
 
 /**
  * What the brief's synthesis call reads (15i.B4): the book's facts, the knowledge only when its verdict accepted it, and
- * one report per window holding the window's verified readings of genre, audience and voice with their quotes. An
+ * one report per window holding the window's verified readings of genre, audience, voice, register and the narrator
+ * with their quotes, and the quotes that name the narrator by a name nobody could verify yet. An
  * answer the code refused never reaches the model, so a quote the book lacks or a refused knowledge cannot steer it.
  */
 @Slf4j
@@ -22,8 +23,14 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class BriefSynthesisInput {
 
-    private static final List<BriefField> SYNTHESIZED =
-            List.of(BriefField.GENRE, BriefField.AUDIENCE, BriefField.VOICE);
+    // Every field the synthesis decides or reads: the narrator's person tells it whether a gender is wanted.
+    private static final List<BriefField> REPORTED = List.of(
+            BriefField.GENRE,
+            BriefField.AUDIENCE,
+            BriefField.VOICE,
+            BriefField.REGISTER,
+            BriefField.NARRATOR,
+            BriefField.NARRATOR_GENDER);
 
     /**
      * The user template's values.
@@ -89,7 +96,7 @@ final class BriefSynthesisInput {
         if (window == null) {
             return "no reading.";
         }
-        final String readings = SYNTHESIZED.stream()
+        final String readings = REPORTED.stream()
                 .map(field -> reading(field, window.get(field)))
                 .collect(Collectors.joining("; "));
         return readings + ".";
@@ -97,8 +104,11 @@ final class BriefSynthesisInput {
 
     private static String reading(final BriefField field, final @Nullable Answer answer) {
         final String name = BriefReplies.wireName(field);
-        if (answer == null || answer.isNeutral()) {
+        if (answer == null || (answer.isNeutral() && answer.quote().isBlank())) {
             return name + " nothing shown";
+        }
+        if (answer.isNeutral()) {
+            return name + " not proved (quote: \"" + answer.quote() + "\")";
         }
         return name + " \"" + answer.value() + "\" (quote: \"" + answer.quote() + "\")";
     }

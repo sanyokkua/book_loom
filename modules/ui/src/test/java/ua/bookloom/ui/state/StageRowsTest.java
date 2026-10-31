@@ -23,10 +23,10 @@ class StageRowsTest {
 
     // IF a request were counted under the wrong stage, THEN the dialog would blame the wrong step for the time.
     @Test
-    void of_passAtFifthStage_countsEachStagesRequestsAndListsEightRows() {
+    void of_passAtFifthStage_countsEachStagesRequestsAndListsNineRows() {
         final StageRows rows = StageRows.of(PassEvents.logUpTo(new int[] {0, 6, 0, 3, 25}, 4, 49));
 
-        assertThat(counts(rows)).containsExactly(0, 6, 0, 3, 25, 0, 0, 0);
+        assertThat(counts(rows)).containsExactly(0, 6, 0, 3, 25, 0, 0, 0, 0);
         assertThat(labels(rows)).containsExactlyElementsOf(PassEvents.CODES);
         assertThat(rows.rows().get(5).isPending()).isTrue();
     }

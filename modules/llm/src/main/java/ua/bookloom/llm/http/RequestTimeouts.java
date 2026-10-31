@@ -78,7 +78,8 @@ public final class RequestTimeouts {
                     BOOK_KNOWLEDGE,
                     BRIEF_SYNTHESIS,
                     TERM_READING,
-                    TERM_CHOICE -> CallLimits.HELPER_TIMEOUT;
+                    TERM_CHOICE,
+                    NAME_KNOWLEDGE -> CallLimits.HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION -> null;
         };
     }
