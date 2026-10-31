@@ -1,0 +1,371 @@
+{
+ "about": "Invented for arm 4a (redesign task 7.8): bare person names, English-looking and Russian-looking, each asked through the production name-knowledge prompt with no book text. A gendered name carries the gender its form and its given name point to; a unisex name (a given name used for both, or a bare surname with no gendered ending) carries no gold gender and is right only when answered below 0.7. No name comes from a book.",
+ "names": [
+  {
+   "term": "Theobric Hale",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Gorvan Pike",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Edrun Moss",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Halbrecht Ure",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Marrick Thorne",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Osric Penhallow",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Dunstan Varr",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Leofric Amble",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Bertrand Quell",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Tomasz Wirrel",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Garret Holloway",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Ivo Brandreth",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Rodric Fenn",
+   "language": "en",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Elowyn Marsh",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Rosalind Kettering",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Isadora Venn",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Marisette Crane",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Annelie Dovecote",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Gwendolyn Pask",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Lisette Harrowgate",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Mirabel Stowe",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Henrietta Brisk",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Celestine Ombry",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Wilhelmina Ruddock",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Josette Laine",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Evangeline Tarrow",
+   "language": "en",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Robin Ashgrove",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Morgan Hythe",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Riley Tavish",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Quinn Ellery",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Avery Stoke",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Rowan Dace",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Emerson Lyle",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Sasha Merrow",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Mallowby",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Kestridge",
+   "language": "en",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Всеслав Кудрин",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Ермолай Стрешнев",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Тихомир Ловчиков",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Прохор Залесский",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Добрыня Кречетов",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Филимон Сивцов",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Аникей Ростовцев",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Евстафий Бурцев",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Лукьян Ольховский",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Святогор Белозёров",
+   "language": "ru",
+   "gender": "male",
+   "unisex": false
+  },
+  {
+   "term": "Агафья Сомова",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Евпраксия Лебедина",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Мелания Курбатова",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Василиса Тернова",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Ульяна Звягинцева",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Прасковья Дымова",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Ефросинья Холмская",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Аграфена Ветлугина",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Олимпиада Рябцева",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Пелагея Островская",
+   "language": "ru",
+   "gender": "female",
+   "unisex": false
+  },
+  {
+   "term": "Саша Ковальчук",
+   "language": "ru",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Женя Шевчик",
+   "language": "ru",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Валя Демченко",
+   "language": "ru",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Ковтуненко",
+   "language": "ru",
+   "gender": null,
+   "unisex": true
+  },
+  {
+   "term": "Зарецких",
+   "language": "ru",
+   "gender": null,
+   "unisex": true
+  }
+ ]
+}

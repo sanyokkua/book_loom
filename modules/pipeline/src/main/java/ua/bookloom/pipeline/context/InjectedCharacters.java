@@ -154,7 +154,8 @@ public final class InjectedCharacters {
 
     // The one switch point for a gender on the sheet: the checks read every gender a line states as one to hold the
     // text to, so only the person's and the book's are stated; a rule's or a likely gender lists the name alone (a
-    // rule's still reaches the model on the glossary line). Arm 4b (task 7.8) decides whether a likely hint may return.
+    // rule's still reaches the model on the glossary line). Arm 4b (task 7.8) kept the name alone: a "(likely)" hint
+    // brought no fewer gender-agreement errors (docs/DEVELOPMENT.md#redesign-arms).
     private static boolean isStated(final GlossaryEntry entry) {
         final Origin origin = entry.genderOrigin();
         return origin != null && origin.isEnforced();

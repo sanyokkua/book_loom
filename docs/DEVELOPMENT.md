@@ -1041,6 +1041,64 @@ until group 10 wires the profile's `batchSize`. `gemma4:26b-mlx` was not run: a 
   patterns `SequenceLogCapture` uses (`Batch item falls back …`, `Evaluated segment=… round=0 … hardGatesPass=false`), and the first
   repeat's counts match the report's.
 
+**Arm 4a: what a model knows about a bare name (task 7.8).** The production name-knowledge stage (`NameKnowledgeCalls`, the
+`name-knowledge` templates, batches of 40, no book text) asked about the 61 invented names of
+`modules/pipeline/src/test/resources/eval/datasets/bare-names/names.json` (dataset `bare-names` v1, root hash `15f24644de82…`): 26
+English-looking and 20 Russian-looking names with a gold gender, and 15 unisex ones (given names used for both, or a bare surname with
+no gendered ending) with none. The English names go out in an en→uk frame and the Russian ones in a ru→uk frame, as a book of
+each language asks them (`BareNamesEvalTest`, `BOOKLOOM_EVAL_SUITE=bare-names`, scored by `BareNamesScore`). Ollama, single-flight.
+
+| Run | Answered | Confident (≥ 0.7) gendered | of them wrong | Unisex answered ≥ 0.7 | Rule |
+|---|---|---|---|---|---|
+| `gemma4:e4b-mlx`, K = 3 (seeds 1000–1002) | 61/61 each | 45 each | 0 (0 %) | 0/15 each | pass |
+| `gemma4:26b-mlx`, K = 1 | 61/61 | 46 | 0 (0 %) | 0/15 | pass |
+
+- *Decision rule.* A model class keeps its likely values in prompts only if at most 5 % of its confident answers are wrong and
+  every unisex name is answered below 0.7. Both classes pass, so **no `NO_KNOWLEDGE_HINT` quirk is set** and the profile code is
+  unchanged. Both models answered every unisex name "neuter" at 0.4–0.6 (the prompt allows no "unknown"); e4b also gave the
+  gendered `Edrun Moss` "neuter" at 0.6, its one gendered name below the bar. e4b's three repeats answered identically.
+- *Runs* (`.temporary_context/eval-history/`): `20261031-224420-bare-names-gemma4_e4b-mlx-arm4a`,
+  `20261031-232345-bare-names-gemma4_26b-mlx-arm4a`; logs in `.temporary_context/arm4/logs/`.
+
+**Arm 4b: the likely-gender hint on the character line (task 7.8).** Default: a character whose gender is only likely is listed
+by name alone (`Pell`). Alternative: `Pell — male (likely)`, which no check enforces. The alternative reached the job's prompts
+through a test-only `PromptVariants.likelyGenders` field (bound by `BOOKLOOM_EVAL_VARIANTS=likelyGenders=HINT`); the hint lines
+were seen in the calls of every hint run and in none of the default runs. Translator on Ollama, Balanced, single-flight, the `mini`
+suite (`mini-en` v2 root `febe1374fd3a…`, `mini-ru` v2 root `852efa31cc1e…`).
+
+- *Characters with no evidence.* The mini books' scan keeps no such character (Pell is left out of `mini-en`'s glossary), so each
+  run adds them after the names pass, as the person does with "+ Add", and runs the name-knowledge stage on them as "Review with
+  model" does (`BOOKLOOM_EVAL_ADD_CHARACTERS`, `MiniRunner`): `Pell` in `mini-en`; `Игнат`, `Ивар` and `Але́ксей` in `mini-ru`.
+  Adding them before the names pass was tried first and dropped: a glossary that is not empty is not scanned, so the book's own
+  characters were lost. Every added character ended the names stage likely male, except Pell on 26b, likely neuter (the hint then
+  read `Pell — neuter (likely)`). `Мирена` stayed likely in every `mini-ru` run and `Велемир` in the 26b one, so they were hinted too.
+- *Scored segments*, fixed before the runs were read: every segment that names a character whose gender was likely in the run —
+  `mini-en` m06, m11, m23, m33 (Pell, gold male from m33's "he"); `mini-ru` ch02.md:4, :6, :8, :10, :14, :16 (Игнат, Але́ксей and
+  Ивар male, Мирена female). A gender-agreement error is a past verb, adjective or pronoun in the Ukrainian that agrees with one of
+  them in the wrong gender. The agent read every repeat of both sides (`.temporary_context/arm4/arm4b-scored-segments.txt`).
+
+| Gender-agreement errors (segment-repeats read) | Name only (default) | Hint |
+|---|---|---|
+| e4b, `mini-en`, K = 3 | 0 (12) | 0 (12) |
+| e4b, `mini-ru`, K = 3 | 0 (18) | 0 (18) |
+| 26b, `mini-en`, K = 1 | 0 (4) | 0 (4) |
+| 26b, `mini-ru`, K = 1 | 0 (6) | 0 (6) |
+
+- *Also reported.* Grader pass rate per repeat, default against hint: e4b `mini-en` 0.947 / 0.947 / 0.965 against 0.965 / 0.947 /
+  0.965, `mini-ru` 0.962 ×3 on both sides; 26b `mini-en` 0.965 and 0.965, `mini-ru` 0.923 against 1.0 (a stress mark kept in
+  ch01.md:15 on the default side, no character in it). Every miss is outside the scored segments. Calls and seconds (first
+  repeat): e4b `mini-en` 24 and 108 s against 25 and 101 s, `mini-ru` 22 and 52 s against 21 and 37 s; 26b `mini-en` 28 and 170 s
+  against 26 and 206 s, `mini-ru` 20 and 95 s against 20 and 72 s.
+- *Decision rule.* The hint is kept only with fewer gender-agreement errors. It has 0 against 0 on both models, so **the name alone
+  stays** (the likely value is still stored and shown); the `likelyGenders` field and its plumbing were deleted, no requirement
+  changes. Why it changed nothing here: English past forms in the source already show the gender the agreement needs ("Pell…
+  said he hoped"), and Russian past forms carry it, so the model never had to guess from the name; a source whose gender shows
+  only through the name is not in the mini books.
+- *Runs* (`.temporary_context/eval-history/`): e4b `20261031-230736`/`-231239` (en), `-231458`/`-231648` (ru); 26b
+  `20261031-232647`/`-233021` (en), `-233204`/`-233327` (ru); default first in each pair. The aborted first batch (no likely
+  character in `mini-en`) and the pilots are in `.temporary_context/arm4/void-runs/` and are not counted. `MiniReport` now writes
+  every repeat's stored targets and characters (`repeats`), which these counts were read from.
+
 **Task 3.4: LM Studio and llama-server error rows.** The fixtures under `modules/llm/src/test/resources/errors/lmstudio/`
 and `errors/llamacpp/` are named `<name>.<status>.json|sse` and hold only the server's own sentences. None of them was
 recorded from a running server in this task, so every status is, for now, taken from the research folder or chosen by

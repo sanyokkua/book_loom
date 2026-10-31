@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,9 @@ import ua.bookloom.api.project.NamePolicy;
  * (default {@code BALANCED}) and {@code BOOKLOOM_EVAL_WINDOW} pass through; {@code BOOKLOOM_EVAL_NAMES}
  * ({@code TRANSLITERATE}, the default, {@code TRANSLATE} or {@code KEEP_ORIGINAL}) is the brief's name policy, which
  * decides what the brand expectations demand. {@code BOOKLOOM_EVAL_PAIR} ({@code en-uk}, the default, reads
- * {@code mini-en}; {@code ru-uk} reads {@code mini-ru}) picks the dataset. It asserts no floor; the report lands in
+ * {@code mini-en}; {@code ru-uk} reads {@code mini-ru}) picks the dataset. {@code BOOKLOOM_EVAL_ADD_CHARACTERS} (terms
+ * separated by commas) adds characters with no gender after the names pass and asks the model for their likely gender, as the
+ * person would (arm 4b). It asserts no floor; the report lands in
  * {@code build/reports/promptEval/<model>-mini-<pair>-<dial>-<policy>.json} and {@code .txt}, and the history folder
  * carries the same pair, dial and policy label.
  */
@@ -60,6 +63,16 @@ class MiniEvalTest {
         assertThat(run.outcomes()).as(report.table()).isNotEmpty();
     }
 
+    // BOOKLOOM_EVAL_ADD_CHARACTERS: terms, separated by commas, added as characters after the names pass (arm 4b).
+    private static List<String> added() {
+        return Arrays.stream(System.getenv()
+                        .getOrDefault("BOOKLOOM_EVAL_ADD_CHARACTERS", "")
+                        .split(","))
+                .map(String::strip)
+                .filter(term -> !term.isEmpty())
+                .toList();
+    }
+
     private static void write(
             final String model, final String label, final EvalPair pair, final EvalRepeats.Runs<MiniReport> runs)
             throws IOException {
@@ -75,7 +88,7 @@ class MiniEvalTest {
                         .withAggregates(runs.aggregates()),
                 name,
                 report.table(),
-                report.json(),
+                MiniReport.json(runs.results(), runs.seeds()),
                 Path.of("build", "reports", "promptEval"),
                 EvalOutput.historyRoot(System.getenv(), EvalProvenance.repoRoot()),
                 cases);
@@ -89,7 +102,7 @@ class MiniEvalTest {
             final NamePolicy policy,
             final String dataset) {
         try {
-            final MiniRun run = new MiniRunner(MiniBook.load(dataset), dial, policy, EvalWindow.window())
+            final MiniRun run = new MiniRunner(MiniBook.load(dataset), dial, policy, EvalWindow.window(), added())
                     .run(seeded, Files.createTempDirectory(workDir, "repeat"));
             return new MiniReport(
                     model,

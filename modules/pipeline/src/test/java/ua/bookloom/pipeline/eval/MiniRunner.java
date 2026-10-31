@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -15,18 +16,25 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
 import ua.bookloom.pipeline.eval.MiniBook.Block;
 import ua.bookloom.pipeline.eval.MiniRun.Calls;
 import ua.bookloom.pipeline.eval.MiniRun.Outcome;
+import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
+import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
@@ -43,6 +51,7 @@ final class MiniRunner {
     private final QualityDial dial;
     private final NamePolicy policy;
     private final @Nullable Integer window;
+    private final List<String> added;
 
     /**
      * Creates the runner.
@@ -53,10 +62,27 @@ final class MiniRunner {
      * @param window the context window the provider is taken to report, or null for the run's default
      */
     MiniRunner(final MiniBook book, final QualityDial dial, final NamePolicy policy, @Nullable final Integer window) {
+        this(book, dial, policy, window, List.of());
+    }
+
+    /**
+     * Creates a runner that adds some characters after the names pass, as the person adds them with "+ Add" (no target,
+     * no gender), and asks the name-knowledge stage about them, as "Review with model" does (arm 4b, task 7.8, adds the
+     * characters the scan leaves out).
+     *
+     * @param added the terms added as characters; one already in the glossary is left as it is
+     */
+    MiniRunner(
+            final MiniBook book,
+            final QualityDial dial,
+            final NamePolicy policy,
+            @Nullable final Integer window,
+            final List<String> added) {
         this.book = Objects.requireNonNull(book, "book");
         this.dial = Objects.requireNonNull(dial, "dial");
         this.policy = Objects.requireNonNull(policy, "policy");
         this.window = window;
+        this.added = List.copyOf(added);
     }
 
     /**
@@ -73,7 +99,7 @@ final class MiniRunner {
         final StageProbe probe = new StageProbe(model);
         final List<String> errors = new ArrayList<>();
         final Instant started = Instant.now();
-        final int names = WholeBookStages.namesPass(prepared, probe, window, errors);
+        final int names = WholeBookStages.namesPass(prepared, probe, window, errors) + addCharacters(prepared, probe);
         final int afterNames = probe.mark();
         final JobState end = WholeBookStages.translate(prepared, probe, window, errors);
         final int afterJob = probe.mark();
@@ -90,6 +116,51 @@ final class MiniRunner {
         final Narrator narrator =
                 new Narrator(book.narrator().person(), book.narrator().gender());
         return SequenceJobs.brief(book.sourceLanguage(), book.targetLanguage(), dial, narrator, policy);
+    }
+
+    // After the names pass, as the person adds a character the scan left out and then asks "Review with model": the
+    // name-knowledge stage gives each added one its likely gender. Returns the calls it made.
+    private int addCharacters(final Prepared prepared, final StageProbe probe) {
+        if (added.isEmpty()) {
+            return 0;
+        }
+        final int mark = probe.mark();
+        final GlossaryRepository glossary = prepared.stores().glossary();
+        added.forEach(term -> addCharacter(glossary, prepared.projectId(), term));
+        final List<GlossaryEntry> held =
+                Objects.requireNonNull(glossary.all(prepared.projectId()).data(), "glossary");
+        final CallFrame frame = new CallFrame(
+                book.sourceLanguage(),
+                book.targetLanguage(),
+                StyleSheet.from(BookBrief.defaults(book.sourceLanguage())),
+                ForeignPassagePolicy.KEEP);
+        final Result<List<GlossaryEntry>> answered = new NameKnowledgeCalls(
+                        EvalVariants.templates(), new ObjectMapper())
+                .applied(held, frame, probe.calls(book.targetLanguage()));
+        Objects.requireNonNull(answered.data(), () -> "name knowledge: " + answered.error())
+                .forEach(entry -> Objects.requireNonNull(glossary.update(entry).data(), "update"));
+        return probe.mark() - mark;
+    }
+
+    // A term already in the glossary is left as it is.
+    private static void addCharacter(final GlossaryRepository glossary, final String projectId, final String term) {
+        final boolean held = Objects.requireNonNull(
+                        glossary.findByTerm(projectId, term).data(), "find")
+                .isPresent();
+        log.info("Mini eval adds character term={} alreadyHeld={}", term, held);
+        if (!held) {
+            Objects.requireNonNull(
+                    glossary.add(GlossaryEntry.of(
+                                    projectId + ":" + term,
+                                    projectId,
+                                    term,
+                                    null,
+                                    TermType.CHARACTER,
+                                    Gender.UNKNOWN,
+                                    false))
+                            .data(),
+                    "added");
+        }
     }
 
     private void consistency(final Prepared prepared, final StageProbe probe, final List<String> errors) {

@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.project.TermType;
 
 /**
  * What the mini suite measured for one model, in the files the other suites write to {@code build/reports/promptEval}.
@@ -116,6 +117,43 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
                 throw new UncheckedIOException(e);
             }
         });
+    }
+
+    /**
+     * The first report's JSON with every repeat's stored targets and characters, so a K-run report keeps what each
+     * repeat decided and with which gender origins (arm 4b reads both).
+     *
+     * @param reports one report per repeat, in repeat order; not empty
+     * @param seeds each repeat's seed, in the same order
+     * @return the JSON object as text
+     */
+    static String json(final List<MiniReport> reports, final List<Integer> seeds) {
+        try {
+            final ObjectNode root =
+                    (ObjectNode) MAPPER.readTree(reports.getFirst().json());
+            final ArrayNode repeats = root.putArray("repeats");
+            for (int repeat = 0; repeat < reports.size(); repeat++) {
+                final ObjectNode row = repeats.addObject().put("seed", seeds.get(repeat));
+                final MiniRun each = reports.get(repeat).run();
+                final ObjectNode outputs = row.putObject("outputs");
+                each.outcomes().forEach((id, outcome) -> outputs.put(id, outcome.target()));
+                final ArrayNode characters = row.putArray("characters");
+                each.glossary().stream()
+                        .filter(entry -> entry.type() == TermType.CHARACTER)
+                        .forEach(entry -> characters
+                                .addObject()
+                                .put("term", entry.term())
+                                .put("gender", entry.gender().name())
+                                .put(
+                                        "origin",
+                                        entry.genderOrigin() == null
+                                                ? null
+                                                : entry.genderOrigin().name()));
+            }
+            return root.toString();
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     /** Every block's stored target of this report's run, so a baseline keeps the text of invented books. */
