@@ -27,7 +27,7 @@ import ua.bookloom.api.project.TmEntry;
  * nothing else, and a person's glossary edit and a run's glossary addition never overwrite each other. Continues
  * {@link LexiconContractTest} in its own file by the project's class-length limit.
  */
-public abstract class ProjectStorageContractTest extends LexiconContractTest {
+public abstract class ProjectStorageContractTest extends GlossaryIndexTest {
 
     @Test
     void save_cyrillicNameDifferingByCaseInOneBook_answersValidationAndStoresNothing() {

@@ -266,6 +266,18 @@ pre-scan (`pipeline` phase B) and grown during translation. Terms can be **hard-
 before inference and substituted back on unmask, guaranteeing an exact rendering. Persisted in `glossary`
 (`06_DATA_MODEL_SQLITE.md#glossary`).
 
+An entry is a **lemma entry**: its term is the name's nominative and its forms list the other spellings the book
+uses. The scan reads the source language file's `nameParadigms` rows the other way round (`glossary/NameForms`) and
+groups the forms whose possible nominatives meet: `Велемир`, `Велемира` and `Велемиру` become one entry `Велемир`,
+counted together against the three-use floor. A nominative is accepted when the book writes it and another form agrees,
+or when two forms agree on it though the book never writes it (the entry is then marked `lemmaInferred`); one oblique
+form alone stays as written, and a language with no `nameParadigms` keeps one entry per written form. A form that is
+also another name's nominative (`Велемира`, a woman) is decided mention by mention by the clause around it
+(`glossary/ClauseEvidence`: a past-tense ending after it, a word before it that asks for another case, a gendered form of
+address); a mention the clause leaves open is unsure and gives no gender vote. Every lookup — a duplicate, a held or
+removed term in a scan, a chunk's additions, the Add term dialog, a CSV row, the terms a window carries — compares by
+one key against the lemma and every form; the id stays the project id plus the lemma's key.
+
 ## context-aware-tm {#context-aware-tm}
 
 Translation memory keyed by `(source_hash, context_key)`:

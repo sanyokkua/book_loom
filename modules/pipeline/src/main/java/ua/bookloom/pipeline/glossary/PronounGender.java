@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
@@ -232,6 +233,27 @@ public final class PronounGender {
      * @return the pronouns seen; empty evidence when the language lists no pronouns
      */
     public static Evidence of(final String term, final List<String> texts, @Nullable final String languageTag) {
+        return of(term, texts, languageTag, (text, use) -> true);
+    }
+
+    /**
+     * Counts the pronouns that follow every name of an entry: its lemma and its forms, a form that fits another name
+     * too counted only where the clause decides it for this one ({@link LemmaMentions}).
+     *
+     * @param entry the non-null entry
+     * @param texts the non-null visible texts to read, tokens already removed
+     * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
+     * @return the pronouns seen; empty evidence when the language lists no pronouns
+     */
+    public static Evidence of(final GlossaryEntry entry, final List<String> texts, @Nullable final String languageTag) {
+        return LemmaMentions.evidence(entry, texts, languageTag);
+    }
+
+    static Evidence of(
+            final String term,
+            final List<String> texts,
+            @Nullable final String languageTag,
+            final BiPredicate<String, Mention> keep) {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(texts, "texts");
         final PronounReader reader = PronounReader.of(term, languageTag);
@@ -241,7 +263,9 @@ public final class PronounGender {
         }
         final List<Mention> uses = new ArrayList<>();
         final Predicate<String> namedElsewhere = namedInsideASentence(texts);
-        texts.forEach(text -> uses.addAll(reader.read(text, namedElsewhere)));
+        texts.forEach(text -> reader.read(text, namedElsewhere).stream()
+                .filter(use -> keep.test(text, use))
+                .forEach(uses::add));
         // A surname written after both a man's and a woman's form of address is a family's: those uses are the
         // titled people's, not the bare name's.
         final long titledGenders = uses.stream()
@@ -251,7 +275,7 @@ public final class PronounGender {
                 .distinct()
                 .count();
         final boolean family = titledGenders > 1;
-        final Tally tally = new Tally();
+        final PronounTally tally = new PronounTally();
         uses.stream().filter(use -> use.title() == null || !family).forEach(tally::add);
         log.trace("Pronoun evidence for {}: {} uses, family name {}", term, uses.size(), family);
         return tally.evidence();
@@ -267,34 +291,6 @@ public final class PronounGender {
                 key -> Pattern.compile("[\\p{Ll},;:]\\p{Zs}+" + Pattern.quote(key) + "(?![\\p{L}\\p{M}])")
                         .matcher(book)
                         .find());
-    }
-
-    /** The running lists of one name's pronouns. */
-    private record Tally(List<String> female, List<String> male, List<String> femaleObject, List<String> maleObject) {
-
-        Tally() {
-            this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        }
-
-        void add(final Mention mention) {
-            final Pronoun title = mention.title();
-            if (title != null) {
-                (title.gender() == Gender.FEMALE ? female : male).add(title.word());
-                return;
-            }
-            final Pronoun subject = mention.subject();
-            final Pronoun object = mention.object();
-            if (subject != null) {
-                (subject.gender() == Gender.FEMALE ? female : male).add(subject.word());
-            }
-            if (object != null) {
-                (object.gender() == Gender.FEMALE ? femaleObject : maleObject).add(object.word());
-            }
-        }
-
-        Evidence evidence() {
-            return new Evidence(female, male, femaleObject, maleObject);
-        }
     }
 
     /**
@@ -317,7 +313,7 @@ public final class PronounGender {
         if (!eligible) {
             return entry;
         }
-        final Evidence evidence = of(entry.term(), texts, languageTag);
+        final Evidence evidence = of(entry, texts, languageTag);
         final Optional<Gender> dominant = evidence.dominant();
         if (dominant.isEmpty()) {
             log.debug(

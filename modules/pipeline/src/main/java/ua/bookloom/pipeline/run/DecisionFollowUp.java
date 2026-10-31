@@ -1,10 +1,13 @@
 package ua.bookloom.pipeline.run;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -18,6 +21,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
+import ua.bookloom.pipeline.glossary.ScanEntries;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.revision.DeferralRegister;
@@ -152,12 +156,14 @@ final class DecisionFollowUp {
      */
     private Optional<AppError> scanNames(final WorkList work, final String unitId) {
         final List<Integer> scanned = decidedStory(work);
-        final Result<List<GlossaryEntry>> proposed =
-                FrequencyScan.newTerms(projectId, index, scanned, analysisLanguage, glossary);
-        if (proposed.isErr()) {
-            return Optional.of(Objects.requireNonNull(proposed.error(), "error"));
+        final Result<ScanEntries.Found> found = FrequencyScan.found(
+                        projectId, index, scanned, analysisLanguage, glossary)
+                .flatMap(scan -> extendHeldForms(scan.heldForms()).map(extended -> scan));
+        if (found.isErr()) {
+            return Optional.of(Objects.requireNonNull(found.error(), "error"));
         }
-        final List<GlossaryEntry> proposals = Objects.requireNonNull(proposed.data(), "proposals");
+        final List<GlossaryEntry> proposals =
+                Objects.requireNonNull(found.data(), "found").proposals();
         if (proposals.isEmpty()) {
             logScan(unitId, scanned.size(), 0, 0);
             return Optional.empty();
@@ -173,6 +179,22 @@ final class DecisionFollowUp {
             sinks.emit().accept(MemoryEvents.namesAdded(count));
         }
         return Optional.empty();
+    }
+
+    // A held entry the scan found in a new form lists that form too, so the windows that name only it carry the entry.
+    private Result<Integer> extendHeldForms(final Map<String, List<String>> heldForms) {
+        for (final Map.Entry<String, List<String>> forms : heldForms.entrySet()) {
+            final Result<Optional<GlossaryEntry>> stored = glossary.update(projectId, forms.getKey(), entry -> {
+                final Set<String> all = new LinkedHashSet<>(entry.forms());
+                all.addAll(forms.getValue());
+                return entry.withForms(List.copyOf(all));
+            });
+            if (stored.isErr()) {
+                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+            }
+        }
+        log.debug("Held entry forms extended project={} entries={}", projectId, heldForms.size());
+        return Result.ok(heldForms.size());
     }
 
     // The decided story segments in the order they were decided, as ordinals of the book's index.

@@ -35,7 +35,8 @@ public record NewTerm(String term, String target, TermType type, Gender gender, 
      * @param held the entries the glossary already has
      * @param messages the catalogue the reason is worded from
      * @return the reason in the display language, or empty if the term may be added; checked in the order a blank
-     *     source, a duplicate by its {@link GlossaryKeys} key, then a lock with no target
+     *     source, a duplicate by its {@link GlossaryKeys} key (an entry's lemma or any of its forms), then a lock with
+     *     no target
      */
     Optional<String> refusal(final List<GlossaryEntry> held, final Messages messages) {
         final String source = term.strip();
@@ -43,7 +44,9 @@ public record NewTerm(String term, String target, TermType type, Gender gender, 
             return Optional.of(messages.get(MessageKey.DIALOG_ADD_TERM_REQUIRED));
         }
         final String key = GlossaryKeys.of(source);
-        if (held.stream().anyMatch(row -> GlossaryKeys.of(row.term()).equals(key))) {
+        if (held.stream()
+                .flatMap(row -> row.names().stream())
+                .anyMatch(name -> GlossaryKeys.of(name).equals(key))) {
             return Optional.of(messages.get(MessageKey.NAMES_STYLE_DUPLICATE, source));
         }
         if (locked && target.isBlank()) {

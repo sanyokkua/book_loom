@@ -19,8 +19,9 @@ import ua.bookloom.util.text.GlossaryKeys;
 /**
  * Stores a project's glossary as one {@link GlossaryDocument} in {@code project_docs}. Every change reads, changes
  * and writes the document inside one write transaction on the single writer, so a person's edit and a run's addition
- * made at the same moment both survive ({@code design.md} D9). Terms are matched by their {@link GlossaryKeys} key,
- * and removed terms are kept with the document, so they are still remembered after a restart.
+ * made at the same moment both survive ({@code design.md} D9). Terms are matched by their {@link GlossaryKeys} key
+ * against every lemma and form ({@link ua.bookloom.persistence.GlossaryIndex}), and removed terms are kept with the
+ * document, so they are still remembered after a restart.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -37,7 +38,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     private Result<GlossaryEntry> addIn(final Handle h, final GlossaryEntry entry) {
         final GlossaryDocument doc = load(h, codec, entry.projectId());
-        if (doc.findByKey(GlossaryKeys.of(entry.term())).isPresent()) {
+        if (doc.holderOf(entry).isPresent()) {
             log.debug(
                     "Glossary add refused as duplicate projectId={} termLength={}",
                     entry.projectId(),

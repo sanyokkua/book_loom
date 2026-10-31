@@ -12,11 +12,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
- * Stores a project's glossary over the shared {@link InMemoryStore}, terms matched by their {@link GlossaryKeys} key and a
+ * Stores a project's glossary over the shared {@link InMemoryStore}, terms matched by their {@link GlossaryKeys} key over
+ * every lemma and form ({@link GlossaryIndex}) and a
  * person's removal remembered so a re-proposed name is not silently re-added.
  */
 @Slf4j
@@ -30,8 +32,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(entry, "entry");
         try {
             final ProjectGlossary glossary = store.glossary(entry.projectId());
-            final String key = GlossaryKeys.of(entry.term());
-            if (glossary.findByKey(key).isPresent()) {
+            if (glossary.holderOf(entry).isPresent()) {
                 log.debug(
                         "Glossary add refused as duplicate projectId={} termLength={}",
                         entry.projectId(),
@@ -42,7 +43,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
                         "That term already exists in this project's glossary, ignoring case."));
             }
             glossary.put(entry);
-            glossary.removedKeys().remove(key);
+            GlossaryIndex.keysOf(entry).forEach(glossary.removedKeys()::remove);
             log.debug(
                     "Glossary term added projectId={} entryId={} termLength={}",
                     entry.projectId(),
@@ -93,7 +94,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         try {
             final ProjectGlossary glossary = store.glossary(projectId);
             final Optional<GlossaryEntry> removed = glossary.removeById(entryId);
-            removed.ifPresent(entry -> glossary.removedKeys().add(GlossaryKeys.of(entry.term())));
+            removed.ifPresent(entry -> glossary.removedKeys().addAll(GlossaryIndex.keysOf(entry)));
             log.debug("Glossary remove projectId={} entryId={} removed={}", projectId, entryId, removed.isPresent());
             return Result.ok(removed.isPresent());
         } catch (Throwable cause) {

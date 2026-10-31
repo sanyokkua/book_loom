@@ -17,8 +17,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
-import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * Applies one chunk's decided segments, TM entries, deferrals, glossary additions and run record all together, under the
@@ -111,14 +111,16 @@ public final class InMemoryCheckpoint implements CheckpointPort {
 
     private int applyGlossaryAdditions(final ChunkCommit commit) {
         final ProjectGlossary glossary = store.glossary(commit.projectId());
+        final GlossaryIndex index = GlossaryIndex.of(glossary.allInInsertionOrder());
         int applied = 0;
         for (final GlossaryEntry entry : commit.glossaryAdditions()) {
-            final String key = GlossaryKeys.of(entry.term());
-            if (glossary.findByKey(key).isPresent() || glossary.removedKeys().contains(key)) {
-                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), key);
+            if (index.holderOf(entry).isPresent()
+                    || GlossaryIndex.keysOf(entry).stream().anyMatch(glossary.removedKeys()::contains)) {
+                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), entry.term());
                 continue;
             }
             glossary.put(entry);
+            index.add(entry);
             applied++;
         }
         return applied;

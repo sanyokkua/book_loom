@@ -291,6 +291,20 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(glossary.added()).isEmpty();
     }
 
+    // IF a form the glossary lists for a name were added, THEN the glossary would hold one name twice.
+    @Test
+    void add_formOfAHeldName_refusesWithoutAskingTheService() {
+        showWith(GlossaryEntry.of("e3", PROJECT, "Велемир", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withForms(List.of("Велемира")));
+        final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        run(() ->
+                vm.add(new NewTerm("Велемира", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, refused::add));
+
+        assertThat(refused).containsExactly("Велемира is already in the glossary");
+        assertThat(glossary.added()).isEmpty();
+    }
+
     // IF a lock with no target were accepted from the dialog, THEN the same refusal as the table's would be missing.
     @Test
     void add_lockedWithNoTarget_refusesWithoutAskingTheService() {

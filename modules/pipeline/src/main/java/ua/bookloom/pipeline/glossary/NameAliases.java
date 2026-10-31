@@ -81,13 +81,9 @@ final class NameAliases {
         if (variants.isEmpty()) {
             return base;
         }
-        final int count =
-                base.count() + variants.stream().mapToInt(NameCandidate::count).sum();
-        return new NameCandidate(
-                base.term(),
-                count,
-                base.firstSentence(),
-                variants.stream().map(NameCandidate::term).toList());
+        return base.withAliases(
+                variants.stream().map(NameCandidate::term).toList(),
+                variants.stream().mapToInt(NameCandidate::count).sum());
     }
 
     private static boolean isVariant(

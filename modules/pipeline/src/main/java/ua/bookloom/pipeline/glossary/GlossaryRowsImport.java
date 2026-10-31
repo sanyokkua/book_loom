@@ -56,7 +56,9 @@ record GlossaryRowsImport(
     private Result<List<Integer>> store(
             final String projectId, final List<GlossaryCsv.Row> rows, final List<GlossaryEntry> held) {
         final Map<String, GlossaryEntry> byKey = new HashMap<>();
-        held.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
+        // A row names an entry by its lemma, else by one of its forms ({@code Велемира} edits {@code Велемир}).
+        held.forEach(entry -> byKey.putIfAbsent(GlossaryKeys.of(entry.term()), entry));
+        held.forEach(entry -> entry.forms().forEach(form -> byKey.putIfAbsent(GlossaryKeys.of(form), entry)));
         final List<Integer> refused = new ArrayList<>();
         final List<EntryChange> changes = new ArrayList<>();
         for (final GlossaryCsv.Row row : rows) {

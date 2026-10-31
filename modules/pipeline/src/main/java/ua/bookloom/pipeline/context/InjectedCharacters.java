@@ -19,9 +19,9 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.glossary.NameClusters;
 import ua.bookloom.pipeline.glossary.PronounGender;
-import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
  * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
@@ -71,7 +71,7 @@ public final class InjectedCharacters {
         final NameClusters clusters = NameClusters.of(glossary, null, sourceLanguage);
         final Map<GlossaryEntry, List<GlossaryEntry>> lines = new LinkedHashMap<>();
         for (final GlossaryEntry entry : characters) {
-            if (namedIn(entry.term(), texts)) {
+            if (namedIn(entry, texts)) {
                 headOf(entry, clusters)
                         .ifPresent(head -> lines.computeIfAbsent(head, _ -> new ArrayList<>())
                                 .add(entry));
@@ -135,9 +135,11 @@ public final class InjectedCharacters {
                 shortNames.isEmpty() ? full.term() : full.term() + " (also " + String.join(", ", shortNames) + ")";
         final String likely = full.genderOrigin() == Origin.LIKELY ? CharacterNames.LIKELY + " " : "";
         final String line = name + " — " + likely + full.gender().name().toLowerCase(Locale.ROOT);
-        PronounGender.Evidence evidence = PronounGender.of(full.term(), texts, sourceLanguage);
-        for (final String shortName : shortNames) {
-            evidence = evidence.and(PronounGender.of(shortName, texts, sourceLanguage));
+        PronounGender.Evidence evidence = PronounGender.of(full, texts, sourceLanguage);
+        for (final GlossaryEntry shorter : named) {
+            if (!shorter.equals(full)) {
+                evidence = evidence.and(PronounGender.of(shorter, texts, sourceLanguage));
+            }
         }
         final String agreeing = evidence.compactAgreeing(full.gender());
         return agreeing.isEmpty() ? line : line + " (" + agreeing + ")";
@@ -163,7 +165,8 @@ public final class InjectedCharacters {
         return kept;
     }
 
-    private static boolean namedIn(final String term, final List<String> texts) {
-        return texts.stream().anyMatch(text -> TermMatch.isNamedIn(term, text));
+    // The lemma or any form the book writes names the character (a window naming only Велемира names Велемир).
+    private static boolean namedIn(final GlossaryEntry entry, final List<String> texts) {
+        return texts.stream().anyMatch(text -> GlossaryNames.isNamedIn(entry, text));
     }
 }

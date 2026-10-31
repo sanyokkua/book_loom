@@ -22,6 +22,7 @@ import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
+import ua.bookloom.persistence.GlossaryIndex;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -169,7 +170,7 @@ final class InMemoryStore {
     }
 
     /**
-     * One project's glossary: entries by id, a lookup by {@link GlossaryKeys} for the duplicate rule,
+     * One project's glossary: entries by id, a lookup by {@link GlossaryKeys} over lemmas and forms for the duplicate rule,
      * and the set of term keys removed this session so a re-proposed name is not silently re-added.
      */
     static final class ProjectGlossary {
@@ -186,10 +187,13 @@ final class InMemoryStore {
             return removedKeys;
         }
 
+        // The lemma first, else the first entry in insertion order that lists the key as a form.
         Optional<GlossaryEntry> findByKey(final String key) {
-            return byId.values().stream()
-                    .filter(entry -> GlossaryKeys.of(entry.term()).equals(key))
-                    .findFirst();
+            return GlossaryIndex.of(allInInsertionOrder()).find(key);
+        }
+
+        Optional<GlossaryEntry> holderOf(final GlossaryEntry entry) {
+            return GlossaryIndex.of(allInInsertionOrder()).holderOf(entry);
         }
 
         void put(final GlossaryEntry entry) {
