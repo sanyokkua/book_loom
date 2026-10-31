@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -286,7 +287,7 @@ class OllamaErrorRowsWireMockTest {
                 : new OpenAiCompatibleClient(config, exchange, new LlmModule().objectMapper(), System::nanoTime);
     }
 
-    private static ChatRequest request(final ReasoningLevel level) {
+    private static ChatRequest request(final @Nullable ReasoningLevel level) {
         return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, level);
     }
 }

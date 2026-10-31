@@ -19,7 +19,9 @@ import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedModelSettings;
 
@@ -103,7 +105,9 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 List.of(REFUSED),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         record(1234, MeasuredFrom.TEST);
 
@@ -137,7 +141,9 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 List.of(REFUSED),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     // IF the store were touched on the FX thread, THEN the window would stall on a slow disk.

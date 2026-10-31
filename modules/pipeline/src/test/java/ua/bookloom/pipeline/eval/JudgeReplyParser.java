@@ -10,7 +10,7 @@ import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.llm.response.ReplySanitizer;
+import ua.bookloom.llm.response.ReasoningScrubber;
 import ua.bookloom.pipeline.eval.JudgeReply.Flags;
 import ua.bookloom.pipeline.eval.JudgeReply.JudgeError;
 import ua.bookloom.pipeline.eval.JudgeReply.Preferred;
@@ -135,7 +135,7 @@ final class JudgeReplyParser {
     // The reply as the production scrubber leaves it first; when that holds no object (the model answered inside its
     // reasoning block) the raw reply is searched.
     private static Optional<JsonNode> object(final String reply, final String key) {
-        return firstObject(ReplySanitizer.clean(reply), key).or(() -> firstObject(reply, key));
+        return firstObject(ReasoningScrubber.scrub(reply), key).or(() -> firstObject(reply, key));
     }
 
     // The first complete JSON object holding `key`, from any `{` on; text after it is ignored. A cut object never

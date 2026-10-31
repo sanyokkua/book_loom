@@ -60,7 +60,8 @@ final class StageProbe implements ChatModel {
 
     /** The run's model-call seam over this probe. */
     ModelCalls calls(final String targetLanguage) {
-        return new JobModelCalls(onSent -> this, event -> {}, Clock.systemUTC(), targetLanguage, EvalProject.window());
+        return new JobModelCalls(onSent -> this, event -> {}, Clock.systemUTC(), targetLanguage, EvalProject.window())
+                .inRun();
     }
 
     /** Every request sent so far, in order. */

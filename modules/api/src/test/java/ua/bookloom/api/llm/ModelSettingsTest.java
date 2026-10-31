@@ -31,7 +31,9 @@ class ModelSettingsTest {
                 refused,
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     @Test
@@ -155,7 +157,9 @@ class ModelSettingsTest {
                 List.of(),
                 seconds,
                 from,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     @Test

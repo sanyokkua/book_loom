@@ -20,6 +20,7 @@ import ua.bookloom.llm.dto.OpenAiModelsResponse.Model;
 import ua.bookloom.llm.engine.EngineDetector;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.profile.ListedModels;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.EndpointPaths;
 
@@ -38,6 +39,7 @@ final class OpenAiModelList {
     private final ProviderConfig config;
     private final ObjectMapper mapper;
     private final HttpExchange exchange;
+    private final ListedModels listed = new ListedModels();
 
     OpenAiModelList(ProviderConfig config, ObjectMapper mapper, HttpExchange exchange) {
         this.config = Objects.requireNonNull(config, "config");
@@ -82,6 +84,7 @@ final class OpenAiModelList {
             }
             final List<ModelInfo> models = response.data().stream()
                     .filter(model -> !Objects.requireNonNull(model, "model").isEmbedding())
+                    .filter(model -> listed.isChat(Objects.requireNonNull(model.id(), "model id")))
                     .map(this::modelInfo)
                     .toList();
             log.debug(

@@ -1,6 +1,15 @@
 # ADR-0033 — The translation engine gets a bound chat model and runs as a pausable job
 
-**Status:** accepted **Date:** 2026-09-13 **Deciders:** owner
+**Status:** accepted **Date:** 2026-09-13 **Deciders:** owner **Amended by:** ADR-0047
+
+> **Amendment (ADR-0047).** The first falsifier below is met: the settings of a call now depend on which model
+> answers. Whether reasoning can be switched and how, where the system text goes, which samplers are sent, the one
+> context window and the batch size all come from the model's profile, resolved inside `:llm` from the engine, the
+> server's facts, the built-in row and the person's overrides. The bound chat model still hides the provider and the
+> model from the engine: `:pipeline` sends provider-neutral intents (a call kind, a reasoning intent, a temperature) and
+> reads `ChatModel.profile()` for the few values it plans with (window, batch size); it never names a model. The job
+> half of the decision (a pausable job that is its own handle) is unchanged. The body below is kept as the record of the
+> original decision.
 
 ## Context and problem statement
 

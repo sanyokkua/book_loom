@@ -238,7 +238,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-REVIEW-X1 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-REVIEW-X2 | implemented | `complete-translation-workflow` | `export` | Also cited by `review-queue`. |
 | FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
-| FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Generation: quality table, Thinking, Sampling and the fixed time limits (finalize 7.3). |
+| FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence`, `redesign-translation-pipeline` | `settings` | Settings › Generation: the quality table and the fixed time limits, no setting (finalize 7.3; Thinking and Sampling moved to per-model overrides on Settings › Models in redesign tasks 6.7 and 6.9). |
 | FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` | Theme and technical details stored; language after a restart (finalize 7.3). |
 | FR-SETTINGS-05 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Automation: when to stop and ask (next run start), default quality for new books, review desk, last-check default, keep awake, reopen last project (finalize 7.4). |
 | FR-SETTINGS-06 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Storage & logs: database folder and size, Open folder, Make a backup…, log folder, detailed-log switch (after a restart), Open log folder, diagnostic bundle (finalize 7.4). |

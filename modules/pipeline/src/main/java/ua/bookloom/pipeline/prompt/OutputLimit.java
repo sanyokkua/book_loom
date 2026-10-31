@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.prompt;
 
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.SourceSize;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
@@ -12,8 +13,21 @@ import ua.bookloom.pipeline.chunk.TokenEstimator;
  * @param expectedTokens the expected completion length, which scales the request timeout; positive
  * @param capTokens the hard cap on the completion, so a model that loops is cut off instead of running to the
  *     timeout; positive
+ * @param source how much source text the call sends, which sizes the room a model that thinks is given for its
+ *     reasoning, or null when the call does not say
  */
-public record OutputLimit(int expectedTokens, int capTokens) {
+public record OutputLimit(
+        int expectedTokens, int capTokens, @Nullable SourceSize source) {
+
+    /**
+     * A limit that does not say how much source the call sends.
+     *
+     * @param expectedTokens the expected completion length; positive
+     * @param capTokens the hard cap on the completion; positive
+     */
+    public OutputLimit(final int expectedTokens, final int capTokens) {
+        this(expectedTokens, capTokens, null);
+    }
 
     // A reviewer reply is, per pair, an id and a status, and for a defect a few short edits; a rewrite repeats the
     // whole candidate. The cap lets every pair carry an edit or be rewritten, so a reply that loops is cut off but a
@@ -56,13 +70,14 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("a review needs at least one candidate");
         }
         long cap = REVIEW_BASE_TOKENS;
+        int read = 0;
         for (final String candidate : maskedCandidates) {
-            cap += REVIEW_TOKENS_PER_PAIR
-                    + REVIEW_TOKENS_PER_POSSIBLE_EDIT
-                    + TokenEstimator.estimate(candidate, targetTag);
+            final int candidateTokens = TokenEstimator.estimate(candidate, targetTag);
+            read += candidateTokens;
+            cap += REVIEW_TOKENS_PER_PAIR + REVIEW_TOKENS_PER_POSSIBLE_EDIT + candidateTokens;
         }
         final int capped = (int) Math.min(Integer.MAX_VALUE, cap);
-        return new OutputLimit(capped / EXPECTED_SHARE_DIVISOR, capped);
+        return new OutputLimit(capped / EXPECTED_SHARE_DIVISOR, capped, new SourceSize(read, maskedCandidates.size()));
     }
 
     /**
@@ -85,7 +100,7 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("candidateCount must be positive: " + candidateCount);
         }
         final int cap = PRESCAN_BASE_TOKENS + PRESCAN_TOKENS_PER_CANDIDATE * candidateCount;
-        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap, new SourceSize(0, candidateCount));
     }
 
     /**
@@ -99,7 +114,7 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("termCount must be positive: " + termCount);
         }
         final int cap = SUGGEST_BASE_TOKENS + SUGGEST_TOKENS_PER_TERM * termCount;
-        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap, new SourceSize(0, termCount));
     }
 
     /**
@@ -113,7 +128,7 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("textCount must be positive: " + textCount);
         }
         final int cap = WORDS_BASE_TOKENS + WORDS_TOKENS_PER_TEXT * textCount;
-        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap, new SourceSize(0, textCount));
     }
 
     /**
@@ -132,13 +147,17 @@ public record OutputLimit(int expectedTokens, int capTokens) {
         }
         int allowance = 0;
         int placeholders = 0;
+        int read = 0;
         for (final String masked : maskedSources) {
             allowance += TokenEstimator.outputAllowance(DisplayText.of(masked), sourceTag, targetTag)
                     + BATCH_ITEM_ENVELOPE_TOKENS;
             placeholders += Tokens.inOrder(masked).size();
+            read += TokenEstimator.estimate(masked, sourceTag);
         }
         return new OutputLimit(
-                allowance, Math.max(SHORT_SOURCE_CAP_FLOOR, TokenEstimator.outputCap(allowance, placeholders)));
+                allowance,
+                Math.max(SHORT_SOURCE_CAP_FLOOR, TokenEstimator.outputCap(allowance, placeholders)),
+                new SourceSize(read, maskedSources.size()));
     }
 
     /**
@@ -161,6 +180,7 @@ public record OutputLimit(int expectedTokens, int capTokens) {
                 Math.max(
                         SHORT_SOURCE_CAP_FLOOR,
                         TokenEstimator.outputCap(
-                                allowance, Tokens.inOrder(maskedSource).size())));
+                                allowance, Tokens.inOrder(maskedSource).size())),
+                new SourceSize(TokenEstimator.estimate(maskedSource, sourceTag), 1));
     }
 }

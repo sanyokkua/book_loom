@@ -130,6 +130,21 @@ public enum FailureReason {
     CAP_SPENT("cap-spent"),
 
     /**
+     * The reply spent its whole answer thinking twice: once as sent, and once more with thinking off or with four times
+     * the room; nothing was left to translate.
+     */
+    REASONING_EXHAUSTED("reasoning-exhausted"),
+
+    /**
+     * A reply under the answer schema held a translation that stopped where its source has a straight quote mark while
+     * the source went on: the schema's grammar ended the string there, so the call kind steps to the prompt-only rung.
+     */
+    SCHEMA_CUT_SHORT("schema-cut-short"),
+
+    /** The model's chat template has no system role; the system text goes into the first user message from now on. */
+    SYSTEM_ROLE_UNSUPPORTED("system-role-unsupported"),
+
+    /**
      * A server that answers any model id with whatever model it has loaded wrote the reply with another model than the
      * one asked for; the reply is not kept, and the person checks the model id.
      */

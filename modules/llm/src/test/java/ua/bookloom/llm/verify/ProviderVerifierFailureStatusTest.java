@@ -71,7 +71,8 @@ class ProviderVerifierFailureStatusTest {
                 mapper,
                 System::nanoTime,
                 new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
-                new FakeModelSettingsRepository());
+                new FakeModelSettingsRepository(),
+                ProbeShapings.over(new FakeModelSettingsRepository()));
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()

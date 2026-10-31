@@ -124,6 +124,7 @@ class GatedChatModelOutputCapTest {
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, ignored -> {});
-        return new GatedChatModel(clients.create(config), "test-model", new InferenceGate(), retryPolicy);
+        // A model whose built-in row has an on/off thinking switch, so the off value is sent and can be refused.
+        return new GatedChatModel(clients.create(config), "qwen3.5:9b", new InferenceGate(), retryPolicy);
     }
 }

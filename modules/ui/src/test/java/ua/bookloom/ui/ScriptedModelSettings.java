@@ -14,6 +14,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProbeVerdicts;
+import ua.bookloom.api.llm.SamplingOverride;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 
 /** A hand-written {@link ModelSettingsRepository} that keeps what a test stored per provider and model in memory. */
@@ -99,7 +101,9 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
                 List.of(),
                 secondsPerSegment,
                 source,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
         stored.put(providerId + "/" + modelId, seeded);
     }
 

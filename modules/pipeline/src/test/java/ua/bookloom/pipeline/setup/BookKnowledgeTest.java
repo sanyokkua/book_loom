@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -70,7 +71,8 @@ class BookKnowledgeTest {
                 },
                 events::add,
                 Clock.systemUTC(),
-                "uk");
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
     }
 
     private static Result<ChatResponse> reply(final String content) {

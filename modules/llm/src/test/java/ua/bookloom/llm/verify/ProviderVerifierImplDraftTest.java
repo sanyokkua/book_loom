@@ -383,7 +383,8 @@ class ProviderVerifierImplDraftTest {
                 mapper,
                 System::nanoTime,
                 new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
-                new FakeModelSettingsRepository());
+                new FakeModelSettingsRepository(),
+                ProbeShapings.over(new FakeModelSettingsRepository()));
     }
 
     private static VerificationReport report(Result<VerificationReport> result) {

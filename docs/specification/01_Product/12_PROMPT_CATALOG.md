@@ -8,10 +8,19 @@
 
 This document is the normative catalogue of every LLM call the translation pipeline makes. For each call it gives the
 concrete **system** and **user (task)** prompt templates, the injected variables (with **required vs optional**), the
-request **parameters** (temperature, output format/schema, reasoning level), and the **expected output shape**. It
+request **parameters** (temperature, output format/schema, reasoning intent), and the **expected output shape**. It
 complements the pipeline text in `05_TRANSLATION_ALGORITHM.md` and `02_Architecture/05_PIPELINE_ENGINE.md`; the
 prompt-building mechanics (template + slots) live in `02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`.
 Placeholders are written `{{variable}}`; the masked inline-tag tokens the model must preserve are written `⟦gN⟧`.
+
+**Reasoning, samplers and the answer schema are per-model profile values, not prompt text** (design D20 of
+`redesign-translation-pipeline`). A call states only its reasoning *intent* ("reasoning off" below: draft, repair,
+proofread, names and brief); the model's profile decides what is sent for it — Ollama `think:false`, `reasoning_effort`
+`none`, llama-server's `enable_thinking:false`, gpt-oss's lowest level `low`, or nothing for a model with no switch, which
+gets room on its cap instead — and the person's Thinking override on Settings › Models can turn it on for the proofread
+and names calls or for every call. No prompt, language-rules section or example names a reasoning level. "Output format
+= … schema" is the schema rung; a call kind the model refused a schema for is on the prompt-only rung, where the shape is
+described in the request text.
 
 The consistency machinery referenced throughout is the **name/term dictionary**, the **context-aware translation
 memory** (exact/context/fuzzy by deterministic string similarity — not vector embeddings), and the **rolling bilingual
@@ -308,7 +317,7 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 | `{{followingTarget}}`              | Optional  | The next segment's target in display text — sent only by a review retry, whose first draft (often in a batch) saw what came next; a run drafts ahead of the next segment and never sends it. |
 | `{{summary}}`, `{{glossaryTerms}}`, `{{lockedNames}}`, `{{suggestedTerms}}`, `{{lexiconTerms}}`, `{{memoryHint}}`, `{{extraInstruction}}` | Optional | The rolling summary, the glossary lines of the terms in the chunk whose target is the person's, under a header saying each name is written out as plain text; `{{lockedNames}}`, the locked terms the segment hides behind tokens, as `⟦gN⟧ → rendering` under a header saying the token is kept and the name never written — a block present only when the segment holds such a token, so a text with none never sees a token explained beside a name; the lines of the terms whose target the model suggested and nobody confirmed (`#glossary-target-suggestions`; a hint the draft may inflect, never a token), the established renderings of the recurring terms the chunk names (`#recurring-terms`), translation-memory hints, and a retry's note; each block is omitted when empty. |
 
-**Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning low/off; non-streaming.
+**Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning off; non-streaming.
 
 **Expected output**
 
@@ -544,7 +553,7 @@ Answer every pair once. Return one JSON object in this schema:
 **Parameters:** temperature 0 and a fixed seed (15), one sample; output format = JSON object / schema, flat — no
 `maxItems`, `maxLength` or `additionalProperties`, only the status and criterion vocabularies enumerated — because LM
 Studio never answered a structured call that carried such limits on one model (the same prompt without a schema answered
-in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning low/off. Output cap `128 + Σ (70 + 120 + the candidate's tokens)` over the pairs (`OutputLimit.forReview`), half of it expected: a rewrite may repeat a whole candidate.
+in 5 s); a structured call that ends `timeout` is sent once more with no response format. Reasoning off. Output cap `128 + Σ (70 + 120 + the candidate's tokens)` over the pairs (`OutputLimit.forReview`), half of it expected: a rewrite may repeat a whole candidate.
 
 **Decision rule:** `ok` leaves the candidate; `edits` are verified and applied one after another; `rewrite` replaces the
 draft only when the whole text passes the placeholder gates and every deterministic check, else the draft stays and the
@@ -639,7 +648,7 @@ Return one JSON object: {"target":"<the full corrected translation>"}
 
 A review panel "Retry with note" is a draft with the note under `[Extra instruction]`, not a directed fix (`#draft-translation`).
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off.
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning off.
 
 **Expected output:** `{"target":"<corrected translation>"}` — the same single-segment shape as `#draft-translation`.
 Re-enters unmask + QA for this one segment; bounded by the repair budget N.
@@ -750,7 +759,7 @@ Return one JSON object: {"target":"<the revised translation, or the same text if
 No book-wide glossary block is sent: a locked term is already swept deterministically before any revision call, and
 the reply must still carry every locked rendering present in the segment (the glossary check).
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning off. **Expected output**
 
 ```json
 { "target": "…" }
@@ -873,7 +882,7 @@ Return JSON exactly as:
 | `{{voiceEra}}`, `{{audience}}`                                                                       | Optional  | Free-text; `(none)` if unset.                 |
 | `{{footnotePolicy}}`, `{{unitPolicy}}`                                                               | Optional  | `FR-BRIEF-06/07`; default behaviour if unset. |
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning off. **Expected output**
 
 ```json
 { "styleSheet": { "summary": "…", "register": "neutral", "voice": "…",
@@ -1152,7 +1161,7 @@ Return JSON exactly as:
 | `{{candidates}}`                         | Required  | The batch's candidates, one `term — first sentence` line each (deterministic scan, at most 40). |
 | `{{existingTerms}}`                      | Optional  | Terms the glossary already holds, comma-separated; the whole block is dropped when there are none. |
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off; output capped at 64 + 48 per candidate, expected half. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning off; output capped at 64 + 48 per candidate, expected half. **Expected output**
 
 ```json
 { "terms": [
@@ -1713,7 +1722,7 @@ Return one JSON object:
 | `{{chapterSource}}`, `{{chapterTarget}}` | Required  | The just-finished unit's accepted source and target display text, one segment per line.  |
 | `{{previousSummary}}`                    | Optional  | The latest summary (its target text, else its deterministic text); the whole block is dropped for the first unit. |
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off; output capped at 1024 tokens, expected 600 (at most 150 words per language and five facts). **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning off; output capped at 1024 tokens, expected 600 (at most 150 words per language and five facts). **Expected output**
 
 ```json
 { "summary": { "source": "…", "target": "…" },

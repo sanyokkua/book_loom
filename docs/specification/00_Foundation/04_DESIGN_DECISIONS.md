@@ -337,10 +337,13 @@ The kind is the transport (two clients); the detected server engine (`ServerEngi
 ### DD-33 — JSON-first, tolerant response handling with repair + text fallback
 
 **Decision:** Every model-facing call requests structured output where the client supports it, then: strips
-reasoning/thinking blocks (`<think>…</think>` and analogues), code-fence wrappers and stray prose; sets reasoning level
-low/off where controllable; parses tolerantly (ignore unknown fields, default missing, trim); on malformed output does
+reasoning/thinking blocks (`<think>…</think>` and analogues, through `ReasoningScrubber`), code-fence wrappers and stray
+prose; sends the call kind's reasoning intent as the model's profile maps it to the engine's own field (nothing where the
+model declares no control); parses tolerantly (ignore unknown fields, default missing, trim); on malformed output does
 **one** repair retry; then falls back to deterministic plain-text extraction; only a chunk that then fails QA is
-flagged. HTTP clients are built once (injected), fresh per-request timeout, record DTOs with `@JsonInclude(NON_NULL)`,
+flagged. Structured answers have two rungs per (model, call kind), schema then prompt-only; a refused schema moves its
+call kind (or the whole model) down and is stored as a refused setting with its scope (ADR-0013 as amended by
+ADR-0047). HTTP clients are built once (injected), fresh per-request timeout, record DTOs with `@JsonInclude(NON_NULL)`,
 tolerant `ObjectMapper`, never logging secrets or full book text. **Why:** Local models vary — some ignore
 structured-output requests, emit reasoning, or add fields; the runtime must be robust to all of it. **Consequences:**
 Response handling is a defined, testable contract shared by both clients; unexpected fields are ignored, missing fields
@@ -375,10 +378,11 @@ documents, providers, pipeline, and a binding UI; local models can only be truly
 ### DD-36 — Low default temperature, per-phase guidance, user-adjustable
 
 **Decision:** Recommend a **low** sampling temperature for fidelity: default **0.2**, with per-phase guidance (draft ~
-0.2; judge/QA ~0.0–0.2; repair/reflect may go slightly higher). It is user-adjustable in Generation settings (range
-0.0–2.0), and a per-retry "lower temperature" option exists. Per model, Settings > Models chooses how it is sent:
-**Let BookLoom choose** (the per-phase value above), **My value** (one value for every call kind) or **Don't send**
-(the field is left out); a save applies from the next request. **Why:** Low temperature yields more deterministic, less
+0.2; judge/QA ~0.0–0.2; repair/reflect may go slightly higher), and a per-retry "lower temperature" option exists.
+There is no global setting; per model, Settings > Models chooses how it is sent: **Let BookLoom choose** (the per-phase
+value above), **My value** (one value for every call kind, 0.0–2.0) or **Don't send** (the field is left out), and the
+Sampling override sends either the profile's samplers or the person's Custom temperature, `top_k`, `top_p` and `min_p`;
+a save applies from the next request. **Why:** Low temperature yields more deterministic, less
 hallucinated translations. **Consequences:** Defaults favour fidelity; users can trade for variability knowingly.
 **ADR:** — **Requirements:** FR-SETTINGS-03.
 
@@ -461,15 +465,16 @@ deliberately. **ADR:** — **Requirements:** FR-UI-01, FR-UI-04. Normative: `04_
 
 ### DD-42 — Candidate model guidance (non-final)
 
-**Decision:** The spec records a **candidate, non-final** set of local models and their capabilities to guide defaults
-and testing: structured-output-friendly, no-hard-reasoning models (e.g. ministral-3, granite4, gemma4:12b, qwen3.5) are
-preferred defaults; models with always-on or non-disableable reasoning (qwen3.5/3.6 thinking, gemma4:26b-a4b MoE,
-gpt-oss:20b) rely on the response-handling text-fallback and reasoning-strip (DD-33); vision models (qwen3-vl) are not
+**Decision:** What the app knows about particular models is the **model profile**'s built-in rows (ADR-0047): data
+with evidence per family (how thinking is switched, the system role, template quirks, the hard cap, the batch size and a
+verdict; no maker's sampler values, which arm 3a of the redesign did not adopt), never a supported-model list; a model no row knows gets the safe default
+profile. Models that cannot turn reasoning off get their lowest level where they have one (gpt-oss:20b and muse-glimmer:
+`low`) or no control (Ministral 3 Reasoning), room for the reasoning on their cap and the reasoning scrubber (DD-33); vision models (qwen3-vl) are not
 used for text translation but may serve the visual-eval vision reviewer (DD-41). For eval embeddings, a small
 multilingual model (`embeddinggemma:300m`, or `bge-m3` for long inputs) is the default. **Why:** The app must behave
 across a moving field of local models with different output/reasoning capabilities; recording capability guidance keeps
 defaults sane without hard-coding a model. **Consequences:** The capability matrix is guidance, not a supported-list
-guarantee; users may configure any compatible model. **ADR:** — **Requirements:** FR-MODEL-01, FR-MODEL-03, DD-09.
+guarantee; users may configure any compatible model. **ADR:** ADR-0047 **Requirements:** FR-MODEL-01, FR-MODEL-03, DD-09.
 Detail: `01_Product/04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`.
 
 ## dd-43-canonical-round-trip {#dd-43-canonical-round-trip}

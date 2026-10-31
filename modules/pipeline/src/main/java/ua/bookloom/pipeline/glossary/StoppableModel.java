@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelProfile;
 
 /**
  * The model of a names pass: it refuses to send a call once the calling thread has been interrupted, because Stop
@@ -35,6 +36,11 @@ final class StoppableModel implements ChatModel {
     @Override
     public @Nullable Integer contextWindowOverride() {
         return inner.contextWindowOverride();
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return inner.profile();
     }
 
     @Override

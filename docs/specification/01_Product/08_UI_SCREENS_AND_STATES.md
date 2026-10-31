@@ -822,10 +822,15 @@ restarts".
   (and how much is loaded now) and whether it gives structured answers. **Use one temperature** (slider; off = the
   per-task defaults of `ChatRequests`); **Use context window** (number; filled in from what is loaded; `num_ctx` for
   Ollama in grey); **Limit answer length** (off = `OutputLimit` per request); **Advanced**: the field that carries the
-  answer length (`max_completion_tokens` / `max_tokens`; not used for Ollama). Pinned footer (H1).
-- **Generation** (applies to segments not translated yet): what the quality choice does (a read-only grid from
-  `DialParameters`); Thinking before answering: Off / Low / On (`ReasoningPlan`); Sampling: Program defaults / Tuned by
-  BookLoom (`SamplingMode`); Time limits: fixed, `RequestTimeouts`.
+  answer length (`max_completion_tokens` / `max_tokens`; not used for Ollama); **Thinking**: what thinking control the
+  model offers, that BookLoom sends thinking off for draft, repair, proofread, names and brief calls, and Recommended
+  (off) · Allow on proofreading and names · Always — no choice when the model has no control or always thinks;
+  **Sampling**: what BookLoom sends (its temperature per call kind, neutral values where a server's defaults are not
+  neutral) and Profile default · Custom (temperature, `top_k`, `top_p`, `min_p`; an empty field keeps the profile's
+  value, a typed temperature is the Temperature row's My value). Pinned footer (H1).
+- **Generation** (holds no setting): what the quality choice does (a read-only grid from `DialParameters`, "The same
+  for every model."); Time limits: fixed (`CallLimits`, read by `RequestTimeouts`), including silence while streaming.
+  Thinking and Sampling are set per model on the Models tab.
 - **Appearance:** Theme; Language of the app ("Applies after BookLoom restarts." [Restart now]); **Show technical
   details** (G12). There is no Accent row and no Reduce-motion switch in the mockup README's tab.
 - **Automation:** When to stop and ask you (Never — translate unattended · When something needs review · After every

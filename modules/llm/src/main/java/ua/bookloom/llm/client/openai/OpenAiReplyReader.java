@@ -12,6 +12,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelVariant;
@@ -21,7 +22,8 @@ import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.UnreadableReply;
-import ua.bookloom.llm.response.ReplySanitizer;
+import ua.bookloom.llm.response.ReasoningBudget;
+import ua.bookloom.llm.response.ReasoningScrubber;
 
 /**
  * Reads one OpenAI-shaped chat reply into a response. Where the engine answers any id with its loaded model (LM Studio,
@@ -51,6 +53,25 @@ final class OpenAiReplyReader {
             return response(requestedModel, reply, decoded, elapsed);
         } catch (JsonProcessingException failure) {
             return unreadable(requestedModel, failure);
+        }
+    }
+
+    // A reply that is not JSON, or has no choice, is read by read(), which says why; here it simply did not spend.
+    boolean spentOnReasoning(final ChatRequest request, final String body) {
+        try {
+            final OpenAiChatResponse decoded = mapper.readValue(body, OpenAiChatResponse.class);
+            if (decoded == null
+                    || decoded.choices() == null
+                    || decoded.choices().isEmpty()) {
+                return false;
+            }
+            final OpenAiChatResponse.@Nullable Choice choice = decoded.choices().getFirst();
+            final OpenAiChatResponse.@Nullable Message message = choice == null ? null : choice.message();
+            return message != null
+                    && ReasoningBudget.spent(request, message.content(), message.hasReasoning(), choice.finishReason());
+        } catch (JsonProcessingException unreadable) {
+            log.debug("Reasoning budget check skipped: the reply is not JSON");
+            return false;
         }
     }
 
@@ -86,7 +107,7 @@ final class OpenAiReplyReader {
                 reply.body().length(),
                 finishReason,
                 usage);
-        return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
+        return Result.ok(new ChatResponse(ReasoningScrubber.scrub(message.content()), finishReason, usage));
     }
 
     // Where any id is served, a reply another model wrote is refused; elsewhere the mismatch is only named.

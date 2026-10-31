@@ -33,23 +33,6 @@ class ContextBudgetTest {
         assertThat(ContextBudget.dynamicAllowance(window, 900)).isEqualTo(expected);
     }
 
-    @ParameterizedTest
-    @CsvSource(
-            value = {
-                "null,null,16384",
-                "4096,null,4096",
-                "131072,null,16384",
-                "131072,32768,32768",
-                "null,2048,2048",
-                "4096,8192,8192",
-                "16384,8192,8192"
-            },
-            nullValues = "null")
-    void windowFor_detectedAndOverride_overrideWinsAndDetectionIsCapped(
-            final Integer detected, final Integer override, final int expected) {
-        assertThat(ContextBudget.windowFor(detected, override)).isEqualTo(expected);
-    }
-
     @Test
     void constructor_nonPositiveWindow_isRejected() {
         assertThatThrownBy(() -> new ContextBudget(0, 0, 0, 1.0)).isInstanceOf(IllegalArgumentException.class);

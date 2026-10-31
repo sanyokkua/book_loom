@@ -620,6 +620,82 @@ public enum MessageKey {
     SETTINGS_MODELS_TEMPERATURE_HINT_VALUE("settings.models.temperature.hint.value"),
     /** Models tab: Not sent at all — for models that refuse it, such as some newer OpenAI and Anthropic models. The model uses its own setting. */
     SETTINGS_MODELS_TEMPERATURE_HINT_OMIT("settings.models.temperature.hint.omit"),
+    /** Models tab: Thinking */
+    SETTINGS_MODELS_THINKING("settings.models.thinking"),
+    /** Models tab: — whether the model reasons before it answers */
+    SETTINGS_MODELS_THINKING_SUB("settings.models.thinking.sub"),
+    /** Models tab: Reading what thinking control this model offers... */
+    SETTINGS_MODELS_THINKING_READING("settings.models.thinking.reading"),
+    /** Models tab: This model can turn thinking on and off. */
+    SETTINGS_MODELS_THINKING_BOOLEAN("settings.models.thinking.boolean"),
+    /** Models tab: This model offers thinking levels and can turn thinking off. */
+    SETTINGS_MODELS_THINKING_LEVELS("settings.models.thinking.levels"),
+    /** Models tab: This model has no thinking control, so BookLoom sends none. */
+    SETTINGS_MODELS_THINKING_NONE("settings.models.thinking.none"),
+    /** Models tab: BookLoom cannot tell whether this model can turn thinking off, so it sends no thinking control. */
+    SETTINGS_MODELS_THINKING_UNKNOWN("settings.models.thinking.unknown"),
+    /** Models tab: Always thinks; BookLoom sends the lowest level, {0}. */
+    SETTINGS_MODELS_THINKING_ALWAYS_LEVEL("settings.models.thinking.alwaysLevel"),
+    /** Models tab: Always thinks; this cannot be changed. */
+    SETTINGS_MODELS_THINKING_ALWAYS_FIXED("settings.models.thinking.alwaysFixed"),
+    /** Models tab: BookLoom sends thinking off for draft, repair, proofread, names and brief calls. */
+    SETTINGS_MODELS_THINKING_SENDS("settings.models.thinking.sends"),
+    /** Models tab: Recommended (off) */
+    SETTINGS_MODELS_THINKING_RECOMMENDED("settings.models.thinking.recommended"),
+    /** Models tab: Thinking stays off on every call: fastest, and no answer is spent on reasoning. */
+    SETTINGS_MODELS_THINKING_RECOMMENDED_TIP("settings.models.thinking.recommended.tip"),
+    /** Models tab: Allow on proofreading and names */
+    SETTINGS_MODELS_THINKING_ALLOW("settings.models.thinking.allow"),
+    /** Models tab: Drafts, repairs and the brief stay off; the proofread and the names pass may think, which is slower. */
+    SETTINGS_MODELS_THINKING_ALLOW_TIP("settings.models.thinking.allow.tip"),
+    /** Models tab: Always */
+    SETTINGS_MODELS_THINKING_ALWAYS("settings.models.thinking.always"),
+    /** Models tab: Every call thinks first: slowest, and room for the reasoning is added to every answer. */
+    SETTINGS_MODELS_THINKING_ALWAYS_TIP("settings.models.thinking.always.tip"),
+    /** Models tab: Sampling */
+    SETTINGS_MODELS_SAMPLING("settings.models.sampling"),
+    /** Models tab: — how adventurous the wording is */
+    SETTINGS_MODELS_SAMPLING_SUB("settings.models.sampling.sub"),
+    /** Models tab: what BookLoom sends under the profile's default. */
+    SETTINGS_MODELS_SAMPLING_SENDS_PROFILE("settings.models.sampling.sends.profile"),
+    /** Models tab: what every request carries under Custom; argument 0 lists the typed values. */
+    SETTINGS_MODELS_SAMPLING_SENDS_CUSTOM("settings.models.sampling.sends.custom"),
+    /** Models tab: Custom chosen with nothing typed yet. */
+    SETTINGS_MODELS_SAMPLING_SENDS_CUSTOM_NONE("settings.models.sampling.sends.customNone"),
+    /** Models tab: Profile default */
+    SETTINGS_MODELS_SAMPLING_PROFILE("settings.models.sampling.profile"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODELS_SAMPLING_PROFILE}. */
+    SETTINGS_MODELS_SAMPLING_PROFILE_TIP("settings.models.sampling.profile.tip"),
+    /** Models tab: Custom */
+    SETTINGS_MODELS_SAMPLING_CUSTOM("settings.models.sampling.custom"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODELS_SAMPLING_CUSTOM}. */
+    SETTINGS_MODELS_SAMPLING_CUSTOM_TIP("settings.models.sampling.custom.tip"),
+    /** Models tab: the label of the Custom temperature field. */
+    SETTINGS_MODELS_SAMPLING_TEMPERATURE("settings.models.sampling.temperature"),
+    /** Hover explanation of the Custom temperature field. */
+    SETTINGS_MODELS_SAMPLING_TEMPERATURE_TIP("settings.models.sampling.temperature.tip"),
+    /** Models tab: the label of the Custom top_k field. */
+    SETTINGS_MODELS_SAMPLING_TOP_K("settings.models.sampling.topK"),
+    /** Models tab: the label of the Custom top_p field. */
+    SETTINGS_MODELS_SAMPLING_TOP_P("settings.models.sampling.topP"),
+    /** Models tab: the label of the Custom min_p field. */
+    SETTINGS_MODELS_SAMPLING_MIN_P("settings.models.sampling.minP"),
+    /** Hover explanation of the Custom top_k field. */
+    SETTINGS_MODELS_SAMPLING_TOP_K_TIP("settings.models.sampling.topK.tip"),
+    /** Hover explanation of the Custom top_p field. */
+    SETTINGS_MODELS_SAMPLING_TOP_P_TIP("settings.models.sampling.topP.tip"),
+    /** Hover explanation of the Custom min_p field. */
+    SETTINGS_MODELS_SAMPLING_MIN_P_TIP("settings.models.sampling.minP.tip"),
+    /** Models tab: the line under the Custom fields. */
+    SETTINGS_MODELS_SAMPLING_HINT("settings.models.sampling.hint"),
+    /** Models tab finding: the Custom temperature is not a number from 0 to 2. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TEMPERATURE("settings.models.error.samplingTemperature"),
+    /** Models tab finding: the Custom top_k is not a whole number above zero. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TOP_K("settings.models.error.samplingTopK"),
+    /** Models tab finding: the Custom top_p is not above 0 and at most 1. */
+    SETTINGS_MODELS_ERROR_SAMPLING_TOP_P("settings.models.error.samplingTopP"),
+    /** Models tab finding: the Custom min_p is not from 0 to 1. */
+    SETTINGS_MODELS_ERROR_SAMPLING_MIN_P("settings.models.error.samplingMinP"),
     /** Models tab: Settings this model refused */
     SETTINGS_MODELS_REFUSED("settings.models.refused"),
     /** Models tab: — learned automatically */
@@ -632,6 +708,12 @@ public enum MessageKey {
     SETTINGS_MODELS_REFUSED_OMITTED("settings.models.refused.omitted"),
     /** Models tab: Refused on &#123;0, date, ::MMMd&#125;. BookLoom now sends &#123;1&#125; instead. */
     SETTINGS_MODELS_REFUSED_INSTEAD("settings.models.refused.instead"),
+    /** Models tab: Refused on a day; the system text now starts the first user message. */
+    SETTINGS_MODELS_REFUSED_FOLDED("settings.models.refused.folded"),
+    /** Models tab: Refused on a day; the answer's shape is now stated in the prompt only. */
+    SETTINGS_MODELS_REFUSED_PROMPT_ONLY("settings.models.refused.promptOnly"),
+    /** Models tab: what one refusal covers: the whole model, or one kind of call named in words. */
+    SETTINGS_MODELS_REFUSED_SCOPE("settings.models.refused.scope"),
     /** Models tab: Send again */
     SETTINGS_MODELS_REFUSED_SEND("settings.models.refused.send"),
     /** Models tab: Forgets the refusal at once: the next request to this model carries the setting again. */
@@ -932,10 +1014,6 @@ public enum MessageKey {
     APPEARANCE_THEME_HINT("appearance.theme.hint"),
     /** Line under the Appearance tab saying a change takes effect without a Save button. */
     SETTINGS_INSTANT("settings.instant"),
-    /** Line under the Generation tab saying when a change takes effect. */
-    SETTINGS_GENERATION_INSTANT("settings.generation.instant"),
-    /** Note shown on the Generation tab while a translation is under way. */
-    SETTINGS_GENERATION_RUNNING("settings.generation.running"),
     /** Toast after a backup copy was written; argument 0 is the file's name. */
     SETTINGS_STORAGE_BACKUP_SAVED("settings.storage.backup.saved"),
     /** Line under the Automation tab saying when a change takes effect. */
@@ -1054,12 +1132,12 @@ public enum MessageKey {
     SETTINGS_STORAGE_DETAILED_DEV("settings.storage.detailed.dev"),
     /** Line shown when the detailed log switch could not be written. */
     SETTINGS_STORAGE_SAVE_FAILED("settings.storage.saveFailed"),
-    /** Line shown when a Generation choice could not be stored. */
-    SETTINGS_GENERATION_SAVE_FAILED("settings.generation.saveFailed"),
     /** Title of the card that lists what each quality setting does. */
     SETTINGS_GENERATION_QUALITY_TITLE("settings.generation.quality.title"),
     /** Where the quality is chosen, shown beside the title of the quality card. */
     SETTINGS_GENERATION_QUALITY_SUB("settings.generation.quality.sub"),
+    /** Line under the quality table: the dial means the same for every model. */
+    SETTINGS_GENERATION_QUALITY_SAME("settings.generation.quality.same"),
     /** Row of the quality table: the most segments in one request. */
     SETTINGS_GENERATION_QUALITY_BATCH("settings.generation.quality.batch"),
     /** Cell of the batch row; 0 is the segment cap. */
@@ -1078,38 +1156,6 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_YES("settings.generation.quality.yes"),
     /** Cell of the quality table for a step that does not run. */
     SETTINGS_GENERATION_QUALITY_NO("settings.generation.quality.no"),
-    /** Label of the thinking-level choice. */
-    SETTINGS_GENERATION_THINKING("settings.generation.thinking"),
-    /** Thinking level: none. */
-    SETTINGS_GENERATION_THINKING_OFF("settings.generation.thinking.off"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_OFF}. */
-    SETTINGS_GENERATION_THINKING_OFF_TIP("settings.generation.thinking.off.tip"),
-    /** Thinking level: brief. */
-    SETTINGS_GENERATION_THINKING_LOW("settings.generation.thinking.low"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_LOW}. */
-    SETTINGS_GENERATION_THINKING_LOW_TIP("settings.generation.thinking.low.tip"),
-    /** Thinking level: full. */
-    SETTINGS_GENERATION_THINKING_ON("settings.generation.thinking.on"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_THINKING_ON}. */
-    SETTINGS_GENERATION_THINKING_ON_TIP("settings.generation.thinking.on.tip"),
-    /** Explanation under the thinking-level choice. */
-    SETTINGS_GENERATION_THINKING_HINT("settings.generation.thinking.hint"),
-    /** Technical names of the thinking setting, shown with technical details on. */
-    SETTINGS_GENERATION_THINKING_TECH("settings.generation.thinking.tech"),
-    /** Note that a variable or property overrides a choice; 0 is its name. */
-    SETTINGS_GENERATION_OVERRIDE("settings.generation.override"),
-    /** Label of the sampling choice. */
-    SETTINGS_GENERATION_SAMPLING("settings.generation.sampling"),
-    /** Sampling mode: only the temperature is sent. */
-    SETTINGS_GENERATION_SAMPLING_DEFAULTS("settings.generation.sampling.defaults"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_DEFAULTS}. */
-    SETTINGS_GENERATION_SAMPLING_DEFAULTS_TIP("settings.generation.sampling.defaults.tip"),
-    /** Sampling mode: BookLoom sends its own sampling. */
-    SETTINGS_GENERATION_SAMPLING_TUNED("settings.generation.sampling.tuned"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_GENERATION_SAMPLING_TUNED}. */
-    SETTINGS_GENERATION_SAMPLING_TUNED_TIP("settings.generation.sampling.tuned.tip"),
-    /** Explanation under the sampling choice. */
-    SETTINGS_GENERATION_SAMPLING_HINT("settings.generation.sampling.hint"),
     /** Title of the card listing the fixed time limits. */
     SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
     /** Tag saying the limits cannot be changed. */
@@ -1118,13 +1164,17 @@ public enum MessageKey {
     SETTINGS_GENERATION_LIMITS_CHECK("settings.generation.limits.check"),
     /** Time-limit row: the helper calls. */
     SETTINGS_GENERATION_LIMITS_HELPER("settings.generation.limits.helper"),
-    /** Time-limit row: drafting calls. */
+    /** Time-limit row: every call without a fixed limit, which waits by its expected length. */
     SETTINGS_GENERATION_LIMITS_DRAFT("settings.generation.limits.draft"),
+    /** Time-limit row: a streamed reply that sends nothing. */
+    SETTINGS_GENERATION_LIMITS_SILENCE("settings.generation.limits.silence"),
+    /** The helper limit; 0 is the number of seconds. */
+    SETTINGS_GENERATION_LIMITS_HELPER_VALUE("settings.generation.limits.helper.value"),
     /** Time-limit row: attempts per call. */
     SETTINGS_GENERATION_LIMITS_TRIES("settings.generation.limits.tries"),
     /** A limit in seconds; 0 is the number of seconds. */
     SETTINGS_GENERATION_LIMITS_SECONDS("settings.generation.limits.seconds"),
-    /** The drafting limit; 0 is the longest allowed in minutes. */
+    /** The limit by length; 0 is the seconds per expected token, 1 the most seconds. */
     SETTINGS_GENERATION_LIMITS_DRAFT_VALUE("settings.generation.limits.draft.value"),
     /** The attempts limit; 0 is the most tries. */
     SETTINGS_GENERATION_LIMITS_TRIES_VALUE("settings.generation.limits.tries.value"),

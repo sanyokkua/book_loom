@@ -16,12 +16,13 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.capability.HealthProbe;
+import ua.bookloom.llm.capability.ModelFactsReader;
 import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.engine.CheckedModelId;
@@ -38,11 +39,12 @@ import ua.bookloom.llm.provider.CheckReply;
 import ua.bookloom.llm.provider.EndpointPaths;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
+import ua.bookloom.llm.response.ReasoningBudget;
 
 /**
  * Implements the shared OpenAI-shaped models and chat endpoints. The provider's engine chooses the reasoning switch and
  * the cap field ({@link EngineShaping}), and a reply whose cap a thinking model spent on reasoning is asked for once
- * more with a raised cap ({@link ReasoningBudget}). Where the engine answers any id with its loaded model, the id is
+ * more ({@link ReasoningBudget}). Where the engine answers any id with its loaded model, the id is
  * first checked against the server's own list ({@link ModelIdCheck}); LM Studio's chat goes to its own route
  * ({@link ChatRoute}).
  */
@@ -59,19 +61,16 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     private final OpenAiReplyReader replies;
     private final ChatRoute route;
     private final ModelIdCheck idCheck;
+    private final ModelFactsReader factsReader;
 
-    /**
-     * Binds one client to an endpoint with no stored check verdicts and its own session facts, so a server no engine
-     * row describes gets only the plain request.
-     */
+    /** Binds one client with no stored check verdicts and its own session facts: only the plain request. */
     public OpenAiCompatibleClient(
             ProviderConfig config, HttpExchange exchange, ObjectMapper mapper, LongSupplier nanoTime) {
         this(config, exchange, mapper, nanoTime, new EngineFacts(exchange, mapper), modelId -> ProbeVerdicts.none());
     }
 
     /**
-     * Binds one client to an endpoint while sharing the application's HTTP, JSON, time and engine-fact
-     * infrastructure.
+     * Binds one client while sharing the application's HTTP, JSON, time and engine-fact infrastructure.
      *
      * @param verdicts the stored check verdicts of a model id, read on each call that needs them
      */
@@ -89,7 +88,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 nanoTime,
                 new EngineShaping(config, facts, verdicts, false),
                 new ChatRoute(config, exchange, mapper),
-                new ModelIdCheck(config, exchange, mapper, facts));
+                new ModelIdCheck(config, exchange, mapper, facts),
+                new ModelFactsReader(exchange, mapper, facts));
     }
 
     // The Test's copy shares the session's route and id checks, so a fallback or a check made by one is the other's.
@@ -100,7 +100,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             LongSupplier nanoTime,
             EngineShaping shaping,
             ChatRoute route,
-            ModelIdCheck idCheck) {
+            ModelIdCheck idCheck,
+            ModelFactsReader factsReader) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
@@ -108,6 +109,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         this.shaping = Objects.requireNonNull(shaping, "shaping");
         this.route = Objects.requireNonNull(route, "route");
         this.idCheck = Objects.requireNonNull(idCheck, "idCheck");
+        this.factsReader = Objects.requireNonNull(factsReader, "factsReader");
         this.models = new OpenAiModelList(config, mapper, exchange);
         this.replies = new OpenAiReplyReader(config, mapper);
         this.requestMapper = new OpenAiRequestMapper(
@@ -119,7 +121,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public ProviderClient forChecks() {
-        return new OpenAiCompatibleClient(config, exchange, mapper, nanoTime, shaping.forChecks(), route, idCheck);
+        return new OpenAiCompatibleClient(
+                config, exchange, mapper, nanoTime, shaping.forChecks(), route, idCheck, factsReader);
     }
 
     // A check is sent once as asked: no raised cap after a reply spent on reasoning, since that reply is the finding.
@@ -136,7 +139,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 offSwitch == null ? "engine" : offSwitch.wireName());
         try {
             final OpenAiCompatibleClient checker = new OpenAiCompatibleClient(
-                    config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck);
+                    config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck, factsReader);
             final Result<CheckedModelId> checked = idCheck.check(modelId);
             if (checked.isErr()) {
                 return ProviderCallResult.withoutRetryAfter(
@@ -280,8 +283,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     @Override
-    public Optional<Integer> contextLength(String modelId) {
-        return new ContextLengthProbe(exchange, mapper).lmStudio(config, modelId);
+    public ModelFacts facts(String modelId) {
+        return factsReader.read(config, modelId);
     }
 
     @Override
@@ -303,17 +306,17 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         return exchangeChat(
                 modelId,
                 request,
-                Objects.requireNonNull(parsedFormat.data(), "parsed format").format(),
+                Objects.requireNonNull(parsedFormat.data(), "format").format(),
                 true);
     }
 
-    // A reply whose cap a thinking model spent on reasoning is asked for once more with a raised cap, never twice; the
-    // outcome names the request sent (ReasoningBudget logs the raise), so the reply is measured against its cap.
+    // A reply that spent its cap thinking is asked once more, never twice (ReasoningBudget); the outcome names the
+    // request sent, so the reply is measured against its cap.
     private ProviderCallResult<ChatResponse> exchangeChat(
             String modelId,
             ChatRequest request,
             OpenAiChatRequest.@Nullable ResponseFormatDto format,
-            boolean mayRaiseCap) {
+            boolean mayReask) {
         final Result<String> requestBody = requestMapper.serializeRequest(modelId, request, format);
         if (requestBody.isErr()) {
             return ProviderCallResult.withoutRetryAfter(
@@ -330,12 +333,13 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
-        final Optional<ChatRequest> raised =
-                mayRaiseCap ? ReasoningBudget.raisedAfter(mapper, reply.body(), request) : Optional.empty();
-        if (raised.isPresent()) {
-            return exchangeChat(modelId, raised.get(), format, false).sentAs(raised.get());
-        }
-        return new ProviderCallResult<>(replies.read(modelId, reply, elapsed), call.retryAfter());
+        return ReasoningBudget.settled(
+                request,
+                replies.spentOnReasoning(request, reply.body()),
+                mayReask,
+                () -> ReasoningBudget.exhausted(config, modelId),
+                again -> exchangeChat(modelId, again, format, false),
+                () -> new ProviderCallResult<>(replies.read(modelId, reply, elapsed), call.retryAfter()));
     }
 
     @Override
@@ -381,10 +385,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private @Nullable String details(@Nullable String modelId) {
-        SafeDetails safeDetails = SafeDetails.empty().withEndpoint(config.baseUrl());
-        return modelId == null
-                ? safeDetails.render()
-                : safeDetails.withModelName(modelId).render();
+        final SafeDetails endpoint = SafeDetails.empty().withEndpoint(config.baseUrl());
+        return (modelId == null ? endpoint : endpoint.withModelName(modelId)).render();
     }
 
     private void logOutcome(String operation, @Nullable String modelId, @Nullable AppError error) {

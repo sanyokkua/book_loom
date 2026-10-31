@@ -10,12 +10,12 @@ class ModelReportTest {
     @ParameterizedTest
     @ValueSource(ints = {0, -5})
     void new_nonPositiveLoaded_throws(final int loaded) {
-        assertThatThrownBy(() -> new ModelReport(4096, loaded)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ModelReport.windowsOnly(4096, loaded)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
     @ValueSource(ints = {0, -5})
     void new_nonPositiveContextLength_throws(final int length) {
-        assertThatThrownBy(() -> new ModelReport(length, null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ModelReport.windowsOnly(length, null)).isInstanceOf(IllegalArgumentException.class);
     }
 }

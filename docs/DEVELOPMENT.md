@@ -827,7 +827,7 @@ by at most 30 %.
 | term reading thinks | — | — | — | — | — | 7 / 2 / 22 | off: one right vote fewer |
 
 `brief-synthesis` with thinking on was not run (stopped on the owner's instruction once the other arms had failed); it stays off
-with the rest. `ReasoningPlan` keeps every call kind off and the notes switch stays off; both remain as eval switches.
+with the rest; since redesign task 6.7 every call kind asks for thinking off and the eval switch is gone.
 
 ### 15i narrator's gender, in order {#15i-narrator}
 
@@ -966,6 +966,79 @@ was recorded in commit dc00e4ab, and `ArmSegments` with `eval/arms/arm-2-segment
   the two close calls above are left for the owner to read.
 - *Also seen.* Both formats wrote Russian words on e4b and 26b (`Мост`, `Трость`), which is none of the four WRONG classes; e4b's
   `m08` has it in 1 of 3 JSON repeats and 3 of 3 markers repeats.
+
+**Arm 3a: the maker's samplers against BookLoom's own (task 6.10).** Default: BookLoom's temperature per call kind and nothing
+else of its own (neutral `top_k`/`top_p`/`min_p`/repeat penalty only where the detected engine's defaults are not neutral).
+Alternative: the row's vendor `top_k` and `top_p` sent explicitly with the same temperatures. The Gemma 4 rows held the model
+card's values for the arm (top_p 0.95, top_k 64; research `03-models/families/gemma4.md` F16). The rows have no sampler fields
+in `ModelProfile`, so the eval reached the wire through a test-only switch (`BOOKLOOM_EVAL_SAMPLING=vendor`, read in
+`PromptEvalTest.chatModel`) that stored the vendor values as the model's Custom sampling choice with no temperature of its own;
+the test log shows `Sampling … source=custom topK=64 topP=0.95` on every call of the vendor runs and none on the default runs.
+
+- *Probe, 5 pairs at temperature 0.3, fixed seeds, invented sentences, each request sent twice.* Ollama `gemma4:e4b-mlx`
+  (only temperature against temperature + 64/0.95): default against vendor differed in 1 of 5 seeds, default against itself in
+  2 of 5, vendor against itself in 1 of 5. LM Studio `google/gemma-4-e4b` (neutral 0/1.0/0/1.0 against 64/0.95): 2 of 5,
+  1 of 5 and 2 of 5. The MLX runtimes are not deterministic at a fixed seed, so the probes differ only inside their own noise;
+  the mini runs were made anyway because the outputs did differ (`.temporary_context/arm3/arm3a-*.json`).
+- *Why Ollama cannot show an effect.* `ollama show gemma4:e4b-mlx --parameters` and the 26b's both hold `top_k 64` and
+  `top_p 0.95`, and BookLoom sends no sampler to Ollama by default, so on Ollama the two sides sample alike. The eval's LM Studio
+  provider is saved without engine detection (engine `GENERIC`), so it got no neutral values either and LM Studio's own Gemma 4
+  defaults (the same 64/0.95) applied; only the probe above compared neutral values with the vendor's on the wire.
+
+| Grader pass rate, mean of K (per repeat); hard-grader failures | Default | Vendor |
+|---|---|---|
+| Ollama e4b, `mini-en`, K = 3 | 0.9697 (0.9675 / 0.974 / 0.9675); 0 | 0.9718 (0.9675 / 0.974 / 0.974); 0 |
+| Ollama e4b, `mini-ru`, K = 3 | 0.9533 (all three); 0 | 0.9533 (all three); 0 |
+| LM Studio e4b, `mini-en`, K = 3 | 0.9026 (0.9026 / 0.8766 / 0.9286); 4 (`numbers-kept-m30` ×3, stress mark ×1) | 0.9264 (0.9026 / 0.9416 / 0.9351); 3 (`numbers-kept-m30` ×3) |
+| LM Studio e4b, `mini-ru`, K = 3 | 0.9502; 0 | 0.9533; 0 |
+| Ollama 26b, `mini-en`, K = 1 | 0.974; 0 | 0.974; 0 |
+| Ollama 26b, `mini-ru`, K = 1 | 0.9439; 2 (stress mark) | 0.9439; 2 (the same) |
+
+- *Paired.* `eval-score.py diff --paired`: Ollama e4b `mini-en` 1:0 discordant (`dialogue-quote-form`, p = 1.0), `mini-ru`
+  none; LM Studio e4b `mini-en` `every-usable` 8:2 for the vendor side (p = 0.11, a screen pass but no real effect) on two
+  sides that sampled alike, `mini-ru` 1:0 (`dash-kept`); 26b none. Noise bands 0.0175 / 0 (Ollama e4b), 0.070 / 0.038
+  (LM Studio e4b). 21 of 33 (`mini-en`) and 15 of 17 (`mini-ru`) first-repeat Ollama outputs were identical across the sides.
+- *Cost, reported and not weighed.* Ollama e4b `mini-en` 23 against 22 calls, 134 against 123 s; 26b 25 against 23 calls,
+  163 against 154 s. LM Studio e4b took about 2,040 s per `mini-en` repeat on both sides: the eval's `GENERIC` engine sends no
+  thinking control, so Gemma 4 thought on every call there.
+- *Decision rule.* The vendor set is adopted only if no hard grader is worse and token fidelity is within the noise band. Both
+  hold, but the vendor set wins nothing beyond noise anywhere, and on the setups measured the two sides sampled alike; D24's
+  tie rule keeps the simpler side. So **BookLoom's own sampling stays and the vendor values are deleted from the rows**
+  (`VendorSampling`, `BuiltInRow.vendor`, the Gemma 4, Gemma 3 MamayLM, Qwen 2.5 and Qwen 3.5 values) with the test switch;
+  no requirement changes. Not measured: a detected LM Studio, llama-server or Unsloth provider, where the default sends neutral
+  values and the vendor set would really differ; only the 5-pair probe touched that case.
+- *Runs* (`.temporary_context/eval-history/`): Ollama e4b `20261030-173138`/`-173656` (en), `-173842`/`-174023` (ru); LM Studio
+  e4b `20261030-213907`/`-232331` (en), `-234658`/`20261031-001356` (ru); 26b `20261031-001644`/`-001925` (en),
+  `-002046`/`-002204` (ru); default first in each pair.
+
+**Arm 3b: batch start size on a small model (task 6.10).** Translator `gemma4:e4b-mlx` on Ollama, Balanced, single-flight,
+the whole `sequence` book (328 segments, the "300-segment slice" of the task; it holds no more), K = 3 (seeds 1000-1002), the
+two sides paired by seed. The start size, which is also the ceiling the size grows back to, is bound in the eval's job by the
+test-only `BOOKLOOM_EVAL_BATCH_START` (`EvalBatchStart`, read by `SequenceJobs`); production still starts every model at 8
+until group 10 wires the profile's `batchSize`. `gemma4:26b-mlx` was not run: a large model starts at 8 either way.
+
+| Per repeat (seeds 1000 / 1001 / 1002) | Start 4 (default) | Start 8 (alternative) |
+|---|---|---|
+| Items that fell back to their own draft (all reasons) | 11 / 12 / 10 (mean 11.0) | 13 / 15 / 12 (mean 13.3) |
+| of them for a lost or changed token (`[TOKENS]`) | 7 / 8 / 5 (6.7) | 4 / 4 / 4 (4.0) |
+| of them for a lost mark (`[MARKERS]`) | 0 / 0 / 0 | 1 / 1 / 1 |
+| of them for quote marks (`[QUOTES]`) | 2 / 1 / 2 | 4 / 8 / 4 |
+| Segments failing a hard gate in their first evaluation | 11 / 9 / 10 (mean 10.0) | 14 / 13 / 11 (mean 12.7) |
+| Flagged | 10 / 10 / 9 | 10 / 10 / 9 |
+| Calls (per segment) | 155 / 152 / 153 (0.47) | 118 / 119 / 114 (0.36) |
+| Seconds per segment | 3.91 / 3.96 / 3.83 | 3.79 / 3.48 / 3.50 |
+| LTCR-1, first repeat | 93.2 % | 93.0 % |
+
+- *Decision rule.* 8 only if token fidelity, fallbacks and hard-gate failures are all no worse beyond the noise band; seconds and
+  calls are reported, not weighed. Token fidelity is better at 8 (4.0 token fallbacks against 6.7, though 8 adds one lost mark per
+  repeat), but fallbacks are worse in every seed (+2, +3, +2) and first-round hard-gate failures are worse in every seed (+3, +4,
+  +1); both means at 8 lie above the largest value any start-4 repeat gave (12 and 11), the spread that is the noise here. So
+  **the rows keep 4** for small models (the batch-size scenario value stays 4) and D11 is unchanged. 8 saves 23 % of the calls
+  and about 7 % of the time per segment.
+- *Runs.* `eval-history/20261030-184427-sequence-gemma4_e4b-mlx-en-uk-balanced-unset` (start 4) and `20261030-194329-…`
+  (start 8). The switch was deleted with the arm settled. The report holds the first repeat in full; the per-repeat counts above were read from the run's test log with the
+  patterns `SequenceLogCapture` uses (`Batch item falls back …`, `Evaluated segment=… round=0 … hardGatesPass=false`), and the first
+  repeat's counts match the report's.
 
 **Task 3.4: LM Studio and llama-server error rows.** The fixtures under `modules/llm/src/test/resources/errors/lmstudio/`
 and `errors/llamacpp/` are named `<name>.<status>.json|sse` and hold only the server's own sentences. None of them was
@@ -1666,8 +1739,9 @@ minutes (`NamesPlan.estimatedMinutes`: the dial's time budget over the 80-term p
 11.25–18.75 s at Balanced, 11.25–22.5 s at Max, rounded up), an upper bound because a character the pronouns decide is
 counted. The lexicon remembers a removed term for the session as the glossary does (`LexiconRepository.wasRemoved`: set by
 `remove`, cleared by `put` and `record`), which the text scan and the model scan honour. The context window of the pass's
-own calls is the detected one (`ContextBudget.windowFor`); the recurring-term calls of the lexicon service use the default
-window, as the buttons do. Owner-book target: 26b at Balanced within 25 minutes with no wrong verified gender and every gold
+own calls was then the detected one (`ContextBudget.windowFor`, since removed: group 6.9b gives every call to a model the
+one window `ModelWindow` resolves); the recurring-term calls of the lexicon service used the default window, as the buttons
+did. Owner-book target: 26b at Balanced within 25 minutes with no wrong verified gender and every gold
 name present (run by the orchestrator).
 
 *Book-neutral sources* (15i.E0): no name, quote or passage of a book under test may sit in `modules/*/src` — the committed
@@ -1894,7 +1968,9 @@ it would have changed (false-alarm edits), `tokenBreaks` the applied edits that 
 **Draft (translation) eval, 2026-10-03.** The 26 draft/fix cases plus six new ones (balanced « », he/she agreement, idiom,
 short line) run for every model. gpt-oss:20b was failing on Ollama's native endpoint (`think:false` is ignored, the cap
 went to reasoning, `emptyCompletion`): the client now asks a gpt-oss model for `think:"low"` and adds 1024 tokens of
-reasoning headroom to its cap (`OllamaClient.thinkControl`, `withReasoningHeadroom`). The draft user prompt ends with a
+reasoning headroom to its cap (`OllamaClient.thinkControl`, `withReasoningHeadroom`; both gone since redesign task 6.7:
+gpt-oss's `low` now comes from its profile row, and a model that always thinks gets the profile's reasoning reserve,
+`max(2048, 4·S + 35·n)` tokens, instead of the flat 1024). The draft user prompt ends with a
 reminder that the target is the target language, never a copy of the source and never "...".
 
 | Model | parse | gate | script | marker | injection | note |
@@ -1967,24 +2043,15 @@ set-but-missing directory is a hard failure. The last recorded corpus run is in
 ### Thinking per call and the notes arm (15i.X2) {#x2-arms}
 
 Published studies find that thinking does not help translation itself, so every call asks the model not to think, as it
-always did. The switch below lets the eval measure where that is wrong; it changes no run that does not set it. The notes
+always did. Since redesign task 6.7 no switch changes that: `BOOKLOOM_REASONING` and its property are gone, and each
+model's thinking is decided per call kind from its profile and the person's choice on Settings › Models (design D20) —
+Recommended (off), Allow on proofreading and names, or Always. A model that cannot stop thinking gets no control and a
+reasoning reserve of `max(2048, 4·S + 35·n)` tokens on its cap for a source of S tokens in n items. The notes
 arm's switch (a one-line `notes` string before each batch `target`, read only to be logged) was removed in redesign task
 2.3 with the related-pairs switch (15i.T8, off since its 2026-10-13 round missed its gate) and the batch-format switch; a
-reply that still carries a `notes` field is read as before, the field ignored.
-
-| Switch | Meaning | Eval wiring |
-|---|---|---|
-| `BOOKLOOM_REASONING="low"` or `"DRAFT_BATCH_JSON=on,TERM_READING=low"` (else `-Dbookloom.reasoning`) | a bare `off`, `low` or `on` sets the level of every call that is not named; `NAME=on\|low\|off` sets one `PromptName` call (names case-insensitive, `-` read as `_`, the last entry for a name wins, a malformed or unknown entry is ignored with one WARN; the environment wins over the property). **Set, it replaces the stored Generation setting entirely; unset, the stored setting (`run.reasoning`, Off when nothing is stored) applies to every call.** `BOOKLOOM_SAMPLING` (`server`\|`tuned`) works the same way against `run.sampling` | `BOOKLOOM_EVAL_REASONING`, `scripts/eval-matrix.sh --reasoning "<spec>"` |
-
-A call that thinks sends Ollama `think:true` (`"low"` at Low) and LM Studio `reasoning_effort:"medium"` (`"low"` at Low), and its output cap grows by 1,024
-tokens for the reasoning (a gpt-oss model gets that room once, thinking or not); the Ollama runaway line guard is sized
-from that grown cap and does not count the thinking lines. The report's provenance records `reasoning` (reports made
-before task 2.3 also carry a `batchNotes` field).
-
-```bash
-scripts/eval-matrix.sh --suite realrun --reasoning "REVIEWER=on" --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx"
-scripts/eval-matrix.sh --suite names --reasoning "TERM_READING=on,TERM_SUMMARY=on,BRIEF_SYNTHESIS=on"
-```
+reply that still carries a `notes` field is read as before, the field ignored. The report's provenance records
+`reasoning` as `off` (reports made before task 2.3 also carry a `batchNotes` field). The arms measured below ran with
+the retired switch.
 
 Compare each arm with the same suite without the switch: a call kind turns on only where its target moves by 2+ with its
 time up by at most 30 %. The measured table goes here when the round is run. The live request shape of both dialects is

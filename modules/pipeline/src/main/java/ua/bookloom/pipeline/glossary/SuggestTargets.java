@@ -348,11 +348,7 @@ public final class SuggestTargets {
                                 .strip()));
         log.trace("Glossary suggestion batch {} messages {}", index, messages);
         return ChatRequests.build(
-                PromptName.SUGGEST_TARGETS,
-                messages,
-                OutputLimit.forSuggestions(batch.size()),
-                false,
-                setting.frame().requestDefaults());
+                PromptName.SUGGEST_TARGETS, messages, OutputLimit.forSuggestions(batch.size()), false);
     }
 
     /**

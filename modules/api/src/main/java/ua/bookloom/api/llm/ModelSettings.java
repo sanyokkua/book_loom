@@ -19,6 +19,8 @@ import org.jspecify.annotations.Nullable;
  *     when set
  * @param measuredFrom where the speed was measured; null exactly when the speed is null
  * @param probeVerdicts what the advanced check found; non-null, with null parts for what was never checked
+ * @param thinkingOverride the person's thinking choice for the model; non-null
+ * @param samplingOverride the person's sampler choice for the model; non-null
  */
 public record ModelSettings(
         String providerId,
@@ -31,7 +33,9 @@ public record ModelSettings(
         List<RefusedSetting> refused,
         @Nullable Double measuredSecondsPerSegment,
         @Nullable MeasuredFrom measuredFrom,
-        ProbeVerdicts probeVerdicts) {
+        ProbeVerdicts probeVerdicts,
+        ThinkingOverride thinkingOverride,
+        SamplingOverride samplingOverride) {
 
     /** The lowest temperature a person may fix. */
     public static final double MIN_TEMPERATURE = 0.0;
@@ -45,6 +49,8 @@ public record ModelSettings(
         Objects.requireNonNull(temperatureChoice, "temperatureChoice");
         Objects.requireNonNull(outputField, "outputField");
         Objects.requireNonNull(probeVerdicts, "probeVerdicts");
+        Objects.requireNonNull(thinkingOverride, "thinkingOverride");
+        Objects.requireNonNull(samplingOverride, "samplingOverride");
         refused = List.copyOf(Objects.requireNonNull(refused, "refused"));
         requireTemperatureMatchesChoice(temperatureChoice, temperature);
         requirePositive(contextWindow, "contextWindow");
@@ -57,7 +63,8 @@ public record ModelSettings(
      *
      * @param providerId the provider's id; non-null
      * @param modelId the model's id; non-null
-     * @return the temperature chosen by BookLoom, no limits, {@code max_tokens}, nothing refused or measured
+     * @return the temperature chosen by BookLoom, no limits, {@code max_tokens}, nothing refused or measured, and the
+     *     profile's thinking and samplers
      */
     public static ModelSettings defaults(final String providerId, final String modelId) {
         return new ModelSettings(
@@ -71,7 +78,9 @@ public record ModelSettings(
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     /**
@@ -94,7 +103,9 @@ public record ModelSettings(
                 refused,
                 secondsPerSegment,
                 from,
-                probeVerdicts);
+                probeVerdicts,
+                thinkingOverride,
+                samplingOverride);
     }
 
     /**
@@ -124,7 +135,9 @@ public record ModelSettings(
                 refused,
                 measuredSecondsPerSegment,
                 measuredFrom,
-                probeVerdicts);
+                probeVerdicts,
+                thinkingOverride,
+                samplingOverride);
     }
 
     /**
@@ -146,7 +159,9 @@ public record ModelSettings(
                 refused,
                 measuredSecondsPerSegment,
                 measuredFrom,
-                verdicts);
+                verdicts,
+                thinkingOverride,
+                samplingOverride);
     }
 
     /**
@@ -157,6 +172,31 @@ public record ModelSettings(
      */
     public ModelSettings withoutRefusal(final String name) {
         Objects.requireNonNull(name, "name");
+        return withRefused(refused.stream().filter(r -> !r.name().equals(name)).toList());
+    }
+
+    /**
+     * Forgets one refusal of one scope, leaving the same setting's refusals of other scopes listed.
+     *
+     * @param name the refused setting's name; non-null
+     * @param scope the call kind the refusal covers, or null for the one that covers the whole model
+     * @return a copy without it, or an equal record when it was not listed
+     */
+    public ModelSettings withoutRefusal(final String name, final @Nullable String scope) {
+        Objects.requireNonNull(name, "name");
+        return withRefused(refused.stream()
+                .filter(r -> !(r.name().equals(name) && Objects.equals(r.scope(), scope)))
+                .toList());
+    }
+
+    /**
+     * Keeps everything but the refused settings.
+     *
+     * @param rows the refusals to keep; non-null
+     * @return a copy holding them
+     */
+    public ModelSettings withRefused(final List<RefusedSetting> rows) {
+        Objects.requireNonNull(rows, "rows");
         return new ModelSettings(
                 providerId,
                 modelId,
@@ -165,10 +205,38 @@ public record ModelSettings(
                 contextWindow,
                 maxOutput,
                 outputField,
-                refused.stream().filter(r -> !r.name().equals(name)).toList(),
+                rows,
                 measuredSecondsPerSegment,
                 measuredFrom,
-                probeVerdicts);
+                probeVerdicts,
+                thinkingOverride,
+                samplingOverride);
+    }
+
+    /**
+     * Keeps everything but the person's thinking and sampler choices.
+     *
+     * @param thinking the thinking choice; non-null
+     * @param sampling the sampler choice; non-null
+     * @return a copy holding them
+     */
+    public ModelSettings withOverrides(final ThinkingOverride thinking, final SamplingOverride sampling) {
+        Objects.requireNonNull(thinking, "thinking");
+        Objects.requireNonNull(sampling, "sampling");
+        return new ModelSettings(
+                providerId,
+                modelId,
+                temperatureChoice,
+                temperature,
+                contextWindow,
+                maxOutput,
+                outputField,
+                refused,
+                measuredSecondsPerSegment,
+                measuredFrom,
+                probeVerdicts,
+                thinking,
+                sampling);
     }
 
     private static void requireTemperatureMatchesChoice(

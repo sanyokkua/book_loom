@@ -73,11 +73,13 @@ class WholeBookPipelineEndToEndTest {
     private static final int SEA_CHUNK = 8;
     private static final int SEA_BATCHES = 7;
     private static final String SEA_TARGET = "Том дивився на сіре море тієї ночі.";
-    // Measured: about 5,000 events at DEBUG or higher (15i: the book index, the open-book and Auto-language lines) in
-    // each dialect once every attempt and context was announced, 14
+    // Measured: about 5,500 events at DEBUG or higher (15i: the book index, the open-book and Auto-language lines;
+    // redesign 6.9: the model's window and sampling lines) in each dialect once every attempt and context was
+    // announced,
+    // 14
     // of them at INFO or higher (the seven batch drafts each log one INFO line); the bound is the next multiple of 500
     // above the first count.
-    private static final int DEBUG_OR_HIGHER_BOUND = 5_500;
+    private static final int DEBUG_OR_HIGHER_BOUND = 6_000;
     private static final int INFO_OR_HIGHER_BOUND = 30;
 
     @TempDir

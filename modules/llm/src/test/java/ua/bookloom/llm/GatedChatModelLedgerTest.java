@@ -207,7 +207,10 @@ class GatedChatModelLedgerTest {
                 null,
                 kind,
                 new SamplingParams(null, null, null, null),
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {
@@ -225,6 +228,7 @@ class GatedChatModelLedgerTest {
                 null,
                 ledger,
                 new BuiltWrongLog(),
-                new CapIgnoredLog());
+                new CapIgnoredLog(),
+                BoundSettings.unrowed(clients.create(config), "test-model"));
     }
 }

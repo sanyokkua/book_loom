@@ -134,7 +134,7 @@ final class VerdictCalls {
                 name.responseFormatName(),
                 facts.entry().term(),
                 messages);
-        return ChatRequests.build(name, messages, LIMIT, false, frame.requestDefaults());
+        return ChatRequests.build(name, messages, LIMIT, false);
     }
 
     // The count, the code's tally and the other spellings, as the reading's term line shows them.

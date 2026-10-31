@@ -69,8 +69,12 @@ OpenAI-compatible request mapper reads, so no per-engine client exists:
 
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
   `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
-  call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
-  provides them. It sends `think` (`false`, `"low"` or `true`) only when the request carries a reasoning level, and deliberately sends no `num_ctx`, `keep_alive`, or `/api/show` request in this change.
+  call's per-kind timeout as the ceiling), plus `options.temperature`, the samplers the model's profile or the
+  person's Custom values set, and `format` only when the request provides them. It sends `think` (`false`, `"low"` or
+  `true`) only when the request carries a reasoning level, `options.num_ctx` with the model's one window
+  (`ModelWindow`, see #effective-context) together with `"truncate":false` so an over-long prompt is refused rather
+  than cut, and `"keep_alive":"30m"` only on a translation run's calls (never on a test, a names pass, a brief or a
+  file name).
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio, llama-server, Unsloth and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
@@ -78,7 +82,10 @@ OpenAI-compatible request mapper reads, so no per-engine client exists:
   (`reasoning_effort:"none"`, `chat_template_kwargs.enable_thinking:false`, or top-level `enable_thinking:false`), a gpt-oss id always gets `reasoning_effort:"low"`, and a generic server gets none until a check has proved a switch. The cap
   goes out as `max_tokens` (and only that on Ollama's `/v1` path, whatever field the model's settings choose) or `max_completion_tokens`; LM Studio, llama-server and Unsloth carry
   their neutral samplers explicitly, and Unsloth carries `"enable_tools":false` on every call. A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
-  is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
+  is not (or whose text is a reasoning opener never closed), and whose finish is `length` is asked for once more —
+  with thinking off when it was on, else with four times the cap bounded by the context size; the Ollama-native client
+  does the same with `message.thinking`, and a repeat that spends its cap again is `emptyCompletion` with the reason
+  `reasoning-exhausted` (`response/ReasoningBudget`). Both clients read the reply through `response/ReasoningScrubber`.
 
 ### provider-factory {#provider-factory}
 
@@ -168,25 +175,55 @@ The built `ChatRequest`/`ChatResponse` (`ua.bookloom.api.llm`) are:
 ```java
 public record ChatRequest(
     List<ChatMessage> messages,
-    @Nullable Double temperature,
-    @Nullable ResponseFormat responseFormat
-) {
-    public ChatRequest(List<ChatMessage> messages) { this(messages, null, null); }
-}
-public record ChatResponse(String content, FinishReason finishReason) {}   // FinishReason: STOP, LENGTH, OTHER
+    @Nullable Double temperature, @Nullable ResponseFormat responseFormat,
+    @Nullable ReasoningLevel reasoningEnabled,      // the intent before the profile, the level sent after it
+    @Nullable Integer contextWindow,                // the model's one window; sent only as Ollama's num_ctx
+    @Nullable Integer expectedOutputTokens, @Nullable Integer maxOutputTokens, @Nullable Integer seed,
+    @Nullable CallKind callKind, @Nullable SamplingParams sampling, @Nullable OutputLengthField outputField,
+    @Nullable SourceSize source, @Nullable Integer reasoningReserve,
+    boolean keepLoaded                              // a run's call: Ollama keeps the model loaded
+) {}
+public record ChatResponse(String content, FinishReason finishReason, @Nullable TokenUsage usage) {}
 ```
 
-`ChatRequest` carries no model field: the model is bound on the `ChatModel` obtained from `ModelSelection`. Its
-nullable `temperature` and `responseFormat` components are both built and omitted from serialized JSON when unset.
-`topP`, `maxTokens`, `numCtx`, token usage and streaming are not part of the current contract.
+`ChatRequest` carries no model field: the model is bound on the `ChatModel` obtained from `ModelSelection`. Every
+nullable component is omitted from the serialized JSON when unset. There is no streaming field: the Ollama-native client
+streams internally and both clients hand back one whole reply. `GatedChatModel` applies the model's stored settings and
+profile to each call (`BoundSettings.applied`): the temperature choice, the Custom samplers, the cap, the reasoning
+decision and the structured rung.
+
+Before a chat call leaves `GatedChatModel`, `client/MessageShaper` lays its messages out for the model's profile
+(design D20): a call with no system message gets BookLoom's own (`MessageShaper.DEFAULT_SYSTEM`; the verification
+probe carries it too), so no persona baked into a download is used; a profile with `systemRole` `FOLD` (Gemma 2, Gemma
+3 and their tunes) gets the system text, a blank line and the user text as one user message, never two user messages
+in a row; `TEMPLATE_WRITES_REASONING` (muse-glimmer) drops any system line naming a reasoning level, strength or
+effort, and `HARMONY_FORMAT` (gpt-oss) drops every line starting `Reasoning:`; `ESCAPE_THINK_TOGGLES` puts a word
+joiner (U+2060) after the slash of `/think` and `/no_think` in book text and takes it out of the reply. A reply whose
+body says `System role not supported` (reason `system-role-unsupported`) stores the refused setting `system_role`
+(done instead: `folded`) and is resent folded at no attempt cost; a template that refuses because roles must
+alternate (`template-rejected`) is resent once with neighbouring messages of one role merged (not remembered), and a
+second refusal stays `validation` `template-rejected`.
 
 ## response-handling {#response-handling}
 
-The current pipeline sends the minimal `{"target":"…"}` schema on every draft call and accepts only that exact
-parsed object. Both clients reject raw blank content before sanitizing, ignore separate reasoning fields, strip
-reasoning tags and an outer code fence, and return the cleaned content to the pipeline. A provider capability downgrade
-may omit the native schema field, but the prompt still requires JSON only. Parsing and the two bounded repairs belong
-to `:pipeline`, not to a client.
+Each call kind asks for its own answer schema (a draft batch for `{"items":[…]}`, a single draft for
+`{"target":"…"}`), and the prompt states the same contract, so a call on the prompt-only rung asks for the same JSON.
+Both clients reject raw blank content before scrubbing, read a separate reasoning field only to decide the once-only
+reasoning re-ask (`response/ReasoningBudget`), scrub every known reasoning and turn marker and one outer code fence
+through `response/ReasoningScrubber`, and return the cleaned content to the pipeline. Parsing and the repair belong to
+`:pipeline`, not to a client.
+
+**Structured rungs (design D20).** A structured answer is asked on one of two rungs per model and answer schema (the
+schema's name is its prompt's name): `SCHEMA`, or `PROMPT_ONLY` with the contract stated in the prompt alone.
+`BoundSettings` sends no schema when the model's row marks `PROMPT_ONLY_START` (the default profile included) or when
+the call thinks (a reasoning level is sent or room is reserved for reasoning). `GatedChatModel` reads each outcome
+through `StructuredRungs`: a schema the server cannot use (`grammar-too-large`, `schema-invalid`, a `400`/`422` naming
+the schema), a schema not applied twice in a row (`schema-not-applied`), or, for a row with `QUOTE_CUTS_SCHEMA_STRING`
+(Gemma 3 on Ollama), a reply whose `target` stops on a space, colon, comma or dash while the source opens a straight
+quotation (`schema-cut-short`, `response/QuoteCut`) moves that schema alone down; a server with no structured output
+(`structured-unavailable`) moves every schema of the model. Each step resends the call at no attempt cost and is stored
+as `RefusedSetting("response_format", day, "omitted", scope)` — `scope` null for the whole model — which the Models
+tab lists with its scope and forgets per scope on Try again now.
 
 ### empty-response ordering {#empty-response-ordering}
 
@@ -229,8 +266,16 @@ or `/api/show` reveals belongs to the model-profile work of a later group.
 
 ## effective-context {#effective-context}
 
-Effective-context discovery and chunk budgeting are deferred. This client intentionally does not send `num_ctx`, call
-`/api/show`, or send `keep_alive`; a later context-window change owns those controls and their precedence.
+Every call to a model is sized from one window, `ModelWindow.of(ContextPolicy, override)` (`:api`, `llm/`): the
+person's window for that model, else the smallest of the loaded or detected window, the profile's hard cap and
+`ModelWindow.DEFAULT_WINDOW` (16,384). The loaded window counts only on an engine that fixes it at load or server
+start (LM Studio, llama-server and the other OpenAI-compatible servers); the Ollama-native client sets the window on
+each request, so Ollama's currently loaded figure does not bind it. The server's facts are read at Start (and on
+the Models tab, Test and Detect again), never in the background. `:pipeline` plans every call of a model (the run,
+preparation, the names pass, the brief, the file name, export, a review retry) for that window through `JobModelCalls`,
+which caps each reply at half of it; only the Ollama-native client sends it, as `num_ctx` with `"truncate":false`, and an
+OpenAI-compatible request never carries a context size. A run's calls also carry `keep_alive` `"30m"` on Ollama's
+native API so a long pause does not unload the model.
 
 ## service-owned-retry {#service-owned-retry}
 

@@ -34,9 +34,10 @@ import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
+import ua.bookloom.llm.profile.ReasoningChoice;
+import ua.bookloom.llm.profile.ReasoningReserve;
 import ua.bookloom.llm.provider.CheckReply;
 import ua.bookloom.llm.provider.ProviderCallResult;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /**
  * The Advanced features checks of one model: short calls with invented text that find out what the server honours.
@@ -82,7 +83,8 @@ final class AdvancedChecks {
     /**
      * Binds the checks to one model.
      *
-     * @param modelId the model checked; a gpt-oss id is always asked by effort, so its thinking check is one call
+     * @param modelId the model checked; one that always reasons at a level is asked by effort, so its thinking check
+     *     is one call
      * @param sender sends one check through the gate
      * @param now the time every verdict of this run carries
      */
@@ -137,7 +139,7 @@ final class AdvancedChecks {
         if (config.kind() == ProviderKind.OLLAMA) {
             return nativeThinking();
         }
-        if (EngineTraits.reasonsAtLowest(modelId)) {
+        if (ReasoningChoice.reasonsAtALevel(config.effectiveEngine(), modelId)) {
             return effortThinking();
         }
         boolean ignored = false;
@@ -164,16 +166,11 @@ final class AdvancedChecks {
         return new ThinkingVerdict(null, verdict(ignored ? Outcome.IGNORED : Outcome.REFUSED));
     }
 
-    // A gpt-oss id is sent reasoning_effort "low" whatever switch is named (it cannot stop reasoning), so trying the
-    // other switches would send the same body again: one call says whether the server accepts the effort field.
+    // A model whose built-in row says it always reasons at a level (gpt-oss) cannot stop reasoning, so it is asked by
+    // its lowest effort and the other switches are not tried: one call says whether the server accepts the field.
     private @Nullable ThinkingVerdict effortThinking() {
-        log.debug(
-                "Advanced thinking check provider={} model={} gpt-oss: only reasoning_effort is checked, the other"
-                        + " switches would send the same body",
-                config.id(),
-                modelId);
         final ProviderCallResult<CheckReply> call =
-                send(request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), OffSwitch.REASONING_EFFORT);
+                send(request(THINK_PROMPT, null, ReasoningLevel.LOW, null, null), OffSwitch.REASONING_EFFORT);
         if (call.result().isOk()) {
             return new ThinkingVerdict(OffSwitch.REASONING_EFFORT.wireName(), verdict(Outcome.HONOURED));
         }
@@ -304,7 +301,7 @@ final class AdvancedChecks {
     }
 
     // A thinking model may spend the whole cap on reasoning and answer nothing; that says nothing about the field
-    // checked, so the call is made once more with the room reasoning needs (ReasoningHeadroom), never twice.
+    // checked, so the call is made once more with the least room reasoning needs, never twice.
     private ProviderCallResult<CheckReply> sendWithRoom(final ChatRequest request) {
         final ProviderCallResult<CheckReply> first = send(request, null);
         final AppError failure = first.result().error();
@@ -312,7 +309,11 @@ final class AdvancedChecks {
             return first;
         }
         log.debug("Advanced check answered nothing provider={}; asking once more with reasoning headroom", config.id());
-        return send(withCap(request, ReasoningHeadroom.raise(request.maxOutputTokens())), null);
+        return send(withCap(request, roomier(request.maxOutputTokens())), null);
+    }
+
+    private static @Nullable Integer roomier(final @Nullable Integer cap) {
+        return cap == null ? null : cap + ReasoningReserve.MIN_TOKENS;
     }
 
     private static ChatRequest withCap(final ChatRequest request, final @Nullable Integer cap) {
@@ -327,7 +328,10 @@ final class AdvancedChecks {
                 request.seed(),
                 request.callKind(),
                 request.sampling(),
-                request.outputField());
+                request.outputField(),
+                request.source(),
+                request.reasoningReserve(),
+                request.keepLoaded());
     }
 
     private ProviderCallResult<CheckReply> send(final ChatRequest request, final @Nullable OffSwitch offSwitch) {
@@ -359,7 +363,10 @@ final class AdvancedChecks {
                 null,
                 null,
                 sampling,
-                field);
+                field,
+                null,
+                null,
+                false);
     }
 
     /** Sends one check through the gate. */

@@ -101,7 +101,7 @@ public final class ProviderClientFactory {
     private ProviderClient createClient(ProviderConfig config) {
         log.debug("Creating provider client id={} kind={}", config.id(), config.kind());
         return switch (config.kind()) {
-            case OLLAMA -> new OllamaClient(config, exchange, mapper);
+            case OLLAMA -> new OllamaClient(config, exchange, mapper, facts);
             case OPENAI_COMPATIBLE ->
                 new OpenAiCompatibleClient(
                         config, exchange, mapper, nanoTime, facts, modelId -> verdicts.apply(config.id(), modelId));

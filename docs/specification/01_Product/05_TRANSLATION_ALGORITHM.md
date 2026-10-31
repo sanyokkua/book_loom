@@ -242,10 +242,13 @@ paraphrase-away-from-source failure mode. The per-phase guidance is:
 | Directed fix                             | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
 | Backward revision                        | 0.2                      | Consistency alignment across the book; determinism preferred.                                                      |
 
-The default is **0.2**, user-adjustable in Generation settings over the range 0.0–2.0 (`07_SETTINGS.md#generation-tab`);
-the review panel's "lower temperature for this retry" option sends that retry — a draft, not a repair — at 0.1.
-Where the provider exposes a **reasoning level** (Ollama `think`, OpenAI reasoning params), translation and judge calls
-run it **low/off** to cut latency and noise; any separate reasoning channel is ignored on parse. Concrete per-call
+The default is **0.2**. Per model, Settings › Models can replace these values (`07_SETTINGS.md#models-tab`: the
+Temperature row's My value or Don't send, or the Sampling row's Custom values); the review panel's "lower temperature for
+this retry" option sends that retry — a draft, not a repair — at 0.1. **Reasoning** is decided per call kind from the
+model's profile (design D20 of `redesign-translation-pipeline`): draft, repair, proofread, names and brief calls ask for
+thinking off, the profile maps that to the engine's own field (Ollama `think`, `reasoning_effort`, llama-server's
+`enable_thinking`, gpt-oss's lowest level `low`), and a model that cannot be switched gets no control and room on its cap
+for the reasoning; any reasoning in the reply is removed before parsing. Concrete per-call
 parameter values and output schemas are catalogued in `12_PROMPT_CATALOG.md`.
 
 ## chunking-worked-example {#chunking-worked-example}

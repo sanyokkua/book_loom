@@ -13,7 +13,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 
@@ -76,7 +78,9 @@ class ModelSettingsCacheTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     /** Answers the first read, then fails every later one. */

@@ -81,7 +81,7 @@ class ModelLoadingWireMockTest extends UnattendedRecoveryHarness {
                 HEALTH,
                 aResponse().withStatus(503).withBody("{\"status\":\"loading model\"}"),
                 okJson("{\"status\":\"ok\"}"));
-        provider.stubGet("/v1/models", okJson("{\"data\":[{\"id\":\"test-model\"}]}"));
+        provider.stubGet("/v1/models", okJson("{\"data\":[{\"id\":\"" + WireMockProvider.MODEL_ID + "\"}]}"));
         return provider;
     }
 

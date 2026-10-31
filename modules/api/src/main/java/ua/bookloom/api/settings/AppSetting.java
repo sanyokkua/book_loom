@@ -51,12 +51,6 @@ public record AppSetting<T>(
     /** The default quality of a new project. */
     public static final AppSetting<QualityDial> DEFAULT_DIAL = ofEnum("run.defaultDial", QualityDial.BALANCED);
 
-    /** Thinking before answering. */
-    public static final AppSetting<ReasoningSetting> REASONING = ofEnum("run.reasoning", ReasoningSetting.OFF);
-
-    /** Which sampling a call sends. */
-    public static final AppSetting<SamplingSetting> SAMPLING = ofEnum("run.sampling", SamplingSetting.PROGRAM_DEFAULTS);
-
     /** Whether the review desk opens when a translation ends with segments to review. */
     public static final AppSetting<Boolean> OPEN_REVIEW_DESK = ofBoolean("automation.openReviewDesk", true);
 

@@ -139,10 +139,11 @@ final class EngineShaping {
         if (level == null) {
             return ReasoningFields.NONE;
         }
-        // A gpt-oss model ignores "off" and spends the whole cap reasoning, so off is asked as its lowest level.
-        if (EngineTraits.reasonsAtLowest(modelId)) {
-            log.debug("Reasoning asked by effort for a gpt-oss id model={} level={}", modelId, level);
-            return ReasoningFields.effort(level == ReasoningLevel.OFF ? REASONING_LOW : effort(level));
+        // The lowest level of a model that always reasons (gpt-oss, muse-glimmer) is a reasoning effort on every
+        // engine's OpenAI layer; on llama-server "none" or a template switch would erase it and fall back to medium.
+        if (level == ReasoningLevel.LOW && forced == null && traits.offSwitch() != OffSwitch.REASONING_OBJECT) {
+            log.debug("Reasoning sent as the lowest effort provider={} model={}", config.id(), modelId);
+            return ReasoningFields.effort(REASONING_LOW);
         }
         final @Nullable OffSwitch field = resolved(modelId);
         log.debug(

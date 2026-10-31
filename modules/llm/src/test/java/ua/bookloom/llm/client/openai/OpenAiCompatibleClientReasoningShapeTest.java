@@ -79,23 +79,14 @@ class OpenAiCompatibleClientReasoningShapeTest {
                 .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo(effort))));
     }
 
-    // IF the level is Low, THEN max_tokens grows by the reasoning headroom as for On; Off keeps the cap as asked.
+    // The room for reasoning is already in the cap the profile's decision set, so the client sends it as given.
     @ParameterizedTest
-    @CsvSource({"OFF,300", "LOW,1324", "ON,1324"})
-    void chat_level_growsMaxTokensOnlyWhenTheModelReasons(final ReasoningLevel level, final String maxTokens) {
+    @CsvSource({"OFF", "LOW", "ON"})
+    void chat_level_sendsTheCapAsGiven(final ReasoningLevel level) {
         client().chat(MODEL_ID, request(300, level));
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
-                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo(maxTokens))));
-    }
-
-    // IF a call has thinking on, THEN its max_tokens grows by 1,024 tokens for the reasoning.
-    @Test
-    void chat_thinkingOn_growsMaxTokensByTheReasoningHeadroom() {
-        client().chat(MODEL_ID, request(300, ReasoningLevel.ON));
-
-        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
-                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("1324"))));
+                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("300"))));
     }
 
     @Test

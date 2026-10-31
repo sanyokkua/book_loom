@@ -25,7 +25,9 @@ import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -86,7 +88,9 @@ class GatedChatModelStoredCapTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         model(kind, basePath).chat(uncapped());
 
@@ -108,7 +112,10 @@ class GatedChatModelStoredCapTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {

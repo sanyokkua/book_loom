@@ -35,6 +35,7 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.CallKindTotals;
 import ua.bookloom.pipeline.PrepSummary;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.OriginalTitles;
@@ -42,7 +43,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -69,13 +69,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final Clock clock;
-
-    private final RequestDefaultsSource requestDefaultsSource;
     private final CallLedger ledger;
 
     /**
-     * A setup assistant whose requests use the defaults the environment alone gives and whose calls are counted
-     * nowhere (tests, evals).
+     * A setup assistant whose calls are counted nowhere (tests, evals).
      */
     public SetupAssistantImpl(
             final ProjectRepository projects,
@@ -85,16 +82,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final PromptTemplates templates,
             final ObjectMapper mapper,
             final Clock clock) {
-        this(
-                projects,
-                segments,
-                glossary,
-                openProjects,
-                templates,
-                mapper,
-                clock,
-                RequestDefaultsSource.environmentOnly(),
-                CallLedger.none());
+        this(projects, segments, glossary, openProjects, templates, mapper, clock, CallLedger.none());
     }
 
     @Override
@@ -133,13 +121,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         log.debug("Brief suggestion requested project={} detectedContext={}", projectId, detectedContext);
         final long mark = ledger.mark();
         try {
+            final int window = ModelWindows.of(model, detectedContext);
             return opened(projectId)
                     .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
-                            .suggest(
-                                    book,
-                                    detectedContext,
-                                    model.contextWindowOverride(),
-                                    calls(model, progress, book)));
+                            .suggest(book, window, calls(model, progress, book, window)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         } finally {
@@ -191,6 +176,11 @@ public final class SetupAssistantImpl implements SetupAssistant {
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final SetupBook book) {
+        return calls(model, progress, book, ModelWindows.of(model, null));
+    }
+
+    private ModelCalls calls(
+            final ChatModel model, final Consumer<JobEvent> progress, final SetupBook book, final int window) {
         return new JobModelCalls(
                 onSent -> {
                     onSent.run();
@@ -198,7 +188,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 },
                 progress,
                 clock,
-                book.target());
+                book.target(),
+                window);
     }
 
     private Result<SetupBook> opened(final String projectId) {
@@ -215,8 +206,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
                     "Nothing to suggest",
                     "The project must be stored, name a target language and have its book open."));
         }
-        return Result.ok(new SetupBook(
-                project, document, target, openProjects.index(projectId), requestDefaultsSource.current()));
+        return Result.ok(new SetupBook(project, document, target, openProjects.index(projectId)));
     }
 
     private Result<FileNameSuggestion> askName(final SetupBook book, final ModelCalls calls) {

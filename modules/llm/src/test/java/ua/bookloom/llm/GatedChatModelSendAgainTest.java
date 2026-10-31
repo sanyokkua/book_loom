@@ -125,7 +125,10 @@ class GatedChatModelSendAgainTest {
                 null,
                 CallKind.DRAFT,
                 new SamplingParams(null, null, null, null),
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {

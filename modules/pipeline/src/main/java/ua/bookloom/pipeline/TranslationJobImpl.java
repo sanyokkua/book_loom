@@ -17,6 +17,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -44,7 +45,6 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
@@ -98,13 +98,11 @@ final class TranslationJobImpl implements TranslationJob {
     private final RunTicks ticks;
     private final int batchSize;
     private final WordValidator words;
-    private final RequestDefaultsSource requestDefaultsSource;
     private final String providerKind;
 
     /**
-     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its
-     * requests use the reasoning level and sampling mode the source reads when the run starts, and its start line
-     * names {@code providerKind}, the kind of server the model runs on or {@code unknown}.
+     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its start
+     * line names {@code providerKind}, the kind of server the model runs on or {@code unknown}.
      */
     TranslationJobImpl(
             final DocumentPort documents,
@@ -122,11 +120,9 @@ final class TranslationJobImpl implements TranslationJob {
             final RunTicks ticks,
             final int batchSize,
             final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource,
             final CallLedger ledger,
             final String providerKind) {
         this.providerKind = Objects.requireNonNull(providerKind, "providerKind");
-        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
         this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
         this.words = Objects.requireNonNull(words, "words");
         this.batchSize = batchSize;
@@ -265,6 +261,7 @@ final class TranslationJobImpl implements TranslationJob {
         if (proposed > 0) {
             emit(MemoryEvents.namesAdded(proposed));
         }
+        announceProfile();
         final RunEnd end = stages(run, dataOf(prepared)).run(work);
         new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
@@ -273,14 +270,9 @@ final class TranslationJobImpl implements TranslationJob {
     private StageRunner stages(final RunStart.Started run, final PrepStage.Prepared prepared) {
         final StyleSheet styleSheet = prepared.styleSheet();
         final BookBrief brief = run.project().brief();
-        final RunWindow runWindow = new RunWindow(request.detectedContext(), model::contextWindowOverride);
+        final RunWindow runWindow = new RunWindow(model, request.detectedContext());
         final CallFrame frame = CallFrame.forRun(
-                brief,
-                styleSheet,
-                run.document(),
-                run.index().majorityScript().orElse(null),
-                words,
-                requestDefaultsSource.current());
+                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
         final ModelCalls calls = new JobModelCalls(
                         onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                         this::emit,
@@ -288,7 +280,8 @@ final class TranslationJobImpl implements TranslationJob {
                         frame.targetLanguage(),
                         runWindow::current,
                         SegmentLocators.of(run.document()))
-                .withSteps(StepAnnouncer.over(this::emit));
+                .withSteps(StepAnnouncer.over(this::emit))
+                .inRun();
         final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
         RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
@@ -299,6 +292,12 @@ final class TranslationJobImpl implements TranslationJob {
                 sinks,
                 calls,
                 new NarratorStage(stores, sinks, run.document(), settings));
+    }
+
+    // The model's first profile ask is the run's start: it writes the profile line beside the start line.
+    private void announceProfile() {
+        final ModelProfile profile = model.profile();
+        log.debug("Run model profile batch={} tier={}", profile.batchSize(), profile.tier());
     }
 
     private ChunkRunner chunkRunner(

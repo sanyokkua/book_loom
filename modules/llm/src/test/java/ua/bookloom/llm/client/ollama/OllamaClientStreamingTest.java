@@ -181,12 +181,12 @@ class OllamaClientStreamingTest {
 
     @Test
     void maxLines_cappedRequest_isTwiceTheCapPlusTheMargin() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, capped(RUNAWAY_CAP))).isEqualTo(104L);
+        assertThat(ThinkingLines.maxLines(MODEL_ID, capped(RUNAWAY_CAP))).isEqualTo(104L);
     }
 
     @Test
     void maxLines_noCapNoContext_isUnbounded() {
-        assertThat(OllamaClient.maxLines(MODEL_ID, new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
+        assertThat(ThinkingLines.maxLines(MODEL_ID, new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
                 .isEqualTo(Long.MAX_VALUE);
     }
 

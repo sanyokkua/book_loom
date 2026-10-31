@@ -16,15 +16,12 @@ import ua.bookloom.api.llm.ResponseFormat;
 class ChatRequestsTest {
 
     private static final List<ChatMessage> MESSAGES = List.of(new ChatMessage(ChatRole.USER, "x"));
-    // Reasoning Off and the server's own sampling: what a run with nothing set and nothing stored sends.
-    private static final RequestDefaults DEFAULTS =
-            new RequestDefaults(ReasoningPlan.stored(ReasoningLevel.OFF), SamplingMode.SERVER);
     private static final String SOURCE = "He opened the ⟦g0⟧old⟦g1⟧ door.";
 
     @Test
     void build_draft_carriesContextWindowOutputAllowanceAndDraftSettings() {
-        final ChatRequest request = ChatRequests.build(
-                PromptName.DRAFT, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false, DEFAULTS);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.DRAFT, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false);
 
         assertThat(request.contextWindow()).isEqualTo(16_384);
         assertThat(request.expectedOutputTokens()).isEqualTo(16);
@@ -35,7 +32,7 @@ class ChatRequestsTest {
 
     @Test
     void build_lowerTemperature_carriesTheLowerOne() {
-        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(16, 64), true, DEFAULTS)
+        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(16, 64), true)
                         .temperature())
                 .isEqualTo(0.1);
     }
@@ -46,16 +43,14 @@ class ChatRequestsTest {
                                 PromptName.STRUCTURAL_REPAIR,
                                 MESSAGES,
                                 OutputLimit.forSource(SOURCE, "en", "uk"),
-                                false,
-                                DEFAULTS)
+                                false)
                         .expectedOutputTokens())
                 .isEqualTo(16);
     }
 
     @Test
     void build_limit_carriesExpectedAndCap() {
-        final ChatRequest request =
-                ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(414, 661), false, DEFAULTS);
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(414, 661), false);
 
         assertThat(request.expectedOutputTokens()).isEqualTo(414);
         assertThat(request.maxOutputTokens()).isEqualTo(661);
@@ -63,7 +58,7 @@ class ChatRequestsTest {
 
     @Test
     void build_noLimit_carriesNeither() {
-        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false, DEFAULTS);
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false);
 
         assertThat(request.expectedOutputTokens()).isNull();
         assertThat(request.maxOutputTokens()).isNull();
@@ -72,9 +67,11 @@ class ChatRequestsTest {
     @ParameterizedTest
     @EnumSource(PromptName.class)
     void build_anyName_carriesThatNamesCallKindAndNoSeed(final PromptName name) {
-        final ChatRequest request = ChatRequests.build(name, MESSAGES, null, false, DEFAULTS);
+        final ChatRequest request = ChatRequests.build(name, MESSAGES, null, false);
 
         assertThat(request.callKind()).isEqualTo(name.callKind());
         assertThat(request.seed()).isNull();
+        // No sampler beyond the temperature: the model's profile or the person's Custom values decide them.
+        assertThat(request.sampling()).isNull();
     }
 }

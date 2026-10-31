@@ -34,7 +34,17 @@ public record OllamaChatResponse(
      * The generated content returned by Ollama.
      *
      * @param content nullable because malformed or partial replies may omit generated text
+     * @param thinking a thinking model's reasoning, kept apart from the text; read only to tell a reply whose cap the
+     *     reasoning used up, never part of the answer; nullable because most replies carry none
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Message(@JsonProperty("content") @Nullable String content) {}
+    public record Message(
+            @JsonProperty("content") @Nullable String content,
+            @JsonProperty("thinking") @Nullable String thinking) {
+
+        /** A message with text and no reasoning. */
+        public Message(final @Nullable String content) {
+            this(content, null);
+        }
+    }
 }

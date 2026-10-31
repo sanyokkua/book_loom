@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
@@ -34,7 +35,6 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.api.project.SegmentLocator;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -66,7 +66,7 @@ class JobModelCallSnapshotsTest {
                 events::add,
                 new FixedClock(),
                 "uk",
-                ContextBudget.DEFAULT_WINDOW,
+                ModelWindow.DEFAULT_WINDOW,
                 LOCATORS);
     }
 

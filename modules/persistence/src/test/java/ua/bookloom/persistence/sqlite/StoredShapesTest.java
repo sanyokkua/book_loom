@@ -66,6 +66,21 @@ class StoredShapesTest {
     }
 
     @Test
+    void fingerprint_afterModelOverrides_differsFromTheStoredOne() {
+        final String described = StoredShapes.describe(StoredShapes.ROOTS);
+        final String withoutNewFields = described
+                .replace("samplingOverride:", "")
+                .replace("thinkingOverride:", "")
+                .replace(",scope:java.lang.String", "");
+
+        assertThat(described)
+                .contains("thinkingOverride:enum[ALLOW_PROOFREAD_AND_NAMES,ALWAYS,RECOMMENDED]")
+                .contains("samplingOverride:{minP:java.lang.Double,mode:enum[CUSTOM,PROFILE_DEFAULT]")
+                .contains("scope:java.lang.String");
+        assertThat(withoutNewFields).isNotEqualTo(described);
+    }
+
+    @Test
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);
     }

@@ -338,10 +338,13 @@ injected variables, required-vs-optional fields, parameters, and expected JSON s
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
 output): draft 0.2 (the default), judge 0.1, directed fix 0.2, backward
-revision 0.2, pre-scan/summary 0.2. The default 0.2 is user-adjustable 0.0–2.0 in Generation settings
-(`01_Product/07_SETTINGS.md#generation-tab`), and a review-desk retry can opt into 0.1 for its draft call when a lower
-temperature is asked. Where a **reasoning level** is controllable (Ollama `think`, OpenAI reasoning params) every call
-sets it low/off; the response handler strips any reasoning/thinking channel before parsing (`04_LLM_INTEGRATION.md`).
+revision 0.2, pre-scan/summary 0.2. These are the pipeline's per-kind values; a model's own settings on Settings ›
+Models (`01_Product/07_SETTINGS.md#models-tab`) may replace them, and a review-desk retry can opt into 0.1 for its draft
+call when a lower temperature is asked. Every call carries a **reasoning intent** for its kind (off for draft, repair,
+proofread, names and brief), never a level; `:llm` maps the intent through the model's profile to the engine's own field
+or sends nothing the model does not declare, and the response handler strips any reasoning/thinking channel before
+parsing (`04_LLM_INTEGRATION.md`). The pipeline never names a model: it reads `ChatModel.profile()` only for the one
+window every call of a run is planned against (`ModelWindow`) and the batch size.
 Per-call values live in `01_Product/12_PROMPT_CATALOG.md`. A batch draft call and its re-ask are `DRAFT`-kind calls
 whose reply is capped by the size of the items sent (`maxOutputTokens` / `num_predict`); a timed-out call is repeated once
 with a lower cap and a new seed, and that second attempt is announced as a `RESEND` step.

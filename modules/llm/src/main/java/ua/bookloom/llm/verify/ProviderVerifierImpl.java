@@ -49,11 +49,12 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final EngineStage engineStage;
     private final AdvancedStage advanced;
     private final ModelsStage models;
+    private final ProbeShaping shaping;
 
     /**
      * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, the engine
-     * detection that stores what it finds on the saved provider, and the models' settings, where the check verdicts
-     * are kept.
+     * detection that stores what it finds on the saved provider, the models' settings, where the check verdicts
+     * are kept, and the shaping that lays the inference probe out the way the model's template reads it.
      */
     @Inject
     public ProviderVerifierImpl(
@@ -64,13 +65,15 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             ObjectMapper mapper,
             LongSupplier nanoTime,
             EngineRegistry engines,
-            ModelSettingsRepository settings) {
+            ModelSettingsRepository settings,
+            ProbeShaping shaping) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
         this.calls = new RetriedCalls(gate, Objects.requireNonNull(retryPolicy, "retryPolicy"));
         this.inference = new InferenceStage(calls, Objects.requireNonNull(mapper, "mapper"));
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.engines = Objects.requireNonNull(engines, "engines");
+        this.shaping = Objects.requireNonNull(shaping, "shaping");
         this.engineStage = new EngineStage(engines);
         this.models = new ModelsStage(calls);
         this.advanced =
@@ -287,7 +290,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     private StageOutcome inferenceStage(ProviderClient client, ProviderConfig config, String modelId) {
         final long start = nanoTime.getAsLong();
-        final InferenceProbe probe = inference.run(client, config.id(), modelId);
+        final InferenceProbe probe = inference.run(client, config.id(), modelId, shaping.forModel(config, modelId));
         final StageOutcome outcome = probe.outcome().withElapsed(since(start));
         final ProbeVerdicts.Outcome schema = probe.schema();
         if (schema != null) {

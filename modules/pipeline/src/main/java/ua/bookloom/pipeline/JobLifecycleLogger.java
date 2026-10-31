@@ -5,11 +5,11 @@ import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.RunRequest;
-import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.WorkList;
 
@@ -27,14 +27,14 @@ final class JobLifecycleLogger {
             final WorkList work,
             final Set<PausePoint> pausePoints) {
         log.info(
-                "Translation job started project={} format={} sourceLanguage={} targetLanguage={} mode={} dial={} contextSize={} pausePoints={} segments={} sections={}",
+                "Translation job started project={} format={} sourceLanguage={} targetLanguage={} mode={} dial={} defaultWindow={} pausePoints={} segments={} sections={}",
                 request.projectId(),
                 run.document().format(),
                 run.project().brief().sourceLanguage(),
                 run.project().brief().targetLanguage(),
                 request.mode(),
                 run.project().brief().dial(),
-                TokenBudget.EFFECTIVE_CONTEXT,
+                ModelWindow.DEFAULT_WINDOW,
                 pausePoints,
                 work.segmentCount(),
                 work.sectionCount());

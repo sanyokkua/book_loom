@@ -14,12 +14,10 @@
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--reasoning NAME=on,...] [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
+#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
 #                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA]
-# --reasoning "DRAFT_BATCH_JSON=on,TERM_READING=on" (15i.X2) asks the named calls (PromptName constants, any case) to think
-# for the run (Ollama think:true, LM Studio reasoning_effort medium); unset leaves every call off. The provenance of a
-# report records it (reasoning=). Batches go out in one JSON format (redesign task 2.3: no format, notes or related-pairs
-# switch is left).
+# Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
+# in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
 # --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
 # read only by the eval test classes; reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
@@ -127,7 +125,6 @@ BATCH_SIZES=""
 NAMES_POLICY=transliterate
 NARRATOR=unset
 NARRATOR_GENDER=male
-REASONING=""
 REPEATS=""
 PAIR=""
 BASELINE_OF=""
@@ -163,7 +160,6 @@ while [ $# -gt 0 ]; do
     --narrator) NARRATOR=$2; shift 2 ;;
     --names) NAMES_POLICY=$2; shift 2 ;;
     --narrator-gender) NARRATOR_GENDER=$2; shift 2 ;;
-    --reasoning) REASONING=$2; shift 2 ;;
     --repeats)
       case "$2" in ''|*[!0-9]*|0) echo "--repeats takes a positive whole number, not $2" >&2; exit 2 ;; *) REPEATS=$2 ;; esac
       shift 2 ;;
@@ -280,7 +276,7 @@ run_one() {
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY BOOKLOOM_EVAL_REASONING=$REASONING \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY \
     BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"

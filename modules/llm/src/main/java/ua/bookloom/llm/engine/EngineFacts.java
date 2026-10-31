@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpExchange;
@@ -32,10 +34,12 @@ public final class EngineFacts {
     private static final String PROPS = "props";
     private static final char KEY_SEPARATOR = '\u0000';
     private static final int HTTP_OK = 200;
+    private static final List<String> TEMPLATE_SWITCH = List.of("true", "false");
 
     private final HttpExchange exchange;
     private final ReplyShapes shapes;
     private final Map<String, Props> props = new ConcurrentHashMap<>();
+    private final Map<String, ModelFacts> modelFacts = new ConcurrentHashMap<>();
 
     /** Shares the provider exchange, so the GET signs in and is logged like every other request. */
     @Inject
@@ -65,6 +69,37 @@ public final class EngineFacts {
     }
 
     /**
+     * Adds the template's thinking switch to what a server said about a model: on an engine whose off switch is the
+     * template variable, a template that reads {@code enable_thinking} declares an on/off switch even when the server
+     * said nothing else about thinking, and one that does not read it declares none.
+     *
+     * @param config the provider; non-null
+     * @param modelId the model; non-null
+     * @param facts what the server said; non-null
+     * @return the facts with the values {@code true} and {@code false} offered when the template reads the variable,
+     *     else the facts unchanged
+     */
+    public ModelFacts withTemplateSwitch(final ProviderConfig config, final String modelId, final ModelFacts facts) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(facts, "facts");
+        final boolean templateEngine = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
+                        .offSwitch()
+                == EngineTraits.OffSwitch.TEMPLATE_KWARG;
+        if (!templateEngine || !facts.thinkingOptions().isEmpty()) {
+            log.debug(
+                    "Template switch not added provider={} model={} templateEngine={}",
+                    config.id(),
+                    modelId,
+                    templateEngine);
+            return facts;
+        }
+        final boolean reads = readsEnableThinking(config, modelId);
+        log.debug("Template switch provider={} model={} readsEnableThinking={}", config.id(), modelId, reads);
+        return reads ? facts.withThinkingOptions(TEMPLATE_SWITCH) : facts;
+    }
+
+    /**
      * Whether a llama-server is a router, which loads whichever listed model an id names, so the id is checked
      * against its list first. Read from the same {@code /props} reply the template check reads.
      *
@@ -88,7 +123,35 @@ public final class EngineFacts {
         Objects.requireNonNull(providerId, "providerId");
         final String prefix = providerId + KEY_SEPARATOR;
         final boolean removed = props.keySet().removeIf(key -> key.startsWith(prefix));
+        modelFacts.keySet().removeIf(key -> key.startsWith(prefix));
         log.debug("Engine facts forgotten provider={} removed={}", providerId, removed);
+    }
+
+    /**
+     * Keeps what a server last said about a model, for the session only; the next person's action reads again.
+     *
+     * @param providerId the provider's id; non-null
+     * @param modelId the model id; non-null
+     * @param facts what the server said; non-null
+     */
+    public void remember(final String providerId, final String modelId, final ModelFacts facts) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(facts, "facts");
+        modelFacts.put(providerId + KEY_SEPARATOR + modelId, facts);
+    }
+
+    /**
+     * What a server last said about a model in this session.
+     *
+     * @param providerId the provider's id; non-null
+     * @param modelId the model id; non-null
+     * @return the facts, or empty when none were read this session
+     */
+    public Optional<ModelFacts> lastRead(final String providerId, final String modelId) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        return Optional.ofNullable(modelFacts.get(providerId + KEY_SEPARATOR + modelId));
     }
 
     private Props known(final ProviderConfig config, final String key, final String path) {
@@ -125,7 +188,7 @@ public final class EngineFacts {
         final Props found =
                 shapes.object(Optional.of(answered)).map(EngineFacts::props).orElse(Props.NONE);
         log.info(
-                "facts read engine={} runner=none templateReads={} router={} perModel={}",
+                "props read engine={} runner=none templateReads={} router={} perModel={}",
                 ServerEngine.LLAMA_CPP,
                 found.readsEnableThinking() ? "enable_thinking" : "none",
                 found.router(),

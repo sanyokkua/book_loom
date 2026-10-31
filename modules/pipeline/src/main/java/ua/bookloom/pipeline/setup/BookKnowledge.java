@@ -101,8 +101,7 @@ public final class BookKnowledge {
                 name,
                 SelfHealCalls.messagesFor(templates, name, frame, user),
                 new OutputLimit(EXPECTED_TOKENS, CAP_TOKENS),
-                false,
-                frame.requestDefaults());
+                false);
         log.debug("Book knowledge asked: author given={}", facts.author() != null);
         return calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.whole(name));
     }

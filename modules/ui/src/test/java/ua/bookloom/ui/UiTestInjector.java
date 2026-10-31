@@ -35,7 +35,6 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.api.settings.GenerationOverrides;
 import ua.bookloom.api.settings.ReviewModeChoice;
 import ua.bookloom.ui.dialog.ContinuePrompt;
 import ua.bookloom.ui.dialog.FindBookPrompt;
@@ -326,12 +325,6 @@ public final class UiTestInjector {
         /** What the graph's {@link AppRestart} is, so the test can read whether and when a restart was asked. */
         public Builder restart(final AppRestart value) {
             launch.restart(Objects.requireNonNull(value, "restart"));
-            return this;
-        }
-
-        /** What the graph says overrides a Generation setting for this launch. */
-        public Builder overrides(final GenerationOverrides value) {
-            launch.overrides(Objects.requireNonNull(value, "overrides"));
             return this;
         }
 

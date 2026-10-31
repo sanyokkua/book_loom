@@ -25,7 +25,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ModelSettingsCache;
@@ -169,7 +171,9 @@ class GatedChatModelSettingsTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     private static ChatRequest request(final Double temperature, @Nullable final Integer cap) {
@@ -184,7 +188,10 @@ class GatedChatModelSettingsTest {
                 null,
                 CallKind.DRAFT,
                 null,
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     /** Hand-written provider fake that records what the bound model hands it. */

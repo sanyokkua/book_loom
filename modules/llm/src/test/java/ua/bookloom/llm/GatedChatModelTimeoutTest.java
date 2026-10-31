@@ -37,9 +37,9 @@ class GatedChatModelTimeoutTest {
 
     // LM Studio's own route, where its chat goes first.
     private static final String CHAT_PATH = "/api/v0/chat/completions";
-    private static final String MODEL_ID = "test-model";
+    private static final String MODEL_ID = "mistral-small3.2:24b";
     private static final String REPLY =
-            "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
+            "{\"model\":\"mistral-small3.2:24b\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =

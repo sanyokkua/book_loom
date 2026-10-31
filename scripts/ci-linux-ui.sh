@@ -31,7 +31,7 @@ docker run --rm \
   -v bookloom-ci-gradle:/root/.gradle \
   -v bookloom-ci-work:/work \
   "$image" bash -ec "
-    rsync -a --exclude build --exclude .gradle --exclude .git --exclude .temporary_context /src/ /work/
+    rsync -a --delete --exclude build --exclude .gradle --exclude .git --exclude .temporary_context /src/ /work/
     cd /work
     ./gradlew --no-daemon :ui:test $quoted
   "

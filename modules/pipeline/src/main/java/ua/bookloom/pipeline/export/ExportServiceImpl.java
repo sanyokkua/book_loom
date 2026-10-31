@@ -23,7 +23,7 @@ import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -149,7 +149,7 @@ public final class ExportServiceImpl implements ExportService {
                 },
                 clock,
                 target,
-                ContextBudget.DEFAULT_WINDOW,
+                ModelWindows.of(model, null),
                 opened == null ? Map.of() : SegmentLocators.of(opened));
     }
 }

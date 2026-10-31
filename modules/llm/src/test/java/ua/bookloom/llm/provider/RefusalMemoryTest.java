@@ -25,7 +25,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 
@@ -67,7 +69,9 @@ class RefusalMemoryTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         final boolean stored = memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
@@ -119,7 +123,9 @@ class RefusalMemoryTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
         memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
         final ChatRequest stripped = memory.withoutRemembered(request(0.7), cache.current(PROVIDER, MODEL));
@@ -144,7 +150,9 @@ class RefusalMemoryTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         final ChatRequest kept = memory.withoutRemembered(request(0.2), cache.current(PROVIDER, MODEL));
 
@@ -164,7 +172,9 @@ class RefusalMemoryTest {
                 List.of(new RefusedSetting("frequency_penalty", DAY, "omitted")),
                 null,
                 null,
-                ProbeVerdicts.none()));
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault()));
 
         assertThat(memory.remembered(cache.current(PROVIDER, MODEL))).isEmpty();
     }
@@ -223,7 +233,10 @@ class RefusalMemoryTest {
         final ExecutorService pool = Executors.newFixedThreadPool(EIGHT);
         try {
             CompletableFuture.allOf(EnumSet.complementOf(EnumSet.of(
-                                    RejectedCapability.STRUCTURED_OUTPUT, RejectedCapability.REASONING_CONTROL))
+                                    RejectedCapability.STRUCTURED_OUTPUT,
+                                    RejectedCapability.REASONING_CONTROL,
+                                    RejectedCapability.SYSTEM_ROLE,
+                                    RejectedCapability.ROLE_ORDER))
                             .stream()
                             .map(setting ->
                                     CompletableFuture.runAsync(() -> memory.remember(PROVIDER, MODEL, setting), pool))

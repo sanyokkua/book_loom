@@ -189,7 +189,10 @@ class GatedChatModelLogTest {
                 null,
                 callKind,
                 new SamplingParams(null, null, null, null),
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath) {
@@ -212,6 +215,7 @@ class GatedChatModelLogTest {
                 null,
                 CallLedger.none(),
                 builtWrong,
-                new CapIgnoredLog());
+                new CapIgnoredLog(),
+                BoundSettings.unrowed(clients.create(config), modelId));
     }
 }

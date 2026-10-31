@@ -738,8 +738,15 @@ Six tabs: **Providers · Models · Generation · Appearance · Automation · Sto
   0.1–0.2 translating) · **My value** (a slider; one value for every request) · **Don't send** (the parameter is
   left out entirely, for models that refuse it, such as some newer OpenAI and Anthropic models). The request DTOs already
   omit a null temperature, so "Don't send" maps to null.
-- **Settings this model refused** (S6): a list learned automatically: the setting, when it was refused and what
-  BookLoom did instead. Each row has **Send again** (it acts at once and leaves unsaved typing alone; there is no Reset). With nothing refused it says "Nothing refused" and why a refusal can happen.
+- **Thinking** (redesign task 6.7): what thinking control the model offers and Recommended (off) · Allow on
+  proofreading and names · Always; no choice when the model has none or always thinks.
+- **Sampling** (redesign task 6.9): what BookLoom sends (its temperature per call kind, neutral values where a
+  server's own defaults are not neutral) and **Profile default** · **Custom** (temperature, `top_k`, `top_p`, `min_p`;
+  an empty field keeps the profile's value, a typed temperature is the Temperature row's My value). No choice leaves
+  sampling to the server.
+- **Settings this model refused** (S6): a list learned automatically: the setting, what it covers (the whole model,
+  or one kind of call whose answer schema it refused, such as "Only: Name reading"), when it was refused and what
+  BookLoom did instead. Each row has **Try again now**, which forgets that scope only (it acts at once and leaves unsaved typing alone; there is no Reset). With nothing refused it says "Nothing refused" and why a refusal can happen.
 - **Use context window** (number; while the switch is off the field shows what is loaded as a suggestion; `num_ctx` for Ollama in grey).
 - **Limit answer length** (off = `OutputLimit` per request).
 - **Advanced**: the field that carries the answer length (`max_completion_tokens` / `max_tokens`; for Ollama the choice is not offered, only a hint).
@@ -758,20 +765,19 @@ BookLoom handles a refusal the same way for every optional setting:
 2. **Drop it and repeat once.** The same request is sent again without that setting, or with
    `max_completion_tokens` instead of `max_tokens`. It does not count as a failed attempt.
 3. **Remember it per provider + model** (planned SQLite; in memory until then). Later requests leave it out. The
-   Models tab lists it under "Settings this model refused", where **Send again** forgets it.
+   Models tab lists it under "Settings this model refused", where **Try again now** forgets it.
 4. **Say it once.** The activity log gets one warn line ("The model refused the setting “temperature” — BookLoom
    stopped sending it and repeated the request"). The inference test's Details show it. No toast during a run.
 5. **A refusal BookLoom cannot place** (a 400 that names no setting it sent) stays an ordinary error with Details. It
    is never guessed.
 
 ### Generation · Appearance · Automation · Storage & logs
-- **Generation** (applies to segments not translated yet):
-  - What the quality choice does: a read-only grid of labels from `DialParameters` (through `DialProfiles`). A note says a
-    running translation keeps the settings it started with.
-  - Thinking before answering: Off / Low / On (`ReasoningPlan`).
-  - Sampling: Program defaults / Tuned by BookLoom (`SamplingMode`). A variable that overrides either choice is named
-    beside it.
-  - Time limits: fixed (`CallLimits`).
+- **Generation** (holds no setting):
+  - What the quality choice does: a read-only grid of labels from `DialParameters` (through `DialProfiles`), with
+    "The same for every model." under it.
+  - Thinking and Sampling are set per model on the Models tab (redesign tasks 6.7 and 6.9).
+  - Time limits: fixed (`CallLimits`): a check, the name and brief calls (longer for a model that always thinks), other
+    calls by expected length, silence while streaming, tries.
 - **Appearance**:
   - Theme (Light · Dark · Match the computer).
   - Language of the app ("Applies after BookLoom restarts."; [Restart now] shows only while the choice differs from the

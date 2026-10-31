@@ -84,17 +84,10 @@ class EvalProvenanceTest {
         assertThat(p.dial()).isEqualTo("FAST");
     }
 
-    // The thinking plan changes what a report measures, so each report says which it ran with.
+    // Each report says what its calls asked for.
     @Test
-    void capture_nothingSet_recordsThinkingOff() {
-        assertThat(provenance(Map.of()).reasoning()).isEqualTo("off");
-    }
-
-    @Test
-    void capture_reasoningPlan_isRecorded() {
-        final EvalProvenance p = provenance(Map.of("BOOKLOOM_REASONING", "TERM_READING=on,DRAFT_BATCH_JSON=on"));
-
-        assertThat(p.reasoning()).isEqualTo("DRAFT_BATCH_JSON=on,TERM_READING=on");
+    void capture_nothingSet_recordsTheOffIntent() {
+        assertThat(provenance(Map.of()).reasoning()).isEqualTo("intent-off");
     }
 
     @Test
@@ -136,13 +129,16 @@ class EvalProvenanceTest {
         assertThat(calibration.get("passed").asBoolean()).isFalse();
     }
 
+    // The retired variable no longer changes what a report says it ran with, and the report names the value as the
+    // calls' intent, not as what the server was sent: the model's profile decides that (design D20).
     @Test
-    void json_reasoning_isAFieldOfTheProvenance() throws IOException {
+    void json_reasoning_isTheOffIntentWhateverTheEnvironment() throws IOException {
         final String json =
                 provenance(Map.of("BOOKLOOM_REASONING", "REVIEWER=on")).json();
 
         final JsonNode node = new ObjectMapper().readTree(json);
-        assertThat(node.get("reasoning").asText()).isEqualTo("REVIEWER=on");
+        assertThat(node.get("reasoning").asText()).isEqualTo("intent-off");
+        assertThat(node.at("/model/thinking").asText()).isEqualTo("intent-off");
     }
 
     @Test

@@ -941,7 +941,7 @@ WHEN a program asked by the first-launch look answers with at least one model, t
 
 ### Requirement: Shape an Ollama-native chat request
 
-WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` to `<baseUrl>/api/chat` a streamed body with `model`, `messages`, `options` with `temperature`, the profile's samplers, `num_ctx`, `num_predict` and `seed` each only when given (the object left out when none is), `format` only when the call asks for a schema, `think` only when the reasoning rules give one, `keep_alive` only on a run's calls, and `stop` only as a list; an absent field SHALL be left out, never `null`.
+WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` to `<baseUrl>/api/chat` a streamed body with `model`, `messages`, `options` with `temperature`, the profile's samplers, `num_ctx`, `num_predict` and `seed` each only when given (the object left out when none is), `truncate:false` with `num_ctx`, `format` only when the call asks for a schema, `think` only when the reasoning rules give one, `keep_alive` only on a run's calls, and `stop` only as a list; an absent field SHALL be left out, never `null`.
 
 **Source**: FR-INFER-01 to FR-INFER-03, chat calls with their settings (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`), `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#effective-context`, `design.md#d20--model-profiles-resolution-reasoning-sampling-message-shaping`. In plain words: Ollama is spoken to natively because its OpenAI-shaped path drops native controls and hides Ollama's own error bodies. Its default context is small and silently truncates a long prompt, so every call tells it the context size. Which `think` value is sent, which samplers and when the model is kept loaded are the `inference` capability's rules; a model that has no thinking switch gets no `think` field at all, which is what stops the `400` that used to pause runs.
 
@@ -949,7 +949,7 @@ WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` t
 
 - **WHEN** a run's draft with temperature `0.2`, the context size `8192` and a JSON-schema response format is sent to the provider `ollama` for the model `gemma4:e4b-mlx` with reasoning Off
 - **THEN** the body posted to `/api/chat` has `"model":"gemma4:e4b-mlx"`, `"stream":true`, an `options` object holding `"temperature":0.2` and `"num_ctx":8192`, and a `"format"` object holding that schema
-- **AND** it has `"think":false` and `"keep_alive":"30m"`
+- **AND** it has `"think":false`, `"truncate":false` and `"keep_alive":"30m"`
 
 #### Scenario: An output cap joins the options
 

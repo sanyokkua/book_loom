@@ -23,6 +23,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -55,7 +56,6 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.OutcomeRecords;
 import ua.bookloom.pipeline.typography.TypographyGate;
@@ -84,7 +84,6 @@ public final class RetryDraft {
     private final SentenceSplitter splitter;
     private final Provider<ReviewMode> mode;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
 
     /**
      * Drafts one segment again.
@@ -228,8 +227,7 @@ public final class RetryDraft {
             return refuse(ErrorCode.validation, record.segmentId(), "The brief names no language to translate into.");
         }
         final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
-        final CallFrame frame = RetryFrames.of(
-                brief, snapshot, document, openProjects.index(record.projectId()), requestDefaultsSource.current());
+        final CallFrame frame = RetryFrames.of(brief, snapshot, document, openProjects.index(record.projectId()));
         return FollowingTarget.of(segments, record)
                 .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
     }
@@ -264,7 +262,7 @@ public final class RetryDraft {
     // the same way, so the longest paragraphs still fit.
     private static int budgetOf(final RetryPlan plan) {
         final Segment segment = plan.segment();
-        final ContextBudget window = ChunkBudget.budget(plan.frame(), ContextBudget.DEFAULT_WINDOW);
+        final ContextBudget window = ChunkBudget.budget(plan.frame(), ModelWindow.DEFAULT_WINDOW);
         final int budget = window.chunkTokens();
         log.debug("retry: segment={} budget={} {}", segment.id(), budget, window.describe());
         return budget;

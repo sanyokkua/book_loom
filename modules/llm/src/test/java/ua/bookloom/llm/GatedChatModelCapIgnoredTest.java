@@ -31,6 +31,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
@@ -40,6 +41,8 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.profile.BuiltInRows;
+import ua.bookloom.llm.profile.ModelProfiles;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.retry.RetryPolicy;
 
@@ -98,20 +101,26 @@ class GatedChatModelCapIgnoredTest {
         assertThat(warnings()).hasSize(2);
     }
 
+    // A thinking call's cap holds the 2,048-token reasoning reserve, so 1,124 tokens is within 100 + 2,048.
     @ParameterizedTest
-    @CsvSource({"100, stop, OFF", "99, stop, OFF", "250, length, OFF", "250, stop, ON", "1124, stop, ON"})
+    @CsvSource({
+        "100, stop, OFF, model-a",
+        "99, stop, OFF, model-a",
+        "250, length, OFF, model-a",
+        "250, stop, ON, qwen3.5:9b",
+        "1124, stop, ON, qwen3.5:9b"
+    })
     void chat_replyWithinTheCapOrCutByIt_warnsNothing(
-            final int completion, final String finish, final ReasoningLevel level) {
+            final int completion, final String finish, final ReasoningLevel level, final String modelId) {
         server.stubFor(post(urlEqualTo(PATH)).willReturn(okJson(reply(completion, finish))));
 
-        model("model-a", new CapIgnoredLog()).chat(request(level));
+        model(modelId, new CapIgnoredLog(), ServerEngine.LM_STUDIO).chat(request(level));
 
         assertThat(warnings()).isEmpty();
     }
 
-    // The client sent the call again with four times the cap after the reasoning spent it; the reply is measured
-    // against that raised cap (400 plus the reasoning room = 1424), not the first one (1124). Ollama's /v1 keeps the
-    // reasoning control, so both requests think.
+    // The client sent the call again with four times the cap after the reasoning spent it (thinking was already off, so
+    // only more room can help); the reply is measured against that raised cap of 400, not the first one of 100.
     @Test
     void chat_capRaisedAfterReasoningSpentIt_measuresTheReplyAgainstTheRaisedCap() {
         server.stubFor(post(urlEqualTo(PATH))
@@ -124,10 +133,10 @@ class GatedChatModelCapIgnoredTest {
         server.stubFor(post(urlEqualTo(PATH))
                 .inScenario("raised")
                 .whenScenarioStateIs("second")
-                .willReturn(okJson(reply(1200, "stop"))));
+                .willReturn(okJson(reply(350, "stop"))));
 
         final Result<ChatResponse> answered =
-                model("model-a", new CapIgnoredLog(), ServerEngine.OLLAMA).chat(request(ReasoningLevel.ON));
+                model("qwen3.5:9b", new CapIgnoredLog(), ServerEngine.OLLAMA).chat(request(ReasoningLevel.OFF));
 
         assertThat(answered.data())
                 .isNotNull()
@@ -162,7 +171,10 @@ class GatedChatModelCapIgnoredTest {
                 null,
                 CallKind.DRAFT,
                 null,
-                null);
+                null,
+                null,
+                null,
+                false);
     }
 
     private GatedChatModel model(final String modelId, final CapIgnoredLog capIgnored) {
@@ -189,6 +201,8 @@ class GatedChatModelCapIgnoredTest {
                 null,
                 CallLedger.none(),
                 new BuiltWrongLog(),
-                capIgnored);
+                capIgnored,
+                stored -> new ModelProfiles(new BuiltInRows())
+                        .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored));
     }
 }

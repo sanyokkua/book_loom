@@ -98,8 +98,7 @@ public final class BatchPromptBuilder {
             final List<ChatMessage> messages, final List<BatchItem> items, final boolean lowerTemperature) {
         final OutputLimit limit = OutputLimit.forBatch(
                 items.stream().map(BatchItem::masked).toList(), frame.sourceLanguage(), frame.targetLanguage());
-        final ChatRequest request = ChatRequests.build(
-                PromptName.DRAFT_BATCH_JSON, messages, limit, lowerTemperature, frame.requestDefaults());
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT_BATCH_JSON, messages, limit, lowerTemperature);
         log.debug("Batch request items={} cap={}", items.size(), limit.capTokens());
         return request;
     }

@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -47,7 +49,13 @@ final class WireMockProvider implements AutoCloseable {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String PROVIDER_ID = "wiremock";
-    private static final ModelSelection SELECTION = new ModelSelection(PROVIDER_ID, "test-model");
+    /**
+     * A model with a built-in row that declares no thinking control and starts on the schema rung, so the requests show
+     * the answer schema and no reasoning field (design D20); a model with no row would start on the prompt-only rung.
+     */
+    static final String MODEL_ID = "mistral-small3.2:24b";
+
+    private static final ModelSelection SELECTION = new ModelSelection(PROVIDER_ID, MODEL_ID);
     private static final long WAIT_SECONDS = 5;
     private static final long POLL_MILLIS = 5;
 
@@ -81,6 +89,29 @@ final class WireMockProvider implements AutoCloseable {
 
     /** The two models of {@link #twoModels(Duration)}. */
     record TwoModels(ChatModel first, ChatModel second) {}
+
+    /**
+     * A model and the capability reader of the same injector, so the server's facts the reader reads at Start are the
+     * session facts the model's profile is resolved from.
+     */
+    record Measured(ChatModel model, ModelCapabilities capabilities, ModelSelection selection) {}
+
+    Measured measured() {
+        final Injector injector = injector(Duration.ofSeconds(WAIT_SECONDS), ignored -> {});
+        final ChatModel model = Objects.requireNonNull(
+                injector.getInstance(ChatModelFactory.class).create(SELECTION).data(), "chat model");
+        return new Measured(model, injector.getInstance(ModelCapabilities.class), SELECTION);
+    }
+
+    /** Answers {@code POST path} with the JSON body. */
+    void stubPost(final String path, final String json) {
+        server.stubFor(post(urlEqualTo(path)).willReturn(okJson(json)));
+    }
+
+    /** Answers {@code GET path} with the JSON body. */
+    void stubGetJson(final String path, final String json) {
+        server.stubFor(get(urlEqualTo(path)).willReturn(okJson(json)));
+    }
 
     private List<ChatModel> chatModels(
             final Duration requestTimeout, final RetryPolicy.Sleeper sleeper, final int count) {
@@ -241,14 +272,14 @@ final class WireMockProvider implements AutoCloseable {
                     kind == ProviderKind.OLLAMA
                             ? Map.of(
                                     "model",
-                                    "test-model",
+                                    MODEL_ID,
                                     "message",
                                     Map.of("role", "assistant", "content", content),
                                     "done_reason",
                                     finish)
                             : Map.of(
                                     "model",
-                                    "test-model",
+                                    MODEL_ID,
                                     "choices",
                                     List.of(Map.of(
                                             "message",

@@ -41,6 +41,8 @@ module ua.bookloom.llm {
             com.google.guice;
     opens ua.bookloom.llm.engine to
             com.google.guice;
+    opens ua.bookloom.llm.profile to
+            com.google.guice;
     opens ua.bookloom.llm.pseudo to
             com.google.guice;
     opens ua.bookloom.llm.response to

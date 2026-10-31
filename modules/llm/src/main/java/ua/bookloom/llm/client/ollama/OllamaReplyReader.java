@@ -14,6 +14,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -21,7 +22,8 @@ import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OllamaChatResponse;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpReply;
-import ua.bookloom.llm.response.ReplySanitizer;
+import ua.bookloom.llm.response.ReasoningBudget;
+import ua.bookloom.llm.response.ReasoningScrubber;
 
 /**
  * Reads an Ollama chat reply, streamed or whole, into one {@link ChatResponse}: the content of every part joined in
@@ -53,9 +55,8 @@ final class OllamaReplyReader {
 
     Result<ChatResponse> read(String requestedModel, HttpReply reply) {
         final List<OllamaChatResponse> parts;
-        try (MappingIterator<@Nullable OllamaChatResponse> values =
-                mapper.readerFor(OllamaChatResponse.class).readValues(reply.body())) {
-            parts = values.readAll().stream().filter(Objects::nonNull).toList();
+        try {
+            parts = parts(reply);
         } catch (IOException | RuntimeException failure) {
             return Result.err(unreadable.apply(requestedModel, failure));
         }
@@ -69,9 +70,41 @@ final class OllamaReplyReader {
         return chatResponse(requestedModel, reply, merged(parts, reply.cut()));
     }
 
+    /**
+     * Whether a reply spent its whole answer thinking; a reply that cannot be read, or stopped with an error, did not
+     * (read() says why).
+     */
+    boolean spentOnReasoning(ChatRequest request, HttpReply reply) {
+        try {
+            final List<OllamaChatResponse> parts = parts(reply);
+            if (parts.isEmpty() || parts.stream().anyMatch(part -> part.error() != null)) {
+                return false;
+            }
+            final OllamaChatResponse merged = merged(parts, reply.cut());
+            final OllamaChatResponse.Message message = merged.message();
+            final String thinking = message == null ? null : message.thinking();
+            return ReasoningBudget.spent(
+                    request,
+                    message == null ? null : message.content(),
+                    thinking != null && !thinking.isBlank(),
+                    merged.doneReason());
+        } catch (IOException | RuntimeException unreadable) {
+            log.debug("Reasoning budget check skipped: the reply could not be read");
+            return false;
+        }
+    }
+
+    private List<OllamaChatResponse> parts(HttpReply reply) throws IOException {
+        try (MappingIterator<@Nullable OllamaChatResponse> values =
+                mapper.readerFor(OllamaChatResponse.class).readValues(reply.body())) {
+            return values.readAll().stream().filter(Objects::nonNull).toList();
+        }
+    }
+
     /** A reply cut as a runaway ends without the provider's last part; it finished for length, as a cap would. */
     private static OllamaChatResponse merged(List<OllamaChatResponse> parts, boolean cut) {
         final StringBuilder content = new StringBuilder();
+        final StringBuilder thinking = new StringBuilder();
         boolean anyContent = false;
         for (final OllamaChatResponse part : parts) {
             final OllamaChatResponse.Message message = part.message();
@@ -79,11 +112,16 @@ final class OllamaReplyReader {
                 content.append(message.content());
                 anyContent = true;
             }
+            if (message != null && message.thinking() != null) {
+                thinking.append(message.thinking());
+            }
         }
         final OllamaChatResponse last = parts.getLast();
         return new OllamaChatResponse(
                 last.model(),
-                anyContent ? new OllamaChatResponse.Message(content.toString()) : null,
+                anyContent || !thinking.isEmpty()
+                        ? new OllamaChatResponse.Message(anyContent ? content.toString() : null, thinking.toString())
+                        : null,
                 cut ? CUT_REASON : last.doneReason(),
                 last.promptEvalCount(),
                 last.evalCount(),
@@ -113,7 +151,7 @@ final class OllamaReplyReader {
                 reply.body().length(),
                 finishReason,
                 usage);
-        return Result.ok(new ChatResponse(ReplySanitizer.clean(content), finishReason, usage));
+        return Result.ok(new ChatResponse(ReasoningScrubber.scrub(content), finishReason, usage));
     }
 
     private Result<ChatResponse> stoppedWithError(String modelId, List<OllamaChatResponse> parts) {

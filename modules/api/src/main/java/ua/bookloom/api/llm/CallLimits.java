@@ -14,6 +14,12 @@ public interface CallLimits {
     /** How long a helper call (names, brief, file name, summary) may take. */
     Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
 
+    /** How long a call with no fixed limit may take per token of its expected reply. */
+    Duration PER_EXPECTED_TOKEN = Duration.ofMillis(500);
+
+    /** How long a streamed reply may send nothing before the call counts as stalled. */
+    Duration STREAM_IDLE = Duration.ofSeconds(60);
+
     /** The longest any chat call is allowed, whatever its expected length. */
     Duration MAX_CHAT_TIMEOUT = Duration.ofMinutes(10);
 

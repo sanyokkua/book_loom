@@ -1,7 +1,6 @@
 package ua.bookloom.llm.engine;
 
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,7 +26,6 @@ public record EngineTraits(
         Map<String, Object> extraSamplers,
         boolean servesUnknownModel) {
 
-    private static final String GPT_OSS = "gpt-oss";
     // These engines' own defaults are not neutral (a repeat penalty above 1, a top_k of 40), so each value is sent.
     private static final Map<String, Object> NEUTRAL_REPEAT_PENALTY = neutral("repeat_penalty");
     private static final Map<String, Object> NEUTRAL_REPETITION_PENALTY = neutral("repetition_penalty");
@@ -67,19 +65,6 @@ public record EngineTraits(
                         CapField.EITHER, OffSwitch.ENABLE_THINKING, TOOLS_OFF, NEUTRAL_REPETITION_PENALTY, true);
             case OPENROUTER, GENERIC -> new EngineTraits(CapField.EITHER, OffSwitch.PROBED, Map.of(), Map.of(), false);
         };
-    }
-
-    /**
-     * Whether a model reasons even when asked not to, so "off" is asked of it as its lowest level. A stopgap read from
-     * the model's name until the model profile decides it.
-     *
-     * @param modelId the model id; non-null
-     * @return {@code true} if the id names a gpt-oss model, {@code false} otherwise
-     */
-    public static boolean reasonsAtLowest(final String modelId) {
-        return Objects.requireNonNull(modelId, "modelId")
-                .toLowerCase(Locale.ROOT)
-                .contains(GPT_OSS);
     }
 
     /** Which cap fields an engine honours. */

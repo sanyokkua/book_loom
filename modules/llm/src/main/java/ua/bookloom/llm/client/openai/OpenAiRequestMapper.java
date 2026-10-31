@@ -17,12 +17,10 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
-import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.llm.client.openai.EngineShaping.ReasoningFields;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /** Shapes a provider-neutral {@link ChatRequest} into the JSON body an OpenAI-compatible server expects. */
 @Slf4j
@@ -93,7 +91,7 @@ final class OpenAiRequestMapper {
     private OpenAiChatRequest payload(String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
         final List<OpenAiChatRequest.Message> messages =
                 request.messages().stream().map(this::toOpenAiMessage).toList();
-        final Integer cap = outputCap(request);
+        final Integer cap = request.maxOutputTokens();
         final boolean completionField = isCompletionField(modelId, request);
         log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
         final ReasoningFields reasoning = shaping.reasoning(modelId, request.reasoningEnabled());
@@ -128,13 +126,6 @@ final class OpenAiRequestMapper {
             return false;
         }
         return chosen;
-    }
-
-    private static @Nullable Integer outputCap(ChatRequest request) {
-        final ReasoningLevel level = request.reasoningEnabled();
-        return level != null && level.isThinking()
-                ? ReasoningHeadroom.raise(request.maxOutputTokens())
-                : request.maxOutputTokens();
     }
 
     private OpenAiChatRequest.Message toOpenAiMessage(ChatMessage message) {

@@ -13,6 +13,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
+import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ReasoningControl;
 
 /**
  * A hand-written {@link ModelCapabilities} that answers each model with the report the test scripted, records every
@@ -38,7 +40,15 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
             final String modelId,
             final @Nullable Integer contextLength,
             final @Nullable Integer loaded) {
-        reports.put(providerId + "/" + modelId, new ModelReport(contextLength, loaded));
+        reports.put(providerId + "/" + modelId, ModelReport.windowsOnly(contextLength, loaded));
+    }
+
+    /** From now on reports {@code thinking} as the thinking control the model offers. */
+    public void thinking(final String providerId, final String modelId, final ReasoningControl thinking) {
+        reports.put(
+                providerId + "/" + modelId,
+                new ModelReport(
+                        null, null, null, ModelReport.Match.DEFAULT, ModelReport.UNKNOWN_MODEL, List.of(), thinking));
     }
 
     /** Makes every later report of this model wait for {@code release}, the way a slow provider would. */
@@ -63,12 +73,15 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     }
 
     @Override
-    public Result<ModelReport> report(final String providerId, final String modelId) {
+    public Result<ModelReport> report(final ModelSelection selection) {
+        final String providerId = selection.providerId();
+        final String modelId = selection.modelId();
         if (Platform.isFxApplicationThread()) {
             fxThreadCalls.incrementAndGet();
         }
         asked.add(providerId + "/" + modelId);
-        final ModelReport report = reports.getOrDefault(providerId + "/" + modelId, new ModelReport(null, null));
+        final ModelReport report =
+                reports.getOrDefault(providerId + "/" + modelId, ModelReport.windowsOnly(null, null));
         awaitHold(holds.get(providerId + "/" + modelId));
         return Result.ok(report);
     }

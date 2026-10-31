@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -135,7 +136,7 @@ class ContextWindowBudgetTest {
     // ceiling before any model is known) would disagree with the run's for every model that reports no window.
     @Test
     void chunkTokens_defaultWindow_reachesTheCeilingTheStructurePreviewPacksBy() {
-        assertThat(ChunkBudget.budget(FRAME, ContextBudget.DEFAULT_WINDOW).chunkTokens())
+        assertThat(ChunkBudget.budget(FRAME, ModelWindow.DEFAULT_WINDOW).chunkTokens())
                 .isEqualTo(2000);
     }
 

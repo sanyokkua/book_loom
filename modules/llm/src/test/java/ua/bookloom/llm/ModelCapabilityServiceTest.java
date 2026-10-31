@@ -27,7 +27,11 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ProfileRows;
+import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
+import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 
 /** Context-length detection on both dialects at the HTTP seam, and its quiet degradation. */
@@ -47,7 +51,9 @@ class ModelCapabilityServiceTest {
         capabilities = new ModelCapabilityService(
                 configs,
                 new ProviderClientFactory(
-                        new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime));
+                        new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime),
+                new ModelProfiles(ProfileRows.NONE),
+                new ModelSettingsCache(new FakeModelSettingsRepository()));
     }
 
     @AfterEach
@@ -144,9 +150,11 @@ class ModelCapabilityServiceTest {
         server.stubFor(get(urlEqualTo("/api/ps"))
                 .willReturn(okJson("{\"models\":[{\"name\":\"gemma3:12b\",\"context_length\":16384}]}")));
 
-        final Result<ModelReport> result = capabilities.report("ollama", "gemma3:12b");
+        final Result<ModelReport> result = capabilities.report(new ModelSelection("ollama", "gemma3:12b"));
 
-        assertThat(result.data()).isEqualTo(new ModelReport(131072, 16384));
+        assertThat(result.data())
+                .extracting(ModelReport::contextLength, ModelReport::loadedContext)
+                .containsExactly(131072, 16384);
     }
 
     @Test
@@ -156,7 +164,11 @@ class ModelCapabilityServiceTest {
         server.stubFor(get(urlEqualTo("/api/ps"))
                 .willReturn(okJson("{\"models\":[{\"name\":\"other\",\"context_length\":4096}]}")));
 
-        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+        assertThat(capabilities
+                        .report(new ModelSelection("ollama", "gemma3:12b"))
+                        .data())
+                .extracting(ModelReport::contextLength, ModelReport::loadedContext)
+                .containsExactly(131072, null);
     }
 
     @Test
@@ -165,7 +177,11 @@ class ModelCapabilityServiceTest {
         server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
         server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[{\"name\":\"gemma3:12b\"}]}")));
 
-        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+        assertThat(capabilities
+                        .report(new ModelSelection("ollama", "gemma3:12b"))
+                        .data())
+                .extracting(ModelReport::contextLength, ModelReport::loadedContext)
+                .containsExactly(131072, null);
     }
 
     @Test
@@ -174,7 +190,11 @@ class ModelCapabilityServiceTest {
         server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
         server.stubFor(get(urlEqualTo("/api/ps")).willReturn(aResponse().withStatus(500)));
 
-        assertThat(capabilities.report("ollama", "gemma3:12b").data()).isEqualTo(new ModelReport(131072, null));
+        assertThat(capabilities
+                        .report(new ModelSelection("ollama", "gemma3:12b"))
+                        .data())
+                .extracting(ModelReport::contextLength, ModelReport::loadedContext)
+                .containsExactly(131072, null);
     }
 
     @Test
@@ -183,16 +203,18 @@ class ModelCapabilityServiceTest {
         server.stubFor(get(urlEqualTo("/api/v0/models/qwen"))
                 .willReturn(okJson("{\"id\":\"qwen\",\"max_context_length\":32768}")));
 
-        final Result<ModelReport> result = capabilities.report("lmstudio", "qwen");
+        final Result<ModelReport> result = capabilities.report(new ModelSelection("lmstudio", "qwen"));
 
-        assertThat(result.data()).isEqualTo(new ModelReport(32768, null));
+        assertThat(result.data())
+                .extracting(ModelReport::contextLength, ModelReport::loadedContext)
+                .containsExactly(32768, null);
         server.verify(0, getRequestedFor(urlEqualTo("/api/ps")));
         server.verify(0, getRequestedFor(urlEqualTo("/v1/api/ps")));
     }
 
     @Test
     void report_unregistered_validationWithoutRequest() {
-        final Result<ModelReport> result = capabilities.report("nobody", "m");
+        final Result<ModelReport> result = capabilities.report(new ModelSelection("nobody", "m"));
 
         assertThat(result.error()).isNotNull();
         assertThat(result.error().code()).isEqualTo(ErrorCode.validation);

@@ -11,9 +11,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.TokenUsage;
-import ua.bookloom.llm.provider.ReasoningHeadroom;
 
 /**
  * Writes one WARN per provider and model when an OpenAI-compatible server answers with more tokens than the answer cap
@@ -59,7 +57,7 @@ public final class CapIgnoredLog {
         }
     }
 
-    // A thinking call is sent with room for its reasoning on top of the cap, so that is the limit it may reach.
+    // A thinking call's cap already holds the room for its reasoning, so the cap is the limit it may reach.
     private static boolean isIgnored(final ChatRequest request, final ChatResponse response) {
         final @Nullable Integer cap = request.maxOutputTokens();
         final @Nullable TokenUsage usage = response.usage();
@@ -67,8 +65,6 @@ public final class CapIgnoredLog {
         if (cap == null || written == null || response.finishReason() != FinishReason.STOP) {
             return false;
         }
-        final ReasoningLevel level = request.reasoningEnabled();
-        final @Nullable Integer limit = level != null && level.isThinking() ? ReasoningHeadroom.raise(cap) : cap;
-        return limit != null && written > limit;
+        return written > cap;
     }
 }

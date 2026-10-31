@@ -10,6 +10,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -39,19 +40,38 @@ public final class RefusalMemory {
     }
 
     /**
-     * The refused settings stored in a model's settings.
+     * The refused settings stored in a model's settings that cover every call to it.
      *
      * @param settings the model's settings; non-null
      * @return the capabilities; never null, empty when none; a stored name nobody knows is skipped
      */
     public EnumSet<RejectedCapability> remembered(final ModelSettings settings) {
+        return remembered(settings, null);
+    }
+
+    /**
+     * The refused settings that cover one call: those of the whole model, and those of the call's own scope.
+     *
+     * @param settings the model's settings; non-null
+     * @param scope the call's scope (the name of the answer schema it asks for), or null when it asks for none
+     * @return the capabilities; never null, empty when none; a stored name nobody knows is skipped
+     */
+    public EnumSet<RejectedCapability> remembered(final ModelSettings settings, final @Nullable String scope) {
         Objects.requireNonNull(settings, "settings");
         final EnumSet<RejectedCapability> found = EnumSet.noneOf(RejectedCapability.class);
         for (final RefusedSetting row : settings.refused()) {
+            if (row.scope() != null && !row.scope().equals(scope)) {
+                continue;
+            }
             RejectedCapability.fromSettingName(row.name())
                     .ifPresentOrElse(
                             found::add, () -> log.debug("Unknown refused setting name={} ignored", row.name()));
         }
+        log.debug(
+                "Remembered refusals scope={} rows={} covering={}",
+                scope,
+                settings.refused().size(),
+                found);
         return found;
     }
 
@@ -84,10 +104,28 @@ public final class RefusalMemory {
      * @return true when the refusal is stored; false when the store could not save it
      */
     public boolean remember(final String providerId, final String modelId, final RejectedCapability setting) {
+        return remember(providerId, modelId, setting, null);
+    }
+
+    /**
+     * Stores a refusal of one scope on the model's settings, once.
+     *
+     * @param providerId the provider's id; non-null
+     * @param modelId the model's id; non-null
+     * @param setting the refused setting; non-null
+     * @param scope the one call kind the refusal covers (the answer schema's name), or null for every call
+     * @return true when the refusal is stored; false when the store could not save it
+     */
+    public boolean remember(
+            final String providerId,
+            final String modelId,
+            final RejectedCapability setting,
+            final @Nullable String scope) {
         Objects.requireNonNull(providerId, "providerId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(setting, "setting");
-        final Result<ModelSettings> saved = cache.update(providerId, modelId, current -> withRefusal(current, setting));
+        final Result<ModelSettings> saved =
+                cache.update(providerId, modelId, current -> withRefusal(current, setting, scope));
         if (saved.isErr()) {
             log.warn(
                     "Refused setting not remembered providerId={} modelId={} setting={} code={}",
@@ -100,28 +138,22 @@ public final class RefusalMemory {
     }
 
     // Runs inside the store's single step, so a speed stored at the same moment is not overwritten.
-    private ModelSettings withRefusal(final ModelSettings current, final RejectedCapability setting) {
-        if (remembered(current).contains(setting)) {
-            log.debug("Refusal already remembered providerId={} setting={}", current.providerId(), setting);
+    private ModelSettings withRefusal(
+            final ModelSettings current, final RejectedCapability setting, final @Nullable String scope) {
+        if (remembered(current, scope).contains(setting)) {
+            log.debug(
+                    "Refusal already remembered providerId={} setting={} scope={}",
+                    current.providerId(),
+                    setting,
+                    scope);
             return current;
         }
         final List<RefusedSetting> rows = new ArrayList<>(current.refused());
-        rows.add(new RefusedSetting(setting.settingName(), LocalDate.now(clock), setting.insteadDid()));
-        return new ModelSettings(
-                current.providerId(),
-                current.modelId(),
-                current.temperatureChoice(),
-                current.temperature(),
-                current.contextWindow(),
-                current.maxOutput(),
-                current.outputField(),
-                rows,
-                current.measuredSecondsPerSegment(),
-                current.measuredFrom(),
-                current.probeVerdicts());
+        rows.add(new RefusedSetting(setting.settingName(), LocalDate.now(clock), setting.insteadDid(), scope));
+        return current.withRefused(rows);
     }
 
-    private static @org.jspecify.annotations.Nullable ErrorCode errorCode(final Result<ModelSettings> saved) {
+    private static @Nullable ErrorCode errorCode(final Result<ModelSettings> saved) {
         final AppError error = saved.error();
         return error == null ? null : error.code();
     }

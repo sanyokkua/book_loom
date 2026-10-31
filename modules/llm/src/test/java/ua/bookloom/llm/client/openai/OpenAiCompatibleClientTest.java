@@ -361,7 +361,7 @@ class OpenAiCompatibleClientTest {
     }
 
     private static ChatRequest messageOnlyRequest() {
-        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
+        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withoutReasoning();
     }
 
     private static ChatRequest formattedRequest() {

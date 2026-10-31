@@ -73,6 +73,16 @@ final class LmStudioRows {
                     RetryRule.NONE,
                     "Provider has no structured output",
                     "This model's runtime cannot produce structured answers."),
+            // A template with no system role (Gemma 2 and 3 and their tunes) says so inside its Jinja exception; the
+            // request is resent with the system text folded into the first user message.
+            any(
+                    "system-role-unsupported",
+                    "system\\s+role\\s+(?:is\\s+)?not\\s+supported",
+                    ErrorCode.validation,
+                    FailureReason.SYSTEM_ROLE_UNSUPPORTED,
+                    RetryRule.NONE,
+                    "Provider refused the system message",
+                    "The model's chat template has no system role."),
             any(
                     "lmstudio-template-rejected",
                     "Jinja\\s+Exception",

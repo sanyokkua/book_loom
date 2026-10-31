@@ -106,11 +106,7 @@ public final class DirectedFix {
         final ChatRequest request = retried(
                 findings,
                 ChatRequests.build(
-                        PromptName.DIRECTED_FIX,
-                        messages,
-                        SelfHealCalls.outputLimit(maskedSource, frame),
-                        false,
-                        frame.requestDefaults()));
+                        PromptName.DIRECTED_FIX, messages, SelfHealCalls.outputLimit(maskedSource, frame), false));
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.DIRECTED_FIX,

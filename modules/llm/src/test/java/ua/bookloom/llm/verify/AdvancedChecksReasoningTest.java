@@ -89,7 +89,8 @@ class AdvancedChecksReasoningTest {
                 .willReturn(okJson(reply("", "length", ",\"reasoning\":\"Thinking Process: 1.\""))));
         server.stubFor(post(urlEqualTo(CHAT))
                 .withRequestBody(containing("advanced_check"))
-                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("1088")))
+                // 64 plus the least reasoning reserve of 2,048.
+                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("2112")))
                 .atPriority(1)
                 .willReturn(okJson(reply("{\"k\":\"ZX-91\"}", "stop", ""))));
 

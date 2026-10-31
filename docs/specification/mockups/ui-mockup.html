@@ -1413,9 +1413,18 @@ SET.models = () => `
     ${seg(['Let BookLoom choose', 'My value', 'Don’t send'], ST.temp === 'mine' ? 1 : ST.temp === 'none' ? 2 : 0, `onclick="const i=[...this.children].indexOf(event.target);if(i>=0){ST.temp=['app','mine','none'][i];ST.dirty=true;rerender()}"`)}
     ${ST.temp === 'mine' ? `<div class="gap8 mt1"><input type="range" value="20" style="max-width:320px"><b>0.20</b><span class="hint">one value for every request</span></div>` : ''}
     <div class="hint">${ST.temp === 'none' ? 'Not sent at all — for models that refuse it, such as some newer OpenAI and Anthropic models. The model uses its own setting.' : ST.temp === 'mine' ? 'Every request uses this value.' : 'Each task uses its own tuned value: 0.0 for checks, 0.1–0.2 for translating.'}</div></div>
+  <div class="field"><label class="fld">Thinking <span class="muted small" style="font-weight:400">— whether the model reasons before it answers</span></label>
+    <div class="hint">${ST.refused ? 'BookLoom cannot tell whether this model can turn thinking off, so it sends no thinking control.' : 'This model can turn thinking on and off. BookLoom sends thinking off for draft, repair, proofread, names and brief calls.'}</div>
+    ${ST.refused ? '' : `<div class="chk"><input type="radio" name="thk" checked> Recommended (off)</div><div class="chk"><input type="radio" name="thk"> Allow on proofreading and names</div><div class="chk"><input type="radio" name="thk"> Always</div>`}</div>
+  <div class="field"><label class="fld">Sampling <span class="muted small" style="font-weight:400">— how adventurous the wording is</span></label>
+    <div class="hint">BookLoom sends its own temperature for each kind of call and no other sampler of its own; a server whose defaults are not neutral is sent neutral values instead.</div>
+    <div class="chk"><input type="radio" name="smp" checked> Profile default</div>
+    <div class="chk"><input type="radio" name="smp"> Custom</div>
+    <div class="gap8 mt1"><span>Temperature</span><input class="input w-num" placeholder=""><span>top_k</span><input class="input w-num"><span>top_p</span><input class="input w-num"><span>min_p</span><input class="input w-num"></div>
+    <div class="hint">An empty field keeps the profile's value. A temperature typed here is the Temperature row's My value.</div></div>
   <div class="field"><label class="fld">Settings this model refused <span class="muted small" style="font-weight:400">— learned automatically</span></label>
-    ${ST.refused ? gridTable(['Setting', 'What happened', ''], [['<span class="mono">temperature</span>', 'Refused on 20 Oct (“unsupported parameter”). BookLoom stopped sending it and repeated the request without it.', '<button class="linkbtn">Send again</button>'], ['<span class="mono">max_tokens</span>', 'Refused; BookLoom now sends <span class="mono">max_completion_tokens</span> instead.', '<button class="linkbtn">Send again</button>']], ['150px', '', '90px']) : '<div>Nothing refused</div><div class="hint">When a model refuses a setting, BookLoom stops sending it, repeats the request once without it, and lists it here.</div>'}</div>
-  <div class="toggle-row">${sw(true)}<div class="tx">Use context window <input class="input w-num" style="float:right;display:inline-block" ${dirtyOn} value="16,384"><small>How much text one request may hold. Filled in from what the program loaded; larger is slower and uses more memory. ${tech('num_ctx (Ollama)')}</small></div></div>
+    ${ST.refused ? gridTable(['Setting', 'Covers', 'What happened', ''], [['<span class="mono">temperature</span>', 'Whole model', 'Refused on 20 Oct (“unsupported parameter”). BookLoom stopped sending it and repeated the request without it.', '<button class="linkbtn">Try again now</button>'], ['<span class="mono">max_tokens</span>', 'Whole model', 'Refused; BookLoom now sends <span class="mono">max_completion_tokens</span> instead.', '<button class="linkbtn">Try again now</button>'], ['<span class="mono">response_format</span>', 'Only: Name reading', 'Refused on 21 Oct. BookLoom now describes the answer’s shape in the request text instead.', '<button class="linkbtn">Try again now</button>']], ['150px', '130px', '', '90px']) : '<div>Nothing refused</div><div class="hint">When a model refuses a setting, BookLoom stops sending it, repeats the request once without it, and lists it here.</div>'}</div>
+  <div class="toggle-row">${sw(true)}<div class="tx">Use context window <input class="input w-num" style="float:right;display:inline-block" ${dirtyOn} value="16,384"><small>The one size every request to this model uses, in a translation and outside it. Filled in from what the program loaded; larger is slower and uses more memory. ${tech('num_ctx (Ollama)')}</small></div></div>
   <div class="toggle-row">${sw(false)}<div class="tx">Limit answer length <input class="input w-num" style="float:right;display:inline-block" value="2,048" disabled><small>Off (recommended): each request is limited by its expected length. ${tech('max output tokens')}</small></div></div>
   <details class="fold" ${ST.tech ? 'open' : ''}><summary>Advanced</summary><div class="fold-b">
     <label class="fld">Field that carries the answer length</label>
@@ -1424,15 +1433,14 @@ SET.models = () => `
     <div class="hint">Not used for Ollama, which has its own option.</div></div></details>
 </div>${formFoot()}</div>`;
 const instant = (txt = 'Changes apply at once.') => `<div class="hint" style="margin-bottom:10px">✓ ${txt}</div>`;
-SET.generation = () => `${instant('Changes apply at once, to the segments not translated yet.')}
+SET.generation = () => `
 <div class="grid2 collapse">
-  <div class="card"><div class="card-h"><h3>What the quality choice does</h3><span class="muted small">chosen per book in the Book Brief</span></div><div class="card-b">${gridTable(['', 'Fast', 'Balanced', 'Max quality'], [['Segments in one request', 'up to 8', 'up to 8', 'up to 2'], ['Previous segments shown', '1', '2', '3'], ['Fix rounds after a failed check', '1', '2', '3'], ['Checks of each segment', '0', '1', '2'], ['Read the book backwards once more', '—', '—', '✓'], ['Model-written chapter summary', '—', '—', '✓']])}</div></div>
+  <div class="card"><div class="card-h"><h3>What the quality choice does</h3><span class="muted small">chosen per book in the Book Brief</span></div><div class="card-b">${gridTable(['', 'Fast', 'Balanced', 'Max quality'], [['Segments in one request', 'up to 8', 'up to 8', 'up to 2'], ['Previous segments shown', '1', '2', '3'], ['Fix rounds after a failed check', '1', '2', '3'], ['Checks of each segment', '0', '1', '2'], ['Read the book backwards once more', '—', '—', '✓'], ['Model-written chapter summary', '—', '—', '✓']])}<div class="hint mt1">The same for every model.</div></div></div>
   <div class="stack">
-    <div class="card"><div class="card-h"><h3>Thinking before answering</h3></div><div class="card-b">${seg(['Off', 'Low', 'On'], 0)}<div class="hint">Off is fastest. "Low" lets reasoning models (such as gpt-oss) think briefly. ${tech('reasoning')}</div></div></div>
-    <div class="card"><div class="card-h"><h3>Sampling</h3></div><div class="card-b">${seg(['Program defaults', 'Tuned by BookLoom'], 0)}<div class="hint">Tuned also sends top-p, top-k, min-p and repeat penalty per task.</div></div></div>
     <div class="card"><div class="card-h"><h3>Time limits</h3><span class="muted small">fixed</span></div><div class="card-b">
-      <div class="kv"><span class="k">A check</span><span>90 s</span></div><div class="kv"><span class="k">Names, brief, file name</span><span>120 s</span></div>
-      <div class="kv"><span class="k">Translating segments</span><span>by length, up to 10 min</span></div>
+      <div class="kv"><span class="k">A check</span><span>90 s</span></div><div class="kv"><span class="k">Names, brief, file name, summary</span><span>120 s (longer for a model that always thinks)</span></div>
+      <div class="kv"><span class="k">Other calls</span><span>0.5 s per expected token, at least the provider's request timeout, at most 600 s</span></div>
+      <div class="kv"><span class="k">Silence while streaming</span><span>60 s</span></div>
       <div class="kv"><span class="k">Tries</span><span>“attempt 1 of 2” — up to 3 tries, a slow answer is asked again once, shorter</span></div></div></div>
   </div>
 </div>`;

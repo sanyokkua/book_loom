@@ -24,8 +24,10 @@ import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -253,6 +255,24 @@ class JsonCodecTest {
                 true);
     }
 
+    // The person's overrides and a refusal scoped to one call kind come back as written.
+    @Test
+    void roundTrip_overridesAndScopedRefusal_readsBackEqual() {
+        final ModelSettings stored = modelSettings()
+                .withOverrides(ThinkingOverride.ALLOW_PROOFREAD_AND_NAMES, SamplingOverride.custom(0.4, 20, null, 0.05))
+                .withRefused(List.of(
+                        new RefusedSetting("temperature", LocalDate.of(2026, 2, 3), "omitted it"),
+                        new RefusedSetting("response_format", LocalDate.of(2026, 2, 4), "prompt only", "summary")));
+
+        final String json = codec.write(stored);
+
+        assertThat(json)
+                .contains("\"thinkingOverride\":\"ALLOW_PROOFREAD_AND_NAMES\"")
+                .contains("\"mode\":\"CUSTOM\"")
+                .contains("\"scope\":\"summary\"");
+        assertThat(codec.read(json, ModelSettings.class)).isEqualTo(stored);
+    }
+
     private static ModelSettings modelSettings() {
         return new ModelSettings(
                 "prov",
@@ -274,6 +294,8 @@ class JsonCodecTest {
                                         ProbeVerdicts.Outcome.IGNORED, "test", Instant.parse("2026-10-29T10:00:01Z"))),
                         null,
                         new ProbeVerdicts.Verdict(
-                                ProbeVerdicts.Outcome.REFUSED, "test", Instant.parse("2026-10-29T10:00:02Z"))));
+                                ProbeVerdicts.Outcome.REFUSED, "test", Instant.parse("2026-10-29T10:00:02Z"))),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 }

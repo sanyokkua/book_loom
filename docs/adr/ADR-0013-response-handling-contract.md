@@ -1,6 +1,17 @@
 # ADR-0013 — Response-handling contract: JSON-first, tolerant, with repair retry and text fallback
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect **Amended by:** ADR-0047
+
+> **Amendment (ADR-0047).** The contract below stands: ask for structure, clean the reply, parse tolerantly, repair
+> once, then use the cleaned text. Two things change. **Reasoning** is no longer one "low/off" setting for every model:
+> each call kind sends an intent (off for draft, repair, proofread, names and brief), and the model's profile maps it
+> through the server engine's traits to that engine's own field (Ollama `think`, `reasoning_effort`, llama-server's
+> `enable_thinking` kwarg, gpt-oss's `low`), sending nothing a model or engine does not declare. **Structure** has two
+> rungs per (model, schema), schema then prompt-only: a schema that fails for one call kind moves that kind down, a
+> failure of the whole model moves every kind, and the step is stored as a refused setting the person can send again.
+> The plain-text fallback of step 5 stays; it is the prompt-only rung's reply read as text. Step 2's sanitiser is now
+> `ReasoningScrubber`, which removes every known reasoning and turn marker. The body below is kept as the record of the
+> original decision.
 
 ## Context and problem statement
 

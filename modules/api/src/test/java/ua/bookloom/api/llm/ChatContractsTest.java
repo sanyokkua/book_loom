@@ -63,15 +63,56 @@ class ChatContractsTest {
     }
 
     @Test
-    void request_messageOnlyConstructorDefaultsOptionalSettingsToNull() {
+    void request_messageOnlyConstructor_carriesIntentOffAndNoOptionalSettings() {
         final ChatRequest request = new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
 
+        assertThat(request.callKind()).isNull();
         assertThat(request.temperature()).isNull();
         assertThat(request.responseFormat()).isNull();
-        assertThat(request.reasoningEnabled()).isNull();
+        assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
+        assertThat(request.source()).isNull();
+        assertThat(request.reasoningReserve()).isNull();
         assertThat(request.contextWindow()).isNull();
         assertThat(request.expectedOutputTokens()).isNull();
         assertThat(request.maxOutputTokens()).isNull();
+    }
+
+    // The room for reasoning goes on the cap and the expected output, so the wait grows with it.
+    @Test
+    void withReasoning_reserve_raisesTheCapAndTheExpectedOutput() {
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, ReasoningLevel.OFF, null, 400, 500);
+
+        final ChatRequest reasoned = request.withReasoning(ReasoningLevel.LOW, 2048);
+
+        assertThat(reasoned.reasoningEnabled()).isEqualTo(ReasoningLevel.LOW);
+        assertThat(reasoned.maxOutputTokens()).isEqualTo(2548);
+        assertThat(reasoned.expectedOutputTokens()).isEqualTo(2448);
+        assertThat(reasoned.reasoningReserve()).isEqualTo(2048);
+        assertThat(reasoned.isThinking()).isTrue();
+    }
+
+    @Test
+    void withReasoning_noReserveAndNoControl_keepsTheCapAndSendsNothing() {
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, ReasoningLevel.OFF, null, null, 500);
+
+        final ChatRequest reasoned = request.withReasoning(null, 0);
+
+        assertThat(reasoned.reasoningEnabled()).isNull();
+        assertThat(reasoned.maxOutputTokens()).isEqualTo(500);
+        assertThat(reasoned.expectedOutputTokens()).isNull();
+        assertThat(reasoned.reasoningReserve()).isNull();
+        assertThat(reasoned.isThinking()).isFalse();
+    }
+
+    @Test
+    void withReasoning_reserveOnAnUncappedRequest_staysUncapped() {
+        final ChatRequest reasoned =
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withReasoning(null, 2048);
+
+        assertThat(reasoned.maxOutputTokens()).isNull();
+        assertThat(reasoned.expectedOutputTokens()).isEqualTo(2048);
     }
 
     @Test

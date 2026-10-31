@@ -6,7 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.pipeline.chunk.TokenBudget;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /**
@@ -23,7 +23,7 @@ final class ChapterText {
      * The most estimated tokens either side of a chapter may take: the source and the target together use half the
      * model's context, which leaves the other half for the instructions, the previous summary and the reply.
      */
-    static final int MAX_TOKENS = TokenBudget.EFFECTIVE_CONTEXT / 4;
+    static final int MAX_TOKENS = ModelWindow.DEFAULT_WINDOW / 4;
 
     /** Stands where the middle of a chapter was dropped. */
     static final String GAP = "\n[…]\n";

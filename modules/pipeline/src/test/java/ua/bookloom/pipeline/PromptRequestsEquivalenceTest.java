@@ -124,7 +124,8 @@ class PromptRequestsEquivalenceTest {
 
     /** The eval path's calls: the run's own seam in front of a model that records what reaches it. */
     private static JobModelCalls evalCalls(final ScriptedChatModel recording) {
-        return new JobModelCalls(onSent -> recording, event -> {}, Clock.systemUTC(), "uk", EvalProject.window());
+        return new JobModelCalls(onSent -> recording, event -> {}, Clock.systemUTC(), "uk", EvalProject.window())
+                .inRun();
     }
 
     private static ScriptedChatModel answeringAnything() {

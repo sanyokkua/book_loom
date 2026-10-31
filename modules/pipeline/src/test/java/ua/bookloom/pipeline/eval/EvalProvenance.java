@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.pipeline.prompt.ReasoningPlan;
 
 /**
  * Where a prompt-eval report came from, so two reports can be compared knowing what changed between them: the code
@@ -41,7 +40,8 @@ import ua.bookloom.pipeline.prompt.ReasoningPlan;
  * @param dial the quality dial
  * @param brief the brief preset or file and the overrides, {@code defaults} when none
  * @param suite the suite name
- * @param reasoning the thinking plan of the run, {@code off} or the calls that are on (15i.X2)
+ * @param reasoning the thinking intent of the run's calls, {@code intent-off}: every call asks for thinking off and
+ *     the model's profile decides what is sent (design D20), which the run log's {@code profile resolved} line names
  * @param pipelineCommit the full SHA of the commit whose sources the run measured, {@code unknown} outside a repository
  * @param baselineOf the commit whose behaviour this run reproduces when it records a baseline, else null
  * @param dataset the dataset the run read, or null for a suite that has no manifest yet
@@ -74,6 +74,10 @@ record EvalProvenance(
 
     static final int REPORT_VERSION = 2;
     private static final double ROUNDING = 1_000_000.0;
+    // Every call asks for thinking off; the model's profile decides what reaches the server (design D20), which this
+    // report does not know (it depends on what the server said about the model), so the value names the intent only.
+    // The run log's "profile resolved" line says what was sent.
+    private static final String REASONING = "intent-off";
 
     private static final String CALIBRATION_RESOURCE = "/eval/judge/calibration.json";
     static final String UNKNOWN = "unknown";
@@ -159,8 +163,7 @@ record EvalProvenance(
                 dial,
                 EvalBriefLabel.briefSummary(env),
                 suite,
-                ReasoningPlan.resolve(env, System.getProperty(ReasoningPlan.PROPERTY_NAME))
-                        .token(),
+                REASONING,
                 commit(root),
                 blankToNull(env.get("BOOKLOOM_EVAL_BASELINE_OF")),
                 datasetOf(suite),

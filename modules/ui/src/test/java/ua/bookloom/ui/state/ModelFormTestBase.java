@@ -16,6 +16,8 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedModelCapabilities;
 
@@ -94,7 +96,7 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
 
     final void sendAgain(final String name) throws Exception {
         onFx(() -> {
-            form.sendAgain(name);
+            form.sendAgain(new RefusedSetting(name, LocalDate.of(2026, 10, 2), "omitted"));
             return null;
         });
         await(() -> !form.sendingAgain().get());
@@ -132,6 +134,8 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
                         List.of(refusal),
                         s.measuredSecondsPerSegment(),
                         s.measuredFrom(),
-                        ProbeVerdicts.none()));
+                        ProbeVerdicts.none(),
+                        ThinkingOverride.RECOMMENDED,
+                        SamplingOverride.profileDefault()));
     }
 }

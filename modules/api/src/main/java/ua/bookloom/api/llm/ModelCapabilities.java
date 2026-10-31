@@ -25,19 +25,20 @@ public interface ModelCapabilities {
     Result<ContextLength> contextLength(String providerId, String modelId);
 
     /**
-     * What the provider says about a model, for display; never fails the caller beyond an unknown provider.
+     * What BookLoom knows about a model, for display; served by provider and model id, so it can be read before a chat
+     * model exists. Never fails the caller beyond an unknown provider.
      *
-     * @param providerId the id of a registered provider; never {@code null}
-     * @param modelId the provider's model id; never {@code null}
+     * @param selection the provider and model to report; never {@code null}
      * @return the report, or {@link ua.bookloom.api.ErrorCode#validation} for an unregistered provider id
      */
-    default Result<ModelReport> report(final String providerId, final String modelId) {
-        final Result<ContextLength> length = contextLength(providerId, modelId);
+    default Result<ModelReport> report(final ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        final Result<ContextLength> length = contextLength(selection.providerId(), selection.modelId());
         final ContextLength data = length.data();
         if (length.isErr() || data == null) {
             return Result.err(Objects.requireNonNull(length.error(), "error"));
         }
-        return Result.ok(new ModelReport(data.tokens(), null));
+        return Result.ok(ModelReport.windowsOnly(data.tokens(), null));
     }
 
     /**

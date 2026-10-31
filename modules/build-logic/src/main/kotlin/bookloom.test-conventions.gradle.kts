@@ -192,18 +192,6 @@ localOnlyTags.forEach { tag ->
             outputs.upToDateWhen { false }
         }
 
-        if (tag == "promptEval") {
-            // The eval measures one sampling mode at a time: `BOOKLOOM_EVAL_SAMPLING=server|tuned`, default server,
-            // reaches the code as the `bookloom.sampling` property (an explicit BOOKLOOM_SAMPLING still wins).
-            systemProperty("bookloom.sampling", System.getenv("BOOKLOOM_EVAL_SAMPLING") ?: "server")
-            // Thinking per call (15i.X2): `BOOKLOOM_EVAL_REASONING="DRAFT_BATCH_JSON=on,TERM_READING=on"` reaches the
-            // code as the `bookloom.reasoning` property; unset leaves every call off, and an explicit BOOKLOOM_REASONING
-            // still wins.
-            System.getenv("BOOKLOOM_EVAL_REASONING")?.takeIf { it.isNotBlank() }?.let {
-                systemProperty("bookloom.reasoning", it)
-            }
-        }
-
         if (tag in neverUpToDateTags) {
             // The evidence of a `corpus` run is its report file, never the exit code (design.md D6, trap 1): the
             // configured corpus directory is read from an environment variable, which Gradle's up-to-date check

@@ -10,7 +10,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 
 /** Behaviour every {@link ModelSettingsRepository} adapter must show. */
@@ -30,7 +32,9 @@ public abstract class ModelSettingsContractTest {
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out")),
                 2.5,
                 MeasuredFrom.TEST,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     @Test
@@ -49,7 +53,9 @@ public abstract class ModelSettingsContractTest {
                 base.refused(),
                 base.measuredSecondsPerSegment(),
                 base.measuredFrom(),
-                new ProbeVerdicts(verdict, null, null, null));
+                new ProbeVerdicts(verdict, null, null, null),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
 
         repository().save(withVerdict);
 
@@ -58,6 +64,24 @@ public abstract class ModelSettingsContractTest {
         assertThat(found.probeVerdicts().answerSchema()).isEqualTo(verdict);
         assertThat(found.probeVerdicts().capField()).isNull();
         assertThat(found).isEqualTo(withVerdict);
+    }
+
+    @Test
+    void save_overridesAndScopedRefusal_roundTrip() {
+        final RefusedSetting schemaForDraft =
+                new RefusedSetting("response_format", LocalDate.of(2026, 10, 30), "asked through the prompt", "draft");
+        final ModelSettings saved = ModelSettings.defaults("office", "gpt-oss:20b")
+                .withOverrides(ThinkingOverride.ALWAYS, SamplingOverride.custom(0.4, 20, 0.9, 0.05))
+                .withRefused(List.of(sample("office", "gpt-oss:20b").refused().get(0), schemaForDraft));
+
+        assertThat(repository().save(saved).isOk()).isTrue();
+
+        assertThat(repository().find("office", "gpt-oss:20b").data()).hasValueSatisfying(found -> {
+            assertThat(found).isEqualTo(saved);
+            assertThat(found.thinkingOverride()).isEqualTo(ThinkingOverride.ALWAYS);
+            assertThat(found.samplingOverride()).isEqualTo(SamplingOverride.custom(0.4, 20, 0.9, 0.05));
+            assertThat(found.refused()).extracting(RefusedSetting::scope).containsExactly(null, "draft");
+        });
     }
 
     @Test
@@ -177,7 +201,9 @@ public abstract class ModelSettingsContractTest {
                         List.of(base.refused().get(0), topP),
                         base.measuredSecondsPerSegment(),
                         base.measuredFrom(),
-                        ProbeVerdicts.none()));
+                        ProbeVerdicts.none(),
+                        ThinkingOverride.RECOMMENDED,
+                        SamplingOverride.profileDefault()));
 
         repository().update("ollama", "gemma", stored -> stored.withoutRefusal("temperature"));
 
@@ -196,18 +222,7 @@ public abstract class ModelSettingsContractTest {
             final var refusal = pool.submit(() -> repository().update("ollama", "gemma", s -> {
                 final var rows = new java.util.ArrayList<>(s.refused());
                 rows.add(new RefusedSetting("top_p", LocalDate.of(2026, 10, 21), "left it out"));
-                return new ModelSettings(
-                        s.providerId(),
-                        s.modelId(),
-                        s.temperatureChoice(),
-                        s.temperature(),
-                        s.contextWindow(),
-                        s.maxOutput(),
-                        s.outputField(),
-                        rows,
-                        s.measuredSecondsPerSegment(),
-                        s.measuredFrom(),
-                        ProbeVerdicts.none());
+                return s.withRefused(rows);
             }));
             final var speed = pool.submit(() ->
                     repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(0.9, MeasuredFrom.RUN)));

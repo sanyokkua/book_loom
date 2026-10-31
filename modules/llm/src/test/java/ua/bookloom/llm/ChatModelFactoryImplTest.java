@@ -41,9 +41,12 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ProfileRows;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -289,7 +292,9 @@ class ChatModelFactoryImplTest {
                 new RefusalMemory(cache),
                 new CallLedgerImpl(),
                 new BuiltWrongLog(),
-                new CapIgnoredLog());
+                new CapIgnoredLog(),
+                new ModelProfiles(ProfileRows.NONE),
+                new EngineFacts(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()));
     }
 
     private void register(ProviderConfig config) {

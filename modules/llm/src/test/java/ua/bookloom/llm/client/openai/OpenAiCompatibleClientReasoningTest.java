@@ -76,8 +76,7 @@ class OpenAiCompatibleClientReasoningTest {
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
     }
 
-    // Low thinks too, so it gets the same room as On, keeps asking for Low on the repeat, and a spent cap is repeated
-    // once.
+    // Low keeps asking for Low on the repeat, and a spent cap is repeated once with four times the cap.
     @Test
     void chat_lowLevelSpentTheCapReasoning_repeatsOnceStillAskingForLowWithTheRaisedCap() {
         stubChatSequence(reasoningOnly("reasoning"), """
@@ -87,7 +86,7 @@ class OpenAiCompatibleClientReasoningTest {
         final ChatResponse response = sendChat(cappedRequest(ReasoningLevel.LOW, 128, 8192));
 
         assertThat(response).isEqualTo(new ChatResponse("ok", FinishReason.STOP));
-        server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(1152)));
+        server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
         server.verify(
                 2,
                 postRequestedFor(urlEqualTo(CHAT_PATH))
@@ -102,13 +101,15 @@ class OpenAiCompatibleClientReasoningTest {
         server.verify(2, postRequestedFor(urlEqualTo(CHAT_PATH)));
     }
 
+    // Four times 128 is past the window of 300; the repeat is raised but leaves the prompt its room in the window.
     @Test
-    void chat_raisedCap_isBoundByTheContextWindow() {
+    void chat_raisedCap_isBoundByWhatTheWindowLeavesAfterThePrompt() {
         stubChatSequence(reasoningOnly("reasoning"), reasoningOnly("reasoning"));
 
         client().chat(MODEL_ID, cappedRequest(128, 300));
 
-        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(300)));
+        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$[?(@.max_tokens > 128 && @.max_tokens < 300)]")));
     }
 
     @Test

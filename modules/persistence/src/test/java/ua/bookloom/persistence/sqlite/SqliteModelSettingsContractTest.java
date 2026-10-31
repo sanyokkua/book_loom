@@ -18,7 +18,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.persistence.contract.ModelSettingsContractTest;
 
@@ -67,7 +69,9 @@ class SqliteModelSettingsContractTest extends ModelSettingsContractTest {
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out")),
                 2.5,
                 MeasuredFrom.TEST,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
         repository.save(saved);
 
         db.close();

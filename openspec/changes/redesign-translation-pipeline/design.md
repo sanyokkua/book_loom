@@ -818,7 +818,7 @@ task edits the delta requirement and this file's line; the result is written int
   (grown from `ContextLengthReader` and `ContextLengthProbe`: Ollama `/api/show` capabilities, thinking values,
   renderer, parser, family, quant, `/api/ps`; LM Studio v0/v1; llama-server `/props` and `meta`; Unsloth rows; read only
   on selection, the Models tab, Test, Detect again, Start or Continue; kept in session memory) → name grammar →
-  `BuiltInRows` (58 Java `Row(IdentityPattern, overrides, evidence)` records: the research table's rows 1–43 and
+  `BuiltInRows` (52 Java `Row(IdentityPattern, overrides, evidence)` records: the research table's rows 1–43 and
   the owner's four gap rows O1–O4 in group 6, the research table's rows 44–54 in group 9; a no-shadowing test; an alias-guard
   test) → the person's override.
 - **Owner's models.** Group 6 adds rows for EuroLLM-22B (system role native, no thinking control, batch 4, verdict
@@ -840,15 +840,16 @@ task edits the delta requirement and this file's line; the result is written int
   `BOOKLOOM_REASONING` (`ReasoningPlan`), `OllamaReasoning`'s `contains("gpt-oss")`, `ReasoningHeadroom`
   (`BOOKLOOM_EVAL_RULES` goes in group 1, D24).
 - **Sampling.** The app's per-kind temperature (`PromptName.temperature`) plus explicit neutral penalties on engines
-  whose defaults are not neutral is the profile's default; a row's vendor `top_p`/`top_k`/`min_p` are sent only if arm
-  3a adopts them, as row data. The person's override is `SamplingOverride {PROFILE_DEFAULT, CUSTOM}` with the custom
+  whose defaults are not neutral is the profile's default; arm 3a did not adopt the rows' vendor `top_p`/`top_k`/`min_p`,
+  so the rows hold none and the default sends no sampler of a maker's. The person's override is `SamplingOverride {PROFILE_DEFAULT, CUSTOM}` with the custom
   values (temperature, `top_k`, `top_p`, `min_p`); there is no "server defaults" choice, because it would contradict the
   explicit samplers sent where server defaults are not neutral. Removed: `SamplingMode` (`BOOKLOOM_SAMPLING`),
   `SamplingProfile`'s global modes, `AppSetting.REASONING`/`SAMPLING` and their enums.
 - **Messages (`client/MessageShaper`).** A system message is always sent (including the verification probe); `FOLD`
   puts system + blank line + user into one user message for gemma2/gemma3 and their tunes; a "System role not
   supported" 400 stores `RejectedCapability.SYSTEM_ROLE` and resends folded at no attempt cost; the old Nemotron
-  escape; the harmony developer turn.
+  escape; the harmony developer turn (the gpt-oss template itself turns BookLoom's system message into the developer
+  turn, so the shaper sends it as a system message like any other and only keeps a `Reasoning:` line out of it).
 - **Replies.** `response/ReasoningScrubber` replaces `ReplySanitizer` (every known reasoning and turn marker, harmony
   channels, one outer fence; `TO_SELF` and `BOXED` filters only by profile); the existing
   `client/openai/ReasoningBudget` (OpenAI only, ×4 cap) moves to `response/` and is extended to the Ollama dialect, so
@@ -1013,8 +1014,8 @@ task edits the delta requirement and this file's line; the result is written int
 |---|---|---|---|---|---|
 | 1 judge calibration | 1 (gates judge use from 2) | judge grades pairwise | judge as a screen only; every discordant case read by the agent with a Codex second opinion by hand | TPR and TNR ≥ 0.8 (Wilson lower bounds), position consistency ≥ 0.7 on the hidden test split | Failed on the Wilson bounds, reasoning off, rubric `bl-judge-1` (`d7b8b8ded24e`) frozen untuned, 59 of 60 items agreed: test TPR 4/4 (lower 0.510), TNR 9/9 (0.701), position consistency 0.818, tau-b 0.716, pairwise accuracy 11/11. The owner kept the rule: the judge is a screen only; `judge.calibration.passed` = false. Reasoning on loses items (`docs/DEVELOPMENT.md#redesign-arms`) |
 | 2 batch format | 2 | JSON items | markers | markers only with ≥ 2 fewer WRONG paragraphs and no hard-gate rise ≥ 2 | JSON stays. 60 segments (`eval/arms/arm-2-segments.json`), e4b K = 3: WRONG JSON 8, markers 8 of the 29 paragraphs the judge screen marked and the agent read blind; first-round hard gates 3 and 3; 0.57 translation calls and 3.4 s against 3.0 s per segment (reported, not weighed). 26b K = 1 does not reverse it: WRONG 0 against 3, hard gates 1 and 1 (`docs/DEVELOPMENT.md#redesign-arms`) |
-| 3a sampling | 6 | app temperature + explicit neutral penalties | vendor `top_k`/`top_p`/`min_p` as row data | vendor set only if no hard grader worse and token fidelity within noise | — |
-| 3b batch size | 6 (wired in 10) | 4 on small models; 8 on large | 8 on small models | 8 only if token fidelity, fallbacks and hard gates are no worse beyond noise | — |
+| 3a sampling | 6 | app temperature + explicit neutral penalties | vendor `top_k`/`top_p`/`min_p` as row data | vendor set only if no hard grader worse and token fidelity within noise | Default kept; vendor data deleted from the rows. A tie: no hard grader worse and nothing beyond noise either way. Grader pass rate, default against vendor: Ollama e4b K = 3 mini-en 0.970 / 0.972, mini-ru 0.953 / 0.953, 0 hard failures; LM Studio e4b K = 3 mini-en 0.903 / 0.926 (`every-usable` 8:2, p = 0.11), mini-ru 0.950 / 0.953; 26b K = 1 equal. Gemma 4's vendor values equal Ollama's and LM Studio's own defaults, so the eval's sides sampled alike; a detected LM Studio, llama-server or Unsloth provider (neutral samplers) was only probed, 5 pairs within noise (`docs/DEVELOPMENT.md#redesign-arms`) |
+| 3b batch size | 6 (wired in 10) | 4 on small models; 8 on large | 8 on small models | 8 only if token fidelity, fallbacks and hard gates are no worse beyond noise | 4 stays. `sequence` (328 segments), e4b, K = 3 paired by seed: fallbacks 11.0 at 4 against 13.3 at 8 and first-round hard-gate failures 10.0 against 12.7, worse at 8 in every seed and above every start-4 repeat; token fallbacks 6.7 against 4.0 (better at 8); flagged equal; 0.47 against 0.36 calls and 3.9 against 3.6 s per segment (reported, not weighed) (`docs/DEVELOPMENT.md#redesign-arms`) |
 | 4a bare-name accuracy | 7 | a class's likely values may reach prompts (per 4b) | `NO_KNOWLEDGE_HINT` for the class | ≤ 5 % confidently wrong (confidence ≥ 0.7) of about 60 names and unisex names below 0.7 | — |
 | 4b likely-gender hint | 7 | name only (H-B) | "Name — male (likely)" (H-A) | hint kept only with fewer gender-agreement errors | — |
 | 5a rules layout | 11 (card in block 8, Balanced) | builder blocks + reminder | today's wording and order inside blocks 3–5 | builder kept unless fidelity, fallbacks or hard gates worse beyond noise, or LTCR-1 −1.5 | — |

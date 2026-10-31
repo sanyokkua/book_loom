@@ -34,14 +34,13 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.CallKindTotals;
 import ua.bookloom.pipeline.PrepSummary;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
 import ua.bookloom.pipeline.glossary.TermReview.Reviewed;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 
 /**
  * The one autonomous names pass (15i.N8): the steps the Names &amp; style buttons run, in order, over a private copy of
@@ -69,12 +68,10 @@ public final class NamesPassImpl implements NamesPass {
     private final SuggestTargets suggestTargets;
     private final LexiconReading lexiconReading;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
     private final CallLedger ledger;
 
     /**
-     * A names pass whose requests use the defaults the environment alone gives and whose calls are counted nowhere
-     * (tests).
+     * A names pass whose calls are counted nowhere (tests).
      */
     public NamesPassImpl(
             final GlossaryRepository glossary,
@@ -102,7 +99,6 @@ public final class NamesPassImpl implements NamesPass {
                 suggestTargets,
                 lexiconReading,
                 clock,
-                RequestDefaultsSource.environmentOnly(),
                 CallLedger.none());
     }
 
@@ -148,7 +144,7 @@ public final class NamesPassImpl implements NamesPass {
                 () -> stage(projectId).flatMap(stage -> {
                     final NamesPassSteps counter = new NamesPassSteps(progress);
                     final ChatModel stoppable = new StoppableModel(model);
-                    final int window = ContextBudget.windowFor(detectedContext, model.contextWindowOverride());
+                    final int window = ModelWindows.of(model, detectedContext);
                     log.debug("Names pass window={} detected={}", window, detectedContext);
                     final ModelCalls calls = stage.scans().calls(stoppable, counter, stage.book(), window);
                     final Run run = new Run(stage, stoppable, counter, calls, clock.instant(), ledger.mark());
@@ -163,14 +159,7 @@ public final class NamesPassImpl implements NamesPass {
                 .flatMap(names -> StagedLexicon.copyOf(lexicon, projectId).flatMap(terms -> {
                     final TermReview review = new TermReview(templates, mapper, names, suggestTargets);
                     final GlossaryModelScans scans = new GlossaryModelScans(
-                            projects,
-                            openProjects,
-                            preScan,
-                            review,
-                            suggestTargets,
-                            lexiconReading,
-                            clock,
-                            requestDefaultsSource);
+                            projects, openProjects, preScan, review, suggestTargets, lexiconReading, clock);
                     return scans.book(projectId)
                             .map(book -> new Stage(
                                     projectId,

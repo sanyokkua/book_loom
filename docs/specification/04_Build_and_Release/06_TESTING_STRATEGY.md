@@ -60,8 +60,9 @@ HTTP→`ErrorCode` mapping are covered against a real HTTP client. The seam is s
   `keep_alive`, `format`, `think`).
 
 These tests assert the **request shape** per dialect (correct paths; nullable params omitted via
-`@JsonInclude(NON_NULL)` rather than serialized as `null`; `num_ctx` sent only on the Ollama options block; reasoning
-set low/off for translation and judge calls) and the full **response-handling contract**
+`@JsonInclude(NON_NULL)` rather than serialized as `null`; `num_ctx` sent only on the Ollama options block; the
+reasoning intent of each call kind mapped through the model's profile to the engine's own field, or left out where the
+model declares no control) and the full **response-handling contract**
 (`04_LLM_INTEGRATION.md#response-handling`): parsing the structured shape, **`<think>…</think>`-stripping** and
 analogous reasoning/code-fence/preamble sanitization, **tolerant parse** (unknown fields ignored, missing optional
 fields defaulted, JSON located within surrounding prose), the **single repair retry** on malformed JSON, and the
@@ -262,7 +263,11 @@ root hash, rechecked by `DatasetManifestCheckTest`), so a changed fixture can ne
 `article-gravity`. A run repeats K times with recorded seeds, writes one record per case (`cases.jsonl`, with the prompt and
 reply of each call in `calls/`) and a version-2 `report.json` with the dataset, model, judge, repeats and noise band.
 `scripts/eval-score.py` holds the statistics (`diff --paired` with the exact sign test, `calibrate`, `show`, `blind`,
-`baseline`). Arms select a prompt alternative only through the test-only `PromptVariants` binding. Baselines of the
+`baseline`). Arms select a prompt alternative only through the test-only `PromptVariants` binding; no environment
+switch reaches production code (`BOOKLOOM_REASONING`, `BOOKLOOM_SAMPLING`, `BOOKLOOM_EVAL_RULES` and the batch-format
+switch are gone, and ArchUnit guards keep the first two out). The two arms of redesign task 6.10 that were not prompt
+variants (sampling and batch start size) used test-only switches that were deleted with the losing data once the arms
+were settled (`docs/DEVELOPMENT.md#redesign-arms`). Baselines of the
 behaviour of commit `79ffede6` are in `eval/baseline/`. Nothing in the repository calls a cloud model or Codex.
 
 **The local judge is a screen, not a grader.** The judge is `gemma4:26b-mlx` run locally through `:llm`, pairwise with the

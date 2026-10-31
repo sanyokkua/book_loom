@@ -42,8 +42,10 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
@@ -389,7 +391,9 @@ class AdvancedChecksTest {
                     current.refused().contains(refusal) ? current.refused() : List.of(refusal),
                     current.measuredSecondsPerSegment(),
                     current.measuredFrom(),
-                    current.probeVerdicts());
+                    current.probeVerdicts(),
+                    ThinkingOverride.RECOMMENDED,
+                    SamplingOverride.profileDefault());
         }
     }
 }

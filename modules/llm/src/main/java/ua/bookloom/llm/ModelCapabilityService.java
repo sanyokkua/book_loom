@@ -10,13 +10,15 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.engine.CheckedModelId;
-import ua.bookloom.llm.provider.ProviderClient;
+import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 
 /**
@@ -29,32 +31,43 @@ public final class ModelCapabilityService implements ModelCapabilities {
 
     private final ProviderConfigs configs;
     private final ProviderClientFactory clients;
+    private final ModelProfiles profiles;
+    private final ModelSettingsCache settings;
 
+    // Served by provider and model id, so the Models tab reads it before a chat model exists. A read that throws leaves
+    // the server's facts unknown; the name alone still gives the identity and the default profile.
     @Override
-    public Result<ModelReport> report(String providerId, String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+    public Result<ModelReport> report(ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        final String providerId = selection.providerId();
+        final String modelId = selection.modelId();
         log.debug("Reporting model providerId={} model={}", providerId, modelId);
         final Optional<ProviderConfig> config = configs.find(providerId);
         if (config.isEmpty()) {
             log.debug("Model report refused branch=unknown-provider providerId={}", providerId);
             return Result.err(unknownProvider());
         }
+        final ModelFacts facts = factsOf(config.get(), modelId);
+        final ModelReport report = profiles.resolve(
+                        config.get().effectiveEngine(), modelId, facts, settings.current(providerId, modelId))
+                .report();
+        log.debug(
+                "Model reported providerId={} model={} contextLength={} loaded={} match={} verdict={}",
+                providerId,
+                modelId,
+                report.contextLength(),
+                report.loadedContext(),
+                report.match(),
+                report.verdict());
+        return Result.ok(report);
+    }
+
+    private ModelFacts factsOf(final ProviderConfig config, final String modelId) {
         try {
-            final ProviderClient client = clients.create(config.get());
-            final ModelReport report = new ModelReport(
-                    client.contextLength(modelId).orElse(null),
-                    client.loadedContextLength(modelId).orElse(null));
-            log.debug(
-                    "Model reported providerId={} model={} contextLength={} loaded={}",
-                    providerId,
-                    modelId,
-                    report.contextLength(),
-                    report.loadedContext());
-            return Result.ok(report);
-        } catch (Throwable cause) {
-            log.warn("Model report degraded to unknown providerId={} model={}", providerId, modelId, cause);
-            return Result.ok(new ModelReport(null, null));
+            return clients.create(config).facts(modelId);
+        } catch (RuntimeException cause) {
+            log.warn("Model facts degraded to unknown providerId={} model={}", config.id(), modelId, cause);
+            return ModelFacts.unknown();
         }
     }
 
@@ -107,7 +120,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
         }
         try {
             final ContextLength length = new ContextLength(
-                    clients.create(config.get()).contextLength(modelId).orElse(null));
+                    clients.create(config.get()).facts(modelId).contextLength());
             log.debug("Detected context length providerId={} model={} tokens={}", providerId, modelId, length.tokens());
             return Result.ok(length);
         } catch (Throwable cause) {

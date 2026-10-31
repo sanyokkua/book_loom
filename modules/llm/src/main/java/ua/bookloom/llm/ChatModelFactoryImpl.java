@@ -12,10 +12,14 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
+import ua.bookloom.llm.profile.ModelProfiles;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -41,6 +45,8 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
     private final CallLedger ledger;
     private final BuiltWrongLog builtWrong;
     private final CapIgnoredLog capIgnored;
+    private final ModelProfiles profiles;
+    private final EngineFacts engineFacts;
 
     @Override
     public Result<ChatModel> create(ModelSelection selection) {
@@ -93,7 +99,30 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 refusals,
                 ledger,
                 builtWrong,
-                capIgnored);
+                capIgnored,
+                stored -> profiles.resolve(
+                        registered.effectiveEngine(),
+                        modelId,
+                        requestFacts(
+                                registered,
+                                engineFacts
+                                        .lastRead(registered.id(), modelId)
+                                        .orElseGet(() -> engineFacts.withTemplateSwitch(
+                                                registered, modelId, ModelFacts.unknown()))),
+                        stored));
+    }
+
+    // The Ollama-native client sends the window on every request, so the window Ollama loaded the model with last does
+    // not bind the next call; every other connection gets the window the server fixed at load or start.
+    private static ModelFacts requestFacts(ProviderConfig registered, ModelFacts facts) {
+        if (registered.kind() != ProviderKind.OLLAMA || facts.loadedContext() == null) {
+            return facts;
+        }
+        log.debug(
+                "Loaded window set aside: the native client sends the window provider={} loaded={}",
+                registered.id(),
+                facts.loadedContext());
+        return facts.withoutLoadedContext();
     }
 
     private Result<ChatModel> rejected(ModelSelection selection, String message) {

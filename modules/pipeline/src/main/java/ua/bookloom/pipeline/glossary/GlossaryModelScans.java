@@ -23,12 +23,11 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -47,27 +46,6 @@ public final class GlossaryModelScans {
     private final SuggestTargets suggestTargets;
     private final LexiconReading lexiconReading;
     private final Clock clock;
-    private final RequestDefaultsSource requestDefaultsSource;
-
-    /** Scans whose requests use the defaults the environment alone gives (the command line, tests). */
-    public GlossaryModelScans(
-            final ProjectRepository projects,
-            final OpenProjects openProjects,
-            final PreScan preScan,
-            final TermReview termReview,
-            final SuggestTargets suggestTargets,
-            final LexiconReading lexiconReading,
-            final Clock clock) {
-        this(
-                projects,
-                openProjects,
-                preScan,
-                termReview,
-                suggestTargets,
-                lexiconReading,
-                clock,
-                RequestDefaultsSource.environmentOnly());
-    }
 
     /** What a model action of the glossary runs on. */
     record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
@@ -171,7 +149,7 @@ public final class GlossaryModelScans {
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
-        return calls(model, progress, book, ContextBudget.DEFAULT_WINDOW);
+        return calls(model, progress, book, ModelWindows.of(model, null));
     }
 
     ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book, final int window) {
@@ -218,7 +196,7 @@ public final class GlossaryModelScans {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before scanning for names."));
         }
-        final CallFrame frame = CallFrame.forBook(brief, document, index, requestDefaultsSource.current());
+        final CallFrame frame = CallFrame.forBook(brief, document, index);
         log.debug(
                 "Glossary model action project={} source={} analysis={} target={}",
                 projectId,

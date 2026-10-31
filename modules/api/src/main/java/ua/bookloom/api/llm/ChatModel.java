@@ -47,4 +47,14 @@ public interface ChatModel {
     default @Nullable Integer contextWindowOverride() {
         return null;
     }
+
+    /**
+     * How requests to this model are shaped, resolved afresh, so a choice the person saved since the last call applies.
+     * A model that knows nothing of its own answers the safe default.
+     *
+     * @return the model's profile; never null
+     */
+    default ModelProfile profile() {
+        return ModelProfile.defaults();
+    }
 }

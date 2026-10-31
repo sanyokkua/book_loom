@@ -34,10 +34,12 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttempt;
 import ua.bookloom.api.llm.CallAttemptListener;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -51,6 +53,8 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.profile.BuiltInRows;
+import ua.bookloom.llm.profile.ModelProfiles;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -205,12 +209,13 @@ class GatedChatModelRefusedSettingTest {
         final Result<ChatResponse> second = model.chat(request(ReasoningLevel.OFF));
 
         assertThat(second.isOk()).isTrue();
-        assertThat(bodies(chatPath).get(0)).contains("\"max_tokens\":400");
+        // gpt-oss always reasons, so its cap of 400 carries the 2,048-token reasoning reserve.
+        assertThat(bodies(chatPath).get(0)).contains("\"max_tokens\":2448");
         assertThat(bodies(chatPath).get(1))
-                .contains("\"max_completion_tokens\":400")
+                .contains("\"max_completion_tokens\":2448")
                 .doesNotContain("\"max_tokens\"");
         assertThat(bodies(chatPath).get(2))
-                .contains("\"max_completion_tokens\":400")
+                .contains("\"max_completion_tokens\":2448")
                 .doesNotContain("\"max_tokens\"");
     }
 
@@ -286,18 +291,9 @@ class GatedChatModelRefusedSettingTest {
     @CsvSource({CSV, CSV_OLLAMA})
     void chat_rememberedRefusalUnderMyValue_sendsNoTemperatureAndOneRequest(
             final ProviderKind kind, final String basePath, final String chatPath) {
-        repository.save(new ModelSettings(
-                PROVIDER,
-                MODEL,
-                TemperatureChoice.VALUE,
-                0.7,
-                null,
-                null,
-                OutputLengthField.MAX_TOKENS,
-                List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted")),
-                null,
-                null,
-                ua.bookloom.api.llm.ProbeVerdicts.none()));
+        repository.save(ModelSettings.defaults(PROVIDER, MODEL)
+                .withChoices(TemperatureChoice.VALUE, 0.7, null, null, OutputLengthField.MAX_TOKENS)
+                .withRefused(List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "omitted"))));
         stubSequence(kind, chatPath, ok());
 
         final Result<ChatResponse> result = model(kind, basePath, MODEL).chat(request(ReasoningLevel.OFF));
@@ -366,19 +362,18 @@ class GatedChatModelRefusedSettingTest {
 
     private static ChatRequest request(final ReasoningLevel level) {
         return new ChatRequest(
-                List.of(
-                        new ChatMessage(ChatRole.SYSTEM, "Keep names."),
-                        new ChatMessage(ChatRole.USER, "Translate this.")),
-                0.2,
-                null,
-                level,
-                8192,
-                null,
-                400,
-                null,
-                CallKind.DRAFT,
-                new SamplingParams(0.9, null, null, null),
-                null);
+                        List.of(
+                                new ChatMessage(ChatRole.SYSTEM, "Keep names."),
+                                new ChatMessage(ChatRole.USER, "Translate this.")),
+                        0.2,
+                        null,
+                        level,
+                        8192,
+                        null,
+                        400,
+                        null,
+                        CallKind.DRAFT)
+                .withSampling(new SamplingParams(0.9, null, null, null));
     }
 
     private GatedChatModel model(final ProviderKind kind, final String basePath, final String modelId) {
@@ -394,6 +389,11 @@ class GatedChatModelRefusedSettingTest {
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
                 cache::current,
-                new RefusalMemory(cache));
+                new RefusalMemory(cache),
+                CallLedger.none(),
+                new BuiltWrongLog(),
+                new CapIgnoredLog(),
+                stored -> new ModelProfiles(new BuiltInRows())
+                        .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored));
     }
 }

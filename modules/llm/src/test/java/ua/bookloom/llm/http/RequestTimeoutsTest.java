@@ -116,6 +116,30 @@ class RequestTimeoutsTest {
         assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofMinutes(2));
     }
 
+    // A model that thinks on every call writes its reasoning first, so a fixed bound becomes the longer of itself and
+    // 60 ms per expected token, the reserve included: 2,600 tokens is 156 s, 1,000 tokens keeps 90 s; a prescan keeps
+    // its two minutes until its reasoning needs more; a draft still scales at 0.5 s per token.
+    @ParameterizedTest
+    @CsvSource({"REVIEW,2600,156", "REVIEW,1000,90", "PRESCAN,2600,156", "PRESCAN,1000,120", "DRAFT,800,400"})
+    void timeout_alwaysThinkingModel_isTheLongerOfNinetySecondsAndSixtyMsPerToken(
+            CallKind kind, int expectedOutputTokens, long effectiveSeconds) {
+        final ChatRequest thinking = new ChatRequest(
+                        List.of(new ChatMessage(ChatRole.USER, "hello")),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        kind)
+                .withReasoning(null, expectedOutputTokens);
+
+        final ProviderConfig bounded = RequestTimeouts.forChat(config(Duration.ofMinutes(3)), thinking);
+
+        assertThat(bounded.requestTimeout()).isEqualTo(Duration.ofSeconds(effectiveSeconds));
+    }
+
     @ParameterizedTest
     @CsvSource({"180,60", "90,60", "30,30"})
     void streamIdle_configuredTimeout_isSixtySecondsOrTheConfiguredTimeoutWhenShorter(

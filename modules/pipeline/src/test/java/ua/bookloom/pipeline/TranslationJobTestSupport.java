@@ -55,7 +55,6 @@ import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.run.RunStores;
 
 /** Shared real-document and controlled-model setup for job acceptance tests. */
@@ -231,7 +230,6 @@ final class TranslationJobTestSupport {
                 RunTicks.DAEMON,
                 BatchDrafter.NO_BATCHING,
                 WordValidator.none(),
-                RequestDefaultsSource.environmentOnly(),
                 CallLedger.none(),
                 "unknown");
     }

@@ -113,6 +113,18 @@ class ModelCatalogServiceTest {
         server.verify(0, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
     }
 
+    // A vision projector file next to the weights is no model to translate with.
+    @Test
+    void discover_routerListingWithMmproj_dropsTheSidecar() {
+        register("llama", ProviderKind.OPENAI_COMPATIBLE, URI.create(server.baseUrl() + "/v1"), ServerEngine.LLAMA_CPP);
+        server.stubFor(get(urlEqualTo(OPENAI_MODELS_PATH))
+                .willReturn(okJson("{\"object\":\"list\",\"data\":["
+                        + "{\"id\":\"Model-9B-Q4_K_M.gguf\",\"object\":\"model\",\"owned_by\":\"llamacpp\"},"
+                        + "{\"id\":\"mmproj-BF16.gguf\",\"object\":\"model\",\"owned_by\":\"llamacpp\"}]}")));
+
+        assertThat(catalog.listModels("llama").data()).containsExactly(new ModelInfo("Model-9B-Q4_K_M.gguf"));
+    }
+
     // An older LM Studio with no own list is still listed through its OpenAI route.
     @Test
     void discover_lmStudioWithoutOwnList_readsTheOpenAiList() {

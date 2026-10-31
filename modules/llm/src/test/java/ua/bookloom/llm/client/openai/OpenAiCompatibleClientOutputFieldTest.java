@@ -26,7 +26,9 @@ import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
@@ -143,7 +145,9 @@ class OpenAiCompatibleClientOutputFieldTest {
                 List.of(),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     private static ChatRequest request(@Nullable Integer cap) {

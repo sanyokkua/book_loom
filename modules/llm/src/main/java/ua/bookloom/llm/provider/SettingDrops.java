@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.SamplingParams;
+import ua.bookloom.llm.client.MessageShaper;
 
 /** Removes one refused setting from a request and keeps everything else. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -35,6 +36,8 @@ public final class SettingDrops {
             case SEED -> request.seed() == null ? null : withSeed(request, null);
             case NUM_CTX -> request.contextWindow() == null ? null : withContextWindow(request, null);
             case OUTPUT_FIELD -> withoutMaxTokens(request);
+            case SYSTEM_ROLE -> MessageShaper.hasSystem(request) ? MessageShaper.folded(request) : null;
+            case ROLE_ORDER -> MessageShaper.hasRuns(request) ? MessageShaper.merged(request) : null;
         };
     }
 
@@ -113,7 +116,10 @@ public final class SettingDrops {
                 seed,
                 r.callKind(),
                 r.sampling(),
-                r.outputField());
+                r.outputField(),
+                r.source(),
+                r.reasoningReserve(),
+                r.keepLoaded());
     }
 
     private static ChatRequest withContextWindow(final ChatRequest r, final @Nullable Integer window) {
@@ -128,6 +134,9 @@ public final class SettingDrops {
                 r.seed(),
                 r.callKind(),
                 r.sampling(),
-                r.outputField());
+                r.outputField(),
+                r.source(),
+                r.reasoningReserve(),
+                r.keepLoaded());
     }
 }

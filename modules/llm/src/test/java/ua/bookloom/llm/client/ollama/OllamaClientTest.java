@@ -326,8 +326,9 @@ class OllamaClientTest {
         return new OllamaClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
     }
 
+    // The client sends the level a request carries; one whose profile decided no reasoning control carries none.
     private static ChatRequest messageOnlyRequest() {
-        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
+        return new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withoutReasoning();
     }
 
     private static ChatRequest formattedRequest() {

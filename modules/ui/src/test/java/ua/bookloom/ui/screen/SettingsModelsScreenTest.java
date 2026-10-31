@@ -17,7 +17,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.TechnicalDetails;
@@ -309,6 +311,8 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 2), "omitted")),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 }

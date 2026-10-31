@@ -18,8 +18,8 @@ import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.Tone;
 
 /**
- * The body of the Models tab: what the program says about the chosen model, then its temperature, the settings it
- * refused, its two optional numbers and the fold of advanced options. It only draws what {@link ModelForm} holds and
+ * The body of the Models tab: what the program says about the chosen model, then its temperature, its thinking, its
+ * sampling, the settings it refused, its two optional numbers and the fold of advanced options. It only draws what {@link ModelForm} holds and
  * turns edits back into draft changes. The form outlives it, so it listens through weak listeners held by the fields
  * below, which live exactly as long as the nodes that use them.
  */
@@ -31,6 +31,8 @@ final class ModelsFormView {
     private final VBox root = new VBox(14);
     private final Banner found = new Banner("models-found", Tone.INFO, "i", "", "");
     private final ModelTemperatureSection temperature;
+    private final ModelThinkingSection thinking;
+    private final ModelSamplingSection sampling;
     private final ModelRefusedSection refused;
     private final ModelLimitsSection limits;
     private final ModelAdvancedFold advanced;
@@ -43,6 +45,8 @@ final class ModelsFormView {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         temperature = new ModelTemperatureSection(form, messages);
+        thinking = new ModelThinkingSection(form, messages);
+        sampling = new ModelSamplingSection(form, messages);
         refused = new ModelRefusedSection(form, messages);
         limits = new ModelLimitsSection(form, messages, technical);
         advanced = new ModelAdvancedFold(form, messages, technical);
@@ -50,7 +54,8 @@ final class ModelsFormView {
         errors.getStyleClass().add("form-errors");
         errorsText.setId("models-errors-text");
         errorsText.setWrapText(true);
-        root.getChildren().addAll(found, temperature.node(), refused.node(), limits.node(), advanced.node(), errors);
+        root.getChildren().addAll(found, temperature.node(), thinking.node(), sampling.node(), refused.node());
+        root.getChildren().addAll(limits.node(), advanced.node(), errors);
         root.disableProperty().bind(form.reading());
         form.draft().addListener(new WeakChangeListener<>(onChange));
         form.facts().addListener(new WeakChangeListener<>(onChange));
@@ -73,6 +78,8 @@ final class ModelsFormView {
 
     private void showAll() {
         temperature.show(form.draft().get());
+        thinking.show(form.draft().get(), form.facts().get());
+        sampling.show(form.draft().get());
         limits.show();
         advanced.show();
         refused.show();

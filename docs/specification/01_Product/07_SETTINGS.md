@@ -120,7 +120,7 @@ can read at once (and, for Ollama only, how much is loaded now — read from `/a
 answer in this session's last inference test (else "not checked yet"). While Use context window is off, the field shows the
 loaded figure as a suggestion. For an Ollama model the answer-length field choice is not offered, only a hint (an Ollama
 reached through an OpenAI-compatible provider also always receives `max_tokens`, whatever the stored choice). Save is
-an update that keeps a refusal recorded meanwhile; **Send again** acts at once and leaves unsaved typing alone; changing
+an update that keeps a refusal recorded meanwhile; **Try again now** on a refused setting acts at once and leaves unsaved typing alone; changing
 model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollama?".
 
 | Setting                       | Type    | Default          | Validation                                                                                            | Requirement                           |
@@ -128,7 +128,9 @@ model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollam
 | Model (per provider)          | string  | first discovered | non-empty; from live discovery or manual model-ID entry                                               | FR-MODEL-01, FR-MODEL-02, FR-MODEL-03 |
 | Manual model-ID entry         | string  | —                | always available; the only source when the provider has no discovery (`supportsModelDiscovery`=false) | FR-MODEL-02, DD-38                    |
 | Temperature                   | choice + decimal | Let BookLoom choose (per-task defaults of `ChatRequests`) | Let BookLoom choose · My value (0.0 – 2.0, one value for every request) · Don't send (omitted from the request, for models that refuse it); mockups/README.md S6 | FR-SETTINGS-03, DD-36                 |
-| Use context window            | integer (tokens) | off; filled in from what is loaded (`ModelCapabilities.contextLength`), shown as "detected" | positive; sent as `num_ctx` on Ollama | FR-SETTINGS-03, FR-INFER-02 |
+| Thinking                      | choice  | Recommended (off) | says what thinking control the model offers (from its profile) and that BookLoom sends thinking off for draft, repair, proofread, names and brief calls; Recommended (off) · Allow on proofreading and names · Always, stored as `ModelSettings.thinkingOverride` through `update`; a model with no control, or one that always thinks, says so and offers no choice | design D20 |
+| Sampling                      | choice + numbers | Profile default | names what BookLoom sends: its temperature per call kind and no sampler of its own beyond it, with neutral values for a server whose defaults are not neutral (LM Studio, llama-server, Unsloth); Profile default · Custom (temperature 0 – 2, `top_k` a whole number above 0, `top_p` above 0 and at most 1, `min_p` 0 – 1; an empty field keeps the profile's value, and a typed temperature is the Temperature row's My value, one stored value), stored as `ModelSettings.samplingOverride` through `update`; no choice leaves sampling to the server | design D20 |
+| Use context window            | integer (tokens) | off; filled in from what is loaded (`ModelCapabilities.contextLength`), shown as "detected" | 512 – 1,048,576; the one size every call to the model uses (`ModelWindow`); sent as `num_ctx` on Ollama's native API only | FR-SETTINGS-03, FR-INFER-02 |
 | Limit answer length           | integer (tokens) | off (computed per request by `OutputLimit`) | positive when on                                                         | FR-SETTINGS-03                        |
 | Answer-length field (advanced) | enum   | `max_tokens`     | `max_tokens` / `max_completion_tokens`; disabled for Ollama                                           | FR-SETTINGS-03                        |
 | Per-provider remembered model | derived | last used        | —                                                                                                     | FR-MODEL-04                           |
@@ -139,22 +141,21 @@ These provider + model choices are the **defaults for new projects**; each proje
 
 ## generation-tab {#generation-tab}
 
-*Built.* The tab says "✓ Changes apply at once, to the segments not translated yet." A run reads the settings once when it
-starts, so while one is running (running, pausing, paused or stopping) a note says it keeps the settings it started with
-and the change reaches its segments not translated yet when it starts or continues again. The tab carries only knobs the
-code has: no judge model and no τ override. Left: the quality grid; right: Thinking, Sampling and Time limits.
+*Built.* The tab holds no setting: it shows what Fast, Balanced and Max do, "The same for every model.", and the fixed
+time limits. The tab carries only what the code has: no judge model and no τ override. Left: the quality grid; right:
+Time limits. Thinking and sampling are set per model on the Models tab (redesign tasks 6.7 and 6.9).
 
 | Setting                  | Type          | Default                | Validation / meaning                                                                 | Requirement  |
 |--------------------------|---------------|------------------------|---------------------------------------------------------------------------------------|--------------|
 | What the quality choice does | read-only grid of labels | —       | the Fast / Balanced / Max rows, read through `DialProfiles` from the pipeline's own `DialParameters` (see below) | FR-ALGO-C12  |
-| Thinking before answering | enum         | Off                    | Off / Low / On, read at each run start (`RequestDefaultsSource`); `BOOKLOOM_REASONING`, when set, replaces it; the tab then names the variable and keeps the choice for launches without it | FR-SETTINGS-03 |
-| Sampling                 | enum          | per `SamplingMode`     | Program defaults / Tuned by BookLoom, read at each run start; `BOOKLOOM_SAMPLING`, when set to a known mode, replaces it; the tab names it the same way | FR-SETTINGS-03 |
-| Time limits              | read-only     | `CallLimits`           | fixed: a check 90 s, names / brief / file name 120 s, translating segments by length up to 10 min, up to 3 tries (a slow answer is asked again once, shorter); the HTTP client reads the same constants | FR-SETTINGS-03 |
+| Time limits              | read-only     | `CallLimits`           | fixed: a check 90 s; names, brief, file name and summary 120 s (longer for a model that always thinks); other calls 0.5 s per expected token, at least the provider's request timeout, at most 600 s; silence while streaming 60 s; up to 3 tries (a slow answer is asked again once, shorter); the HTTP client reads the same constants | FR-SETTINGS-03 |
 
-**Context window (built).** Every call is sized against a fixed effective context of **16,384 tokens**
-(`TokenBudget.EFFECTIVE_CONTEXT`), sent to Ollama's `num_ctx`; an OpenAI-compatible server receives no context-size
-field (FR-MODEL-07, DD-44). The detected window is used only for budgeting. A per-model override that replaces it is the
-Models tab's **Use context window**.
+**Context window (built).** Every call to a model, before, during or after a run, is sized against one window,
+`ModelWindow.of` (`:api`): the model's **Use context window** when set, else the smallest of the loaded or detected
+window, the profile's hard cap and **16,384** (`ModelWindow.DEFAULT_WINDOW`). The loaded window counts only where the
+engine fixes it at load or server start (LM Studio, llama-server); the facts are read at Start. Only Ollama's native
+API is sent the window, as `num_ctx` with `"truncate":false`; an OpenAI-compatible server receives no context-size
+field (FR-MODEL-07, DD-44). A saved window applies from the next chunk.
 
 **Temperature** is a constant per call kind today (`ChatRequests`), low for fidelity: draft ~0.2, QA ~0.0–0.2, repair
 slightly higher (`05_TRANSLATION_ALGORITHM.md#generation-parameters`, `12_PROMPT_CATALOG.md`). The Models tab's **Use

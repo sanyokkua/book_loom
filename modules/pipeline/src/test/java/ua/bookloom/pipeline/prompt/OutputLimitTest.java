@@ -8,6 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.SourceSize;
 
 /** The expected length and the hard cap a call states for one masked source. */
 class OutputLimitTest {
@@ -16,20 +17,26 @@ class OutputLimitTest {
     void forSource_shortSourceWithTwoTokens_expectsSixteenAndCapsAtTheShortSourceFloor() {
         final OutputLimit limit = OutputLimit.forSource("He opened the ⟦g0⟧old⟦g1⟧ door.", "en", "uk");
 
-        assertThat(limit).isEqualTo(new OutputLimit(16, 128));
+        assertThat(limit)
+                .extracting(OutputLimit::expectedTokens, OutputLimit::capTokens)
+                .containsExactly(16, 128);
     }
 
     // A one-word source under a 64-token cap came back as an empty target; the floor leaves the reply room.
     @Test
     void forSource_oneWord_capsAtTheShortSourceFloor() {
-        assertThat(OutputLimit.forSource("Well", "en", "uk")).isEqualTo(new OutputLimit(3, 128));
+        assertThat(OutputLimit.forSource("Well", "en", "uk"))
+                .extracting(OutputLimit::expectedTokens, OutputLimit::capTokens)
+                .containsExactly(3, 128);
     }
 
     @Test
     void forSource_sixHundredCharactersWithFourTokens_capsAtSixHundredSixtyOne() {
         final String masked = "⟦g0⟧⟦g1⟧" + "a".repeat(600) + "⟦g2⟧⟦g3⟧";
 
-        assertThat(OutputLimit.forSource(masked, "en", "uk")).isEqualTo(new OutputLimit(414, 661));
+        assertThat(OutputLimit.forSource(masked, "en", "uk"))
+                .extracting(OutputLimit::expectedTokens, OutputLimit::capTokens)
+                .containsExactly(414, 661);
     }
 
     @Test
@@ -68,6 +75,22 @@ class OutputLimitTest {
         assertThatThrownBy(() -> OutputLimit.forReview(List.of(), "uk")).isInstanceOf(IllegalArgumentException.class);
     }
 
+    // The source size sizes a thinking model's reasoning reserve: the source's own tokens and one item per source.
+    @Test
+    void forBatch_threeSources_statesTheirTokensAndCount() {
+        final OutputLimit limit = OutputLimit.forBatch(List.of("a".repeat(400), "b".repeat(400), "Well"), "en", "uk");
+
+        // 115 tokens for each 400-letter source, 2 for the one word.
+        assertThat(limit.source()).isEqualTo(new SourceSize(232, 3));
+    }
+
+    @Test
+    void forSource_oneSource_statesItsTokensAndOneItem() {
+        assertThat(OutputLimit.forSource("a".repeat(400), "en", "uk"))
+                .extracting(OutputLimit::source)
+                .isEqualTo(new SourceSize(115, 1));
+    }
+
     @Test
     void forSummary_capsAtTenTwentyFour() {
         assertThat(OutputLimit.forSummary()).isEqualTo(new OutputLimit(600, 1024));
@@ -75,11 +98,11 @@ class OutputLimitTest {
 
     @Test
     void forPrescan_fortyCandidates_capsAtNineteenTwentyFour() {
-        assertThat(OutputLimit.forPrescan(40)).isEqualTo(new OutputLimit(992, 1984));
+        assertThat(OutputLimit.forPrescan(40)).isEqualTo(new OutputLimit(992, 1984, new SourceSize(0, 40)));
     }
 
     @Test
     void forSuggestions_twentyTerms_capsAtNineHundredTwentyEight() {
-        assertThat(OutputLimit.forSuggestions(20)).isEqualTo(new OutputLimit(464, 928));
+        assertThat(OutputLimit.forSuggestions(20)).isEqualTo(new OutputLimit(464, 928, new SourceSize(0, 20)));
     }
 }

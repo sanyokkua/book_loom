@@ -48,7 +48,6 @@ class ReviewerWireMockTest {
     private static final String DRAFT_TARGET = "Він відчинив старі двері.";
     private static final String REVIEWER_REPLY = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
             + "{\"criterion\":\"gender\",\"quote\":\"Він відчинив\",\"replacement\":\"Вона відчинила\"}]}]}";
-    private static final String THINK_OFF = "\"think\":false";
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
@@ -88,7 +87,7 @@ class ReviewerWireMockTest {
         assertThat(bodies.get(1))
                 .contains("\"temperature\":0.0", "\"seed\":15", "\"edits\"")
                 .doesNotContain("\"target\"");
-        assertReasoningOff(kind, bodies);
+        assertNoReasoningControl(bodies);
         assertThat(bodies.get(0)).contains(capField(kind) + ":128");
         assertThat(bodies.get(1)).contains(capField(kind) + ":");
     }
@@ -200,12 +199,9 @@ class ReviewerWireMockTest {
         };
     }
 
-    private static void assertReasoningOff(final ProviderKind kind, final List<String> bodies) {
-        switch (kind) {
-            case OLLAMA ->
-                assertThat(bodies).allSatisfy(body -> assertThat(body).contains(THINK_OFF));
-            case OPENAI_COMPATIBLE ->
-                assertThat(bodies).allSatisfy(body -> assertThat(body).doesNotContain("\"think\"", "\"reasoning\""));
-        }
+    // The provider's model's row declares no thinking control, so none is sent (design D20).
+    private static void assertNoReasoningControl(final List<String> bodies) {
+        assertThat(bodies)
+                .allSatisfy(body -> assertThat(body).doesNotContain("\"think\"", "\"reasoning", "enable_thinking"));
     }
 }

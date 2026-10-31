@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.engine.CheckedModelId;
@@ -48,23 +49,14 @@ public interface ProviderClient {
     }
 
     /**
-     * Asks the provider for a model's context length; never fails the caller.
+     * Asks the provider what it says about a model: window, thinking control, template, quant. Called only for a
+     * person's action; never fails the caller.
      *
      * @param modelId the model to ask about; never null
-     * @return the context length in tokens, or empty when the provider cannot or does not say
+     * @return the facts, with whatever the provider did not say left empty; never null
      */
-    default Optional<Integer> contextLength(String modelId) {
-        return Optional.empty();
-    }
-
-    /**
-     * Asks the provider for the context a model is loaded with right now; never fails the caller.
-     *
-     * @param modelId the model to ask about; never null
-     * @return the loaded context length in tokens, or empty when unknown, not loaded, or this dialect cannot say
-     */
-    default Optional<Integer> loadedContextLength(String modelId) {
-        return Optional.empty();
+    default ModelFacts facts(String modelId) {
+        return ModelFacts.unknown();
     }
 
     /**

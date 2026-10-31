@@ -59,7 +59,7 @@ migrations arrives with the first release; until then no statement here about mi
 | `meta` | `key` PK, `value` | facts about the file itself: `record_shapes`, the fingerprint of the stored records ([record-shapes](#record-shapes)) |
 | `settings` | `key` PK, `value`, `type` | preferences ([settings-serialization](#settings-serialization)) |
 | `providers` | `id` PK, `json` | `ProviderConfig`, including the detected `engine` and `engineVersion`, the person's `engineChoice` ("Treat this server as…") and `nativeOfferDeclined` (Keep as is on the one-time Ollama offer); engine traits are computed from the effective engine and never stored; the credential is an env-var name reference only |
-| `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included, and the `probeVerdicts` of the Advanced features checks (answer schema, thinking switch, extra samplers, cap field: each an outcome of honoured, ignored or refused, its source `test` and its time) |
+| `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speed included, the `probeVerdicts` of the Advanced features checks (answer schema, thinking switch, extra samplers, cap field: each an outcome of honoured, ignored or refused, its source `test` and its time), and the person's overrides: `thinkingOverride` (`RECOMMENDED`, `ALLOW_PROOFREAD_AND_NAMES` or `ALWAYS`) and `samplingOverride` (`PROFILE_DEFAULT`, or `CUSTOM` with the person's temperature, `top_k`, `top_p` and `min_p`). Each refusal (`RefusedSetting`) holds its setting, day, what was done instead and a `scope`: null for the whole model, or the one call kind whose answer schema was refused. What a server says about a model (window, capabilities, quant, size, loaded state) is never stored |
 | `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once; `title` is the book's title (the base of an automatic project name); `source_path` is written when the book is first stored and changed only by `relocateBook`, so saving a project never moves it |
 | `projects` | `id` PK, `content_hash` → `books`, `name`, `name_key`, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; `UNIQUE (content_hash, name_key)`; index (`content_hash`, `source_lang`, `target_lang`) | the project; a name is unique within its book, ignoring letter case |
 | `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, last export |
@@ -146,7 +146,8 @@ class name of a record is not part of it, so moving or renaming a record changes
 fingerprint into `meta` (`record_shapes`); a file holding another one does not fit and is set aside like a file of
 another `user_version`. A record change therefore needs no hand-raised number: the next start sets the old file aside
 and creates an empty one. The engine fields of `ProviderConfig` and the `probeVerdicts` of `ModelSettings` (ADR-0047)
-changed the fingerprint once, so a database from before them was set aside on its first start.
+changed the fingerprint once, so a database from before them was set aside on its first start; the
+`thinkingOverride` and `samplingOverride` of `ModelSettings` and the `scope` of `RefusedSetting` changed it again.
 
 ## resume-support {#resume-support}
 

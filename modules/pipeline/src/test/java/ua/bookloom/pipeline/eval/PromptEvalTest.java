@@ -139,14 +139,15 @@ class PromptEvalTest {
 
     static ModelCalls calls(final String modelId) {
         final ChatModel chatModel = chatModel(modelId);
-        // The run's own seam, so a request is sized to the window and capped exactly as the app sends it; the guard
-        // lets everything through and nothing is announced.
+        // The run's own seam, so a request is sized to the window, capped and kept loaded exactly as the app sends
+        // it; the guard lets everything through and nothing is announced.
         return new JobModelCalls(
-                onSent -> chatModel,
-                event -> {},
-                Clock.systemUTC(),
-                PromptEvalCases.TARGET_LANGUAGE,
-                EvalProject.window());
+                        onSent -> chatModel,
+                        event -> {},
+                        Clock.systemUTC(),
+                        PromptEvalCases.TARGET_LANGUAGE,
+                        EvalProject.window())
+                .inRun();
     }
 
     /** An injector whose provider registry holds the eval's one provider, built from the environment. */

@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.context;
 
 import java.util.Locale;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 
 /**
@@ -15,12 +14,6 @@ import ua.bookloom.pipeline.chunk.TokenBudget;
  * @param outputRatio output tokens per source token for the language pair; positive
  */
 public record ContextBudget(int window, int staticPrefixTokens, int dynamicTokens, double outputRatio) {
-
-    /**
-     * The window used when none is detected, and the cap on a detected one: a server may train a model for 128k but
-     * running it that wide costs memory the person did not ask to spend, so only an explicit override goes above it.
-     */
-    public static final int DEFAULT_WINDOW = TokenBudget.EFFECTIVE_CONTEXT;
 
     /** Held back from every window for the tokenizer's disagreement with the estimate and for role markers. */
     public static final int SAFETY_MARGIN = 500;
@@ -38,20 +31,6 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
             throw new IllegalArgumentException("invalid context budget: window=" + window + " prefix="
                     + staticPrefixTokens + " dynamic=" + dynamicTokens + " ratio=" + outputRatio);
         }
-    }
-
-    /**
-     * The window a run sizes against.
-     *
-     * @param detected the context length the provider reported, or null when it said nothing
-     * @param override the window the person set, or null; wins over detection and over the cap
-     * @return the override, else the detected length limited to {@link #DEFAULT_WINDOW}, else {@link #DEFAULT_WINDOW}
-     */
-    public static int windowFor(@Nullable final Integer detected, @Nullable final Integer override) {
-        if (override != null) {
-            return override;
-        }
-        return detected == null ? DEFAULT_WINDOW : Math.min(detected, DEFAULT_WINDOW);
     }
 
     /**

@@ -31,7 +31,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaults;
 
 /**
  * The model's choice among recurring words: of candidate words and phrases, each shown with how often the book uses it
@@ -96,14 +95,13 @@ public final class TermChoice {
         final Map<String, Evidence> evidence = TermEvidence.of(story.index(), story.ordinals(), terms);
         final String system =
                 templates.renderSystem(PromptName.TERM_CHOICE, frame).strip();
-        return runBatches(terms, evidence, system, frame.requestDefaults(), calls);
+        return runBatches(terms, evidence, system, calls);
     }
 
     private Result<Choice> runBatches(
             final List<String> terms,
             final Map<String, Evidence> evidence,
             final String system,
-            final RequestDefaults defaults,
             final ModelCalls calls) {
         final int batches = (terms.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         log.info("Term choice started terms={} batches={}", terms.size(), batches);
@@ -114,7 +112,7 @@ public final class TermChoice {
             final List<String> batch =
                     terms.subList(index * BATCH_SIZE, Math.min(terms.size(), (index + 1) * BATCH_SIZE));
             calls.announce(new BatchStarted(CallKind.TERM_CHOICE, index + 1, batches));
-            final Result<Choice> answered = runBatch(batch, evidence, system, defaults, calls);
+            final Result<Choice> answered = runBatch(batch, evidence, system, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -136,19 +134,18 @@ public final class TermChoice {
             final List<String> batch,
             final Map<String, Evidence> evidence,
             final String system,
-            final RequestDefaults defaults,
             final ModelCalls calls) {
-        final Result<Choice> first = ask(batch, evidence, system, defaults, calls);
+        final Result<Choice> first = ask(batch, evidence, system, calls);
         if (first.isErr() || !isUniform(Objects.requireNonNull(first.data(), "choice"))) {
             return first;
         }
         log.warn("Term choice batch of {} answered all alike; asking again in halves", batch.size());
         final int middle = batch.size() / 2;
-        final Result<Choice> head = ask(batch.subList(0, middle), evidence, system, defaults, calls);
+        final Result<Choice> head = ask(batch.subList(0, middle), evidence, system, calls);
         if (head.isErr()) {
             return head;
         }
-        final Result<Choice> tail = ask(batch.subList(middle, batch.size()), evidence, system, defaults, calls);
+        final Result<Choice> tail = ask(batch.subList(middle, batch.size()), evidence, system, calls);
         if (tail.isErr()) {
             return tail;
         }
@@ -178,7 +175,6 @@ public final class TermChoice {
             final List<String> batch,
             final Map<String, Evidence> evidence,
             final String system,
-            final RequestDefaults defaults,
             final ModelCalls calls) {
         final String lines = String.join(
                 "\n",
@@ -194,7 +190,7 @@ public final class TermChoice {
                                 .strip()));
         final int cap = BASE_TOKENS + TOKENS_PER_VERDICT * batch.size();
         final ChatRequest request =
-                ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false, defaults);
+                ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false);
         log.trace("Term choice messages {}", messages);
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));

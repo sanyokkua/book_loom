@@ -105,11 +105,14 @@ class OpenAiRequestMapperEnginesTest {
         assertThat(body.has("reasoning_effort")).isFalse();
     }
 
+    // gpt-oss's profile decides its lowest level; on llama-server it goes as an effort, never as the template switch,
+    // which would erase it and fall back to medium.
     @Test
     void serializeRequest_llamaServerGptOss_sendsLowAndNoKwarg() throws IOException {
         server.stubFor(get(urlEqualTo("/props")).willReturn(okJson(PROPS_READING_THE_VARIABLE)));
 
-        final JsonNode body = sentBody(client(ServerEngine.LLAMA_CPP), "gpt-oss-20b", off(null));
+        final JsonNode body =
+                sentBody(client(ServerEngine.LLAMA_CPP), "gpt-oss-20b", request(null, ReasoningLevel.LOW, null));
 
         assertThat(body.path("reasoning_effort").asText()).isEqualTo("low");
         assertThat(body.has("chat_template_kwargs")).isFalse();
@@ -360,7 +363,10 @@ class OpenAiRequestMapperEnginesTest {
                 null,
                 CallKind.DRAFT,
                 null,
-                field);
+                field,
+                null,
+                null,
+                false);
     }
 
     private static ResponseFormat schema() {

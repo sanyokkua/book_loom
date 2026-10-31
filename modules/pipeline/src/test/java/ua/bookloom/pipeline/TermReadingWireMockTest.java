@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
@@ -59,7 +60,8 @@ class TermReadingWireMockTest {
                 },
                 event -> {},
                 Clock.systemUTC(),
-                "uk");
+                "uk",
+                ModelWindow.DEFAULT_WINDOW);
         return reading.read(ILSA, List.of(WINDOW), frame, calls);
     }
 

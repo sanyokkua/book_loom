@@ -48,11 +48,13 @@ class GatedChatModelTest {
     // LM Studio's own route, where its chat goes first.
     private static final String CHAT_PATH = "/api/v0/chat/completions";
     private static final String OLLAMA_CHAT_PATH = "/api/chat";
-    private static final String MODEL_ID = "test-model";
+    private static final String MODEL_ID = "mistral-small3.2:24b";
+    // A model whose built-in row has an on/off thinking switch, so the off value is sent and can be refused.
+    private static final String SWITCH_MODEL_ID = "qwen3.5:9b";
     private static final String REPLY =
-            "{\"model\":\"test-model\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
+            "{\"model\":\"mistral-small3.2:24b\",\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"finish_reason\":\"stop\"}]}";
     private static final String OLLAMA_REPLY =
-            "{\"model\":\"test-model\",\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"done_reason\":\"stop\"}";
+            "{\"model\":\"mistral-small3.2:24b\",\"message\":{\"role\":\"assistant\",\"content\":\"translated\"},\"done_reason\":\"stop\"}";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
@@ -354,7 +356,7 @@ class GatedChatModelTest {
         final ProviderClientFactory clients = new ProviderClientFactory(
                 new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, sleeper);
-        return new GatedChatModel(clients.create(config), MODEL_ID, new InferenceGate(), retryPolicy);
+        return new GatedChatModel(clients.create(config), SWITCH_MODEL_ID, new InferenceGate(), retryPolicy);
     }
 
     private static Result<ChatResponse> concurrentChat(GatedChatModel model, CountDownLatch ready, CountDownLatch start)

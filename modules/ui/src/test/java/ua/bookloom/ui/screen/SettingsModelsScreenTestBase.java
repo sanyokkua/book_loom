@@ -13,7 +13,9 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
+import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.ui.ScriptedModelCapabilities;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -117,7 +119,9 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
                 List.<RefusedSetting>of(),
                 null,
                 null,
-                ProbeVerdicts.none());
+                ProbeVerdicts.none(),
+                ThinkingOverride.RECOMMENDED,
+                SamplingOverride.profileDefault());
     }
 
     Button press(final String id) {

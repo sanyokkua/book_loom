@@ -33,14 +33,38 @@ public enum RejectedCapability {
     OUTPUT_FIELD("max_tokens", "max_completion_tokens"),
 
     /** The provider rejected {@code num_ctx}. */
-    NUM_CTX("num_ctx", "omitted");
+    NUM_CTX("num_ctx", "omitted"),
+
+    /** The model's chat template has no system role; the system text goes into the first user message instead. */
+    SYSTEM_ROLE("system_role", "folded"),
+
+    /**
+     * The model's chat template wants the roles to alternate; neighbouring messages of one role are merged. Not
+     * remembered: the merge is made on the one call that was refused, and the person has nothing to send again.
+     */
+    ROLE_ORDER("role_order", "merged", false);
 
     private final String settingName;
     private final String insteadDid;
+    private final boolean remembered;
 
     RejectedCapability(final String settingName, final String insteadDid) {
+        this(settingName, insteadDid, true);
+    }
+
+    RejectedCapability(final String settingName, final String insteadDid, final boolean remembered) {
         this.settingName = settingName;
         this.insteadDid = insteadDid;
+        this.remembered = remembered;
+    }
+
+    /**
+     * Whether the refusal is kept on the model's settings so later calls leave the setting out from the start.
+     *
+     * @return {@code true} if it is remembered, {@code false} if it holds for the refused call alone
+     */
+    public boolean isRemembered() {
+        return remembered;
     }
 
     /**

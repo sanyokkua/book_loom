@@ -9,12 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.llm.client.MessageShaper;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.RejectedCapability;
@@ -36,12 +38,19 @@ final class InferenceStage {
 
     private record Sent(ProviderCallResult<ChatResponse> call, ChatRequest request) {}
 
-    InferenceProbe run(final ProviderClient client, final String providerId, final String modelId) {
+    private record Probe(ProviderClient client, String providerId, String modelId, ProbeShaping.Shaper shaper) {}
+
+    InferenceProbe run(
+            final ProviderClient client,
+            final String providerId,
+            final String modelId,
+            final ProbeShaping.Shaper shaper) {
         log.debug(
                 "Provider verification inference stage started provider={} model={} messageCount=1 responseFormatPresent=true reasoningDisabled=true",
                 providerId,
                 modelId);
-        final Sent first = chatProbe(client, providerId, modelId, ProbeRequests.structured(ReasoningLevel.OFF));
+        final Probe probe = new Probe(client, providerId, modelId, shaper);
+        final Sent first = chatProbe(probe, ProbeRequests.structured(ReasoningLevel.OFF));
         final ProviderCallResult<ChatResponse> call = first.call();
         if (call.result().isErr()) {
             return failed(RetriedCalls.error(call.result()), first.request());
@@ -57,28 +66,25 @@ final class InferenceStage {
                     true,
                     first.request());
         }
-        return plainProbe(client, providerId, modelId);
+        return plainProbe(probe);
     }
 
-    private Sent chatProbe(
-            final ProviderClient client, final String providerId, final String modelId, final ChatRequest request) {
-        final ProviderCallResult<ChatResponse> call = send(client, providerId, modelId, request);
-        final boolean reasoningRefused = call.rejectedCapability() == RejectedCapability.REASONING_CONTROL;
-        final ChatRequest effective = reasoningRefused ? ProbeRequests.structured(null) : request;
-        final ProviderCallResult<ChatResponse> retried =
-                reasoningRefused ? send(client, providerId, modelId, effective) : call;
-        if (retried.rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
-            final Sent plain = plainCall(client, providerId, modelId, null);
+    private Sent chatProbe(final Probe probe, final ChatRequest request) {
+        final Sent call = send(probe, request);
+        final boolean reasoningRefused = call.call().rejectedCapability() == RejectedCapability.REASONING_CONTROL;
+        final Sent retried = reasoningRefused ? send(probe, ProbeRequests.structured(null)) : call;
+        if (retried.call().rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
+            final Sent plain = plainCall(probe, null);
             return new Sent(
                     new ProviderCallResult<>(
                             plain.call().result(), plain.call().retryAfter(), RejectedCapability.STRUCTURED_OUTPUT),
                     plain.request());
         }
-        return new Sent(retried, effective);
+        return retried;
     }
 
-    private InferenceProbe plainProbe(final ProviderClient client, final String providerId, final String modelId) {
-        final Sent plain = plainCall(client, providerId, modelId, ReasoningLevel.OFF);
+    private InferenceProbe plainProbe(final Probe probe) {
+        final Sent plain = plainCall(probe, ReasoningLevel.OFF);
         if (plain.call().result().isErr()) {
             return failed(RetriedCalls.error(plain.call().result()), plain.request());
         }
@@ -88,23 +94,35 @@ final class InferenceStage {
                 ProbeVerdicts.Outcome.IGNORED);
     }
 
-    private Sent plainCall(
-            final ProviderClient client,
-            final String providerId,
-            final String modelId,
-            final @Nullable ReasoningLevel reasoning) {
-        final ChatRequest request = ProbeRequests.plain(reasoning);
-        final ProviderCallResult<ChatResponse> call = send(client, providerId, modelId, request);
-        if (call.rejectedCapability() != RejectedCapability.REASONING_CONTROL) {
-            return new Sent(call, request);
+    private Sent plainCall(final Probe probe, final @Nullable ReasoningLevel reasoning) {
+        final Sent call = send(probe, ProbeRequests.plain(reasoning));
+        if (call.call().rejectedCapability() != RejectedCapability.REASONING_CONTROL) {
+            return call;
         }
-        final ChatRequest bare = ProbeRequests.plain(null);
-        return new Sent(send(client, providerId, modelId, bare), bare);
+        return send(probe, ProbeRequests.plain(null));
     }
 
-    private ProviderCallResult<ChatResponse> send(
-            final ProviderClient client, final String providerId, final String modelId, final ChatRequest request) {
-        return calls.run(() -> client.chat(modelId, request), VerificationStage.INFERENCE, providerId);
+    // A template that refuses the system role gets the probe once more with the system text folded in, as a run's call.
+    private Sent send(final Probe probe, final ChatRequest request) {
+        final ChatRequest shaped = probe.shaper().shaped(request);
+        final ProviderCallResult<ChatResponse> call = exchange(probe, shaped);
+        if (call.rejectedCapability() != RejectedCapability.SYSTEM_ROLE || !MessageShaper.hasSystem(shaped)) {
+            return new Sent(call, shaped);
+        }
+        log.warn(
+                "Provider verification probe refused the system role reason={} provider={} model={}; sending it"
+                        + " folded",
+                FailureReason.SYSTEM_ROLE_UNSUPPORTED.token(),
+                probe.providerId(),
+                probe.modelId());
+        probe.shaper().systemRoleRefused();
+        final ChatRequest folded = probe.shaper().shaped(request);
+        return new Sent(exchange(probe, folded), folded);
+    }
+
+    private ProviderCallResult<ChatResponse> exchange(final Probe probe, final ChatRequest request) {
+        return calls.run(
+                () -> probe.client().chat(probe.modelId(), request), VerificationStage.INFERENCE, probe.providerId());
     }
 
     private static InferenceProbe failed(final AppError failure, final ChatRequest sent) {

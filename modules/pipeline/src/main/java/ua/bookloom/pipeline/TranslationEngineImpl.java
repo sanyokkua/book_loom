@@ -31,7 +31,6 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.RequestDefaultsSource;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -55,7 +54,6 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final IdSource idSource;
     private final RecoveryTimer timer;
     private final WordValidator words;
-    private final RequestDefaultsSource requestDefaultsSource;
     private final CallLedger ledger;
     private final ProviderConfigs providers;
 
@@ -86,11 +84,9 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final IdSource idSource,
             final RecoveryTimer timer,
             final WordValidator words,
-            final RequestDefaultsSource requestDefaultsSource,
             final CallLedger ledger,
             final ProviderConfigs providers) {
         this.providers = Objects.requireNonNull(providers, "providers");
-        this.requestDefaultsSource = Objects.requireNonNull(requestDefaultsSource, "requestDefaultsSource");
         this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
@@ -142,7 +138,6 @@ public final class TranslationEngineImpl implements TranslationEngine {
                 RunTicks.DAEMON,
                 BatchDrafter.DEFAULT_INITIAL_SIZE,
                 words,
-                requestDefaultsSource,
                 ledger,
                 providerKindOf(request));
     }

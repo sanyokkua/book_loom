@@ -94,7 +94,7 @@ stores what a server honours (see #three-stage-verification).
 | FR-MODEL-03a | Two model slots exist: translator (required) and judge/helper (used when the judge or reflection runs). There is no embedding slot.                                                                                                                                                                                                                                                                                                               |
 | FR-MODEL-05a | A model is **available** when: with discovery, its ID is a member of the live model list (`listModels()`); without discovery (a manually-entered model ID), the Inference verification round-trip against that model **is** the availability check — a non-empty completion proves availability, a failure marks it unavailable (`modelUnavailable`). Where the engine answers any id with the loaded model (LM Studio, Unsloth) or routes by id (a llama-server router), the id is also checked against the server's own list at the first chat call of a session per provider and model: an id that is not listed ends that call with `modelNotFound` (reason `model-not-listed`) before any chat request, and the run pauses on it; a list that cannot be read lets the call go ahead. Availability is confirmed before the provider is used for a run (see #per-project-binding). |
 | FR-MODEL-06a | Each provider carries an **effective context (tokens)** value resolved in order: Ollama `num_ctx` / `/api/show` reported context → discovery-reported context → the provider profile's manual **"effective context (tokens)"** field → a conservative built-in default. The chunk packer budgets against this resolved value (see #effective-context).                                                                                            |
-| FR-MODEL-07a | Each provider carries a `supportsStructuredOutput` capability, **populated during the Models/Inference verification stage** and thereafter cached on the provider. It records whether the server honoured a structured-output request; it never blocks a run, because structured output is always attempted and a rejection silently downgrades to text (see #response-handling). On a generic server the stored verdict decides whether a schema is sent at all (see #server-engines).                                                                 |
+| FR-MODEL-07a | Each provider carries a `supportsStructuredOutput` capability, **populated during the Models/Inference verification stage** and thereafter cached on the provider. It records whether the server honoured a structured-output request; it never blocks a run, because structured output is always attempted and a rejection moves that call kind (or, for a model-wide failure, every kind) of that model to the prompt-only rung, stored as a refused setting with its scope (see #response-handling). On a generic server the stored verdict decides whether a schema is sent at all (see #server-engines).                                                                 |
 
 Cross-chapter consistency is provided by the name/term dictionary, a context-aware translation memory (exact / context /
 fuzzy via deterministic string similarity — not vectors), and a rolling bilingual summary; no embedding model or vector
@@ -102,29 +102,39 @@ store is used or reserved.
 
 ## candidate-models {#candidate-models}
 
-The app is model-agnostic: any compatible chat model can be configured. The table below is **candidate guidance, not a
-supported-model guarantee or a fixed list** (DD-42) — it records how representative current local models differ in the
-two properties the pipeline cares about (structured-output support and reasoning behaviour) so defaults and evals stay
-sane as the field moves. What the app must handle regardless is captured by the response-handling contract
-(`#response-handling`, DD-33): request structured output where supported, strip reasoning, tolerate variance, fall back
-to text.
+The app is model-agnostic: any compatible chat model can be configured. What it knows about particular models is the
+**model profile**, resolved at every call and never stored (design D20): the half a request needs (`ModelProfile` in
+`:api`: how thinking is switched, the system role, template quirks, the window facts, template overhead, batch size and
+size tier) and the half a person reads (`ModelReport`: who the model is, how the profile was found, a verdict).
 
-| Model family (Ollama)        | Structured output / tools                    | Reasoning ("thinking")                                            | Context   | Notes for this app                                                                                      |
-|------------------------------|----------------------------------------------|---------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------|
-| ministral-3 (3b/8b/14b)      | Native function-calling + JSON               | None (fast)                                                       | ~256K     | Structured-output-friendly default; multilingual; small                                                 |
-| granite4 (micro … 32b-a9b-h) | Native tools + JSON                          | None                                                              | 128K      | Structured-output-friendly; fast; no reasoning to strip                                                 |
-| gemma4 (e2b/e4b/12b/26b/31b) | Function-calling; JSON viable                | Configurable; **26b-a4b MoE reasoning may not disable cleanly**   | 128K–256K | 12b a good default; multimodal (image not used for text translation)                                    |
-| qwen3.5 (4b/9b/27b/35b)      | Tools; JSON/response_format                  | Thinking mode (toggle exists; leakage risk)                       | ~256K     | Strongest multilingual coverage — use for Asian/long-tail languages; needs reasoning-strip              |
-| qwen3.6 (27b/35b)            | Tools                                        | Thinking + preservation                                           | 256K      | Same lineage; needs reasoning-strip                                                                     |
-| gpt-oss:20b                  | Native function-calling + structured outputs | Always-on chain-of-thought; **reasoning effort configurable low** | 128K      | Set reasoning effort low; English-centric — weaker for non-English translation                          |
-| qwen3-vl (4b/8b)             | Tools / visual                               | Instruct + thinking variants                                      | 256K      | **Vision model — not used for text translation**; candidate for the visual-eval vision reviewer (DD-41) |
+Four sources are read in a fixed order, the later winning: the stored engine's traits (whether any thinking control can
+be sent at all); the model's **name**, parsed into a family, version, line, size and variants (the metadata a server
+reports wins over the name on size), which picks a **built-in row**; the **server's own facts** (a listed capability set
+without `thinking` removes a switch; a model that thinks by default with no renderer cannot be switched off); and the
+person's per-model overrides. A model no row knows gets the default profile (no thinking control, answers asked through
+the prompt, a batch of 2) and the verdict "unknown model".
 
-Guidance: prefer a **structured-output-friendly, non-reasoning** model as the translator default (ministral-3, granite4,
-gemma4:12b) for clean JSON with nothing to sanitize; models with always-on or non-disableable reasoning (qwen3.5/3.6
-thinking, gemma4:26b-a4b, gpt-oss) rely on the text-fallback + reasoning-strip path. "Smallest viable" defaults suit
-low-VRAM machines. Note: some listed tags (e.g. `granite4.1:30b`) may not exist under that exact name in a given Ollama
-version — the closest real tag is used, and prior-generation models (gemma3, qwen3, granite3, mistral/ministral
-2024–2025) are valid fallbacks.
+**Built-in rows** (`llm: profile/BuiltInRows`, grouped by family in `GemmaRows`, `MistralRows`, `QwenRows` and
+`OtherRows`) are data with the rule in words: an identity pattern, the reasoning switch and its off value, the system
+role, quirks, the hard cap, the batch (4 for a small tier, 8 for a large one, 2 for the smallest models) and a verdict. A row
+holds no maker's sampler values: arm 3a of the redesign kept BookLoom's own temperature per call kind, with neutral
+values where a server's own samplers are not neutral (`docs/DEVELOPMENT.md#redesign-arms`). The classes they restate: models that never think (with a native
+system role, or with none so the system text is folded: Gemma 2 and 3); a boolean thinking switch (Gemma 4, Qwen 3.5 and
+3.6, Nemotron 3, Magistral); a level switch (Qwen 3.8); models that always reason (gpt-oss in the harmony format;
+muse-glimmer, whose template writes the reasoning level; Ministral 3 Reasoning, which has no switch at all). Gemma 4's
+`-it` and `-it-qat` builds share one row per size. Template quirks a row sets: `QUOTE_CUTS_SCHEMA_STRING` (Gemma 3),
+`TEMPLATE_WRITES_REASONING` (muse-glimmer), `HARMONY_FORMAT` (gpt-oss), `ESCAPE_THINK_TOGGLES` (the Nemotron 3 builds
+with the older renderer).
+
+A row is picked by the parsed name alone, by the whole family word and never by its start. **The architecture a server
+reports never picks a row**: `llama` and `deepseek2` are shared by unrelated models, and a family with no row of its
+own (Nemotron 3.5 Bolt) keeps the default profile and its own unknown languages whatever architecture its server
+reports. A name that reads a reasoning, thinking or vision variant never falls to the plain instruct row of its family.
+The rows for Ministral 3 Reasoning, EuroLLM and Qwen 2.5's smallest sizes cover models the owner runs; further rows
+and the fine-tune fallback to a base family come with the language and quant advice. The rows are guidance for handling,
+not a supported-model guarantee or a fixed list (DD-42). What the app must handle regardless is captured by the
+response-handling contract (`#response-handling`, DD-33): request structured output where supported, strip reasoning,
+tolerate variance, fall back to text.
 
 **Embedding models are used only by the local prompt-eval harness**
 (`04_Build_and_Release/06_TESTING_STRATEGY.md#prompt-evals`), never by the app: a small multilingual embedder is the
@@ -201,7 +211,7 @@ Every model-facing call is JSON-first but tolerant, with a single repair retry a
 | ID | Requirement | |---|---| | FR-INFER-09a | Structured output is **always attempted** (OpenAI `response_format`;
 Ollama `format`) — on a generic OpenAI-compatible server only once a stored check verdict shows it is honoured; until then the prompt states the answer contract. A structured-output rejection (HTTP 400 / "unsupported") is a **silent downgrade**: the call is
 retried as a plain request and continues down the text-fallback path — never a hard failure. The outcome is recorded on
-the provider's `supportsStructuredOutput` capability. | | FR-INFER-09d | Reasoning control is **best-effort**: every call carries the level the Generation setting chooses (Off by default; the environment variable `BOOKLOOM_REASONING`, when set, replaces the setting) **where controllable**. Ollama `think` is `false` (Off), `"low"` (Low) or `true` (On), and a gpt-oss model, which ignores `false`, is sent `"low"` for Off; on an OpenAI-compatible server Off is the engine's own switch (`reasoning_effort:"none"` for Ollama `/v1` and LM Studio, `chat_template_kwargs.enable_thinking:false` for a llama-server whose template reads it, top-level `enable_thinking:false` for Unsloth), a gpt-oss id gets `reasoning_effort:"low"` wherever a control is sent, and a generic server gets none until a check has proved a switch. Low and On raise the output cap to leave room for the reasoning. The parameter is **omitted when unsupported** (a model that refuses it is repeated without it). Whether or
+the provider's `supportsStructuredOutput` capability. | | FR-INFER-09d | Reasoning control is **best-effort**: every call asks for thinking off, and the model's profile decides what is sent (design D20): no control the model or its engine does not declare; then the person's Thinking choice on Settings › Models (Recommended = off on every call, Allow on proofreading and names, Always); then the profile's own off value. Ollama `think` is `false` (Off), the model's lowest level when it lists no `false` (`"low"` for gpt-oss), or `true` (On); on an OpenAI-compatible server Off is the engine's own switch (`reasoning_effort:"none"` for Ollama `/v1`, LM Studio and a generic server whose check proved it, `chat_template_kwargs.enable_thinking:false` as a JSON boolean for a llama-server whose template reads it, top-level `enable_thinking:false` for Unsloth), and a model that always reasons at a level (gpt-oss, muse-glimmer) gets `reasoning_effort:"low"`. A call that thinks, and every call of a model that cannot stop thinking (no control sent), gets a reasoning reserve of `max(2048, 4·S + 35·n)` tokens on its output cap for a source of S tokens in n items; no environment variable changes any of this. The parameter is **omitted when unsupported** (a model that refuses it is repeated without it). Whether or
 not the parameter takes, output always falls through to the `<think>`-strip sanitize path, so an always-on or
 non-disableable reasoning model still yields clean output. | | FR-INFER-09e | **Any optional setting a model refuses is dropped, not fatal** (mockups/README.md "Refused settings (S6)"). When a reply is HTTP 400 or 422, is classified `validation`, and its body names a setting the request **sent** (`temperature`, `top_p`, `top_k`, `min_p`, repeat penalty, `seed`, `max_tokens`, `num_ctx`, besides the reasoning and structured-output cases above) with words like unsupported / unknown / invalid / only the default, the request is repeated without that setting alone (`max_tokens` becomes `max_completion_tokens`); the repeat is not an attempt, and each distinct setting earns one repeat per call. The refusal is remembered per provider + model in `ModelSettings.refused` (written by `RefusalMemory`) until the person sends the setting again in Settings › Models, and one warn line says the request was repeated without it. A remembered refusal beats the person's own choice (My value 0.7 with `temperature` refused sends none); a refused sampler's neutral value does not return on the resend. A 400 or 422 that names nothing the request sent stays an ordinary `validation` error. `CapabilityRejections` is the recogniser. | | FR-INFER-09b | Responses are sanitized before parsing —
 `<think>` reasoning blocks, chain-of-thought preambles, code-fence wrappers, and stray prose are stripped — then parsed

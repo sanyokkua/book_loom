@@ -97,7 +97,8 @@ public final class Probe {
         final boolean dry = args.dry();
         final ProbeModel model = new ProbeModel(dry ? null : chatModel(args));
         final JobModelCalls calls = new JobModelCalls(
-                onSent -> model, event -> {}, Clock.systemUTC(), PromptEvalCases.TARGET_LANGUAGE, args.window());
+                        onSent -> model, event -> {}, Clock.systemUTC(), PromptEvalCases.TARGET_LANGUAGE, args.window())
+                .inRun();
         final Path workDir = temporaryDirectory();
         try {
             out.println("probe case=" + probeCase.id() + " suite=" + probeCase.suite() + " provider=" + args.provider()
