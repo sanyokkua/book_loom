@@ -6,6 +6,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,12 +17,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedModelSettings;
 
@@ -50,7 +53,7 @@ class ModelSpeedRecorderTest extends FxTestBase {
     private void record(final long millis, final MeasuredFrom from) throws TimeoutException {
         final long before = onFx(() -> speeds.revision().get());
         onFx(() -> {
-            recorder.record("ollama", "gemma", Duration.ofMillis(millis), from);
+            recorder.record("ollama", "gemma", CallKind.DRAFT, Duration.ofMillis(millis), from);
             return null;
         });
         WaitForAsyncUtils.waitFor(
@@ -68,8 +71,8 @@ class ModelSpeedRecorderTest extends FxTestBase {
     void record_testMeasurement_storesTenthsAndTheTestSource() throws TimeoutException {
         record(1234, MeasuredFrom.TEST);
 
-        assertThat(stored().measuredSecondsPerSegment()).isEqualTo(1.2);
-        assertThat(stored().measuredFrom()).isEqualTo(MeasuredFrom.TEST);
+        assertThat(stored().speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.2);
+        assertThat(stored().speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.TEST);
     }
 
     // IF a zero elapsed time were stored, THEN the settings record would refuse it and the speed would be lost.
@@ -77,7 +80,7 @@ class ModelSpeedRecorderTest extends FxTestBase {
     void record_zeroElapsed_storesATenthOfASecond() throws TimeoutException {
         record(0, MeasuredFrom.TEST);
 
-        assertThat(stored().measuredSecondsPerSegment()).isEqualTo(0.1);
+        assertThat(stored().speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(0.1);
     }
 
     // IF the last measurement did not win, THEN an old test would outlive a translation that is more telling.
@@ -87,8 +90,8 @@ class ModelSpeedRecorderTest extends FxTestBase {
 
         record(2000, MeasuredFrom.RUN);
 
-        assertThat(stored().measuredSecondsPerSegment()).isEqualTo(2.0);
-        assertThat(stored().measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(stored().speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(2.0);
+        assertThat(stored().speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
     }
 
     // IF a refusal recorded earlier were dropped, THEN the model would be sent a setting it refused.
@@ -103,8 +106,7 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 1024,
                 ModelSettings.defaults("ollama", "gemma").outputField(),
                 List.of(REFUSED),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault()));
@@ -139,8 +141,7 @@ class ModelSpeedRecorderTest extends FxTestBase {
                 null,
                 base.outputField(),
                 List.of(REFUSED),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());

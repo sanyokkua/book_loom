@@ -8,6 +8,7 @@ import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.api.pipeline.CallKind;
 
 /**
  * Keeps what a passing inference test of a saved provider measured: the seconds per segment on the model, and whether
@@ -40,7 +41,8 @@ final class InferenceFindings {
                 !model.isEmpty(),
                 inference.isPresent());
         if (keep && inference.isPresent() && inference.get().elapsed() != null) {
-            speeds.record(target.config().id(), model, inference.get().elapsed(), MeasuredFrom.TEST);
+            speeds.record(
+                    target.config().id(), model, CallKind.DRAFT, inference.get().elapsed(), MeasuredFrom.TEST);
         }
         final VerificationExchange exchange = inference.map(StageChip::exchange).orElse(null);
         if (keep && exchange != null) {

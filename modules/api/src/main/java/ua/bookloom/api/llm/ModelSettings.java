@@ -1,8 +1,12 @@
 package ua.bookloom.api.llm;
 
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallKind;
 
 /**
  * What the person set for one model of one provider; every field left off means the safe default.
@@ -15,9 +19,8 @@ import org.jspecify.annotations.Nullable;
  * @param maxOutput the answer-length cap in tokens, or null for the computed one; positive when set
  * @param outputField the field that carries the cap; non-null
  * @param refused the settings the model refused; defensively copied
- * @param measuredSecondsPerSegment the measured speed in seconds per segment, or null when never measured; positive
- *     when set
- * @param measuredFrom where the speed was measured; null exactly when the speed is null
+ * @param secondsPerCall the measured speed of each call kind that was measured; defensively copied, empty when never
+ *     measured
  * @param probeVerdicts what the advanced check found; non-null, with null parts for what was never checked
  * @param thinkingOverride the person's thinking choice for the model; non-null
  * @param samplingOverride the person's sampler choice for the model; non-null
@@ -31,8 +34,7 @@ public record ModelSettings(
         @Nullable Integer maxOutput,
         OutputLengthField outputField,
         List<RefusedSetting> refused,
-        @Nullable Double measuredSecondsPerSegment,
-        @Nullable MeasuredFrom measuredFrom,
+        Map<CallKind, MeasuredSpeed> secondsPerCall,
         ProbeVerdicts probeVerdicts,
         ThinkingOverride thinkingOverride,
         SamplingOverride samplingOverride) {
@@ -55,7 +57,7 @@ public record ModelSettings(
         requireTemperatureMatchesChoice(temperatureChoice, temperature);
         requirePositive(contextWindow, "contextWindow");
         requirePositive(maxOutput, "maxOutput");
-        requireSpeedMatchesSource(measuredSecondsPerSegment, measuredFrom);
+        secondsPerCall = Map.copyOf(Objects.requireNonNull(secondsPerCall, "secondsPerCall"));
     }
 
     /**
@@ -76,22 +78,25 @@ public record ModelSettings(
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());
     }
 
     /**
-     * Keeps everything but the measured speed.
+     * Keeps everything but one call kind's measured speed.
      *
-     * @param secondsPerSegment the new speed, positive
+     * @param kind the call kind measured; non-null
+     * @param seconds the new speed, positive
      * @param from where it was measured; non-null
-     * @return a copy holding the new speed and its source
+     * @return a copy holding the new speed for that kind, the other kinds' speeds kept
      */
-    public ModelSettings withMeasuredSpeed(final double secondsPerSegment, final MeasuredFrom from) {
-        Objects.requireNonNull(from, "from");
+    public ModelSettings withMeasuredSpeed(final CallKind kind, final double seconds, final MeasuredFrom from) {
+        Objects.requireNonNull(kind, "kind");
+        final Map<CallKind, MeasuredSpeed> next = new EnumMap<>(CallKind.class);
+        next.putAll(secondsPerCall);
+        next.put(kind, new MeasuredSpeed(seconds, from));
         return new ModelSettings(
                 providerId,
                 modelId,
@@ -101,11 +106,20 @@ public record ModelSettings(
                 maxOutput,
                 outputField,
                 refused,
-                secondsPerSegment,
-                from,
+                next,
                 probeVerdicts,
                 thinkingOverride,
                 samplingOverride);
+    }
+
+    /**
+     * Reads one call kind's measured speed.
+     *
+     * @param kind the call kind; non-null
+     * @return the speed if it was measured, or empty if not
+     */
+    public Optional<MeasuredSpeed> speedOf(final CallKind kind) {
+        return Optional.ofNullable(secondsPerCall.get(Objects.requireNonNull(kind, "kind")));
     }
 
     /**
@@ -133,8 +147,7 @@ public record ModelSettings(
                 output,
                 field,
                 refused,
-                measuredSecondsPerSegment,
-                measuredFrom,
+                secondsPerCall,
                 probeVerdicts,
                 thinkingOverride,
                 samplingOverride);
@@ -157,8 +170,7 @@ public record ModelSettings(
                 maxOutput,
                 outputField,
                 refused,
-                measuredSecondsPerSegment,
-                measuredFrom,
+                secondsPerCall,
                 verdicts,
                 thinkingOverride,
                 samplingOverride);
@@ -206,8 +218,7 @@ public record ModelSettings(
                 maxOutput,
                 outputField,
                 rows,
-                measuredSecondsPerSegment,
-                measuredFrom,
+                secondsPerCall,
                 probeVerdicts,
                 thinkingOverride,
                 samplingOverride);
@@ -232,8 +243,7 @@ public record ModelSettings(
                 maxOutput,
                 outputField,
                 refused,
-                measuredSecondsPerSegment,
-                measuredFrom,
+                secondsPerCall,
                 probeVerdicts,
                 thinking,
                 sampling);
@@ -247,15 +257,6 @@ public record ModelSettings(
             }
         } else if (temperature != null) {
             throw new IllegalArgumentException("temperature is only set for VALUE, not " + choice);
-        }
-    }
-
-    private static void requireSpeedMatchesSource(final @Nullable Double speed, final @Nullable MeasuredFrom from) {
-        if ((speed == null) != (from == null)) {
-            throw new IllegalArgumentException("measuredFrom is set exactly when the speed is: " + speed + " " + from);
-        }
-        if (speed != null && !(speed > 0.0)) {
-            throw new IllegalArgumentException("measured speed must be positive: " + speed);
         }
     }
 

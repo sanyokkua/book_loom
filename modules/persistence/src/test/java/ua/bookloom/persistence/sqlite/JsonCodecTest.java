@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,6 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
@@ -28,11 +30,15 @@ import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.Address;
+import ua.bookloom.api.project.AddressForm;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.BriefField;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -47,6 +53,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.RenderingOrigin;
 import ua.bookloom.api.project.RollingSummary;
@@ -278,6 +285,23 @@ class JsonCodecTest {
         assertThat(codec.read(json, ModelSettings.class)).isEqualTo(stored);
     }
 
+    // The Brief's policy keys, a lemma entry and the seconds per call kind come back as written.
+    @Test
+    void roundTrip_lemmaEntryBriefKeysAndSecondsPerCall() {
+        final BookBrief declared = brief().withApostrophe("\u2019")
+                .withQuoteStyle(new QuoteStyle("\u00ab", "\u00bb", "\u201e", "\u201c"))
+                .withDefaultAddress(new Address(AddressForm.INFORMAL, AddressForm.FORMAL))
+                .withConventions(Map.of("hardG", "\u0433"))
+                .withLikely(Set.of(BriefField.GENRE));
+        final ModelSettings measured = modelSettings().withMeasuredSpeed(CallKind.DRAFT, 3.0, MeasuredFrom.TEST);
+
+        assertThat(codec.read(codec.write(glossary()), GlossaryEntry.class)).isEqualTo(glossary());
+        assertThat(codec.read(codec.write(declared), BookBrief.class)).isEqualTo(declared);
+        final ModelSettings back = codec.read(codec.write(measured), ModelSettings.class);
+        assertThat(back.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(3.0, MeasuredFrom.TEST));
+        assertThat(back).isEqualTo(measured);
+    }
+
     private static ModelSettings modelSettings() {
         return new ModelSettings(
                 "prov",
@@ -288,8 +312,7 @@ class JsonCodecTest {
                 4096,
                 OutputLengthField.MAX_COMPLETION_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 2, 3), "omitted it")),
-                1.6,
-                MeasuredFrom.TEST,
+                Map.of(CallKind.DRAFT, new MeasuredSpeed(1.6, MeasuredFrom.TEST)),
                 new ProbeVerdicts(
                         new ProbeVerdicts.Verdict(
                                 ProbeVerdicts.Outcome.HONOURED, "test", Instant.parse("2026-10-29T10:00:00Z")),

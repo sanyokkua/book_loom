@@ -12,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /** Keeps the seconds per segment a test or a run measured on the model, for the estimate before Start. */
@@ -51,18 +52,25 @@ public final class ModelSpeedRecorder {
      *
      * @param providerId the stored provider
      * @param modelId the model
+     * @param kind the call kind the time belongs to
      * @param elapsed how long one segment took
      * @param from where it was measured
      */
-    public void record(final String providerId, final String modelId, final Duration elapsed, final MeasuredFrom from) {
+    public void record(
+            final String providerId,
+            final String modelId,
+            final CallKind kind,
+            final Duration elapsed,
+            final MeasuredFrom from) {
+        Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(providerId, "providerId");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(elapsed, "elapsed");
         Objects.requireNonNull(from, "from");
         final double seconds = secondsOf(elapsed);
-        log.debug("recording {} s per segment from {} for {}/{}", seconds, from, providerId, modelId);
+        log.debug("recording {} s for {} from {} for {}/{}", seconds, kind, from, providerId, modelId);
         try {
-            executor.execute(() -> write(providerId, modelId, seconds, from));
+            executor.execute(() -> write(providerId, modelId, kind, seconds, from));
         } catch (RejectedExecutionException closing) {
             log.warn("the speed of {}/{} was not kept: the window is closing", providerId, modelId);
         }
@@ -73,14 +81,19 @@ public final class ModelSpeedRecorder {
         return Math.max(MIN_SECONDS, tenths / TENTHS_PER_SECOND);
     }
 
-    private void write(final String providerId, final String modelId, final double seconds, final MeasuredFrom from) {
+    private void write(
+            final String providerId,
+            final String modelId,
+            final CallKind kind,
+            final double seconds,
+            final MeasuredFrom from) {
         final Result<ModelSettings> saved =
-                store.update(providerId, modelId, row -> row.withMeasuredSpeed(seconds, from));
+                store.update(providerId, modelId, row -> row.withMeasuredSpeed(kind, seconds, from));
         if (saved.isErr()) {
             log.warn("the speed of {}/{} was not stored", providerId, modelId);
             return;
         }
-        log.info("speed of {}/{} stored: {} s per segment from {}", providerId, modelId, seconds, from);
+        log.info("speed of {}/{} stored: {} s for {} from {}", providerId, modelId, seconds, kind, from);
         Platform.runLater(speeds::bump);
     }
 }

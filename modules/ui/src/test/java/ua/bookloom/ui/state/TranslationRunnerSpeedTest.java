@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.StepChanged;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
@@ -113,8 +115,8 @@ class TranslationRunnerSpeedTest extends RunnerTestBase {
 
         final var row =
                 store.stored(SELECTION.providerId(), SELECTION.modelId()).orElseThrow();
-        assertThat(row.measuredSecondsPerSegment()).isEqualTo(8.0);
-        assertThat(row.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(row.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(8.0);
+        assertThat(row.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
     }
 
     private static void waitForRevision(final ModelSpeeds speeds) throws TimeoutException {

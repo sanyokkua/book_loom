@@ -103,4 +103,13 @@ class StoredShapesTest {
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);
     }
+
+    // The new Brief keys and the per-kind speeds are part of the stored shapes, so an older database is set aside.
+    @Test
+    void fingerprint_afterBriefKeysAndSecondsPerCall_differs() {
+        final String described = StoredShapes.describe(StoredShapes.ROOTS);
+
+        assertThat(described).contains("secondsPerCall:", "quoteStyle:", "defaultAddress:", "apostrophe:");
+        assertThat(described).doesNotContain("measuredSecondsPerSegment");
+    }
 }

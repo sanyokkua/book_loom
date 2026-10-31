@@ -389,8 +389,7 @@ class AdvancedChecksTest {
                     current.maxOutput(),
                     current.outputField(),
                     current.refused().contains(refusal) ? current.refused() : List.of(refusal),
-                    current.measuredSecondsPerSegment(),
-                    current.measuredFrom(),
+                    current.secondsPerCall(),
                     current.probeVerdicts(),
                     ThinkingOverride.RECOMMENDED,
                     SamplingOverride.profileDefault());

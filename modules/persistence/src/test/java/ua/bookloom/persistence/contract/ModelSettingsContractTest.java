@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
@@ -14,6 +16,7 @@ import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** Behaviour every {@link ModelSettingsRepository} adapter must show. */
 public abstract class ModelSettingsContractTest {
@@ -30,8 +33,7 @@ public abstract class ModelSettingsContractTest {
                 1024,
                 OutputLengthField.MAX_COMPLETION_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 20), "left it out")),
-                2.5,
-                MeasuredFrom.TEST,
+                Map.of(CallKind.DRAFT, new MeasuredSpeed(2.5, MeasuredFrom.TEST)),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());
@@ -51,8 +53,7 @@ public abstract class ModelSettingsContractTest {
                 base.maxOutput(),
                 base.outputField(),
                 base.refused(),
-                base.measuredSecondsPerSegment(),
-                base.measuredFrom(),
+                base.secondsPerCall(),
                 new ProbeVerdicts(verdict, null, null, null),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());
@@ -100,21 +101,21 @@ public abstract class ModelSettingsContractTest {
 
     @Test
     void save_runMeasuredSpeed_returnsTheSpeedAndItsSource() {
-        final ModelSettings saved = sample("ollama", "gemma").withMeasuredSpeed(0.8, MeasuredFrom.RUN);
+        final ModelSettings saved = sample("ollama", "gemma").withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN);
         repository().save(saved);
 
         final ModelSettings found = repository().find("ollama", "gemma").data().orElseThrow();
 
-        assertThat(found.measuredSecondsPerSegment()).isEqualTo(0.8);
-        assertThat(found.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(0.8);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
     }
 
     @Test
     void save_noMeasuredSpeed_returnsNoSource() {
         repository().save(ModelSettings.defaults("ollama", "gemma"));
 
-        assertThat(repository().find("ollama", "gemma").data().orElseThrow().measuredFrom())
-                .isNull();
+        assertThat(repository().find("ollama", "gemma").data().orElseThrow().secondsPerCall())
+                .isEmpty();
     }
 
     @Test
@@ -167,10 +168,12 @@ public abstract class ModelSettingsContractTest {
 
     @Test
     void update_nothingSaved_appliesTheChangeToTheDefaults() {
-        final var updated = repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(1.2, MeasuredFrom.TEST));
+        final var updated = repository()
+                .update("ollama", "gemma", s -> s.withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST));
 
         assertThat(updated.data())
-                .isEqualTo(ModelSettings.defaults("ollama", "gemma").withMeasuredSpeed(1.2, MeasuredFrom.TEST));
+                .isEqualTo(ModelSettings.defaults("ollama", "gemma")
+                        .withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST));
         assertThat(repository().find("ollama", "gemma").data()).hasValue(updated.data());
     }
 
@@ -178,10 +181,22 @@ public abstract class ModelSettingsContractTest {
     void update_existingRecord_keepsEveryOtherField() {
         repository().save(sample("ollama", "gemma"));
 
-        repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(0.8, MeasuredFrom.RUN));
+        repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN));
 
         assertThat(repository().find("ollama", "gemma").data())
-                .hasValue(sample("ollama", "gemma").withMeasuredSpeed(0.8, MeasuredFrom.RUN));
+                .hasValue(sample("ollama", "gemma").withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN));
+    }
+
+    // Updating one call kind's speed must leave another kind's stored speed alone, in both adapters.
+    @Test
+    void update_secondsPerCall_keptPerKind() {
+        repository().save(sample("ollama", "gemma").withMeasuredSpeed(CallKind.REVIEW, 6.0, MeasuredFrom.RUN));
+
+        repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN));
+
+        final ModelSettings found = repository().find("ollama", "gemma").data().orElseThrow();
+        assertThat(found.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(0.8, MeasuredFrom.RUN));
+        assertThat(found.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
     }
 
     // IF Send again dropped more than the named row, THEN the other refusals and the settings would be lost with it.
@@ -199,8 +214,7 @@ public abstract class ModelSettingsContractTest {
                         base.maxOutput(),
                         base.outputField(),
                         List.of(base.refused().get(0), topP),
-                        base.measuredSecondsPerSegment(),
-                        base.measuredFrom(),
+                        base.secondsPerCall(),
                         ProbeVerdicts.none(),
                         ThinkingOverride.RECOMMENDED,
                         SamplingOverride.profileDefault()));
@@ -210,7 +224,8 @@ public abstract class ModelSettingsContractTest {
         assertThat(repository().find("ollama", "gemma").data()).hasValueSatisfying(found -> {
             assertThat(found.refused()).containsExactly(topP);
             assertThat(found.contextWindow()).isEqualTo(8192);
-            assertThat(found.measuredSecondsPerSegment()).isEqualTo(2.5);
+            assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds))
+                    .hasValue(2.5);
         });
     }
 
@@ -224,8 +239,8 @@ public abstract class ModelSettingsContractTest {
                 rows.add(new RefusedSetting("top_p", LocalDate.of(2026, 10, 21), "left it out"));
                 return s.withRefused(rows);
             }));
-            final var speed = pool.submit(() ->
-                    repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(0.9, MeasuredFrom.RUN)));
+            final var speed = pool.submit(() -> repository()
+                    .update("ollama", "gemma", s -> s.withMeasuredSpeed(CallKind.DRAFT, 0.9, MeasuredFrom.RUN)));
             refusal.get();
             speed.get();
         } finally {
@@ -234,6 +249,6 @@ public abstract class ModelSettingsContractTest {
 
         final ModelSettings found = repository().find("ollama", "gemma").data().orElseThrow();
         assertThat(found.refused()).extracting(RefusedSetting::name).containsExactly("top_p");
-        assertThat(found.measuredSecondsPerSegment()).isEqualTo(0.9);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(0.9);
     }
 }

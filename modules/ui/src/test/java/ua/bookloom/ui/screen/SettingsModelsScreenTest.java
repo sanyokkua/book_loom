@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Slider;
@@ -309,8 +310,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("temperature", LocalDate.of(2026, 10, 2), "omitted")),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());

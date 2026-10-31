@@ -3,6 +3,8 @@ package ua.bookloom.api.project;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -102,5 +104,36 @@ class BookBriefTest {
                 .isFalse();
         assertThat(new Narrator(NarratorPerson.FIRST, Gender.MALE).hasCheckableGender())
                 .isTrue();
+    }
+
+    // One character means one code point: a pair of characters is not an apostrophe.
+    @Test
+    void withApostrophe_twoCharacters_isRejected() {
+        final BookBrief base = BookBrief.defaults("en");
+
+        assertThatThrownBy(() -> base.withApostrophe("''")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // The policy keys survive a change of language and default to "the target file's default".
+    @Test
+    void withPolicyKeys_thenLanguages_keepsThemAndDefaultsAreEmpty() {
+        final BookBrief base = BookBrief.defaults("en");
+        final BookBrief declared = base.withApostrophe("\u2019")
+                .withQuoteStyle(new QuoteStyle("\u00ab", "\u00bb", "\u201e", "\u201c"))
+                .withDefaultAddress(new Address(AddressForm.INFORMAL, AddressForm.FORMAL))
+                .withConventions(Map.of("hardG", "\u0433"))
+                .withLikely(Set.of(BriefField.GENRE))
+                .withLanguages("en", "uk");
+
+        assertThat(declared.apostrophe()).isEqualTo("\u2019");
+        assertThat(declared.quoteStyle()).isEqualTo(new QuoteStyle("\u00ab", "\u00bb", "\u201e", "\u201c"));
+        assertThat(declared.defaultAddress()).isEqualTo(new Address(AddressForm.INFORMAL, AddressForm.FORMAL));
+        assertThat(declared.conventions()).containsEntry("hardG", "\u0433");
+        assertThat(declared.likely()).containsExactly(BriefField.GENRE);
+        assertThat(base.apostrophe()).isNull();
+        assertThat(base.quoteStyle()).isNull();
+        assertThat(base.defaultAddress()).isNull();
+        assertThat(base.conventions()).isEmpty();
+        assertThat(base.likely()).isEmpty();
     }
 }

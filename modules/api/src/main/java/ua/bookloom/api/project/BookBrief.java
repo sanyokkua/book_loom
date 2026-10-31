@@ -1,6 +1,8 @@
 package ua.bookloom.api.project;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.QualityDial;
 
@@ -25,6 +27,12 @@ import ua.bookloom.api.pipeline.QualityDial;
  * @param alsoTranslate the auxiliary-text switches
  * @param dial the chosen speed/quality dial
  * @param narrator who narrates the book; {@link Narrator#unspecified()} when the person has not said
+ * @param apostrophe the apostrophe character of the translated book, exactly one code point, or null for the target
+ *     file's default
+ * @param quoteStyle the quotation marks of the translated book, or null for the target file's default
+ * @param defaultAddress the default form of address between characters, or null when not declared
+ * @param conventions declared language choices by name; copied, never null
+ * @param likely the fields the analysis filled that the person has not confirmed; copied, never null
  */
 public record BookBrief(
         @Nullable String sourceLanguage,
@@ -40,7 +48,12 @@ public record BookBrief(
         int balance,
         AlsoTranslate alsoTranslate,
         QualityDial dial,
-        Narrator narrator) {
+        Narrator narrator,
+        @Nullable String apostrophe,
+        @Nullable QuoteStyle quoteStyle,
+        @Nullable Address defaultAddress,
+        Map<String, String> conventions,
+        Set<BriefField> likely) {
 
     private static final int MIN_BALANCE = 0;
     private static final int MAX_BALANCE = 100;
@@ -58,9 +71,53 @@ public record BookBrief(
         Objects.requireNonNull(alsoTranslate, "alsoTranslate");
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(narrator, "narrator");
+        conventions = Map.copyOf(Objects.requireNonNull(conventions, "conventions"));
+        likely = Set.copyOf(Objects.requireNonNull(likely, "likely"));
+        if (apostrophe != null && apostrophe.codePointCount(0, apostrophe.length()) != 1) {
+            throw new IllegalArgumentException(
+                    "apostrophe must be exactly one character, but was '" + apostrophe + "'");
+        }
         if (balance < MIN_BALANCE || balance > MAX_BALANCE) {
             throw new IllegalArgumentException("balance must be within [0,100], but was " + balance);
         }
+    }
+
+    /** A brief with no policy keys declared: the target file's defaults apply to all of them. */
+    public BookBrief(
+            @Nullable final String sourceLanguage,
+            @Nullable final String targetLanguage,
+            @Nullable final String genre,
+            final Register register,
+            @Nullable final String voiceEra,
+            @Nullable final String audience,
+            final NamePolicy names,
+            final ForeignPassagePolicy foreignPassages,
+            final FootnotePolicy footnotes,
+            final UnitPolicy units,
+            final int balance,
+            final AlsoTranslate alsoTranslate,
+            final QualityDial dial,
+            final Narrator narrator) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator,
+                null,
+                null,
+                null,
+                Map.of(),
+                Set.of());
     }
 
     /** A brief with no narrator stated, which is what every brief made before the narrator existed holds. */
@@ -127,21 +184,7 @@ public record BookBrief(
      * @return a new brief with the supplied languages
      */
     public BookBrief withLanguages(@Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
-        return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                narrator);
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, narrator);
     }
 
     /**
@@ -151,21 +194,7 @@ public record BookBrief(
      * @return a new brief with the narrator
      */
     public BookBrief withNarrator(final Narrator chosen) {
-        return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                chosen);
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, chosen);
     }
 
     /**
@@ -175,21 +204,7 @@ public record BookBrief(
      * @return a new brief with the genre
      */
     public BookBrief withGenre(@Nullable final String genre) {
-        return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                narrator);
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, narrator);
     }
 
     /**
@@ -199,21 +214,7 @@ public record BookBrief(
      * @return a new brief with the voice and era notes
      */
     public BookBrief withVoiceEra(@Nullable final String voiceEra) {
-        return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                narrator);
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, narrator);
     }
 
     /**
@@ -223,21 +224,7 @@ public record BookBrief(
      * @return a new brief with the audience
      */
     public BookBrief withAudience(@Nullable final String audience) {
-        return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                narrator);
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, narrator);
     }
 
     /**
@@ -247,6 +234,65 @@ public record BookBrief(
      * @return a new brief with the quality dial
      */
     public BookBrief withDial(final QualityDial dial) {
+        return copy(sourceLanguage, targetLanguage, genre, voiceEra, audience, dial, narrator);
+    }
+
+    /**
+     * Returns this brief with its apostrophe replaced, everything else kept.
+     *
+     * @param apostrophe exactly one code point, or null for the target file's default
+     * @return a new brief with the apostrophe
+     */
+    public BookBrief withApostrophe(@Nullable final String apostrophe) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+    }
+
+    /**
+     * Returns this brief with its quotation marks replaced, everything else kept.
+     *
+     * @param quoteStyle the replacement, or null for the target file's default
+     * @return a new brief with the quotation marks
+     */
+    public BookBrief withQuoteStyle(@Nullable final QuoteStyle quoteStyle) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+    }
+
+    /**
+     * Returns this brief with its default form of address replaced, everything else kept.
+     *
+     * @param defaultAddress the replacement, or null when not declared
+     * @return a new brief with the address
+     */
+    public BookBrief withDefaultAddress(@Nullable final Address defaultAddress) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+    }
+
+    /**
+     * Returns this brief with its declared conventions replaced, everything else kept.
+     *
+     * @param conventions the replacement; non-null
+     * @return a new brief with the conventions
+     */
+    public BookBrief withConventions(final Map<String, String> conventions) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+    }
+
+    /**
+     * Returns this brief with its set of unconfirmed fields replaced, everything else kept.
+     *
+     * @param fields the fields the analysis filled that the person has not confirmed; non-null
+     * @return a new brief with the set
+     */
+    public BookBrief withLikely(final Set<BriefField> fields) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, fields);
+    }
+
+    private BookBrief keys(
+            @Nullable final String apostrophe,
+            @Nullable final QuoteStyle quoteStyle,
+            @Nullable final Address defaultAddress,
+            final Map<String, String> conventions,
+            final Set<BriefField> likely) {
         return new BookBrief(
                 sourceLanguage,
                 targetLanguage,
@@ -261,6 +307,41 @@ public record BookBrief(
                 balance,
                 alsoTranslate,
                 dial,
-                narrator);
+                narrator,
+                apostrophe,
+                quoteStyle,
+                defaultAddress,
+                conventions,
+                likely);
+    }
+
+    private BookBrief copy(
+            @Nullable final String sourceLanguage,
+            @Nullable final String targetLanguage,
+            @Nullable final String genre,
+            @Nullable final String voiceEra,
+            @Nullable final String audience,
+            final QualityDial dial,
+            final Narrator narrator) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator,
+                apostrophe,
+                quoteStyle,
+                defaultAddress,
+                conventions,
+                likely);
     }
 }

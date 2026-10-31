@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,6 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
@@ -19,6 +21,7 @@ import ua.bookloom.api.llm.RefusedSetting;
 import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /** The Models tab's draft: what it shows for stored settings, what stops a save, and what a save writes. */
@@ -293,8 +296,7 @@ class ModelDraftTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(refusal),
-                1.5,
-                MeasuredFrom.RUN,
+                Map.of(CallKind.DRAFT, new MeasuredSpeed(1.5, MeasuredFrom.RUN)),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());
@@ -303,7 +305,7 @@ class ModelDraftTest {
                 saved(ModelDraft.of(DEFAULTS).withChoice(TemperatureChoice.OMIT).apply(current));
 
         assertThat(written.refused()).containsExactly(refusal);
-        assertThat(written.measuredSecondsPerSegment()).isEqualTo(1.5);
+        assertThat(written.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.5);
     }
 
     @Test

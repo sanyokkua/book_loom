@@ -30,6 +30,8 @@ Prompts already know how to say "the language of this segment (infer it from its
   shown, chosen or sent), and the reading with the most "I" is its hint, so Start asks who narrates a first-person
   book under Auto too (amended in `finalize-ui-and-persistence`, retest G2-1: a hint of none had read as third person
   and the question never came). Target-side checks are unchanged.
+- With no analysis language there is no form grouping: lemma glossary entries need a declared name-ending table, and
+  under Auto none is read, so each form stays its own entry; the rest of this decision stands.
 - A foreign run the book marks is kept verbatim under Auto only when it is written in a script other than the one the
   book is mostly written in, counted by code from the letters. A foreign passage in the same script is left to the
   prompt's foreign-passage rule.

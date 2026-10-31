@@ -132,8 +132,7 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
                         s.maxOutput(),
                         s.outputField(),
                         List.of(refusal),
-                        s.measuredSecondsPerSegment(),
-                        s.measuredFrom(),
+                        s.secondsPerCall(),
                         ProbeVerdicts.none(),
                         ThinkingOverride.RECOMMENDED,
                         SamplingOverride.profileDefault()));

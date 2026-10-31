@@ -5,9 +5,11 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.TemperatureChoice;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** What Save on the Models tab writes, and what it leaves alone. */
 class ModelFormSaveTest extends ModelFormTestBase {
@@ -79,8 +81,10 @@ class ModelFormSaveTest extends ModelFormTestBase {
 
         save();
 
-        assertThat(stored(GEMMA).measuredSecondsPerSegment()).isEqualTo(2.5);
-        assertThat(stored(GEMMA).measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(stored(GEMMA).speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds))
+                .hasValue(2.5);
+        assertThat(stored(GEMMA).speedOf(CallKind.DRAFT).map(MeasuredSpeed::from))
+                .hasValue(MeasuredFrom.RUN);
         assertThat(stored(GEMMA).maxOutput()).isEqualTo(300);
     }
 

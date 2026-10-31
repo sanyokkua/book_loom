@@ -11,10 +11,10 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -134,8 +134,6 @@ public final class BriefEstimate {
     }
 
     private static Optional<ModelSpeed> speedOf(final ModelSettings row) {
-        final Double seconds = row.measuredSecondsPerSegment();
-        final MeasuredFrom from = row.measuredFrom();
-        return seconds == null || from == null ? Optional.empty() : Optional.of(new ModelSpeed(seconds, from));
+        return row.speedOf(CallKind.DRAFT).map(speed -> new ModelSpeed(speed.seconds(), speed.from()));
     }
 }

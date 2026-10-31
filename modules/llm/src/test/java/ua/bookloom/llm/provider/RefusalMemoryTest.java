@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +22,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.OutputLengthField;
 import ua.bookloom.api.llm.ProbeVerdicts;
@@ -29,6 +31,7 @@ import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.testing.FakeModelSettingsRepository;
 
 /** A refusal is stored on the model's own settings row, once, and read back to strip the next request. */
@@ -47,13 +50,14 @@ class RefusalMemoryTest {
     // THEN the row gets (temperature, today, omitted) and the person's other choices stay.
     @Test
     void remember_modelWithMeasuredSpeed_keepsSpeedAndSource() {
-        repository.save(ModelSettings.defaults(PROVIDER, MODEL).withMeasuredSpeed(1.2, MeasuredFrom.RUN));
+        repository.save(
+                ModelSettings.defaults(PROVIDER, MODEL).withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.RUN));
 
         memory.remember(PROVIDER, MODEL, RejectedCapability.TEMPERATURE);
 
         final ModelSettings found = cache.current(PROVIDER, MODEL);
-        assertThat(found.measuredSecondsPerSegment()).isEqualTo(1.2);
-        assertThat(found.measuredFrom()).isEqualTo(MeasuredFrom.RUN);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.2);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
     }
 
     @Test
@@ -67,8 +71,7 @@ class RefusalMemoryTest {
                 512,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault()));
@@ -121,8 +124,7 @@ class RefusalMemoryTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault()));
@@ -148,8 +150,7 @@ class RefusalMemoryTest {
                 withRow.maxOutput(),
                 withRow.outputField(),
                 List.of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault()));
@@ -170,8 +171,7 @@ class RefusalMemoryTest {
                 null,
                 OutputLengthField.MAX_TOKENS,
                 List.of(new RefusedSetting("frequency_penalty", DAY, "omitted")),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault()));
@@ -182,12 +182,12 @@ class RefusalMemoryTest {
     // IF remembering rewrote the whole record from an earlier read, THEN a speed stored in between would be lost.
     @Test
     void remember_speedAlreadyStored_keepsTheSpeed() {
-        repository.update(PROVIDER, MODEL, row -> row.withMeasuredSpeed(1.2, MeasuredFrom.TEST));
+        repository.update(PROVIDER, MODEL, row -> row.withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST));
 
         memory.remember(PROVIDER, MODEL, RejectedCapability.SEED);
 
         final ModelSettings found = cache.current(PROVIDER, MODEL);
-        assertThat(found.measuredSecondsPerSegment()).isEqualTo(1.2);
+        assertThat(found.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(1.2);
         assertThat(found.refused()).hasSize(1);
     }
 

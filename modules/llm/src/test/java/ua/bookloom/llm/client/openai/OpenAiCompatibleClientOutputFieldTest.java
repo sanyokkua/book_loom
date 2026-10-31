@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -143,8 +144,7 @@ class OpenAiCompatibleClientOutputFieldTest {
                 maxOutput,
                 field,
                 List.of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());

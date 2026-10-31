@@ -12,11 +12,13 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.SamplingOverride;
 import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
+import ua.bookloom.api.pipeline.CallKind;
 
 /** A hand-written {@link ModelSettingsRepository} that keeps what a test stored per provider and model in memory. */
 public final class ScriptedModelSettings implements ModelSettingsRepository {
@@ -99,8 +101,7 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
                 null,
                 base.outputField(),
                 List.of(),
-                secondsPerSegment,
-                source,
+                Map.of(CallKind.DRAFT, new MeasuredSpeed(secondsPerSegment, source)),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());

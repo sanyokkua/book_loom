@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -117,8 +118,7 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
                 limit,
                 OutputLengthField.MAX_TOKENS,
                 List.<RefusedSetting>of(),
-                null,
-                null,
+                Map.of(),
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());
