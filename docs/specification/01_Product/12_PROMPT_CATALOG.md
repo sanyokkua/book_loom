@@ -146,10 +146,13 @@ stopwords-iso (MIT); the source, commits and attribution are in the folder's `AT
 |---|---|---|
 | `negationWords`, `moodWords` | space-separated words | Negations; mood particles. No word is in both. They replace the old `functionWords` key; "function words" now means only the function-word files. |
 | `nameParadigms.N` | `<ending>\|<gender>: <endings of the other cases>`; `<ending>\|<gender>>voc: <ending>` for the vocative; `C` is a consonant; `indeclinable\|any: <endings>` is the closed class that never changes | How a name declines: the source file's rows are read backwards to find a form's nominative, the target file's rows generate the case forms and the vocative. |
-| `nameAlternations` | `о/е>і fleeting-е` | Vowel changes in a closed syllable and a fleeting vowel. |
+| `nameAlternations` | `о/е>і fleeting-е>ь` | Vowel changes in a closed syllable (`Сокіл`, `Сокола`) and a fleeting vowel with what it becomes (`Лев`, `Льва`); the target's forms keep the plain spelling beside the changed one. |
+| `paradigmGender` | row endings (`C`, `ов`, …) | The name-ending rows whose declension shows a gender by itself: a name with an attested oblique form from such a row gets that gender by rule (ru `C ов ова ой ий ия`, uk `C ов ова ий ій й о`; `-а` is left out because `Никита` declines so). |
 | `nounEndings` | endings | Stripped from a noun to find its stem. |
 | `clippedVocative`, `femSurnameMap` | `ending>replacement` pairs (`∅` is nothing) | A vocative that clips a name; a man's surname ending and the woman's form. |
-| `pastFemale`, `pastMale`, `pastMaleIrregular`, `shortAdjFemale`, `shortAdjMale` | endings or words | Past-tense verbs and short adjectives that show a gender (gender evidence after a name). |
+| `pastFemale`, `pastMale`, `pastNeuter`, `pastMaleIrregular`, `shortAdjFemale`, `shortAdjMale` | endings or words | Past-tense verbs and short adjectives that show a gender, read by one `PastTenseReader` for every language: the first verb after a mention written as the term (gender evidence beside the pronouns), the narrator's own «я + past verb» in Prepare and after the run, and the Ukrainian narrator check. A neuter form shows no person. |
+| `pastSkipWords` | words | Particles and adverbs that may stand between a subject and its past verb (`я тоже не спал`); up to three are passed over. |
+| `pastNotVerbs` | words | Words that end like a past tense and are not one (`стол`, `мало`, `лев`). |
 | `addressPositions` | words | Words that put a person in a clause as the one spoken to. |
 | `stripStressMarks` | `true` | The language's text is stripped of stress marks (ru, uk). |
 | `conventions`, `convention.<name>.choices`, `convention.<name>.default` | names; values; the default | A convention the target declares for the Book Brief; uk declares `hardG` (`г ґ`, default `г`). |

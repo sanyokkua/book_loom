@@ -22,13 +22,14 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.util.lang.LanguageTags;
 
 /**
  * The bundled, deliberately small first-name lists ({@code given-names-<language>.txt}, "seed, not exhaustive") and
  * what they are used for: a glossary entry for a person whose first word is a listed name and whose gender is not
- * known gets that name's gender as a suggestion, so the character gender sheet and the later agreement fixes have
+ * known gets that name's gender by rule ({@link Origin#RULE}: shown, never enforced), so the character gender sheet and the later agreement fixes have
  * something to act on. A name that either gender uses is not listed, so the list never guesses; a language with no list
  * suggests nothing, and nothing is fetched.
  */
@@ -71,9 +72,9 @@ public final class GivenNames {
 
     /**
      * Suggests a gender for a person's entry that has none: a character whose first word is a listed first name gets
-     * that gender marked as a suggestion. It never types an entry — a place or an untyped entry named like a person
-     * (Victoria Station, Florence) stays what it is — and it never touches a gender somebody set, a locked entry, or an
-     * entry the list was already tried on, so a gender the person reset to unknown stays unknown.
+     * that gender with the origin rule, and is marked as tried. It never types an entry — a place or an untyped entry
+     * named like a person (Victoria Station, Florence) stays what it is — and it never touches a gender somebody set, a
+     * locked entry, or an entry the list was already tried on, so a gender the person reset to unknown stays unknown.
      *
      * @param entry the non-null entry
      * @param languageTag the source language's tag, or null when it is not known
@@ -92,8 +93,9 @@ public final class GivenNames {
         if (listed.isEmpty()) {
             return entry;
         }
-        log.debug("Glossary entry {} gets the suggested gender {} from the given-name list", entry.id(), listed.get());
-        return entry.withSuggestedGender(listed.get());
+        log.debug("Given-name list sets the gender {} by rule", listed.get());
+        log.trace("Glossary entry {} gets the gender {} by rule from the given-name list", entry.id(), listed.get());
+        return entry.withSuggestedGender(listed.get()).withGenderFrom(listed.get(), Origin.RULE);
     }
 
     /**

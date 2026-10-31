@@ -7,7 +7,7 @@
   "person": "first",
   "gender": "unknown"
  },
- "about": "Invented for the mini eval (1.4): 17 blocks in two chapters, ru to uk, the first-person narrator has no stated gender. Ids are <chapter file>:<line>. No line comes from a book.",
+ "about": "Invented for the mini eval (1.4): 17 blocks in two chapters, ru to uk, the first-person narrator has no stated gender. Ids are <chapter file>:<line>. Version 2 (redesign 7.4) adds narration inside four blocks so a small book reaches the code's evidence bars: three of the narrator's own past forms, verbs and pronouns after Велемир, Мирена and Рудакова. No line comes from a book.",
  "blocks": [
   {
    "id": "ch01.md:1",
@@ -17,7 +17,7 @@
   {
    "id": "ch01.md:3",
    "kind": "p",
-   "text": "Я вернулась поздно."
+   "text": "Я вернулась поздно. Я долго стояла у окна и слушала ветер, а потом я легла, но так и не уснула."
   },
   {
    "id": "ch01.md:5",
@@ -27,7 +27,7 @@
   {
    "id": "ch01.md:7",
    "kind": "p",
-   "text": "Ключ Велемира лежал на столе. Велемир вернулся поздно."
+   "text": "Ключ Велемира лежал на столе. Велемир вернулся поздно. Он снял мокрый плащ, и Велемир долго молчал у огня."
   },
   {
    "id": "ch01.md:9",
@@ -77,12 +77,12 @@
   {
    "id": "ch02.md:10",
    "kind": "p",
-   "text": "— Да! — крикнула Мирена и распахнула окно."
+   "text": "— Да! — крикнула Мирена и распахнула окно. Мирена долго смотрела на пустую дорогу."
   },
   {
    "id": "ch02.md:12",
    "kind": "p",
-   "text": "Письмо Рудаковой нашли утром. Сама Рудакова ещё спала."
+   "text": "Письмо Рудаковой нашли утром. Сама Рудакова ещё спала. Рудакова проснулась к полудню, и она сразу спросила о письме."
   },
   {
    "id": "ch02.md:14",

@@ -348,11 +348,6 @@ public final class LanguageRules implements LanguageSupport {
         return Set.copyOf(wordsOf(languageTag, "firstPersonPronouns"));
     }
 
-    /** The {@code firstPersonPast} pattern (groups {@code female}, {@code male}) of a language, if it has one. */
-    public Optional<Pattern> firstPersonPast(final String languageTag) {
-        return pattern(languageTag, "firstPersonPast");
-    }
-
     public Optional<Pattern> pattern(final String tag, final String key) {
         final String value = targetValue(Objects.requireNonNull(tag, "tag"), Objects.requireNonNull(key, "key"));
         return Optional.ofNullable(value)

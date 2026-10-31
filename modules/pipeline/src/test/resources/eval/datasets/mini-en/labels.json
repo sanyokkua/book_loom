@@ -80,7 +80,7 @@
   "task": "prose",
   "pair": "en-uk",
   "difficulty": "easy",
-  "length": "11-30",
+  "length": ">30",
   "defectClass": "name-with-evidence"
  },
  "m13": {
@@ -213,7 +213,7 @@
   "task": "prose",
   "pair": "en-uk",
   "difficulty": "medium",
-  "length": "11-30",
+  "length": ">30",
   "defectClass": "late-name"
  },
  "m32": {

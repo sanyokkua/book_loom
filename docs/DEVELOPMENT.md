@@ -839,8 +839,8 @@ filter as the brief (a name the narrator says to someone else proves nothing), a
 (the person's or verified, not a suggestion) makes the narrator that gender, `VERIFIED`; (3) Start runs the re-check only when
 it is about to ask "Who narrates?" and stores a verified result through the Book Brief, a failed re-check asks as before; (4)
 still unknown when translation ends (`NarratorStage`, after the last chunk, before backward revision): the targets of the
-segments whose source narration holds «I» are read with the target language's `firstPersonPast` pattern (`uk.properties`, one
-regex with the named groups `female` and `male`) outside quotes and dialogue; with at least 20 such segments, 8 forms and 80 % of
+segments whose source narration holds «I» are read with the target language file's past endings and first-person pronouns
+(`PastTenseReader`, redesign 7.4; it replaced the Ukrainian-only `firstPersonPast` regex) outside quotes and dialogue; with at least 20 such segments, 8 forms and 80 % of
 them (inclusive) agreeing the narrator is stored as first person with the origin `INFERRED`, logged at INFO (forms, agreeing,
 gender), and each segment holding a form of the other gender gets a `GENDER_UNKNOWN` deferral waiting on
 `DeferralRegister.NARRATOR`, which `GenderRevision` re-renders against the narrator at Max (the stored narrator is read when
@@ -1070,6 +1070,12 @@ carried into all three translations. Fixed decisions: HTML comments and the meta
 anchors follow each language's headings, code and identifiers are untouched. Segment counts through the real importer: Markdown 152,
 EPUB 169, FB2 207, identical in the four languages. The EPUB/FB2 files are built by `scripts/md-to-books.py` (standard library only,
 byte-reproducible). Models that reject a reasoning level: `none` for Sol, `minimal` for Luna.
+
+**Dataset version 2 (redesign 7.4).** `mini-en` and `mini-ru` gained narration inside existing blocks (`mini-en` m09, m12, m21,
+m31; `mini-ru` ch01.md:3, ch01.md:7, ch02.md:10, ch02.md:12; ids, counts and cases unchanged) so a small book reaches the
+code's evidence bars (`MiniBookGendersTest`). The baselines below were measured on version 1 and name its root hashes
+(`d712187a…`, `f2f9fce5…`); `eval-score.py diff --paired` lists the changed root hash under what changed, so a comparison
+with a version-2 run is not like for like until they are measured again.
 
 **Baselines of `79ffede6` (task 1.10).** Recorded on 2026-10-28/29 with the `redesign-translation-pipeline` harness (v2) on Ollama, one run at a
 time, seeds 1000.., and committed under `modules/pipeline/src/test/resources/eval/baseline/` (aggregates, per-case results, noise band,

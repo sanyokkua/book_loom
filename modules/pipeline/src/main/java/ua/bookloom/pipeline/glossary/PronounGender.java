@@ -1,15 +1,11 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +14,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PronounReader.Mention;
-import ua.bookloom.pipeline.glossary.PronounReader.Pronoun;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /**
@@ -30,9 +26,10 @@ import ua.bookloom.pipeline.index.BookIndex;
  * Speech in straight quotes is blanked too when the paragraph's straight quotes pair up, since a speaker's {@code he}
  * is about somebody else. The pronouns come from the language file ({@code femalePronouns}, {@code malePronouns}, and
  * the weaker object and possessive forms {@code femaleObjectPronouns}, {@code maleObjectPronouns}); a language with no
- * subject pronouns is never read, silently. A suggestion needs {@link #MIN_EVIDENCE} pronouns of which
- * {@link #MIN_SHARE} agree, and it is marked as a suggestion like the first-name list's, so the person's confirmation
- * or edit always wins. A strong case ({@link Evidence#isStrong()}) needs no model at all.
+ * subject pronouns is never read, silently. The first past-tense verb after a mention written as the term
+ * ({@link PastTenseReader}) is a vote too. A suggestion needs {@link #MIN_EVIDENCE} votes of which {@link #MIN_SHARE}
+ * agree, and it is marked as likely, so the person's confirmation or edit always wins; a strong case
+ * ({@link Evidence#isStrong()}) needs no model at all and is the book's.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -52,20 +49,24 @@ public final class PronounGender {
     static final double STRONG_SHARE = 0.9;
 
     /**
-     * The pronouns seen after a name. The object and possessive forms count only while the subject pronouns are fewer
-     * than {@link #MIN_EVIDENCE} and none of those names the other gender, since an object form often names somebody
-     * else ("Badger hit him").
+     * The pronouns and past-tense verbs seen after a name. The object and possessive forms count only while the subject
+     * pronouns and verbs are fewer than {@link #MIN_EVIDENCE} and none of those names the other gender, since an object
+     * form often names somebody else ("Badger hit him").
      *
      * @param femaleWords the feminine subject pronouns, one per mention that had one, as written in lower case
      * @param maleWords the masculine subject pronouns, one per mention that had one
      * @param femaleObjectWords the feminine object or possessive forms, one per mention that had one
      * @param maleObjectWords the masculine object or possessive forms, one per mention that had one
+     * @param femaleVerbs the feminine past-tense verbs right after the name itself ({@link PastTenseReader#voteAfter})
+     * @param maleVerbs the masculine past-tense verbs right after the name itself
      */
     public record Evidence(
             List<String> femaleWords,
             List<String> maleWords,
             List<String> femaleObjectWords,
-            List<String> maleObjectWords) {
+            List<String> maleObjectWords,
+            List<String> femaleVerbs,
+            List<String> maleVerbs) {
 
         /** Copies the lists. */
         public Evidence {
@@ -73,6 +74,17 @@ public final class PronounGender {
             maleWords = List.copyOf(maleWords);
             femaleObjectWords = List.copyOf(femaleObjectWords);
             maleObjectWords = List.copyOf(maleObjectWords);
+            femaleVerbs = List.copyOf(femaleVerbs);
+            maleVerbs = List.copyOf(maleVerbs);
+        }
+
+        /** Evidence of pronouns only. */
+        public Evidence(
+                final List<String> femaleWords,
+                final List<String> maleWords,
+                final List<String> femaleObjectWords,
+                final List<String> maleObjectWords) {
+            this(femaleWords, maleWords, femaleObjectWords, maleObjectWords, List.of(), List.of());
         }
 
         /** Evidence of subject pronouns only. */
@@ -92,7 +104,9 @@ public final class PronounGender {
                     joined(femaleWords, other.femaleWords()),
                     joined(maleWords, other.maleWords()),
                     joined(femaleObjectWords, other.femaleObjectWords()),
-                    joined(maleObjectWords, other.maleObjectWords()));
+                    joined(maleObjectWords, other.maleObjectWords()),
+                    joined(femaleVerbs, other.femaleVerbs()),
+                    joined(maleVerbs, other.maleVerbs()));
         }
 
         private static List<String> joined(final List<String> first, final List<String> second) {
@@ -102,36 +116,39 @@ public final class PronounGender {
         }
 
         /**
-         * Whether the object and possessive forms are read: too few subject pronouns, and none contradicts them.
+         * Whether the object and possessive forms are read: too few subject pronouns and verbs, and none contradicts
+         * them.
          *
          * @return {@code true} if the object forms count, {@code false} otherwise
          */
         public boolean usesObjectForms() {
-            final boolean contradicted = (!femaleObjectWords.isEmpty() && !maleWords.isEmpty())
-                    || (!maleObjectWords.isEmpty() && !femaleWords.isEmpty());
-            return femaleWords.size() + maleWords.size() < MIN_EVIDENCE && !contradicted;
+            final int feminine = femaleWords.size() + femaleVerbs.size();
+            final int masculine = maleWords.size() + maleVerbs.size();
+            final boolean contradicted =
+                    (!femaleObjectWords.isEmpty() && masculine > 0) || (!maleObjectWords.isEmpty() && feminine > 0);
+            return feminine + masculine < MIN_EVIDENCE && !contradicted;
         }
 
         /**
-         * The feminine pronouns that count.
+         * The feminine votes that count.
          *
-         * @return the feminine subject pronouns, plus the object forms when {@link #usesObjectForms()}
+         * @return the feminine subject pronouns and verbs, plus the object forms when {@link #usesObjectForms()}
          */
         public int female() {
-            return femaleWords.size() + (usesObjectForms() ? femaleObjectWords.size() : 0);
+            return femaleWords.size() + femaleVerbs.size() + (usesObjectForms() ? femaleObjectWords.size() : 0);
         }
 
         /**
-         * The masculine pronouns that count.
+         * The masculine votes that count.
          *
-         * @return the masculine subject pronouns, plus the object forms when {@link #usesObjectForms()}
+         * @return the masculine subject pronouns and verbs, plus the object forms when {@link #usesObjectForms()}
          */
         public int male() {
-            return maleWords.size() + (usesObjectForms() ? maleObjectWords.size() : 0);
+            return maleWords.size() + maleVerbs.size() + (usesObjectForms() ? maleObjectWords.size() : 0);
         }
 
         /**
-         * All pronouns that count.
+         * All votes that count.
          *
          * @return the feminine and masculine counts together
          */
@@ -169,7 +186,7 @@ public final class PronounGender {
         }
 
         /**
-         * The evidence as a few words for a prompt line, e.g. {@code she/her ×4}.
+         * The evidence as a few words for a prompt line, e.g. {@code she/her ×4} or {@code пришла/ушла ×2}.
          *
          * @return each counted side's distinct pronouns and count, joined by commas; empty when there is none
          */
@@ -194,6 +211,8 @@ public final class PronounGender {
             final List<String> parts = new ArrayList<>();
             addPart(parts, withFemale, femaleWords);
             addPart(parts, withMale, maleWords);
+            addPart(parts, withFemale, femaleVerbs);
+            addPart(parts, withMale, maleVerbs);
             addPart(parts, withFemale && objects, femaleObjectWords);
             addPart(parts, withMale && objects, maleObjectWords);
             return parts;
@@ -233,7 +252,7 @@ public final class PronounGender {
      * @return the pronouns seen; empty evidence when the language lists no pronouns
      */
     public static Evidence of(final String term, final List<String> texts, @Nullable final String languageTag) {
-        return of(term, texts, languageTag, (text, use) -> true);
+        return of(term, term, texts, languageTag, (text, use) -> true);
     }
 
     /**
@@ -249,87 +268,67 @@ public final class PronounGender {
         return LemmaMentions.evidence(entry, texts, languageTag);
     }
 
+    /**
+     * Counts the pronouns that follow one name of an entry, and the past-tense verbs that follow a mention written as
+     * the entry's term: an oblique form ({@code Ключ Велемира лежал}) is no subject, so its verb is not counted.
+     *
+     * @param term the non-blank name whose mentions are read
+     * @param lemma the entry's term; a mention takes a verb only when it is written so
+     * @param texts the non-null visible texts to read
+     * @param languageTag the source language's tag, or null when it is not known
+     * @param keep which mentions count, given the text they stand in
+     * @return the evidence; empty when the language lists no pronouns
+     */
     static Evidence of(
             final String term,
+            final String lemma,
             final List<String> texts,
             @Nullable final String languageTag,
             final BiPredicate<String, Mention> keep) {
-        Objects.requireNonNull(term, "term");
-        Objects.requireNonNull(texts, "texts");
-        final PronounReader reader = PronounReader.of(term, languageTag);
-        if (reader == null) {
-            log.trace("Pronoun evidence skipped term={} language={}: no pronoun table", term, languageTag);
-            return new Evidence(List.of(), List.of());
-        }
-        final List<Mention> uses = new ArrayList<>();
-        final Predicate<String> namedElsewhere = namedInsideASentence(texts);
-        texts.forEach(text -> reader.read(text, namedElsewhere).stream()
-                .filter(use -> keep.test(text, use))
-                .forEach(uses::add));
-        // A surname written after both a man's and a woman's form of address is a family's: those uses are the
-        // titled people's, not the bare name's.
-        final long titledGenders = uses.stream()
-                .map(Mention::title)
-                .filter(Objects::nonNull)
-                .map(Pronoun::gender)
-                .distinct()
-                .count();
-        final boolean family = titledGenders > 1;
-        final PronounTally tally = new PronounTally();
-        uses.stream().filter(use -> use.title() == null || !family).forEach(tally::add);
-        log.trace("Pronoun evidence for {}: {} uses, family name {}", term, uses.size(), family);
-        return tally.evidence();
-    }
-
-    // Whether the book writes a word with a capital after a lower-case word or a comma, as only a name is written;
-    // asked only of the few words that open a sentence right before a use, and remembered.
-    private static Predicate<String> namedInsideASentence(final List<String> texts) {
-        final String book = String.join("\n", texts);
-        final Map<String, Boolean> asked = new HashMap<>();
-        return word -> asked.computeIfAbsent(
-                word,
-                key -> Pattern.compile("[\\p{Ll},;:]\\p{Zs}+" + Pattern.quote(key) + "(?![\\p{L}\\p{M}])")
-                        .matcher(book)
-                        .find());
+        return NameEvidence.read(term, lemma, texts, languageTag, keep);
     }
 
     /**
-     * The entry as the book's pronouns leave it: a person's entry, or a term or untyped entry, that has no gender and
-     * was never tried gets the dominant gender as a suggestion, and a term entry becomes a character. Nothing a person
-     * set, nothing locked and no place or title is touched.
+     * The entry as the book's pronouns and verbs leave it. A person's entry, or a term or untyped entry, that has no
+     * gender and was never tried gets the dominant gender: from the book ({@link Origin#BOOK}) when the evidence is
+     * strong ({@link Evidence#isStrong()}), else as likely; a term entry becomes a character. A gender a rule or a guess
+     * set is replaced only by strong evidence, which makes it the book's. Nothing a person or the book set, nothing
+     * locked and no place or title is touched.
      *
      * @param entry the non-null entry
      * @param texts the non-null visible texts of the book
      * @param languageTag the source language's tag, or null when it is not known (no pronoun table, no evidence)
-     * @return the entry with a suggested gender, or {@code entry} itself when nothing is to be suggested
+     * @return the entry with a gender from the evidence, or {@code entry} itself when nothing is to be set
      */
     public static GlossaryEntry seeded(
             final GlossaryEntry entry, final List<String> texts, @Nullable final String languageTag) {
         Objects.requireNonNull(entry, "entry");
-        final boolean eligible = entry.gender() == Gender.UNKNOWN
-                && !entry.locked()
-                && !entry.genderSeedTried()
-                && isPersonLike(entry.type());
-        if (!eligible) {
+        final boolean open = entry.gender() == Gender.UNKNOWN && !entry.genderSeedTried();
+        final boolean guessed = entry.gender() != Gender.UNKNOWN && entry.isGenderSuggested();
+        if (entry.locked() || !isPersonLike(entry.type()) || (!open && !guessed)) {
             return entry;
         }
         final Evidence evidence = of(entry, texts, languageTag);
         final Optional<Gender> dominant = evidence.dominant();
-        if (dominant.isEmpty()) {
-            log.debug(
-                    "Pronoun evidence for entry {}: {} female, {} male, too little or too mixed",
-                    entry.id(),
-                    evidence.female(),
-                    evidence.male());
+        final boolean sets = dominant.isPresent() && (open || evidence.isStrong());
+        final Origin origin = evidence.isStrong() ? Origin.BOOK : Origin.LIKELY;
+        log.debug(
+                "Gender evidence {} female, {} male, strong {}, held {}: sets {} as {}",
+                evidence.female(),
+                evidence.male(),
+                evidence.isStrong(),
+                entry.genderOrigin(),
+                sets,
+                origin);
+        if (dominant.isEmpty() || !sets) {
             return entry;
         }
-        log.debug(
-                "Glossary entry {} gets the suggested gender {} from pronouns ({} female, {} male)",
-                entry.id(),
-                dominant.get(),
-                evidence.female(),
-                evidence.male());
-        return entry.withType(TermType.CHARACTER).withSuggestedGender(dominant.get());
+        log.trace(
+                "Glossary entry {} gets the gender {} from the book's pronouns and verbs", entry.id(), dominant.get());
+        final GlossaryEntry character = entry.withType(TermType.CHARACTER);
+        return origin == Origin.BOOK
+                ? character.withGenderFrom(dominant.get(), Origin.BOOK)
+                : character.withSuggestedGender(dominant.get());
     }
 
     /**

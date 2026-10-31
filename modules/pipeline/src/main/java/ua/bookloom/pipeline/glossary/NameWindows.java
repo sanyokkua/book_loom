@@ -134,14 +134,19 @@ final class NameWindows {
         return evidence;
     }
 
+    // The mentions of every name of each entry, its term and its forms, grouped by the entry's term; a name two
+    // entries share is the first one's.
     private static Map<String, List<Mention>> usesOf(
             final BookIndex index, final List<Integer> ordinals, final List<GlossaryEntry> entries) {
         final Set<Integer> slice = new HashSet<>(ordinals);
-        final Set<String> terms = new HashSet<>();
-        entries.forEach(entry -> terms.add(entry.term()));
-        return index.mentions(terms, Case.INSENSITIVE).stream()
+        final Map<String, String> termOf = new HashMap<>();
+        entries.forEach(entry -> entry.names().forEach(name -> termOf.putIfAbsent(name, entry.term())));
+        return index.mentions(termOf.keySet(), Case.INSENSITIVE).stream()
                 .filter(mention -> slice.contains(mention.ordinal()))
-                .collect(Collectors.groupingBy(Mention::name, LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(
+                        mention -> termOf.getOrDefault(mention.name(), mention.name()),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
     }
 
     private static Evidence evidenceOf(
@@ -153,8 +158,8 @@ final class NameWindows {
         if (uses.isEmpty()) {
             return new Evidence(0, List.of(), pronouns);
         }
-        final PronounLookup lookup = new PronounLookup(
-                PronounReader.of(entry.term(), languageTag), index, new HashMap<>(), pronouns.usesObjectForms());
+        final PronounLookup lookup =
+                new PronounLookup(languageTag, index, new HashMap<>(), new HashMap<>(), pronouns.usesObjectForms());
         // Two uses in one short paragraph give the same window; the model reads it once, so it is cited once.
         final Set<String> shown = new HashSet<>();
         final List<Window> windows = index
@@ -183,21 +188,25 @@ final class NameWindows {
     }
 
     /**
-     * Reads the pronoun the code gives the name at each use, keeping each segment's readings once they are made. An
-     * object or possessive form gives a use its gender only when {@code objectForms}: by
-     * {@link PronounGender.Evidence#usesObjectForms()}, the name's subject pronouns are scarce and none of them names
-     * the other gender.
+     * Reads the pronoun the code gives the name at each use, with a reader of the name the use is written as (the term
+     * or one of its forms), keeping each segment's readings once they are made. An object or possessive form gives a
+     * use its gender only when {@code objectForms}: by {@link PronounGender.Evidence#usesObjectForms()}, the name's
+     * subject pronouns are scarce and none of them names the other gender.
      */
     private record PronounLookup(
-            @Nullable PronounReader reader,
+            @Nullable String language,
             BookIndex index,
-            Map<Integer, List<PronounReader.Mention>> readings,
+            Map<String, PronounReader> readers,
+            Map<String, List<PronounReader.Mention>> readings,
             boolean objectForms) {
 
         @Nullable
         Pronoun pronounOf(final Mention use) {
+            // A name with no reader (no pronoun table) is not kept, and asked again: that is a null check.
+            final PronounReader reader = readers.computeIfAbsent(use.name(), name -> PronounReader.of(name, language));
             final List<PronounReader.Mention> found = readings.computeIfAbsent(
-                    use.ordinal(), ordinal -> reader == null ? List.of() : reader.read(textOf(ordinal)));
+                    use.name() + "@" + use.ordinal(),
+                    key -> reader == null ? List.of() : reader.read(textOf(use.ordinal())));
             return found.stream()
                     .filter(mention -> mention.start() == use.start())
                     .map(mention -> objectForms ? mention.attributed() : mention.subject())

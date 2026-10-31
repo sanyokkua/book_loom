@@ -55,7 +55,7 @@ public final class ScanEntries {
             final GlossaryRepository glossary,
             final List<GlossaryEntry> held,
             @Nullable final String language) {
-        final Pass pass = new Pass(projectId, glossary, byKey(held));
+        final Pass pass = new Pass(projectId, glossary, byKey(held), held, language);
         for (final NameCandidate candidate : candidates) {
             final Optional<AppError> failed = pass.take(candidate, namesOf(candidate, language));
             if (failed.isPresent()) {
@@ -78,25 +78,35 @@ public final class ScanEntries {
         private final String projectId;
         private final GlossaryRepository glossary;
         private final Map<String, GlossaryEntry> heldByKey;
+        private final List<GlossaryEntry> held;
+        private final @Nullable String language;
         private final Set<String> proposedKeys = new HashSet<>();
         private final List<GlossaryEntry> proposals = new ArrayList<>();
         private final Map<String, List<String>> heldForms = new LinkedHashMap<>();
         private int skippedHeld;
         private int skippedRemoved;
 
-        Pass(final String projectId, final GlossaryRepository glossary, final Map<String, GlossaryEntry> heldByKey) {
+        Pass(
+                final String projectId,
+                final GlossaryRepository glossary,
+                final Map<String, GlossaryEntry> heldByKey,
+                final List<GlossaryEntry> held,
+                @Nullable final String language) {
             this.projectId = projectId;
             this.glossary = glossary;
             this.heldByKey = heldByKey;
+            this.held = held;
+            this.language = language;
         }
 
         Optional<AppError> take(final NameCandidate candidate, final List<String> names) {
-            final Optional<GlossaryEntry> holder = names.stream()
+            final List<GlossaryEntry> holders = names.stream()
                     .map(name -> heldByKey.get(GlossaryKeys.of(name)))
                     .filter(Objects::nonNull)
-                    .findFirst();
-            if (holder.isPresent() || names.stream().map(GlossaryKeys::of).anyMatch(proposedKeys::contains)) {
-                holder.ifPresent(entry -> newForms(entry, candidate, heldForms));
+                    .distinct()
+                    .toList();
+            if (!holders.isEmpty() || names.stream().map(GlossaryKeys::of).anyMatch(proposedKeys::contains)) {
+                holderOf(candidate, holders, this).ifPresent(entry -> newForms(entry, candidate, heldForms));
                 skippedHeld++;
                 return Optional.empty();
             }
@@ -112,6 +122,37 @@ public final class ScanEntries {
             names.forEach(name -> proposedKeys.add(GlossaryKeys.of(name)));
             return Optional.empty();
         }
+    }
+
+    // The entry that holds the candidate's own spelling takes it; else one held entry its readings name takes it, and
+    // two take it only when their targets are the same (LemmaCollapse), else the form is unsure and attaches to
+    // neither.
+    private static Optional<GlossaryEntry> holderOf(
+            final NameCandidate candidate, final List<GlossaryEntry> holders, final Pass pass) {
+        final GlossaryEntry own = pass.heldByKey.get(GlossaryKeys.of(candidate.term()));
+        if (own != null || holders.size() <= 1) {
+            return own != null ? Optional.of(own) : holders.stream().findFirst();
+        }
+        final Map<String, String> targets = new LinkedHashMap<>();
+        holders.stream()
+                .filter(entry -> entry.target() != null)
+                .forEach(entry -> targets.put(entry.term(), Objects.requireNonNull(entry.target(), "target")));
+        final Optional<String> lemma =
+                LemmaCollapse.collapse(candidate.term(), pass.language, targets, namesPerRow(pass.held, pass.language));
+        log.debug("Name form fits {} held entries; collapsed {}", holders.size(), lemma.isPresent());
+        return lemma.flatMap(name -> holders.stream()
+                .filter(entry -> GlossaryKeys.of(entry.term()).equals(GlossaryKeys.of(name)))
+                .findFirst());
+    }
+
+    // How many held names decline by each row, read from their terms' gendered nominative rows.
+    private static Map<String, Integer> namesPerRow(final List<GlossaryEntry> held, @Nullable final String language) {
+        final Map<String, Integer> counts = new HashMap<>();
+        held.forEach(entry -> NameForms.declensions(entry.term(), language).stream()
+                .filter(NameForms.Declension::nominative)
+                .filter(declension -> !declension.row().isEmpty())
+                .forEach(declension -> counts.merge(declension.row(), 1, Integer::sum)));
+        return counts;
     }
 
     // The lemma's key first, then the forms', so a term that is one entry's lemma and another's form finds the lemma.

@@ -54,12 +54,14 @@ class PronounGenderTest {
         assertThat(PronounGender.of("Chisel", FEMALE_TEXTS, "xx").total()).isZero();
     }
 
+    // Both the name and its declined form find their pronoun; the verb after the name itself is a vote of its own.
     @Test
     void of_declinedNonLatinName_isFound() {
         final Evidence evidence = PronounGender.of(
                 "Чизел", List.of("Чизел налила чаю. Она устала.", "Чизела никто не видел. Она ушла."), "ru");
 
-        assertThat(evidence.female()).isEqualTo(2);
+        assertThat(evidence.femaleWords()).hasSize(2);
+        assertThat(evidence.femaleVerbs()).containsExactly("налила");
     }
 
     @Test

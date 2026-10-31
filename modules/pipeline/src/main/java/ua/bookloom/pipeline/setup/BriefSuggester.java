@@ -27,6 +27,7 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.glossary.PastTenseReader;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
@@ -290,13 +291,38 @@ final class BriefSuggester {
         final String language = book.project().brief().sourceLanguage() == null
                 ? BriefDecision.languageProposal(read.languages())
                 : null;
-        final BriefSuggestion suggestion = suggestion(
-                BriefDecision.register(answers),
-                person,
-                BriefDecision.narratorGender(person.value(), answers),
-                synthesized,
-                language);
+        final Decided<Gender> answered = BriefDecision.narratorGender(person.value(), answers);
+        final Decided<Gender> gender = person.value() == NarratorPerson.THIRD
+                ? answered
+                : fromSource(book).orElse(answered);
+        final BriefSuggestion suggestion =
+                suggestion(BriefDecision.register(answers), person, gender, synthesized, language);
         return aligned(book, suggestion, answers.size());
+    }
+
+    // The narrator's own past forms in the source's narration: a verified count is the book's evidence and replaces
+    // the model's answer; a language with no gendered past forms counts nothing, and the later steps decide.
+    private static Optional<Decided<Gender>> fromSource(final SetupBook book) {
+        final String language = book.languageOf();
+        final PastTenseReader reader = PastTenseReader.of(language);
+        if (reader == null) {
+            log.debug("Narrator not read from the source language={}: no gendered past forms", language);
+            return Optional.empty();
+        }
+        final PastTenseReader.FirstPersonCount count =
+                reader.firstPerson(NarratorDetector.paragraphsOf(book.document()));
+        log.info(
+                "Narrator from source language={} forms={} agreeing={} verified={}",
+                language,
+                count.forms(),
+                count.agreeing(),
+                count.verified());
+        if (!count.verified()) {
+            return Optional.empty();
+        }
+        return Optional.of(new Decided<>(
+                count.gender(),
+                new FieldEvidence(FieldEvidence.Basis.MEASURED, count.quotes(), count.agreeing(), count.forms())));
     }
 
     private static BriefSuggestion suggestion(

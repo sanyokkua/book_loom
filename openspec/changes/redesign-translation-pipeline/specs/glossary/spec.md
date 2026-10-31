@@ -248,6 +248,16 @@ WHERE the target language's file sets a name-ending table, the application SHALL
 - **WHEN** `Лев` (male) is pinned and the file lists the change from `е` to a soft sign before the ending
 - **THEN** `Льва` is one of its forms
 
+#### Scenario: The most specific row of the entry's gender is read
+
+- **WHEN** the target language is Ukrainian, `Рудакова` (female) is pinned, and the file lists both `ова|f` and `а|f`
+- **THEN** its forms include `Рудакової` and `Рудаковою` from the longer row `ова|f`, none from a masculine row, and an entry of unknown gender is given the forms of both genders
+
+#### Scenario: Each word of a target declines
+
+- **WHEN** `Тарас Зотов` (male) is pinned
+- **THEN** its forms include `Тараса Зотова` and `Тарасом Зотовим`, at most 64 combined forms in all
+
 #### Scenario: No table gives only the target
 
 - **WHEN** the target language's file sets no name-ending table
@@ -304,6 +314,47 @@ WHERE the source language's file lists past-tense endings that show gender, the 
 
 - **WHEN** the source language is `en`
 - **THEN** only the pronouns are counted
+
+#### Scenario: A genitive does not take the verb
+
+- **WHEN** the source language is `ru` and the book writes `Ключ Велемира лежал на столе.`
+- **THEN** `лежал` is no vote for `Велемир`: a verb counts only after a mention written as the entry's term, since an oblique form such as `Велемира` is not the subject of the clause
+
+#### Scenario: A particle between the name and the verb is allowed
+
+- **WHEN** the book writes `Велемир тихо ушёл.`
+- **THEN** `ушёл` is one vote for male, the words the source file lists in `pastSkipWords` being passed over, while a comma, a word that is no past form (`Ольга, наверное, ушла.`) or a word on the file's `pastNotVerbs` list (`стол`) ends the search
+
+### Requirement: Suggest a name's gender from how the book declines it
+
+WHERE the source file lists the rows whose declension shows a gender (`paradigmGender`), WHEN a person-like entry of unknown, untried gender has an attested form that reads as an oblique case of its term, those readings and the term's nominative readings share one gender, their rows are listed, and no pronoun or verb after the name shows the other gender, the application SHALL set that gender with the origin rule, without changing the entry's type.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `design.md#d3--the-book-map-lemma-entries-origin-target-state`. In plain words: a small book may say a man's name only a few times with no `он` after it, yet its genitive `Велемира` beside `Велемир` already shows the man's declension. That is a rule of the language, not a fact of the book, so it is shown as a rule's hint, no check enforces it, and a pronoun or a verb of the book always wins over it. A row both genders decline by (the Russian `-а`: `Никита`, `Илья`) is left out of the list, so it decides nothing.
+
+#### Scenario: A consonant name with an attested genitive is a man's by rule
+
+- **WHEN** the source language is `ru` and the entry `Велемир` holds the form `Велемира`, and no pronoun or verb after the name shows a gender
+- **THEN** the entry's gender is male with the origin rule, and its type is unchanged
+
+#### Scenario: A feminine surname's oblique form is a woman's by rule
+
+- **WHEN** the entry `Рудакова` holds the form `Рудаковой`
+- **THEN** its gender is female with the origin rule
+
+#### Scenario: A contrary vote decides nothing
+
+- **WHEN** the entry `Велемир` holds the form `Велемира` and the book writes `Велемир пришла поздно.`
+- **THEN** the entry's gender stays unknown
+
+#### Scenario: A row of either gender decides nothing
+
+- **WHEN** the entry `Горята` holds the form `Горяты`, from the `а|f` row that `paradigmGender` leaves out
+- **THEN** the entry's gender stays unknown
+
+#### Scenario: Only an unknown, untried, person-like entry is read
+
+- **WHEN** the entry is a place, has a gender, was reset to unknown by the person, or the language's file has no name-ending table
+- **THEN** it is left as it is
 
 ### Requirement: Keep a meaning-bearing name's meaning as a note
 

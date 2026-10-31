@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -17,7 +16,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Decides which name one mention of a form that fits two names belongs to, by the clause around it: a past-tense verb
- * right after it ({@code pastFemale}, {@code pastMale}) makes it that gender's nominative when it can be one, and
+ * right after it ({@link PastTenseReader#genderOf}) makes it that gender's nominative when it can be one, and
  * otherwise rules out the other gender's nominative; a word before it that asks for another case
  * ({@code addressPositions}) rules out every nominative; a gendered form of address before it ({@code addressTerms})
  * keeps that gender. Only a word joined to the mention by spaces counts: a comma or a dash ends the clause. A mention
@@ -29,12 +28,8 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 @Slf4j
 final class ClauseEvidence {
 
-    /** The fewest letters a verb keeps before its past ending. */
-    static final int MIN_VERB_STEM = 2;
-
     private final @Nullable String language;
-    private final List<String> pastFemale;
-    private final List<String> pastMale;
+    private final @Nullable PastTenseReader past;
     private final Set<String> asksOblique;
     private final Map<String, Gender> addressTerms;
     private int decided;
@@ -42,13 +37,11 @@ final class ClauseEvidence {
 
     private ClauseEvidence(
             @Nullable final String language,
-            final List<String> pastFemale,
-            final List<String> pastMale,
+            @Nullable final PastTenseReader past,
             final Set<String> asksOblique,
             final Map<String, Gender> addressTerms) {
         this.language = language;
-        this.pastFemale = pastFemale;
-        this.pastMale = pastMale;
+        this.past = past;
         this.asksOblique = asksOblique;
         this.addressTerms = addressTerms;
     }
@@ -61,13 +54,12 @@ final class ClauseEvidence {
      */
     static ClauseEvidence of(@Nullable final String language) {
         if (language == null) {
-            return new ClauseEvidence(null, List.of(), List.of(), Set.of(), Map.of());
+            return new ClauseEvidence(null, null, Set.of(), Map.of());
         }
         final LanguageRules rules = LanguageRules.bundled();
         return new ClauseEvidence(
                 language,
-                rules.wordsOf(language, "pastFemale"),
-                rules.wordsOf(language, "pastMale"),
+                PastTenseReader.of(language),
                 rules.wordsOf(language, "addressPositions").stream()
                         .map(word -> word.toLowerCase(Locale.ROOT))
                         .collect(Collectors.toUnmodifiableSet()),
@@ -133,25 +125,14 @@ final class ClauseEvidence {
         return kept.isEmpty() ? readings : kept;
     }
 
+    // A feminine or masculine past form; a neuter one, or no verb, decides nothing.
     private @Nullable Gender pastGender(@Nullable final String word) {
-        if (word == null) {
+        if (word == null || past == null) {
             return null;
         }
-        final String lower = word.toLowerCase(Locale.ROOT);
-        final int female = longestEnding(lower, pastFemale);
-        final int male = longestEnding(lower, pastMale);
-        if (female == 0 && male == 0) {
-            return null;
-        }
-        return female > male ? Gender.FEMALE : Gender.MALE;
-    }
-
-    private static int longestEnding(final String lower, final List<String> endings) {
-        return endings.stream()
-                .filter(ending -> lower.length() - ending.length() >= MIN_VERB_STEM && lower.endsWith(ending))
-                .mapToInt(String::length)
-                .max()
-                .orElse(0);
+        return past.genderOf(word.toLowerCase(Locale.ROOT))
+                .filter(gender -> gender == Gender.FEMALE || gender == Gender.MALE)
+                .orElse(null);
     }
 
     private static @Nullable String wordAfter(final String text, final int end) {

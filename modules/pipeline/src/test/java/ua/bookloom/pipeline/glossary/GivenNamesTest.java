@@ -54,12 +54,13 @@ class GivenNamesTest {
         assertThat(GivenNames.genderOf("John the Elder of Wales", "en")).isEmpty();
     }
 
+    // The list's gender is a rule's: shown with the "rule" chip, never enforced.
     @Test
     void seeded_characterWithUnknownGender_getsASuggestedGender() {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.MALE);
-        assertThat(seeded.genderOrigin()).isEqualTo(Origin.LIKELY);
+        assertThat(seeded.genderOrigin()).isEqualTo(Origin.RULE);
         assertThat(seeded.locked()).isFalse();
     }
 
@@ -121,7 +122,7 @@ class GivenNamesTest {
         final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.withInferredGender(Gender.MALE)).isSameAs(seeded);
-        assertThat(seeded.withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.LIKELY);
+        assertThat(seeded.withInferredGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.RULE);
         assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
     }
 
@@ -131,6 +132,6 @@ class GivenNamesTest {
 
         assertThat(seeded.withGender(Gender.MALE).genderOrigin()).isEqualTo(Origin.USER);
         assertThat(seeded.withLocked(true).genderOrigin()).isEqualTo(Origin.USER);
-        assertThat(seeded.withTarget("Джон").genderOrigin()).isEqualTo(Origin.LIKELY);
+        assertThat(seeded.withTarget("Джон").genderOrigin()).isEqualTo(Origin.RULE);
     }
 }

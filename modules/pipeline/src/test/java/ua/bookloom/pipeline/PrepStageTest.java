@@ -182,7 +182,7 @@ class PrepStageTest {
                 .filteredOn(entry -> entry.term().equals("Harry"))
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, Origin.LIKELY);
+                .containsExactly(Gender.MALE, Origin.RULE);
     }
 
     // A person set Harry back to unknown on purpose; a run start must not suggest the list's gender again.

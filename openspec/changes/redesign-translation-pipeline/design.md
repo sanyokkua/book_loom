@@ -212,7 +212,14 @@ task edits the delta requirement and this file's line; the result is written int
   value. This is not a "language-specific word list" in the sense of owner decision D-16.
 - **Gender evidence.** `glossary/PronounGender.Evidence` sums pronoun votes and source past-tense votes from the new
   `glossary/PastTenseReader` (patterns from the source file's `pastFemale`, `pastMale`, `pastMaleIrregular`,
-  `shortAdjFemale/Male`; one reader for every language). Thresholds unchanged (3 votes at 80 %, strong 5 at 90 %).
+  `shortAdjFemale/Male`, `pastNeuter`, `pastSkipWords`, `pastNotVerbs`; one reader for every language); a verb counts
+  only after a mention written as the entry's term, never after an oblique form. Thresholds unchanged (3 votes at 80 %,
+  strong 5 at 90 %); a strong count is BOOK, a weaker one LIKELY, and only a strong count replaces a RULE or LIKELY
+  gender. Sources in order: the given-names list (RULE), pronouns and past tense (BOOK or LIKELY), then the declension
+  (`glossary/DeclensionGender`, RULE): an attested oblique form of the entry's own term, all its readings and the
+  term's nominative readings of one gender, their rows listed in the source file's `paradigmGender` (owner decision,
+  group 7: small books rarely reach the pronoun bar), and no contrary vote. A form that fits two held names attaches
+  to one only when both targets are equal (`glossary/LemmaCollapse`, the more frequent class, ties to file order).
 - **Target state.** `LockRule` decides at acceptance: PINNED for an inflecting target (the stem is fixed, every
   generated form is allowed), LOCKED for a non-inflecting target or a kept identifier (exact text, token-substituted).
 - **Recurring terms.** New `lexicon/FormGroups`: key = form minus its longest `nounEndings` ending, stem ≥
@@ -238,7 +245,9 @@ task edits the delta requirement and this file's line; the result is written int
   target of such a language and finds no U+0301/U+0300.
 - **`glossary/NameForms`** (new, pure, group 7): `candidates(form, lang)` inverts the source file's `nameParadigms`
   rows (`ending|gender: oblique endings`); `forms(target, gender, lang)` generates the target's case forms and vocative
-  from the target file's `nameParadigms` and `nameAlternations` (`о/е → і` in a closed syllable, fleeting `е`). A
+  from the target file's `nameParadigms` and `nameAlternations` (`о/е → і` in a closed syllable, fleeting `е → ь`; the
+  most specific row of the entry's gender, the longest ending, `C` counting as none; an unknown gender takes both;
+  each word of a target declines, at most `MAX_FORMS` (64) combined forms; plain forms kept beside changed ones). A
   language with no paradigm gets the identity table (source) or the target itself (target). Readers: the scan (D3),
   the `name-spelling` check (D12), `NeverWorse` veto 4 (D14), `TermSweep` for PINNED entries (D15), `WindowMap` (D8).
 - **`glossary/TargetValidator`** (the extended `RenderingChecks`, one class): target letters (`forbiddenLetters`; no

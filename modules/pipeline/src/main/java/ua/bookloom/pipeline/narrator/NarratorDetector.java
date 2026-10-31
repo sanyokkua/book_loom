@@ -328,6 +328,21 @@ public final class NarratorDetector {
         return -1;
     }
 
+    /**
+     * The body paragraphs of an opened book in reading order, formatting tokens removed: the text the narrator's own
+     * forms are counted in.
+     *
+     * @param document the non-null opened book; only its body units are read
+     * @return never null; empty when the book has no body paragraph
+     */
+    public static List<String> paragraphsOf(final Document document) {
+        Objects.requireNonNull(document, "document");
+        return chaptersOf(document).stream()
+                .flatMap(List::stream)
+                .map(paragraph -> TOKEN.matcher(paragraph).replaceAll(""))
+                .toList();
+    }
+
     private static List<List<String>> chaptersOf(final Document document) {
         final List<List<String>> chapters = new ArrayList<>();
         for (final Unit unit : document.units()) {

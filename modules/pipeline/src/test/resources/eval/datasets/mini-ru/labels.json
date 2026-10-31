@@ -10,7 +10,7 @@
   "task": "prose",
   "pair": "ru-uk",
   "difficulty": "medium",
-  "length": "<=10",
+  "length": "11-30",
   "defectClass": "narrator-gender-past"
  },
  "ch01.md:5": {
@@ -94,14 +94,14 @@
   "task": "dialogue",
   "pair": "ru-uk",
   "difficulty": "medium",
-  "length": "<=10",
+  "length": "11-30",
   "defectClass": "weak-word-da"
  },
  "ch02.md:12": {
   "task": "prose",
   "pair": "ru-uk",
   "difficulty": "hard",
-  "length": "<=10",
+  "length": "11-30",
   "defectClass": "female-surname-forms"
  },
  "ch02.md:14": {

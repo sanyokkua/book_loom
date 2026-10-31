@@ -17,6 +17,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.pipeline.SourceLanguage;
+import ua.bookloom.pipeline.glossary.DeclensionGender;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
@@ -141,6 +142,7 @@ public final class PrepStage {
         return FrequencyScan.newTerms(projectId, index, index.story(), sourceLanguage, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
                 .map(proposals -> PronounGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
+                .map(proposals -> DeclensionGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added, added));
     }

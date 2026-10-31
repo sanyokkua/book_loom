@@ -3,38 +3,33 @@ package ua.bookloom.pipeline.checks;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.pipeline.glossary.PastTenseReader;
 
 /**
  * The Ukrainian gender check: the past tense of a verb shows its subject's gender, so the first verb after the
  * narrator's «я» must end as the narrator's gender does ({@code -в} masculine, {@code -ла} feminine, {@code -ло}
  * neuter, which never fits «я»). Only the narrator's own words are read — quoted speech and dash dialogue are blanked
- * first, since a character of the other gender says «я зачинила» correctly. The rule is a suffix rule, so it reads
- * a handful of words that end like a past tense and are not one from an exceptions list, and it only looks at the
- * word that follows «я», past a few particles and adverbs, never at a word behind punctuation.
+ * first, since a character of the other gender says «я зачинила» correctly. The endings, the words that only look like
+ * a past tense and the particles and adverbs a verb may stand behind are the language file's, read through
+ * {@link PastTenseReader}; it only looks at the word that follows «я», past a few particles and adverbs, never at a
+ * word behind punctuation.
  */
 @Slf4j
 final class UkrainianGenderCheck implements GenderCheck {
 
     private static final String LANGUAGE = "uk";
-    private static final int MIN_VERB_LENGTH = 3;
     private static final int MAX_SKIPPED = 3;
     private static final Pattern PRONOUN = Pattern.compile("(?<![\\p{L}\\p{M}'’ʼ-])[Яя](?![\\p{L}\\p{M}'’ʼ-])");
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ-]*");
     private static final Pattern BREAK = Pattern.compile("[,.;:!?…()—–―]");
-    private static final Set<String> SKIPPED = Set.of(
-            "не", "ні", "б", "би", "ж", "же", "й", "і", "вже", "ще", "лише", "тільки", "тоді", "потім", "тихо",
-            "швидко", "просто", "одразу", "знову", "теж", "також", "нарешті", "ніколи", "завжди", "майже", "там", "тут",
-            "ось", "тепер", "швидше", "якось", "навіть", "зовсім", "аж", "все");
-    private static final Set<String> NOT_PAST = Set.of(
-            "мало", "чимало", "число", "село", "тіло", "діло", "світло", "скло", "зло", "весло", "крило", "дно", "лев",
-            "любов", "кров", "церков", "морков", "львів", "нів", "дарів", "знов");
-
+    private static final PastTenseReader READER =
+            Objects.requireNonNull(PastTenseReader.of(LANGUAGE), "the Ukrainian file lists its past endings");
     /** The gender a past-tense ending shows. */
     enum Ending {
         MASCULINE(Gender.MALE),
@@ -80,7 +75,7 @@ final class UkrainianGenderCheck implements GenderCheck {
                 return Optional.empty();
             }
             final String lower = word.group().toLowerCase(Locale.ROOT);
-            if (!SKIPPED.contains(lower)) {
+            if (!READER.isSkipped(lower)) {
                 return Optional.of(new NextWord(lower, word.start(), word.end()));
             }
             position = word.end();
@@ -113,15 +108,13 @@ final class UkrainianGenderCheck implements GenderCheck {
     }
 
     static Ending endingOf(final String word) {
-        if (word.length() < MIN_VERB_LENGTH || NOT_PAST.contains(word)) {
-            return Ending.NONE;
-        }
-        if (word.endsWith("ла") || word.endsWith("лась") || word.endsWith("лася")) {
-            return Ending.FEMININE;
-        }
-        if (word.endsWith("ло") || word.endsWith("лось") || word.endsWith("лося")) {
-            return Ending.NEUTER;
-        }
-        return word.endsWith("в") || word.endsWith("вся") ? Ending.MASCULINE : Ending.NONE;
+        return READER.genderOf(word)
+                .map(gender -> switch (gender) {
+                    case MALE -> Ending.MASCULINE;
+                    case FEMALE -> Ending.FEMININE;
+                    case NEUTER -> Ending.NEUTER;
+                    case UNKNOWN -> Ending.NONE;
+                })
+                .orElse(Ending.NONE);
     }
 }

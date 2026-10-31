@@ -64,6 +64,8 @@ class BookRunnerOfflineTest {
         assertThat(outDir.resolve("mini-book.with_consistency_pass.report.md")).isRegularFile();
     }
 
+    // Counts of dataset version 2: the scan gives Ilsabet, Dorrin and Tobin Reed a likely gender from the book, so the
+    // names pass reads them and the segments naming them wait on a confirmed gender.
     @ParameterizedTest
     @CsvSource({
         "/dial,FAST",
@@ -74,18 +76,18 @@ class BookRunnerOfflineTest {
         "/segments,39",
         "/flaggedSegments,31",
         "/calls/briefSuggestion,2",
-        "/calls/names,2",
+        "/calls/names,4",
         "/characters/verified,0",
-        "/characters/suggested,0",
+        "/characters/suggested,3",
         "/characters/none,0",
         "/noConsistencyPass/aligned,39",
         "/noConsistencyPass/unaligned,0",
-        "/noConsistencyPass/latinWords,758",
+        "/noConsistencyPass/latinWords,827",
         "/noConsistencyPass/alphabetWords,0",
-        "/noConsistencyPass/awaitingGenderSegments,0",
+        "/noConsistencyPass/awaitingGenderSegments,13",
         "/noConsistencyPass/detectors/echo,39",
         "/withConsistencyPass/aligned,39",
-        "/withConsistencyPass/latinWords,758",
+        "/withConsistencyPass/latinWords,827",
         "/withConsistencyPass/detectors/script,31"
     })
     void run_pseudoModel_holdsTheCountsOfTheRun(final String pointer, final String expected) {

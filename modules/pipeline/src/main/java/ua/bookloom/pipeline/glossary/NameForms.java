@@ -25,7 +25,13 @@ import ua.bookloom.pipeline.prompt.NameParadigms;
  * other {@code endings}; {@code C} stands for a consonant and {@code indeclinable} for the endings a name never
  * changes. Only the longest oblique ending a form matches is read, so {@code Алісою} is the {@code -ою} of
  * {@code Аліса} and not also the {@code -ю} of a name in {@code -й}. A language whose file has no table (or no known
- * language) gets the identity table: the form is its own nominative. Vocative rows are not read.
+ * language) gets the identity table: the form is its own nominative. Vocative rows are not read the other way round.
+ *
+ * <p>Forward, {@link #forms} generates a target's case forms and vocative from the target language's table: the most
+ * specific row of the target's gender (the longest ending; {@code C} counts as none), its {@code >voc} row, and the
+ * vowel changes the file's {@code nameAlternations} lists ({@code о/е>і}: an {@code і} in the last closed syllable is an
+ * {@code о} or {@code е} in the other forms; {@code fleeting-е>ь}: that {@code е} becomes a soft sign). The plain forms
+ * are kept beside the changed ones, so a form is never refused for a change the table cannot tell apart.
  *
  * <p>Which letters a {@code C} may stand for is read from the data too, never listed in code: a letter is not a
  * consonant when it is a one-letter ending of the language's {@code nounEndings} or of any row, or the last letter of
@@ -40,9 +46,14 @@ public final class NameForms {
     static final int MIN_STEM_LETTERS = 2;
 
     private static final Pattern ROW = Pattern.compile("(\\S+)\\|(m|f|any)(>voc)?:\\s*(\\S+(?:\\s+\\S+)*)");
-    private static final Pattern SPACES = Pattern.compile("\\s+");
+    static final Pattern SPACES = Pattern.compile("\\s+");
+    /** The most forms a target of several words is given, all words' forms combined. */
+    static final int MAX_FORMS = 64;
+
     private static final String CONSONANT = "C";
     private static final String INDECLINABLE = "indeclinable";
+    private static final Pattern VOWEL_TO_I = Pattern.compile("(\\p{L}+)/(\\p{L}+)>(\\p{L})");
+    private static final Pattern FLEETING = Pattern.compile("fleeting-(\\p{L})>(\\p{L})");
     private static final Map<String, Table> TABLES = new ConcurrentHashMap<>();
 
     /**
@@ -61,15 +72,70 @@ public final class NameForms {
         }
     }
 
-    private enum Kind {
+    /**
+     * One reading of a written form with the row it comes from.
+     *
+     * @param lemma the nominative, spelled with the form's own letters up to the ending
+     * @param gender the row's gender; {@link Gender#UNKNOWN} for a row of any gender or the identity table
+     * @param row the row as the file names it ({@code ending|gender}, e.g. {@code C|m}); empty for the identity table
+     * @param order the row's place in the file, from zero; {@link Integer#MAX_VALUE} for the identity table
+     * @param nominative whether the form is this nominative itself rather than one of its other cases
+     */
+    public record Declension(String lemma, Gender gender, String row, int order, boolean nominative) {
+
+        /** Validates the components. */
+        public Declension {
+            Objects.requireNonNull(lemma, "lemma");
+            Objects.requireNonNull(gender, "gender");
+            Objects.requireNonNull(row, "row");
+        }
+
+        Reading reading() {
+            return new Reading(lemma, gender, nominative);
+        }
+    }
+
+    /**
+     * A target's forms.
+     *
+     * @param target the target as written
+     * @param cases its case forms, the target itself left out; empty when the language has no table
+     * @param vocatives its vocative forms; empty when the language has no vocative row for it
+     */
+    public record TargetForms(String target, Set<String> cases, Set<String> vocatives) {
+
+        /** Copies the sets. */
+        public TargetForms {
+            Objects.requireNonNull(target, "target");
+            cases = Set.copyOf(cases);
+            vocatives = Set.copyOf(vocatives);
+        }
+
+        /**
+         * Every form a rendering of the entry may take.
+         *
+         * @return the target, its case forms and its vocatives; never empty
+         */
+        public Set<String> all() {
+            final Set<String> all = new LinkedHashSet<>();
+            all.add(target);
+            all.addAll(cases);
+            all.addAll(vocatives);
+            return Set.copyOf(all);
+        }
+    }
+
+    enum Kind {
         CONSONANT,
         INDECLINABLE,
         ENDING
     }
 
-    private record Row(Kind kind, String ending, Gender gender, List<String> obliques) {}
+    record Row(Kind kind, String ending, Gender gender, List<String> obliques, String name, int order) {}
 
-    private record Table(List<Row> rows, Set<Integer> nonConsonants) {
+    record Alternation(List<String> from, String to, boolean fleeting) {}
+
+    record Table(List<Row> rows, List<Row> vocatives, List<Alternation> alternations, Set<Integer> nonConsonants) {
 
         boolean isConsonant(final int letter) {
             return Character.isLetter(letter) && !nonConsonants.contains(letter);
@@ -95,13 +161,28 @@ public final class NameForms {
      */
     public static Set<Reading> candidates(final String form, @Nullable final String language) {
         Objects.requireNonNull(form, "form");
-        final Set<Reading> identity = Set.of(new Reading(form, Gender.UNKNOWN, true));
+        final Set<Reading> readings = new LinkedHashSet<>();
+        declensions(form, language).forEach(declension -> readings.add(declension.reading()));
+        log.trace("Name form {} of {} reads as {}", form, language, readings);
+        return Set.copyOf(readings);
+    }
+
+    /**
+     * The nominatives a written form could belong to, each with the row that gives it.
+     *
+     * @param form the non-null form as written
+     * @param language the source language tag, or null when it is not known (the identity table)
+     * @return never empty; the form itself as a nominative of unknown gender and no row when the table gives nothing
+     */
+    public static List<Declension> declensions(final String form, @Nullable final String language) {
+        Objects.requireNonNull(form, "form");
+        final List<Declension> identity = List.of(new Declension(form, Gender.UNKNOWN, "", Integer.MAX_VALUE, true));
         if (language == null) {
             return identity;
         }
         final Table table = tableOf(language);
         final String lower = form.toLowerCase(Locale.ROOT);
-        final Set<Reading> nominatives = new LinkedHashSet<>();
+        final List<Declension> nominatives = new ArrayList<>();
         final List<Oblique> obliques = new ArrayList<>();
         for (final Row row : table.rows()) {
             read(row, table, form, lower, nominatives, obliques);
@@ -109,19 +190,35 @@ public final class NameForms {
         final int longest = obliques.stream().mapToInt(Oblique::length).max().orElse(0);
         obliques.stream()
                 .filter(oblique -> oblique.length() == longest)
-                .forEach(oblique -> nominatives.add(oblique.reading()));
-        log.trace("Name form {} of {} reads as {}", form, language, nominatives);
-        return nominatives.isEmpty() ? identity : Set.copyOf(nominatives);
+                .forEach(oblique -> nominatives.add(oblique.declension()));
+        return nominatives.isEmpty() ? identity : List.copyOf(nominatives);
     }
 
-    private record Oblique(int length, Reading reading) {}
+    /**
+     * The case forms and the vocative of a target, from the target language's table.
+     *
+     * @param target the non-null target as written, of one word or more
+     * @param gender the entry's gender; {@link Gender#UNKNOWN} allows the forms of both genders
+     * @param language the target language tag, or null when it is not known
+     * @return the forms; only the target when the language has no table
+     */
+    public static TargetForms forms(final String target, final Gender gender, @Nullable final String language) {
+        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(gender, "gender");
+        if (language == null || !hasParadigm(language) || target.isBlank()) {
+            return new TargetForms(target, Set.of(), Set.of());
+        }
+        return TargetDeclension.forms(target, gender, language, tableOf(language));
+    }
+
+    private record Oblique(int length, Declension declension) {}
 
     private static void read(
             final Row row,
             final Table table,
             final String form,
             final String lower,
-            final Set<Reading> nominatives,
+            final List<Declension> nominatives,
             final List<Oblique> obliques) {
         final boolean nominative =
                 switch (row.kind()) {
@@ -131,7 +228,7 @@ public final class NameForms {
                     case ENDING -> endsWith(lower, row.ending());
                 };
         if (nominative) {
-            nominatives.add(new Reading(form, row.gender(), true));
+            nominatives.add(new Declension(form, row.gender(), row.name(), row.order(), true));
         }
         if (row.kind() == Kind.INDECLINABLE) {
             return;
@@ -140,7 +237,8 @@ public final class NameForms {
             if (endsWith(lower, ending) && fitsStem(row, table, lower, ending)) {
                 final String stem = form.substring(0, form.length() - ending.length());
                 final String lemma = row.kind() == Kind.CONSONANT ? stem : stem + row.ending();
-                obliques.add(new Oblique(ending.length(), new Reading(lemma, row.gender(), false)));
+                obliques.add(new Oblique(
+                        ending.length(), new Declension(lemma, row.gender(), row.name(), row.order(), false)));
             }
         }
     }
@@ -152,7 +250,7 @@ public final class NameForms {
     }
 
     // An ending counts only with at least MIN_STEM_LETTERS letters left before it.
-    private static boolean endsWith(final String lower, final String ending) {
+    static boolean endsWith(final String lower, final String ending) {
         return lower.length() - ending.length() >= MIN_STEM_LETTERS && lower.endsWith(ending);
     }
 
@@ -162,26 +260,46 @@ public final class NameForms {
 
     private static Table load(final String language) {
         final List<Row> rows = new ArrayList<>();
-        for (final String text : NameParadigms.of(language)) {
-            final Matcher row = ROW.matcher(text.strip());
+        final List<Row> vocatives = new ArrayList<>();
+        final List<String> written = NameParadigms.of(language);
+        for (int order = 0; order < written.size(); order++) {
+            final Matcher row = ROW.matcher(written.get(order).strip());
             if (!row.matches()) {
                 log.warn("Name paradigm row of {} is not 'ending|gender: endings' and is ignored", language);
                 continue;
             }
-            if (row.group(3) == null) {
-                rows.add(rowOf(row.group(1), row.group(2), row.group(4)));
-            }
+            final Row read = rowOf(row.group(1), row.group(2), row.group(4), order);
+            (row.group(3) == null ? rows : vocatives).add(read);
         }
-        final Table table = new Table(List.copyOf(rows), nonConsonants(language, rows));
+        final Table table = new Table(
+                List.copyOf(rows), List.copyOf(vocatives), alternationsOf(language), nonConsonants(language, rows));
         log.debug(
-                "Name paradigm language={} rows={} nonConsonantLetters={}",
+                "Name paradigm language={} rows={} vocativeRows={} alternations={} nonConsonantLetters={}",
                 language,
                 table.rows().size(),
+                table.vocatives().size(),
+                table.alternations().size(),
                 table.nonConsonants().size());
         return table;
     }
 
-    private static Row rowOf(final String ending, final String gender, final String endings) {
+    private static List<Alternation> alternationsOf(final String language) {
+        final List<Alternation> alternations = new ArrayList<>();
+        for (final String written : LanguageRules.bundled().wordsOf(language, "nameAlternations")) {
+            final Matcher fleeting = FLEETING.matcher(written);
+            final Matcher vowel = VOWEL_TO_I.matcher(written);
+            if (fleeting.matches()) {
+                alternations.add(new Alternation(List.of(fleeting.group(1)), fleeting.group(2), true));
+            } else if (vowel.matches()) {
+                alternations.add(new Alternation(List.of(vowel.group(1), vowel.group(2)), vowel.group(3), false));
+            } else {
+                log.warn("Name alternation of {} is not 'a/b>c' or 'fleeting-a>b' and is ignored", language);
+            }
+        }
+        return List.copyOf(alternations);
+    }
+
+    private static Row rowOf(final String ending, final String gender, final String endings, final int order) {
         final Kind kind =
                 switch (ending) {
                     case CONSONANT -> Kind.CONSONANT;
@@ -195,7 +313,7 @@ public final class NameForms {
                     default -> Gender.UNKNOWN;
                 };
         final List<String> obliques = List.of(SPACES.split(endings.toLowerCase(Locale.ROOT)));
-        return new Row(kind, ending.toLowerCase(Locale.ROOT), rowGender, obliques);
+        return new Row(kind, ending.toLowerCase(Locale.ROOT), rowGender, obliques, ending + "|" + gender, order);
     }
 
     private static Set<Integer> nonConsonants(final String language, final List<Row> rows) {

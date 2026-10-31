@@ -46,9 +46,9 @@ final class LemmaMentions {
         }
         final ClauseEvidence clause = ClauseEvidence.of(language);
         final BiPredicate<String, Mention> keep = filter(entry, texts, language, clause);
-        PronounGender.Evidence evidence = PronounGender.of(entry.term(), texts, language, keep);
+        PronounGender.Evidence evidence = PronounGender.of(entry.term(), entry.term(), texts, language, keep);
         for (final String form : entry.forms()) {
-            evidence = evidence.and(PronounGender.of(form, texts, language, keep));
+            evidence = evidence.and(PronounGender.of(form, entry.term(), texts, language, keep));
         }
         log.debug(
                 "Pronoun mentions of entry {} read over {} names",

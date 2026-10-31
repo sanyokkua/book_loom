@@ -231,4 +231,19 @@ class NameWindowsTest {
 
         assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE);
     }
+    // An entry whose lemma the book never writes is found by its forms, and each window keeps the pronoun after the
+    // form.
+    @Test
+    void windows_entryNamedOnlyByAForm_getsWindows() {
+        final GlossaryEntry inferred =
+                entry("Градимир", TermType.CHARACTER).withForms(List.of("Градимиру", "Градимиром"));
+        final BookSlice book = GlossaryTestSegments.of(List.of(
+                "Утром Градимиру принесли письмо. Он прочёл его молча.", "Вечером с Градимиром никто не говорил."));
+
+        final Evidence evidence = NameWindows.of(book.index(), book.ordinals(), List.of(inferred), "ru")
+                .getOrDefault(inferred.term(), Evidence.NONE);
+
+        assertThat(evidence.count()).isEqualTo(2);
+        assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE, null);
+    }
 }

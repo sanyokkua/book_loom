@@ -25,7 +25,8 @@ import ua.bookloom.llm.pseudo.PseudoChatModel;
 class MiniEvalOfflineTest {
 
     // The echo stores findings of no check these expectations name and keeps no brand, a material or a place out of the
-    // glossary, so exactly the absence and optional-entry expectations hold.
+    // glossary, so exactly the absence and optional-entry expectations hold. Since dataset version 2 the scan proposes
+    // Tobin Reed, so his optional entry is checked, and the echo's Latin target does not meet it.
     private static final List<String> PSEUDO_MET = List.of(
             "dialogue-sentences-m04",
             "dialogue-sentences-m25",
@@ -48,8 +49,7 @@ class MiniEvalOfflineTest {
             "glossary-quorrel-written",
             "glossary-corvanium",
             "glossary-sedrafine",
-            "glossary-no-sentence-starters",
-            "glossary-tobin");
+            "glossary-no-sentence-starters");
 
     @TempDir
     private static Path workDir;
