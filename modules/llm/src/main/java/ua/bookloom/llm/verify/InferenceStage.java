@@ -38,18 +38,30 @@ final class InferenceStage {
 
     private record Sent(ProviderCallResult<ChatResponse> call, ChatRequest request) {}
 
-    private record Probe(ProviderClient client, String providerId, String modelId, ProbeShaping.Shaper shaper) {}
+    private record Probe(
+            ProviderClient client,
+            String providerId,
+            String modelId,
+            ProbeShaping.Shaper shaper,
+            RequestAnnouncer announcer) {}
 
+    /**
+     * Runs the probe.
+     *
+     * @param announcer told of each request just before it is sent, retries included
+     */
     InferenceProbe run(
             final ProviderClient client,
             final String providerId,
             final String modelId,
-            final ProbeShaping.Shaper shaper) {
+            final ProbeShaping.Shaper shaper,
+            final RequestAnnouncer announcer) {
         log.debug(
                 "Provider verification inference stage started provider={} model={} messageCount=1 responseFormatPresent=true reasoningDisabled=true",
                 providerId,
                 modelId);
-        final Probe probe = new Probe(client, providerId, modelId, shaper);
+        final Probe probe =
+                new Probe(client, providerId, modelId, shaper, Objects.requireNonNull(announcer, "announcer"));
         final Sent first = chatProbe(probe, ProbeRequests.structured(ReasoningLevel.OFF));
         final ProviderCallResult<ChatResponse> call = first.call();
         if (call.result().isErr()) {
@@ -122,7 +134,12 @@ final class InferenceStage {
 
     private ProviderCallResult<ChatResponse> exchange(final Probe probe, final ChatRequest request) {
         return calls.run(
-                () -> probe.client().chat(probe.modelId(), request), VerificationStage.INFERENCE, probe.providerId());
+                () -> {
+                    probe.announcer().inference(request);
+                    return probe.client().chat(probe.modelId(), request);
+                },
+                VerificationStage.INFERENCE,
+                probe.providerId());
     }
 
     private static InferenceProbe failed(final AppError failure, final ChatRequest sent) {

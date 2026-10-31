@@ -126,7 +126,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new MemorySettings(),
                 EnglishMessages.create(),
                 new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers());
+                new StructuredAnswers(),
+                java.time.Clock.systemUTC());
     }
 
     // The model's window is unknown, and whether the server loads the model by itself is what the test scripted.

@@ -15,6 +15,7 @@ import java.util.Objects;
  * @param metrics the figures between the body and the response, in the order shown
  * @param rawBody the request body as sent, empty when there was none; this, not the placeholder, is what Copy takes
  * @param rawResponse the reply as received, empty when there was none
+ * @param checks the Advanced features checks, one worded row each; empty for every other test and while it runs
  */
 public record TestDetail(
         Severity severity,
@@ -25,7 +26,22 @@ public record TestDetail(
         String response,
         List<Metric> metrics,
         String rawBody,
-        String rawResponse) {
+        String rawResponse,
+        List<CheckRow> checks) {
+
+    /** A detail with no check rows, as every test but the Advanced features one shows. */
+    public TestDetail(
+            final Severity severity,
+            final String verdict,
+            final String requestLine,
+            final String curl,
+            final String body,
+            final String response,
+            final List<Metric> metrics,
+            final String rawBody,
+            final String rawResponse) {
+        this(severity, verdict, requestLine, curl, body, response, metrics, rawBody, rawResponse, List.of());
+    }
 
     /** How the banner over the dialog looks. */
     public enum Severity {
@@ -48,6 +64,30 @@ public record TestDetail(
      */
     public record Metric(String name, String label, String value) {}
 
+    /**
+     * One Advanced features check as the card explains it.
+     *
+     * @param token the check's machine word, such as {@code schema}, which the row's id is made from
+     * @param name the check's name
+     * @param asked what the request asked the server for
+     * @param answered what came back
+     * @param verdict honoured, ignored or refused
+     * @param calls one line per call the check made: its time, and its speed when the reply said
+     */
+    public record CheckRow(
+            String token, String name, String asked, String answered, String verdict, List<String> calls) {
+
+        /** Rejects a missing part and copies the calls. */
+        public CheckRow {
+            Objects.requireNonNull(token, "token");
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(asked, "asked");
+            Objects.requireNonNull(answered, "answered");
+            Objects.requireNonNull(verdict, "verdict");
+            calls = List.copyOf(calls);
+        }
+    }
+
     /** Rejects a missing part and copies the metrics. */
     public TestDetail {
         Objects.requireNonNull(severity, "severity");
@@ -59,5 +99,6 @@ public record TestDetail(
         Objects.requireNonNull(rawBody, "rawBody");
         Objects.requireNonNull(rawResponse, "rawResponse");
         metrics = List.copyOf(metrics);
+        checks = List.copyOf(checks);
     }
 }

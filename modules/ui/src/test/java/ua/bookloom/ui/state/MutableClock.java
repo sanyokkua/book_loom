@@ -7,11 +7,13 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 
 /** A {@link Clock} the test moves by hand, so a ten-second wait is a line of code and not ten seconds of sleeping. */
-final class MutableClock extends Clock {
+public final class MutableClock extends Clock {
 
-    private Instant now = Instant.parse("2026-01-01T00:00:00Z");
+    // Moved on the test thread and read on the FX thread.
+    private volatile Instant now = Instant.parse("2026-01-01T00:00:00Z");
 
-    void advance(final Duration by) {
+    /** Moves the clock on by {@code by}. */
+    public void advance(final Duration by) {
         now = now.plus(by);
     }
 

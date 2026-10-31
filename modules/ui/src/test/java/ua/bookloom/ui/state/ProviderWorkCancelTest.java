@@ -80,7 +80,8 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
                 new MemorySettings(),
                 EnglishMessages.create(),
                 new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers()));
+                new StructuredAnswers(),
+                java.time.Clock.systemUTC()));
         queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         form(viewModel);

@@ -107,7 +107,8 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 new MemorySettings(),
                 messages,
                 new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers());
+                new StructuredAnswers(),
+                java.time.Clock.systemUTC());
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */

@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,7 @@ public final class SettingsViewModel {
      * @param messages the catalogue a provider without a name of its own is named from
      * @param speedRecorder where the seconds per segment a passing inference test measured are kept
      * @param structuredAnswers where whether the model answered in the structured form is kept for the session
+     * @param clock where the test card reads when a request was sent and how long it has been open
      */
     @Inject
     public SettingsViewModel(
@@ -92,7 +94,8 @@ public final class SettingsViewModel {
             final SettingsRepository settingsStore,
             final Messages messages,
             final ModelSpeedRecorder speedRecorder,
-            final StructuredAnswers structuredAnswers) {
+            final StructuredAnswers structuredAnswers,
+            final Clock clock) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.configs = Objects.requireNonNull(configs, "configs");
         this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
@@ -105,7 +108,8 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(activities, "activities"),
                 Objects.requireNonNull(speedRecorder, "speedRecorder"),
                 Objects.requireNonNull(structuredAnswers, "structuredAnswers"),
-                Objects.requireNonNull(messages, "messages"));
+                Objects.requireNonNull(messages, "messages"),
+                Objects.requireNonNull(clock, "clock"));
         this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
         executor.execute(() -> loadProviders(readCurrentModel(), () -> {}));
@@ -272,11 +276,7 @@ public final class SettingsViewModel {
         return modelNotes.notes();
     }
 
-    /**
-     * The models the selected provider offers. Typing a name never depends on it.
-     *
-     * @return the listing this view model discards and re-asks whenever another provider is selected
-     */
+    /** The models the selected provider offers, asked again when another is selected; typing never depends on it. */
     public ModelListing modelListing() {
         return modelListing;
     }

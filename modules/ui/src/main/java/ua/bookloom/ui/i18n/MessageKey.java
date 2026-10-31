@@ -3834,6 +3834,50 @@ public enum MessageKey {
     SETTINGS_TEST_ADVANCED_TIP("settings.test.advanced.tip"),
     /** Title of the test dialog for the Advanced features check, and the line beside its button before it runs. */
     SETTINGS_TEST_ADVANCED_TITLE("settings.test.advanced.title"),
+    /** Button beside a model test that runs it and opens its card at once. */
+    SETTINGS_TEST_WITH_DETAILS("settings.test.withDetails"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_WITH_DETAILS}. */
+    SETTINGS_TEST_WITH_DETAILS_TIP("settings.test.withDetails.tip"),
+    /** Shown where the reply will be while the request is out. */
+    SETTINGS_TEST_WAITING("settings.test.waiting"),
+    /** Button of the test card that stops the running test. */
+    SETTINGS_TEST_STOP("settings.test.stop"),
+    /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_STOP}. */
+    SETTINGS_TEST_STOP_TIP("settings.test.stop.tip"),
+    /** Label of the time the server spent loading the model before it answered. */
+    SETTINGS_TEST_METRIC_LOAD("settings.test.metric.load"),
+    /** Heading over one call of the Advanced features test; 0 is the check, 1 its number. */
+    SETTINGS_TEST_CALL_HEADING("settings.test.callHeading"),
+    /** What the Advanced features test is for, at the top of its card. */
+    SETTINGS_TEST_ADVANCED_INTRO("settings.test.advanced.intro"),
+    /** What one Advanced features check asked for, selected by its token. */
+    SETTINGS_TEST_ADVANCED_ASKED("settings.test.advanced.asked"),
+    /** What came back for one Advanced features check, selected by check and outcome; 2 is the field that worked. */
+    SETTINGS_TEST_ADVANCED_ANSWERED("settings.test.advanced.answered"),
+    /** Label of what an Advanced features check asked for. */
+    SETTINGS_TEST_ADVANCED_ASKED_LABEL("settings.test.advanced.askedLabel"),
+    /** Label of what came back for an Advanced features check. */
+    SETTINGS_TEST_ADVANCED_ANSWERED_LABEL("settings.test.advanced.answeredLabel"),
+    /** Label of an Advanced features check's verdict. */
+    SETTINGS_TEST_ADVANCED_VERDICT_LABEL("settings.test.advanced.verdictLabel"),
+    /** One call of an Advanced features check; 0 is its number, 1 its time. */
+    SETTINGS_TEST_ADVANCED_CALL("settings.test.advanced.call"),
+    /** One call of an Advanced features check with its speed; 2 is tokens per second. */
+    SETTINGS_TEST_ADVANCED_CALL_SPEED("settings.test.advanced.callSpeed"),
+    /** One call of an Advanced features check the server answered with an error; 2 is the status. */
+    SETTINGS_TEST_ADVANCED_CALL_STATUS("settings.test.advanced.callStatus"),
+    /** Title of the question asked when the test card is closed while its test runs. */
+    DIALOG_TEST_CLOSE_TITLE("dialog.testClose.title"),
+    /** Text of the question asked when the test card is closed while its test runs; 0 is the test. */
+    DIALOG_TEST_CLOSE_TEXT("dialog.testClose.text"),
+    /** Button that stops the running test and closes its card. */
+    DIALOG_TEST_CLOSE_STOP("dialog.testClose.stop"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_TEST_CLOSE_STOP}. */
+    DIALOG_TEST_CLOSE_STOP_TIP("dialog.testClose.stop.tip"),
+    /** Button that closes the test card and lets the test finish. */
+    DIALOG_TEST_CLOSE_KEEP("dialog.testClose.keep"),
+    /** Hover explanation of the button labelled by {@link #DIALOG_TEST_CLOSE_KEEP}. */
+    DIALOG_TEST_CLOSE_KEEP_TIP("dialog.testClose.keep.tip"),
     /** Name of one Advanced features check, selected by its note token; &#123;1&#125; is the token. */
     SETTINGS_ADVANCED_CHECK("settings.providers.advanced.check"),
     /** How the server treated a setting an Advanced features check sent, selected by the outcome; &#123;1&#125; is the word. */

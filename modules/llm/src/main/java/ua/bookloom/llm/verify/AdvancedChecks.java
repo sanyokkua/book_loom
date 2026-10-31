@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
+import ua.bookloom.api.llm.AdvancedCheck;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -76,7 +77,7 @@ final class AdvancedChecks {
     private final ProviderConfig config;
     private final String modelId;
     private final ObjectMapper mapper;
-    private final Sender sender;
+    private final CheckSender sender;
     private final Instant now;
     private @Nullable AppError stopped;
 
@@ -92,7 +93,7 @@ final class AdvancedChecks {
             final ProviderConfig config,
             final String modelId,
             final ObjectMapper mapper,
-            final Sender sender,
+            final CheckSender sender,
             final Instant now) {
         this.config = Objects.requireNonNull(config, "config");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
@@ -125,7 +126,8 @@ final class AdvancedChecks {
     // Honoured only when the reply is exactly the one value the schema allows; a free-text 200 is ignored and is never
     // asked again as json_object, since that would prove nothing about the schema.
     private @Nullable Verdict schema() {
-        final ProviderCallResult<CheckReply> call = sendWithRoom(request(SCHEMA_PROMPT, SCHEMA, null, null, null));
+        final ProviderCallResult<CheckReply> call =
+                sendWithRoom(AdvancedCheck.SCHEMA, request(SCHEMA_PROMPT, SCHEMA, null, null, null));
         final CheckReply reply = call.result().data();
         if (reply == null) {
             return verdictOf(refusedOrStop("schema", call));
@@ -144,8 +146,8 @@ final class AdvancedChecks {
         }
         boolean ignored = false;
         for (final OffSwitch offSwitch : switches()) {
-            final ProviderCallResult<CheckReply> call =
-                    send(request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), offSwitch);
+            final ProviderCallResult<CheckReply> call = send(
+                    AdvancedCheck.THINKING, request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), offSwitch);
             final CheckReply reply = call.result().data();
             final boolean works = reply != null && reply.reasoning() != CheckReply.Reasoning.SHOWN;
             log.debug("Advanced thinking check provider={} switch={} works={}", config.id(), offSwitch, works);
@@ -169,8 +171,10 @@ final class AdvancedChecks {
     // A model whose built-in row says it always reasons at a level (gpt-oss) cannot stop reasoning, so it is asked by
     // its lowest effort and the other switches are not tried: one call says whether the server accepts the field.
     private @Nullable ThinkingVerdict effortThinking() {
-        final ProviderCallResult<CheckReply> call =
-                send(request(THINK_PROMPT, null, ReasoningLevel.LOW, null, null), OffSwitch.REASONING_EFFORT);
+        final ProviderCallResult<CheckReply> call = send(
+                AdvancedCheck.THINKING,
+                request(THINK_PROMPT, null, ReasoningLevel.LOW, null, null),
+                OffSwitch.REASONING_EFFORT);
         if (call.result().isOk()) {
             return new ThinkingVerdict(OffSwitch.REASONING_EFFORT.wireName(), verdict(Outcome.HONOURED));
         }
@@ -181,7 +185,7 @@ final class AdvancedChecks {
     // Ollama's own API has one switch, think, which its client always sends; the check says whether it was accepted.
     private @Nullable ThinkingVerdict nativeThinking() {
         final ProviderCallResult<CheckReply> call =
-                send(request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), null);
+                send(AdvancedCheck.THINKING, request(THINK_PROMPT, null, ReasoningLevel.OFF, null, null), null);
         if (call.result().isOk()) {
             return new ThinkingVerdict(NATIVE_SWITCH, verdict(Outcome.HONOURED));
         }
@@ -209,11 +213,13 @@ final class AdvancedChecks {
     // At a hot temperature two replies differ unless top_k 1 is honoured and the model picks its likeliest token.
     private @Nullable Verdict samplers() {
         final SamplingParams greedy = new SamplingParams(null, GREEDY, null, null);
-        final ProviderCallResult<CheckReply> first = sendWithRoom(request(SAMPLE_PROMPT, null, null, greedy, null));
+        final ProviderCallResult<CheckReply> first =
+                sendWithRoom(AdvancedCheck.SAMPLERS, request(SAMPLE_PROMPT, null, null, greedy, null));
         if (first.result().isErr()) {
             return verdictOf(refusedOrStop("samplers", first));
         }
-        final ProviderCallResult<CheckReply> second = sendWithRoom(request(SAMPLE_PROMPT, null, null, greedy, null));
+        final ProviderCallResult<CheckReply> second =
+                sendWithRoom(AdvancedCheck.SAMPLERS, request(SAMPLE_PROMPT, null, null, greedy, null));
         if (second.result().isErr()) {
             return verdictOf(refusedOrStop("samplers", second));
         }
@@ -242,7 +248,7 @@ final class AdvancedChecks {
     }
 
     private ProviderCallResult<CheckReply> capCall(final OutputLengthField field) {
-        return send(request(COUNT_PROMPT, null, null, null, field), null);
+        return send(AdvancedCheck.CAP, request(COUNT_PROMPT, null, null, null, field), null);
     }
 
     // A thinking model may use all 16 tokens on reasoning; the server then stopped it at the cap with no text.
@@ -302,14 +308,14 @@ final class AdvancedChecks {
 
     // A thinking model may spend the whole cap on reasoning and answer nothing; that says nothing about the field
     // checked, so the call is made once more with the least room reasoning needs, never twice.
-    private ProviderCallResult<CheckReply> sendWithRoom(final ChatRequest request) {
-        final ProviderCallResult<CheckReply> first = send(request, null);
+    private ProviderCallResult<CheckReply> sendWithRoom(final AdvancedCheck check, final ChatRequest request) {
+        final ProviderCallResult<CheckReply> first = send(check, request, null);
         final AppError failure = first.result().error();
         if (failure == null || failure.code() != ErrorCode.emptyCompletion) {
             return first;
         }
         log.debug("Advanced check answered nothing provider={}; asking once more with reasoning headroom", config.id());
-        return send(withCap(request, roomier(request.maxOutputTokens())), null);
+        return send(check, withCap(request, roomier(request.maxOutputTokens())), null);
     }
 
     private static @Nullable Integer roomier(final @Nullable Integer cap) {
@@ -334,8 +340,9 @@ final class AdvancedChecks {
                 request.keepLoaded());
     }
 
-    private ProviderCallResult<CheckReply> send(final ChatRequest request, final @Nullable OffSwitch offSwitch) {
-        return sender.send(request, offSwitch);
+    private ProviderCallResult<CheckReply> send(
+            final AdvancedCheck check, final ChatRequest request, final @Nullable OffSwitch offSwitch) {
+        return sender.send(check, request, offSwitch);
     }
 
     private @Nullable Verdict verdictOf(final @Nullable Outcome outcome) {
@@ -367,17 +374,6 @@ final class AdvancedChecks {
                 null,
                 null,
                 false);
-    }
-
-    /** Sends one check through the gate. */
-    @FunctionalInterface
-    interface Sender {
-        /**
-         * Sends one check.
-         *
-         * @param offSwitch the thinking switch to send in place of the engine's, or null for the engine's own
-         */
-        ProviderCallResult<CheckReply> send(ChatRequest request, @Nullable OffSwitch offSwitch);
     }
 
     /**

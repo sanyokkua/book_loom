@@ -46,14 +46,16 @@ class SettingsConnectionFoldTipTest extends SettingsScreenTestBase {
         assertThat(isFoldTipShowing()).isFalse();
     }
 
-    // The title still explains the fold, and its tip goes once the pointer leaves the title.
+    // The title still explains the fold, and its tip goes once the pointer leaves the title. The pointer goes to the
+    // summary card's Test, outside the fold: the closed fold's content slides up under its title, so a node inside it
+    // can lie under the title, depending on how tall the form is.
     @Test
     void hover_titleThenAway_showsTheTipThenHidesIt() throws TimeoutException {
         openSettings();
 
         moveTo(inFold(".title"));
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, this::isFoldTipShowing);
-        moveTo(required("settings-checks-hint"));
+        moveTo(required("settings-summary-test"));
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> !isFoldTipShowing());
 
         assertThat(isFoldTipShowing()).isFalse();

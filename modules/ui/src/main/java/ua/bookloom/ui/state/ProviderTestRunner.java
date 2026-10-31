@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -25,11 +26,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.StageOutcome;
-import ua.bookloom.api.llm.StageStatus;
-import ua.bookloom.api.llm.VerificationExchange;
+import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.ErrorWords;
@@ -58,8 +57,8 @@ public final class ProviderTestRunner {
     private final Messages messages;
     private final ExecutorService executor;
     private final ReadOnlyObjectProperty<Optional<TestSubject>> subject;
-    private final ModelSpeedRecorder speeds;
-    private final StructuredAnswers structured;
+    private final InferenceFindings keeper;
+    private final TestProgress progress;
     private final ReadOnlyBooleanWrapper checking = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper checkRefusal = new ReadOnlyStringWrapper("");
     private final ReadOnlyObjectWrapper<@Nullable ProviderTest> running = new ReadOnlyObjectWrapper<>();
@@ -91,6 +90,7 @@ public final class ProviderTestRunner {
      * @param speeds where a speed measured by a passing inference test of a saved provider is kept
      * @param structured where whether the model answered in the structured form is kept for the session
      * @param messages the catalogue a refusal shown in place is worded from
+     * @param clock where the test card reads when a request was sent and how long it has been open
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
@@ -100,15 +100,16 @@ public final class ProviderTestRunner {
             final ActivityTracker activities,
             final ModelSpeedRecorder speeds,
             final StructuredAnswers structured,
-            final Messages messages) {
+            final Messages messages,
+            final Clock clock) {
+        this.progress = new TestProgress(clock);
         this.messages = Objects.requireNonNull(messages, "messages");
         this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.subject = Objects.requireNonNull(subject, "subject");
         this.activities = Objects.requireNonNull(activities, "activities");
-        this.speeds = Objects.requireNonNull(speeds, "speeds");
-        this.structured = Objects.requireNonNull(structured, "structured");
+        this.keeper = new InferenceFindings(speeds, structured);
         this.inferenceBlocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
         for (final ProviderTest test : ProviderTest.values()) {
             availability.put(
@@ -180,6 +181,21 @@ public final class ProviderTestRunner {
     }
 
     /**
+     * What the running test has sent and which of its stages have ended, for the test card.
+     *
+     * @return the live state of the test; never null
+     */
+    public TestProgress progress() {
+        return progress;
+    }
+
+    /** Stops the running test, as the test card's Stop does; nothing it found is kept. FX thread only. */
+    public void stop() {
+        log.info("provider test {} stopped from its card", running.get());
+        invalidate("stopped from the test card");
+    }
+
+    /**
      * The findings of the last test: the stages it covers, in stage order, once there is a report.
      *
      * @return a read-only list, empty before any report, after a provider or model change and while a test runs
@@ -216,6 +232,7 @@ public final class ProviderTestRunner {
                 test,
                 target.config().id());
         stages.clear();
+        progress.clear();
         lastReport.set(null);
         checkRefusal.set("");
         checkEpoch++;
@@ -270,6 +287,7 @@ public final class ProviderTestRunner {
         checking.set(false);
         checkRefusal.set("");
         stages.clear();
+        progress.clear();
         if (somethingShown) {
             log.debug("provider test state invalidated, now epoch {}: {}", checkEpoch, reason);
         } else {
@@ -292,16 +310,18 @@ public final class ProviderTestRunner {
                 test,
                 target.config().id(),
                 Thread.currentThread().getName());
-        final Result<VerificationReport> result = verifyGuarded(test, target);
+        final Result<VerificationReport> result =
+                verifyGuarded(test, target, progress.listener(epoch, () -> checkEpoch));
         Platform.runLater(() -> publish(test, target, epoch, result));
     }
 
-    private Result<VerificationReport> verifyGuarded(final ProviderTest test, final TestSubject target) {
+    private Result<VerificationReport> verifyGuarded(
+            final ProviderTest test, final TestSubject target, final VerificationListener listener) {
         try {
             // The connection test is about the server alone; the others ask about the model whenever one is chosen.
             final String chosen =
                     test == ProviderTest.CONNECTION ? "" : target.model().strip();
-            return verifier.verify(target.config(), chosen, test.policy());
+            return verifier.verify(target.config(), chosen, test.policy(), listener);
         } catch (Throwable thrown) {
             log.error("the verifier threw instead of returning a result", thrown);
             return Result.err(internalError(thrown));
@@ -364,35 +384,11 @@ public final class ProviderTestRunner {
         chips.forEach(TestChips::log);
         stages.setAll(chips);
         lastReport.set(report);
-        keepSpeed(test, target, chips);
+        keeper.keep(test, target, chips);
         if (chips.stream().allMatch(TestChips::isPass)) {
             log.info("provider test {} passed", test);
         } else {
             log.info("provider test {} did not pass", test);
-        }
-    }
-
-    // Only a saved provider has a row to keep a speed on, and only the inference test measures one.
-    private void keepSpeed(final ProviderTest test, final TestSubject target, final List<StageChip> chips) {
-        final String model = target.model().strip();
-        final Optional<StageChip> inference = chips.stream()
-                .filter(chip -> chip.stage() == VerificationStage.INFERENCE && chip.status() == StageStatus.PASSED)
-                .findFirst();
-        final boolean keep = test == ProviderTest.INFERENCE && target.stored() && !model.isEmpty();
-        log.debug(
-                "speed of {} kept {}: needs the inference test {}, a saved provider as saved {}, a model {}, a pass {}",
-                target.config().id(),
-                keep && inference.isPresent(),
-                test == ProviderTest.INFERENCE,
-                target.stored(),
-                !model.isEmpty(),
-                inference.isPresent());
-        if (keep && inference.isPresent() && inference.get().elapsed() != null) {
-            speeds.record(target.config().id(), model, inference.get().elapsed(), MeasuredFrom.TEST);
-        }
-        final VerificationExchange exchange = inference.map(StageChip::exchange).orElse(null);
-        if (keep && exchange != null) {
-            structured.record(target.config().id(), model, exchange.structured());
         }
     }
 }

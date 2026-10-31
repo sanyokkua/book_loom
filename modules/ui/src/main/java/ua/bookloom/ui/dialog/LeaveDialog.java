@@ -32,6 +32,9 @@ public final class LeaveDialog {
     static final String UNSAVED_KEEP_ID = "unsaved-keep";
     static final String UNSAVED_DISCARD_ID = "unsaved-discard";
     static final String UNSAVED_SAVE_ID = "unsaved-save";
+    static final String TEST_CLOSE_CARD_ID = "test-close-card";
+    static final String TEST_CLOSE_STOP_ID = "test-close-stop";
+    static final String TEST_CLOSE_KEEP_ID = "test-close-keep";
 
     private final ModalHost modalHost;
     private final Messages messages;
@@ -89,6 +92,41 @@ public final class LeaveDialog {
                     log.debug("stopping the work and leaving");
                     stopAndLeave.run();
                 });
+    }
+
+    /**
+     * Asks before the provider test card is closed while its test runs: stop it and close, or close and let it finish,
+     * its result then shown beside its button. The question takes the card's place, so either answer leaves it closed.
+     * FX thread only.
+     *
+     * @param test the running test, already worded
+     * @param stop what stops the test
+     * @param keepRunning what lets the test run on
+     */
+    public void askCloseTest(final String test, final Runnable stop, final Runnable keepRunning) {
+        Objects.requireNonNull(test, "test");
+        Objects.requireNonNull(stop, "stop");
+        Objects.requireNonNull(keepRunning, "keepRunning");
+        log.debug("asking before closing the card of {}, which still runs", test);
+        final FormCard card = card(
+                TEST_CLOSE_CARD_ID,
+                messages.get(MessageKey.DIALOG_TEST_CLOSE_TITLE),
+                messages.get(MessageKey.DIALOG_TEST_CLOSE_TEXT, test));
+        answer(
+                card,
+                TEST_CLOSE_KEEP_ID,
+                MessageKey.DIALOG_TEST_CLOSE_KEEP,
+                MessageKey.DIALOG_TEST_CLOSE_KEEP_TIP,
+                ButtonBar.ButtonData.OTHER,
+                keepRunning);
+        answer(
+                card,
+                TEST_CLOSE_STOP_ID,
+                MessageKey.DIALOG_TEST_CLOSE_STOP,
+                MessageKey.DIALOG_TEST_CLOSE_STOP_TIP,
+                ButtonBar.ButtonData.OK_DONE,
+                stop);
+        card.show();
     }
 
     /**
@@ -199,7 +237,7 @@ public final class LeaveDialog {
             final ButtonBar.ButtonData data,
             final Runnable then) {
         return card.button(id, messages.get(caption), tip, data, "btn-secondary", () -> {
-            log.debug("unsaved changes answered with {}", id);
+            log.debug("leave question answered with {}", id);
             then.run();
         });
     }

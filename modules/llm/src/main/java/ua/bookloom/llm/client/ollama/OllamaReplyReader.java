@@ -128,6 +128,7 @@ final class OllamaReplyReader {
                 last.evalDuration(),
                 last.promptEvalDuration(),
                 last.promptEvalCachedCount(),
+                last.loadDuration(),
                 null);
     }
 
@@ -190,6 +191,7 @@ final class OllamaReplyReader {
     private static @Nullable TokenUsage usage(OllamaChatResponse decoded) {
         final Long evalDuration = decoded.evalDuration();
         final Long promptEvalDuration = decoded.promptEvalDuration();
+        final Long loadDuration = decoded.loadDuration();
         if (decoded.promptEvalCount() == null
                 && decoded.evalCount() == null
                 && evalDuration == null
@@ -198,16 +200,18 @@ final class OllamaReplyReader {
             return null;
         }
         log.debug(
-                "Ollama usage promptTokens={} cachedPromptTokens={} completionTokens={}",
+                "Ollama usage promptTokens={} cachedPromptTokens={} completionTokens={} loadNanos={}",
                 decoded.promptEvalCount(),
                 decoded.promptEvalCachedCount(),
-                decoded.evalCount());
+                decoded.evalCount(),
+                loadDuration);
         return new TokenUsage(
                 decoded.promptEvalCount(),
                 decoded.evalCount(),
                 evalDuration == null ? null : Duration.ofNanos(evalDuration),
                 promptEvalDuration == null ? null : Duration.ofNanos(promptEvalDuration),
-                decoded.promptEvalCachedCount());
+                decoded.promptEvalCachedCount(),
+                loadDuration == null ? null : Duration.ofNanos(loadDuration));
     }
 
     private void logModelMismatch(String requestedModel, @Nullable String answeredModel) {

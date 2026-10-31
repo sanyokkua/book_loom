@@ -68,7 +68,7 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
                         + "top_k/min_p: ignored\nAnswer cap: max_tokens");
     }
 
-    // The dialog names the stage and lists one figure per check; a recognised engine runs two checks, so two lines.
+    // The dialog names the stage and words one row per check; a recognised engine runs two checks, so two rows.
     @Test
     void advancedDialog_recognisedEngine_listsTwoVerdicts() throws TimeoutException {
         openSettings();
@@ -78,15 +78,17 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> ((Labeled) required("test-card").lookup(".dialog-title")).getText()))
                 .isEqualTo("Advanced features (optional, uses the model)");
-        assertThat(shown("test-metric-schema")).isEqualTo("honoured");
-        assertThat(shown("test-metric-thinking")).isEqualTo("works with think");
-        assertThat(ThemeTestSupport.onFx(() -> required("test-metrics").lookup("#test-metric-samplers")))
+        assertThat(textsUnder(required("test-check-schema")))
+                .contains("Structured answers", "The answer was exactly the fixed shape.", "honoured");
+        assertThat(textsUnder(required("test-check-thinking")))
+                .contains("Turning reasoning off", "The think switch worked.", "honoured");
+        assertThat(ThemeTestSupport.onFx(() -> required("test-checks").lookup("#test-check-samplers")))
                 .isNull();
-        assertThat(ThemeTestSupport.onFx(() -> required("test-metrics").lookup("#test-metric-cap")))
+        assertThat(ThemeTestSupport.onFx(() -> required("test-checks").lookup("#test-check-cap")))
                 .isNull();
     }
 
-    // A generic server's four checks appear as four figures, a missing cap field in words.
+    // A generic server's four checks appear as four worded rows, a missing cap field as ignored.
     @Test
     void advancedDialog_genericServer_listsFourVerdicts() throws TimeoutException {
         openSettings();
@@ -94,10 +96,14 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> ((Hyperlink) required("check-details-ADVANCED")).fire());
 
-        assertThat(shown("test-metric-schema")).isEqualTo("refused");
-        assertThat(shown("test-metric-thinking")).isEqualTo("no switch works");
-        assertThat(shown("test-metric-samplers")).isEqualTo("honoured");
-        assertThat(shown("test-metric-cap")).isEqualTo("no field limits it");
+        assertThat(textsUnder(required("test-check-schema")))
+                .contains("The server answered with an error for this field.", "refused");
+        assertThat(textsUnder(required("test-check-thinking")))
+                .contains("Reasoning still came back: no switch turned it off.", "ignored");
+        assertThat(textsUnder(required("test-check-samplers")))
+                .contains("Both answers were the same, so top_k was applied.", "honoured");
+        assertThat(textsUnder(required("test-check-cap")))
+                .contains("The answer ran past the cap with every field tried.", "ignored");
     }
 
     // The request line is the route the engine was actually reached on, LM Studio's own chat route here.

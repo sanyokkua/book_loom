@@ -16,6 +16,8 @@ import org.jspecify.annotations.Nullable;
  * @param promptEvalDuration nullable time spent evaluating the prompt in nanoseconds, because providers may omit it
  * @param promptEvalCachedCount nullable count of prompt tokens the server served from its prompt cache; on MLX
  *     runners {@code prompt_eval_count} already includes them while {@code prompt_eval_duration} covers only the rest
+ * @param loadDuration nullable time in nanoseconds the server spent loading the model before it answered, because
+ *     providers may omit it
  * @param error nullable; the failure a provider reports in place of a reply, which a stream may send after it began
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -28,6 +30,7 @@ public record OllamaChatResponse(
         @JsonProperty("eval_duration") @Nullable Long evalDuration,
         @JsonProperty("prompt_eval_duration") @Nullable Long promptEvalDuration,
         @JsonProperty("prompt_eval_cached_count") @Nullable Integer promptEvalCachedCount,
+        @JsonProperty("load_duration") @Nullable Long loadDuration,
         @JsonProperty("error") @Nullable String error) {
 
     /**

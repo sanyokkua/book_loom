@@ -872,7 +872,10 @@ provider dialog. Built: under the address the detected-engine line with **Detect
 detection with no answer, "The server does not answer, so the engine was not detected again."), the **Treat this server
 as…** row (hidden for an app that cannot translate a book), the one-time inline offer of Ollama's own connection with
 **Use it** and **Keep as is**, and a fourth check row, **Test advanced features**, which reads "Advanced features
-(optional, uses the model)" until it runs and then one verdict line per check (`07_SETTINGS.md#providers-tab`).
+(optional, uses the model)" until it runs and then one verdict line per check (`07_SETTINGS.md#providers-tab`). The
+inference and advanced rows have a second button under the first, **Test with details**
+(`#settings-test-inference-details`, `#settings-test-advanced-details`), which runs the test and opens
+`#dialog-test-provider` at once; the first button runs it quietly.
 Also built: the engine help — the address hint `http://127.0.0.1:9931/v1` for llama-server, the Unsloth key hint and
 tools line under the address, LM Studio's "has no model" sentence on a failed id check, the one-time line under the
 model entry when an `@variant` was removed, and a notice at Start when LM Studio will load the model with its own
@@ -882,13 +885,23 @@ beside cloud models in the model list. No consent dialog or acknowledgement box.
 
 ### dialog-test-provider {#dialog-test-provider}
 
-**Planned (S2).** Test connection / models / inference: a verdict banner first ("The model replied correctly.
-Translation can start."); the request line (method and full URL, Copy as curl with the key hidden); three columns —
-**Body** (request JSON) \| **Status / Time / First token / Speed / Tokens / Structured** \| **Response** (JSON), each
-pane scrolling inside its column so the banner never overlaps; footer: switch between the tests · Close. The request
-line is the route the engine was actually reached on. The Advanced features dialog has no request line; its middle
-column lists one verdict per check it ran. Built
-today the Providers tab shows the three tests' measured values inline.
+**Built.** Test connection / models / inference / advanced features: a verdict banner first ("The model replied
+correctly. Translation can start."); the request line (method and full URL, Copy as curl with the key hidden and the
+body exactly as sent); three columns — **Body** (request JSON, indented) \| **Status / Time / Model load (Ollama) /
+First token / Speed / Tokens / Structured** \| **Response** (indented when it is JSON, else as it came), each pane
+scrolling inside its column so the banner never overlaps; footer: switch between the tests · **Stop** (while a test
+runs) · Close. The request line is the route the engine was actually reached on.
+
+States: *not run* ("Not tested yet."); *waiting* — opened by **Test with details** (or the summary card's Test), the
+request line and the body show as soon as the request is sent, the Response column reads "Waiting for the model" and
+Time counts up (`#test-metric-time`); *finished* — the reply, the verdict and the figures replace the wait, and the
+dialog stays open until Close. A stage that has ended while a later one still runs already shows its result. Close or
+Escape during a run asks `#test-close-card` ("Close while the test is running?": **Stop and close** · **Close and keep
+running**). The quiet Test buttons never open this dialog, and no model test opens the progress dialog.
+
+The Advanced features dialog starts with what the test is for (`#test-advanced-intro`), then `#test-checks`: one row
+per check (`#test-check-<token>`) with Asked, Came back and Verdict, and one line per call ("Call 1: 1.2 s · 34.0
+tok/s"); the Body and Response columns list every call under "<check>, call <n>".
 
 ### dialog-provider-binding {#dialog-provider-binding}
 

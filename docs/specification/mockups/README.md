@@ -716,15 +716,22 @@ Six tabs: **Providers · Models · Generation · Appearance · Automation · Sto
 | **Privacy line** (under the summary card) | "Your book stays private when you use a local model." — for a host outside this computer "… the text you translate is sent to {host}."; for LM Studio "LM Studio keeps request text in its own server log unless you turn that off in LM Studio." No consent dialog or box | `ProviderPrivacyLines` |
 | **Cloud label** (model list) | a neutral "cloud" chip beside an Ollama cloud model (mockup: `gpt-oss:120b-cloud · cloud`); every model stays listed | `ModelChoiceCell`, `ModelListing.isCloud` |
 | **Test advanced features** (fourth check) | "Advanced features (optional, uses the model)" until it runs, then one verdict line per check; refused while a translation is translating, like Test inference | `ProviderTest.ADVANCED`, `EngineWords.verdictLines` |
+| **Test with details** (inference and advanced rows) | a second button under Test inference and Test advanced features: runs the test and opens the test dialog at once; the first button runs it quietly, its result beside the button. No model test opens the progress dialog | `ProviderChecks.buttons`, `ActivityKind.hasOwnCard` |
 
 #### Dialog · Test connection / models / inference (S2)
 - A verdict banner first ("The model replied correctly. Translation can start.").
 - The request line (method and full URL, Copy as curl with the key hidden).
-- Three columns: **Body** (request JSON) \| **Status / Time / First token / Speed / Tokens / Structured** \|
-  **Response** (JSON). Each pane scrolls inside its column, so the banner never overlaps.
+- Three columns: **Body** (request JSON, indented) \| **Status / Time / Model load (Ollama) / First token / Speed /
+  Tokens / Structured** \| **Response** (indented when it is JSON). Each pane scrolls inside its column, so the banner
+  never overlaps. Copy takes the indented text; Copy as curl the body exactly as sent.
+- **Waiting** (mockup: Test with details on the inference row): the request line and the body as soon as the request is
+  sent, "Waiting for the model" in the Response column and a Time that counts up; the reply and the figures replace
+  them when they arrive, and the dialog stays open until Close.
 - The request line is the route the engine was actually reached on (LM Studio: `/api/v0/chat/completions`). The
-  Advanced features dialog has no request line; its middle column lists one verdict per check.
-- Footer: switch between the tests · Close. Copy feedback ("Copied as curl — the key is hidden.", "Copied.")
+  Advanced features dialog opens with what the test is for, then one row per check (Asked · Came back · Verdict, and
+  one line per call: "Call 1: 1.2 s · 34.0 tok/s"); its Body and Response list every call under "<check>, call <n>".
+- Footer: switch between the tests · **Stop** while a test runs · Close (during a run it asks: Stop and close · Close
+  and keep running). Copy feedback ("Copied as curl — the key is hidden.", "Copied.")
   stays in the dialog's footer; the earlier toast is superseded. The Server row reads "—" because the probe does not
   report the server's name.
 

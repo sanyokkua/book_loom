@@ -6,7 +6,9 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -102,6 +104,7 @@ public final class UiTestInjector {
         private final ReplacementQuestions replacements = new ReplacementQuestions();
         private @Nullable ExecutorService backgroundExecutor;
         private boolean gated;
+        private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         private SettingsRepository settings = new MemorySettings();
         private FileRevealer revealer = new RecordingFileRevealer();
         private @Nullable ProjectActions projectActions;
@@ -111,6 +114,12 @@ public final class UiTestInjector {
 
         private Builder(final Locale locale) {
             this.locale = locale;
+        }
+
+        /** What the graph's {@link Clock} is; by default one standing at {@link #NOW}. */
+        public Builder clock(final Clock value) {
+            clock = Objects.requireNonNull(value, "clock");
+            return this;
         }
 
         /** What the graph's {@link ProviderConfigs} is. */
@@ -363,7 +372,7 @@ public final class UiTestInjector {
             protected void configure() {
                 install(launch.module(locale));
                 UiTestBindings.bindExecutors(binder(), backgroundExecutor);
-                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, NOW);
+                UiTestBindings.bindStores(binder(), configs, settings, modelSettings, clock);
                 bind(EnvironmentVariables.class).toInstance(name -> environment.contains(name));
                 bind(ProviderVerifier.class).toInstance(verifier);
                 bind(ModelCatalog.class).toInstance(catalog);

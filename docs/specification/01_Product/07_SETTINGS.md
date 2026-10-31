@@ -42,7 +42,19 @@ The tab is a list | form split that stays side by side at every width. The detai
 — ready · Answers in about 1 second · 7 models available", with Test and Change model), and a **Connection details**
 fold around the unchanged GoText-style form. The fold opens by itself when there is a problem, for a new provider, or
 with Show technical details. Test results are in plain words with a **Details** link to the test dialog (request line,
-body, status, time, first token, speed, response).
+body, status, time, model load, first token, speed, response).
+
+The two tests that use the model, **Test inference** and **Test advanced features**, each have two buttons: the quiet
+one runs the test and leaves its result sentence beside the button, and **Test with details** runs it and opens the test
+dialog at once (the summary card's Test is the detailed one). Neither opens the generic progress dialog; the test still
+counts as model work (one at a time, the title bar's chip, refused while a translation is translating) and keeps the
+navigation locked while it runs. In the dialog the request line and the body appear as soon as the request is sent;
+the Response column reads "Waiting for the model" and the Time figure counts up until the reply comes, then the verdict,
+the reply and the figures fill in. While the test runs the dialog offers **Stop**; Close (or Escape) then asks "Close
+while the test is running?" with **Stop and close** and **Close and keep running** (the result then shows beside the
+button). JSON bodies and replies are shown indented (Jackson's own pretty printer, in `:llm`; any other text is shown
+as it came); Copy takes the indented text and **Copy as curl** the body exactly as it was sent. Ollama's reported model
+load time is its own figure, **Model load**, so a slow first call is explained.
 
 | Setting                    | Type         | Default                  | Validation                                                    | Requirement             |
 |----------------------------|--------------|--------------------------|-----------------------------------------------------------------|-------------------------|
@@ -77,7 +89,12 @@ requests with invented text and lists one verdict per check it ran: a recognised
 turning reasoning off), a generic server or OpenRouter four ("Structured answers: honoured", "Turning reasoning off:
 works with reasoning_effort", "top_k/min_p: ignored", "Answer cap: max_tokens"). The verdicts are kept on the model.
 Like Test inference it is refused while a translation is translating and runs while the run is paused. The test
-dialog's request line is the route the engine was actually reached on (LM Studio's `/api/v0/chat/completions`).
+dialog's request line is the route the engine was actually reached on (LM Studio's `/api/v0/chat/completions`). Its
+dialog opens with one paragraph on what the test is for and that it costs a few short model calls, then one row per
+check it ran: what was asked ("Sent a request that asks for a JSON answer in a fixed shape."), what came back ("The
+answer was exactly the fixed shape.") and the verdict (honoured, ignored or refused), with one line per call under it
+("Call 1: 1.2 s · 34.0 tok/s", or the status of a call the server answered with an error). The Body and Response
+columns list every call, retries included, each under a heading such as "Structured answers, call 2", as it is sent.
 
 | Setting                    | Type         | Default                  | Validation                                                    | Requirement             |
 |----------------------------|--------------|--------------------------|-----------------------------------------------------------------|-------------------------|

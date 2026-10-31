@@ -96,6 +96,17 @@ public interface ProviderClient {
     }
 
     /**
+     * The JSON body {@link #checkChat} puts on the wire, for the Settings test card; the check's shaping and its
+     * thinking switch included.
+     *
+     * @param offSwitch the thinking switch sent in place of the engine's, or null for the engine's own
+     * @return the serialized body, or an empty string when this client cannot show one
+     */
+    default String checkRequestBody(String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
+        return forChecks().requestBody(modelId, request);
+    }
+
+    /**
      * Whether this client checks a model id against the server's own list before a chat call, because its server
      * would answer an id it does not have with another model.
      *

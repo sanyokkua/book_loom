@@ -7,6 +7,7 @@ import java.util.Optional;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.Bindings;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
@@ -32,14 +33,15 @@ import ua.bookloom.ui.state.TestDetails;
 import ua.bookloom.ui.state.TestSubject;
 
 /**
- * The checks of the open provider as a grid: a button, the sentence the last run found and a Details link for
- * each. They run against the values in the form, saved or not, and change nothing; they are off while the form holds
+ * The checks of the open provider as a grid: a button (two for the model tests, the second opening the test card at
+ * once), the sentence the last run found and a Details link for each. They run against the values in the form, saved or not, and change nothing; they are off while the form holds
  * something the rules refuse.
  */
 @Slf4j
 final class ProviderChecks {
 
     private static final double GRID_GAP = 10;
+    private static final double BUTTON_GAP = 4;
 
     private final SettingsViewModel viewModel;
     private final Messages messages;
@@ -115,7 +117,7 @@ final class ProviderChecks {
         details.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, details, MessageKey.SETTINGS_CHECK_DETAILS_TIP);
         details.setOnAction(event -> open(stage));
-        grid.add(testButton(buttonId, test, text), 0, row);
+        grid.add(buttons(buttonId, test, text), 0, row);
         grid.add(cell, 1, row);
         grid.add(details, 2, row);
     }
@@ -178,6 +180,29 @@ final class ProviderChecks {
         return !refusal.isEmpty() || blocker == null
                 ? refusal
                 : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
+    }
+
+    // The model tests have two ways in: the quiet one leaves its line beside the button, "Test with details" opens the
+    // card at once, so the request shows while the model works.
+    private Node buttons(final String id, final ProviderTest test, final MessageKey text) {
+        final Button quiet = testButton(id, test, text);
+        if (!test.needsModel()) {
+            return quiet;
+        }
+        final Button detailed = new Button(messages.get(MessageKey.SETTINGS_TEST_WITH_DETAILS));
+        detailed.setId(id + "-details");
+        detailed.getStyleClass().add("btn-secondary");
+        detailed.setMinWidth(Region.USE_PREF_SIZE);
+        detailed.setMaxWidth(Double.MAX_VALUE);
+        Tips.install(messages, detailed, MessageKey.SETTINGS_TEST_WITH_DETAILS_TIP);
+        detailed.disableProperty().bind(Bindings.not(viewModel.tests().available(test)));
+        detailed.setOnAction(event -> {
+            log.debug("{} with details pressed", test);
+            if (viewModel.tests().run(test)) {
+                dialog.open(test.lastStage());
+            }
+        });
+        return new VBox(BUTTON_GAP, quiet, detailed);
     }
 
     private Button testButton(final String id, final ProviderTest test, final MessageKey text) {

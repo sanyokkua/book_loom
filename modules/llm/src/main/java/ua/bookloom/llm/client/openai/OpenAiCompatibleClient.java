@@ -11,9 +11,7 @@ import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ModelFacts;
@@ -115,7 +113,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         this.requestMapper = new OpenAiRequestMapper(
                 config,
                 mapper,
-                (modelId, failure) -> unexpectedError("serialize chat request", modelId, failure),
+                (modelId, failure) -> OpenAiFailures.unexpected(config, "serialize chat request", modelId, failure),
                 shaping);
     }
 
@@ -148,8 +146,23 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return checker.sendCheck(
                     Objects.requireNonNull(checked.data(), "checked").sentId(), request);
         } catch (Throwable failure) {
-            return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("check", modelId, failure)));
+            return ProviderCallResult.withoutRetryAfter(
+                    Result.err(OpenAiFailures.unexpected(config, "check", modelId, failure)));
         }
+    }
+
+    @Override
+    public String checkRequestBody(String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(request, "request");
+        log.debug(
+                "OpenAI-compatible check body asked provider={} model={} offSwitch={}",
+                config.id(),
+                modelId,
+                offSwitch == null ? "engine" : offSwitch.wireName());
+        return new OpenAiCompatibleClient(
+                        config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck, factsReader)
+                .requestBody(modelId, request);
     }
 
     private ProviderCallResult<CheckReply> sendCheck(String modelId, ChatRequest request) {
@@ -187,7 +200,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             logOutcome("probe", null, result.error());
             return new ProviderCallResult<>(result.map(ignored -> true), call.retryAfter());
         } catch (Throwable failure) {
-            return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("probe", null, failure)));
+            return ProviderCallResult.withoutRetryAfter(
+                    Result.err(OpenAiFailures.unexpected(config, "probe", null, failure)));
         }
     }
 
@@ -238,7 +252,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                     Objects.requireNonNull(checked.data(), "checked").sentId();
             return chatWithParsedFormat(sentId, shaping.proved(sentId, request));
         } catch (Throwable failure) {
-            return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
+            return ProviderCallResult.withoutRetryAfter(
+                    Result.err(OpenAiFailures.unexpected(config, "chat", modelId, failure)));
         }
     }
 
@@ -367,26 +382,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
         return ProviderCallResult.fromHttpReply(HttpErrorMapper.map(reply, config, purpose, modelId), reply);
-    }
-
-    private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {
-        log.error(
-                "Unexpected OpenAI-compatible client failure operation={} host={} modelPresent={} failureType={}",
-                operation,
-                config.baseUrl().getHost(),
-                modelId != null,
-                failure == null ? "none" : failure.getClass().getSimpleName());
-        return AppError.of(
-                ErrorCode.internal,
-                "OpenAI-compatible request failed",
-                "The OpenAI-compatible provider could not complete the request.",
-                details(modelId),
-                failure);
-    }
-
-    private @Nullable String details(@Nullable String modelId) {
-        final SafeDetails endpoint = SafeDetails.empty().withEndpoint(config.baseUrl());
-        return (modelId == null ? endpoint : endpoint.withModelName(modelId)).render();
     }
 
     private void logOutcome(String operation, @Nullable String modelId, @Nullable AppError error) {

@@ -13,9 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProbeVerdicts;
@@ -25,6 +23,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
@@ -50,6 +49,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final AdvancedStage advanced;
     private final ModelsStage models;
     private final ProbeShaping shaping;
+    private final PrettyJson pretty;
 
     /**
      * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, the engine
@@ -76,8 +76,9 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         this.shaping = Objects.requireNonNull(shaping, "shaping");
         this.engineStage = new EngineStage(engines);
         this.models = new ModelsStage(calls);
-        this.advanced =
-                new AdvancedStage(calls, mapper, Objects.requireNonNull(settings, "settings"), retryPolicy.clock());
+        this.pretty = new PrettyJson(mapper);
+        this.advanced = new AdvancedStage(
+                calls, mapper, Objects.requireNonNull(settings, "settings"), retryPolicy.clock(), nanoTime, pretty);
     }
 
     @Override
@@ -85,9 +86,9 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         Objects.requireNonNull(selection, "selection");
         Objects.requireNonNull(policy, "policy");
         final Optional<ProviderConfig> configured = providerConfigs.find(selection.providerId());
-        logStart(selection, policy, configured);
+        VerificationReports.logStart(selection, policy, configured);
         if (configured.isEmpty()) {
-            return unknownProvider(selection, policy);
+            return VerificationReports.unknownProvider(selection, policy);
         }
         return verifyConfigured(selection, policy, configured.orElseThrow());
     }
@@ -114,7 +115,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         log.info(
                 "Provider connection check finished provider={} stage={}",
                 providerId,
-                stageSummary(connection.outcome()));
+                VerificationReports.stageSummary(connection.outcome()));
         return Result.ok(new VerificationReport(List.of(connection.outcome()), connection.engine()));
     }
 
@@ -140,15 +141,23 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     @Override
     public Result<VerificationReport> verify(ProviderConfig draft, String modelId, VerificationPolicy policy) {
+        return verify(draft, modelId, policy, VerificationListener.NONE);
+    }
+
+    @Override
+    public Result<VerificationReport> verify(
+            ProviderConfig draft, String modelId, VerificationPolicy policy, VerificationListener listener) {
         Objects.requireNonNull(draft, "draft");
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(policy, "policy");
+        Objects.requireNonNull(listener, "listener");
         log.info(
-                "Draft provider verification started provider={} kind={} model={} policy={}",
+                "Draft provider verification started provider={} kind={} model={} policy={} heard={}",
                 draft.id(),
                 draft.kind(),
                 modelId,
-                policy);
+                policy,
+                !VerificationListener.NONE.equals(listener));
         final ProviderConfigRules.Check check = ProviderConfigRules.check(draft);
         if (!check.isValid()) {
             final AppError refusal = check.errors().get(0);
@@ -160,12 +169,25 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 policy,
                 draft,
                 clients.createUncached(draft),
-                detectsEngine(draft, policy, true));
+                new Run(detectsEngine(draft, policy, true), listener));
     }
+
+    /**
+     * How one verification runs beyond its stages.
+     *
+     * @param detect whether the connection stage asks which engine answers
+     * @param listener hears each request before it is sent and each stage as it ends
+     */
+    private record Run(boolean detect, VerificationListener listener) {}
 
     private Result<VerificationReport> verifyConfigured(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config) {
-        return runStages(selection, policy, config, clients.create(config), detectsEngine(config, policy, false));
+        return runStages(
+                selection,
+                policy,
+                config,
+                clients.create(config),
+                new Run(detectsEngine(config, policy, false), VerificationListener.NONE));
     }
 
     // Only the person's Test asks which engine answers: the window's three Test buttons check a description
@@ -193,32 +215,35 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
             VerificationPolicy policy,
             ProviderConfig config,
             ProviderClient client,
-            boolean detect) {
+            Run run) {
         final List<StageOutcome> stages = new ArrayList<>(3);
-        if (policy == VerificationPolicy.HEALTH_AND_MODELS && isStillLoading(client, config)) {
-            stages.add(StageOutcomes.failed(VerificationStage.CONNECTION, loading(config, selection.modelId())));
-            return completed(selection, policy, stages, null);
+        if (policy == VerificationPolicy.HEALTH_AND_MODELS && VerificationReports.isStillLoading(client, config)) {
+            stages.add(StageOutcomes.failed(
+                    VerificationStage.CONNECTION, VerificationReports.loading(config, selection.modelId())));
+            return VerificationReports.completed(selection, policy, stages, null);
         }
-        final EngineStage.Checked connection = connectionStage(client, config, detect);
-        stages.add(connection.outcome());
+        final EngineStage.Checked connection = connectionStage(client, config, run.detect());
+        VerificationReports.finished(stages, connection.outcome(), run.listener());
         if (connection.outcome().status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
-            return completed(selection, policy, stages, connection.engine());
+            return VerificationReports.completed(selection, policy, stages, connection.engine());
         }
         final ProviderConfig detected = detectedConfig(config, connection.engine());
         final ProviderClient asDetected = detected.equals(config) ? client : clients.createUncached(detected);
         final StageOutcome models = modelsStage(asDetected, detected, selection.modelId());
-        stages.add(models);
+        VerificationReports.finished(stages, models, run.listener());
         if (models.status() == StageStatus.FAILED
                 || policy == VerificationPolicy.CONNECTION_AND_MODELS
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
-            return completed(selection, policy, stages, connection.engine());
+            return VerificationReports.completed(selection, policy, stages, connection.engine());
         }
-        final StageOutcome inference = inferenceStage(asDetected.forChecks(), detected, selection.modelId());
-        stages.add(inference);
+        final StageOutcome inference =
+                inferenceStage(asDetected.forChecks(), detected, selection.modelId(), run.listener());
+        VerificationReports.finished(stages, inference, run.listener());
         if (policy == VerificationPolicy.ADVANCED && inference.status() != StageStatus.FAILED) {
-            stages.add(advancedStage(detected, selection.modelId()));
+            VerificationReports.finished(
+                    stages, advancedStage(detected, selection.modelId(), run.listener()), run.listener());
         }
-        return completed(selection, policy, stages, connection.engine());
+        return VerificationReports.completed(selection, policy, stages, connection.engine());
     }
 
     // The models, inference and advanced stages are shaped by the engine this Test just found (an LM Studio id check,
@@ -235,40 +260,16 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return detected;
     }
 
-    private StageOutcome advancedStage(ProviderConfig config, String modelId) {
+    private StageOutcome advancedStage(ProviderConfig config, String modelId, VerificationListener listener) {
         final ProviderClient client = clients.createUncached(config);
         final long start = nanoTime.getAsLong();
-        final StageOutcome outcome = advanced.run(client, config, modelId).withElapsed(since(start));
+        final AdvancedStage.Ran ran =
+                advanced.run(client, config, modelId, new RequestAnnouncer(listener, config, client, modelId, pretty));
+        final StageOutcome outcome = ran.outcome().withElapsed(since(start));
         return StageOutcomes.withExchange(
                 outcome,
-                VerificationExchanges.advanced(config, outcome, client.chatUrl().orElse(null)));
-    }
-
-    // A llama-server answers 503 on every route while it loads; its health route is the one that says when it is done.
-    private static boolean isStillLoading(ProviderClient client, ProviderConfig config) {
-        final boolean loading = client.isLoadingModel();
-        if (loading) {
-            log.debug("Provider health says the model is still loading provider={}", config.id());
-        } else {
-            log.info(
-                    "Provider health no longer says loading provider={} host={}",
-                    config.id(),
-                    config.baseUrl().getHost());
-        }
-        return loading;
-    }
-
-    private static AppError loading(ProviderConfig config, String modelId) {
-        return AppError.of(
-                ErrorCode.modelUnavailable,
-                "Provider is still loading the model",
-                "The server is loading the model and will answer when it is ready.",
-                SafeDetails.empty()
-                        .withReason(FailureReason.MODEL_LOADING)
-                        .withEndpoint(config.baseUrl())
-                        .withModelName(modelId)
-                        .render(),
-                null);
+                VerificationExchanges.advanced(
+                        config, outcome, ran.calls(), client.chatUrl().orElse(null)));
     }
 
     private EngineStage.Checked connectionStage(ProviderClient client, ProviderConfig config, boolean detect) {
@@ -288,20 +289,28 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return StageOutcomes.withExchange(outcome, VerificationExchanges.models(config, outcome, probe.ids()));
     }
 
-    private StageOutcome inferenceStage(ProviderClient client, ProviderConfig config, String modelId) {
+    private StageOutcome inferenceStage(
+            ProviderClient client, ProviderConfig config, String modelId, VerificationListener listener) {
         final long start = nanoTime.getAsLong();
-        final InferenceProbe probe = inference.run(client, config.id(), modelId, shaping.forModel(config, modelId));
+        final InferenceProbe probe = inference.run(
+                client,
+                config.id(),
+                modelId,
+                shaping.forModel(config, modelId),
+                new RequestAnnouncer(listener, config, client, modelId, pretty));
         final StageOutcome outcome = probe.outcome().withElapsed(since(start));
         final ProbeVerdicts.Outcome schema = probe.schema();
         if (schema != null) {
             advanced.keepSchema(config.id(), modelId, schema);
         }
+        final String body = client.requestBody(modelId, probe.sent());
+        final String reply = probe.response() == null ? "" : probe.response().content();
         return StageOutcomes.withExchange(
                 outcome,
                 VerificationExchanges.inference(
                         config,
                         probe,
-                        client.requestBody(modelId, probe.sent()),
+                        new VerificationExchanges.Bodies(body, pretty.of(body), reply, pretty.of(reply)),
                         client.chatUrl().orElse(null)));
     }
 
@@ -331,53 +340,5 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
 
     private static <T> AppError error(Result<T> result) {
         return RetriedCalls.error(result);
-    }
-
-    private Result<VerificationReport> unknownProvider(ModelSelection selection, VerificationPolicy policy) {
-        final AppError error =
-                AppError.of(ErrorCode.validation, "Unknown provider", "The selected provider is not registered.");
-        log.warn("Provider verification refused unknown provider={} code={}", selection.providerId(), error.code());
-        log.info(
-                "Provider verification finished provider={} model={} policy={} error={} stages=[]",
-                selection.providerId(),
-                selection.modelId(),
-                policy,
-                error.code());
-        return Result.err(error);
-    }
-
-    private void logStart(ModelSelection selection, VerificationPolicy policy, Optional<ProviderConfig> config) {
-        final String kind = config.map(value -> value.kind().name()).orElse("unknown");
-        final String host = config.map(value -> value.baseUrl().getHost()).orElse("unknown");
-        log.info(
-                "Provider verification started provider={} kind={} host={} model={} policy={}",
-                selection.providerId(),
-                kind,
-                host,
-                selection.modelId(),
-                policy);
-    }
-
-    private Result<VerificationReport> completed(
-            ModelSelection selection,
-            VerificationPolicy policy,
-            List<StageOutcome> outcomes,
-            @Nullable EngineDetection engine) {
-        final VerificationReport report = new VerificationReport(outcomes, engine);
-        log.info(
-                "Provider verification finished provider={} model={} policy={} engine={} stages={}",
-                selection.providerId(),
-                selection.modelId(),
-                policy,
-                engine == null ? "none" : engine.engine(),
-                outcomes.stream().map(ProviderVerifierImpl::stageSummary).toList());
-        return Result.ok(report);
-    }
-
-    private static String stageSummary(StageOutcome outcome) {
-        final String error =
-                outcome.error() == null ? "" : " code=" + outcome.error().code();
-        final String note = outcome.note() == null ? "" : " note=" + outcome.note();
-        return outcome.stage() + ":" + outcome.status() + error + note;
     }
 }

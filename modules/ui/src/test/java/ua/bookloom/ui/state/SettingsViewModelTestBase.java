@@ -125,7 +125,8 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
                 settings,
                 EnglishMessages.create(),
                 new ModelSpeedRecorder(modelSettings, speeds, executor),
-                structured));
+                structured,
+                java.time.Clock.systemUTC()));
         awaitProvidersLoaded();
         form(built);
         return built;

@@ -52,7 +52,8 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
                 activities,
                 new ModelSpeedRecorder(modelSettings, speeds, executor),
                 new StructuredAnswers(),
-                new Messages(() -> Locale.ENGLISH)));
+                new Messages(() -> Locale.ENGLISH),
+                java.time.Clock.systemUTC()));
     }
 
     private void setModel(final String text) {

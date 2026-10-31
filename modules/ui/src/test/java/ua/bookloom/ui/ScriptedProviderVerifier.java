@@ -12,12 +12,16 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.AdvancedCheck;
 import ua.bookloom.api.llm.EngineDetection;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.llm.VerificationExchange;
+import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.llm.VerificationStage;
 
 /**
  * A hand-written {@link ProviderVerifier} that answers with what the test scripted (a result, or a thrown exception),
@@ -31,6 +35,11 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     /** One check of a description that is not saved: the description, the model asked about and the depth. */
     public record DraftCall(ProviderConfig config, String modelId, VerificationPolicy policy) {}
 
+    /** One request the verifier tells its listener of before it answers, as the real one does before each call. */
+    public record Announced(
+            VerificationStage stage, @Nullable AdvancedCheck check, VerificationExchange request) {}
+
+    private final List<Announced> announcements = new CopyOnWriteArrayList<>();
     private volatile @Nullable Result<VerificationReport> answer;
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
@@ -137,6 +146,31 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         calls.incrementAndGet();
         entered.countDown();
         return answer(held);
+    }
+
+    /** From now on tells a listening check of {@code heard}, in order, before it holds or answers. */
+    public void announce(final Announced... heard) {
+        announcements.clear();
+        announcements.addAll(List.of(heard));
+    }
+
+    /**
+     * Tells the listener of every scripted request, then answers as the unheard form does, then tells it of each stage
+     * of the answer, the order the real verifier keeps.
+     */
+    @Override
+    public Result<VerificationReport> verify(
+            final ProviderConfig draft,
+            final String modelId,
+            final VerificationPolicy policy,
+            final VerificationListener listener) {
+        announcements.forEach(heard -> listener.requestSent(heard.stage(), heard.check(), heard.request()));
+        final Result<VerificationReport> result = verify(draft, modelId, policy);
+        final VerificationReport report = result.data();
+        if (report != null) {
+            report.stages().forEach(listener::stageFinished);
+        }
+        return result;
     }
 
     private Result<VerificationReport> answer() {
