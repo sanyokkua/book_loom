@@ -713,7 +713,7 @@ conventions, the likely marks and the narrator.
   - **Docs:** `docs/adr/ADR-0042-auto-source-language.md` (one line), `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md` (glossary shape), `00_Foundation/02_GLOSSARY.md` (book map, lemma entry, origin, target state, likely value).
   - **Done when:** tests green; `scripts/test-focused.sh --full-module` green for `:api`, `:persistence`, `:pipeline`, `:ui`.
 
-- [ ] 7.3 Group the forms of a name into one lemma entry in the scan, and decide a form that fits two names by the clause around each mention. This is the heart of the acceptance test: the scan must stop making a new name from every ending. → :pipeline, :persistence
+- [x] 7.3 Group the forms of a name into one lemma entry in the scan, and decide a form that fits two names by the clause around each mention. This is the heart of the acceptance test: the scan must stop making a new name from every ending. → :pipeline, :persistence
   - **Satisfies:** "Group the inflected forms of a name into one lemma entry" (glossary), "Resolve a form that fits two names by the clause around each mention" (glossary), "Propose names by a deterministic scan when the glossary is empty" (glossary), "Compare glossary terms by one key" (glossary), "Give the model only the terms that occur in the chunk" (glossary; a lemma or any attested form occurs), "Propose new names at the end of each body unit" (translation-pipeline; the unit-end scan groups forms under one base form)
   - **Depends on:** 7.2
   - **Excludes:** target forms (7.4); gender evidence from past tense (7.4)
@@ -726,7 +726,7 @@ conventions, the likely marks and the narrator.
   - **Log:** DEBUG groups merged, mentions decided by clause, mentions left unsure (counts only); the names pass's INFO line comes in 7.7.
   - **Done when:** tests green; acceptance method 1 green.
 
-- [ ] 7.4 Generate a target name's case forms and vocative from the target language's own table, read past-tense verbs after a name as gender evidence, and find the narrator's gender from the source in Prepare. A pinned target must accept every correct form, and gender must come from evidence the code can check. → :pipeline
+- [x] 7.4 Generate a target name's case forms and vocative from the target language's own table, read past-tense verbs after a name as gender evidence, and find the narrator's gender from the source in Prepare. A pinned target must accept every correct form, and gender must come from evidence the code can check. → :pipeline
   - **Satisfies:** "Generate the forms of a target from the target language's name table" (glossary), "Read past-tense verbs after a name as gender evidence" (glossary), "Suggest a character's gender from a short list of first names" (glossary), "Read the narrator's gender from the source in Prepare" (book-brief), "Suggest the narrator from the source and ask once at Start translation" (book-brief), "Ask who narrates once at Start translation" (book-brief)
   - **Depends on:** 7.3
   - **Read:** design.md D3, D4, D5; pipeline: `glossary/PronounGender` (`Evidence`), `glossary/GivenNames`, `run/NarratorStage`, `glossary/PronounReader`, `qa/UkrainianGenderCheck`; language files `uk.properties` (`nameParadigms` with its vocative row, `nameAlternations`), `ru.properties` (`pastFemale`, `pastMale`, `pastMaleIrregular`, `shortAdjFemale`, `shortAdjMale`); `ua/bookloom/pipeline/glossary/given-names-{en,ru,uk}.txt`
