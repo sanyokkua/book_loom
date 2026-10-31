@@ -20,6 +20,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -110,15 +111,21 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     @Override
+    public Result<AcceptReport> acceptSuggested(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        return guarded("acceptSuggested", projectId, () -> acceptValid(projectId));
+    }
+
+    @Override
     public Result<GlossaryEntry> add(final GlossaryEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        return guarded("add", entry.projectId(), () -> addEntry(entry));
+        return guarded("add", entry.projectId(), () -> addEntry(cleaned(entry)));
     }
 
     @Override
     public Result<GlossaryEntry> update(final GlossaryEntry entry) {
         Objects.requireNonNull(entry, "entry");
-        return guarded("update", entry.projectId(), () -> updateEntry(entry));
+        return guarded("update", entry.projectId(), () -> updateEntry(cleaned(entry)));
     }
 
     @Override
@@ -188,6 +195,32 @@ public final class GlossaryServiceImpl implements GlossaryService {
         return Optional.ofNullable(projects.find(projectId).data())
                 .flatMap(project -> project.map(Project::brief))
                 .orElse(null);
+    }
+
+    private Result<AcceptReport> acceptValid(final String projectId) {
+        final BookBrief brief = briefOf(projectId);
+        final String target = brief == null ? null : brief.targetLanguage();
+        if (brief == null || target == null) {
+            log.warn("Accept suggested project={} refused: no target language is chosen", projectId);
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "No target language",
+                    "Choose the target language before accepting the suggestions."));
+        }
+        final Document document = openProjects.get(projectId);
+        final String analysis = document == null ? brief.sourceLanguage() : languageOf(brief, document);
+        return new SuggestionAcceptance(glossary, this::recordTermChange).accept(projectId, brief, target, analysis);
+    }
+
+    // A typed or edited target is stored without the stress marks its language asks to remove; a target left blank by
+    // that is no target, so a locked entry is then refused like one typed empty.
+    private GlossaryEntry cleaned(final GlossaryEntry entry) {
+        final String target = entry.target();
+        final String clean = TargetText.clean(target, TargetText.targetLanguageOf(projects, entry.projectId()));
+        if (Objects.equals(clean, target) || clean == null) {
+            return entry;
+        }
+        return entry.isSuggested() && !clean.isBlank() ? entry.withSuggestedTarget(clean) : entry.withTarget(clean);
     }
 
     private Result<GlossaryEntry> addEntry(final GlossaryEntry entry) {
@@ -311,7 +344,8 @@ public final class GlossaryServiceImpl implements GlossaryService {
     private GlossaryRowsImport rowsImport(final String projectId) {
         final Document document = openProjects.get(projectId);
         final String language = document == null ? null : languageOf(briefOf(projectId), document);
-        return new GlossaryRowsImport(glossary, segments, deferrals, language);
+        return new GlossaryRowsImport(
+                glossary, segments, deferrals, language, TargetText.targetLanguageOf(projects, projectId));
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {

@@ -413,6 +413,8 @@ making them glossary entries. Four prompt-facing parts:
   the suggested renderings. The counts are vocabulary only (memory grows with the book's vocabulary, not its length), a stop
   leaves no count for an undecided segment, and a run that continues over stored decisions replays them first. The
   learned rendering is shown in the Recurring terms card with its support and reaches every prompt that shows the block.
+  Every rendering stored for a recurring term — the person's, a CSV row's, a reading's or a learned one — loses its
+  stress marks where the target's language file asks for that (`#glossary-target-suggestions`).
   Three rules keep it from flapping or from learning a function word (15e.13): a rendering once established is **kept**
   while its score stays at least 0.4 and at least three quarters of the best unrelated rival's (`retained`; the first
   decision wins, so a term the model renders two ways keeps the one it was shown first instead of losing it when the
@@ -1571,6 +1573,28 @@ speaking name is locked only when the target's language file says `namesInflect=
 Spanish, Portuguese); for Ukrainian, Russian, Polish, Czech, Croatian, Slovak, Slovenian and any other target, names
 inflect, so the rendering stays an unlocked suggestion held by the name checks. The rule is a pure function
 (`LockRule`) that the names pass applies.
+
+**Stress marks.** Where the target's language file sets `stripStressMarks=true` (Ukrainian, Russian), every target that
+comes in — a suggestion of this call, a CSV row, a typed edit, a learned rendering — is stored without its stress marks
+(`StressMarks`: decompose, drop the combining acute and grave, recompose, so `й` and `ї` keep theirs; a spacing acute
+only after a Cyrillic vowel; a soft hyphen): `Зо́тов` is stored `Зотов`.
+
+**Accept all (`GlossaryService.acceptSuggested`, design D3/D4).** The Names & style button and the command line's
+`--review-names` read every suggested entry that has a target — an entry with none, a pinned one and a locked one are
+never touched — and check it against the target language's rules (`TargetValidator`): a letter of `forbiddenLetters`
+(`letter not in the target alphabet`); a Latin letter in a target of another script unless the term is an identifier or
+kept as written; a stress mark; no capital at all for a capitalised name (`capitalisation differs`; a translated common
+word in lower case such as `місто` and the later part of a hyphenated name such as `Бейкер-стріт` pass); a different
+number of words for a name, a hyphenated word counting as its parts on both sides (`different number of words`;
+`Бейкер-стріт` for `Baker Street` passes); and the other alternative of a convention the Brief stores (`conventions=`
+in the language file; `hard g is spelled ґ, the book uses г`), the file's default being the unmarked spelling. A
+review flag keeps a row out too: a name's target that ends like an oblique form (the `nonNominativeEndings` check above)
+or a vocative (`-ю` in Ukrainian, an ending of the file's vocative rows that no nominative row ends in) reads `not the
+dictionary form`. A row that passes is accepted as the person's: locked when `LockRule` locks it (an identifier, a kept
+original, a checked verified name where names do not inflect), pinned otherwise, so `Гейла` and `Гейлу` in a draft are
+forms of a pinned `Гейл`; every other row stays suggested and is listed with its reasons. For an accepted target the same
+check reads a candidate spelling through the forms the target's name table generates (`NameForms.forms`), the
+alternatives of a convention folded, so `Алєксєю` is a form of a pinned `Алєксєй` and `Олексій` is a respelling.
 
 **SYSTEM**
 

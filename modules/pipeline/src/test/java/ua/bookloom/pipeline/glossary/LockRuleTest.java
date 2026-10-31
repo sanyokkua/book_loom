@@ -2,9 +2,11 @@ package ua.bookloom.pipeline.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.pipeline.glossary.LockRule.Basis;
+import ua.bookloom.pipeline.glossary.LockRule.Decision;
 
 /**
  * Which suggestions are locked (15i.N6, 15j.J1): an identifier or a kept original (a name, or a brand, under Keep
@@ -51,5 +53,21 @@ class LockRuleTest {
         final Basis basis = new Basis(keepOriginal, verifiedName, speaking, checked);
 
         assertThat(LockRule.locks(term, rendering, basis, namesInflect)).isEqualTo(expected);
+    }
+
+    // IF an accepted name were locked where names inflect, THEN a placeholder would hide it and its endings be lost.
+    @Test
+    void accept_inflectingTarget_isPinned() {
+        final Basis verified = new Basis(false, true, false, true);
+
+        assertThat(LockRule.decide("Hale", "Гейл", verified, true)).isEqualTo(Decision.PINNED);
+        assertThat(LockRule.decide("Venn", "Venn", verified, false)).isEqualTo(Decision.LOCKED);
+    }
+
+    @Test
+    void accept_identifier_isLocked() {
+        final Basis nothingKnown = new Basis(false, false, false, false);
+
+        assertThat(LockRule.decide("ZX-81", "ZX-81", nothingKnown, true)).isEqualTo(Decision.LOCKED);
     }
 }

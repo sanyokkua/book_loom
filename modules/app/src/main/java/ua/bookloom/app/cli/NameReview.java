@@ -2,7 +2,6 @@ package ua.bookloom.app.cli;
 
 import com.google.inject.Inject;
 import java.io.PrintStream;
-import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
@@ -17,8 +17,9 @@ import ua.bookloom.api.project.GlossaryEntry;
 
 /**
  * The Names &amp; style screen's names work done before a headless run: the frequency scan, Review with model (its
- * verdicts and suggested targets), then Accept all — every suggested target confirmed as the person's, so the run
- * applies it exactly. A failed step is reported and the run goes on with the glossary as it then stands: names help a
+ * verdicts and suggested targets), then the validated Accept all — every suggested target that passes the target
+ * language's checks is pinned, or locked where it never inflects, and the rest stay suggestions, counted as rejected.
+ * A failed step is reported and the run goes on with the glossary as it then stands: names help a
  * translation, they are not needed for one.
  */
 @Slf4j
@@ -33,6 +34,7 @@ final class NameReview {
      * @param updated the terms that took the model's type or gender
      * @param suggested the terms that received a suggested target
      * @param accepted the suggested targets confirmed
+     * @param rejected the suggested targets the checks left out
      * @param error the step that failed, or {@code null} when every step ran
      */
     record Counts(
@@ -41,6 +43,7 @@ final class NameReview {
             int updated,
             int suggested,
             int accepted,
+            int rejected,
             @Nullable String error) {}
 
     private final GlossaryService glossary;
@@ -67,28 +70,36 @@ final class NameReview {
             return failed("review", Objects.requireNonNull(reviewed.error()), added, out);
         }
         final GlossaryReviewReport report = Objects.requireNonNull(reviewed.data());
-        final int accepted = acceptAll(report.entries());
-        final Counts counts = new Counts(added, report.removed(), report.updated(), report.suggested(), accepted, null);
+        final Result<AcceptReport> acceptance = glossary.acceptSuggested(projectId);
+        if (acceptance.isErr()) {
+            return failed("accept", Objects.requireNonNull(acceptance.error()), added, out);
+        }
+        final Counts counts = counts(added, report, Objects.requireNonNull(acceptance.data()));
         log.info("translate command names review finished counts={}", counts);
-        out.println("names: " + added + " found, " + report.removed() + " removed, " + report.updated() + " typed, "
-                + report.suggested() + " suggested, " + accepted + " accepted");
+        print(counts, out);
         return counts;
     }
 
-    private int acceptAll(List<GlossaryEntry> entries) {
-        int accepted = 0;
-        for (final GlossaryEntry entry : entries) {
-            if (entry.isSuggested() && glossary.update(entry.accepted()).isOk()) {
-                accepted++;
-            }
-        }
-        log.debug("translate command accepted suggested targets count={}", accepted);
-        return accepted;
+    private static Counts counts(int added, GlossaryReviewReport report, AcceptReport accepted) {
+        return new Counts(
+                added,
+                report.removed(),
+                report.updated(),
+                report.suggested(),
+                accepted.acceptedCount(),
+                accepted.rejectedCount(),
+                null);
+    }
+
+    private static void print(Counts counts, PrintStream out) {
+        out.println("names: " + counts.scanned() + " found, " + counts.removed() + " removed, " + counts.updated()
+                + " typed, " + counts.suggested() + " suggested, " + counts.accepted() + " accepted, "
+                + counts.rejected() + " rejected");
     }
 
     private static Counts failed(String step, AppError error, int scanned, PrintStream out) {
         log.warn("translate command names {} failed code={}; the run goes on", step, error.code());
         out.println("names: " + step + " failed (" + error.title() + "); translating with the glossary as it is");
-        return new Counts(scanned, 0, 0, 0, 0, step + ": " + error.code());
+        return new Counts(scanned, 0, 0, 0, 0, 0, step + ": " + error.code());
     }
 }

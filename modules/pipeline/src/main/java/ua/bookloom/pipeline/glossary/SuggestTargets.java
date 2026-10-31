@@ -199,7 +199,7 @@ public final class SuggestTargets {
             Map<String, Evidence> evidence,
             @Nullable Script refused,
             @Nullable Script required,
-            RenderingChecks checks,
+            TargetValidator checks,
             ClusterAgreement cluster) {}
 
     private Result<List<Suggestion>> ask(final List<GlossaryEntry> asked, final Setting setting) {
@@ -239,7 +239,7 @@ public final class SuggestTargets {
                 evidenceOf(setting.story(), asked),
                 refusedScript(frame, setting.policy()),
                 requiredScript(frame),
-                new RenderingChecks(frame, setting.policy(), setting.context()),
+                new TargetValidator(frame, setting.policy(), setting.context()),
                 ClusterAgreement.over(clusters, setting.context().held(), asked));
     }
 
@@ -315,10 +315,7 @@ public final class SuggestTargets {
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Glossary suggestion batch {} reply {}", index, content);
-        final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
-        batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
-        final Replies read =
-                SuggestionReplies.read(mapper, content, byKey, run.refused(), run.required(), run.checks()::standing);
+        final Replies read = readReply(content, batch, run);
         log.debug(
                 "Glossary suggestion batch {} answered: size={} suggestions={} refused={}",
                 index,
@@ -326,6 +323,21 @@ public final class SuggestTargets {
                 read.kept().size(),
                 read.refused().size());
         return Result.ok(read);
+    }
+
+    // Each target is stored without the stress marks its language asks to remove before any rule reads it.
+    private Replies readReply(final String content, final List<GlossaryEntry> batch, final Run run) {
+        final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
+        batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
+        final String target = run.setting().frame().targetLanguage();
+        return SuggestionReplies.read(
+                mapper,
+                content,
+                byKey,
+                run.refused(),
+                run.required(),
+                run.checks()::standing,
+                text -> Objects.requireNonNull(TargetText.clean(text, target), "clean"));
     }
 
     private ChatRequest requestFor(

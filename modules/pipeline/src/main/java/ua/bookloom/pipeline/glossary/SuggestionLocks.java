@@ -83,9 +83,9 @@ final class SuggestionLocks {
         return policy == NamePolicy.KEEP_ORIGINAL && isNameLike(entry, context);
     }
 
-    // A kept suggestion has passed the identity rule and, under Transliterate, the letter table.
-    private static LockRule.Basis basisOf(
-            final GlossaryEntry entry, final NamePolicy policy, final TargetContext context) {
+    // A kept suggestion has passed the identity rule and, under Transliterate, the letter table. Accept all reads the
+    // same facts, so a name gets the same state by every path.
+    static LockRule.Basis basisOf(final GlossaryEntry entry, final NamePolicy policy, final TargetContext context) {
         final Reading reading = context.readings().get(entry.id());
         final boolean kept = isKeptAsWritten(entry, policy, context);
         log.debug("Entry {} (type {}) is {}", entry.id(), entry.type(), kept ? "kept as written" : "left to the model");

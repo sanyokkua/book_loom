@@ -211,6 +211,37 @@ public final class NameForms {
         return TargetDeclension.forms(target, gender, language, tableOf(language));
     }
 
+    /**
+     * Whether a word ends in a vocative ending of the language's table that no nominative row or indeclinable ending
+     * also ends in, so it cannot be a dictionary form: {@code -ю} is only ever a vocative in Ukrainian, while {@code -е}
+     * and {@code -о} begin many foreign names ({@code Рене}, {@code Бруно}) and decide nothing.
+     *
+     * @param word the non-null word as written
+     * @param language the target language tag, or null when it is not known
+     * @return {@code true} if such an ending follows at least {@link #MIN_STEM_LETTERS} letters, {@code false}
+     *     otherwise and for a language with no vocative row
+     */
+    static boolean looksVocative(final String word, @Nullable final String language) {
+        Objects.requireNonNull(word, "word");
+        if (language == null) {
+            return false;
+        }
+        final Table table = tableOf(language);
+        final Set<String> nominal = new HashSet<>();
+        for (final Row row : table.rows()) {
+            if (row.kind() == Kind.ENDING) {
+                nominal.add(row.ending());
+            } else if (row.kind() == Kind.INDECLINABLE) {
+                nominal.addAll(row.obliques());
+            }
+        }
+        final String lower = word.toLowerCase(Locale.ROOT);
+        return table.vocatives().stream()
+                .flatMap(row -> row.obliques().stream())
+                .filter(ending -> nominal.stream().noneMatch(ending::endsWith))
+                .anyMatch(ending -> endsWith(lower, ending));
+    }
+
     private record Oblique(int length, Declension declension) {}
 
     private static void read(

@@ -18,6 +18,7 @@ import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
 import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
+import ua.bookloom.pipeline.glossary.TargetText;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /**
@@ -33,6 +34,8 @@ final class LexiconDecisions {
     private final GlossaryRepository glossary;
     // The open book, which says how it writes a term; null when none is open, and then no verdict is changed.
     private final @Nullable BookIndex index;
+    // The project's target language, whose file says whether a rendering's stress marks are removed; null when none.
+    private final @Nullable String targetLanguage;
 
     // A kept term enters with the rendering the reading gave, marked as the model's; a named thing goes to the
     // glossary; a dropped or undecided one is not added.
@@ -88,7 +91,8 @@ final class LexiconDecisions {
 
     // A "name" majority on a word the book writes mostly in lower case is a recurring term, not a name: a common noun
     // read in windows that happen to mention a person or a place (15i.N7). The scans' own bar decides "mostly".
-    private Decision settled(final String term, final Decision decision) {
+    private Decision settled(final String term, final Decision read) {
+        final Decision decision = new Decision(read.verdict(), TargetText.clean(read.rendering(), targetLanguage));
         if (decision.verdict() != Verdict.PROMOTE || index == null) {
             return decision;
         }

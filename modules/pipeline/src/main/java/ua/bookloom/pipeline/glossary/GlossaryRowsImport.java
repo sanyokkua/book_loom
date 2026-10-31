@@ -27,13 +27,16 @@ import ua.bookloom.util.text.GlossaryKeys;
  * @param segments the decided segments a changed target is checked against
  * @param deferrals where a segment a changed target touches is deferred
  * @param languageTag the source language's tag for the name clusters, or null when it is not known
+ * @param targetLanguage the project's target language, whose file says whether a row's stress marks are removed; null
+ *     when none is chosen
  */
 @Slf4j
 record GlossaryRowsImport(
         GlossaryRepository glossary,
         SegmentRepository segments,
         DeferralRepository deferrals,
-        @Nullable String languageTag) {
+        @Nullable String languageTag,
+        @Nullable String targetLanguage) {
 
     GlossaryRowsImport {
         Objects.requireNonNull(glossary, "glossary");
@@ -61,7 +64,8 @@ record GlossaryRowsImport(
         held.forEach(entry -> entry.forms().forEach(form -> byKey.putIfAbsent(GlossaryKeys.of(form), entry)));
         final List<Integer> refused = new ArrayList<>();
         final List<EntryChange> changes = new ArrayList<>();
-        for (final GlossaryCsv.Row row : rows) {
+        for (final GlossaryCsv.Row written : rows) {
+            final GlossaryCsv.Row row = cleaned(written);
             if (row.locked() && (row.target() == null || row.target().isBlank())) {
                 refused.add(row.line());
                 continue;
@@ -76,6 +80,22 @@ record GlossaryRowsImport(
                 .flatMap(stored -> deferChangedTargets(projectId, changes))
                 .flatMap(deferred -> ClusterGender.propagateAll(glossary, projectId, changes, languageTag))
                 .map(shared -> List.copyOf(refused));
+    }
+
+    // A row's target is stored without the stress marks its language asks to remove; one left blank is no target.
+    private GlossaryCsv.Row cleaned(final GlossaryCsv.Row row) {
+        final String clean = TargetText.clean(row.target(), targetLanguage);
+        if (Objects.equals(clean, row.target())) {
+            return row;
+        }
+        log.debug("Glossary rows import line {} target cleaned", row.line());
+        return new GlossaryCsv.Row(
+                row.line(),
+                row.term(),
+                clean == null || clean.isBlank() ? null : clean,
+                row.type(),
+                row.gender(),
+                row.locked());
     }
 
     private static GlossaryEntry added(final String projectId, final GlossaryCsv.Row row) {

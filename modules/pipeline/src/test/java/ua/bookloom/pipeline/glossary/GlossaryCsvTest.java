@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.glossary.GlossaryServiceFixtures.PROJECT;
 
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,11 +22,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.CsvProblem;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -42,11 +47,14 @@ class GlossaryCsvTest {
 
     @BeforeEach
     void setUp() {
-        service = Guice.createInjector(
-                        new DocumentModule(),
-                        new InMemoryPersistenceModule(),
-                        binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
-                .getInstance(GlossaryServiceImpl.class);
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(),
+                new InMemoryPersistenceModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
+        injector.getInstance(ProjectRepository.class)
+                .save(GlossaryServiceFixtures.project(
+                        GlossaryServiceFixtures.withTarget(BookBrief.defaults("en"), "uk")));
+        service = injector.getInstance(GlossaryServiceImpl.class);
     }
 
     @Test
@@ -360,5 +368,31 @@ class GlossaryCsvTest {
 
     private Path write(final String... lines) throws IOException {
         return Files.writeString(dir.resolve("glossary.csv"), String.join("\n", lines) + "\n");
+    }
+
+    @Test
+    void importCsv_lockedAndUnlockedRows_areLockedAndPinnedAsThePersons() throws IOException {
+        final Path file = Files.writeString(
+                dir.resolve("states.csv"),
+                HEADER + "\nHale,Гейл,character,male,true\nVelk,Велк,character,male,false\n");
+
+        service.importCsv(PROJECT, file);
+
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::targetState, GlossaryEntry::targetOrigin)
+                .containsExactlyInAnyOrder(
+                        tuple("Hale", TargetState.LOCKED, Origin.USER), tuple("Velk", TargetState.PINNED, Origin.USER));
+    }
+
+    @Test
+    void importCsv_stressMarkedTarget_isStoredWithoutTheMark() throws IOException {
+        final Path file =
+                Files.writeString(dir.resolve("stress.csv"), HEADER + "\nZotov,Зо\u0301тов,character,male,false\n");
+
+        service.importCsv(PROJECT, file);
+
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::target)
+                .containsExactly("Зотов");
     }
 }

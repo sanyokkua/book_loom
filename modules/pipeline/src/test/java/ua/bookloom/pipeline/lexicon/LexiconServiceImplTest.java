@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -11,15 +12,18 @@ import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
+import ua.bookloom.pipeline.TestProjects;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.project.OpenProjects;
 
@@ -115,6 +119,22 @@ class LexiconServiceImplTest {
         assertThat(edited.isOk()).isTrue();
         assertThat(held().getFirst().chosen()).isEqualTo("пан");
         assertThat(held().getFirst().renderings()).containsExactly(new LexiconEntry.Rendering("господар", 2));
+    }
+
+    @Test
+    void edit_stressMarkedRendering_isStoredWithoutTheMark() {
+        injector.getInstance(ProjectRepository.class)
+                .save(TestProjects.of(
+                        PROJECT,
+                        Path.of("book.txt"),
+                        BookFormat.TXT,
+                        "hash",
+                        BookBrief.defaults("en").withLanguages("en", "uk")));
+        real.record(PROJECT, "master", "господар");
+
+        service.edit(PROJECT, "master", "па\u0301н");
+
+        assertThat(held().getFirst().chosen()).isEqualTo("пан");
     }
 
     @Test

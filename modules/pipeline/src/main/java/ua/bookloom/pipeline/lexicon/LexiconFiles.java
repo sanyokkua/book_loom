@@ -21,6 +21,7 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.glossary.TargetText;
 
 /**
  * Reads and writes the recurring terms as a CSV file (15i.N7). An import adds the terms the lexicon lacks and gives a
@@ -40,6 +41,8 @@ final class LexiconFiles {
 
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
+    // The project's target language, whose file says whether a row's stress marks are removed; null when none.
+    private final @Nullable String targetLanguage;
 
     Result<GlossaryImportReport> importFrom(final String projectId, final Path source) {
         final String text;
@@ -122,7 +125,7 @@ final class LexiconFiles {
             log.debug("Lexicon import refused line {}: the glossary holds the term", row.line());
             return Result.ok(Outcome.REFUSED);
         }
-        final String target = row.target();
+        final String target = TargetText.clean(row.target(), targetLanguage);
         if (held == null) {
             final LexiconEntry added = LexiconEntry.of(projectId, row.term());
             return lexicon.put(target == null ? added : added.withChosen(target))

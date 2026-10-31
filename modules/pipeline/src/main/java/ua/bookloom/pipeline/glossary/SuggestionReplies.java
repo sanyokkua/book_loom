@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,7 +137,14 @@ final class SuggestionReplies {
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
             @Nullable final Script targetScript) {
-        return read(mapper, replyText, batch, sourceScript, targetScript, (_, _) -> Standing.OPEN)
+        return read(
+                        mapper,
+                        replyText,
+                        batch,
+                        sourceScript,
+                        targetScript,
+                        (_, _) -> Standing.OPEN,
+                        UnaryOperator.identity())
                 .kept();
     }
 
@@ -150,6 +158,8 @@ final class SuggestionReplies {
      * @param targetScript the script every letter of a target must belong to; null when it is not known
      * @param standing how a usable rendering stands for its entry: a {@link Standing#VERBATIM} one skips the script
      *     rules, a refusing one is returned in {@link Replies#refused()}
+     * @param cleaner what a target is stored as before any rule reads it (its stress marks removed where the target
+     *     language asks for that)
      * @return the suggestions kept and the renderings refused; both empty when the reply is unreadable
      */
     static Replies read(
@@ -158,7 +168,8 @@ final class SuggestionReplies {
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
             @Nullable final Script targetScript,
-            final BiFunction<GlossaryEntry, String, Standing> standing) {
+            final BiFunction<GlossaryEntry, String, Standing> standing,
+            final UnaryOperator<String> cleaner) {
         final JsonNode suggestions = JsonReplies.tolerant(mapper, replyText)
                 .map(root -> root.path("suggestions"))
                 .orElse(null);
@@ -169,7 +180,8 @@ final class SuggestionReplies {
         final List<Suggestion> kept = new ArrayList<>();
         final List<Refusal> refused = new ArrayList<>();
         for (final JsonNode node : suggestions) {
-            final Optional<Suggestion> read = suggestionOf(node, batch, sourceScript, targetScript, standing, refused);
+            final Optional<Suggestion> read =
+                    suggestionOf(node, batch, new Rules(sourceScript, targetScript, standing, cleaner), refused);
             read.ifPresent(kept::add);
         }
         log.debug(
@@ -180,12 +192,17 @@ final class SuggestionReplies {
         return new Replies(kept, refused);
     }
 
+    /** The rules one reply is read by. */
+    private record Rules(
+            @Nullable Script sourceScript,
+            @Nullable Script targetScript,
+            BiFunction<GlossaryEntry, String, Standing> standing,
+            UnaryOperator<String> cleaner) {}
+
     private static Optional<Suggestion> suggestionOf(
             final JsonNode node,
             final Map<String, GlossaryEntry> batch,
-            @Nullable final Script sourceScript,
-            @Nullable final Script targetScript,
-            final BiFunction<GlossaryEntry, String, Standing> standing,
+            final Rules rules,
             final List<Refusal> refused) {
         final String term = node.path("term").asText("");
         final GlossaryEntry entry = batch.get(GlossaryKeys.of(term));
@@ -193,16 +210,18 @@ final class SuggestionReplies {
             log.debug("Suggestion dropped: not a term of the batch");
             return Optional.empty();
         }
-        final String target = LookAlikes.repaired(node.path("target").asText("").strip());
+        final String target = rules.cleaner()
+                .apply(LookAlikes.repaired(node.path("target").asText("").strip()));
         final String shape = shapeRefusal(target);
-        final Standing stands = shape != null ? Standing.OPEN : standing.apply(entry, target);
+        final Standing stands = shape != null ? Standing.OPEN : rules.standing().apply(entry, target);
         if (stands.isRefusal()) {
             log.debug("Suggestion refused for a retry: {}", stands);
             log.trace("Suggestion refused for term '{}' target '{}': {}", term, target, stands);
             refused.add(new Refusal(entry, target, stands));
             return Optional.empty();
         }
-        final String refusal = stands == Standing.VERBATIM ? shape : refusal(target, sourceScript, targetScript);
+        final String refusal =
+                stands == Standing.VERBATIM ? shape : refusal(target, rules.sourceScript(), rules.targetScript());
         if (refusal != null) {
             log.debug("Suggestion dropped: {}", refusal);
             log.trace("Suggestion dropped for term '{}' target '{}': {}", term, target, refusal);

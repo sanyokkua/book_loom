@@ -41,7 +41,7 @@ class LexiconDecisionsTest {
         desk = ReviewFixtures.markdown(tempDir, String.join("\n\n", Collections.nCopies(4, PARAGRAPH)) + "\n");
         lexicon = Guice.createInjector(new InMemoryPersistenceModule()).getInstance(LexiconRepository.class);
         decisions = new LexiconDecisions(
-                lexicon, desk.glossary(), desk.openProjects().index(desk.projectId()));
+                lexicon, desk.glossary(), desk.openProjects().index(desk.projectId()), "uk");
     }
 
     private static Map<String, Decision> promote(final String term) {

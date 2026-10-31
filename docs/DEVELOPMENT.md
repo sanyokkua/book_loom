@@ -294,7 +294,8 @@ existing destination.
 
 It is the headless proof tool, so it runs a book the way a window run does. `--quality` and `--names` are saved on the
 brief (defaults Balanced and Transliterate; `keep` is Keep original). `--review-names` runs the names scan, Review with
-model and Accept all before translating and prints one `names: …` line. The run pauses on an error and **recovers from
+model and the validated Accept all before translating and prints one `names: …` line ending in the accepted and
+rejected counts (`… 34 accepted, 3 rejected`): a suggestion that fails the target language's checks stays a hint. The run pauses on an error and **recovers from
 an outage by itself** with the window's schedule and probe (below) for up to `--max-outage` (default `12h`; `90m`,
 `1h30m`, `45s` or ISO `PT2H`), printing a line when an outage begins; a pause only a person could end — a wrong key, a
 missing model, a refused request, an outage past the limit — stops the run with `Stopping the run: <reason>`. A run that

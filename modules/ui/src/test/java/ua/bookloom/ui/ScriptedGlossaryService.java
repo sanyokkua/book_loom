@@ -12,6 +12,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -152,6 +153,11 @@ public final class ScriptedGlossaryService implements GlossaryService {
             progress.accept(event);
             event = events.poll();
         }
+    }
+
+    @Override
+    public Result<AcceptReport> acceptSuggested(final String projectId) {
+        return answer("acceptSuggested(" + projectId + ")");
     }
 
     @Override

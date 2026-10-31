@@ -29,6 +29,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.StopWords;
+import ua.bookloom.pipeline.glossary.TargetText;
 import ua.bookloom.pipeline.lexicon.CooccurrenceLearner;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
@@ -54,6 +55,7 @@ final class TermLearning {
 
     private final CooccurrenceLearner learner;
     private final @Nullable String analysisLanguage;
+    private final @Nullable String targetLanguage;
     private final SegmentRepository segments;
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
@@ -76,6 +78,7 @@ final class TermLearning {
             final @Nullable String targetLanguage) {
         Objects.requireNonNull(stores, "stores");
         this.analysisLanguage = analysisLanguage;
+        this.targetLanguage = targetLanguage;
         this.learner = new CooccurrenceLearner(
                 targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage),
                 analysisLanguage,
@@ -203,16 +206,30 @@ final class TermLearning {
 
     // One atomic step against the entry as it is now: a person's edit made on another thread meanwhile is never lost.
     private void suggest(final GlossaryEntry entry, final CooccurrenceLearner.Learned found) {
+        final String spelling = Objects.requireNonNull(TargetText.clean(found.rendering(), targetLanguage), "spelling");
         final Result<Optional<GlossaryEntry>> stored = glossary.update(
                 projectId,
                 entry.term(),
-                current -> lacksSpelling(current) ? current.withSuggestedTarget(found.rendering()) : current);
+                current -> lacksSpelling(current) && !spelling.isBlank()
+                        ? current.withSuggestedTarget(spelling)
+                        : current);
         if (stored.isErr()) {
             log.warn("A learned spelling could not be stored project={}", projectId);
             return;
         }
         log.debug("Learned spelling of a name set project={} support={}", projectId, found.support());
         log.trace("Learned spelling of {} is {}", entry.term(), found.rendering());
+    }
+
+    // A learned rendering is stored without the stress marks its language asks to remove, as every other inflow is.
+    private LexiconEntry.@Nullable Learned cleaned(final LexiconEntry.@Nullable Learned learned) {
+        if (learned == null) {
+            return null;
+        }
+        final String text = TargetText.clean(learned.text(), targetLanguage);
+        return text == null || text.equals(learned.text()) || text.isBlank()
+                ? learned
+                : new LexiconEntry.Learned(text, learned.support(), learned.occurrences());
     }
 
     private static boolean lacksSpelling(final GlossaryEntry entry) {
@@ -290,7 +307,8 @@ final class TermLearning {
         return pairs.stream().anyMatch(pair -> TermMatch.occursIn(term, pair.source()));
     }
 
-    private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned found) {
+    private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned learned) {
+        final LexiconEntry.Learned found = cleaned(learned);
         if (Objects.equals(entry.learned(), found)) {
             return false;
         }

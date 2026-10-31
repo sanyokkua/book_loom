@@ -78,6 +78,7 @@ final class RunReport {
         names.put("typed", counts.updated());
         names.put("suggested", counts.suggested());
         names.put("accepted", counts.accepted());
+        names.put("rejected", counts.rejected());
         names.put("failed", counts.error());
     }
 

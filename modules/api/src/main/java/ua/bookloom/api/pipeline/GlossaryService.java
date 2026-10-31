@@ -76,6 +76,17 @@ public interface GlossaryService {
     Result<EntryChanges<GlossaryEntry>> translate(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
+     * Accepts every suggested target that passes the target language's checks: an inflecting target is pinned, a
+     * target that never inflects (an identifier, a kept original, a checked name where names are not declined) is
+     * locked. A suggestion that fails a check or carries a review flag stays suggested; an entry with no target, a
+     * pinned one and a locked one are never touched.
+     *
+     * @param projectId the non-null project id
+     * @return the accepted entries and the rejected ones with their reasons
+     */
+    Result<AcceptReport> acceptSuggested(String projectId);
+
+    /**
      * Adds a glossary entry.
      *
      * @param entry the non-null entry to add

@@ -88,7 +88,7 @@ class GlossaryServiceChangesTest {
         service.add(open);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(
-                        "{\"suggestions\":[{\"term\":\"Dome\",\"target\":\"Купол\"}]}", FinishReason.STOP)));
+                        "{\"suggestions\":[{\"term\":\"Dome\",\"target\":\"Ку\u0301пол\"}]}", FinishReason.STOP)));
 
         final EntryChanges<GlossaryEntry> changes = Objects.requireNonNull(
                 service.translate(PROJECT, model, events::add).data());
