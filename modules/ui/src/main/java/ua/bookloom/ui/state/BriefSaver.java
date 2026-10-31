@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.UnaryOperator;
@@ -43,6 +44,14 @@ final class BriefSaver {
     }
 
     void enqueue(final String projectId, final BookBrief brief) {
+        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
+        if (brief.targetLanguage() != null && Objects.equals(brief.sourceLanguage(), brief.targetLanguage())) {
+            log.debug(
+                    "the brief of project {} is not saved: source and target are both {}",
+                    projectId,
+                    brief.targetLanguage());
+            return;
+        }
         final Save save = new Save(projectId, brief);
         if (saving.get()) {
             log.debug("a save is in flight; the newest brief waits");

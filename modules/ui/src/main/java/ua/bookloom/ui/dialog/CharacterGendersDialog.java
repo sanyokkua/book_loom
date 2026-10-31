@@ -2,15 +2,18 @@ package ua.bookloom.ui.dialog;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.UnknownGender;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -21,9 +24,10 @@ import ua.bookloom.ui.state.UnknownGenders;
 
 /**
  * The question asked at Start translation when characters the book names often still have no gender, or only a
- * suggested one: it lists them, the two kinds apart, and offers Back (set or confirm the genders in Names &amp; style
- * first) or Start anyway, which Enter chooses, so a run is never held
- * back by it. Once started anyway the question is not asked again for the book in this session. Back, and Escape,
+ * likely or rule one: it lists them in the order given (least confident first) with the offered gender chosen, and
+ * offers Back (set or confirm the genders in Names &amp; style first) or Start anyway, which Enter chooses, so a run is
+ * never held back by it. Start stores the rows the person ticked or changed as the person's own genders; an untouched
+ * row stays a hint. Once started anyway the question is not asked again for the book in this session. Back, and Escape,
  * which the host guarantees for every card, return without starting.
  */
 @Slf4j
@@ -33,6 +37,8 @@ public final class CharacterGendersDialog {
     static final String CARD_ID = "genders-card";
     static final String START_ID = "genders-start";
     static final String BACK_ID = "genders-back";
+
+    private static final double ROW_SPACING = 10;
 
     private final ModalHost modalHost;
     private final Messages messages;
@@ -83,48 +89,49 @@ public final class CharacterGendersDialog {
                 return;
             }
             log.debug("asking about {} characters with unknown gender for project {}", found.size(), projectId);
-            final FormCard card = card(found);
-            wire(card, projectId, start);
+            final List<GenderRow> rows = new ArrayList<>();
+            final FormCard card = card(found, rows);
+            wire(card, projectId, rows, start);
             card.show();
         });
     }
 
-    private FormCard card(final List<UnknownGender> found) {
-        final List<UnknownGender> missing =
-                found.stream().filter(character -> !character.suggested()).toList();
-        final List<UnknownGender> suggested =
-                found.stream().filter(UnknownGender::suggested).toList();
-        final VBox body = new VBox();
-        group(body, missing, MessageKey.DIALOG_GENDERS_TEXT, MessageKey.DIALOG_GENDERS_ROW);
-        group(body, suggested, MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT, MessageKey.DIALOG_GENDERS_SUGGESTED_ROW);
+    private FormCard card(final List<UnknownGender> found, final List<GenderRow> rows) {
+        final boolean anyMissing = found.stream().anyMatch(character -> !character.suggested());
+        final VBox body = new VBox(ROW_SPACING);
+        intro(body, found, false, MessageKey.DIALOG_GENDERS_TEXT);
+        intro(body, found, true, MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT);
+        for (int index = 0; index < found.size(); index++) {
+            final UnknownGender character = found.get(index);
+            final MessageKey key =
+                    character.suggested() ? MessageKey.DIALOG_GENDERS_SUGGESTED_ROW : MessageKey.DIALOG_GENDERS_ROW;
+            final GenderRow row = new GenderRow(
+                    messages, character, messages.get(key, character.term(), character.mentions()), index);
+            rows.add(row);
+            body.getChildren().add(row.node());
+        }
         final FormCard card = new FormCard(
                 modalHost,
                 messages,
                 CARD_ID,
                 ModalCard.Size.WIDE,
-                messages.get(
-                        missing.isEmpty()
-                                ? MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE
-                                : MessageKey.DIALOG_GENDERS_TITLE));
+                messages.get(anyMissing ? MessageKey.DIALOG_GENDERS_TITLE : MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE));
         card.card().setContent(body);
         return card;
     }
 
-    // One intro and the characters under it; a group with no character adds nothing.
-    private void group(
-            final VBox body, final List<UnknownGender> characters, final MessageKey intro, final MessageKey row) {
-        if (characters.isEmpty()) {
-            return;
-        }
-        body.getChildren().add(Wrapped.label(messages.get(intro, characters.size()), "dialog-text"));
-        for (final UnknownGender character : characters) {
-            final Label line = new Label(messages.get(row, character.term(), character.mentions()));
-            line.getStyleClass().add("dialog-text");
-            body.getChildren().add(line);
+    // One intro per kind of character present; the rows themselves follow in the order given.
+    private void intro(
+            final VBox body, final List<UnknownGender> found, final boolean suggested, final MessageKey intro) {
+        final long count = found.stream()
+                .filter(character -> character.suggested() == suggested)
+                .count();
+        if (count > 0) {
+            body.getChildren().add(Wrapped.label(messages.get(intro, count), "dialog-text"));
         }
     }
 
-    private void wire(final FormCard card, final String projectId, final Runnable start) {
+    private void wire(final FormCard card, final String projectId, final List<GenderRow> rows, final Runnable start) {
         card.button(
                 BACK_ID,
                 messages.get(MessageKey.DIALOG_GENDERS_BACK),
@@ -139,9 +146,29 @@ public final class CharacterGendersDialog {
                 ButtonBar.ButtonData.OK_DONE,
                 "btn-primary",
                 () -> {
-                    log.debug("starting with the genders of project {} unknown", projectId);
                     answered.add(projectId);
-                    start.run();
+                    final Map<String, Gender> answers = ticked(rows);
+                    log.debug(
+                            "starting project {} with {} of {} genders confirmed",
+                            projectId,
+                            answers.size(),
+                            rows.size());
+                    if (answers.isEmpty()) {
+                        start.run();
+                    } else {
+                        unknown.answer(projectId, answers, start);
+                    }
                 });
+    }
+
+    // Only a ticked row is the person's answer; an untouched one stays a hint.
+    private static Map<String, Gender> ticked(final List<GenderRow> rows) {
+        final Map<String, Gender> answers = new LinkedHashMap<>();
+        for (final GenderRow row : rows) {
+            if (row.isTicked() && !row.entryId().isEmpty()) {
+                answers.put(row.entryId(), row.chosen());
+            }
+        }
+        return answers;
     }
 }

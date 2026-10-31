@@ -287,6 +287,18 @@ public record BookBrief(
         return keys(apostrophe, quoteStyle, defaultAddress, conventions, fields);
     }
 
+    /**
+     * Returns this brief with the policy keys and the likely marks of another brief, everything else kept; for a
+     * brief rebuilt through the 14-argument constructor, which declares no key.
+     *
+     * @param other the non-null brief whose apostrophe, quotation marks, address, conventions and likely set to take
+     * @return a new brief with those five parts of {@code other}
+     */
+    public BookBrief withKeysOf(final BookBrief other) {
+        Objects.requireNonNull(other, "other");
+        return keys(other.apostrophe, other.quoteStyle, other.defaultAddress, other.conventions, other.likely);
+    }
+
     private BookBrief keys(
             @Nullable final String apostrophe,
             @Nullable final QuoteStyle quoteStyle,

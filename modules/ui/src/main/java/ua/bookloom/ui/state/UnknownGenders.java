@@ -3,18 +3,20 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.UnknownGender;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
  * Finds the characters Start should ask about: those with no gender whom the book names {@value #MIN_MENTIONS} times
  * or more. The glossary is read off the FX thread; the answer is delivered on it. A failed read is "none": the question
- * is a courtesy, and must never stop a run from starting.
+ * is a courtesy, and must never stop a run from starting. The answers of the ticked rows are stored the same way.
  */
 @Slf4j
 @Singleton
@@ -52,6 +54,27 @@ public final class UnknownGenders {
             final List<UnknownGender> found = answer.data() == null ? List.of() : answer.data();
             log.debug("project {} has {} characters to ask about, ok {}", projectId, found.size(), answer.isOk());
             onFx.accept(found);
+        });
+    }
+
+    /**
+     * Stores the genders the person confirmed or changed at Start; they become the person's own. A failure is logged
+     * and the run goes on, because the question must never stop a run from starting.
+     *
+     * @param projectId the stored project
+     * @param answers the gender per glossary entry id; only the ticked rows
+     * @param onFx what runs on the FX thread once the answers are stored, or failed to be
+     */
+    public void answer(final String projectId, final Map<String, Gender> answers, final Runnable onFx) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(answers, "answers");
+        Objects.requireNonNull(onFx, "onFx");
+        log.debug("storing {} gender answers for project {}", answers.size(), projectId);
+        calls.run("gender answers", () -> glossary.answerGenders(projectId, answers), stored -> {
+            if (stored.isErr()) {
+                log.warn("the gender answers of project {} were not stored; the genders stay as they were", projectId);
+            }
+            onFx.run();
         });
     }
 }

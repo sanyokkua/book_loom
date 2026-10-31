@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.BriefField;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -201,9 +202,9 @@ public final class BookBriefViewModel {
      * @param genre the English name of a predefined genre, or free text as typed; blank clears it
      */
     public void setGenre(final String genre) {
-        final String text = blankToNull(genre);
+        final String text = BriefRebuild.blankToNull(genre);
         log.trace("genre is now '{}'", text);
-        change("genre", text == null ? "cleared" : "set", brief -> brief.withGenre(text));
+        change("genre", text == null ? "cleared" : "set", BriefField.GENRE, brief -> brief.withGenre(text));
     }
 
     /**
@@ -212,9 +213,13 @@ public final class BookBriefViewModel {
      * @param voiceEra free text; blank clears it
      */
     public void setVoiceEra(final String voiceEra) {
-        final String text = blankToNull(voiceEra);
+        final String text = BriefRebuild.blankToNull(voiceEra);
         log.trace("voice and era are now '{}'", text);
-        change("voice and era", text == null ? "cleared" : "set", brief -> brief.withVoiceEra(text));
+        change(
+                "voice and era",
+                text == null ? "cleared" : "set",
+                BriefField.VOICE_ERA,
+                brief -> brief.withVoiceEra(text));
     }
 
     /**
@@ -223,9 +228,9 @@ public final class BookBriefViewModel {
      * @param audience free text; blank clears it
      */
     public void setAudience(final String audience) {
-        final String text = blankToNull(audience);
+        final String text = BriefRebuild.blankToNull(audience);
         log.trace("audience is now '{}'", text);
-        change("audience", text == null ? "cleared" : "set", brief -> brief.withAudience(text));
+        change("audience", text == null ? "cleared" : "set", BriefField.AUDIENCE, brief -> brief.withAudience(text));
     }
 
     /**
@@ -238,6 +243,7 @@ public final class BookBriefViewModel {
         change(
                 "register",
                 register.name(),
+                BriefField.REGISTER,
                 brief -> BriefRebuild.of(brief, register, null, null, null, null, null, null));
     }
 
@@ -320,10 +326,7 @@ public final class BookBriefViewModel {
      */
     public void setNarratorPerson(final NarratorPerson person) {
         Objects.requireNonNull(person, "person");
-        change(
-                "narrator person",
-                person.name(),
-                brief -> brief.withNarrator(brief.narrator().withPerson(person)));
+        changeNarrator("narrator person", person.name(), narrator -> narrator.withPerson(person));
     }
 
     /**
@@ -333,10 +336,7 @@ public final class BookBriefViewModel {
      */
     public void setNarratorGender(final Gender gender) {
         Objects.requireNonNull(gender, "gender");
-        change(
-                "narrator gender",
-                gender.name(),
-                brief -> brief.withNarrator(new Narrator(brief.narrator().person(), gender)));
+        changeNarrator("narrator gender", gender.name(), narrator -> new Narrator(narrator.person(), gender));
     }
 
     /**
@@ -346,10 +346,7 @@ public final class BookBriefViewModel {
      */
     public void setFirstPersonNarrator(final Gender gender) {
         Objects.requireNonNull(gender, "gender");
-        change(
-                "first-person narrator",
-                gender.name(),
-                brief -> brief.withNarrator(new Narrator(NarratorPerson.FIRST, gender)));
+        changeNarrator("first-person narrator", gender.name(), narrator -> new Narrator(NarratorPerson.FIRST, gender));
     }
 
     /**
@@ -362,30 +359,33 @@ public final class BookBriefViewModel {
         change("quality dial", dial.name(), brief -> brief.withDial(dial));
     }
 
-    private static @Nullable String blankToNull(final String text) {
-        Objects.requireNonNull(text, "text");
-        return text.isBlank() ? null : text;
+    private void change(final String field, final String value, final UnaryOperator<BookBrief> edit) {
+        change(field, value, null, edit);
     }
 
-    private void change(final String field, final String value, final UnaryOperator<BookBrief> edit) {
+    private void changeNarrator(final String field, final String value, final UnaryOperator<Narrator> edit) {
+        change(field, value, BriefField.NARRATOR, brief -> brief.withNarrator(edit.apply(brief.narrator())));
+    }
+
+    // A field the person edits is no longer a guess: it leaves the likely set whatever the edit made of it.
+    private void change(
+            final String field,
+            final String value,
+            final @Nullable BriefField edited,
+            final UnaryOperator<BookBrief> edit) {
         final OpenedBook book = project.book().get();
         final BookBrief current = project.brief().get();
         if (book == null || current == null) {
             log.debug("{} not changed: no book is open", field);
             return;
         }
-        final BookBrief changed = edit.apply(current);
+        final BookBrief changed = BriefRebuild.confirmed(edit.apply(current), edited);
         log.debug("{} is now {}", field, value);
         if (changed.equals(current)) {
             log.debug("{} was already so; nothing is saved", field);
             return;
         }
         project.replaceBrief(changed);
-        // A same-language pair is shown but never stored, so the project keeps its pair and name until they differ.
-        if (changed.targetLanguage() != null && Objects.equals(changed.sourceLanguage(), changed.targetLanguage())) {
-            log.debug("{} not saved: source and target are both {}", field, changed.targetLanguage());
-            return;
-        }
         saver.enqueue(book.projectId(), changed);
     }
 

@@ -1,10 +1,14 @@
 package ua.bookloom.ui.state;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.BriefField;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
@@ -26,19 +30,35 @@ final class BriefRebuild {
             final @Nullable Integer balance,
             final @Nullable AlsoTranslate alsoTranslate) {
         return new BookBrief(
-                brief.sourceLanguage(),
-                brief.targetLanguage(),
-                brief.genre(),
-                register == null ? brief.register() : register,
-                brief.voiceEra(),
-                brief.audience(),
-                names == null ? brief.names() : names,
-                foreign == null ? brief.foreignPassages() : foreign,
-                footnotes == null ? brief.footnotes() : footnotes,
-                units == null ? brief.units() : units,
-                balance == null ? brief.balance() : balance,
-                alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
-                brief.dial(),
-                brief.narrator());
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        brief.genre(),
+                        register == null ? brief.register() : register,
+                        brief.voiceEra(),
+                        brief.audience(),
+                        names == null ? brief.names() : names,
+                        foreign == null ? brief.foreignPassages() : foreign,
+                        footnotes == null ? brief.footnotes() : footnotes,
+                        units == null ? brief.units() : units,
+                        balance == null ? brief.balance() : balance,
+                        alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
+                        brief.dial(),
+                        brief.narrator())
+                .withKeysOf(brief);
+    }
+
+    // An edited field is the person's now, so it is no longer marked as the model's guess.
+    static BookBrief confirmed(final BookBrief brief, final @Nullable BriefField edited) {
+        if (edited == null || !brief.likely().contains(edited)) {
+            return brief;
+        }
+        final Set<BriefField> remaining = new HashSet<>(brief.likely());
+        remaining.remove(edited);
+        return brief.withLikely(remaining);
+    }
+
+    static @Nullable String blankToNull(final String text) {
+        Objects.requireNonNull(text, "text");
+        return text.isBlank() ? null : text;
     }
 }

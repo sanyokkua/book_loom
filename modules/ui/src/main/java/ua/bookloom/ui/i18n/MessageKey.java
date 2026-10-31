@@ -1423,6 +1423,10 @@ public enum MessageKey {
     BRIEF_EVIDENCE_UNCERTAIN("brief.evidence.uncertain"),
     /** Hover explanation of the chip labelled by {@link #BRIEF_EVIDENCE_UNCERTAIN}. */
     BRIEF_EVIDENCE_UNCERTAIN_TIP("brief.evidence.uncertain.tip"),
+    /** The line under a field that holds only the model's best guess. */
+    BRIEF_EVIDENCE_LIKELY("brief.evidence.likely"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_EVIDENCE_LIKELY}. */
+    BRIEF_EVIDENCE_LIKELY_TIP("brief.evidence.likely.tip"),
     /** Heading of the tone-and-style card. */
     BRIEF_CARD_TONE("brief.card.tone"),
     /** Heading of the translation-policies card. */
@@ -2781,6 +2785,20 @@ public enum MessageKey {
     DIALOG_GENDERS_BACK("dialog.genders.back"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_BACK}. */
     DIALOG_GENDERS_BACK_TIP("dialog.genders.back.tip"),
+    /** Note on a row whose offered gender is the model's likely one. */
+    DIALOG_GENDERS_ROW_LIKELY("dialog.genders.row.likely"),
+    /** Note on a row whose likely gender the model was not sure of. */
+    DIALOG_GENDERS_ROW_LOW_CONFIDENCE("dialog.genders.row.lowConfidence"),
+    /** Note on a row whose offered gender comes from a rule. */
+    DIALOG_GENDERS_ROW_RULE("dialog.genders.row.rule"),
+    /** Note on a row where the rule and the model disagree; arguments: 0 the rule's gender, 1 the model's. */
+    DIALOG_GENDERS_ROW_DISAGREE("dialog.genders.row.disagree"),
+    /** The tick that makes a row's gender the person's. */
+    DIALOG_GENDERS_ROW_CONFIRM("dialog.genders.row.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_ROW_CONFIRM}. */
+    DIALOG_GENDERS_ROW_CONFIRM_TIP("dialog.genders.row.confirm.tip"),
+    /** Hover explanation of a row's gender choices. */
+    DIALOG_GENDERS_ROW_CHOICE_HELP("dialog.genders.row.choice.help"),
     /** Title of the question asked at Start about names whose meaning the book explains or plays on. */
     DIALOG_MEANING_TITLE("dialog.meaning.title"),
     /** Body of that question; argument 0 is the number of names listed. */

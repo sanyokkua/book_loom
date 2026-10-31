@@ -280,7 +280,10 @@ public final class StyleSuggestion {
      */
     public void adoptNarrator(final Narrator narrator) {
         Objects.requireNonNull(narrator, "narrator");
-        change.accept("narrator re-check", brief -> brief.withNarrator(narrator));
+        change.accept(
+                "narrator re-check",
+                brief -> BriefRebuild.confirmed(
+                        brief.withNarrator(narrator), ua.bookloom.api.project.BriefField.NARRATOR));
     }
 
     // A source the person or the file named is never second-guessed: the proposal is held for an Auto source only.
