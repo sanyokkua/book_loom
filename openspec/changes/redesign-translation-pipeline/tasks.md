@@ -698,7 +698,7 @@ conventions, the likely marks and the narrator.
   - **Done when:** the red result is recorded in the task notes.
   - **Notes (red, 2026-10-31):** `scan_inflectedFormOfInventedName_isNotItsOwnEntry` fails: `Expecting ["Мирена"] to contain ["Велемир"]`; `scan_baseNameWithGenitiveOfItsOwnGender_keepsGenderMale` fails: `Expected size: 1 but was: 0`. No model; gender is code evidence only.
 
-- [ ] 7.2 Reshape the stored records: lemma entries with forms, origin and target state, three more term types, the Brief's policy keys, and the seconds per call kind. Every later task in this group reads these shapes, so the change and its mapping from the old shapes land together, with the database reset. → :api, :persistence, :pipeline, :ui
+- [x] 7.2 Reshape the stored records: lemma entries with forms, origin and target state, three more term types, the Brief's policy keys, and the seconds per call kind. Every later task in this group reads these shapes, so the change and its mapping from the old shapes land together, with the database reset. → :api, :persistence, :pipeline, :ui
   - **Satisfies:** "Record where each glossary value came from" (glossary), "Keep a stored lexicon of recurring terms and show it on Names & style" (glossary; the shape), "Keep the per-model overrides, probe verdicts and measured seconds on the model's settings" (local-storage; the seconds), "Keep the application's work across a restart" (local-storage)
   - **Depends on:** 7.1
   - **Excludes:** the rule that sets a state (7.5); scan grouping (7.3)
