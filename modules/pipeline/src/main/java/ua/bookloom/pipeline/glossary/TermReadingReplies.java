@@ -76,7 +76,8 @@ final class TermReadingReplies {
                 term,
                 read,
                 root.path("speaking").asBoolean(false),
-                root.path("brand").asBoolean(false));
+                root.path("brand").asBoolean(false),
+                explanationOf(root, term, windows));
         log.trace("Term reading of {} read as {}", term, reading);
         return reading;
     }
@@ -100,6 +101,21 @@ final class TermReadingReplies {
                 kindOf(node.path("kind").asText("")),
                 claimed,
                 vote);
+    }
+
+    // The window the reply says explains or plays on the name, by its number: only a window the call showed counts, and
+    // 0, a missing field or anything else is none.
+    private static String explanationOf(final JsonNode root, final String term, final List<Window> windows) {
+        final int number = root.path("explainsName").asInt(0);
+        if (number < 1 || number > windows.size()) {
+            if (number != 0) {
+                log.debug(
+                        "Term reading of {}: explaining window {} dropped (shown 1..{})", term, number, windows.size());
+            }
+            return "";
+        }
+        log.debug("Term reading of {}: window {} explains the name", term, number);
+        return windows.get(number - 1).text();
     }
 
     // The marks the prompt puts round the term are no part of the book; "none" is no quote.

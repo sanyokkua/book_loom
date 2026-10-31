@@ -816,6 +816,7 @@ BookLoom handles a refusal the same way for every optional setting:
 |---|---|---|
 | Add to the glossary | + Add | `dialog/AddTermDialog`, `AddRecurringTermDialog` |
 | Who tells the story? | Start, first-person story with an unknown narrator gender (Enter = not stated) | `dialog/NarratorDialog` |
+| Names the book plays on | Start, first of its questions, only for names the names pass marked (the book explains or plays on the meaning) — each name with its meaning, Sound it out (chosen) · Translate it · Sound it out, explain once; Save and start; Back and Escape keep Sound it out and start nothing; once per name, never during a run; `DLG.meanings` | `dialog/MeaningNameDialog` |
 | Characters without a gender | Start; its count equals its rows | `dialog/CharacterGendersDialog` |
 | Stop translating? | Stop — Keep translating · Stop | `ConfirmDialog` |
 | Unsaved changes | Leaving Providers or Models with changes — Keep editing · Discard · Save | new |

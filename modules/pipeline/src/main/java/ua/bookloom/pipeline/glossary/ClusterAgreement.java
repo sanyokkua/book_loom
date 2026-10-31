@@ -118,7 +118,7 @@ final class ClusterAgreement {
                         suggestion.entry().id());
                 log.trace("Cluster agreement: {} → {}", suggestion.target(), target);
             }
-            aligned.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(suggestion.entry(), target));
+            aligned.add(target.equals(suggestion.target()) ? suggestion : suggestion.retargeted(target));
         }
         return withSharedWords(aligned);
     }
@@ -142,7 +142,7 @@ final class ClusterAgreement {
                 log.trace("Shared-word agreement: {} → {}", suggestion.target(), target);
             }
             learnWords(group.get(), entry.term(), target, words);
-            agreed.add(target.equals(suggestion.target()) ? suggestion : new Suggestion(entry, target));
+            agreed.add(target.equals(suggestion.target()) ? suggestion : suggestion.retargeted(target));
         }
         return agreed;
     }

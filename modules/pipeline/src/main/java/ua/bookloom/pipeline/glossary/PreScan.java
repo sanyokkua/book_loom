@@ -342,6 +342,7 @@ public final class PreScan {
                 Origin.LIKELY,
                 false,
                 false,
+                null,
                 null);
     }
 

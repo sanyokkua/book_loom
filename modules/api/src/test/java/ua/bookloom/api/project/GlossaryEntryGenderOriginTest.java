@@ -224,6 +224,7 @@ class GlossaryEntryGenderOriginTest {
                 stated,
                 false,
                 false,
+                null,
                 null);
     }
 }

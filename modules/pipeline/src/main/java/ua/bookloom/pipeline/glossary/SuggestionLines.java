@@ -61,7 +61,7 @@ final class SuggestionLines {
     }
 
     private static String refusedNote(final Refusal refusal) {
-        return "refused: \"" + refusal.rendering() + "\" (" + refusal.why().reason() + "); give another";
+        return "refused: \"" + refusal.rendering() + "\" (" + refusal.why() + "); give another";
     }
 
     private static String genderOf(final GlossaryEntry entry) {

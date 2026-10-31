@@ -93,7 +93,8 @@ class LegacyMappingTest {
                 Origin.BOOK,
                 false,
                 true,
-                "  ");
+                "  ",
+                null);
 
         assertThat(entry.targetOrigin()).isEqualTo(Origin.USER);
         assertThat(entry.placeKind()).isNull();

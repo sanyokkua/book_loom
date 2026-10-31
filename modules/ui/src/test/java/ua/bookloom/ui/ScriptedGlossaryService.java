@@ -2,6 +2,7 @@ package ua.bookloom.ui;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -20,6 +21,7 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 
 /**
  * A hand-written {@link GlossaryService} that records each call and answers with what a test queued, in order; a call
@@ -36,7 +38,9 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
     private final CountDownLatch release = new CountDownLatch(1);
     private final List<String> unknownGenderCalls = new CopyOnWriteArrayList<>();
+    private final List<Map<String, MeaningChoice>> meaningAnswers = new CopyOnWriteArrayList<>();
     private volatile List<UnknownGender> unknownGenders = List.of();
+    private volatile List<GlossaryEntry> meaningQuestions = List.of();
     private volatile boolean holding;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
@@ -158,6 +162,29 @@ public final class ScriptedGlossaryService implements GlossaryService {
     @Override
     public Result<AcceptReport> acceptSuggested(final String projectId) {
         return answer("acceptSuggested(" + projectId + ")");
+    }
+
+    /** Sets the names {@code meaningQuestions} answers with; none until a test says so. */
+    public void willAskMeanings(final List<GlossaryEntry> pending) {
+        meaningQuestions = List.copyOf(pending);
+    }
+
+    // Kept apart from the queued answers, as unknownGenders is, so every Start does not consume a scripted answer.
+    @Override
+    public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
+        return Result.ok(meaningQuestions);
+    }
+
+    /** Every {@code answerMeaning} call's answers, in order. */
+    public List<Map<String, MeaningChoice>> meaningAnswers() {
+        return List.copyOf(meaningAnswers);
+    }
+
+    // Answered at once, so a test of the question needs to script nothing: the answers are what it checks.
+    @Override
+    public Result<List<GlossaryEntry>> answerMeaning(final String projectId, final Map<String, MeaningChoice> answers) {
+        meaningAnswers.add(Map.copyOf(answers));
+        return Result.ok(List.of());
     }
 
     @Override

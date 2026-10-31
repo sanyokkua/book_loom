@@ -2,10 +2,12 @@ package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 
 /**
  * Reads and edits a project's glossary and runs the deterministic and model-assisted scans that propose new terms,
@@ -85,6 +87,27 @@ public interface GlossaryService {
      * @return the accepted entries and the rejected ones with their reasons
      */
     Result<AcceptReport> acceptSuggested(String projectId);
+
+    /**
+     * The names the names pass marked for the once-per-name question about a meaning the book plays on, still
+     * unanswered ({@link MeaningChoice#PENDING}); the question at Start translation lists them.
+     *
+     * @param projectId the non-null project id
+     * @return the entries in glossary order; never null, empty when none waits
+     */
+    Result<List<GlossaryEntry>> meaningQuestions(String projectId);
+
+    /**
+     * Stores the person's answers to the once-per-name question about names whose meaning the book plays on (design
+     * D5). Transcribe and transcribe-and-gloss keep the target; translate drops a suggested target, so the next
+     * suggestion asks for the name by its meaning; {@link MeaningChoice#PENDING}, the question closed unanswered, is
+     * stored as transcribe. No model is called.
+     *
+     * @param projectId the non-null project id
+     * @param answers the non-null answer per entry id; an id the glossary no longer holds is skipped
+     * @return the entries the answers changed, as stored
+     */
+    Result<List<GlossaryEntry>> answerMeaning(String projectId, Map<String, MeaningChoice> answers);
 
     /**
      * Adds a glossary entry.

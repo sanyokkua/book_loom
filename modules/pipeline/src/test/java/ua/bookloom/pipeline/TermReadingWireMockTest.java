@@ -123,7 +123,7 @@ class TermReadingWireMockTest {
             final JsonNode format = body.path("response_format").path("json_schema");
             assertThat(format.path("name").asText()).isEqualTo("term-reading");
             assertThat(fieldNames(format.path("schema").path("properties")))
-                    .containsExactly("windows", "speaking", "brand");
+                    .containsExactly("windows", "speaking", "brand", "explainsName");
             assertThat(fieldNames(format.path("schema")
                             .path("properties")
                             .path("windows")

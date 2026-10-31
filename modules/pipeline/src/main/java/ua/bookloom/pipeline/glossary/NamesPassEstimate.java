@@ -57,8 +57,8 @@ final class NamesPassEstimate {
                 + (dial == QualityDial.MAX ? read.size() : 0);
         final int terms = termCalls(story, dial, language);
         final int renderings = RENDERING_CALLS_PER_BATCH
-                * (Math.ceilDiv(open.size(), SuggestTargets.BATCH_SIZE)
-                        + Math.ceilDiv(terms, SuggestTargets.BATCH_SIZE));
+                * (Math.ceilDiv(open.size(), SuggestTargets.SUGGEST_BATCH)
+                        + Math.ceilDiv(terms, SuggestTargets.SUGGEST_BATCH));
         final int calls = names + terms + renderings;
         final Minutes minutes = NamesPlan.minutesFor(dial, calls);
         log.debug(

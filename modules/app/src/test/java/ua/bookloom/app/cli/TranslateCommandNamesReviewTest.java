@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -29,6 +30,7 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.app.CoreModules;
@@ -164,6 +166,17 @@ class TranslateCommandNamesReviewTest {
         @Override
         public Result<AcceptReport> acceptSuggested(final String projectId) {
             return real.acceptSuggested(projectId);
+        }
+
+        @Override
+        public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
+            return real.meaningQuestions(projectId);
+        }
+
+        @Override
+        public Result<List<GlossaryEntry>> answerMeaning(
+                final String projectId, final Map<String, MeaningChoice> answers) {
+            return real.answerMeaning(projectId, answers);
         }
 
         @Override

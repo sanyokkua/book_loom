@@ -1028,7 +1028,7 @@ Brief's name policy for the dictionary form of each target, keep only suggestion
 them as suggested targets of origin likely after every call has answered; IF a call fails or Stop is pressed, THEN it
 SHALL write nothing.
 
-**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until Accept all or the person accepts it — the draft may inflect it — and the model never undoes the person's choice. Names are sounded out by default for every language pair; the model adapts a name to the target language's own form only when the person chose that policy, and no list of equivalent names is bundled. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply's gender is not written; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
+**Source**: FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`), `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes one spelling per name, following the policy the person chose. It is a call of its own because a small model does one task per call far better than two. A suggestion is only a hint until Accept all or the person accepts it — the draft may inflect it — and the model never undoes the person's choice. Names are sounded out by default for every language pair; the model adapts a name to the target language's own form only when the person chose that policy, and no list of equivalent names is bundled. On gemma4:e4b every place and thing came back "neuter", masculine Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the reply asks for no gender; and the same model wrote a Latin `e` inside `Венс`, which reads right and matches nothing.
 
 #### Scenario: Transliterated names get Cyrillic targets
 
@@ -1100,8 +1100,8 @@ SHALL write nothing.
 - **THEN** each carries its lemma (the nominative), its type, its gender when known, `speaking name` and `brand` when the term reading says so, what
   the glossary already renders of its person (`Arlo Venn → Арло Венн, so Venn → Венн`, for a spelling of a person whose
   full name has a rendering) and up to two sentences of the book that hold it (each cut at 120 characters)
-- **AND** the reply is `{"suggestions":[{"term","target","gender"}]}`, at most 20 items, a target at most 80 characters,
-  `""` meaning no suggestion
+- **AND** the reply is `{"suggestions":[{"term","target","meaning"}]}`, at most 20 items, a target and a meaning at most
+  80 characters each, `""` meaning no suggestion or no note; the reply carries no gender
 
 #### Scenario: The system message states the name policy
 
@@ -1192,7 +1192,7 @@ SHALL write nothing.
 
 - **WHEN** every call has answered
 - **THEN** a suggestion is written into an entry that is neither pinned nor locked and whose target is empty or was suggested, as a suggested target of origin likely,
-  and the reply's gender is not written (a person's gender is the review's)
+  and no gender comes from the suggestion call (a person's gender is the review's)
 - **AND** a target the person typed, imported, accepted or locked is not overwritten, the writes record no deferral, and
   while the calls run the screen shows `Suggesting renderings B/N` with the batch under way
 

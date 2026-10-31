@@ -139,6 +139,11 @@ The system SHALL write each injected entry as one line `base form → target (ty
 - **WHEN** a ru→uk call carries any map line
 - **THEN** it also carries the sentence that names and terms are dictionary forms to decline to fit the sentence, keeping the stem, and never the words `exactly as shown`
 
+#### Scenario: A name the person chose to gloss carries its meaning at its first use
+
+- **WHEN** the person answered "transcribe and gloss at first use" for `Brightwater` (target `Брайтвотер`, meaning note `bright water`), and the window holds the book's first segment that names it
+- **THEN** its line reads `Brightwater → Брайтвотер (place; gloss once: bright water)`, and the line of a window after that first segment carries no gloss
+
 ### Requirement: Choose the writing rules once per book
 
 WHEN a run starts, the system SHALL choose the rule lines of the fixed system part from what the book holds — formatting marks anywhere, a share of dialogue, numbers, a gendered cast in a target whose language file has gendered past forms, a target language that inflects names — and SHALL keep the same lines for every draft, repair and proofread call of the run, each line's wording taken from the target language's file.

@@ -37,6 +37,8 @@ import org.jspecify.annotations.Nullable;
  * @param noGenderEvidence whether the names pass read this person and found no evidence for a gender, so the table
  *     can say "not specified — no evidence in the book" (15i.N5); {@code false} whenever the gender is known
  * @param meaning a note on what the term means, or null
+ * @param meaningChoice how a name whose meaning the book plays on is rendered, or null when the book does not play on
+ *     it (or nobody was asked)
  */
 public record GlossaryEntry(
         String id,
@@ -54,7 +56,8 @@ public record GlossaryEntry(
         @Nullable Origin genderOrigin,
         boolean genderSeedTried,
         boolean noGenderEvidence,
-        @Nullable String meaning) {
+        @Nullable String meaning,
+        @Nullable MeaningChoice meaningChoice) {
 
     /** Validates the parts and normalises the ones that cannot hold together. */
     public GlossaryEntry {
@@ -115,6 +118,7 @@ public record GlossaryEntry(
                 Origin.USER,
                 false,
                 false,
+                null,
                 null);
     }
 
@@ -212,31 +216,10 @@ public record GlossaryEntry(
         return copyTarget(target, locked() ? TargetState.LOCKED : TargetState.PINNED, Origin.USER, genderOrigin);
     }
 
-    /**
-     * This entry with another type; the type's origin and the target's are kept.
-     *
-     * @param changed the non-null type
-     * @return a copy with the type set
-     */
+    /** This entry with another type; the type's origin and the target's are kept. */
     public GlossaryEntry withType(final TermType changed) {
         Objects.requireNonNull(changed, "changed");
-        return new GlossaryEntry(
-                id,
-                projectId,
-                term,
-                forms,
-                lemmaInferred,
-                target,
-                targetState,
-                targetOrigin,
-                changed,
-                placeKind,
-                typeOrigin,
-                gender,
-                genderOrigin,
-                genderSeedTried,
-                noGenderEvidence,
-                meaning);
+        return described(forms, changed, meaning, meaningChoice);
     }
 
     /**
@@ -305,30 +288,19 @@ public record GlossaryEntry(
         return copyGender(gender, null, genderSeedTried, true);
     }
 
-    /**
-     * This entry with the other spellings the book uses for its term.
-     *
-     * @param folded the non-null other spellings of the term
-     * @return a copy holding them as its forms
-     */
+    /** This entry with the other spellings the book uses for its term; never null. */
     public GlossaryEntry withForms(final List<String> folded) {
-        return new GlossaryEntry(
-                id,
-                projectId,
-                term,
-                folded,
-                lemmaInferred,
-                target,
-                targetState,
-                targetOrigin,
-                type,
-                placeKind,
-                typeOrigin,
-                gender,
-                genderOrigin,
-                genderSeedTried,
-                noGenderEvidence,
-                meaning);
+        return described(folded, type, meaning, meaningChoice);
+    }
+
+    /** This entry with a note on what its term means; a null or blank note is none. */
+    public GlossaryEntry withMeaning(@Nullable final String note) {
+        return described(forms, type, note, meaningChoice);
+    }
+
+    /** This entry with how its meaning-bearing name is rendered; null for a name the book does not play on. */
+    public GlossaryEntry withMeaningChoice(@Nullable final MeaningChoice choice) {
+        return described(forms, type, meaning, choice);
     }
 
     /**
@@ -344,6 +316,32 @@ public record GlossaryEntry(
         names.add(term);
         names.addAll(forms);
         return List.copyOf(names);
+    }
+
+    // A copy with what describes the term changed; the target and the gender, and their origins, are kept.
+    private GlossaryEntry described(
+            final List<String> newForms,
+            final TermType newType,
+            @Nullable final String newMeaning,
+            @Nullable final MeaningChoice newChoice) {
+        return new GlossaryEntry(
+                id,
+                projectId,
+                term,
+                newForms,
+                lemmaInferred,
+                target,
+                targetState,
+                targetOrigin,
+                newType,
+                placeKind,
+                typeOrigin,
+                gender,
+                genderOrigin,
+                genderSeedTried,
+                noGenderEvidence,
+                newMeaning,
+                newChoice);
     }
 
     private GlossaryEntry copyTarget(
@@ -386,7 +384,8 @@ public record GlossaryEntry(
                 newGenderOrigin,
                 newSeedTried,
                 newNoEvidence,
-                meaning);
+                meaning,
+                meaningChoice);
     }
 
     private static @Nullable String blankAsNull(@Nullable final String text) {

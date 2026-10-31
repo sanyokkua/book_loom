@@ -14,15 +14,18 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
@@ -114,6 +117,37 @@ class GlossaryServiceAcceptTest {
                         .isErr())
                 .isTrue();
         assertThat(service.entries(PROJECT).data()).isEmpty();
+    }
+
+    // Closing the question unanswered is transcribe; translate drops the suggestion for the next call to ask by
+    // meaning.
+    @Test
+    void answerMeaning_threeAnswers_storesEachAndAsksNoMore() {
+        suggest("Hale", "Гейл", TermType.CHARACTER);
+        suggest("Velk", "Велк", TermType.CHARACTER);
+        suggest("Orrin", "Оррін", TermType.PLACE);
+        Objects.requireNonNull(repository.all(PROJECT).data())
+                .forEach(entry -> repository.update(entry.withMeaningChoice(MeaningChoice.PENDING)));
+        final List<GlossaryEntry> asked =
+                Objects.requireNonNull(service.meaningQuestions(PROJECT).data());
+
+        final Result<List<GlossaryEntry>> answered = service.answerMeaning(
+                PROJECT,
+                Map.of(
+                        GlossaryIds.of(PROJECT, "Hale"), MeaningChoice.PENDING,
+                        GlossaryIds.of(PROJECT, "Velk"), MeaningChoice.TRANSLATE,
+                        GlossaryIds.of(PROJECT, "Orrin"), MeaningChoice.TRANSCRIBE_GLOSS,
+                        GlossaryIds.of(PROJECT, "Gone"), MeaningChoice.TRANSLATE));
+
+        assertThat(answered.isOk()).as("%s", answered.error()).isTrue();
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::target, GlossaryEntry::meaningChoice)
+                .containsExactlyInAnyOrder(
+                        tuple("Hale", "Гейл", MeaningChoice.TRANSCRIBE),
+                        tuple("Velk", null, MeaningChoice.TRANSLATE),
+                        tuple("Orrin", "Оррін", MeaningChoice.TRANSCRIBE_GLOSS));
+        assertThat(asked).hasSize(3);
+        assertThat(service.meaningQuestions(PROJECT).data()).isEmpty();
     }
 
     private void suggest(final String term, final String target, final TermType type) {

@@ -27,19 +27,15 @@ import ua.bookloom.util.lang.Script;
 import ua.bookloom.util.text.StressMarks;
 
 /**
- * The rules a target must meet in the target language (15i.N6, 15j.J1, 15j.J4, 15j.J10, design D4). Two ways in share
- * them. {@link #standing} judges a suggestion as it arrives, so the model is asked once more: the one identity rule; a
- * letter the target language does not use; and for a name or a brand that is not a speaking name every capitalised
- * word kept, under Transliterate the target's letter table, and the dictionary form of a name that ends in a
- * consonant. {@link #validate} judges a target before anything accepts it, with the language file's own keys: its
- * letters, no Latin unless the identity rule keeps the term, no stress mark, a capital where the term has one, the word
- * count, the Brief's declared conventions, and for an accepted name the forms its table generates; it also raises the
- * review flags, which are computed each time and never stored. Which entries are speaking names or brands comes from
- * their readings; an entry never read is neither, and a term that is not a brand is a common noun, judged by none of
- * the name rules.
+ * The rules a target must meet in the target language (15i.N6, 15j.J1, 15j.J4, 15j.J10, design D4). {@link #standing}
+ * judges a suggestion as it arrives (identity, alphabet, and for a name that is not a speaking name every capitalised
+ * word kept, the letter table under Transliterate and the dictionary form), and then {@link #suggestionRefusal}; a
+ * refusal of either is asked once more. {@link #validate} judges a target before anything accepts it by the language
+ * file's keys (letters, Latin, stress marks, capitals, word count, the Brief's conventions, an accepted name's forms) and
+ * raises the review flags, computed each time and never stored. Speaking names and brands come from the readings.
  */
 @Slf4j
-final class TargetValidator {
+final class TargetValidator implements SuggestionReplies.Judge {
 
     private static final Pattern LAST_WORD = Pattern.compile("[^\\s-]+$");
     private static final Pattern WORD_PARTS = Pattern.compile("[\\s\\-\u2010\u2011\u2013]+");
@@ -201,7 +197,8 @@ final class TargetValidator {
      * @return the refusing {@link Standing} for a refused one, {@link Standing#VERBATIM} for an identifier kept as
      *     written, {@link Standing#OPEN} otherwise
      */
-    Standing standing(final GlossaryEntry entry, final String rendering) {
+    @Override
+    public Standing standing(final GlossaryEntry entry, final String rendering) {
         final String term = entry.term();
         if (term.strip().equalsIgnoreCase(rendering.strip())) {
             return copyStanding(term, rendering);
@@ -258,6 +255,19 @@ final class TargetValidator {
         log.debug("Target of entry {} judged: refusals={} flags={}", entry.id(), verdict.rejections(), flags);
         log.trace("Target '{}' of '{}': {}", candidate, entry.term(), verdict.reasons());
         return verdict;
+    }
+
+    // The first refusal of validate, as a suggestion arrives: a different word count is no refusal where the words may
+    // rightly differ (a speaking name, or a name under a policy that translates: Silverbrook, Срібний Струмок).
+    @Override
+    public @Nullable String suggestionRefusal(final GlossaryEntry entry, final String rendering) {
+        final Reading reading = context.readings().get(entry.id());
+        final boolean isCountFree = policy != NamePolicy.TRANSLITERATE || (reading != null && reading.speaking());
+        final Optional<Refusal> first = validate(entry, rendering).refusals().stream()
+                .filter(refusal -> !(isCountFree && refusal.reason() == Reason.WORD_COUNT))
+                .findFirst();
+        first.ifPresent(refusal -> log.debug("Suggestion for entry {} refused: {}", entry.id(), refusal.reason()));
+        return first.map(Refusal::text).orElse(null);
     }
 
     private Optional<Refusal> forbidden(final String candidate) {

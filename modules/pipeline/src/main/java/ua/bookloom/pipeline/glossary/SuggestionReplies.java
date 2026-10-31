@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -31,6 +30,45 @@ final class SuggestionReplies {
     /** The longest target kept; the schema caps it at the same length. */
     static final int MAX_TARGET_CHARS = 80;
 
+    /** The longest meaning note kept; the schema caps it at the same length, and a longer one is dropped. */
+    static final int MAX_MEANING_CHARS = 80;
+
+    /** How the rules judge one usable rendering of an entry. */
+    interface Judge {
+
+        /**
+         * Where the rendering stands before the script rules.
+         *
+         * @param entry the entry the rendering is for
+         * @param rendering the stripped, one-line rendering
+         * @return the standing; a refusing one is asked once more
+         */
+        Standing standing(GlossaryEntry entry, String rendering);
+
+        /**
+         * Why the target language's rules refuse a rendering that stands open.
+         *
+         * @param entry the entry the rendering is for
+         * @param rendering the stripped, one-line rendering
+         * @return the reason in the words the retry's line quotes, or null when the rules accept it
+         */
+        @Nullable
+        String suggestionRefusal(GlossaryEntry entry, String rendering);
+    }
+
+    /** A judge that leaves every rendering to the script rules. */
+    private static final Judge OPEN = new Judge() {
+        @Override
+        public Standing standing(final GlossaryEntry entry, final String rendering) {
+            return Standing.OPEN;
+        }
+
+        @Override
+        public @Nullable String suggestionRefusal(final GlossaryEntry entry, final String rendering) {
+            return null;
+        }
+    };
+
     /**
      * The model's suggestion for one entry. The reply's gender is not read: a small model answered "neuter" for every
      * place and thing (gemma4:e4b, 2026-10-02) and a person's gender from one example sentence (15h.A2), and the
@@ -38,30 +76,49 @@ final class SuggestionReplies {
      *
      * @param entry the entry as it was held when the batch was asked
      * @param target the suggested rendering, stripped and never blank
+     * @param meaning what the words of a name that was sounded out mean, kept as the entry's note; null when the reply
+     *     gave none or the entry takes no note
      * @param basis what is known of the entry that decides whether its rendering is locked as it is written
      * @param namesInflect whether the target language declines names, which the lock rule weighs
      */
-    record Suggestion(GlossaryEntry entry, String target, LockRule.Basis basis, boolean namesInflect) {
+    record Suggestion(
+            GlossaryEntry entry, String target, @Nullable String meaning, LockRule.Basis basis, boolean namesInflect) {
 
         private static final LockRule.Basis UNKNOWN = new LockRule.Basis(false, false, false, false);
 
         /** A suggestion nothing is known of beyond its entry, so it is never locked. */
         Suggestion(final GlossaryEntry entry, final String target) {
-            this(entry, target, UNKNOWN, true);
+            this(entry, target, null);
         }
 
-        /** This suggestion under the facts the lock rule weighs, its entry and target unchanged. */
+        /** A suggestion with the meaning the reply gave, never locked. */
+        Suggestion(final GlossaryEntry entry, final String target, @Nullable final String meaning) {
+            this(entry, target, meaning, UNKNOWN, true);
+        }
+
+        /** This suggestion under the facts the lock rule weighs, its entry, target and meaning unchanged. */
         Suggestion locking(final LockRule.Basis facts, final boolean inflects) {
-            return new Suggestion(entry, target, facts, inflects);
+            return new Suggestion(entry, target, meaning, facts, inflects);
+        }
+
+        /** This suggestion with another target (a cluster's agreed spelling), the rest unchanged. */
+        Suggestion retargeted(final String agreed) {
+            return new Suggestion(entry, agreed, meaning, basis, namesInflect);
+        }
+
+        /** This suggestion without a meaning note. */
+        Suggestion withoutMeaning() {
+            return meaning == null ? this : new Suggestion(entry, target, null, basis, namesInflect);
         }
 
         /**
          * The entry as it is now with this suggestion written in as a suggested target, locked when the lock rule
          * says the rendering is final (a kept name or brand as its source, a verified name where names are not
-         * declined); nothing else changes.
+         * declined), and with the meaning as its note unless it already holds one, which may be the person's.
          */
         GlossaryEntry onto(final GlossaryEntry now) {
-            final GlossaryEntry suggested = now.withSuggestedTarget(target);
+            final GlossaryEntry noted = meaning != null && now.meaning() == null ? now.withMeaning(meaning) : now;
+            final GlossaryEntry suggested = noted.withSuggestedTarget(target);
             return LockRule.locks(now.term(), target, basis, namesInflect) ? suggested.withRuleLock() : suggested;
         }
     }
@@ -115,9 +172,9 @@ final class SuggestionReplies {
      *
      * @param entry the entry as it was held when the batch was asked
      * @param rendering the refused rendering
-     * @param why the refusing {@link Standing}
+     * @param why why it was refused, in the words the retry's line quotes
      */
-    record Refusal(GlossaryEntry entry, String rendering, Standing why) {}
+    record Refusal(GlossaryEntry entry, String rendering, String why) {}
 
     /**
      * Reads a reply against the batch it answers.
@@ -137,14 +194,7 @@ final class SuggestionReplies {
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
             @Nullable final Script targetScript) {
-        return read(
-                        mapper,
-                        replyText,
-                        batch,
-                        sourceScript,
-                        targetScript,
-                        (_, _) -> Standing.OPEN,
-                        UnaryOperator.identity())
+        return read(mapper, replyText, batch, sourceScript, targetScript, OPEN, UnaryOperator.identity())
                 .kept();
     }
 
@@ -156,8 +206,9 @@ final class SuggestionReplies {
      * @param batch the batch's entries by their {@link GlossaryKeys} key
      * @param sourceScript the script a target must not hold a letter of; null when any script is acceptable
      * @param targetScript the script every letter of a target must belong to; null when it is not known
-     * @param standing how a usable rendering stands for its entry: a {@link Standing#VERBATIM} one skips the script
-     *     rules, a refusing one is returned in {@link Replies#refused()}
+     * @param judge how a usable rendering stands for its entry: a {@link Standing#VERBATIM} one skips the script
+     *     rules, and a refusing standing or a refusal of the target language's rules is returned in
+     *     {@link Replies#refused()}
      * @param cleaner what a target is stored as before any rule reads it (its stress marks removed where the target
      *     language asks for that)
      * @return the suggestions kept and the renderings refused; both empty when the reply is unreadable
@@ -168,7 +219,7 @@ final class SuggestionReplies {
             final Map<String, GlossaryEntry> batch,
             @Nullable final Script sourceScript,
             @Nullable final Script targetScript,
-            final BiFunction<GlossaryEntry, String, Standing> standing,
+            final Judge judge,
             final UnaryOperator<String> cleaner) {
         final JsonNode suggestions = JsonReplies.tolerant(mapper, replyText)
                 .map(root -> root.path("suggestions"))
@@ -181,7 +232,7 @@ final class SuggestionReplies {
         final List<Refusal> refused = new ArrayList<>();
         for (final JsonNode node : suggestions) {
             final Optional<Suggestion> read =
-                    suggestionOf(node, batch, new Rules(sourceScript, targetScript, standing, cleaner), refused);
+                    suggestionOf(node, batch, new Rules(sourceScript, targetScript, judge, cleaner), refused);
             read.ifPresent(kept::add);
         }
         log.debug(
@@ -194,10 +245,7 @@ final class SuggestionReplies {
 
     /** The rules one reply is read by. */
     private record Rules(
-            @Nullable Script sourceScript,
-            @Nullable Script targetScript,
-            BiFunction<GlossaryEntry, String, Standing> standing,
-            UnaryOperator<String> cleaner) {}
+            @Nullable Script sourceScript, @Nullable Script targetScript, Judge judge, UnaryOperator<String> cleaner) {}
 
     private static Optional<Suggestion> suggestionOf(
             final JsonNode node,
@@ -213,11 +261,12 @@ final class SuggestionReplies {
         final String target = rules.cleaner()
                 .apply(LookAlikes.repaired(node.path("target").asText("").strip()));
         final String shape = shapeRefusal(target);
-        final Standing stands = shape != null ? Standing.OPEN : rules.standing().apply(entry, target);
-        if (stands.isRefusal()) {
-            log.debug("Suggestion refused for a retry: {}", stands);
-            log.trace("Suggestion refused for term '{}' target '{}': {}", term, target, stands);
-            refused.add(new Refusal(entry, target, stands));
+        final Standing stands = shape != null ? Standing.OPEN : rules.judge().standing(entry, target);
+        final String why = stands.isRefusal() ? stands.reason() : ruleRefusal(entry, target, shape, stands, rules);
+        if (why != null) {
+            log.debug("Suggestion refused for a retry: standing={} rules={}", stands, why);
+            log.trace("Suggestion refused for term '{}' target '{}': {}", term, target, why);
+            refused.add(new Refusal(entry, target, why));
             return Optional.empty();
         }
         final String refusal =
@@ -227,7 +276,28 @@ final class SuggestionReplies {
             log.trace("Suggestion dropped for term '{}' target '{}': {}", term, target, refusal);
             return Optional.empty();
         }
-        return Optional.of(new Suggestion(entry, target));
+        return Optional.of(new Suggestion(entry, target, meaningOf(node)));
+    }
+
+    // The target language's rules judge only a rendering that is well formed and stands open; an identifier kept as
+    // written and a shape no glossary holds are past them.
+    private static @Nullable String ruleRefusal(
+            final GlossaryEntry entry,
+            final String target,
+            @Nullable final String shape,
+            final Standing stands,
+            final Rules rules) {
+        return shape == null && stands == Standing.OPEN ? rules.judge().suggestionRefusal(entry, target) : null;
+    }
+
+    // A meaning note is one short line; anything else is no note, and the suggestion stands without one.
+    private static @Nullable String meaningOf(final JsonNode node) {
+        final String meaning = node.path("meaning").asText("").strip();
+        final boolean isNote = !meaning.isEmpty()
+                && meaning.length() <= MAX_MEANING_CHARS
+                && meaning.indexOf('\n') < 0
+                && meaning.indexOf('\r') < 0;
+        return isNote ? meaning : null;
     }
 
     // What no glossary can hold, whatever the script.

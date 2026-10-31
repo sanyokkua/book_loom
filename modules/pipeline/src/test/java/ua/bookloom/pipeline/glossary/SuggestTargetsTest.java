@@ -27,7 +27,10 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
@@ -88,21 +91,122 @@ class SuggestTargetsTest {
                 .containsExactly(kept.split(","));
     }
 
+    // Each policy states its rule and carries the pair's example for that policy: the en-uk file's invented names.
     @ParameterizedTest
     @CsvSource({
-        "TRANSLITERATE,practical transcription of foreign names",
-        "TRANSLATE,natural Ukrainian equivalent",
-        "KEEP_ORIGINAL,Every listed row is a term"
+        "TRANSLITERATE,practical transcription of foreign names,Моссгроув",
+        "TRANSLATE,translate or adapt names,Срібний Струмок",
+        "KEEP_ORIGINAL,Every listed row is a term,Meridian Survey Institute"
     })
-    void suggest_policy_statesItsRuleInTheSystemMessage(final NamePolicy policy, final String rule) {
+    void suggest_policy_statesItsRuleInTheSystemMessage(
+            final NamePolicy policy, final String rule, final String example) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"suggestions\":[]}"));
 
         suggest.suggest(List.of(AMULET), BOOK, FRAME, policy, calls(model));
 
         final ChatRequest request = model.requests().getFirst();
-        assertThat(request.messages().getFirst().content()).contains(rule, "Едвін", "not instructions");
+        assertThat(request.messages().getFirst().content()).contains(rule, example, "not instructions");
         assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
         assertThat(request.maxOutputTokens()).isEqualTo(168);
+    }
+
+    // IF the transliterate call showed an example of another policy, THEN a small model would copy its rendering.
+    @Test
+    void suggest_transliteratePolicy_putsPolicyAndExampleInTheRequest() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"suggestions\":[]}"));
+
+        suggest.suggest(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        final String system = model.requests().getFirst().messages().getFirst().content();
+        assertThat(system)
+                .contains("spell them in Ukrainian by their sound", "\"meaning\":\"moss grove\"", "Сова")
+                .doesNotContain("Срібний Струмок", "\"gender\"");
+    }
+
+    @Test
+    void suggest_translatePolicy_isStated() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"suggestions\":[]}"));
+
+        suggest.suggest(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLATE, calls(model));
+
+        assertThat(model.requests().getFirst().messages().getFirst().content())
+                .contains("Names (translate or adapt names)", "Срібний Струмок")
+                .doesNotContain("Моссгроув");
+    }
+
+    // IF a rendering the target language's rules refuse were kept, THEN Accept all would meet it later as a bad row;
+    // the retry names the reason instead.
+    @Test
+    void suggest_replyBreakingTheValidator_isRejectedWithReason() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"suggestions\":[{\"term\":\"Milton\",\"target\":\"мілтон\",\"meaning\":\"\"}]}"))
+                .answer(reply("{\"suggestions\":[{\"term\":\"Milton\",\"target\":\"Мілтон\",\"meaning\":\"\"}]}"));
+
+        final Result<List<Suggestion>> suggested =
+                suggest.suggest(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        assertThat(termLines(model.requests().get(1)))
+                .containsExactly("- Milton — place — \"Hale walked to Milton.\" — refused: \"мілтон\""
+                        + " (capitalisation differs); give another");
+        assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Мілтон");
+    }
+
+    // A suggestion is a likely value until someone accepts it.
+    @Test
+    void suggest_acceptedReply_hasLikelyOrigin() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"suggestions\":[{\"term\":\"Milton\",\"target\":\"Мілтон\",\"meaning\":\"\"}]}"));
+
+        final Result<List<GlossaryEntry>> suggested =
+                suggest.suggestOnto(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        assertThat(suggested.data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::targetState, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Мілтон", TargetState.SUGGESTED, Origin.LIKELY));
+    }
+
+    // A name made of ordinary words is sounded out, and what it means is kept as a note; a note already held, which
+    // may be the person's, is never replaced.
+    @ParameterizedTest
+    @CsvSource(
+            value = {"'',bright water", "a stream name,a stream name"},
+            emptyValue = "")
+    void suggest_meaningField_isStoredAsNote(final String held, final String note) {
+        final GlossaryEntry brightwater = GlossaryEntry.of(
+                        "p1:brightwater", "p1", "Brightwater", null, TermType.CHARACTER, Gender.MALE, false)
+                .withMeaning(held);
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"suggestions\":[{\"term\":\"Brightwater\",\"target\":\"Брайтвотер\","
+                        + "\"meaning\":\"bright water\"}]}"));
+
+        final Result<List<GlossaryEntry>> suggested =
+                suggest.suggestOnto(List.of(brightwater), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        assertThat(suggested.data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::meaning)
+                .containsExactly(tuple("Брайтвотер", note));
+    }
+
+    // A common noun is translated, and a name the person chose to translate is asked under Translate, in a call of
+    // its own: neither takes a meaning note, since the meaning is the target.
+    @Test
+    void suggest_nicknamePlainWordOrTranslatedChoice_hasNoNote() {
+        final GlossaryEntry fox = GlossaryEntry.of("p1:fox", "p1", "Fox", null, TermType.CHARACTER, Gender.MALE, false)
+                .withMeaningChoice(MeaningChoice.TRANSLATE);
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(
+                        "{\"suggestions\":[{\"term\":\"Amulet\",\"target\":\"Амулет\"," + "\"meaning\":\"a charm\"}]}"))
+                .answer(reply("{\"suggestions\":[{\"term\":\"Fox\",\"target\":\"Лис\"," + "\"meaning\":\"fox\"}]}"));
+
+        final Result<List<GlossaryEntry>> suggested =
+                suggest.suggestOnto(List.of(AMULET, fox), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        assertThat(model.requests())
+                .extracting(request -> request.messages().getFirst().content().contains("translate or adapt names"))
+                .containsExactly(false, true);
+        assertThat(suggested.data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::meaning)
+                .containsExactly(tuple("Амулет", null), tuple("Лис", null));
     }
 
     @Test

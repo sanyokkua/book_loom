@@ -18,7 +18,9 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * asked with the held glossary, the readings and the verified names of the names step, and written the way a review
  * writes its suggestions — locked by {@link LockRule} through the facts {@link SuggestionLocks} gave each suggestion, so
  * a review and the names pass share one lock rule and one meaning of a verified name. Only an entry that was open is
- * touched, so a locked entry or one with the person's target is never suggested over.
+ * touched, so a locked entry or one with the person's target is never suggested over. With the suggestions written, a
+ * scanned form that fits two new names joins one of them when their targets agree ({@link FormCollapse}), and a name
+ * the book plays on is marked for the once-per-name question ({@link MeaningQuestions}).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -61,14 +63,24 @@ final class NamesTranslation {
                 return Result.ok(new GlossaryReviewReport(0, 0, held));
             }
             final TargetContext context = new TargetContext(held, reviewed.readings(), reviewed.verified());
+            final String language = book.frame().analysisLanguage();
             return scans.suggestFor(open, context, book, calls)
                     .flatMap(suggestions -> ReviewCommit.apply(
                             glossary,
                             projectId,
                             List.of(),
                             suggestions,
-                            book.frame().analysisLanguage(),
-                            book.story().visibleTexts()));
+                            language,
+                            book.story().visibleTexts()))
+                    .flatMap(report -> afterSuggestions(glossary, projectId, book, reviewed)
+                            .map(marked -> report));
         });
+    }
+
+    // With the suggested targets written, a form two new names share can be folded, and the names to ask are marked.
+    private static Result<Integer> afterSuggestions(
+            final GlossaryRepository glossary, final String projectId, final Book book, final Reviewed reviewed) {
+        return FormCollapse.collapse(glossary, projectId, book.frame().analysisLanguage())
+                .flatMap(collapsed -> MeaningQuestions.mark(glossary, projectId, reviewed.readings(), book.names()));
     }
 }

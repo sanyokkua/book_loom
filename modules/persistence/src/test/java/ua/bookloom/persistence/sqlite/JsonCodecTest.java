@@ -48,6 +48,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
@@ -204,7 +205,8 @@ class JsonCodecTest {
                 Origin.BOOK,
                 true,
                 false,
-                "a note " + UK);
+                "a note " + UK,
+                MeaningChoice.TRANSCRIBE_GLOSS);
     }
 
     private static LexiconEntry lexicon() {

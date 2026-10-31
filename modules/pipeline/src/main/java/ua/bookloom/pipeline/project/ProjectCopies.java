@@ -85,7 +85,8 @@ public final class ProjectCopies {
                     entry.genderOrigin(),
                     entry.genderSeedTried(),
                     entry.noGenderEvidence(),
-                    entry.meaning()));
+                    entry.meaning(),
+                    entry.meaningChoice()));
             if (added.isErr()) {
                 return Result.err(failure(added));
             }

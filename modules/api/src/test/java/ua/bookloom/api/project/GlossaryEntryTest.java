@@ -42,6 +42,7 @@ class GlossaryEntryTest {
                 null,
                 false,
                 false,
+                null,
                 null);
 
         assertThat(entry.isSuggested()).isFalse();
@@ -123,5 +124,21 @@ class GlossaryEntryTest {
                 .withGenderFrom(Gender.UNKNOWN, Origin.LIKELY);
 
         assertThat(entry.genderOrigin()).isNull();
+    }
+
+    // A meaning note and the person's answer about it travel with every later copy of the entry (design D5).
+    @Test
+    void withMeaningAndChoice_laterCopies_keepBoth() {
+        final GlossaryEntry entry = GlossaryEntry.of(
+                        "e1", "p1", "Brightwater", null, TermType.PLACE, Gender.UNKNOWN, false)
+                .withMeaning("bright water")
+                .withMeaningChoice(MeaningChoice.TRANSCRIBE_GLOSS);
+
+        final GlossaryEntry later =
+                entry.withSuggestedTarget("Брайтвотер").withLocked(true).withType(TermType.CHARACTER);
+
+        assertThat(later.meaning()).isEqualTo("bright water");
+        assertThat(later.meaningChoice()).isEqualTo(MeaningChoice.TRANSCRIBE_GLOSS);
+        assertThat(entry.withMeaning("  ").meaning()).isNull();
     }
 }

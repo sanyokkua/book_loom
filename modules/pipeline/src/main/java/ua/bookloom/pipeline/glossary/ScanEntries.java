@@ -146,7 +146,7 @@ public final class ScanEntries {
     }
 
     // How many held names decline by each row, read from their terms' gendered nominative rows.
-    private static Map<String, Integer> namesPerRow(final List<GlossaryEntry> held, @Nullable final String language) {
+    static Map<String, Integer> namesPerRow(final List<GlossaryEntry> held, @Nullable final String language) {
         final Map<String, Integer> counts = new HashMap<>();
         held.forEach(entry -> NameForms.declensions(entry.term(), language).stream()
                 .filter(NameForms.Declension::nominative)
@@ -227,6 +227,7 @@ public final class ScanEntries {
                 base.genderOrigin(),
                 base.genderSeedTried(),
                 base.noGenderEvidence(),
-                base.meaning());
+                base.meaning(),
+                base.meaningChoice());
     }
 }

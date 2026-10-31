@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.project.NamePolicy;
 
 /**
  * The language-rules map: what a prompt tells a model about one language pair, read from the bundled
@@ -199,9 +200,12 @@ public final class LanguageRules implements LanguageSupport {
         return pick(sourceTag, targetTag, BATCH_EXAMPLE, file -> String.join("\n\n", file.indexed(BATCH_EXAMPLE)));
     }
 
-    /** The suggestion call's example, chosen like {@link #examples}. */
-    String nameExamples(@Nullable final String sourceTag, final String targetTag) {
-        return pick(sourceTag, targetTag, NAME_EXAMPLE, file -> Objects.requireNonNullElse(file.get(NAME_EXAMPLE), ""));
+    /** The suggestion call's example, chosen like {@link #examples}; a file's {@code nameExample.<POLICY>} first. */
+    String nameExamples(@Nullable final String sourceTag, final String targetTag, final NamePolicy policy) {
+        final String own = NAME_EXAMPLE + "." + policy.name();
+        final Function<LanguageFile, String> read = file ->
+                Objects.requireNonNullElse(file.get(own), Objects.requireNonNullElse(file.get(NAME_EXAMPLE), ""));
+        return pick(sourceTag, targetTag, own, read);
     }
 
     private String pick(

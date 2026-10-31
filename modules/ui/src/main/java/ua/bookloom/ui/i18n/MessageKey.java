@@ -2781,6 +2781,34 @@ public enum MessageKey {
     DIALOG_GENDERS_BACK("dialog.genders.back"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_BACK}. */
     DIALOG_GENDERS_BACK_TIP("dialog.genders.back.tip"),
+    /** Title of the question asked at Start about names whose meaning the book explains or plays on. */
+    DIALOG_MEANING_TITLE("dialog.meaning.title"),
+    /** Body of that question; argument 0 is the number of names listed. */
+    DIALOG_MEANING_TEXT("dialog.meaning.text"),
+    /** One listed name with its meaning; argument 0 is the name, argument 1 what it means. */
+    DIALOG_MEANING_ROW("dialog.meaning.row"),
+    /** One listed name whose meaning was not given; argument 0 is the name. */
+    DIALOG_MEANING_ROW_PLAIN("dialog.meaning.row.plain"),
+    /** The choice that sounds the name out and keeps its meaning as a note. */
+    DIALOG_MEANING_CHOICE_TRANSCRIBE("dialog.meaning.choice.transcribe"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_TRANSCRIBE}. */
+    DIALOG_MEANING_CHOICE_TRANSCRIBE_TIP("dialog.meaning.choice.transcribe.tip"),
+    /** The choice that translates the name by its meaning. */
+    DIALOG_MEANING_CHOICE_TRANSLATE("dialog.meaning.choice.translate"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_TRANSLATE}. */
+    DIALOG_MEANING_CHOICE_TRANSLATE_TIP("dialog.meaning.choice.translate.tip"),
+    /** The choice that sounds the name out and explains its meaning at its first use. */
+    DIALOG_MEANING_CHOICE_GLOSS("dialog.meaning.choice.gloss"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CHOICE_GLOSS}. */
+    DIALOG_MEANING_CHOICE_GLOSS_TIP("dialog.meaning.choice.gloss.tip"),
+    /** The control that stores the choices and goes on. */
+    DIALOG_MEANING_CONFIRM("dialog.meaning.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_CONFIRM}. */
+    DIALOG_MEANING_CONFIRM_TIP("dialog.meaning.confirm.tip"),
+    /** The control that keeps the default for every name and returns without starting. */
+    DIALOG_MEANING_BACK("dialog.meaning.back"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_MEANING_BACK}. */
+    DIALOG_MEANING_BACK_TIP("dialog.meaning.back.tip"),
     /** Title of the question asked before leaving a screen whose model work is still running. */
     DIALOG_LEAVE_TITLE("dialog.leave.title"),
     /** Body of the leave question; argument 0 is the name of the running work. */

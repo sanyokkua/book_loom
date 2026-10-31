@@ -72,7 +72,7 @@ final class NameReadings {
      * @param verdicts the code's verdicts on the entries read
      * @param unread the open entries the plan does not read, for the batched review, in glossary order
      * @param readings what the calls read of each entry read, by entry id: a speaking name or a brand in any of its
-     *     calls is one
+     *     calls is one, and the first window any call cited as explaining the name is its explanation
      */
     record Outcome(List<Verdict> verdicts, List<GlossaryEntry> unread, Map<String, Reading> readings) {
 
@@ -182,8 +182,17 @@ final class NameReadings {
                             entry.term(),
                             List.of(),
                             calls.stream().anyMatch(Reading::speaking),
-                            calls.stream().anyMatch(Reading::brand)));
+                            calls.stream().anyMatch(Reading::brand),
+                            calls.stream()
+                                    .map(Reading::explanation)
+                                    .filter(text -> !text.isEmpty())
+                                    .findFirst()
+                                    .orElse("")));
         }
+        log.debug(
+                "Names reading: {} of {} entries read have a window that explains the name",
+                readings.values().stream().filter(Reading::explainsName).count(),
+                readings.size());
         return readings;
     }
 

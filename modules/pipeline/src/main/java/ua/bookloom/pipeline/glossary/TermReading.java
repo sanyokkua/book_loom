@@ -143,13 +143,39 @@ public final class TermReading {
      * @param windows the windows the reply answered, by number, each once
      * @param speaking whether the model says the name's meaning matters to the story
      * @param brand whether the model says the term is a brand or a product
+     * @param explanation the text of the window the model cited as one where the book explains or plays on the name's
+     *     meaning (design D5); empty when it cited none, or a window the call did not show
      */
-    public record Reading(String term, List<WindowReading> windows, boolean speaking, boolean brand) {
+    public record Reading(
+            String term, List<WindowReading> windows, boolean speaking, boolean brand, String explanation) {
 
         /** Copies the windows. */
         public Reading {
             Objects.requireNonNull(term, "term");
             windows = List.copyOf(windows);
+            Objects.requireNonNull(explanation, "explanation");
+        }
+
+        /**
+         * A reading that cites no window explaining the name.
+         *
+         * @param term the term read
+         * @param windows the windows the reply answered
+         * @param speaking whether the name's meaning matters to the story
+         * @param brand whether the term is a brand
+         */
+        public Reading(
+                final String term, final List<WindowReading> windows, final boolean speaking, final boolean brand) {
+            this(term, windows, speaking, brand, "");
+        }
+
+        /**
+         * Whether the book explains or plays on the name's meaning in a window the reading cited.
+         *
+         * @return {@code true} when a window was cited, {@code false} otherwise
+         */
+        public boolean explainsName() {
+            return !explanation.isEmpty();
         }
 
         /**
@@ -218,7 +244,7 @@ public final class TermReading {
         final Reading reading =
                 TermReadingReplies.read(mapper, reply.content(), subject.term(), windows, frame.analysisLanguage());
         log.debug(
-                "Term reading {} answered {} of {} windows, {} votes, speaking={} brand={}",
+                "Term reading {} answered {} of {} windows, {} votes, speaking={} brand={} explainsName={}",
                 subject.term(),
                 reading.windows().size(),
                 windows.size(),
@@ -226,7 +252,8 @@ public final class TermReading {
                         .filter(w -> w.vote() != Gender.UNKNOWN)
                         .count(),
                 reading.speaking(),
-                reading.brand());
+                reading.brand(),
+                reading.explainsName());
         return reading;
     }
 

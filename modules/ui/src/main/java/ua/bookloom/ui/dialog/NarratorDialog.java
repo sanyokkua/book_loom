@@ -12,8 +12,9 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.NarratorQuestion;
 
 /**
- * The questions asked at Start translation: first the narrator, when {@link NarratorQuestion} says it must be asked
- * (male, female, or not stated, start anyway), then the characters without a gender ({@link CharacterGendersDialog}).
+ * The questions asked at Start translation: first the names whose meaning the book plays on, when the names pass
+ * marked any ({@link MeaningNameDialog}), then the narrator, when {@link NarratorQuestion} says it must be asked (male,
+ * female, or not stated, start anyway), then the characters without a gender ({@link CharacterGendersDialog}).
  * Back, and Escape, which the host guarantees for every card, return without starting and without remembering
  * anything. Enter chooses "not stated", never a gender.
  */
@@ -31,6 +32,7 @@ public final class NarratorDialog {
     private final Messages messages;
     private final CharacterGendersDialog genders;
     private final NarratorQuestion question;
+    private final MeaningNameDialog meanings;
 
     /**
      * Creates the dialog.
@@ -39,17 +41,20 @@ public final class NarratorDialog {
      * @param messages the catalogue every word of the card comes from
      * @param genders the question about characters without a gender, asked after the narrator's
      * @param question what decides whether to ask and what an answer does
+     * @param meanings the question about names whose meaning the book plays on, asked before the narrator's
      */
     @Inject
     public NarratorDialog(
             final ModalHost modalHost,
             final Messages messages,
             final CharacterGendersDialog genders,
-            final NarratorQuestion question) {
+            final NarratorQuestion question,
+            final MeaningNameDialog meanings) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.genders = Objects.requireNonNull(genders, "genders");
         this.question = Objects.requireNonNull(question, "question");
+        this.meanings = Objects.requireNonNull(meanings, "meanings");
     }
 
     /**
@@ -62,7 +67,7 @@ public final class NarratorDialog {
     public void startAfterAsking(final Runnable start) {
         Objects.requireNonNull(start, "start");
         final Runnable next = () -> genders.startAfterAsking(start);
-        question.startOrAsk(next, projectId -> show(projectId, next));
+        meanings.askThen(() -> question.startOrAsk(next, projectId -> show(projectId, next)));
     }
 
     private void show(final String projectId, final Runnable start) {

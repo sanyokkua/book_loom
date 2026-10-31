@@ -13,7 +13,8 @@ public final class TermReadingSchema {
 
     /**
      * A response object holding the readings of one term's windows, at most six as a call shows, each quote at most
-     * 200 characters so a looping reply cannot run on, and the term's two flags after its windows.
+     * 200 characters so a looping reply cannot run on, and after its windows the term's two flags and the window that
+     * explains or plays on its meaning (0 for none; design D5).
      */
     public static final String SCHEMA = """
             {"type":"object","properties":{\
@@ -26,8 +27,9 @@ public final class TermReadingSchema {
             "required":["window","quote","usage","kind","gender"],\
             "additionalProperties":false}},\
             "speaking":{"type":"boolean"},\
-            "brand":{"type":"boolean"}},\
-            "required":["windows","speaking","brand"],\
+            "brand":{"type":"boolean"},\
+            "explainsName":{"type":"integer","minimum":0,"maximum":6}},\
+            "required":["windows","speaking","brand","explainsName"],\
             "additionalProperties":false}""";
 
     /**

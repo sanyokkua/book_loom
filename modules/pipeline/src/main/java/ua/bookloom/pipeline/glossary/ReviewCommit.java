@@ -185,9 +185,11 @@ final class ReviewCommit {
             final Suggestion suggestion,
             final Tally tally) {
         final GlossaryEntry now = byId.get(suggestion.entry().id());
-        if (now == null || !TermReview.isOpen(now)) {
+        // A suggestion is a likely value: it never replaces a target of a higher origin (design D3), even one held in
+        // the suggested state.
+        if (now == null || !TermReview.isOpen(now) || !Origin.LIKELY.mayReplace(now.targetOrigin())) {
             log.debug(
-                    "Glossary suggestion for entry {} dropped: gone, locked or given the person's target meanwhile",
+                    "Glossary suggestion for entry {} dropped: gone, locked or given a target of a higher origin",
                     suggestion.entry().id());
             return Result.ok(false);
         }

@@ -977,6 +977,7 @@ non-release build. Control: `Dialog`; the only dialog that closes on a click out
 |---|---|---|
 | Add to the glossary | + Add (built) | `dialog/AddTermDialog`, `AddRecurringTermDialog` |
 | Who tells the story? | Start, first-person story with an unknown narrator gender (Enter = not stated) (built) | `dialog/NarratorDialog` |
+| Names the book plays on | Start, before the narrator's question, when the names pass marked a name whose meaning the book explains or plays on: each name with its meaning and Sound it out (chosen) · Translate it · Sound it out, explain once; Save and start stores the choices, Back and Escape store Sound it out and start nothing; asked once per name, never during a run (built) | `dialog/MeaningNameDialog` |
 | Characters without a gender | Start; its count equals its rows (built) | `dialog/CharacterGendersDialog` |
 | Stop translating? | Stop — Keep translating · Stop | `ConfirmDialog` |
 | Unsaved changes | Leaving Providers or Models with changes — Keep editing · Discard · Save | new |

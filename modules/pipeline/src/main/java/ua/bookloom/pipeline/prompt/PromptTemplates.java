@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.project.NamePolicy;
 
 /**
  * Loads every declared {@code *.prompt} template once and renders it. A template that uses an undeclared slot or lacks
@@ -214,7 +215,7 @@ public final class PromptTemplates {
         if (declares(name, TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
             values.putAll(tokenGate(true));
         }
-        if (declares(name, EXAMPLES)) {
+        if (declares(name, EXAMPLES) && !extra.containsKey(EXAMPLES)) {
             values.put(EXAMPLES, examplesFor(name, frame));
         }
         if (declares(name, LANGUAGE_RULES)) {
@@ -229,11 +230,25 @@ public final class PromptTemplates {
         final String source = frame.sourceLanguage();
         final String target = frame.targetLanguage();
         if (name.showsNameExamples()) {
-            return rules.nameExamples(source, target);
+            return rules.nameExamples(source, target, NamePolicy.TRANSLITERATE);
         }
         return name == PromptName.DRAFT_BATCH_JSON
                 ? BatchExamples.render(rules.batchExamples(source, target))
                 : rules.examples(source, target);
+    }
+
+    /**
+     * The suggestion call's examples for a name policy, which the caller passes as the {@code examples} slot: the pair's
+     * example for that policy when it has one, else the nearest plain example.
+     *
+     * @param frame the run's language pair; never null
+     * @param policy the Book Brief's name policy, or the policy a group of entries is asked under; never null
+     * @return the examples text; never null
+     */
+    public String nameExamples(final CallFrame frame, final NamePolicy policy) {
+        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(policy, "policy");
+        return rules.nameExamples(frame.sourceLanguage(), frame.targetLanguage(), policy);
     }
 
     private static boolean declares(final PromptName name, final String slot) {

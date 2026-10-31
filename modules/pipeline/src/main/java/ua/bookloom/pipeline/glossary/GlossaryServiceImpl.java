@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -31,6 +32,7 @@ import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
@@ -48,9 +50,6 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
 public final class GlossaryServiceImpl implements GlossaryService {
 
     static final String LOCKED_NEEDS_TARGET = "A locked term needs a target.";
-
-    /** How many line numbers an import's warning names; the count says how many there were. */
-    private static final int LOGGED_LINES = 20;
 
     private final GlossaryRepository glossary;
     private final SegmentRepository segments;
@@ -114,6 +113,19 @@ public final class GlossaryServiceImpl implements GlossaryService {
     public Result<AcceptReport> acceptSuggested(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         return guarded("acceptSuggested", projectId, () -> acceptValid(projectId));
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        return guarded("meaningQuestions", projectId, () -> MeaningQuestions.pending(glossary, projectId));
+    }
+
+    @Override
+    public Result<List<GlossaryEntry>> answerMeaning(final String projectId, final Map<String, MeaningChoice> answers) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(answers, "answers");
+        return guarded("answerMeaning", projectId, () -> MeaningQuestions.answer(glossary, projectId, answers));
     }
 
     @Override
@@ -308,37 +320,9 @@ public final class GlossaryServiceImpl implements GlossaryService {
                         glossary, rows -> rowsImport(projectId).apply(projectId, rows))
                 .importFrom(projectId, source);
         if (report.isOk()) {
-            logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
+            GlossaryCsvFiles.logImport(projectId, source, Objects.requireNonNull(report.data(), "report"));
         }
         return report;
-    }
-
-    private static void logImport(final String projectId, final Path source, final GlossaryImportReport report) {
-        // One line per kind, not per row: a file of 5,000 bad rows must not write 5,000 warnings.
-        if (!report.malformedLines().isEmpty()) {
-            log.warn(
-                    "Glossary import path={} malformed={} problems={} lines={}",
-                    source,
-                    report.malformedLines().size(),
-                    report.problems(),
-                    report.malformedLines().stream().limit(LOGGED_LINES).toList());
-        }
-        if (!report.refusedLines().isEmpty()) {
-            log.warn(
-                    "Glossary import path={} refused={} ({}) lines={}",
-                    source,
-                    report.refusedLines().size(),
-                    LOCKED_NEEDS_TARGET,
-                    report.refusedLines().stream().limit(LOGGED_LINES).toList());
-        }
-        log.info(
-                "Glossary imported project={} path={} imported={} malformed={} refused={} duplicates={}",
-                projectId,
-                source,
-                report.imported(),
-                report.malformedLines().size(),
-                report.refusedLines().size(),
-                report.duplicates());
     }
 
     private GlossaryRowsImport rowsImport(final String projectId) {
