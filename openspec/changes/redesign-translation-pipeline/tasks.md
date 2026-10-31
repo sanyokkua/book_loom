@@ -781,7 +781,7 @@ conventions, the likely marks and the narrator.
   - **Log:** INFO `names pass entries=… forms=… book=… rule=… likely=… noGender=… rejected=…` (the glossary spec's "Log the names pass as counts and never as names").
   - **Done when:** tests green.
 
-- [ ] 7.8 Run arms 4a (bare-name accuracy) and 4b (likely-gender hint). They decide whether a likely value may ever reach a prompt. → :pipeline
+- [x] 7.8 Run arms 4a (bare-name accuracy) and 4b (likely-gender hint). They decide whether a likely value may ever reach a prompt. → :pipeline
   - **Satisfies:** enabling work for design D5, D24 (arms 4a and 4b)
   - **Depends on:** 7.7, the eval harness of group 1
   - **Read:** design.md D5, D24 (rows 4a and 4b, "If an alternative wins"); pipeline: `context/InjectedCharacters` (the one place that renders a gender into a call today), `prompt/PromptVariants` (test-only), `scripts/eval-matrix.sh`
