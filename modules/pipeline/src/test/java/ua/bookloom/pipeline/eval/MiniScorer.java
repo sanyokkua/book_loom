@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.checks.GenderChecks;
 import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind;
@@ -316,7 +316,7 @@ final class MiniScorer {
             final GlossaryExpectation expectation, final List<GlossaryEntry> glossary) {
         return expectation.terms().stream()
                 .flatMap(term -> glossary.stream()
-                        .filter(e -> e.term().equals(term) || e.aliases().contains(term)))
+                        .filter(e -> e.term().equals(term) || e.forms().contains(term)))
                 .findFirst();
     }
 
@@ -375,7 +375,7 @@ final class MiniScorer {
     }
 
     private static boolean isSettled(final GlossaryEntry entry) {
-        return entry.gender() != Gender.UNKNOWN && entry.genderOrigin() != GenderOrigin.SUGGESTED;
+        return entry.gender() != Gender.UNKNOWN && entry.genderOrigin() != Origin.LIKELY;
     }
 
     private static boolean isCyrillic(final String target) {

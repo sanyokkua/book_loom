@@ -283,12 +283,12 @@ class DeferralRegisterTest {
     }
 
     private static GlossaryEntry entry(final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 PROJECT + ":" + term.toLowerCase(Locale.ROOT), PROJECT, term, null, type, gender, false);
     }
 
     private static GlossaryEntry term(final String term, @Nullable final String target, final boolean locked) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 PROJECT + ":" + term.toLowerCase(Locale.ROOT),
                 PROJECT,
                 term,

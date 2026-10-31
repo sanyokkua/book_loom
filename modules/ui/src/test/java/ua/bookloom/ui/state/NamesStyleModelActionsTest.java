@@ -79,11 +79,11 @@ class NamesStyleModelActionsTest extends FxTestBase {
     }
 
     private static GlossaryEntry well() {
-        return new GlossaryEntry("e1", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
     private static GlossaryEntry hale(final TermType type, final Gender gender) {
-        return new GlossaryEntry("e2", PROJECT, "Hale", null, type, gender, false);
+        return GlossaryEntry.of("e2", PROJECT, "Hale", null, type, gender, false);
     }
 
     // IF a review's outcome were not shown, THEN rows would vanish with no word of why.
@@ -109,7 +109,7 @@ class NamesStyleModelActionsTest extends FxTestBase {
         final NamesStyleViewModel vm = viewModel(new DirectExecutor());
         interact(() -> settings.model().set("gemma3:12b"));
         final GlossaryEntry translated =
-                new GlossaryEntry("e1", PROJECT, "Well", "Колодязь", TermType.OTHER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("e1", PROJECT, "Well", "Колодязь", TermType.OTHER, Gender.UNKNOWN, false);
         glossary.willAnswer(Result.ok(new EntryChanges<>(
                 List.of(), List.of(), List.of(new EntryChanges.Change<>(well(), translated, null)))));
 

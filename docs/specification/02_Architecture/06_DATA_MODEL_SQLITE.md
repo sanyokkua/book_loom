@@ -39,6 +39,13 @@ migrations arrives with the first release; until then no statement here about mi
   consistent snapshot, opens as a database and holds no key. A write submitted while the copy runs waits on the writer thread and runs after it; a failed copy removes the half-written file.
 - **One document, one writer:** the glossary and the lexicon are one JSON document per project; every change to them is
   a read-modify-write inside one write transaction, so a person's edit and a run's addition never overwrite each other.
+- **Glossary and lexicon shape (design D3):** a glossary entry is a lemma entry — the base form `term`, the `forms` the
+  book uses for it, `lemmaInferred` (the base form was inferred, not seen), the `target` with its `targetState`
+  (`SUGGESTED`, `PINNED` or `LOCKED`) and `targetOrigin`, the `type` (character, place, term, title, organisation,
+  product, material, other) with its `typeOrigin` and, for a place, its `placeKind` (city, river, country, region),
+  the `gender` with its `genderOrigin`, `genderSeedTried`, `noGenderEvidence` and a free `meaning` note. Every origin is
+  one of `USER`, `BOOK`, `RULE`, `LIKELY` (highest first): an automatic update never replaces a higher origin, and only
+  `USER` and `BOOK` genders are enforced. A lexicon entry also holds its `forms`. The id stays `projectId:key(lemma)`.
 - **Errors:** a storage failure is `ErrorCode.internal` with the safe details `storage <operation>`; no SQL, path or
   row content is put in `details`.
 - **FX-thread check:** a read or write on a thread named "JavaFX Application Thread" logs one WARN with the stack per
@@ -147,7 +154,9 @@ fingerprint into `meta` (`record_shapes`); a file holding another one does not f
 another `user_version`. A record change therefore needs no hand-raised number: the next start sets the old file aside
 and creates an empty one. The engine fields of `ProviderConfig` and the `probeVerdicts` of `ModelSettings` (ADR-0047)
 changed the fingerprint once, so a database from before them was set aside on its first start; the
-`thinkingOverride` and `samplingOverride` of `ModelSettings` and the `scope` of `RefusedSetting` changed it again.
+`thinkingOverride` and `samplingOverride` of `ModelSettings` and the `scope` of `RefusedSetting` changed it again. The
+lemma glossary entry (`forms`, `lemmaInferred`, `targetState`, the origins, `placeKind`, `meaning`) and the lexicon's
+`forms` changed it once more (group 7 of `redesign-translation-pipeline`), so a database from before them is set aside.
 
 ## resume-support {#resume-support}
 

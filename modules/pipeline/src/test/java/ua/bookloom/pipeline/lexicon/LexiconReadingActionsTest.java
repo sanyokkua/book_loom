@@ -29,9 +29,9 @@ import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RenderingOrigin;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.LexiconReading;
@@ -187,7 +187,7 @@ class LexiconReadingActionsTest {
     @Test
     void review_termTheGlossaryHolds_isNotAskedAndAPromotionOnlyRemovesIt() {
         desk.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         desk.projectId() + ":pentacle",
                         desk.projectId(),
                         "Pentacle",
@@ -307,7 +307,7 @@ class LexiconReadingActionsTest {
                 .extracting(GlossaryEntry::term, GlossaryEntry::target)
                 .containsExactly(org.assertj.core.api.Assertions.tuple("Orlan", "Орлан"));
         assertThat(desk.glossary().findByTerm(desk.projectId(), "Orlan").data())
-                .hasValueSatisfying(entry -> assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED));
+                .hasValueSatisfying(entry -> assertThat(entry.targetOrigin()).isEqualTo(Origin.LIKELY));
     }
 
     // The person promoting a term whose rendering they typed makes it the glossary's own; a reading's stays a
@@ -319,7 +319,7 @@ class LexiconReadingActionsTest {
         service.promote(desk.projectId(), "pentacle");
 
         assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
-                .hasValueSatisfying(entry -> assertThat(entry.origin()).isEqualTo(TargetOrigin.PERSON));
+                .hasValueSatisfying(entry -> assertThat(entry.targetOrigin()).isEqualTo(Origin.USER));
     }
 
     @Test
@@ -331,7 +331,7 @@ class LexiconReadingActionsTest {
         assertThat(desk.glossary().findByTerm(desk.projectId(), "pentacle").data())
                 .hasValueSatisfying(entry -> {
                     assertThat(entry.target()).isEqualTo(PENTACLE_KEPT);
-                    assertThat(entry.origin()).isEqualTo(TargetOrigin.SUGGESTED);
+                    assertThat(entry.targetOrigin()).isEqualTo(Origin.LIKELY);
                 });
     }
 

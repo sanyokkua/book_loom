@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.NamesPlan.Candidate;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
@@ -215,7 +215,7 @@ final class NameReadings {
                 decision.type(),
                 decision.gender(),
                 decision.quote(),
-                decision.origin() == GenderOrigin.VERIFIED,
+                decision.origin() == Origin.BOOK,
                 true,
                 decision.noEvidence());
     }

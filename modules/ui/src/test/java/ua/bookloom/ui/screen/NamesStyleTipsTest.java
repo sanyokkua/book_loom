@@ -30,7 +30,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         openBook(BOOK);
         chooseTarget();
         final GlossaryEntry entry =
-                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false);
         glossary.willAnswer(Result.ok(List.of(entry)));
         glossary.willAnswer(Result.ok(List.of(entry)));
         onFx(() -> shell.activate(ViewNames.IMPORT));

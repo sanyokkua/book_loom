@@ -201,7 +201,7 @@ final class SequenceEval {
         for (final GlossarySeed seed : fixture.glossary()) {
             prepared.stores()
                     .glossary()
-                    .add(new GlossaryEntry(
+                    .add(GlossaryEntry.of(
                             GlossaryIds.of(prepared.projectId(), seed.term()),
                             prepared.projectId(),
                             seed.term(),

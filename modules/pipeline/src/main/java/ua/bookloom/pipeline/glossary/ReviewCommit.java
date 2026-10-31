@@ -18,8 +18,8 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
@@ -245,8 +245,8 @@ final class ReviewCommit {
                     ? typed.withInferredGender(verdict.gender())
                     : typed.withSuggestedGender(verdict.gender());
         }
-        final GenderOrigin held = now.genderOrigin();
-        final boolean replaces = verdict.genderVerified() && held != GenderOrigin.PERSON;
+        final Origin held = now.genderOrigin();
+        final boolean replaces = verdict.genderVerified() && held != Origin.USER;
         log.debug(
                 "Glossary review gender for entry {}: held={} verified={} replaces={}",
                 now.id(),
@@ -268,26 +268,14 @@ final class ReviewCommit {
         return verdict.read()
                 && !now.locked()
                 && now.type() == TermType.CHARACTER
-                && now.genderOrigin() == GenderOrigin.SUGGESTED
+                && now.genderOrigin() == Origin.LIKELY
                 && verdict.type() != TermType.CHARACTER
                 && verdict.type() != TermType.OTHER;
     }
 
-    // A verified verdict stands as a verified gender even where it agrees with the suggestion it replaces; the
-    // cluster's
-    // reconciliation upgrades its members the same way.
+    // A verified verdict stands as the book's gender even where it agrees with the suggestion it replaces; the
+    // cluster's reconciliation upgrades its members the same way.
     static GlossaryEntry verified(final GlossaryEntry entry, final Gender gender) {
-        return new GlossaryEntry(
-                entry.id(),
-                entry.projectId(),
-                entry.term(),
-                entry.target(),
-                entry.type(),
-                gender,
-                entry.locked(),
-                entry.origin(),
-                GenderOrigin.VERIFIED,
-                entry.genderSeedTried(),
-                entry.aliases());
+        return entry.withGenderFrom(gender, Origin.BOOK);
     }
 }

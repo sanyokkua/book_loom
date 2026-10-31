@@ -80,6 +80,25 @@ class StoredShapesTest {
         assertThat(withoutNewFields).isNotEqualTo(described);
     }
 
+    // Proves the stored glossary and lexicon shapes carry the lemma fields, so a database from before them is reset.
+    @Test
+    void fingerprint_afterLemmaEntries_differsFromTheStoredOne() {
+        final String described = StoredShapes.describe(StoredShapes.ROOTS);
+        final String withoutNewFields = described
+                .replace("forms:", "")
+                .replace("lemmaInferred:", "")
+                .replace("targetState:", "")
+                .replace("placeKind:", "");
+
+        assertThat(described)
+                .contains("forms:java.util.List<java.lang.String>")
+                .contains("lemmaInferred:boolean")
+                .contains("targetState:enum[LOCKED,PINNED,SUGGESTED]")
+                .contains("placeKind:enum[CITY,COUNTRY,REGION,RIVER]")
+                .contains("genderOrigin:enum[BOOK,LIKELY,RULE,USER]");
+        assertThat(withoutNewFields).isNotEqualTo(described);
+    }
+
     @Test
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);

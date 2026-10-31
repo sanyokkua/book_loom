@@ -60,7 +60,7 @@ class MiniScorerTest {
     }
 
     static GlossaryEntry entry(final String term, final String target, final TermType type, final Gender gender) {
-        return new GlossaryEntry("id-" + term, "p", term, target, type, gender, false);
+        return GlossaryEntry.of("id-" + term, "p", term, target, type, gender, false);
     }
 
     @ParameterizedTest(name = "{0} {1} / {2} -> {3}")

@@ -104,8 +104,7 @@ final class NameLossCheck {
                     && Character.isUpperCase(term.codePointAt(0))
                     && !rendering.isEmpty()
                     && !KeyTermScan.isTitle(term, sourceLanguage)) {
-                entries.add(
-                        new GlossaryEntry(NO_ID, NO_ID, term, rendering, TermType.CHARACTER, Gender.UNKNOWN, false));
+                entries.add(GlossaryEntry.of(NO_ID, NO_ID, term, rendering, TermType.CHARACTER, Gender.UNKNOWN, false));
             }
         }
         return entries;

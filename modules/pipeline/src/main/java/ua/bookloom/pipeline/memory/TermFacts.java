@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.checks.CharacterNames;
 
@@ -26,12 +26,12 @@ public final class TermFacts {
      * @param origin who decided the gender; null when it is unknown
      * @return {@code character, likely female} or {@code place}; never null
      */
-    public static String of(final TermType type, final Gender gender, @Nullable final GenderOrigin origin) {
+    public static String of(final TermType type, final Gender gender, @Nullable final Origin origin) {
         final String name = type.name().toLowerCase(Locale.ROOT);
         if (type != TermType.CHARACTER) {
             return name;
         }
-        final String likely = origin == GenderOrigin.SUGGESTED ? CharacterNames.LIKELY + " " : "";
+        final String likely = origin == Origin.LIKELY ? CharacterNames.LIKELY + " " : "";
         return name + ", " + likely + gender.name().toLowerCase(Locale.ROOT);
     }
 }

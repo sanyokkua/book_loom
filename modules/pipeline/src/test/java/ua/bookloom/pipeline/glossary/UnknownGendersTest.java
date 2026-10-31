@@ -39,7 +39,7 @@ class UnknownGendersTest {
     }
 
     private void add(final String term, final TermType type, final Gender gender) {
-        service.add(new GlossaryEntry("p1:" + term, PROJECT, term, null, type, gender, false));
+        service.add(GlossaryEntry.of("p1:" + term, PROJECT, term, null, type, gender, false));
     }
 
     // A name met four times is not worth a question; one met five times is, and the more mentioned comes first.
@@ -73,7 +73,7 @@ class UnknownGendersTest {
                                         + " Hale came. Hale came. Hale came."),
                         "Title"));
         add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
-        service.add(new GlossaryEntry("p1:Dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.MALE, false)
+        service.add(GlossaryEntry.of("p1:Dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.MALE, false)
                 .withSuggestedGender(Gender.MALE));
         add("Hale", TermType.CHARACTER, Gender.FEMALE);
 

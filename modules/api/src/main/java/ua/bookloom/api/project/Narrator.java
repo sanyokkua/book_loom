@@ -20,7 +20,7 @@ public record Narrator(NarratorPerson person, Gender gender, GenderOrigin gender
     private static final Narrator UNSPECIFIED = new Narrator(NarratorPerson.UNSPECIFIED, Gender.UNKNOWN);
 
     /**
-     * Who decided the narrator's gender. Apart from a glossary entry's {@link ua.bookloom.api.project.GenderOrigin}
+     * Who decided the narrator's gender. Apart from a glossary entry's {@link Origin}
      * because a narrator's gender has one more source, the run's own count of the narrator's words.
      */
     public enum GenderOrigin {

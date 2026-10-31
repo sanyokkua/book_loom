@@ -8,8 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PronounGender.Evidence;
 
@@ -22,7 +22,7 @@ class PronounGenderTest {
             "Chisel sat down.");
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
     }
 
     @Test
@@ -67,7 +67,7 @@ class PronounGenderTest {
         final GlossaryEntry seeded = PronounGender.seeded(entry("Chisel", TermType.CHARACTER), FEMALE_TEXTS, "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.FEMALE);
-        assertThat(seeded.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(seeded.genderOrigin()).isEqualTo(Origin.LIKELY);
     }
 
     @Test

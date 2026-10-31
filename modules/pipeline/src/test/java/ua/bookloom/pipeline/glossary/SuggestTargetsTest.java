@@ -44,11 +44,11 @@ class SuggestTargetsTest {
     private static final BookSlice BOOK =
             GlossaryTestSegments.of(List.of("Hale walked to Milton.", "The Amulet glowed in the dark."));
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry MILTON =
-            new GlossaryEntry("p1:milton", "p1", "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("p1:milton", "p1", "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
     private static final GlossaryEntry AMULET =
-            new GlossaryEntry("p1:amulet", "p1", "Amulet", null, TermType.TERM, Gender.UNKNOWN, false);
+            GlossaryEntry.of("p1:amulet", "p1", "Amulet", null, TermType.TERM, Gender.UNKNOWN, false);
     private static final String REPLY = "{\"suggestions\":["
             + "{\"term\":\"Hale\",\"target\":\"Hale\",\"gender\":\"male\"},"
             + "{\"term\":\"Milton\",\"target\":\"Мілтон\",\"gender\":\"male\"},"
@@ -137,7 +137,7 @@ class SuggestTargetsTest {
     @Test
     void suggestOnto_replyNamesAGender_writesOnlyTheTarget() {
         final GlossaryEntry unknown =
-                new GlossaryEntry("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"suggestions\":[{\"term\":\"Hale\",\"target\":\"Гейл\",\"gender\":\"male\"}]}"));
 
@@ -162,7 +162,7 @@ class SuggestTargetsTest {
 
     private static List<GlossaryEntry> entries(final int count) {
         return IntStream.range(0, count)
-                .mapToObj(index -> new GlossaryEntry(
+                .mapToObj(index -> GlossaryEntry.of(
                         "p1:x" + index, "p1", "Xa" + index, null, TermType.PLACE, Gender.UNKNOWN, false))
                 .toList();
     }

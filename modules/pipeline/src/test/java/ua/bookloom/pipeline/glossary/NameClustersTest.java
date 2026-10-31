@@ -146,8 +146,8 @@ class NameClustersTest {
     @Test
     void namesOf_clusterWithAliases_listsEveryMembersSpellings() {
         final List<GlossaryEntry> entries = List.of(
-                entry("Venn", TermType.CHARACTER).withAliases(List.of("Venns")),
-                entry("Arlo Venn", TermType.CHARACTER).withAliases(List.of("Arlo Vennn")));
+                entry("Venn", TermType.CHARACTER).withForms(List.of("Venns")),
+                entry("Arlo Venn", TermType.CHARACTER).withForms(List.of("Arlo Vennn")));
 
         final NameClusters clusters = NameClusters.of(entries, null);
 
@@ -162,7 +162,7 @@ class NameClustersTest {
     void membersOf_aliasLooksLikeAnotherFullName_isNotASecondAnchor() {
         final List<GlossaryEntry> entries = List.of(
                 entry("Venn", TermType.CHARACTER),
-                entry("Arlo Venn", TermType.CHARACTER).withAliases(List.of("Mira Venn")));
+                entry("Arlo Venn", TermType.CHARACTER).withForms(List.of("Mira Venn")));
 
         assertThat(NameClusters.of(entries, null).membersOf(entries.getFirst()))
                 .extracting(GlossaryEntry::term)
@@ -172,7 +172,7 @@ class NameClustersTest {
     @Test
     void namesOf_entryAlone_isItsOwnSpellings() {
         final List<GlossaryEntry> entries =
-                List.of(entry("Venn", TermType.CHARACTER).withAliases(List.of("Venns")));
+                List.of(entry("Venn", TermType.CHARACTER).withForms(List.of("Venns")));
 
         assertThat(NameClusters.of(entries, null).namesOf(entries.getFirst())).containsExactly("Venn", "Venns");
     }
@@ -211,7 +211,7 @@ class NameClustersTest {
     }
 
     private static GlossaryEntry entry(final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry("p1:" + term, PROJECT, term, null, type, gender, false);
+        return GlossaryEntry.of("p1:" + term, PROJECT, term, null, type, gender, false);
     }
 
     private static GlossaryEntry named(final List<GlossaryEntry> entries, final String term) {

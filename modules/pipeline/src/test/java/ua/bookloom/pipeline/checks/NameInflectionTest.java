@@ -67,8 +67,8 @@ class NameInflectionTest {
     })
     void lost_declinedLowerCaseOrAlternatingTarget_isNotLost(final String source, final String target) {
         final List<GlossaryEntry> glossary = List.of(
-                new GlossaryEntry("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false),
-                new GlossaryEntry("b", "p", "Night Council", "Нічна рада", TermType.CHARACTER, Gender.UNKNOWN, false));
+                GlossaryEntry.of("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false),
+                GlossaryEntry.of("b", "p", "Night Council", "Нічна рада", TermType.CHARACTER, Gender.UNKNOWN, false));
 
         assertThat(NameMissingCheck.lost(glossary, source, target, "uk")).isEmpty();
     }
@@ -76,15 +76,15 @@ class NameInflectionTest {
     @Test
     void lost_alternatingFormOfADifferentWord_isStillLost() {
         final List<GlossaryEntry> glossary =
-                List.of(new GlossaryEntry("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false));
+                List.of(GlossaryEntry.of("a", "p", "Falcon", "Сокіл", TermType.CHARACTER, Gender.UNKNOWN, false));
 
         assertThat(NameMissingCheck.lost(glossary, "The Falcon held.", "Міст тримали вони.", "uk"))
                 .hasSize(1);
     }
 
     private static final List<GlossaryEntry> TWO_TIMS = List.of(
-            new GlossaryEntry("a", "p", "Tim", "Тім", TermType.CHARACTER, Gender.UNKNOWN, false),
-            new GlossaryEntry("b", "p", "Tom", "Том", TermType.CHARACTER, Gender.UNKNOWN, false));
+            GlossaryEntry.of("a", "p", "Tim", "Тім", TermType.CHARACTER, Gender.UNKNOWN, false),
+            GlossaryEntry.of("b", "p", "Tom", "Том", TermType.CHARACTER, Gender.UNKNOWN, false));
 
     @Test
     void lost_alternationEqualsAnotherGlossaryStem_isStillLost() {

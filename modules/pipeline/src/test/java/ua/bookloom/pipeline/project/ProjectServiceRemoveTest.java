@@ -43,7 +43,7 @@ class ProjectServiceRemoveTest {
         world.translate(de, "en", "de");
         for (final String id : List.of(uk, de)) {
             world.glossary.add(
-                    new GlossaryEntry("g-" + id, id, "Mira Holt", "Міра", TermType.CHARACTER, Gender.FEMALE, true));
+                    GlossaryEntry.of("g-" + id, id, "Mira Holt", "Міра", TermType.CHARACTER, Gender.FEMALE, true));
             world.lexicon.put(LexiconEntry.of(id, "warden"));
             world.runs.save(new RunRecord("r-" + id, id, Instant.EPOCH, Instant.EPOCH, JobState.COMPLETED, 1, 0));
         }

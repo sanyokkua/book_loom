@@ -18,9 +18,9 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 
@@ -120,7 +120,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryP
         repository.add(glossaryEntry("e1", "Hale"));
 
         final GlossaryEntry updated =
-                new GlossaryEntry("e1", "p1", "Hale", "Гейл 2", TermType.CHARACTER, Gender.MALE, true);
+                GlossaryEntry.of("e1", "p1", "Hale", "Гейл 2", TermType.CHARACTER, Gender.MALE, true);
         assertThat(repository.update(updated).isOk()).isTrue();
 
         assertThat(repository.findByTerm("p1", "hale").data())
@@ -138,7 +138,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryP
 
         assertThat(repository.findByTerm("p1", "Hale").data())
                 .isPresent()
-                .hasValueSatisfying(e -> assertThat(e.origin()).isEqualTo(TargetOrigin.SUGGESTED));
+                .hasValueSatisfying(e -> assertThat(e.targetOrigin()).isEqualTo(Origin.LIKELY));
     }
 
     @Test
@@ -196,7 +196,7 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryP
     }
 
     private static GlossaryEntry glossaryEntry(final String id, final String term) {
-        return new GlossaryEntry(id, "p1", term, "Гейл", TermType.CHARACTER, Gender.MALE, true);
+        return GlossaryEntry.of(id, "p1", term, "Гейл", TermType.CHARACTER, Gender.MALE, true);
     }
 
     // ===== TmRepository ========================================================================================

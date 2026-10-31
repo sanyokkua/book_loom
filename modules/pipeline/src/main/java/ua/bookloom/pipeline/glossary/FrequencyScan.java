@@ -386,7 +386,7 @@ public final class FrequencyScan {
     }
 
     private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                         GlossaryIds.of(projectId, candidate.term()),
                         projectId,
                         candidate.term(),
@@ -394,6 +394,6 @@ public final class FrequencyScan {
                         TermType.OTHER,
                         Gender.UNKNOWN,
                         false)
-                .withAliases(candidate.aliases());
+                .withForms(candidate.aliases());
     }
 }

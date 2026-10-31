@@ -25,7 +25,7 @@ class NamesPlanMinutesTest {
     private static List<Candidate> characters(final int count, final int mentions) {
         return IntStream.range(0, count)
                 .mapToObj(index -> new Candidate(
-                        new GlossaryEntry(
+                        GlossaryEntry.of(
                                 "p1:c" + index, "p1", "Name" + index, null, TermType.CHARACTER, Gender.MALE, false),
                         mentions))
                 .toList();

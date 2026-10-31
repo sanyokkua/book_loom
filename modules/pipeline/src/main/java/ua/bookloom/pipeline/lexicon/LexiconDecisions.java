@@ -13,7 +13,6 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
@@ -138,14 +137,9 @@ final class LexiconDecisions {
             log.debug("Lexicon promote project={}: the glossary already holds the term, nothing added", projectId);
             return Result.ok(found.get());
         }
-        return glossary.add(new GlossaryEntry(
-                GlossaryIds.of(projectId, term),
-                projectId,
-                term,
-                rendering,
-                TermType.TERM,
-                Gender.UNKNOWN,
-                false,
-                isModels ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON));
+        final GlossaryEntry added = GlossaryEntry.of(
+                GlossaryIds.of(projectId, term), projectId, term, rendering, TermType.TERM, Gender.UNKNOWN, false);
+        log.debug("Lexicon promote project={}: model's rendering={}", projectId, isModels);
+        return glossary.add(isModels && rendering != null ? added.withSuggestedTarget(rendering) : added);
     }
 }

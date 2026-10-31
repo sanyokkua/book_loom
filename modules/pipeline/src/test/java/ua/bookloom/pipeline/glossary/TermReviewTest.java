@@ -28,10 +28,9 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
@@ -314,9 +313,7 @@ class TermReviewTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("John", Gender.MALE, GenderOrigin.SUGGESTED),
-                        tuple("Mary", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("John", Gender.MALE, Origin.LIKELY), tuple("Mary", Gender.MALE, Origin.USER));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";
@@ -349,7 +346,7 @@ class TermReviewTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, locked);
+        return GlossaryEntry.of(id, PROJECT, term, target, type, gender, locked);
     }
 
     /** Answers the verdicts, then stores {@code edit} as the person would while the suggestion call is out. */
@@ -365,7 +362,7 @@ class TermReviewTest {
 
     private static GlossaryEntry suggested(
             final String id, final String term, final String target, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, false, TargetOrigin.SUGGESTED);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false).withSuggestedTarget(target);
     }
 
     private static List<String> blockLines(final ChatRequest request) {

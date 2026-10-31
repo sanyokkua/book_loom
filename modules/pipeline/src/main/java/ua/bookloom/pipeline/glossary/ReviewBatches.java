@@ -19,8 +19,8 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
@@ -83,7 +83,7 @@ final class ReviewBatches {
         final PronounGender.Evidence pronouns =
                 evidence.getOrDefault(entry.term(), Evidence.NONE).pronouns();
         final boolean person = entry.type() == TermType.CHARACTER
-                || (entry.type() == TermType.OTHER && entry.genderOrigin() == GenderOrigin.SUGGESTED);
+                || (entry.type() == TermType.OTHER && entry.genderOrigin() == Origin.LIKELY);
         log.debug(
                 "Glossary review code decision for entry {}: type={} genderOrigin={} person={} strong={}",
                 entry.id(),

@@ -192,7 +192,7 @@ public abstract class ProjectStorageContractTest extends LexiconContractTest {
     private void storeWork(final String projectId) {
         segmentRepository().saveAll(projectId, List.of(pending(projectId, "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         glossaryRepository()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         "g-" + projectId, projectId, "Hale", null, TermType.CHARACTER, Gender.MALE, false));
         tmRepository().put(new TmEntry("t-" + projectId, projectId, "h1", "c1", "Hello", "Привіт"));
         summaryRepository().save(new RollingSummary(projectId, null, "src", "tgt", 1, null, 0));
@@ -205,7 +205,7 @@ public abstract class ProjectStorageContractTest extends LexiconContractTest {
     }
 
     private static GlossaryEntry term(final String id, final String text) {
-        return new GlossaryEntry(id, "p1", text, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(id, "p1", text, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     private static ChunkCommit additionOf(final GlossaryEntry entry) {

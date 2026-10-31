@@ -65,7 +65,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
     }
 
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false);
     }
 
     private ChangeResults results() {

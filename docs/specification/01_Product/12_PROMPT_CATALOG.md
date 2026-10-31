@@ -1536,7 +1536,7 @@ two. Every entry still open (unlocked, with no target or a suggested one) is sen
 gender when known and one sentence of the book that holds it (at most 120 characters), and the model suggests a target
 by the Book Brief's name policy and a gender. Under **Keep original** no call is made for a name: it is suggested as
 written, and only a common noun is asked about (an entry of type `term`, or a single title or other word the readings did not verify as a name). A suggestion is written only into an unlocked entry whose
-target is empty or was itself suggested, as a **suggested** target (`TargetOrigin.SUGGESTED`) that the draft prompt
+target is empty or was itself suggested, as a **suggested** target (`TargetState.SUGGESTED`, origin `LIKELY`) that the draft prompt
 lists apart as a hint (`#draft-translation`, `{{suggestedTerms}}`) until the person accepts, edits or locks it. The
 reply's gender is not written: a person's gender is the review's, decided from windows across the book (15h.A2), and
 one sentence is too little to decide it.

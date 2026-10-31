@@ -234,7 +234,7 @@ class ExportJobSideFilesTest {
                         .withFindings(
                                 List.of(new QaFinding("omission", Severity.MEDIUM, "a clause is missing", "judge"))));
         ok(fixture.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(id, "Victor"), id, "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true)));
         return id;
     }

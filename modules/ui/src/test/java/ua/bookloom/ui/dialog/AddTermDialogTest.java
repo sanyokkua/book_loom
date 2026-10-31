@@ -74,7 +74,7 @@ class AddTermDialogTest extends ShellTestBase {
     }
 
     private static GlossaryEntry justine() {
-        return new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
+        return GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
     }
 
     // IF a valid term were not added, THEN the dialog's one purpose would fail.

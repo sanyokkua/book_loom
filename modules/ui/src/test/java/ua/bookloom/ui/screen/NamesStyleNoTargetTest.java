@@ -21,13 +21,13 @@ import ua.bookloom.ui.ViewNames;
 class NamesStyleNoTargetTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry HAS_TARGET =
-            new GlossaryEntry("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e1", "p1", "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry NO_TARGET =
-            new GlossaryEntry("e2", "p1", "Pellbury", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e2", "p1", "Pellbury", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry BLANK_TARGET =
-            new GlossaryEntry("e3", "p1", "Ashdown", "  ", TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e3", "p1", "Ashdown", "  ", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry SHOUTED =
-            new GlossaryEntry("e4", "p1", "BRANWICK", "Бранвік", TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e4", "p1", "BRANWICK", "Бранвік", TermType.PLACE, Gender.UNKNOWN, false);
 
     private static final String CARD = "no-target-card";
 

@@ -103,7 +103,7 @@ class KeyTermScanTest {
         final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
         final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
         final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
-        glossary.add(new GlossaryEntry("p1:imp", "p1", "Imp", "біс", TermType.TERM, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("p1:imp", "p1", "Imp", "біс", TermType.TERM, Gender.UNKNOWN, false));
         lexicon.put(LexiconEntry.of("p1", "MR"));
         final List<String> lines = join(
                 copies("Then Mr. Hale nodded.", 3), copies("We saw the Imp again.", 3), copies("the imp laughed.", 3));

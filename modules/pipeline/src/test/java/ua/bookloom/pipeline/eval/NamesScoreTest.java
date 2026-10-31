@@ -7,12 +7,11 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.Register;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -59,18 +58,8 @@ class NamesScoreTest {
 
     private static GlossaryEntry entry(
             final String term, final String target, final TermType type, final Gender gender, final boolean suggested) {
-        return new GlossaryEntry(
-                P + ":" + term,
-                P,
-                term,
-                target,
-                type,
-                gender,
-                false,
-                TargetOrigin.PERSON,
-                suggested ? GenderOrigin.SUGGESTED : GenderOrigin.VERIFIED,
-                false,
-                List.of());
+        return GlossaryEntry.of(P + ":" + term, P, term, target, type, Gender.UNKNOWN, false)
+                .withGenderFrom(gender, suggested ? Origin.LIKELY : Origin.BOOK);
     }
 
     // Dax Orlo is right; Dax is a verified wrong gender and its own spelling of the name; Ysolde is wrong but still a
@@ -86,34 +75,15 @@ class NamesScoreTest {
                 entry("Hale", null, TermType.TERM, Gender.MALE, false),
                 entry("Mayday", null, TermType.OTHER, Gender.UNKNOWN, false),
                 entry("Kessel Optik", null, TermType.OTHER, Gender.UNKNOWN, false),
-                new GlossaryEntry(
-                        P + ":Velaris",
-                        P,
-                        "Velaris",
-                        null,
-                        TermType.PLACE,
-                        Gender.UNKNOWN,
-                        false,
-                        TargetOrigin.PERSON,
-                        null,
-                        false,
-                        List.of("Velar")));
+                GlossaryEntry.of(P + ":Velaris", P, "Velaris", null, TermType.PLACE, Gender.UNKNOWN, false)
+                        .withForms(List.of("Velar")));
     }
 
     private static GlossaryEntry withAlias(
             final String term, final String target, final TermType type, final String alias) {
-        return new GlossaryEntry(
-                P + ":" + term,
-                P,
-                term,
-                target,
-                type,
-                Gender.FEMALE,
-                false,
-                TargetOrigin.PERSON,
-                GenderOrigin.VERIFIED,
-                false,
-                List.of(alias));
+        return GlossaryEntry.of(P + ":" + term, P, term, target, type, Gender.UNKNOWN, false)
+                .withGenderFrom(Gender.FEMALE, Origin.BOOK)
+                .withForms(List.of(alias));
     }
 
     private static List<LexiconEntry> lexicon() {
@@ -132,7 +102,7 @@ class NamesScoreTest {
         final List<GlossaryEntry> held = List.of(
                 entry("Dax Orlo", "Дакс Орло", TermType.CHARACTER, Gender.MALE, false),
                 entry("Dax", "Декс", TermType.CHARACTER, Gender.FEMALE, false),
-                new GlossaryEntry(P + ":Ysolde", P, "Ysolde", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                GlossaryEntry.of(P + ":Ysolde", P, "Ysolde", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                         .withNoGenderEvidence());
 
         final NamesScore score = NamesScore.of(GOLD, BOOK, held, lexicon(), 12, Duration.ofSeconds(90));

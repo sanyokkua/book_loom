@@ -23,18 +23,18 @@ import ua.bookloom.ui.ViewNames;
 abstract class TermTableCardTestBase extends TranslatingScreenTestBase {
 
     protected static final GlossaryEntry ROSALIND =
-            new GlossaryEntry("e1", "p1", "Rosalind", "Розалінда", TermType.CHARACTER, Gender.FEMALE, false);
+            GlossaryEntry.of("e1", "p1", "Rosalind", "Розалінда", TermType.CHARACTER, Gender.FEMALE, false);
     protected static final GlossaryEntry HALE =
-            new GlossaryEntry("e2", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
-    protected static final GlossaryEntry JOHN = new GlossaryEntry(
+            GlossaryEntry.of("e2", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+    protected static final GlossaryEntry JOHN = GlossaryEntry.of(
                     "e3", "p1", "John", "Джон", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     protected static final GlossaryEntry BROOK =
-            new GlossaryEntry("e4", "p1", "Brook", null, TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e4", "p1", "Brook", null, TermType.PLACE, Gender.UNKNOWN, false);
     protected static final GlossaryEntry WAND =
-            new GlossaryEntry("e5", "p1", "Wand", "Паличка", TermType.TERM, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e5", "p1", "Wand", "Паличка", TermType.TERM, Gender.UNKNOWN, false);
     protected static final GlossaryEntry SHOUTED =
-            new GlossaryEntry("e6", "p1", "BRANWICK", null, TermType.OTHER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e6", "p1", "BRANWICK", null, TermType.OTHER, Gender.UNKNOWN, false);
 
     protected static final LexiconEntry MASTER =
             LexiconEntry.of("p1", "master").seen("господар").seen("господар");

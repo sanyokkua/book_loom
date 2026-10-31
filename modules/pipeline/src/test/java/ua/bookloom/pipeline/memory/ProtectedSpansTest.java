@@ -47,7 +47,7 @@ class ProtectedSpansTest {
     @Test
     void mask_aliasOfALockedTerm_isHiddenBehindTheTermsTarget() {
         final GlossaryEntry zurich =
-                ProtectedSpansFixtures.locked("Zurich", "Цюрих").withAliases(List.of("Zurish"));
+                ProtectedSpansFixtures.locked("Zurich", "Цюрих").withForms(List.of("Zurish"));
 
         final ProtectedMask mask = mask("Zurish was cold.", zurich);
 

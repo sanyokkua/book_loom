@@ -34,11 +34,11 @@ public final class AutoNamesFixture {
      * a suggested female and a person the book gives no evidence for, among them.
      */
     public static GlossaryEntry character(final String id, final String term, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, TermType.CHARACTER, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, TermType.CHARACTER, gender, false);
     }
 
     private static GlossaryEntry entry(final String id, final String term, final TermType type, final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, null, type, gender, false);
+        return GlossaryEntry.of(id, PROJECT, term, null, type, gender, false);
     }
 
     /** {@return what the pass reports for the tables {@code Well}, {@code Hale} and {@code table}} */

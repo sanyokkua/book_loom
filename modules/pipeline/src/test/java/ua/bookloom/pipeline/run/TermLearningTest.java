@@ -162,7 +162,7 @@ class TermLearningTest {
 
     @Test
     void committed_termTheGlossaryHolds_isNotTracked() {
-        stores.glossary().add(new GlossaryEntry("g1", PROJECT, "master", "пан", TermType.TERM, Gender.UNKNOWN, true));
+        stores.glossary().add(GlossaryEntry.of("g1", PROJECT, "master", "пан", TermType.TERM, Gender.UNKNOWN, true));
 
         learnFrom(book(4));
 
@@ -172,7 +172,7 @@ class TermLearningTest {
     @Test
     void committed_renderingThatIsAGlossaryName_isNotLearned() {
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Hosp", "Господар", TermType.CHARACTER, Gender.UNKNOWN, true));
+                .add(GlossaryEntry.of("g1", PROJECT, "Hosp", "Господар", TermType.CHARACTER, Gender.UNKNOWN, true));
 
         learnFrom(book(4));
 
@@ -287,8 +287,7 @@ class TermLearningTest {
 
     @Test
     void committed_nameWithNoTarget_getsTheSpellingTheBookUsedAsASuggestion() {
-        stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
+        stores.glossary().add(GlossaryEntry.of("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
             {"Zerubin walked on.", "Зерубін ішов далі."},
@@ -304,10 +303,9 @@ class TermLearningTest {
 
     @Test
     void committed_nameTheCurrentEntryAlreadyHasATargetFor_isLeftAsThePersonSetIt() {
+        stores.glossary().add(GlossaryEntry.of("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false));
-        stores.glossary()
-                .update(new GlossaryEntry(
+                .update(GlossaryEntry.of(
                         "g1", PROJECT, "Zerubin", "Зерубин", TermType.CHARACTER, Gender.FEMALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
@@ -324,7 +322,7 @@ class TermLearningTest {
     @Test
     void committed_nameWithALockedTarget_isLeftAlone() {
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Zerubin", "Зерубин", TermType.CHARACTER, Gender.MALE, true));
+                .add(GlossaryEntry.of("g1", PROJECT, "Zerubin", "Зерубин", TermType.CHARACTER, Gender.MALE, true));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
             {"Zerubin walked on.", "Зерубін ішов далі."},
@@ -342,7 +340,7 @@ class TermLearningTest {
     void committed_titleWrittenBesideAName_isNotTheNamesSpelling() {
         stores.lexicon().put(LexiconEntry.of(PROJECT, "Ms"));
         stores.glossary()
-                .add(new GlossaryEntry("g1", PROJECT, "Ashdown", null, TermType.CHARACTER, Gender.FEMALE, false));
+                .add(GlossaryEntry.of("g1", PROJECT, "Ashdown", null, TermType.CHARACTER, Gender.FEMALE, false));
         learning = new TermLearning(stores, PROJECT, "en", "uk");
         learnFrom(companyBook(new String[][] {
             {"Ms Ashdown walked on.", "Тоді Міс Ешдаун ішла далі."},

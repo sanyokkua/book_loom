@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -81,8 +81,7 @@ class ContextPackageReplayTest {
         final ContextSnapshot snapshot = new ContextSnapshot(
                 List.of(),
                 List.of(
-                        new SnapshotTerm(
-                                "Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, GenderOrigin.SUGGESTED),
+                        new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, Origin.LIKELY),
                         new SnapshotTerm("Milton", "Мілтон", TermType.PLACE, Gender.NEUTER, false, false, null)),
                 List.of(),
                 null,

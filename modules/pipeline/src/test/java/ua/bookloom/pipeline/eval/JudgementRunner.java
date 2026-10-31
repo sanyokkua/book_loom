@@ -126,7 +126,7 @@ final class JudgementRunner {
                 .forEach(character -> prepared.stores()
                         .glossary()
                         .add(PronounGender.seeded(
-                                new GlossaryEntry(
+                                GlossaryEntry.of(
                                         GlossaryIds.of(project, character.term()),
                                         project,
                                         character.term(),

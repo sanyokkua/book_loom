@@ -27,7 +27,7 @@ class NameMatchingRuleTest {
             List.of("Orrin & Vale sold cameras.", "Orrin and Vale argued all day.", "Orrin, Vale and Pell waited.");
 
     private static GlossaryEntry character(final String term) {
-        return new GlossaryEntry("p1:" + term, "p1", term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:" + term, "p1", term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     private static NameWindows.Evidence windowsOf(final String term, final List<String> paragraphs) {

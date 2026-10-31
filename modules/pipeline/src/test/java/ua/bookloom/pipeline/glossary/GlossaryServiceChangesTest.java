@@ -61,7 +61,7 @@ class GlossaryServiceChangesTest {
         injector.getInstance(ProjectRepository.class).save(project(withTarget(BookBrief.defaults("en"), "uk")));
         openProjects.put(PROJECT, book(List.of("Well, we met Moreau today."), "Title"));
         final GlossaryEntry well =
-                new GlossaryEntry("p1:well", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:well", PROJECT, "Well", null, TermType.OTHER, Gender.UNKNOWN, false);
         service.add(well);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(
@@ -83,7 +83,7 @@ class GlossaryServiceChangesTest {
         openProjects.put(PROJECT, book(List.of("We met Moreau near the Dome today."), "Title"));
         final GlossaryEntry chosen = entry("Hale", "Гейл", TermType.CHARACTER, false);
         final GlossaryEntry open =
-                new GlossaryEntry("p1:dome", PROJECT, "Dome", null, TermType.TERM, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:dome", PROJECT, "Dome", null, TermType.TERM, Gender.UNKNOWN, false);
         service.add(chosen);
         service.add(open);
         final ScriptedChatModel model = new ScriptedChatModel()
@@ -123,7 +123,7 @@ class GlossaryServiceChangesTest {
     void translate_modelAnswerFails_writesNothingAndAnswersTheError() {
         injector.getInstance(ProjectRepository.class).save(project(withTarget(BookBrief.defaults("en"), "uk")));
         openProjects.put(PROJECT, book(List.of("We met Dome today."), "Title"));
-        service.add(new GlossaryEntry("p1:dome", PROJECT, "Dome", null, TermType.TERM, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:dome", PROJECT, "Dome", null, TermType.TERM, Gender.UNKNOWN, false));
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
         final ScriptedChatModel model = new ScriptedChatModel().answer(Result.err(failure));
 

@@ -18,8 +18,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -51,18 +51,17 @@ class GlossaryGenderOriginServiceTest {
     // person typed.
     @Test
     void add_dialogEntryWithAChosenGender_storesThePersonsOrigin() {
-        service.add(
-                new GlossaryEntry("p1:justine", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false));
+        service.add(GlossaryEntry.of("p1:justine", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false));
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(Gender.FEMALE, GenderOrigin.PERSON));
+                .containsExactly(tuple(Gender.FEMALE, Origin.USER));
     }
 
     @Test
     void add_dialogEntryWithNoGender_storesNoOrigin() {
         service.add(
-                new GlossaryEntry("p1:justine", PROJECT, "Justine", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+                GlossaryEntry.of("p1:justine", PROJECT, "Justine", null, TermType.CHARACTER, Gender.UNKNOWN, false));
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
@@ -70,8 +69,8 @@ class GlossaryGenderOriginServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(GenderOrigin.class)
-    void add_entryWithAnyOrigin_storesItAsGiven(final GenderOrigin origin) {
+    @EnumSource(Origin.class)
+    void add_entryWithAnyOrigin_storesItAsGiven(final Origin origin) {
         service.add(holding(origin, Gender.MALE, "Wren"));
 
         assertThat(service.entries(PROJECT).data())
@@ -81,8 +80,8 @@ class GlossaryGenderOriginServiceTest {
 
     // The table's gender combo (and choosing the shown value again) goes through the entry's own withGender.
     @ParameterizedTest
-    @EnumSource(GenderOrigin.class)
-    void update_genderChosenByThePerson_storesThePersonsOrigin(final GenderOrigin was) {
+    @EnumSource(Origin.class)
+    void update_genderChosenByThePerson_storesThePersonsOrigin(final Origin was) {
         final GlossaryEntry held = holding(was, Gender.MALE, "Wren");
         service.add(held);
 
@@ -90,14 +89,14 @@ class GlossaryGenderOriginServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple(Gender.MALE, Origin.USER));
     }
 
     // IF the service rewrote the origin of every entry it stores, THEN a target edit would turn a verified gender into
     // the person's, which no later verdict could correct.
     @ParameterizedTest
-    @EnumSource(GenderOrigin.class)
-    void update_targetEdit_keepsTheGendersOrigin(final GenderOrigin origin) {
+    @EnumSource(Origin.class)
+    void update_targetEdit_keepsTheGendersOrigin(final Origin origin) {
         final GlossaryEntry held = holding(origin, Gender.MALE, "Wren");
         service.add(held);
 
@@ -110,7 +109,7 @@ class GlossaryGenderOriginServiceTest {
 
     @Test
     void update_genderClearedToUnknown_storesNoOrigin() {
-        final GlossaryEntry held = holding(GenderOrigin.PERSON, Gender.MALE, "Wren");
+        final GlossaryEntry held = holding(Origin.USER, Gender.MALE, "Wren");
         service.add(held);
 
         service.update(held.withGender(Gender.UNKNOWN));
@@ -128,7 +127,7 @@ class GlossaryGenderOriginServiceTest {
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(expected, GenderOrigin.PERSON));
+                .containsExactly(tuple(expected, Origin.USER));
     }
 
     @Test
@@ -143,29 +142,29 @@ class GlossaryGenderOriginServiceTest {
     // The file is the person's word: a row naming a gender replaces a suggested or verified one, even the same value.
     @ParameterizedTest
     @CsvSource({
-        "SUGGESTED, male, MALE",
-        "SUGGESTED, female, FEMALE",
-        "VERIFIED, male, MALE",
-        "VERIFIED, female, FEMALE",
-        "PERSON, male, MALE",
-        "PERSON, female, FEMALE"
+        "LIKELY, male, MALE",
+        "LIKELY, female, FEMALE",
+        "BOOK, male, MALE",
+        "BOOK, female, FEMALE",
+        "USER, male, MALE",
+        "USER, female, FEMALE"
     })
     void importCsv_rowWithAGender_overAHeldGender_isThePersons(
-            final GenderOrigin was, final String column, final Gender expected) throws IOException {
+            final Origin was, final String column, final Gender expected) throws IOException {
         service.add(holding(was, Gender.MALE, "Wren"));
 
         service.importCsv(PROJECT, write(HEADER, "Wren,,character," + column + ",false"));
 
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(expected, GenderOrigin.PERSON));
+                .containsExactly(tuple(expected, Origin.USER));
     }
 
     // 15h.B6: a rescan's file lists a character as "unknown" before anybody settled it; importing that must not undo
     // the gender, nor change who settled it (a suggestion must not silently become the person's).
     @ParameterizedTest
-    @EnumSource(GenderOrigin.class)
-    void importCsv_rowWithUnknownGender_keepsTheHeldGenderAndItsOrigin(final GenderOrigin was) throws IOException {
+    @EnumSource(Origin.class)
+    void importCsv_rowWithUnknownGender_keepsTheHeldGenderAndItsOrigin(final Origin was) throws IOException {
         service.add(holding(was, Gender.FEMALE, "Wren"));
 
         service.importCsv(PROJECT, write(HEADER, "Wren,Рен,term,unknown,false"));
@@ -179,7 +178,7 @@ class GlossaryGenderOriginServiceTest {
     // suggested again at the next run start.
     @Test
     void importCsv_rowWithUnknownGender_overAGenderThePersonResetKeepsTheTriedFlag() throws IOException {
-        service.add(holding(GenderOrigin.PERSON, Gender.MALE, "Wren").withGender(Gender.UNKNOWN));
+        service.add(holding(Origin.USER, Gender.MALE, "Wren").withGender(Gender.UNKNOWN));
 
         service.importCsv(PROJECT, write(HEADER, "Wren,,character,unknown,false"));
 
@@ -216,30 +215,31 @@ class GlossaryGenderOriginServiceTest {
         assertThat(service.entries("p2").data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Hale", Gender.MALE, GenderOrigin.PERSON),
-                        tuple("Rook", Gender.FEMALE, GenderOrigin.PERSON),
-                        tuple("Wren", Gender.MALE, GenderOrigin.PERSON),
+                        tuple("Hale", Gender.MALE, Origin.USER),
+                        tuple("Rook", Gender.FEMALE, Origin.USER),
+                        tuple("Wren", Gender.MALE, Origin.USER),
                         tuple("Moss", Gender.UNKNOWN, null));
     }
 
     private void addOneOfEachOrigin() {
-        service.add(holding(GenderOrigin.SUGGESTED, Gender.MALE, "Hale"));
-        service.add(holding(GenderOrigin.VERIFIED, Gender.FEMALE, "Rook"));
-        service.add(holding(GenderOrigin.PERSON, Gender.MALE, "Wren"));
+        service.add(holding(Origin.LIKELY, Gender.MALE, "Hale"));
+        service.add(holding(Origin.BOOK, Gender.FEMALE, "Rook"));
+        service.add(holding(Origin.USER, Gender.MALE, "Wren"));
         service.add(holding(null, Gender.UNKNOWN, "Moss"));
     }
 
     // The entry as each writer leaves it: the person's edit, a verified answer, a suggestion, or nothing known.
-    private static GlossaryEntry holding(@Nullable final GenderOrigin origin, final Gender gender, final String term) {
-        final GlossaryEntry unknown = new GlossaryEntry(
+    private static GlossaryEntry holding(@Nullable final Origin origin, final Gender gender, final String term) {
+        final GlossaryEntry unknown = GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, term), PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
         if (origin == null) {
             return unknown;
         }
         return switch (origin) {
-            case PERSON -> unknown.withGender(gender);
-            case VERIFIED -> unknown.withInferredGender(gender);
-            case SUGGESTED -> unknown.withSuggestedGender(gender);
+            case USER -> unknown.withGender(gender);
+            case BOOK -> unknown.withInferredGender(gender);
+            case RULE -> unknown.withGenderFrom(gender, Origin.RULE);
+            case LIKELY -> unknown.withSuggestedGender(gender);
         };
     }
 

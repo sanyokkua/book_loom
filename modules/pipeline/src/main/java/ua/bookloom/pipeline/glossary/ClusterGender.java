@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 
 /**
  * One person, one gender (15i.N2): the gender known for one spelling of a person is written to the others
@@ -90,10 +90,8 @@ final class ClusterGender {
         final GlossaryEntry chosen = change.after();
         final GlossaryEntry before = change.before();
         final boolean choice = chosen.gender() != Gender.UNKNOWN
-                && chosen.genderOrigin() == GenderOrigin.PERSON
-                && (before == null
-                        || before.gender() != chosen.gender()
-                        || before.genderOrigin() != GenderOrigin.PERSON);
+                && chosen.genderOrigin() == Origin.USER
+                && (before == null || before.gender() != chosen.gender() || before.genderOrigin() != Origin.USER);
         log.debug("Cluster gender: entry {} is a person's gender choice: {}", chosen.id(), choice);
         return choice;
     }
@@ -119,7 +117,7 @@ final class ClusterGender {
             final GlossaryEntry chosen) {
         for (final GlossaryEntry member : clusters.membersOf(chosen)) {
             final GlossaryEntry now = current.get(member.id());
-            if (member.id().equals(chosen.id()) || now == null || now.genderOrigin() == GenderOrigin.PERSON) {
+            if (member.id().equals(chosen.id()) || now == null || now.genderOrigin() == Origin.USER) {
                 continue;
             }
             final GlossaryEntry changed = asPerson(now, chosen.gender());
@@ -168,7 +166,7 @@ final class ClusterGender {
     // it at that rank or a higher one.
     private static Result<Integer> share(
             final GlossaryRepository glossary, final String projectId, final List<GlossaryEntry> members) {
-        for (final GenderOrigin rank : GenderOrigin.values()) {
+        for (final Origin rank : Origin.values()) {
             final Set<Gender> held = new HashSet<>();
             members.stream()
                     .filter(member -> member.genderOrigin() == rank)
@@ -211,17 +209,18 @@ final class ClusterGender {
     }
 
     private static GlossaryEntry asPerson(final GlossaryEntry current, final Gender gender) {
-        return current.genderOrigin() == GenderOrigin.PERSON ? current : current.withGender(gender);
+        return current.genderOrigin() == Origin.USER ? current : current.withGender(gender);
     }
 
-    private static GlossaryEntry atRank(final GlossaryEntry current, final Gender gender, final GenderOrigin rank) {
+    private static GlossaryEntry atRank(final GlossaryEntry current, final Gender gender, final Origin rank) {
         if (current.genderOrigin() != null && current.genderOrigin().compareTo(rank) <= 0) {
             return current;
         }
         return switch (rank) {
-            case PERSON -> current.withGender(gender);
-            case VERIFIED -> ReviewCommit.verified(current, gender);
-            case SUGGESTED -> current.withSuggestedGender(gender);
+            case USER -> current.withGender(gender);
+            case BOOK -> ReviewCommit.verified(current, gender);
+            case RULE -> current.withGenderFrom(gender, Origin.RULE);
+            case LIKELY -> current.withSuggestedGender(gender);
         };
     }
 }

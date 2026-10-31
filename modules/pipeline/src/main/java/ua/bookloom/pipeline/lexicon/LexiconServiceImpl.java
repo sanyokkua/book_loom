@@ -326,7 +326,7 @@ public final class LexiconServiceImpl implements LexiconService {
 
     private static List<GlossaryEntry> asGlossary(final String projectId, final List<LexiconEntry> entries) {
         return entries.stream()
-                .map(entry -> new GlossaryEntry(
+                .map(entry -> GlossaryEntry.of(
                         GlossaryIds.of(projectId, entry.term()),
                         projectId,
                         entry.term(),

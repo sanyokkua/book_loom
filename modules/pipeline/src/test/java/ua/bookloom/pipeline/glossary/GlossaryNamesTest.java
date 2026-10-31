@@ -11,9 +11,9 @@ import ua.bookloom.api.project.TermType;
 /** An entry's folded spellings name it wherever the glossary is matched against the book. */
 class GlossaryNamesTest {
 
-    private static final GlossaryEntry IKON = new GlossaryEntry(
+    private static final GlossaryEntry IKON = GlossaryEntry.of(
                     "p1:ikon", "p1", "Ikon", "Ікона", TermType.TERM, Gender.UNKNOWN, false)
-            .withAliases(List.of("Ikonn"));
+            .withForms(List.of("Ikonn"));
 
     // IF a misspelt alias were no line, THEN the name checks could not hold "Ikonn" to the entry's target.
     @Test
@@ -24,7 +24,7 @@ class GlossaryNamesTest {
     @Test
     void pairs_entryWithNoTarget_listsNothing() {
         final GlossaryEntry open =
-                new GlossaryEntry("p1:wren", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:wren", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
 
         assertThat(GlossaryNames.pairs(List.of(open))).isEmpty();
     }

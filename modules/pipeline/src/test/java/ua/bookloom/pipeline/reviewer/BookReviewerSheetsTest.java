@@ -27,9 +27,9 @@ class BookReviewerSheetsTest {
     private static final int ALLOWANCE = 1000;
     private static final String P = "p1";
     private static final GlossaryEntry MARROW =
-            new GlossaryEntry("p1:marrow", P, "Marrow", "Мерроу", TermType.CHARACTER, Gender.FEMALE, false);
+            GlossaryEntry.of("p1:marrow", P, "Marrow", "Мерроу", TermType.CHARACTER, Gender.FEMALE, false);
     private static final GlossaryEntry TINDLE =
-            new GlossaryEntry("p1:tindle", P, "Tindle", "Тіндл", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("p1:tindle", P, "Tindle", "Тіндл", TermType.CHARACTER, Gender.MALE, false);
     private static final ReviewedPair MARROW_PAIR =
             new ReviewedPair("Book.md:0", "Marrow opened the door.", "Мерроу відчинила двері.");
     private static final ReviewedPair TINDLE_PAIR =
@@ -79,7 +79,7 @@ class BookReviewerSheetsTest {
 
     @Test
     void forPairs_aliasedEntry_isListedOnceWithItsAliasesOnTheSameLine() {
-        final GlossaryEntry aliased = TINDLE.withAliases(List.of("Tindles", "Tindel"));
+        final GlossaryEntry aliased = TINDLE.withForms(List.of("Tindles", "Tindel"));
         final ReviewedPair pair = new ReviewedPair("Book.md:2", "Tindles and Tindel waited.", "Тіндли чекали.");
 
         final ReviewerSheets.Sheet sheet = sheets(List.of(aliased), List.of()).forPairs(List.of(pair));
@@ -89,7 +89,7 @@ class BookReviewerSheetsTest {
 
     @Test
     void forPairs_suggestedTarget_isOfferedAsSuggestedAndNeverAsTheGlossary() {
-        final GlossaryEntry suggested = new GlossaryEntry(
+        final GlossaryEntry suggested = GlossaryEntry.of(
                         "p1:vale", P, "Vale", null, TermType.PLACE, Gender.UNKNOWN, false)
                 .withSuggestedTarget("Вейл");
         final ReviewedPair pair = new ReviewedPair("Book.md:3", "They crossed the Vale.", "Вони перетнули Вейл.");
@@ -103,7 +103,7 @@ class BookReviewerSheetsTest {
 
     @Test
     void review_suggestedTarget_isLabelledNotConfirmedUnderItsOwnHeading() {
-        final GlossaryEntry suggested = new GlossaryEntry(
+        final GlossaryEntry suggested = GlossaryEntry.of(
                         "p1:vale", P, "Vale", null, TermType.PLACE, Gender.UNKNOWN, false)
                 .withSuggestedTarget("Вейл");
         final ScriptedChatModel model = new ScriptedChatModel().answer(ok(ALL_OK));
@@ -161,7 +161,7 @@ class BookReviewerSheetsTest {
     @Test
     void forPairs_recurringTermTheGlossaryHolds_isNotRepeatedAsUsual() {
         final GlossaryEntry held =
-                new GlossaryEntry("p1:lantern", P, "lantern", "ліхтар", TermType.TERM, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:lantern", P, "lantern", "ліхтар", TermType.TERM, Gender.UNKNOWN, false);
         final LexiconEntry lamp = new LexiconEntry(P, "lantern", List.of(), "ліхтар", null, null);
         final ReviewedPair named = new ReviewedPair("Book.md:5", "She lit the lantern.", "Вона запалила ліхтар.");
 

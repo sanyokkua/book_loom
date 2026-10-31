@@ -15,7 +15,7 @@ class NameMissingCheckTest {
 
     private static GlossaryEntry entry(
             final String term, final String target, final TermType type, final boolean locked) {
-        return new GlossaryEntry("g", "p", term, target, type, Gender.UNKNOWN, locked);
+        return GlossaryEntry.of("g", "p", term, target, type, Gender.UNKNOWN, locked);
     }
 
     @ParameterizedTest

@@ -9,10 +9,10 @@ class SnapshotTermTest {
 
     @Test
     void constructor_suggestedOrigin_isKept() {
-        final SnapshotTerm term = new SnapshotTerm(
-                "Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false, false, GenderOrigin.SUGGESTED);
+        final SnapshotTerm term =
+                new SnapshotTerm("Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false, false, Origin.LIKELY);
 
-        assertThat(term.genderOrigin()).isEqualTo(GenderOrigin.SUGGESTED);
+        assertThat(term.genderOrigin()).isEqualTo(Origin.LIKELY);
     }
 
     // A snapshot built before origins existed held only the person's or the code's confirmed genders.
@@ -20,13 +20,13 @@ class SnapshotTermTest {
     void constructor_knownGenderWithNoOrigin_isThePersons() {
         assertThat(new SnapshotTerm("Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false, false, null)
                         .genderOrigin())
-                .isEqualTo(GenderOrigin.PERSON);
+                .isEqualTo(Origin.USER);
     }
 
     @Test
     void constructor_unknownGender_hasNoOriginWhateverWasPassed() {
-        final SnapshotTerm term = new SnapshotTerm(
-                "Lyra", "Ліра", TermType.CHARACTER, Gender.UNKNOWN, false, false, GenderOrigin.SUGGESTED);
+        final SnapshotTerm term =
+                new SnapshotTerm("Lyra", "Ліра", TermType.CHARACTER, Gender.UNKNOWN, false, false, Origin.LIKELY);
 
         assertThat(term.genderOrigin()).isNull();
     }

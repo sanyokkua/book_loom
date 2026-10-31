@@ -105,7 +105,7 @@ public record BookReviewerSheets(
     }
 
     private static String lineOf(final GlossaryEntry entry) {
-        final List<String> aliases = entry.aliases();
+        final List<String> aliases = entry.forms();
         final String name = aliases.isEmpty() ? entry.term() : entry.term() + ALSO + String.join(", ", aliases) + ")";
         return name + ARROW + entry.target();
     }

@@ -82,7 +82,7 @@ class InjectedCharactersClustersTest {
     void select_placeSharingAWordWithACharacter_isNotACharacterLine() {
         final List<GlossaryEntry> glossary = List.of(
                 character("Venn", Gender.FEMALE),
-                new GlossaryEntry("p1:Venn Hall", "p1", "Venn Hall", null, TermType.PLACE, Gender.NEUTER, false));
+                GlossaryEntry.of("p1:Venn Hall", "p1", "Venn Hall", null, TermType.PLACE, Gender.NEUTER, false));
 
         assertThat(select("Venn walked to Venn Hall.", glossary)).containsExactly("Venn — female");
     }

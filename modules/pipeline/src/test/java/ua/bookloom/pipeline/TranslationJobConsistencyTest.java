@@ -356,7 +356,7 @@ class TranslationJobConsistencyTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        final GlossaryEntry entry = new GlossaryEntry(
+        final GlossaryEntry entry = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), term), project.id(), term, rendering, type, gender, locked);
         Objects.requireNonNull(project.stores().glossary().add(entry).data(), "added " + term);
     }

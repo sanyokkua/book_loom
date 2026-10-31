@@ -145,7 +145,7 @@ final class JudgementFakeModel implements ChatModel {
             case PLACE -> "place";
             case TERM -> "term";
             case TITLE -> "title";
-            case OTHER -> "other";
+            case ORGANISATION, PRODUCT, MATERIAL, OTHER -> "other";
         };
     }
 

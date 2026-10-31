@@ -103,7 +103,7 @@ class TermReviewChangesTest {
             @Nullable final String target,
             final TermType type,
             final Gender gender) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, target != null);
+        return GlossaryEntry.of(id, PROJECT, term, target, type, gender, target != null);
     }
 
     private static Result<ChatResponse> reply(final String content) {

@@ -14,8 +14,8 @@ import javafx.scene.input.MouseEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
@@ -26,12 +26,12 @@ import ua.bookloom.ui.ViewNames;
  */
 class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
 
-    private static final GlossaryEntry SUGGESTED = new GlossaryEntry(
+    private static final GlossaryEntry SUGGESTED = GlossaryEntry.of(
                     "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CONFIRMED =
-            new GlossaryEntry("e2", "p1", "Rosalind", null, TermType.CHARACTER, Gender.FEMALE, false);
-    private static final GlossaryEntry VERIFIED = new GlossaryEntry(
+            GlossaryEntry.of("e2", "p1", "Rosalind", null, TermType.CHARACTER, Gender.FEMALE, false);
+    private static final GlossaryEntry VERIFIED = GlossaryEntry.of(
                     "e3", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withInferredGender(Gender.MALE);
 
@@ -70,7 +70,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.MALE, Origin.USER);
     }
 
     // IF a person's correction of a verified gender stayed "verified", THEN the next review could overwrite it.
@@ -85,7 +85,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly("Hale", Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly("Hale", Gender.FEMALE, Origin.USER);
     }
 
     private void choose(final String shownText, final String optionText) throws Exception {

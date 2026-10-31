@@ -142,7 +142,7 @@ class TranslationJobVerbatimTest {
         final TestProject project = project(source, brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(project.id(), "Zerubin"),
                         project.id(),
                         "Zerubin",

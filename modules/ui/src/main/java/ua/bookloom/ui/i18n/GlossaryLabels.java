@@ -31,6 +31,9 @@ public final class GlossaryLabels {
                     case PLACE -> MessageKey.NAMES_STYLE_TYPE_PLACE;
                     case TERM -> MessageKey.NAMES_STYLE_TYPE_TERM;
                     case TITLE -> MessageKey.NAMES_STYLE_TYPE_TITLE;
+                    case ORGANISATION -> MessageKey.NAMES_STYLE_TYPE_ORGANISATION;
+                    case PRODUCT -> MessageKey.NAMES_STYLE_TYPE_PRODUCT;
+                    case MATERIAL -> MessageKey.NAMES_STYLE_TYPE_MATERIAL;
                     case OTHER -> MessageKey.NAMES_STYLE_TYPE_OTHER;
                 });
     }

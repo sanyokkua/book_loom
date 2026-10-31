@@ -176,7 +176,7 @@ class SqliteStorageInfoTest {
     void sizeBytes_afterTheOnlyLargeProjectIsRemoved_shrinksWithIt() {
         storeProjects("a");
         final List<GlossaryEntry> entries = IntStream.range(0, 3000)
-                .mapToObj(i -> new GlossaryEntry(
+                .mapToObj(i -> GlossaryEntry.of(
                         "a:" + i, "a", "Name" + i, "Імʼя".repeat(100), TermType.CHARACTER, Gender.UNKNOWN, false))
                 .toList();
         assertThat(new SqliteGlossaryRepository(db, new JsonCodec())

@@ -18,6 +18,15 @@ public enum TermType {
     /** A title or honorific. */
     TITLE,
 
+    /** A company, institution, army or other body of people. */
+    ORGANISATION,
+
+    /** A brand or a named product. */
+    PRODUCT,
+
+    /** A material or substance. */
+    MATERIAL,
+
     /** A term that fits none of the other categories. */
     OTHER
 }

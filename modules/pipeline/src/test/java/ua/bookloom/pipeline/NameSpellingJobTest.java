@@ -110,7 +110,7 @@ class NameSpellingJobTest {
                 project(TestBooks.epub(tempDir.resolve("Book.epub"), CHAPTERS, "en"), brief("en", "uk"));
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry("g1", project.id(), "Zerubin", target, TermType.CHARACTER, Gender.MALE, locked));
+                .add(GlossaryEntry.of("g1", project.id(), "Zerubin", target, TermType.CHARACTER, Gender.MALE, locked));
         return project;
     }
 

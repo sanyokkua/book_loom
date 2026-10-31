@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Facts;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.ReadCall;
 
@@ -46,13 +46,13 @@ final class ReadingVotes {
      * @param noEvidence whether the book gave this person no evidence at all: a pronoun tally of 0/0 and no verified
      *     vote; only for an unknown gender
      */
-    record GenderCall(Gender gender, @Nullable GenderOrigin origin, boolean noEvidence) {
+    record GenderCall(Gender gender, @Nullable Origin origin, boolean noEvidence) {
 
         static final GenderCall NONE = new GenderCall(Gender.UNKNOWN, null, false);
 
         static final GenderCall NO_EVIDENCE = new GenderCall(Gender.UNKNOWN, null, true);
 
-        static GenderCall of(final Gender gender, final GenderOrigin origin) {
+        static GenderCall of(final Gender gender, final Origin origin) {
             return new GenderCall(gender, origin, false);
         }
     }
@@ -109,16 +109,16 @@ final class ReadingVotes {
                     majority,
                     against,
                     agreed ? "verified" : "suggested");
-            return GenderCall.of(clear, agreed ? GenderOrigin.VERIFIED : GenderOrigin.SUGGESTED);
+            return GenderCall.of(clear, agreed ? Origin.BOOK : Origin.LIKELY);
         }
         if (majority != Gender.UNKNOWN && enough) {
             log.debug("Reading votes: no clear tally, {} by the votes, suggested", majority);
-            return GenderCall.of(majority, GenderOrigin.SUGGESTED);
+            return GenderCall.of(majority, Origin.LIKELY);
         }
         final Gender oneSided = oneSided(male + tally.male(), female + tally.female());
         log.debug("Reading votes: no clear tally and too few votes; votes and pronouns together point to {}", oneSided);
         if (oneSided != Gender.UNKNOWN) {
-            return GenderCall.of(oneSided, GenderOrigin.SUGGESTED);
+            return GenderCall.of(oneSided, Origin.LIKELY);
         }
         final boolean nothing = male + female + tally.total() == 0;
         log.debug("Reading votes: no gender decided, the book gave no evidence at all: {}", nothing);

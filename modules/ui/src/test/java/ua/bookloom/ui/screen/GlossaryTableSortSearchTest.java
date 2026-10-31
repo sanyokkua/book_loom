@@ -24,13 +24,13 @@ import ua.bookloom.ui.state.SettingsViewModel;
 class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry ZETA =
-            new GlossaryEntry("e1", "p1", "Zeta", null, TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Zeta", null, TermType.PLACE, Gender.UNKNOWN, false);
     private static final GlossaryEntry ALPHA =
-            new GlossaryEntry("e2", "p1", "Alpha", null, TermType.CHARACTER, Gender.FEMALE, true);
+            GlossaryEntry.of("e2", "p1", "Alpha", null, TermType.CHARACTER, Gender.FEMALE, true);
     private static final GlossaryEntry MID =
-            new GlossaryEntry("e3", "p1", "Mid", "Мід", TermType.OTHER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e3", "p1", "Mid", "Мід", TermType.OTHER, Gender.UNKNOWN, false);
     private static final GlossaryEntry BETA =
-            new GlossaryEntry("e4", "p1", "Beta", null, TermType.OTHER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e4", "p1", "Beta", null, TermType.OTHER, Gender.UNKNOWN, false);
 
     private void showGlossary() throws Exception {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
@@ -82,7 +82,7 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
         showGlossary();
         sortBy(1);
         glossary.willAnswer(
-                Result.ok(new GlossaryEntry("e4", "p1", "Beta", "Бета", TermType.OTHER, Gender.UNKNOWN, false)));
+                Result.ok(GlossaryEntry.of("e4", "p1", "Beta", "Бета", TermType.OTHER, Gender.UNKNOWN, false)));
 
         onFx(() -> injector.getInstance(NamesStyleViewModel.class).setTarget("e4", "Бета"));
         awaitFx(() -> "Бета".equals(table().getItems().get(2).target()));
@@ -110,7 +110,7 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
     void reviewButton_modelChosen_asksTheServiceAndShowsTheRowsItLeft() throws Exception {
         showGlossary();
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set(MODEL));
-        final GlossaryEntry typed = new GlossaryEntry("e3", "p1", "Mid", "Мід", TermType.CHARACTER, Gender.MALE, false);
+        final GlossaryEntry typed = GlossaryEntry.of("e3", "p1", "Mid", "Мід", TermType.CHARACTER, Gender.MALE, false);
         glossary.willAnswer(Result.ok(new GlossaryReviewReport(3, 1, List.of(typed))));
 
         onFx(() -> button("names-style-review").fire());

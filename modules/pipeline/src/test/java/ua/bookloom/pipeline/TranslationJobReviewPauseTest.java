@@ -292,7 +292,7 @@ class TranslationJobReviewPauseTest {
     }
 
     private static void lockHale(final TestProject project) {
-        final GlossaryEntry entry = new GlossaryEntry(
+        final GlossaryEntry entry = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Hale"),
                 project.id(),
                 "Hale",

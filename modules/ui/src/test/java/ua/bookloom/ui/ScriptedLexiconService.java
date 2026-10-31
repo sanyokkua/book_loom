@@ -184,7 +184,7 @@ public final class ScriptedLexiconService implements LexiconService {
         calls.add("promote(" + term + ")");
         final LexiconEntry entry = find(term);
         held.remove(entry);
-        return Result.ok(new GlossaryEntry(
+        return Result.ok(GlossaryEntry.of(
                 projectId + ":" + term,
                 projectId,
                 entry.term(),

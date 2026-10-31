@@ -12,8 +12,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -241,10 +241,7 @@ class ContextPackageAssemblerTest {
 
         assertThat(pack.snapshot().glossary())
                 .extracting(SnapshotTerm::term, SnapshotTerm::genderOrigin)
-                .containsExactly(
-                        tuple("Hale", GenderOrigin.SUGGESTED),
-                        tuple("Lyra", GenderOrigin.VERIFIED),
-                        tuple("Sam", GenderOrigin.PERSON));
+                .containsExactly(tuple("Hale", Origin.LIKELY), tuple("Lyra", Origin.BOOK), tuple("Sam", Origin.USER));
     }
 
     @Test

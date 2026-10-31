@@ -25,7 +25,7 @@ class GlossaryReviewReportTest {
     @Test
     void new_entriesListChangedAfterwards_keepsTheEntriesItWasGiven() {
         final List<GlossaryEntry> entries = new ArrayList<>();
-        entries.add(new GlossaryEntry("e1", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false));
+        entries.add(GlossaryEntry.of("e1", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false));
 
         final GlossaryReviewReport report = new GlossaryReviewReport(1, 0, entries);
         entries.clear();

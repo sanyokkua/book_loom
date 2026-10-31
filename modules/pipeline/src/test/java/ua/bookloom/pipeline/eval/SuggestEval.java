@@ -38,7 +38,7 @@ final class SuggestEval {
 
     static List<EvalRow> rows(final Suggest suggest, final CallFrame frame, final ModelCalls calls) {
         final List<GlossaryEntry> entries = suggest.names().stream()
-                .map(name -> new GlossaryEntry(
+                .map(name -> GlossaryEntry.of(
                         "eval:" + name.term(), "eval", name.term(), null, name.type(), Gender.UNKNOWN, false))
                 .toList();
         final List<Segment> book =

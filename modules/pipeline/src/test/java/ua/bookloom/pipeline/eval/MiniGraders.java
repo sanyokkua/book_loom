@@ -136,7 +136,7 @@ final class MiniGraders {
     }
 
     private static boolean isFiledUnder(final GlossaryEntry entry, final List<String> forms) {
-        return forms.contains(entry.term()) || entry.aliases().stream().anyMatch(forms::contains);
+        return forms.contains(entry.term()) || entry.forms().stream().anyMatch(forms::contains);
     }
 
     private static Verdict oneEntry(final List<GlossaryEntry> entries, final List<String> forms) {

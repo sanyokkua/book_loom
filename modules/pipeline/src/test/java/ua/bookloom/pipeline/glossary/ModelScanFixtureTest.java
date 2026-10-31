@@ -137,7 +137,7 @@ class ModelScanFixtureTest {
         return StreamSupport.stream(names.spliterator(), false)
                 .map(name -> {
                     final String term = name.path("name").asText().replaceFirst("^(Dr\\. |The |the )", "");
-                    return new GlossaryEntry(
+                    return GlossaryEntry.of(
                             "p1:" + term,
                             "p1",
                             term,

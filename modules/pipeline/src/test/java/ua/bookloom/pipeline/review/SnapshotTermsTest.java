@@ -7,8 +7,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 
@@ -24,10 +24,9 @@ class SnapshotTermsTest {
     @Test
     void entriesOf_snapshotWithEveryOrigin_keepsEachOne() {
         final ContextSnapshot snapshot = snapshotOf(
-                new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, GenderOrigin.SUGGESTED),
-                new SnapshotTerm(
-                        "Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false, false, GenderOrigin.VERIFIED),
-                new SnapshotTerm("Sam", "Сем", TermType.CHARACTER, Gender.MALE, false, false, GenderOrigin.PERSON),
+                new SnapshotTerm("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false, false, Origin.LIKELY),
+                new SnapshotTerm("Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false, false, Origin.BOOK),
+                new SnapshotTerm("Sam", "Сем", TermType.CHARACTER, Gender.MALE, false, false, Origin.USER),
                 new SnapshotTerm("Quill", "Квіл", TermType.CHARACTER, Gender.UNKNOWN, false, false, null));
 
         final List<GlossaryEntry> entries = SnapshotTerms.entriesOf(snapshot, "p1");
@@ -35,9 +34,9 @@ class SnapshotTermsTest {
         assertThat(entries)
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Hale", Gender.MALE, GenderOrigin.SUGGESTED),
-                        tuple("Lyra", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Sam", Gender.MALE, GenderOrigin.PERSON),
+                        tuple("Hale", Gender.MALE, Origin.LIKELY),
+                        tuple("Lyra", Gender.FEMALE, Origin.BOOK),
+                        tuple("Sam", Gender.MALE, Origin.USER),
                         tuple("Quill", Gender.UNKNOWN, null));
     }
 }

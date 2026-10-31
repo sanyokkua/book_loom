@@ -109,7 +109,7 @@ class StartNarratorQuestionTest extends WorkspaceTestBase {
         final OpenedBook open = Objects.requireNonNull(
                 onFx(() -> injector.getInstance(CurrentProject.class).book().get()));
         assertThat(injector.getInstance(GlossaryService.class)
-                        .add(new GlossaryEntry(
+                        .add(GlossaryEntry.of(
                                 "anna", open.projectId(), "Anna", null, TermType.CHARACTER, Gender.UNKNOWN, false))
                         .isOk())
                 .isTrue();

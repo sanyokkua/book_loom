@@ -7,8 +7,8 @@ import com.google.inject.Guice;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -23,7 +23,7 @@ class ClusterGenderReconcileTest {
             .getInstance(GlossaryRepository.class);
 
     private static GlossaryEntry character(final String term) {
-        return new GlossaryEntry(PROJECT + ":" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of(PROJECT + ":" + term, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     // IF the verified gender went to the members through the inferred-gender path, THEN a member already suggested
@@ -37,8 +37,6 @@ class ClusterGenderReconcileTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Arlo Venn", Gender.MALE, GenderOrigin.VERIFIED),
-                        tuple("Arlo", Gender.MALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple("Arlo Venn", Gender.MALE, Origin.BOOK), tuple("Arlo", Gender.MALE, Origin.BOOK));
     }
 }

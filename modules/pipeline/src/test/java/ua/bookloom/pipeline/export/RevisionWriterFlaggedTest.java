@@ -165,7 +165,7 @@ class RevisionWriterFlaggedTest {
     }
 
     private GlossaryEntry hale(final String target) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, "Hale"), projectId, "Hale", target, TermType.CHARACTER, Gender.MALE, true);
     }
 

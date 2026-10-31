@@ -72,7 +72,7 @@ class CommonNounScanTest {
         lines.addAll(copies("We visited the Hollins at home.", 4));
 
         assertThat(entries(lines))
-                .extracting(GlossaryEntry::term, GlossaryEntry::aliases)
+                .extracting(GlossaryEntry::term, GlossaryEntry::forms)
                 .containsExactly(tuple("Hollin", List.of("Hollins")));
     }
 

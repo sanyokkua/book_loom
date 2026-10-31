@@ -192,9 +192,9 @@ class RollingSummaryKeeperTest {
 
     @Test
     void onDecided_entriesAndHeadingsInTheDecidedSource_listsEntriesByFrequencyThenHeadings() {
-        glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
-        glossary.add(new GlossaryEntry("e2", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false));
-        glossary.add(new GlossaryEntry("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("e2", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false));
         final Segment heading = segment("ch01.xhtml", 0, SegmentKind.HEADING, "Chapter One");
         keeper.onDecided(heading, record(heading, SegmentStatus.ACCEPTED, "Розділ перший"));
         final List<Segment> body = List.of(
@@ -211,7 +211,7 @@ class RollingSummaryKeeperTest {
 
     @Test
     void onDecided_termNextToAFootnoteMarker_isCounted() {
-        glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false));
         final Segment noted = segment("ch01.xhtml", 0, SegmentKind.PARAGRAPH, "Hale⟦g0⟧1⟦g1⟧ opened the door.");
         keeper.onDecided(noted, record(noted, SegmentStatus.ACCEPTED, "Гейл відчинив двері."));
 
@@ -226,7 +226,7 @@ class RollingSummaryKeeperTest {
         final Segment mentions = segment("ch01.xhtml", 0, SegmentKind.PARAGRAPH, "Milton and Milton again.");
         keeper.onDecided(mentions, record(mentions, SegmentStatus.ACCEPTED, "Мілтон"));
         decideAccepted(keeper, "ch01.xhtml", 1, 19);
-        glossary.add(new GlossaryEntry("e1", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false));
 
         decideAccepted(keeper, "ch01.xhtml", 20, 20);
 
@@ -256,7 +256,7 @@ class RollingSummaryKeeperTest {
     private void glossaryOfTwoHundred() {
         IntStream.range(0, GLOSSARY_SIZE).forEach(index -> {
             final String number = "%03d".formatted(index);
-            glossary.add(new GlossaryEntry(
+            glossary.add(GlossaryEntry.of(
                     "e" + number, PROJECT, "Name" + number, "Ціль" + number, TermType.CHARACTER, Gender.MALE, false));
         });
     }

@@ -110,7 +110,7 @@ class FinalAuditJobTest {
                 brief("en", "uk"));
         book.stores()
                 .glossary()
-                .add(new GlossaryEntry("g1", book.id(), "Nell", "Нелл", TermType.CHARACTER, Gender.UNKNOWN, false));
+                .add(GlossaryEntry.of("g1", book.id(), "Nell", "Нелл", TermType.CHARACTER, Gender.UNKNOWN, false));
         report(batchedJob(book, new ScriptedModel(replacements), new RunRequest(book.id(), ReviewMode.UNATTENDED))
                 .run());
         return book;

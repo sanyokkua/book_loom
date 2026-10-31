@@ -544,7 +544,7 @@ title line, nor a block or run marked as another language — and never proposes
 the pre-scan's proposals pass through the review's verdict step in the same action before anything is written, since a
 small model asked once kept chapter-title words, numbers and language names as names (fixture run, 2026-10-02). Both
 buttons end with a third, separate call that **suggests a target** for each open entry by the Book Brief's name policy
-(Keep original suggests a name as written without a call); a suggestion is marked as the model's (`TargetOrigin`), is
+(Keep original suggests a name as written without a call); a suggestion is marked as the model's (target state `SUGGESTED`, origin `LIKELY`), is
 written only where the target is empty or was itself suggested, reaches a draft as a hint the model may inflect rather
 than a rendering to apply exactly, and becomes the person's when accepted, edited or locked. **Why:**
 Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER

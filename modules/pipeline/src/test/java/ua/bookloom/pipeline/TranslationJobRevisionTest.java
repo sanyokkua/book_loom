@@ -188,7 +188,7 @@ class TranslationJobRevisionTest {
             final String target,
             final Gender gender,
             final boolean locked) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(project.id(), term), project.id(), term, target, TermType.CHARACTER, gender, locked);
     }
 

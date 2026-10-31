@@ -12,8 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.NameWindows.Window;
@@ -141,7 +141,7 @@ class TermReviewRepliesGenderTest {
 
         assertThat(after)
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, GenderOrigin.SUGGESTED);
+                .containsExactly(Gender.MALE, Origin.LIKELY);
     }
 
     // Two of three cited windows and a neutral tally are a verified gender on an entry with no gender yet.
@@ -153,7 +153,7 @@ class TermReviewRepliesGenderTest {
 
         assertThat(after)
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.VERIFIED);
+                .containsExactly(Gender.FEMALE, Origin.BOOK);
     }
 
     // IF the tally's gender were written over a gender the person set, THEN a favoured tally would undo a choice.
@@ -166,7 +166,7 @@ class TermReviewRepliesGenderTest {
 
         assertThat(after)
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.FEMALE, Origin.USER);
     }
 
     // A person's male gender also survives a verified-looking female verdict from a book whose tally agrees with it.
@@ -178,7 +178,7 @@ class TermReviewRepliesGenderTest {
         assertThat(verdict.genderVerified()).isTrue();
         assertThat(ReviewCommit.guessed(persons, verdict))
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.MALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.MALE, Origin.USER);
     }
 
     // Every verdict of a batch is judged on its own term's windows and tally.
@@ -186,7 +186,7 @@ class TermReviewRepliesGenderTest {
     void read_twoTermsInOneBatch_eachIsJudgedAgainstItsOwnTally() {
         final GlossaryEntry corin = entry();
         final GlossaryEntry mara =
-                new GlossaryEntry("e2", PROJECT, "Mara", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("e2", PROJECT, "Mara", null, TermType.CHARACTER, Gender.UNKNOWN, false);
         final String reply = "{\"verdicts\":["
                 + "{\"term\":\"Corin\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\",\"windows\":[1,2]},"
                 + "{\"term\":\"Mara\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\",\"windows\":[1,2]}"
@@ -206,7 +206,7 @@ class TermReviewRepliesGenderTest {
     }
 
     private static GlossaryEntry entry() {
-        return new GlossaryEntry("e1", PROJECT, TERM, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", PROJECT, TERM, null, TermType.CHARACTER, Gender.UNKNOWN, false);
     }
 
     private static Verdict read(

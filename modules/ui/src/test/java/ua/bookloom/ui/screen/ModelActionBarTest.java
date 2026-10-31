@@ -28,7 +28,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 class ModelActionBarTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("e1", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
 
     @AfterEach
     void releaseTheModel() {
@@ -89,7 +89,7 @@ class ModelActionBarTest extends TranslatingScreenTestBase {
     void namesTranslate_pressed_asksTheGlossaryToTranslateAndOpensItsResults() throws Exception {
         showScreen();
         final GlossaryEntry translated =
-                new GlossaryEntry("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN, false);
         glossary.willAnswer(Result.ok(
                 new EntryChanges<>(List.of(), List.of(), List.of(new EntryChanges.Change<>(HALE, translated, null)))));
 

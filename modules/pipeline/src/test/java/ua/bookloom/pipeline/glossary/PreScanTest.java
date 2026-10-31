@@ -70,7 +70,7 @@ class PreScanTest {
     @Test
     void scan_modelProposesHeldAndNewTerm_keepsHeldEntryAndAddsUnlockedTargetlessNewOne() {
         final GlossaryEntry held =
-                new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+                GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
         glossary.add(held);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
@@ -81,7 +81,7 @@ class PreScanTest {
                 preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, POLICY, calls(model));
 
         final GlossaryEntry milton =
-                new GlossaryEntry("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
         assertThat(added(result)).containsExactly(milton);
         assertThat(glossary.all(PROJECT).data()).containsExactlyInAnyOrder(held, milton);
     }
@@ -112,7 +112,7 @@ class PreScanTest {
     @Test
     void scan_secondOfThreeBatchesFails_returnsThatErrorAndWritesNothing() {
         final GlossaryEntry held =
-                new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+                GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
         glossary.add(held);
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
         final ScriptedChatModel model = new ScriptedChatModel()
@@ -145,7 +145,7 @@ class PreScanTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
-                        new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false));
+                        GlossaryEntry.of("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false));
     }
 
     @ParameterizedTest
@@ -177,7 +177,7 @@ class PreScanTest {
 
     @Test
     void scan_personRemovedTheTerm_doesNotBringItBack() {
-        glossary.add(new GlossaryEntry("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
+        glossary.add(GlossaryEntry.of("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove(PROJECT, "e2");
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
@@ -254,7 +254,7 @@ class PreScanTest {
 
     @Test
     void scan_glossaryHoldsTerms_requestListsThem() {
-        glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[]}"));
 
         preScan.scan(PROJECT, book("We met Milton today."), FRAME, POLICY, calls(model));

@@ -19,7 +19,7 @@ import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -33,14 +33,14 @@ import ua.bookloom.ui.i18n.Messages;
 class NamesStyleSuggestionsTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
-    private static final GlossaryEntry HALE = new GlossaryEntry(
+    private static final GlossaryEntry HALE = GlossaryEntry.of(
                     "e1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.MALE, false)
             .withSuggestedTarget("Гейл");
-    private static final GlossaryEntry WALES = new GlossaryEntry(
+    private static final GlossaryEntry WALES = GlossaryEntry.of(
                     "e2", PROJECT, "Wales", null, TermType.PLACE, Gender.UNKNOWN, false)
             .withSuggestedTarget("Уельс");
     private static final GlossaryEntry MILTON =
-            new GlossaryEntry("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e3", PROJECT, "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
 
     private ScriptedGlossaryService glossary;
     private SettingsViewModel settings;
@@ -84,8 +84,8 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         run(() -> vm.accept("e1"));
 
         assertThat(glossary.updated())
-                .extracting(GlossaryEntry::target, GlossaryEntry::origin)
-                .containsExactly(tuple("Гейл", TargetOrigin.PERSON));
+                .extracting(GlossaryEntry::target, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Гейл", Origin.USER));
         assertThat(onFx(() -> vm.suggestedCount().get())).isEqualTo(1);
     }
 

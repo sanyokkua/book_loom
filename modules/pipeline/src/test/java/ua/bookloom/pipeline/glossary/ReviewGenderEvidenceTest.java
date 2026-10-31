@@ -26,10 +26,9 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -81,7 +80,7 @@ class ReviewGenderEvidenceTest {
         assertThat(model.requests()).extracting(ChatRequest::callKind).containsExactly(CallKind.SUGGEST_TARGETS);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, Origin.BOOK));
     }
 
     // A gender stands when a cited window holds a pronoun of it outside speech; the Ember shape cites Badger's "he".
@@ -89,17 +88,17 @@ class ReviewGenderEvidenceTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "Wren stood. She left. | female | 1 | FEMALE | VERIFIED",
-                "Wren stood. She left. | male | 1 | MALE | SUGGESTED",
-                "Wren stood. She left. | female | 2 | FEMALE | SUGGESTED",
-                "Wren nodded. \"He never pays,\" said Badger. | male | 1 | MALE | SUGGESTED"
+                "Wren stood. She left. | female | 1 | FEMALE | BOOK",
+                "Wren stood. She left. | male | 1 | MALE | LIKELY",
+                "Wren stood. She left. | female | 2 | FEMALE | LIKELY",
+                "Wren nodded. \"He never pays,\" said Badger. | male | 1 | MALE | LIKELY"
             })
     void review_modelGender_isDecidedOnlyWhenACitedWindowShowsIt(
             final String paragraph,
             final String gender,
             final int window,
             final Gender expected,
-            final GenderOrigin expectedOrigin) {
+            final Origin expectedOrigin) {
         glossary.add(entry("p1:wren", "Wren", null, TermType.OTHER, Gender.UNKNOWN, false));
         final String verdict = "{\"verdicts\":[{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"person\","
                 + "\"gender\":\"" + gender + "\",\"windows\":[" + window + "],\"evidence\":\"\"}]}";
@@ -146,9 +145,9 @@ class ReviewGenderEvidenceTest {
 
     // IF the proposal's first-sentence guess won, THEN a speaker's "he" next to a woman's name would stand (15h.A2).
     @ParameterizedTest
-    @CsvSource({"female,FEMALE,VERIFIED", "unknown,MALE,SUGGESTED"})
+    @CsvSource({"female,FEMALE,BOOK", "unknown,MALE,LIKELY"})
     void scan_proposalGender_neverOverridesTheReview(
-            final String reviewGender, final Gender expected, final GenderOrigin expectedOrigin) {
+            final String reviewGender, final Gender expected, final Origin expectedOrigin) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"terms\":[{\"term\":\"Justine\",\"type\":\"person\",\"gender\":\"male\"}]}"));
         final String verdict = "{\"verdicts\":[{\"term\":\"Justine\",\"verdict\":\"name\",\"type\":\"person\","
@@ -183,8 +182,8 @@ class ReviewGenderEvidenceTest {
             names = {"TERM", "OTHER"})
     void review_strongPronounsOnATermOrUntypedEntry_stillAskTheModelAndForceNoCharacter(final TermType type) {
         // Seeding already tried (as after the scan), so only the review itself could retype the entry here.
-        glossary.add(new GlossaryEntry(
-                "p1:wren", PROJECT, "Wren", null, type, Gender.UNKNOWN, false, TargetOrigin.PERSON, false, true));
+        glossary.add(GlossaryEntry.of("p1:wren", PROJECT, "Wren", null, type, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.UNKNOWN));
         final String verdicts = "{\"verdicts\":["
                 + "{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"term\",\"gender\":\"unknown\"}]}";
         final List<CallKind> kinds = new ArrayList<>();
@@ -215,7 +214,7 @@ class ReviewGenderEvidenceTest {
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(Gender.FEMALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple(Gender.FEMALE, Origin.BOOK));
     }
 
     // IF a first-name seed outranked a verdict the book's own window proves, THEN Hale stayed a man.
@@ -238,9 +237,7 @@ class ReviewGenderEvidenceTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(
-                        tuple("Hale", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Wren", Gender.MALE, GenderOrigin.PERSON));
+                .containsExactly(tuple("Hale", Gender.FEMALE, Origin.BOOK), tuple("Wren", Gender.MALE, Origin.USER));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";
@@ -252,7 +249,7 @@ class ReviewGenderEvidenceTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        return new GlossaryEntry(id, PROJECT, term, target, type, gender, locked);
+        return GlossaryEntry.of(id, PROJECT, term, target, type, gender, locked);
     }
 
     private static List<String> termLines(final ChatRequest request) {

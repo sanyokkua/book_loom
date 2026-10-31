@@ -27,11 +27,11 @@ class NamesStyleHiddenScreenTest extends NamesStyleAutoScreenTestBase {
 
     static final String BANNER = "Names is running in the background";
 
-    private static final GlossaryEntry SUGGESTED = new GlossaryEntry(
+    private static final GlossaryEntry SUGGESTED = GlossaryEntry.of(
                     "e1", "p1", "Well", null, TermType.CHARACTER, Gender.MALE, false)
             .withSuggestedTarget("Велл");
     private static final GlossaryEntry LOCKED =
-            new GlossaryEntry("e4", "p1", "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, true);
+            GlossaryEntry.of("e4", "p1", "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, true);
 
     private void showWithSuggestion() throws Exception {
         readyToStart();

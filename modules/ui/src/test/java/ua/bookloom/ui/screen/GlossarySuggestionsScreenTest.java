@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
@@ -26,11 +26,11 @@ import ua.bookloom.ui.ViewNames;
  */
 class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
 
-    private static final GlossaryEntry HALE = new GlossaryEntry(
+    private static final GlossaryEntry HALE = GlossaryEntry.of(
                     "e1", "p1", "Hale", null, TermType.CHARACTER, Gender.MALE, false)
             .withSuggestedTarget("Гейл");
     private static final GlossaryEntry MILTON =
-            new GlossaryEntry("e2", "p1", "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e2", "p1", "Milton", "Мілтон", TermType.PLACE, Gender.UNKNOWN, false);
 
     private void showGlossary(final GlossaryEntry... rows) throws Exception {
         readyToStart();
@@ -83,8 +83,8 @@ class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
         awaitFx(() -> !glossary.updated().isEmpty());
 
         assertThat(glossary.updated())
-                .extracting(GlossaryEntry::target, GlossaryEntry::origin)
-                .containsExactly(tuple("Гейл", TargetOrigin.PERSON));
+                .extracting(GlossaryEntry::target, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Гейл", Origin.USER));
     }
 
     @Test

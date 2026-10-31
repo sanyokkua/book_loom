@@ -221,7 +221,7 @@ final class RetryEvalRunner {
         book.glossary()
                 .forEach(seed -> prepared.stores()
                         .glossary()
-                        .add(new GlossaryEntry(
+                        .add(GlossaryEntry.of(
                                 GlossaryIds.of(project, seed.term()),
                                 project,
                                 seed.term(),

@@ -13,8 +13,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -28,17 +28,17 @@ import ua.bookloom.ui.i18n.Messages;
 class NamesStyleConfirmGendersTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
-    private static final GlossaryEntry ANNE = new GlossaryEntry(
+    private static final GlossaryEntry ANNE = GlossaryEntry.of(
                     "e1", PROJECT, "Anne", "Анна", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
-    private static final GlossaryEntry BORIS = new GlossaryEntry(
+    private static final GlossaryEntry BORIS = GlossaryEntry.of(
                     "e2", PROJECT, "Boris", "Борис", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CARL =
-            new GlossaryEntry("e3", PROJECT, "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e3", PROJECT, "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry DORA =
-            new GlossaryEntry("e4", PROJECT, "Dora", "Дора", TermType.CHARACTER, Gender.UNKNOWN, false);
-    private static final GlossaryEntry RIVER = new GlossaryEntry(
+            GlossaryEntry.of("e4", PROJECT, "Dora", "Дора", TermType.CHARACTER, Gender.UNKNOWN, false);
+    private static final GlossaryEntry RIVER = GlossaryEntry.of(
                     "e5", PROJECT, "River", "Ріка", TermType.PLACE, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
 
@@ -102,8 +102,8 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple("Anne", Gender.FEMALE, GenderOrigin.PERSON),
-                        org.assertj.core.groups.Tuple.tuple("Boris", Gender.MALE, GenderOrigin.PERSON));
+                        org.assertj.core.groups.Tuple.tuple("Anne", Gender.FEMALE, Origin.USER),
+                        org.assertj.core.groups.Tuple.tuple("Boris", Gender.MALE, Origin.USER));
         assertThat(onFx(() -> vm.suggestedGenderCount().get())).isZero();
     }
 
@@ -148,10 +148,10 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     // IF Undo restored only the rows the action asked for, THEN a character's other spellings stayed the person's.
     @Test
     void undoAll_characterWithAnotherSpelling_putsBothRowsBack() {
-        final GlossaryEntry ember = new GlossaryEntry(
+        final GlossaryEntry ember = GlossaryEntry.of(
                         "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
-        final GlossaryEntry embers = new GlossaryEntry(
+        final GlossaryEntry embers = GlossaryEntry.of(
                         "e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
         glossary.willAnswer(Result.ok(List.of(ember, embers)));
@@ -173,11 +173,11 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     // IF the glossary shared the gender with a spelling nobody asked about, THEN the results must list that row too.
     @Test
     void confirmGenders_serviceChangesAnotherSpelling_reportsThatRowToo() {
-        final GlossaryEntry ember = new GlossaryEntry(
+        final GlossaryEntry ember = GlossaryEntry.of(
                         "e6", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.FEMALE);
         final GlossaryEntry embers =
-                new GlossaryEntry("e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.FEMALE, false);
+                GlossaryEntry.of("e7", PROJECT, "Embers", "Ембер", TermType.CHARACTER, Gender.FEMALE, false);
         glossary.willAnswer(Result.ok(List.of(ember, embers)));
         run(() -> vm.show(PROJECT));
         glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));

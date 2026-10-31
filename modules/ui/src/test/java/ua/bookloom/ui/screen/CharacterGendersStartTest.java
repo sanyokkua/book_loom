@@ -22,7 +22,7 @@ import ua.bookloom.ui.dialog.CharacterGendersDialog;
 class CharacterGendersStartTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry NAME =
-            new GlossaryEntry("e1", "p1", "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final String CARD = "genders-card";
 
     private void showNamesStyle(final List<UnknownGender> unknown) throws Exception {

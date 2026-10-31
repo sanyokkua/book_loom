@@ -64,8 +64,9 @@ final class SuggestionLocks {
         }
         return switch (entry.type()) {
             case CHARACTER, PLACE -> true;
-            case TITLE, OTHER -> context.verified().contains(entry.id()) || isCapitalisedPhrase(entry.term());
-            case TERM -> false;
+            case TITLE, ORGANISATION, PRODUCT, OTHER ->
+                context.verified().contains(entry.id()) || isCapitalisedPhrase(entry.term());
+            case TERM, MATERIAL -> false;
         };
     }
 

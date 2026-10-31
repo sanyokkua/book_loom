@@ -76,7 +76,7 @@ final class ContextFixtures {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        return new GlossaryEntry("p1:" + term, "p1", term, target, type, gender, locked);
+        return GlossaryEntry.of("p1:" + term, "p1", term, target, type, gender, locked);
     }
 
     static TmEntry tmEntry(final String source, final String target) {

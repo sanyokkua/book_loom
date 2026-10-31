@@ -330,7 +330,7 @@ class BatchDraftingJobTest {
                                 "She walked to the harbour.",
                                 "Nell said nothing for a long while.")),
                 brief("en", "uk"));
-        final GlossaryEntry nell = new GlossaryEntry(
+        final GlossaryEntry nell = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Nell"),
                 project.id(),
                 "Nell",

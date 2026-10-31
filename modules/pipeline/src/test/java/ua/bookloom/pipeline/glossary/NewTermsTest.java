@@ -43,8 +43,8 @@ class NewTermsTest {
 
         assertThat(entries)
                 .containsExactly(
-                        new GlossaryEntry("p1:hale", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false),
-                        new GlossaryEntry(
+                        GlossaryEntry.of("p1:hale", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false),
+                        GlossaryEntry.of(
                                 "p1:baker street",
                                 PROJECT,
                                 "Baker Street",
@@ -67,7 +67,7 @@ class NewTermsTest {
 
     @Test
     void newTerms_personHoldsTheTermInAnotherCase_doesNotProposeIt() {
-        glossary.add(new GlossaryEntry("e1", PROJECT, "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("e1", PROJECT, "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
 
         final List<GlossaryEntry> entries = newTermsOf(GlossaryTestSegments.of(copies("We saw Hale at the door.", 5)));
 
@@ -76,7 +76,7 @@ class NewTermsTest {
 
     @Test
     void newTerms_personRemovedTheTerm_doesNotProposeItAgain() {
-        glossary.add(new GlossaryEntry("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
+        glossary.add(GlossaryEntry.of("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove(PROJECT, "e2");
 
         final List<GlossaryEntry> entries =

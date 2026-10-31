@@ -27,7 +27,7 @@ import ua.bookloom.ui.ViewNames;
 class GlossaryCellsTest extends TranslatingScreenTestBase {
 
     private static final GlossaryEntry VICTOR =
-            new GlossaryEntry("e1", "p1", "Victor", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e1", "p1", "Victor", null, TermType.CHARACTER, Gender.UNKNOWN, false);
 
     private void showGlossary() throws Exception {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
@@ -87,7 +87,7 @@ class GlossaryCellsTest extends TranslatingScreenTestBase {
         final Label shown = typeLabel();
         final TableCell<?, ?> cell = cellOf(shown);
         glossary.willAnswer(
-                Result.ok(new GlossaryEntry("e1", "p1", "Victor", null, TermType.PLACE, Gender.UNKNOWN, false)));
+                Result.ok(GlossaryEntry.of("e1", "p1", "Victor", null, TermType.PLACE, Gender.UNKNOWN, false)));
 
         onFx(() -> Event.fireEvent(shown, mouse(MouseEvent.MOUSE_CLICKED)));
         @SuppressWarnings("unchecked")

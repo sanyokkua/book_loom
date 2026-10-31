@@ -27,7 +27,7 @@ class NamesPlanTest {
     private static final String PROJECT = "p1";
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry("p1:" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("p1:" + term, PROJECT, term, null, type, Gender.UNKNOWN, false);
     }
 
     private static Candidate candidate(final GlossaryEntry entry, final int mentions) {

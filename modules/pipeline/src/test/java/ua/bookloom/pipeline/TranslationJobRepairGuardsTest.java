@@ -201,7 +201,7 @@ class TranslationJobRepairGuardsTest {
     private TestProject chisel(final QualityDial dial, final UnaryOperator<GlossaryEntry> gender) {
         final Path book = TestBooks.txt(tempDir.resolve("Book.txt"), CHISEL_SOURCE);
         final TestProject project = project(book, brief("en", "uk", dial));
-        final GlossaryEntry chisel = gender.apply(new GlossaryEntry(
+        final GlossaryEntry chisel = gender.apply(GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Chisel"),
                 project.id(),
                 "Chisel",

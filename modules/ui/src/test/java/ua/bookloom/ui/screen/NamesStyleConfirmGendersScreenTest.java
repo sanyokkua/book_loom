@@ -8,8 +8,8 @@ import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
@@ -19,14 +19,14 @@ import ua.bookloom.ui.ViewNames;
 class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
     private static final String CONFIRM = "names-style-confirm-genders";
-    private static final GlossaryEntry ANNE = new GlossaryEntry(
+    private static final GlossaryEntry ANNE = GlossaryEntry.of(
                     "e1", "p1", "Anne", "Анна", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.FEMALE);
-    private static final GlossaryEntry BORIS = new GlossaryEntry(
+    private static final GlossaryEntry BORIS = GlossaryEntry.of(
                     "e2", "p1", "Boris", "Борис", TermType.CHARACTER, Gender.UNKNOWN, false)
             .withSuggestedGender(Gender.MALE);
     private static final GlossaryEntry CARL =
-            new GlossaryEntry("e3", "p1", "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("e3", "p1", "Carl", "Карл", TermType.CHARACTER, Gender.MALE, false);
 
     private void showGlossary(final GlossaryEntry... entries) throws Exception {
         readyToStart();
@@ -69,7 +69,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::genderOrigin)
-                .containsExactly(GenderOrigin.PERSON, GenderOrigin.PERSON);
+                .containsExactly(Origin.USER, Origin.USER);
         awaitFx(() -> genderLabels().stream().noneMatch(label -> label.contains("(suggested)")));
         awaitFx(() -> !button(CONFIRM).isVisible());
     }

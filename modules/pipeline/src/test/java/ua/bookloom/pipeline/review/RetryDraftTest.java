@@ -113,7 +113,7 @@ class RetryDraftTest {
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         withContext(desk, FLAGGED_ID, overWideSnapshot());
         Objects.requireNonNull(desk.glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         "g1", desk.projectId(), "monster", "чудовисько", TermType.TERM, Gender.NEUTER, false))
                 .data());
         final ScriptedChatModel model = passing();

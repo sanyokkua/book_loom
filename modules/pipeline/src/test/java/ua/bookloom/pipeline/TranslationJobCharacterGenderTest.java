@@ -42,7 +42,7 @@ class TranslationJobCharacterGenderTest {
     private TestProject projectWith(final Gender gender) {
         final Path book = TestBooks.txt(tempDir.resolve("Book.txt"), SOURCE);
         final TestProject project = project(book, brief("en", "uk"));
-        final GlossaryEntry chisel = new GlossaryEntry(
+        final GlossaryEntry chisel = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), "Chisel"),
                 project.id(),
                 "Chisel",

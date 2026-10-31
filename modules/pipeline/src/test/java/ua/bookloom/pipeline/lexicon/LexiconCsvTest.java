@@ -224,7 +224,7 @@ class LexiconCsvTest {
     // A term the glossary holds is the glossary's: the lexicon never gives a draft two renderings of one term.
     @Test
     void importCsv_termTheGlossaryHolds_isRefusedAndNotAdded() throws IOException {
-        glossary.add(new GlossaryEntry("p1:pasha", PROJECT, "Pasha", "Паша", TermType.TERM, Gender.UNKNOWN, false));
+        glossary.add(GlossaryEntry.of("p1:pasha", PROJECT, "Pasha", "Паша", TermType.TERM, Gender.UNKNOWN, false));
         final Path file = write(HEADER, "master,пан", "pasha,паша");
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);

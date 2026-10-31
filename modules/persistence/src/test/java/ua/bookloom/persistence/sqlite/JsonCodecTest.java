@@ -40,12 +40,12 @@ import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.RenderingOrigin;
@@ -57,7 +57,7 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
-import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.api.project.UnitPolicy;
@@ -185,15 +185,19 @@ class JsonCodecTest {
                 "g1",
                 "p1",
                 "Nia",
-                "Нія",
-                TermType.CHARACTER,
-                Gender.FEMALE,
-                true,
-                TargetOrigin.PERSON,
-                GenderOrigin.VERIFIED,
-                true,
                 List.of("Nia's", "Nias"),
-                false);
+                true,
+                "Нія",
+                TargetState.LOCKED,
+                Origin.USER,
+                TermType.CHARACTER,
+                null,
+                Origin.RULE,
+                Gender.FEMALE,
+                Origin.BOOK,
+                true,
+                false,
+                "a note " + UK);
     }
 
     private static LexiconEntry lexicon() {
@@ -204,7 +208,8 @@ class JsonCodecTest {
                 "магія",
                 "чари",
                 new LexiconEntry.Learned("магія", 2, 4),
-                RenderingOrigin.PERSON);
+                RenderingOrigin.PERSON,
+                List.of("magics"));
     }
 
     private static RunRecord running() {

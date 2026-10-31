@@ -24,9 +24,9 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -72,28 +72,28 @@ class GenderOriginReviewTest {
             nullValues = "NONE",
             value = {
                 // held origin, held gender, verdict gender, verdict verified, expected gender, expected origin
-                "NONE,    UNKNOWN, FEMALE,  true,  FEMALE,  VERIFIED",
-                "NONE,    UNKNOWN, FEMALE,  false, FEMALE,  SUGGESTED",
+                "NONE,    UNKNOWN, FEMALE,  true,  FEMALE,  BOOK",
+                "NONE,    UNKNOWN, FEMALE,  false, FEMALE,  LIKELY",
                 "NONE,    UNKNOWN, UNKNOWN, true,  UNKNOWN, NONE",
-                "PERSON,  MALE,    FEMALE,  true,  MALE,    PERSON",
-                "PERSON,  MALE,    FEMALE,  false, MALE,    PERSON",
-                "PERSON,  MALE,    MALE,    true,  MALE,    PERSON",
-                "VERIFIED, MALE,   FEMALE,  true,  FEMALE,  VERIFIED",
-                "VERIFIED, MALE,   FEMALE,  false, MALE,    VERIFIED",
-                "VERIFIED, MALE,   MALE,    true,  MALE,    VERIFIED",
-                "VERIFIED, MALE,   MALE,    false, MALE,    VERIFIED",
-                "SUGGESTED, MALE,  FEMALE,  true,  FEMALE,  VERIFIED",
-                "SUGGESTED, MALE,  MALE,    true,  MALE,    VERIFIED",
-                "SUGGESTED, MALE,  FEMALE,  false, MALE,    SUGGESTED",
-                "SUGGESTED, MALE,  MALE,    false, MALE,    SUGGESTED"
+                "USER,  MALE,    FEMALE,  true,  MALE,    USER",
+                "USER,  MALE,    FEMALE,  false, MALE,    USER",
+                "USER,  MALE,    MALE,    true,  MALE,    USER",
+                "BOOK, MALE,   FEMALE,  true,  FEMALE,  BOOK",
+                "BOOK, MALE,   FEMALE,  false, MALE,    BOOK",
+                "BOOK, MALE,   MALE,    true,  MALE,    BOOK",
+                "BOOK, MALE,   MALE,    false, MALE,    BOOK",
+                "LIKELY, MALE,  FEMALE,  true,  FEMALE,  BOOK",
+                "LIKELY, MALE,  MALE,    true,  MALE,    BOOK",
+                "LIKELY, MALE,  FEMALE,  false, MALE,    LIKELY",
+                "LIKELY, MALE,  MALE,    false, MALE,    LIKELY"
             })
     void guessed_heldOriginAndVerdict_decideWhoWins(
-            final @Nullable GenderOrigin held,
+            final @Nullable Origin held,
             final Gender heldGender,
             final Gender verdictGender,
             final boolean verified,
             final Gender expectedGender,
-            final @Nullable GenderOrigin expectedOrigin) {
+            final @Nullable Origin expectedOrigin) {
         final GlossaryEntry now = holding(held, heldGender);
         final Verdict verdict = new Verdict(now, Kind.NAME, TermType.CHARACTER, verdictGender, "", verified);
 
@@ -139,7 +139,7 @@ class GenderOriginReviewTest {
     // A thing or a place takes no gender from the review, whatever the verdict says.
     @Test
     void guessed_nonCharacterEntry_takesNoGenderAndHasNoOrigin() {
-        final GlossaryEntry term = new GlossaryEntry("e1", PROJECT, "Wren", null, TermType.TERM, Gender.UNKNOWN, false);
+        final GlossaryEntry term = GlossaryEntry.of("e1", PROJECT, "Wren", null, TermType.TERM, Gender.UNKNOWN, false);
         final Verdict verdict = new Verdict(term, Kind.NAME, TermType.CHARACTER, Gender.FEMALE, "", true);
 
         final GlossaryEntry after = ReviewCommit.guessed(term, verdict);
@@ -151,7 +151,7 @@ class GenderOriginReviewTest {
     // IF the replacement dropped the tried flag, THEN the first-name list could propose a gender for the entry again.
     @Test
     void guessed_suggestedGenderReplacedByAVerifiedVerdict_keepsTheSeedTriedFlag() {
-        final GlossaryEntry now = holding(GenderOrigin.SUGGESTED, Gender.MALE);
+        final GlossaryEntry now = holding(Origin.LIKELY, Gender.MALE);
         final Verdict verdict = new Verdict(now, Kind.NAME, TermType.CHARACTER, Gender.FEMALE, "", true);
 
         assertThat(ReviewCommit.guessed(now, verdict).genderSeedTried()).isTrue();
@@ -162,9 +162,9 @@ class GenderOriginReviewTest {
     // verified one, or the person's choice would not be safe.
     @Test
     void review_verifiedFemaleVerdict_correctsSuggestedAndVerifiedButNeverAPersonsGender() {
-        glossary.add(holding(GenderOrigin.SUGGESTED, Gender.MALE, "p1:hale", "Hale"));
-        glossary.add(holding(GenderOrigin.VERIFIED, Gender.MALE, "p1:rook", "Rook"));
-        glossary.add(holding(GenderOrigin.PERSON, Gender.MALE, "p1:wren", "Wren"));
+        glossary.add(holding(Origin.LIKELY, Gender.MALE, "p1:hale", "Hale"));
+        glossary.add(holding(Origin.BOOK, Gender.MALE, "p1:rook", "Rook"));
+        glossary.add(holding(Origin.USER, Gender.MALE, "p1:wren", "Wren"));
         final BookSlice book = GlossaryTestSegments.of(
                 List.of("Hale smiled. She left.", "Rook smiled. She left.", "Wren smiled. She left."));
         final String verdicts = "{\"verdicts\":[" + female("Hale") + "," + female("Rook") + "," + female("Wren") + "]}";
@@ -176,16 +176,16 @@ class GenderOriginReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Hale", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Rook", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Wren", Gender.MALE, GenderOrigin.PERSON));
+                        tuple("Hale", Gender.FEMALE, Origin.BOOK),
+                        tuple("Rook", Gender.FEMALE, Origin.BOOK),
+                        tuple("Wren", Gender.MALE, Origin.USER));
     }
 
     // IF a verdict the window does not show (a cited window with no "she") replaced a verified gender, THEN a guess
     // would undo a proof; it also never turns the held gender into a suggestion.
     @Test
     void review_unverifiedOppositeVerdict_leavesAVerifiedGenderVerified() {
-        glossary.add(holding(GenderOrigin.VERIFIED, Gender.MALE, "p1:rook", "Rook"));
+        glossary.add(holding(Origin.BOOK, Gender.MALE, "p1:rook", "Rook"));
         final BookSlice book = GlossaryTestSegments.of(List.of("Rook stood. He left."));
         final String verdicts = "{\"verdicts\":[" + female("Rook") + "]}";
         final ScriptedChatModel model =
@@ -195,16 +195,16 @@ class GenderOriginReviewTest {
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(Gender.MALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple(Gender.MALE, Origin.BOOK));
     }
 
     // A strong pronoun case is the code's own verified verdict (no model call for a character); it corrects a
     // suggested or a verified gender and still never a person's.
     @Test
     void review_strongPronounCase_correctsSuggestedAndVerifiedButNeverAPersonsGender() {
-        glossary.add(holding(GenderOrigin.SUGGESTED, Gender.MALE, "p1:hale", "Hale"));
-        glossary.add(holding(GenderOrigin.VERIFIED, Gender.MALE, "p1:rook", "Rook"));
-        glossary.add(holding(GenderOrigin.PERSON, Gender.MALE, "p1:wren", "Wren"));
+        glossary.add(holding(Origin.LIKELY, Gender.MALE, "p1:hale", "Hale"));
+        glossary.add(holding(Origin.BOOK, Gender.MALE, "p1:rook", "Rook"));
+        glossary.add(holding(Origin.USER, Gender.MALE, "p1:wren", "Wren"));
         final List<CallKind> kinds = new ArrayList<>();
         final ModelCalls calls = (kind, segmentId, request) -> {
             kinds.add(kind);
@@ -217,17 +217,16 @@ class GenderOriginReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
-                        tuple("Hale", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Rook", Gender.FEMALE, GenderOrigin.VERIFIED),
-                        tuple("Wren", Gender.MALE, GenderOrigin.PERSON));
+                        tuple("Hale", Gender.FEMALE, Origin.BOOK),
+                        tuple("Rook", Gender.FEMALE, Origin.BOOK),
+                        tuple("Wren", Gender.MALE, Origin.USER));
     }
 
     // An untyped entry a first-name seed or a pre-scan marked as a person (a SUGGESTED gender) is still decided by the
     // code from a strong pronoun case; the seed's origin is what makes it person-like.
     @Test
     void review_untypedEntryWithASuggestedGender_isDecidedByTheCodeFromStrongPronouns() {
-        glossary.add(
-                holding(GenderOrigin.SUGGESTED, Gender.MALE, "p1:hale", "Hale").withType(TermType.OTHER));
+        glossary.add(holding(Origin.LIKELY, Gender.MALE, "p1:hale", "Hale").withType(TermType.OTHER));
         final List<CallKind> kinds = new ArrayList<>();
         final ModelCalls calls = (kind, segmentId, request) -> {
             kinds.add(kind);
@@ -239,15 +238,15 @@ class GenderOriginReviewTest {
         assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, GenderOrigin.VERIFIED));
+                .containsExactly(tuple(TermType.CHARACTER, Gender.FEMALE, Origin.BOOK));
     }
 
     // The pre-scan's first-sentence guess is a suggestion at best and never the person's: the review's verified answer
     // wins over it, and with no answer it stays SUGGESTED.
     @ParameterizedTest
-    @CsvSource({"female,FEMALE,VERIFIED", "unknown,MALE,SUGGESTED"})
+    @CsvSource({"female,FEMALE,BOOK", "unknown,MALE,LIKELY"})
     void scan_proposalGender_endsVerifiedFromTheReviewOrSuggestedNeverThePersons(
-            final String reviewGender, final Gender expected, final GenderOrigin expectedOrigin) {
+            final String reviewGender, final Gender expected, final Origin expectedOrigin) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"terms\":[{\"term\":\"Justine\",\"type\":\"person\",\"gender\":\"male\"}]}"));
         final String verdict = "{\"verdicts\":[{\"term\":\"Justine\",\"verdict\":\"name\",\"type\":\"person\","
@@ -283,22 +282,23 @@ class GenderOriginReviewTest {
                 .toList());
     }
 
-    private static GlossaryEntry holding(@Nullable final GenderOrigin origin, final Gender gender) {
+    private static GlossaryEntry holding(@Nullable final Origin origin, final Gender gender) {
         return holding(origin, gender, "p1:wren", "Wren");
     }
 
     // The held entry as each writer leaves it: the person's edit, a verified answer, a suggestion, or nothing.
     private static GlossaryEntry holding(
-            @Nullable final GenderOrigin origin, final Gender gender, final String id, final String term) {
+            @Nullable final Origin origin, final Gender gender, final String id, final String term) {
         final GlossaryEntry unknown =
-                new GlossaryEntry(id, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
+                GlossaryEntry.of(id, PROJECT, term, null, TermType.CHARACTER, Gender.UNKNOWN, false);
         if (origin == null) {
             return unknown;
         }
         return switch (origin) {
-            case PERSON -> unknown.withGender(gender);
-            case VERIFIED -> unknown.withInferredGender(gender);
-            case SUGGESTED -> unknown.withSuggestedGender(gender);
+            case USER -> unknown.withGender(gender);
+            case BOOK -> unknown.withInferredGender(gender);
+            case RULE -> unknown.withGenderFrom(gender, Origin.RULE);
+            case LIKELY -> unknown.withSuggestedGender(gender);
         };
     }
 

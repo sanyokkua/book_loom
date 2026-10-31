@@ -168,7 +168,7 @@ class LexiconModelActionsTest {
     @Test
     void restore_termTheGlossaryHoldsNow_answersValidation() {
         desk.glossary()
-                .add(new GlossaryEntry("g1", desk.projectId(), "table", "стіл", TermType.TERM, Gender.UNKNOWN, false));
+                .add(GlossaryEntry.of("g1", desk.projectId(), "table", "стіл", TermType.TERM, Gender.UNKNOWN, false));
 
         final Result<LexiconEntry> restored = service.restore(LexiconEntry.of(desk.projectId(), "table"));
 

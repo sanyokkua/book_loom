@@ -196,7 +196,7 @@ class ExportJobCancelTest {
     }
 
     private GlossaryEntry sam(final Gender gender) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, "Sam"), projectId, "Sam", "Сем", TermType.CHARACTER, gender, false);
     }
 }

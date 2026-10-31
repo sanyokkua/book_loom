@@ -12,8 +12,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.i18n.GlossaryLabels;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -190,7 +190,7 @@ final class GlossaryTable {
             return messages.get(MessageKey.NAMES_STYLE_GENDER_NO_EVIDENCE);
         }
         final String label = GlossaryLabels.gender(messages, entry.gender());
-        return entry.genderOrigin() == GenderOrigin.SUGGESTED
+        return entry.genderOrigin() == Origin.LIKELY
                 ? messages.get(MessageKey.NAMES_STYLE_GENDER_SUGGESTED, label)
                 : label;
     }

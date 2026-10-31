@@ -77,7 +77,7 @@ record GlossaryRowsImport(
     }
 
     private static GlossaryEntry added(final String projectId, final GlossaryCsv.Row row) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, row.term()),
                 projectId,
                 row.term(),

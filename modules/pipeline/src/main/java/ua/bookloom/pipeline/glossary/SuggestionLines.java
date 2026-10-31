@@ -80,6 +80,9 @@ final class SuggestionLines {
             case PLACE -> "place";
             case TERM -> "term";
             case TITLE -> "title";
+            case ORGANISATION -> "organisation";
+            case PRODUCT -> "product";
+            case MATERIAL -> "material";
             case OTHER -> "other";
         };
     }

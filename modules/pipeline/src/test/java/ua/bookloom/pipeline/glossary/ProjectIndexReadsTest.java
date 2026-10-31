@@ -55,8 +55,8 @@ class ProjectIndexReadsTest {
                                 "Ember came in. Ember sat. Ember’s coat. Ember left. Ember ran. Dane spoke.",
                                 "Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke. Dane spoke."),
                         "Title"));
-        service.add(new GlossaryEntry("p1:ember", PROJECT, "Ember", null, TermType.CHARACTER, Gender.UNKNOWN, false));
-        service.add(new GlossaryEntry("p1:dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:ember", PROJECT, "Ember", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:dane", PROJECT, "Dane", null, TermType.CHARACTER, Gender.UNKNOWN, false));
         assertThat(openProjects.hasIndex(PROJECT)).isFalse();
 
         final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();

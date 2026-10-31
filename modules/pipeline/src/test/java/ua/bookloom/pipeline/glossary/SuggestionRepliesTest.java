@@ -20,7 +20,7 @@ class SuggestionRepliesTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final Map<String, GlossaryEntry> BATCH = Map.of("hale", HALE);
 
     private static List<Suggestion> read(final String target) {
@@ -108,7 +108,7 @@ class SuggestionRepliesTest {
     // confirmed stays a suggestion (15i review).
     @Test
     void onto_brandLockedByRule_keepsASuggestedGenderSuggested() {
-        final GlossaryEntry held = new GlossaryEntry(
+        final GlossaryEntry held = GlossaryEntry.of(
                         "p:orrel", "p", "Orrel", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withSuggestedGender(Gender.MALE);
 
@@ -118,6 +118,6 @@ class SuggestionRepliesTest {
 
         assertThat(written.locked()).isTrue();
         assertThat(written.target()).isEqualTo("Orrel");
-        assertThat(written.genderOrigin()).isEqualTo(ua.bookloom.api.project.GenderOrigin.SUGGESTED);
+        assertThat(written.genderOrigin()).isEqualTo(ua.bookloom.api.project.Origin.LIKELY);
     }
 }

@@ -44,7 +44,7 @@ final class ScanSnapshot {
         final List<NameCandidate> keyTerms = readers.keyTerms();
         final List<GlossaryEntry> probes = names.stream()
                 .limit(PROBE_NAMES)
-                .map(candidate -> new GlossaryEntry(
+                .map(candidate -> GlossaryEntry.of(
                         "g:" + candidate.term(),
                         PROJECT,
                         candidate.term(),

@@ -184,7 +184,7 @@ class ConsistencyPassTermTest {
 
     private GlossaryEntry term(final String target) {
         final GlossaryEntry went = book.character("went", target, Gender.UNKNOWN, true);
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 went.id(), went.projectId(), went.term(), went.target(), TermType.TERM, went.gender(), went.locked());
     }
 }

@@ -86,7 +86,7 @@ class TranslationJobNamesAndDeferralsTest {
         assertThat(glossary(project))
                 .containsExactlyInAnyOrder(
                         hale,
-                        new GlossaryEntry(
+                        GlossaryEntry.of(
                                 GlossaryIds.of(project.id(), "Moreau"),
                                 project.id(),
                                 "Moreau",
@@ -228,7 +228,7 @@ class TranslationJobNamesAndDeferralsTest {
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        final GlossaryEntry entry = new GlossaryEntry(
+        final GlossaryEntry entry = GlossaryEntry.of(
                 GlossaryIds.of(project.id(), term), project.id(), term, rendering, type, gender, locked);
         return Objects.requireNonNull(project.stores().glossary().add(entry).data(), "added " + term);
     }

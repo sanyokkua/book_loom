@@ -26,7 +26,7 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
     private static final double ROW_CENTRE = 23;
     private static final double ONE_PIXEL = 1;
     private static final GlossaryEntry VICTOR =
-            new GlossaryEntry("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
+            GlossaryEntry.of("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
 
     private void showGlossary(final List<GlossaryEntry> entries) throws Exception {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));

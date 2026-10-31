@@ -105,7 +105,7 @@ class BatchWindowFitJobTest {
     private static void addTerm(final TestProject project, final String term, final String target) {
         project.stores()
                 .glossary()
-                .add(new GlossaryEntry(
+                .add(GlossaryEntry.of(
                         GlossaryIds.of(project.id(), term),
                         project.id(),
                         term,

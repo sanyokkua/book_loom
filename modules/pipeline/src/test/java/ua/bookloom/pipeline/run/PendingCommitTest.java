@@ -142,7 +142,7 @@ class PendingCommitTest {
         final Deferral gender = new Deferral(
                 "p1:s0:GENDER_UNKNOWN:Sam", PROJECT, "s0", DeferralReason.GENDER_UNKNOWN, "Sam", null, null, null);
         final GlossaryEntry moreau =
-                new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
         pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
         pending.deferred(List.of(gender));
         pending.deferred(List.of(gender));
@@ -160,7 +160,7 @@ class PendingCommitTest {
     @Test
     void flush_onlyProposals_stillCommits() {
         final GlossaryEntry moreau =
-                new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
         pending.proposed(List.of(moreau));
 
         final Result<Integer> flushed = pending.flush();

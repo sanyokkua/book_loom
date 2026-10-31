@@ -38,7 +38,7 @@ class GlossaryLockedTargetStoredTest extends WorkspaceTestBase {
         final String project = Objects.requireNonNull(onFx(
                         () -> injector.getInstance(CurrentProject.class).book().get()))
                 .projectId();
-        final GlossaryEntry locked = new GlossaryEntry(
+        final GlossaryEntry locked = GlossaryEntry.of(
                 UUID.randomUUID().toString(), project, "Mira", "Міра", TermType.CHARACTER, Gender.FEMALE, true);
         assertThat(injector.getInstance(GlossaryService.class).add(locked).isOk())
                 .isTrue();

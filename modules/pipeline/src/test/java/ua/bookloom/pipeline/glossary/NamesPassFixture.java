@@ -127,7 +127,7 @@ final class NamesPassFixture {
     }
 
     static GlossaryEntry untyped(final String term) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, term), PROJECT, term, null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
@@ -140,9 +140,9 @@ final class NamesPassFixture {
 
     /** The person's own work: a woman's gender, a locked office and a street with a target. */
     NamesPassFixture seedPersonsEntries() {
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Wren"), PROJECT, "Wren", null, TermType.CHARACTER, Gender.FEMALE, false));
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Gatewarden"),
                 PROJECT,
                 "Gatewarden",
@@ -150,7 +150,7 @@ final class NamesPassFixture {
                 TermType.TERM,
                 Gender.UNKNOWN,
                 true));
-        glossary.add(new GlossaryEntry(
+        glossary.add(GlossaryEntry.of(
                 GlossaryIds.of(PROJECT, "Marrow Lane"),
                 PROJECT,
                 "Marrow Lane",

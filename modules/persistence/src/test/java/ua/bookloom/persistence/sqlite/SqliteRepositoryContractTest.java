@@ -258,8 +258,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         segmentRepository().update("p1", "ch1:0", r -> r.withStatus(SegmentStatus.ACCEPTED));
         tmRepository().put(new TmEntry("t1", "p1", "h1", "c1", "Hello", "Привіт"));
         summaryRepository().save(new RollingSummary("p1", null, "src", "tgt", 3, null, 0));
-        glossaryRepository().add(new GlossaryEntry("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
-        glossaryRepository().add(new GlossaryEntry("e2", "p1", "Milton", null, TermType.PLACE, Gender.NEUTER, false));
+        glossaryRepository().add(GlossaryEntry.of("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossaryRepository().add(GlossaryEntry.of("e2", "p1", "Milton", null, TermType.PLACE, Gender.NEUTER, false));
         glossaryRepository().remove("p1", "e2");
         lexiconRepository().record("p1", "warden", "наглядач");
         lexiconRepository().put(LexiconEntry.of("p1", "master"));

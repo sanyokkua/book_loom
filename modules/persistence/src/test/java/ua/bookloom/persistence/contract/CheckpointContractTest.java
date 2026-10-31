@@ -119,12 +119,12 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     void commit_glossaryAdditionOfAnExistingLockedTerm_keepsTheExistingEntry() {
         givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
-        glossary.add(new GlossaryEntry("existing", "p1", "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+        glossary.add(GlossaryEntry.of("existing", "p1", "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("proposed", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
+                List.of(GlossaryEntry.of("proposed", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);
@@ -140,13 +140,13 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     void commit_glossaryAdditionOfARemovedTerm_isNotReAdded() {
         givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();
-        glossary.add(new GlossaryEntry("e1", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false));
+        glossary.add(GlossaryEntry.of("e1", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false));
         glossary.remove("p1", "e1");
         final ChunkCommit commit = new ChunkCommit(
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("e2", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false)),
+                List.of(GlossaryEntry.of("e2", "p1", "Chapter", null, TermType.TERM, Gender.NEUTER, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);
@@ -162,7 +162,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
                 "p1",
                 List.of(),
                 List.of(),
-                List.of(new GlossaryEntry("e1", "p1", "Milton", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
+                List.of(GlossaryEntry.of("e1", "p1", "Milton", null, TermType.CHARACTER, Gender.UNKNOWN, false)),
                 List.of());
 
         final Result<Integer> result = checkpointPort().commit(commit);

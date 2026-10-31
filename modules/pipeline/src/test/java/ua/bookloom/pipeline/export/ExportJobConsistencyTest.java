@@ -186,7 +186,7 @@ class ExportJobConsistencyTest {
     }
 
     private GlossaryEntry justine(@Nullable final String target) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(projectId, "Justine"),
                 projectId,
                 "Justine",

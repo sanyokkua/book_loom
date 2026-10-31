@@ -26,7 +26,6 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -52,7 +51,7 @@ class GlossaryCsvTest {
 
     @Test
     void exportCsv_termWithComma_quotesTheFields() throws IOException {
-        service.add(new GlossaryEntry(
+        service.add(GlossaryEntry.of(
                 "p1:hale, margaret",
                 PROJECT,
                 "Hale, Margaret",
@@ -104,7 +103,7 @@ class GlossaryCsvTest {
     // IF a spreadsheet read a term as a formula, THEN opening the export could run it; a quote in front keeps it text.
     @Test
     void exportCsv_formulaLikeTerm_isWrittenAfterAQuoteAndImportsBackUnchanged() throws IOException {
-        service.add(new GlossaryEntry("p1:sum", PROJECT, "=SUM(A1)", "@home", TermType.OTHER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:sum", PROJECT, "=SUM(A1)", "@home", TermType.OTHER, Gender.UNKNOWN, false));
         final Path file = dir.resolve("glossary.csv");
 
         service.exportCsv(PROJECT, file);
@@ -119,7 +118,7 @@ class GlossaryCsvTest {
     @Test
     void format_fieldWithQuoteAndLineBreak_isQuotedWithDoubledQuotes() {
         final GlossaryEntry entry =
-                new GlossaryEntry("p1:x", PROJECT, "Say \"Hi\"\nnow", null, TermType.OTHER, Gender.UNKNOWN, false);
+                GlossaryEntry.of("p1:x", PROJECT, "Say \"Hi\"\nnow", null, TermType.OTHER, Gender.UNKNOWN, false);
 
         assertThat(GlossaryCsv.format(List.of(entry)))
                 .isEqualTo(HEADER + "\r\n\"Say \"\"Hi\"\"\nnow\",,other,unknown,false\r\n");
@@ -173,7 +172,7 @@ class GlossaryCsvTest {
 
     @Test
     void importCsv_termAlreadyHeldIgnoringCase_updatesItInPlace() throws IOException {
-        service.add(new GlossaryEntry("p1:hale", PROJECT, "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false));
+        service.add(GlossaryEntry.of("p1:hale", PROJECT, "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false));
         final Path file = write(HEADER, "hale,Гейл,character,male,true");
 
         final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
@@ -181,26 +180,26 @@ class GlossaryCsvTest {
         assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(), List.of()));
         assertThat(service.entries(PROJECT).data())
                 .containsExactly(
-                        new GlossaryEntry("p1:hale", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
+                        GlossaryEntry.of("p1:hale", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
     }
 
     @Test
     void importCsv_rescanRowTypedTermWithUnknownGender_keepsTheHeldCharacterAndGender() throws IOException {
         service.add(
-                new GlossaryEntry("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
+                GlossaryEntry.of("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
         final Path file = write(HEADER, "Chisel,Чизел,term,unknown,false");
 
         service.importCsv(PROJECT, file);
 
         assertThat(service.entries(PROJECT).data())
-                .containsExactly(new GlossaryEntry(
+                .containsExactly(GlossaryEntry.of(
                         "p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
     }
 
     @Test
     void importCsv_rowWithAKnownGender_replacesTheHeldOne() throws IOException {
         service.add(
-                new GlossaryEntry("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
+                GlossaryEntry.of("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
         final Path file = write(HEADER, "Chisel,Чизел,character,male,false");
 
         service.importCsv(PROJECT, file);
@@ -303,7 +302,7 @@ class GlossaryCsvTest {
     @Test
     void importCsv_exportedGlossary_importsBackIntoAnEmptyOneUnchanged() throws IOException {
         final List<GlossaryEntry> entries = List.of(
-                new GlossaryEntry(
+                GlossaryEntry.of(
                         "p1:hale, margaret",
                         PROJECT,
                         "Hale, Margaret",
@@ -311,8 +310,8 @@ class GlossaryCsvTest {
                         TermType.CHARACTER,
                         Gender.FEMALE,
                         true),
-                new GlossaryEntry("p1:say", PROJECT, "Say \"Hi\"\nnow", "Скажи", TermType.TITLE, Gender.NEUTER, false),
-                new GlossaryEntry("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false));
+                GlossaryEntry.of("p1:say", PROJECT, "Say \"Hi\"\nnow", "Скажи", TermType.TITLE, Gender.NEUTER, false),
+                GlossaryEntry.of("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false));
         entries.forEach(service::add);
         final Path file = dir.resolve("glossary.csv");
         service.exportCsv(PROJECT, file);
@@ -339,16 +338,9 @@ class GlossaryCsvTest {
     @Test
     void importCsv_exportedSuggestionAndLockedNames_keepLockAndGenderAndTheSuggestionBecomesTheirs()
             throws IOException {
-        service.add(new GlossaryEntry(
-                "p1:zerubin",
-                PROJECT,
-                "Zerubin",
-                "Зерубін",
-                TermType.CHARACTER,
-                Gender.MALE,
-                false,
-                TargetOrigin.SUGGESTED));
-        service.add(new GlossaryEntry("p1:edwin", PROJECT, "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, true));
+        service.add(GlossaryEntry.of("p1:zerubin", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false)
+                .withSuggestedTarget("Зерубін"));
+        service.add(GlossaryEntry.of("p1:edwin", PROJECT, "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, true));
         final Path file = dir.resolve("glossary.csv");
         service.exportCsv(PROJECT, file);
 

@@ -17,8 +17,8 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -69,15 +69,15 @@ class NamesStyleViewModelTest extends FxTestBase {
     }
 
     private static GlossaryEntry hale() {
-        return new GlossaryEntry("e1", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("e1", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false);
     }
 
     private static GlossaryEntry haleTranslated(final boolean locked) {
-        return new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.OTHER, Gender.UNKNOWN, locked);
+        return GlossaryEntry.of("e1", PROJECT, "Hale", "Гейл", TermType.OTHER, Gender.UNKNOWN, locked);
     }
 
     private static GlossaryEntry chapter() {
-        return new GlossaryEntry("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false);
+        return GlossaryEntry.of("e2", PROJECT, "Chapter", null, TermType.TERM, Gender.NEUTER, false);
     }
 
     private static AppError refusal() {
@@ -268,7 +268,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     // IF a duplicate were sent to the service, THEN the dialog would learn of it only by a round trip.
     @Test
     void add_termHeldIgnoringCase_refusesWithoutAskingTheService() {
-        showWith(new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
+        showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         run(() -> vm.add(
@@ -281,7 +281,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     // IF a possessive spelling of a held name were added, THEN the glossary would hold one name twice.
     @Test
     void add_possessiveOfAHeldTerm_refusesWithoutAskingTheService() {
-        showWith(new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
+        showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
         run(() ->
@@ -308,7 +308,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     void add_newTerm_storesItUnderANewIdAndShowsTheRow() {
         showWith();
         final GlossaryEntry stored =
-                new GlossaryEntry("new-1", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
+                GlossaryEntry.of("new-1", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);
         glossary.willAnswer(Result.ok(stored));
         final AtomicInteger added = new AtomicInteger();
 
@@ -328,7 +328,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     void add_dialogWithAChosenGender_sendsTheGenderAsThePersons() {
         showWith();
         glossary.willAnswer(Result.ok(
-                new GlossaryEntry("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
+                GlossaryEntry.of("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
 
         run(() ->
                 vm.add(new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, message -> {}));
@@ -336,14 +336,14 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(glossary.added())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.FEMALE, Origin.USER);
     }
 
     @Test
     void add_dialogWithNoGender_sendsNoGenderOrigin() {
         showWith();
-        glossary.willAnswer(Result.ok(
-                new GlossaryEntry("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
+        glossary.willAnswer(
+                Result.ok(GlossaryEntry.of("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
 
         run(() -> vm.add(new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, false), () -> {}, message -> {}));
 
@@ -357,7 +357,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     // open to the next review.
     @Test
     void setGender_overAVerifiedGender_sendsTheNewGenderAsThePersons() {
-        final GlossaryEntry held = new GlossaryEntry(
+        final GlossaryEntry held = GlossaryEntry.of(
                         "e1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                 .withInferredGender(Gender.MALE);
         showWith(held);
@@ -368,6 +368,6 @@ class NamesStyleViewModelTest extends FxTestBase {
         assertThat(glossary.updated())
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::genderOrigin)
-                .containsExactly(Gender.FEMALE, GenderOrigin.PERSON);
+                .containsExactly(Gender.FEMALE, Origin.USER);
     }
 }

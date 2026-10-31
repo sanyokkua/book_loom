@@ -20,11 +20,11 @@ import ua.bookloom.ui.ViewNames;
  */
 class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
 
-    private static final GlossaryEntry NO_EVIDENCE = new GlossaryEntry(
+    private static final GlossaryEntry NO_EVIDENCE = GlossaryEntry.of(
                     "e1", "p1", "Odo", null, TermType.CHARACTER, Gender.UNKNOWN, false)
             .withNoGenderEvidence();
     private static final GlossaryEntry NEVER_SCANNED =
-            new GlossaryEntry("e2", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+            GlossaryEntry.of("e2", "p1", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false);
     private static final GlossaryEntry EDITED_BACK = NO_EVIDENCE.withGender(Gender.UNKNOWN);
 
     private List<String> genderLabels(final Locale locale) throws Exception {

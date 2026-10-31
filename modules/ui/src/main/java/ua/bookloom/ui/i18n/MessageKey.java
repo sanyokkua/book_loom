@@ -2037,6 +2037,12 @@ public enum MessageKey {
     NAMES_STYLE_TYPE_TERM("namesStyle.type.term"),
     /** Term type: a title or honorific. */
     NAMES_STYLE_TYPE_TITLE("namesStyle.type.title"),
+    /** Term type: a company, institution or other body of people. */
+    NAMES_STYLE_TYPE_ORGANISATION("namesStyle.type.organisation"),
+    /** Term type: a brand or named product. */
+    NAMES_STYLE_TYPE_PRODUCT("namesStyle.type.product"),
+    /** Term type: a material or substance. */
+    NAMES_STYLE_TYPE_MATERIAL("namesStyle.type.material"),
     /** Term type: anything else. */
     NAMES_STYLE_TYPE_OTHER("namesStyle.type.other"),
     /** Grammatical gender: female. */

@@ -45,7 +45,7 @@ record GlossaryAdditions(
         }
         final String target = term.target().isBlank() ? null : term.target().strip();
         final GlossaryEntry entry =
-                new GlossaryEntry(ids.get(), project.get(), source, target, term.type(), term.gender(), term.locked());
+                GlossaryEntry.of(ids.get(), project.get(), source, target, term.type(), term.gender(), term.locked());
         calls.run("add", () -> glossary.add(entry), answer -> {
             final AppError failure = answer.error();
             if (failure != null) {

@@ -33,7 +33,7 @@ import ua.bookloom.pipeline.qa.LockedRendering;
 class SegmentTranslatorProtectedSpansTest {
 
     private static final GlossaryEntry HALE =
-            new GlossaryEntry("p1:hale", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
+            GlossaryEntry.of("p1:hale", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true);
 
     @TempDir
     private Path tempDir;

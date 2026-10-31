@@ -13,8 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.checks.CharacterNames;
@@ -133,7 +133,7 @@ public final class InjectedCharacters {
                 .toList();
         final String name =
                 shortNames.isEmpty() ? full.term() : full.term() + " (also " + String.join(", ", shortNames) + ")";
-        final String likely = full.genderOrigin() == GenderOrigin.SUGGESTED ? CharacterNames.LIKELY + " " : "";
+        final String likely = full.genderOrigin() == Origin.LIKELY ? CharacterNames.LIKELY + " " : "";
         final String line = name + " — " + likely + full.gender().name().toLowerCase(Locale.ROOT);
         PronounGender.Evidence evidence = PronounGender.of(full.term(), texts, sourceLanguage);
         for (final String shortName : shortNames) {

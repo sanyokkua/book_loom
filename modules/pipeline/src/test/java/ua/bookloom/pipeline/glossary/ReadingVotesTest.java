@@ -17,7 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GenderOrigin;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.ReadingFixtures.Answer;
 import ua.bookloom.pipeline.glossary.ReadingVerdict.Decision;
@@ -40,29 +40,24 @@ class ReadingVotesTest {
     // the tally's nearest-name attribution alone wrote a demon's "it" as a verified "he", four times).
     @ParameterizedTest(name = "{0} male, {1} female votes, tally she {2} he {3} -> {4} {5}")
     @CsvSource({
-        "3,0,4,0,FEMALE,SUGGESTED",
-        "0,0,3,2,FEMALE,SUGGESTED",
-        "0,0,0,4,MALE,SUGGESTED",
-        "0,0,0,5,MALE,VERIFIED",
-        "0,0,6,0,FEMALE,VERIFIED",
-        "0,0,20,0,FEMALE,VERIFIED",
-        "0,1,0,6,MALE,SUGGESTED",
-        "1,0,6,0,FEMALE,SUGGESTED",
-        "0,0,5,1,FEMALE,SUGGESTED",
-        "3,0,0,3,MALE,VERIFIED",
-        "1,0,0,3,MALE,VERIFIED",
-        "0,1,3,0,FEMALE,VERIFIED",
-        "1,1,0,4,MALE,SUGGESTED",
-        "2,1,0,4,MALE,SUGGESTED",
-        "0,0,0,6,MALE,VERIFIED"
+        "3,0,4,0,FEMALE,LIKELY",
+        "0,0,3,2,FEMALE,LIKELY",
+        "0,0,0,4,MALE,LIKELY",
+        "0,0,0,5,MALE,BOOK",
+        "0,0,6,0,FEMALE,BOOK",
+        "0,0,20,0,FEMALE,BOOK",
+        "0,1,0,6,MALE,LIKELY",
+        "1,0,6,0,FEMALE,LIKELY",
+        "0,0,5,1,FEMALE,LIKELY",
+        "3,0,0,3,MALE,BOOK",
+        "1,0,0,3,MALE,BOOK",
+        "0,1,3,0,FEMALE,BOOK",
+        "1,1,0,4,MALE,LIKELY",
+        "2,1,0,4,MALE,LIKELY",
+        "0,0,0,6,MALE,BOOK"
     })
     void decide_tieBreakingAndAClearTally_isTheTallysGenderVerifiedOnlyWhenTheVotesAgree(
-            final int male,
-            final int female,
-            final int she,
-            final int he,
-            final Gender gender,
-            final GenderOrigin origin) {
+            final int male, final int female, final int she, final int he, final Gender gender, final Origin origin) {
         final Decision decision = breakingTies(
                 answers(
                         times(male, voting(Gender.MALE)),
@@ -82,13 +77,13 @@ class ReadingVotesTest {
     @ParameterizedTest(name = "{0} male, {1} female, tally she {2} he {3} -> {4}")
     @CsvSource(
             value = {
-                "3,0,0,0,MALE,SUGGESTED",
-                "2,0,1,1,MALE,SUGGESTED",
+                "3,0,0,0,MALE,LIKELY",
+                "2,0,1,1,MALE,LIKELY",
                 "2,1,0,0,UNKNOWN,NONE",
                 "1,0,0,0,UNKNOWN,NONE",
-                "1,0,0,1,MALE,SUGGESTED",
-                "0,0,0,2,MALE,SUGGESTED",
-                "0,0,2,0,FEMALE,SUGGESTED",
+                "1,0,0,1,MALE,LIKELY",
+                "0,0,0,2,MALE,LIKELY",
+                "0,0,2,0,FEMALE,LIKELY",
                 "1,0,1,0,UNKNOWN,NONE",
                 "0,0,1,1,UNKNOWN,NONE"
             },
@@ -99,7 +94,7 @@ class ReadingVotesTest {
             final int she,
             final int he,
             final Gender gender,
-            @Nullable final GenderOrigin origin) {
+            @Nullable final Origin origin) {
         final Decision decision = breakingTies(
                 answers(
                         times(male, voting(Gender.MALE)),

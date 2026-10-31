@@ -21,6 +21,18 @@ public abstract class LexiconContractTest extends CheckpointContractTest {
         return Objects.requireNonNull(lexiconRepository().all("p1").data());
     }
 
+    // Proves a recurring term's forms survive the store in both adapters.
+    @Test
+    void lexiconPut_entryWithForms_roundTrips() {
+        givenProjects("p1");
+        final LexiconEntry entry = new LexiconEntry(
+                "p1", "warden", List.of(), "наглядач", null, null, null, List.of("wardens", "warden's"));
+        lexiconRepository().put(entry);
+
+        assertThat(held()).containsExactly(entry);
+        assertThat(held().getFirst().forms()).containsExactly("wardens", "warden's");
+    }
+
     @Test
     void lexiconAll_unknownProject_isEmpty() {
         assertThat(lexiconRepository().all("nobody").data()).isEmpty();

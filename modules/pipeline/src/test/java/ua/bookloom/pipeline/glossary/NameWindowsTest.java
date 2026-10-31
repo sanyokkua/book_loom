@@ -18,7 +18,7 @@ import ua.bookloom.pipeline.glossary.NameWindows.Window;
 class NameWindowsTest {
 
     private static GlossaryEntry entry(final String term, final TermType type) {
-        return new GlossaryEntry("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
+        return GlossaryEntry.of("id-" + term, "p1", term, null, type, Gender.UNKNOWN, false);
     }
 
     private static Evidence windowsOf(final GlossaryEntry entry, final List<String> paragraphs) {

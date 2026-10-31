@@ -126,7 +126,7 @@ final class RevisionBook {
 
     GlossaryEntry character(
             final String term, @Nullable final String target, final Gender gender, final boolean locked) {
-        return new GlossaryEntry(
+        return GlossaryEntry.of(
                 GlossaryIds.of(desk.projectId(), term),
                 desk.projectId(),
                 term,

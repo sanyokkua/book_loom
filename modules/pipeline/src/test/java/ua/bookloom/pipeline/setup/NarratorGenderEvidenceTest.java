@@ -32,9 +32,9 @@ class NarratorGenderEvidenceTest {
             List.of("«Пане, ви забули капелюха», — гукнув мені швейцар. «Дівчино, зачекай!» — крикнула мені сусідка."),
             60);
     private static final GlossaryEntry RAY =
-            new GlossaryEntry("g1", "p1", "Ray", null, TermType.CHARACTER, Gender.MALE, false);
+            GlossaryEntry.of("g1", "p1", "Ray", null, TermType.CHARACTER, Gender.MALE, false);
     private static final GlossaryEntry RAY_PLACE =
-            new GlossaryEntry("g2", "p1", "Ray", null, TermType.PLACE, Gender.MALE, false);
+            GlossaryEntry.of("g2", "p1", "Ray", null, TermType.PLACE, Gender.MALE, false);
 
     private static Answer read(
             final String value,
@@ -58,7 +58,7 @@ class NarratorGenderEvidenceTest {
     @Test
     void genderOf_vocativeNameOfAnUnlistedNarrator_isProvedOnlyOnceTheNameIsAGlossaryCharacter() {
         final GlossaryEntry thessaly =
-                new GlossaryEntry("g3", "p1", "Thessaly", null, TermType.CHARACTER, Gender.FEMALE, false);
+                GlossaryEntry.of("g3", "p1", "Thessaly", null, TermType.CHARACTER, Gender.FEMALE, false);
 
         assertThat(english().genderOf("Hold the rope tight, Thessaly", "Thessaly"))
                 .isEmpty();
@@ -168,7 +168,7 @@ class NarratorGenderEvidenceTest {
     @Test
     void genderOf_glossaryPersonByOneWordOfItsTerm_takesItsGender() {
         final GlossaryEntry lena =
-                new GlossaryEntry("g3", "p1", "Lena Brightwater", null, TermType.CHARACTER, Gender.FEMALE, false);
+                GlossaryEntry.of("g3", "p1", "Lena Brightwater", null, TermType.CHARACTER, Gender.FEMALE, false);
 
         assertThat(english(lena).genderOf("Lena, come here", "Lena")).contains(Gender.FEMALE);
     }
