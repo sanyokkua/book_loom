@@ -754,7 +754,7 @@ conventions, the likely marks and the narrator.
   - **Docs:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms` / `#glossary-target-suggestions` (accept rules).
   - **Done when:** tests green.
 
-- [ ] 7.6 Rewrite target suggestion under the name policy (transliteration by default for every pair), keep a meaning-bearing name's meaning as a note, and ask the person once in Prepare only where the book plays on the meaning. A name must sound the same in the target language, and the model must not decide it silently. → :pipeline, :ui
+- [x] 7.6 Rewrite target suggestion under the name policy (transliteration by default for every pair), keep a meaning-bearing name's meaning as a note, and ask the person once in Prepare only where the book plays on the meaning. A name must sound the same in the target language, and the model must not decide it silently. → :pipeline, :ui
   - **Satisfies:** "Suggest target renderings with the model" (glossary), "Keep a meaning-bearing name's meaning as a note" (glossary), "Ask about a meaning-bearing name in Prepare, once, and never during a run" (book-brief), "Decide a read name from its readings by code" (glossary), "Review the glossary with the model when the person asks" (glossary)
   - **Depends on:** 7.5
   - **Read:** design.md D5; pipeline: `glossary/SuggestTargets`, `glossary/NameReadings`, `glossary/NamesTranslation`, `glossary/NamesPassImpl`, prompts `suggest-targets.*`, `term-reading.*`; api: `project/NamePolicy`; ui: `dialog/CharacterGendersDialog` (the pattern for a question dialog), `state/NameSuggestion`; the pair files `pairs/ru-uk.properties`, `pairs/en-uk.properties` (`nameExample.<policy>` from group 4)
