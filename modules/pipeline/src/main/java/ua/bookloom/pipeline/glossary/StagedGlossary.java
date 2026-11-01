@@ -110,6 +110,23 @@ final class StagedGlossary implements GlossaryRepository {
     }
 
     @Override
+    public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+        Objects.requireNonNull(foldedId, "foldedId");
+        Objects.requireNonNull(kept, "kept");
+        if (!byId.containsKey(foldedId) || !byId.containsKey(kept.id())) {
+            log.debug("Staged glossary fold refused: an entry is not held");
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "Unknown glossary entry",
+                    "No such glossary entry exists in this project's glossary."));
+        }
+        byId.remove(foldedId);
+        byId.put(kept.id(), kept);
+        log.debug("Staged glossary fold foldedId={} keptId={}", foldedId, kept.id());
+        return Result.ok(kept);
+    }
+
+    @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
         return Result.ok(entries());
     }

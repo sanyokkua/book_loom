@@ -68,6 +68,11 @@ class NamesPassStoreTest {
         }
 
         @Override
+        public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+            return delegate.fold(projectId, foldedId, kept);
+        }
+
+        @Override
         public Result<List<GlossaryEntry>> all(final String projectId) {
             return delegate.all(projectId);
         }

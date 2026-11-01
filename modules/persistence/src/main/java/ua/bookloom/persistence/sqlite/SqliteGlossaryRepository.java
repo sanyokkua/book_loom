@@ -125,6 +125,28 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     }
 
     @Override
+    public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(foldedId, "foldedId");
+        Objects.requireNonNull(kept, "kept");
+        return db.write("glossary fold", h -> {
+                    final GlossaryDocument doc = load(h, codec, projectId);
+                    if (doc.findById(foldedId).isEmpty()
+                            || doc.findById(kept.id()).isEmpty()) {
+                        log.debug("Glossary fold refused projectId={}: an entry is not held", projectId);
+                        return Result.<GlossaryEntry>err(AppError.of(
+                                ErrorCode.validation,
+                                "Unknown glossary entry",
+                                "No such glossary entry exists in project '" + projectId + "'."));
+                    }
+                    store(h, codec, projectId, doc.folded(foldedId, kept));
+                    log.debug("Glossary fold projectId={} foldedId={} keptId={}", projectId, foldedId, kept.id());
+                    return Result.ok(kept);
+                })
+                .flatMap(Function.identity());
+    }
+
+    @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         return db.read("glossary all", h -> {

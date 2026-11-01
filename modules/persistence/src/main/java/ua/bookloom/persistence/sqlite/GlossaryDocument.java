@@ -109,6 +109,15 @@ public record GlossaryDocument(List<GlossaryEntry> entries, List<String> removed
         return new GlossaryDocument(next, List.copyOf(nowRemoved));
     }
 
+    /** Drops the folded entry and replaces the kept one, remembering nothing as removed. */
+    GlossaryDocument folded(final String foldedId, final GlossaryEntry kept) {
+        final List<GlossaryEntry> next = entries.stream()
+                .filter(held -> !held.id().equals(foldedId))
+                .map(held -> held.id().equals(kept.id()) ? kept : held)
+                .toList();
+        return new GlossaryDocument(next, removed);
+    }
+
     Optional<GlossaryEntry> findById(final String entryId) {
         return entries.stream().filter(entry -> entry.id().equals(entryId)).findFirst();
     }

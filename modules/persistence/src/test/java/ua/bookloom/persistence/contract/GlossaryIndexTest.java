@@ -20,6 +20,34 @@ import ua.bookloom.api.project.TermType;
 public abstract class GlossaryIndexTest extends LexiconContractTest {
 
     @Test
+    void fold_foldedEntryAndKeptEntry_dropsOneStoresTheOtherAndRemembersNoRemoval() {
+        givenProjects("p1");
+        final GlossaryRepository glossary = glossaryRepository();
+        glossary.add(entry("e1", "Велемир"));
+        glossary.add(entry("e2", "Велемира"));
+
+        final Result<GlossaryEntry> folded =
+                glossary.fold("p1", "e2", entry("e1", "Велемир").withForms(List.of("Велемира")));
+
+        assertThat(folded.isOk()).isTrue();
+        assertThat(glossary.all("p1").data()).extracting(GlossaryEntry::id).containsExactly("e1");
+        assertThat(glossary.all("p1").data().getFirst().forms()).containsExactly("Велемира");
+        assertThat(glossary.wasRemoved("p1", "Велемира").data()).isFalse();
+    }
+
+    @Test
+    void fold_unknownFoldedEntry_answersValidationAndChangesNothing() {
+        givenProjects("p1");
+        final GlossaryRepository glossary = glossaryRepository();
+        glossary.add(entry("e1", "Велемир"));
+
+        final Result<GlossaryEntry> folded = glossary.fold("p1", "nope", entry("e1", "Велемир"));
+
+        assertThat(Objects.requireNonNull(folded.error()).code()).isEqualTo(ErrorCode.validation);
+        assertThat(glossary.all("p1").data()).hasSize(1);
+    }
+
+    @Test
     void findByKey_attestedForm_returnsTheLemmaEntry() {
         givenProjects("p1");
         final GlossaryRepository glossary = glossaryRepository();

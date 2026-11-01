@@ -65,6 +65,8 @@ final class FormCollapse {
         final Set<NameForms.Reading> readings = NameForms.candidates(entry.term(), language);
         return !entry.locked()
                 && entry.targetOrigin() != Origin.USER
+                && entry.genderOrigin() != Origin.USER
+                && entry.typeOrigin() != Origin.USER
                 && readings.stream().anyMatch(reading -> !reading.nominative())
                 && readings.stream().noneMatch(reading -> reading.nominative() && reading.gender() != Gender.UNKNOWN);
     }
@@ -92,8 +94,7 @@ final class FormCollapse {
             log.trace("Form {} joins {}", form.term(), winner.get().term());
             final List<String> joined = new ArrayList<>(winner.get().forms());
             joined.addAll(form.names());
-            return glossary.remove(projectId, form.id())
-                    .flatMap(removed -> glossary.update(winner.get().withForms(joined)))
+            return glossary.fold(projectId, form.id(), winner.get().withForms(joined))
                     .map(stored -> true);
         });
     }

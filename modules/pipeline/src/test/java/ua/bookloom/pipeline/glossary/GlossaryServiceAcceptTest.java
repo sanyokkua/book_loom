@@ -155,10 +155,11 @@ class GlossaryServiceAcceptTest {
                 .containsExactly("Зотов");
     }
 
-    // IF stripping a target that is only a mark left it blank, THEN a locked entry would hold no text to put back.
+    // IF stripping a target that is only a soft hyphen left it blank, THEN a locked entry would hold no text to put
+    // back.
     @Test
     void add_lockedTargetBlankAfterStripping_isRefused() {
-        assertThat(service.add(entry("Zotov", "\u0301", TermType.CHARACTER, true))
+        assertThat(service.add(entry("Zotov", "\u00AD", TermType.CHARACTER, true))
                         .isErr())
                 .isTrue();
         assertThat(service.entries(PROJECT).data()).isEmpty();

@@ -103,6 +103,26 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
     }
 
     @Override
+    public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(foldedId, "foldedId");
+        Objects.requireNonNull(kept, "kept");
+        try {
+            final ProjectGlossary glossary = store.glossary(projectId);
+            if (!glossary.byId().containsKey(foldedId) || !glossary.byId().containsKey(kept.id())) {
+                log.debug("Glossary fold refused projectId={}: an entry is not held", projectId);
+                return Result.err(unknownEntry(projectId, foldedId));
+            }
+            glossary.removeById(foldedId);
+            glossary.put(kept);
+            log.debug("Glossary fold projectId={} foldedId={} keptId={}", projectId, foldedId, kept.id());
+            return Result.ok(kept);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         try {

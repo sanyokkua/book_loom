@@ -168,6 +168,11 @@ class NewTermsTest {
         }
 
         @Override
+        public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Result<Optional<GlossaryEntry>> findByTerm(final String projectId, final String term) {
             throw new UnsupportedOperationException();
         }

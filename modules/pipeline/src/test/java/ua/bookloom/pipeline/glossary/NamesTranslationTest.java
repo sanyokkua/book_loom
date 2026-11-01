@@ -32,8 +32,10 @@ class NamesTranslationTest {
             .getInstance(GlossaryRepository.class);
 
     private void hold(final String term, @Nullable final String suggested) {
-        final GlossaryEntry entry =
-                GlossaryEntry.of(GlossaryIds.of("p1", term), "p1", term, null, TermType.CHARACTER, Gender.MALE, false);
+        final GlossaryEntry entry = GlossaryEntry.of(
+                        GlossaryIds.of("p1", term), "p1", term, null, TermType.CHARACTER, Gender.MALE, false)
+                .withType(TermType.CHARACTER, Origin.BOOK)
+                .withGenderFrom(Gender.MALE, Origin.BOOK);
         glossary.add(suggested == null ? entry : entry.withSuggestedTarget(suggested));
     }
 
@@ -87,6 +89,27 @@ class NamesTranslationTest {
         assertThat(held())
                 .extracting(GlossaryEntry::term, GlossaryEntry::forms)
                 .containsExactlyInAnyOrder(tuple("Градовский", List.of("Градовского")), tuple("Градовской", List.of()));
+        assertThat(glossary.wasRemoved("p1", "Градовского").data()).isFalse();
+    }
+
+    // A gender the person chose is theirs: the form entry that carries it is not folded away.
+    @Test
+    void collapse_formWithPersonsGender_isLeft() {
+        hold("Градовский", "Градовський");
+        hold("Градовской", "Градовський");
+        glossary.add(GlossaryEntry.of(
+                        GlossaryIds.of("p1", "Градовского"),
+                        "p1",
+                        "Градовского",
+                        null,
+                        TermType.CHARACTER,
+                        Gender.MALE,
+                        false)
+                .withType(TermType.CHARACTER, Origin.BOOK)
+                .withTarget(null));
+
+        assertThat(FormCollapse.collapse(glossary, "p1", "ru").data()).isZero();
+        assertThat(held()).extracting(GlossaryEntry::term).contains("Градовского");
     }
 
     // Different targets are different people: the form stays an entry of its own.
