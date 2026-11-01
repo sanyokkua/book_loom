@@ -2105,6 +2105,15 @@ set-but-missing directory is a hard failure. The last recorded corpus run is in
 - A `:ui` test that shows a stage extends `FxTestBase`, not TestFX's `ApplicationTest`: the same lifecycle, but it
   waits for the FX thread and two real pulses instead of sleeping ([below](#test-speed)).
 
+### Group 7 results {#group-7-results}
+
+What group 7 (`lemma-book-map`) of `redesign-translation-pipeline` measured, all on invented data: arm 4a (what a model knows
+about a bare name: 0 wrong of the confident answers on `gemma4:e4b-mlx` and `gemma4:26b-mlx`, no unisex name answered at 0.7 or
+more, so likely values stay in the prompts) and arm 4b (a `male (likely)` hint on the character line against the name alone: 0
+gender-agreement errors on both sides, so the name alone stays) are recorded under `#redesign-arms`, with the `bare-names` dataset
+and the mini books named there. The estimate and speed figures are unit-tested rules, not measurements; the hand check of 7.10
+(a short invented Russian book on `gemma4:e4b-mlx`) is recorded with the task.
+
 ### Thinking per call and the notes arm (15i.X2) {#x2-arms}
 
 Published studies find that thinking does not help translation itself, so every call asks the model not to think, as it

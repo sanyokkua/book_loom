@@ -546,7 +546,7 @@ small model asked once kept chapter-title words, numbers and language names as n
 buttons end with a third, separate call that **suggests a target** for each open entry by the Book Brief's name policy
 (Keep original suggests a name as written without a call); a suggestion is marked as the model's (target state `SUGGESTED`, origin `LIKELY`), is
 written only where the target is empty or was itself suggested, reaches a draft as a hint the model may inflect rather
-than a rendering to apply exactly, and becomes the person's when accepted, edited or locked. **Why:**
+than a rendering to apply exactly, and becomes the person's when accepted, edited or locked (Accept all strips stress marks and validates each target first, reporting the rejected ones). The entry is a lemma entry — one per name, its inflected forms listed — and the names pass also asks the model what it knows of each bare name, recorded as a likely value that nothing enforces. **Why:**
 Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER
 libraries/embeddings (DD-18), but an automatic model call at every run's start costs time and network the automatic-
 first pipeline should not spend without the person asking. **Consequences:** No model call in Phase B by default; the

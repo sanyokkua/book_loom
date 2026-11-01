@@ -278,6 +278,8 @@ address); a mention the clause leaves open is unsure and gives no gender vote. E
 removed term in a scan, a chunk's additions, the Add term dialog, a CSV row, the terms a window carries — compares by
 one key against the lemma and every form; the id stays the project id plus the lemma's key.
 
+The names pass runs ten stages (`NamesPassImpl`): scan, decide the names, `name-knowledge` (the model's answer for each bare name nobody settled, recorded as a **likely** value that no check enforces; `#name-knowledge` in the prompt catalog), recurring-term scan, clean-up and reading, target suggestions for names and for recurring terms, a `check` stage (no request: every suggestion against the target language's rules, counting how many Accept all would take) and the write. Accept all (`acceptSuggested`) strips the stress marks the target language asks to remove, validates each suggested target and makes only the valid ones the person's; the rest are reported with their reasons.
+
 ## context-aware-tm {#context-aware-tm}
 
 Translation memory keyed by `(source_hash, context_key)`:

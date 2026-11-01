@@ -1134,8 +1134,8 @@ whose gender no person, book or rule value holds (`Origin.LIKELY.mayReplace`), i
 Below `NameKnowledge.LOW_CONFIDENCE` (0.7) the gender is shown "likely, low confidence"; a rule that disagrees keeps its
 value and both are shown ("rule: male · model: female"). Likely and rule values fill the Start question's pre-selection,
 least confident first, and feed nothing that checks: the character sheet states a gender only when the person set it or
-the book proved it, and a glossary line states a rule's gender but not a likely one (arm 4b, task 7.8, decides whether
-a likely hint ever may). A place, a firm or a thing takes no gender.
+the book proved it, and a glossary line states a rule's gender but not a likely one (arm 4b, task 7.8, measured a `male (likely)` hint on the character line against the name alone and found no
+difference, so the name alone stays; `docs/DEVELOPMENT.md#redesign-arms`). A place, a firm or a thing takes no gender.
 
 **SYSTEM**
 
