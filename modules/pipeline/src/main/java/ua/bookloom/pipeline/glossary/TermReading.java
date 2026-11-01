@@ -207,7 +207,8 @@ public final class TermReading {
         Objects.requireNonNull(calls, "calls");
         logEntry(subject, windows);
         if (windows.isEmpty()) {
-            log.debug("Term reading {} has no window: no call", subject.term());
+            log.debug("Term reading has no window: no call");
+            log.trace("Term reading {} has no window", subject.term());
             return Result.ok(Reading.none(subject.term()));
         }
         final Result<ChatResponse> reply = calls.callAbout(
@@ -231,11 +232,11 @@ public final class TermReading {
 
     private static void logEntry(final Subject subject, final List<Window> windows) {
         log.debug(
-                "Term reading {}: {} windows, {} mentions, cluster of {}",
-                subject.term(),
+                "Term reading: {} windows, {} mentions, cluster of {}",
                 windows.size(),
                 subject.mentions(),
                 subject.cluster().size());
+        log.trace("Term reading subject {}", subject.term());
     }
 
     private Reading readingOf(
@@ -244,8 +245,7 @@ public final class TermReading {
         final Reading reading =
                 TermReadingReplies.read(mapper, reply.content(), subject.term(), windows, frame.analysisLanguage());
         log.debug(
-                "Term reading {} answered {} of {} windows, {} votes, speaking={} brand={} explainsName={}",
-                subject.term(),
+                "Term reading answered {} of {} windows, {} votes, speaking={} brand={} explainsName={}",
                 reading.windows().size(),
                 windows.size(),
                 reading.windows().stream()
