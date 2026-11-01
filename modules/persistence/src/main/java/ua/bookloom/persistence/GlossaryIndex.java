@@ -68,6 +68,7 @@ public final class GlossaryIndex {
      * @return the entry whose lemma has the key, else the first that lists it as a form; or empty if none
      */
     public Optional<GlossaryEntry> find(final String key) {
+        Objects.requireNonNull(key, "key");
         return Optional.ofNullable(byLemma.get(key)).or(() -> Optional.ofNullable(byForm.get(key)));
     }
 
