@@ -169,7 +169,9 @@ public final class NameKnowledgeCalls {
                 CallKind.NAME_KNOWLEDGE,
                 List.of(),
                 requestFor(batch, entries, system),
-                CallDescriptor.whole(PromptName.NAME_KNOWLEDGE));
+                CallDescriptor.asking(
+                        PromptName.NAME_KNOWLEDGE,
+                        entries.stream().map(GlossaryEntry::term).toList()));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -187,7 +189,9 @@ public final class NameKnowledgeCalls {
                 batch,
                 entries.size(),
                 asked.stream().filter(Waiting::retried).count());
-        return Result.ok(NameKnowledgeReplies.read(mapper, content, entries));
+        final Map<String, NameKnowledge> read = NameKnowledgeReplies.read(mapper, content, entries);
+        calls.answered(NameKnowledgeReplies.shown(entries, read));
+        return Result.ok(read);
     }
 
     // One line per bare name, and a cap sized to the batch.

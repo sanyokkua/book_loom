@@ -15,7 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.JsonReplies;
+import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.util.lang.Script;
 import ua.bookloom.util.text.GlossaryKeys;
 
@@ -357,5 +359,20 @@ final class SuggestionReplies {
         return target.codePoints()
                 .filter(Character::isLetter)
                 .anyMatch(codePoint -> script.letterScripts().contains(Character.UnicodeScript.of(codePoint)));
+    }
+
+    /** The batch's terms as the call describes them before the model answers. */
+    static CallDescriptor asking(final List<GlossaryEntry> batch) {
+        return CallDescriptor.asking(
+                PromptName.SUGGEST_TARGETS,
+                batch.stream().map(GlossaryEntry::term).toList());
+    }
+
+    /** What a person reads of a batch: each term asked, with the target the reply gave it, if any. */
+    static Map<String, @Nullable String> shown(final List<GlossaryEntry> batch, final List<Suggestion> kept) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        batch.forEach(entry -> shown.put(entry.term(), null));
+        kept.forEach(suggestion -> shown.put(suggestion.entry().term(), suggestion.target()));
+        return shown;
     }
 }

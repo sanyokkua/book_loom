@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.LexiconEntry;
@@ -309,7 +310,7 @@ public final class LexiconReading {
                 CallKind.TERM_READING,
                 List.of(),
                 request(term, mentions.size(), windows, frame),
-                CallDescriptor.whole(PromptName.LEXICON_READING));
+                CallDescriptor.asking(PromptName.LEXICON_READING, List.of(term)));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -318,7 +319,7 @@ public final class LexiconReading {
                     FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
-        return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame));
+        return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame, calls));
     }
 
     // Every form's mentions, so the windows of a word may come from any form the book writes it in.
@@ -333,7 +334,11 @@ public final class LexiconReading {
     }
 
     private Decision decisionOf(
-            final String term, final ChatResponse reply, final List<Window> windows, final CallFrame frame) {
+            final String term,
+            final ChatResponse reply,
+            final List<Window> windows,
+            final CallFrame frame,
+            final ModelCalls calls) {
         log.trace("Lexicon reading of {} reply {}", term, reply.content());
         final LexiconReadingReplies.Counts counts = LexiconReadingReplies.read(mapper, reply.content(), term, windows);
         if (counts == null) {
@@ -351,6 +356,7 @@ public final class LexiconReading {
                 counts.senses(),
                 !counts.rendering().isEmpty(),
                 rendering != null);
+        calls.answered(Map.of(term, CallItem.words(verdict) + (rendering == null ? "" : ": " + rendering)));
         return new Decision(verdict, rendering);
     }
 

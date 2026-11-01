@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
@@ -80,6 +81,30 @@ public interface ModelCalls {
      */
     default void parsed(final List<String> segmentIds, final List<CallItem> items) {
         // Nothing shows calls.
+    }
+
+    /**
+     * Shows what the reply of the call just answered was read as, for a call about no segment: each line it asked about
+     * with the parsed answer for it. A seam that shows nothing ignores it.
+     *
+     * @param items the non-null items, one per line asked, in the order asked
+     */
+    default void read(final List<CallItem> items) {
+        parsed(List.of(), items);
+    }
+
+    /**
+     * Shows each line a call about no segment asked with the parsed answer for it; a line the reply gave no answer for
+     * stays as asked. A seam that shows nothing ignores it.
+     *
+     * @param answers each line asked, in order, with its answer or null when the reply gave none
+     */
+    default void answered(final Map<String, @Nullable String> answers) {
+        read(answers.entrySet().stream()
+                .map(line -> line.getValue() == null
+                        ? CallItem.asked(line.getKey())
+                        : CallItem.answered(line.getKey(), line.getValue()))
+                .toList());
     }
 
     /**

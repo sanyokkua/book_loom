@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.pipeline.index.Window;
@@ -39,6 +40,8 @@ public final class TermReading {
 
     // Per window a quote of a few words and three short labels; the term's two flags and the braces besides.
     private static final int BASE_TOKENS = 40;
+    // What a reading with no window that named a gender says in the call list.
+    private static final String NO_VOTE = "no gender vote";
     private static final int TOKENS_PER_WINDOW = 80;
     // Twice the expected reply: a full answer is never cut, a reply that loops is.
     private static final int CAP_FACTOR = 2;
@@ -215,7 +218,7 @@ public final class TermReading {
                 CallKind.TERM_READING,
                 List.of(),
                 request(subject, windows, frame),
-                CallDescriptor.whole(PromptName.TERM_READING));
+                CallDescriptor.asking(PromptName.TERM_READING, List.of(subject.term())));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             // The term is a word of the book, so it stays out of the always-on run log.
@@ -227,7 +230,7 @@ public final class TermReading {
                     FailureReason.tokenIn(error.details()));
             return Result.err(error);
         }
-        return Result.ok(readingOf(Objects.requireNonNull(reply.data(), "reply"), subject, windows, frame));
+        return Result.ok(readingOf(Objects.requireNonNull(reply.data(), "reply"), subject, windows, frame, calls));
     }
 
     private static void logEntry(final Subject subject, final List<Window> windows) {
@@ -240,7 +243,11 @@ public final class TermReading {
     }
 
     private Reading readingOf(
-            final ChatResponse reply, final Subject subject, final List<Window> windows, final CallFrame frame) {
+            final ChatResponse reply,
+            final Subject subject,
+            final List<Window> windows,
+            final CallFrame frame,
+            final ModelCalls calls) {
         log.trace("Term reading {} reply {}", subject.term(), reply.content());
         final Reading reading =
                 TermReadingReplies.read(mapper, reply.content(), subject.term(), windows, frame.analysisLanguage());
@@ -254,7 +261,18 @@ public final class TermReading {
                 reading.speaking(),
                 reading.brand(),
                 reading.explainsName());
+        showRead(calls, subject, reading);
         return reading;
+    }
+
+    // The windows that voted, and what they voted for, are what a person sees of the reading.
+    private static void showRead(final ModelCalls calls, final Subject subject, final Reading reading) {
+        final Gender[] votes = reading.windows().stream()
+                .map(WindowReading::vote)
+                .filter(vote -> vote != Gender.UNKNOWN)
+                .distinct()
+                .toArray(Gender[]::new);
+        calls.answered(Map.of(subject.term(), votes.length == 0 ? NO_VOTE : CallItem.words(votes)));
     }
 
     private ChatRequest request(final Subject subject, final List<Window> windows, final CallFrame frame) {

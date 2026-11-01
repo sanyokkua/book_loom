@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.glossary;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -11,11 +12,14 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.JsonReplies;
+import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -289,5 +293,20 @@ final class TermReviewReplies {
             case "neuter" -> Gender.NEUTER;
             default -> Gender.UNKNOWN;
         };
+    }
+
+    /** The batch's terms as the call describes them before the model answers. */
+    static CallDescriptor asking(final List<GlossaryEntry> batch) {
+        return CallDescriptor.asking(
+                PromptName.REVIEW_TERMS, batch.stream().map(GlossaryEntry::term).toList());
+    }
+
+    /** What a person reads of a batch: each term asked, with the kind, type and gender the reply gave it, if any. */
+    static Map<String, @Nullable String> shown(final List<GlossaryEntry> batch, final List<Verdict> verdicts) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        batch.forEach(entry -> shown.put(entry.term(), null));
+        verdicts.forEach(verdict ->
+                shown.put(verdict.entry().term(), CallItem.words(verdict.kind(), verdict.type(), verdict.gender())));
+        return shown;
     }
 }

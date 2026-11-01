@@ -49,6 +49,7 @@ final class CallSnapshots {
     private final Map<Long, CallSnapshot> shown = latest(KEPT_CALLS);
     private final Map<String, Long> draftedBy = latest(KEPT_SEGMENTS);
     private long lastId;
+    private @Nullable Shown lastShown;
 
     CallSnapshots(final Consumer<JobEvent> announce, final Map<String, SegmentLocator> locators) {
         this.announce = Objects.requireNonNull(announce, "announce");
@@ -67,7 +68,11 @@ final class CallSnapshots {
             @Nullable final CallDescriptor descriptor,
             final List<ChatMessage> sent) {
         log.debug("Call snapshot kind={} segmentIds={} described={}", kind, segmentIds, descriptor != null);
-        return descriptor == null ? null : new Shown(kind, segmentIds, descriptor, sent);
+        if (descriptor == null) {
+            return null;
+        }
+        lastShown = new Shown(kind, segmentIds, descriptor, sent);
+        return lastShown;
     }
 
     /** Adds an outcome to the draft call that last drafted its segment; a decision ends that segment's following. */
@@ -91,7 +96,11 @@ final class CallSnapshots {
     void parsed(final List<String> segmentIds, final List<CallItem> items) {
         Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(items, "items");
-        final Long callId = segmentIds.isEmpty() ? null : draftedBy.get(segmentIds.getFirst());
+        if (segmentIds.isEmpty()) {
+            read(items);
+            return;
+        }
+        final Long callId = draftedBy.get(segmentIds.getFirst());
         final CallSnapshot call = callId == null ? null : shown.get(callId);
         if (call == null) {
             log.debug("Items parsed with no draft call shown segmentIds={} callId={}", segmentIds.size(), callId);
@@ -103,6 +112,16 @@ final class CallSnapshots {
         }
         if (call != null && call.kind() == CallKind.DRAFT) {
             publish(call.withItems(items));
+        }
+    }
+
+    /** Puts what the reply of the last call was read as on that call; the model is single-flight, so it is the one. */
+    private void read(final List<CallItem> items) {
+        Objects.requireNonNull(items, "items");
+        final Shown last = lastShown;
+        log.debug("Reply read as {} items, call shown={}", items.size(), last != null);
+        if (last != null) {
+            last.read(items);
         }
     }
 
@@ -187,8 +206,21 @@ final class CallSnapshots {
                                     attempt.maxAttempts(),
                                     attempt.timeout())
                             .withSent(sent)
+                            .withItems(askedItems())
                     : before.retrying(at, attempt.number(), attempt.maxAttempts(), attempt.timeout());
             publish(current);
+        }
+
+        private List<CallItem> askedItems() {
+            return descriptor.asked().stream().map(CallItem::asked).toList();
+        }
+
+        void read(final List<CallItem> items) {
+            final CallSnapshot before = current;
+            if (before != null && before.state() == CallState.ANSWERED) {
+                current = before.withItems(items);
+                publish(current);
+            }
         }
 
         void failed(final ErrorCode code, final Duration elapsed) {

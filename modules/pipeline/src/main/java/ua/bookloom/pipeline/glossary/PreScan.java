@@ -254,8 +254,9 @@ public final class PreScan {
         final ChatRequest request =
                 ChatRequests.build(PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false);
         log.trace("Pre-scan batch {} messages {}", index, messages);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.PRESCAN, List.of(), request, CallDescriptor.whole(PromptName.PRESCAN));
+        final CallDescriptor asked = CallDescriptor.asking(
+                PromptName.PRESCAN, batch.stream().map(NameCandidate::term).toList());
+        final Result<ChatResponse> reply = calls.callAbout(CallKind.PRESCAN, List.of(), request, asked);
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -272,6 +273,7 @@ public final class PreScan {
         batch.forEach(candidate -> byKey.put(PreScanReplies.key(candidate.term()), candidate));
         final List<Proposal> proposals = PreScanReplies.read(mapper, content, byKey);
         log.debug("Pre-scan batch {} answered: size={} proposals={}", index, batch.size(), proposals.size());
+        calls.answered(PreScanReplies.shown(batch, proposals));
         return Result.ok(proposals);
     }
 

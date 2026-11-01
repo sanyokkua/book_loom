@@ -25,7 +25,6 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
-import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -137,8 +136,8 @@ final class ReviewBatches {
                 false);
         log.debug("Glossary review batch {} asks about {} terms", index, batch.size());
         log.trace("Glossary review batch {} messages {}", index, messages);
-        final Result<ChatResponse> reply = calls.callAbout(
-                CallKind.REVIEW_TERMS, List.of(), request, CallDescriptor.whole(PromptName.REVIEW_TERMS));
+        final Result<ChatResponse> reply =
+                calls.callAbout(CallKind.REVIEW_TERMS, List.of(), request, TermReviewReplies.asking(batch));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -155,6 +154,7 @@ final class ReviewBatches {
         batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
         final List<Verdict> verdicts = TermReviewReplies.read(mapper, content, byKey, evidence);
         log.debug("Glossary review batch {} answered: size={} verdicts={}", index, batch.size(), verdicts.size());
+        calls.answered(TermReviewReplies.shown(batch, verdicts));
         return Result.ok(verdicts);
     }
 

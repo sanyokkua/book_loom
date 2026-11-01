@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
@@ -40,6 +41,10 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermChoice {
+
+    // What the call list says of a term the model kept or dropped.
+    private static final String KEEP = "keep";
+    private static final String DROP = "drop";
 
     /**
      * The model's verdicts.
@@ -192,14 +197,32 @@ public final class TermChoice {
         final ChatRequest request =
                 ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false);
         log.trace("Term choice messages {}", messages);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.TERM_CHOICE, List.of(), request, CallDescriptor.asking(PromptName.TERM_CHOICE, batch));
         if (reply.isErr()) {
             return failed(batch.size(), Objects.requireNonNull(reply.error(), "error"));
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Term choice reply {}", content);
-        return verdicts(content, batch);
+        return readAndShow(content, batch, calls);
+    }
+
+    private Result<Choice> readAndShow(final String content, final List<String> batch, final ModelCalls calls) {
+        final Result<Choice> choice = verdicts(content, batch);
+        final Choice read = choice.data();
+        if (read != null) {
+            showRead(calls, batch, read);
+        }
+        return choice;
+    }
+
+    private static void showRead(final ModelCalls calls, final List<String> batch, final Choice read) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        for (final String term : batch) {
+            final String key = LexiconEntry.keyOf(term);
+            shown.put(term, read.kept().contains(key) ? KEEP : read.dropped().contains(key) ? DROP : null);
+        }
+        calls.answered(shown);
     }
 
     private static Result<Choice> failed(final int batchSize, final AppError error) {

@@ -91,6 +91,26 @@ class JobModelCallSnapshotsTest {
     }
 
     @Test
+    void callAbout_aboutNoSegment_waitingSnapshotHoldsWhatWasAskedAndReadAddsTheAnswers() {
+        final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("x"));
+
+        calls.callAbout(
+                CallKind.NAME_KNOWLEDGE,
+                List.of(),
+                REQUEST,
+                CallDescriptor.asking(PromptName.NAME_KNOWLEDGE, List.of("Ivar", "Mira")));
+        calls.read(List.of(CallItem.answered("Ivar", "male"), CallItem.asked("Mira")));
+
+        assertThat(snapshots().getFirst().items())
+                .extracting(CallItem::id, CallItem::target)
+                .containsExactly(tuple("Ivar", null), tuple("Mira", null));
+        assertThat(snapshots().getLast().items())
+                .extracting(CallItem::id, CallItem::target)
+                .containsExactly(tuple("Ivar", "male"), tuple("Mira", null));
+        assertThat(snapshots().getLast().state()).isEqualTo(CallState.ANSWERED);
+    }
+
+    @Test
     void callAbout_described_namesEverySegmentWithItsLocatorAndTheSectionsSent() {
         callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
 

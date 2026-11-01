@@ -104,8 +104,11 @@ final class VerdictCalls {
             final CallFrame frame,
             final ModelCalls calls) {
         final ChatRequest request = request(name, facts, slot, body, frame);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.TERM_READING, List.of(), request, CallDescriptor.whole(name));
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.TERM_READING,
+                List.of(),
+                request,
+                CallDescriptor.asking(name, List.of(facts.entry().term())));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(

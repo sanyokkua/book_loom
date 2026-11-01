@@ -13,6 +13,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NameKnowledge;
@@ -192,5 +193,15 @@ final class NameKnowledgeReplies {
             case "term" -> new Kind(TermType.TERM, null);
             default -> new Kind(TermType.OTHER, null);
         };
+    }
+
+    /** What a person reads of a batch: each name asked, with the gender and kind the reply gave it, if any. */
+    static Map<String, @Nullable String> shown(final List<GlossaryEntry> asked, final Map<String, NameKnowledge> read) {
+        final Map<String, @Nullable String> shown = new LinkedHashMap<>();
+        for (final GlossaryEntry entry : asked) {
+            final NameKnowledge known = read.get(entry.id());
+            shown.put(entry.term(), known == null ? null : CallItem.words(known.gender(), known.type()));
+        }
+        return shown;
     }
 }

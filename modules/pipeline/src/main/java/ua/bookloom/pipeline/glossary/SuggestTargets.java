@@ -28,7 +28,6 @@ import ua.bookloom.pipeline.glossary.SuggestionReplies.Refusal;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Replies;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
-import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -329,8 +328,7 @@ public final class SuggestTargets {
         final ChatRequest request = requestFor(index, batch, refused, run);
         final Result<ChatResponse> reply = run.setting()
                 .calls()
-                .callAbout(
-                        CallKind.SUGGEST_TARGETS, List.of(), request, CallDescriptor.whole(PromptName.SUGGEST_TARGETS));
+                .callAbout(CallKind.SUGGEST_TARGETS, List.of(), request, SuggestionReplies.asking(batch));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -344,6 +342,7 @@ public final class SuggestTargets {
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Glossary suggestion batch {} reply {}", index, content);
         final Replies read = readReply(content, batch, run);
+        run.setting().calls().answered(SuggestionReplies.shown(batch, read.kept()));
         log.debug(
                 "Glossary suggestion batch {} answered: size={} suggestions={} refused={}",
                 index,
