@@ -132,12 +132,21 @@ public final class ProgressDialogModel {
                 ? lastItem().orElse(activity.get().steps().running())
                 : activity.get().steps().running();
         if (running != null) {
-            selectedKey = running.key();
+            selectedKey = stageRowKey(running);
         } else if (selectedKey == null && !rows.isEmpty()) {
             // Work that ended before the dialog read it (a quick answer) still shows its last step.
             selectedKey = rows.getLast().key();
         }
         reselect();
+    }
+
+    // A request in flight has no row of its own; its stage's row is the one that shows it, so that row is followed.
+    private String stageRowKey(final StepEntry running) {
+        return lastRequestOfStage.entrySet().stream()
+                .filter(stage -> stage.getValue().equals(running.key()))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(running.key());
     }
 
     private java.util.Optional<StepEntry> lastItem() {

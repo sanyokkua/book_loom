@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.pipeline.StepState;
 import ua.bookloom.api.pipeline.StepsPlanned;
+import ua.bookloom.ui.PassEvents;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -103,6 +104,22 @@ class ProgressDialogModelTest {
             end(index);
         });
         model.accept(activity());
+    }
+
+    // IF a request in flight had no row, THEN the dialog would select nothing and say "Nothing yet" for the whole
+    // request; its stage row is selected and shows the call that is out.
+    @Test
+    void selectRunning_requestInFlight_selectsItsStageAndShowsTheCall() {
+        log = PassEvents.logUpTo(new int[] {0, 3}, 1, 10)
+                .apply(new StepChanged(StepKind.REQUEST, "names", 3, StepState.STARTED, null, null));
+        current = call(4);
+        final ProgressDialogModel model = model(ProgressDialogModel.Mode.DETAILED);
+
+        model.accept(activity());
+
+        final StepEntry selected = model.selected().get();
+        assertThat(selected).isNotNull().extracting(StepEntry::index).isEqualTo(1);
+        assertThat(model.callOf(selected)).extracting(CallSnapshot::callId).isEqualTo(4L);
     }
 
     // IF following did not move the selection, THEN the person would watch a step that ended long ago.
