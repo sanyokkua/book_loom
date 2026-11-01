@@ -85,6 +85,7 @@ class PrepSummaryTest extends NamesPassTestBase {
                 .contains("SUGGEST_TARGETS=2/0 ")
                 .contains("TERM_READING=10/0 ")
                 .doesNotContain("DRAFT=")
+                .contains(" secondsPerCall[REVIEW_TERMS=2.0 SUGGEST_TARGETS=2.0 TERM_READING=2.0]")
                 .endsWith("] stage=names project=" + PROJECT);
     }
 

@@ -7,22 +7,35 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.stream.Stream;
 import javafx.application.Platform;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.MeasuredFrom;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ProjectSummary;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.ui.FixedDialProfiles;
 import ua.bookloom.ui.ProjectFixtures;
 import ua.bookloom.ui.RecordingProjectActions;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.i18n.Messages;
 
-/** The estimate before Start follows the stored speed and says where it was measured. */
+/** The estimate before Start follows the stored speeds and says whether it was measured and where. */
 class BriefEstimateTest extends SettingsViewModelTestBase {
+
+    private static final Messages EN = new Messages(() -> Locale.ENGLISH);
 
     private static final ModelSelection CHOSEN = new ModelSelection("ollama", "gemma");
 
@@ -52,8 +65,9 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         final BriefProject project = onFx(() ->
                 new BriefProject(current, projects, new RecordingProjectActions(), new RecordingToasts(), executor));
         WaitForAsyncUtils.waitForFxEvents();
-        final BriefEstimate estimate = onFx(() ->
-                new BriefEstimate(current, viewModel, project, modelSettings, speeds, background, Platform::runLater));
+        final FixedDialProfiles dial = new FixedDialProfiles();
+        final BriefEstimate estimate = onFx(() -> new BriefEstimate(
+                current, viewModel, project, modelSettings, speeds, dial, background, Platform::runLater));
         WaitForAsyncUtils.waitForFxEvents();
         return estimate;
     }
@@ -69,14 +83,15 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
 
         final BriefEstimate estimate = estimateOver(100);
 
-        assertThat(shown(estimate)).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.RUN));
+        assertThat(shown(estimate))
+                .isEqualTo(new StartEstimate.Ranged(Duration.ofMinutes(5), Duration.ofMinutes(10), MeasuredFrom.RUN));
     }
 
     // IF the estimate were not worked out again when a test stored a speed, THEN Start would keep showing the old line.
     @Test
     void estimate_speedStoredWhileShown_isWorkedOutAgainOnTheRevision() {
         final BriefEstimate estimate = estimateOver(100);
-        assertThat(shown(estimate)).isEqualTo(new StartEstimate.Relative());
+        assertThat(shown(estimate)).isEqualTo(new StartEstimate.None());
 
         modelSettings.measured("ollama", "gemma", 3.0, MeasuredFrom.TEST);
         onFx(() -> {
@@ -85,7 +100,8 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         });
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(shown(estimate)).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.TEST));
+        assertThat(shown(estimate))
+                .isEqualTo(new StartEstimate.Ranged(Duration.ofMinutes(5), Duration.ofMinutes(10), MeasuredFrom.TEST));
     }
 
     // IF the stored speed were read on the FX thread, THEN each change of the brief would wait there on the database.
@@ -99,7 +115,49 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         held.forEach(Runnable::run);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(beforeTheRead).isEqualTo(new StartEstimate.Relative());
-        assertThat(shown(estimate)).isEqualTo(new StartEstimate.Measured(Duration.ofSeconds(450), MeasuredFrom.RUN));
+        assertThat(beforeTheRead).isEqualTo(new StartEstimate.None());
+        assertThat(shown(estimate))
+                .isEqualTo(new StartEstimate.Ranged(Duration.ofMinutes(5), Duration.ofMinutes(10), MeasuredFrom.RUN));
+    }
+
+    static Stream<Arguments> wordings() {
+        return Stream.of(
+                Arguments.of(
+                        "every planned kind measured by a run",
+                        Map.of(
+                                CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
+                                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
+                        300,
+                        QualityDial.BALANCED,
+                        List.of("For this book on this computer: about 17 min, measured on this model")),
+                Arguments.of(
+                        "only the draft speed of the model test, at Fast",
+                        Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.TEST)),
+                        3000,
+                        QualityDial.FAST,
+                        List.of("For this book on this computer: about 2–3 h, estimate from the model test")),
+                Arguments.of(
+                        "a run's draft speed and a never-measured review, at Balanced",
+                        Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN)),
+                        300,
+                        QualityDial.BALANCED,
+                        List.of(
+                                "For this book on this computer: about 15–30 min, estimate from an earlier translation")),
+                Arguments.of("nothing measured", Map.of(), 300, QualityDial.BALANCED, List.of()));
+    }
+
+    // The plan of the spec's cases: 300 segments in 20 chunks, the reviewer once a chunk at Balanced and never at Fast.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("wordings")
+    void line_measuredAndEstimate_wording(
+            final String description,
+            final Map<CallKind, MeasuredSpeed> stored,
+            final int segments,
+            final QualityDial dial,
+            final List<String> expected) {
+        final int passes = dial == QualityDial.FAST ? 0 : 1;
+
+        assertThat(StartEstimates.of(stored, segments, 20, dial, passes).lines(EN))
+                .containsExactlyElementsOf(expected);
     }
 }

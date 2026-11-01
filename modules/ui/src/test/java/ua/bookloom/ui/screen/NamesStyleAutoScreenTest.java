@@ -7,6 +7,7 @@ import static ua.bookloom.ui.AutoNamesFixture.WELL;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -14,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.ui.ScriptedNamesPass;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -60,43 +63,53 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
     // IF the person had to guess how long one press takes, THEN a twenty-minute run would start as a surprise.
     @Test
-    void subtitle_estimateAnswered_saysTheMinutesAndTheDialOfTheBrief() throws Exception {
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+    void subtitle_estimateAnswered_saysTheMinutesAsAnEstimate() throws Exception {
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
 
         showScreen();
 
-        assertThat(labelText(SUBTITLE)).isEqualTo("about 15–25 min on Balanced");
+        assertThat(labelText(SUBTITLE)).isEqualTo("About 15–25 min, estimate.");
         assertThat(namesPass.estimateCalls()).contains("p1");
+    }
+
+    // IF every kind of call has seconds stored on the model, THEN the line says it is measured, not an estimate.
+    @Test
+    void subtitle_measuredEstimate_saysMeasuredOnThisModel() throws Exception {
+        namesPass.willEstimate(new NamesEstimate(7, Map.of(CallKind.TERM_READING, 7), 2, 2, true));
+
+        showScreen();
+
+        assertThat(labelText(SUBTITLE)).isEqualTo("About 2 min, measured on this model.");
     }
 
     // IF the line were composed once, THEN moving the dial on the brief would leave the old minutes on this button.
     @Test
-    void subtitle_dialChangedToMax_asksForANewEstimateAndNamesTheNewDial() throws Exception {
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+    void subtitle_dialChangedToMax_asksForANewEstimate() throws Exception {
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
         showScreen();
         final int askedBefore = namesPass.estimateCalls().size();
-        namesPass.willEstimate(new NamesEstimate(40, 30, 60));
+        namesPass.willEstimate(ScriptedNamesPass.range(40, 30, 60));
 
         onFx(() -> injector.getInstance(BookBriefViewModel.class).setDial(QualityDial.MAX));
 
-        awaitFx(() -> "about 30–60 min on Max quality".equals(labelText(SUBTITLE)));
+        awaitFx(() -> "About 30–60 min, estimate.".equals(labelText(SUBTITLE)));
         assertThat(namesPass.estimateCalls().size()).isGreaterThan(askedBefore);
     }
 
-    // IF the old minutes stayed beside the new dial while the save was slow, THEN the line would say "15–25 min on Max
-    // quality", minutes computed for Balanced.
+    // IF the old minutes stayed beside the new dial while the save was slow, THEN the line would show minutes computed
+    // for Balanced under Max.
     @Test
     void subtitle_dialChangedAndSaveNotYetStored_isBlankUntilTheNewEstimateArrives() throws Exception {
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
         showScreen();
         projects.holdBriefSaves();
-        namesPass.willEstimate(new NamesEstimate(40, 30, 60));
+        namesPass.willEstimate(ScriptedNamesPass.range(40, 30, 60));
 
         onFx(() -> injector.getInstance(BookBriefViewModel.class).setDial(QualityDial.MAX));
 
         assertThat(labelText(SUBTITLE)).isBlank();
         projects.releaseBriefSaves();
-        awaitFx(() -> "about 30–60 min on Max quality".equals(labelText(SUBTITLE)));
+        awaitFx(() -> "About 30–60 min, estimate.".equals(labelText(SUBTITLE)));
     }
 
     // IF a failed estimate printed a made-up time, THEN the line would promise minutes nobody computed.
@@ -112,14 +125,14 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
     // IF the words came from the English bundle only, THEN a Ukrainian window would mix languages on its main button.
     @Test
-    void button_ukrainianInterface_isWordedInUkrainianWithTheUkrainianDialLabel() throws Exception {
+    void button_ukrainianInterface_isWordedInUkrainian() throws Exception {
         useLocale(Locale.forLanguageTag("uk"));
-        namesPass.willEstimate(new NamesEstimate(12, 15, 25));
+        namesPass.willEstimate(ScriptedNamesPass.range(12, 15, 25));
 
         showScreen();
 
         assertThat(button(AUTO).getText()).isEqualTo("Підготувати імена автоматично");
-        assertThat(labelText(SUBTITLE)).startsWith("приблизно 15–25 хв").contains("Збалансовано");
+        assertThat(labelText(SUBTITLE)).isEqualTo("Близько 15–25 хв, оцінка.");
         assertThat(TooltipProbe.tipText(required(AUTO))).isNotBlank().contains("Повторювані терміни");
     }
 

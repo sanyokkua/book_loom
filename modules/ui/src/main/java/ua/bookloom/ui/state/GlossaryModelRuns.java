@@ -70,6 +70,7 @@ final class GlossaryModelRuns {
      * @param project the project the screen shows now
      * @param activities the model work under way, which a scan or review must not overlap
      * @param changes where the exact changes of an operation are kept for the results dialog
+     * @param measured where the seconds per call a names pass measured on the model are kept when it ends
      */
     record Screen(
             GlossaryService glossary,
@@ -84,7 +85,8 @@ final class GlossaryModelRuns {
             ObjectProperty<@Nullable GlossaryNotice> notice,
             Supplier<String> project,
             ActivityTracker activities,
-            ChangeLog changes) {}
+            ChangeLog changes,
+            MeasuredCalls measured) {}
 
     private static final long NO_TICKET = -1;
 
@@ -204,8 +206,7 @@ final class GlossaryModelRuns {
                 ActivityKind.NAMES_PASS,
                 ChangeOperation.AUTO_NAMES,
                 MessageKey.NAMES_STYLE_AUTO_NO_MODEL,
-                (model, progress) -> answers.prepare(
-                        project, model, chosen.flatMap(screen.detection()).orElse(null), progress),
+                (model, progress) -> answers.prepare(project, chosen.orElse(null), model, progress),
                 answer -> answers.autoPrepared(operation, answer));
     }
 

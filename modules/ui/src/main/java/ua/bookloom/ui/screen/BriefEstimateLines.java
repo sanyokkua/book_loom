@@ -2,31 +2,33 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BriefEstimate;
 import ua.bookloom.ui.state.StartEstimate;
 
 /**
- * The lines under the quality choice that say what it costs: one line with a time when the model test measured one on
- * this computer, else the relative cost of the choices. A measured line says where it comes from on hover.
+ * The line under the quality choice that says what it costs: a time measured on this model, a range marked as an
+ * estimate with where its speed was measured, or nothing when nothing was measured. The line says how it was worked
+ * out on hover.
  */
 final class BriefEstimateLines {
 
-    private static final double SPACING = 3;
-    private static final int LINES = 2;
-
     private final Messages messages;
-    private final List<Label> lines;
+    private final Label line;
     private final VBox node;
 
     BriefEstimateLines(final Messages messages, final BriefEstimate estimate) {
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.lines = List.of(line("brief-estimate-line-1"), line("brief-estimate-line-2"));
-        this.node = new VBox(SPACING, lines.get(0), lines.get(1));
+        this.line = Wrapped.wholeLines(new Label());
+        line.setId("brief-estimate-line-1");
+        line.getStyleClass().add("hint");
+        this.node = new VBox(line);
         node.setId("brief-estimate");
         estimate.estimate().addListener((observed, was, now) -> show(now));
         show(estimate.estimate().get());
@@ -36,28 +38,17 @@ final class BriefEstimateLines {
         return node;
     }
 
-    private static Label line(final String id) {
-        final Label line = new Label();
-        line.setId(id);
-        line.getStyleClass().add("hint");
-        line.setWrapText(true);
-        return line;
-    }
-
     private void show(final StartEstimate now) {
         final List<String> texts = now.lines(messages);
-        final MessageKey tip = now instanceof StartEstimate.Measured measured ? measured.tip() : null;
-        for (int at = 0; at < LINES; at++) {
-            final Label line = lines.get(at);
-            final boolean shown = at < texts.size();
-            line.setText(shown ? texts.get(at) : "");
-            line.setVisible(shown);
-            line.setManaged(shown);
-            if (tip != null && shown) {
-                Tips.install(messages, line, tip);
-            } else {
-                line.setTooltip(null);
-            }
+        final boolean shown = !texts.isEmpty();
+        line.setText(shown ? texts.getFirst() : "");
+        line.setVisible(shown);
+        line.setManaged(shown);
+        final Optional<MessageKey> tip = now.tip();
+        if (shown && tip.isPresent()) {
+            Tips.install(messages, line, tip.get());
+        } else {
+            line.setTooltip(null);
         }
     }
 }

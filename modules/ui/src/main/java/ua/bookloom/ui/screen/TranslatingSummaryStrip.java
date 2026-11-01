@@ -145,9 +145,7 @@ final class TranslatingSummaryStrip {
                                 MessageKey.TRANSLATING_STRIP_FINISHED_IN,
                                 DurationText.spelled(messages, pace.elapsed()));
             case READY, CANNOT_START ->
-                estimate instanceof StartEstimate.Measured measured
-                        ? measured.lines(messages).getFirst()
-                        : "";
+                estimate.lines(messages).stream().findFirst().orElse("");
             default -> view.title().in(messages);
         };
     }

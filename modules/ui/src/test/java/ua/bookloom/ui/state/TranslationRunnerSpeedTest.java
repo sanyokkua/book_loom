@@ -7,11 +7,15 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.pipeline.CallKind;
@@ -117,6 +121,52 @@ class TranslationRunnerSpeedTest extends RunnerTestBase {
                 store.stored(SELECTION.providerId(), SELECTION.modelId()).orElseThrow();
         assertThat(row.speedOf(CallKind.DRAFT).map(MeasuredSpeed::seconds)).hasValue(8.0);
         assertThat(row.speedOf(CallKind.DRAFT).map(MeasuredSpeed::from)).hasValue(MeasuredFrom.RUN);
+    }
+
+    /** A ledger that keeps every record, for the run to read its own calls from. */
+    private static final class ListLedger implements CallLedger {
+        private final List<CallRecord> records = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void record(final CallRecord record) {
+            records.add(record);
+        }
+
+        @Override
+        public long mark() {
+            return records.size();
+        }
+
+        @Override
+        public List<CallRecord> since(final long mark) {
+            return List.copyOf(records.subList((int) mark, records.size()));
+        }
+    }
+
+    // IF a run's reviewer calls were not stored per call, THEN the next estimate could never be measured on the model.
+    @Test
+    void run_ended_storesTheSecondsPerCallOfEachKindAndKeepsOtherKinds() throws Exception {
+        final ScriptedModelSettings store = new ScriptedModelSettings();
+        store.measured(SELECTION.providerId(), SELECTION.modelId(), 3.0, MeasuredFrom.TEST);
+        final ModelSpeeds speeds = new ModelSpeeds();
+        final ModelSpeedRecorder recorder = new ModelSpeedRecorder(store, speeds, executor);
+        final ListLedger ledger = new ListLedger();
+        ledger.record(new CallRecord(CallKind.SUMMARY, null, Duration.ofSeconds(50), null, null));
+        runner = new TranslationRunner(
+                mirror, executor, ticks, desk, clock, RunSpeedSink.NONE, new MeasuredCalls(ledger, store, recorder));
+        startJob();
+
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(5), null, null));
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(7), null, null));
+        job.finish(Result.ok(completedReport(1)));
+        awaitState(RunState.COMPLETED);
+        waitForRevision(speeds);
+
+        final var row =
+                store.stored(SELECTION.providerId(), SELECTION.modelId()).orElseThrow();
+        assertThat(row.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
+        assertThat(row.speedOf(CallKind.SUMMARY)).isEmpty();
+        assertThat(row.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(3.0, MeasuredFrom.TEST));
     }
 
     private static void waitForRevision(final ModelSpeeds speeds) throws TimeoutException {

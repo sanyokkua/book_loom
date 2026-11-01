@@ -1,9 +1,11 @@
 package ua.bookloom.api.pipeline;
 
+import java.util.Map;
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.MeasuredSpeed;
 
 /**
  * The one autonomous names pass (15i.N8): the steps the Names &amp; style buttons run, in order, over a staged copy of
@@ -16,10 +18,12 @@ public interface NamesPass {
      * Says what a pass would cost before its first call.
      *
      * @param projectId the non-null project whose book is open
-     * @return the calls and minutes the dial's plan reads; {@code validation} when the project is not stored or its
-     *     book is not open
+     * @param stored the seconds per call of each kind measured on the chosen model; never null, empty when the model was
+     *     never measured or none is chosen
+     * @return the calls of each kind the dial's plan makes and their minutes, measured when every kind is in
+     *     {@code stored}; {@code validation} when the project is not stored or its book is not open
      */
-    Result<NamesEstimate> estimate(String projectId);
+    Result<NamesEstimate> estimate(String projectId, Map<CallKind, MeasuredSpeed> stored);
 
     /**
      * Prepares the glossary and the recurring terms of a project with the model.

@@ -2,6 +2,7 @@ package ua.bookloom.ui;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -13,6 +14,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.MeasuredSpeed;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.NamesEstimate;
@@ -36,13 +39,14 @@ public final class ScriptedNamesPass implements NamesPass {
             String projectId, ChatModel model, @Nullable Integer detectedContext) {}
 
     private final List<String> estimateCalls = new CopyOnWriteArrayList<>();
+    private final List<Map<CallKind, MeasuredSpeed>> estimateSeconds = new CopyOnWriteArrayList<>();
     private final List<Run> runs = new CopyOnWriteArrayList<>();
     private final Queue<Result<NamesPassReport>> answers = new ConcurrentLinkedQueue<>();
     private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
     private final CountDownLatch started = new CountDownLatch(1);
     private final CountDownLatch release = new CountDownLatch(1);
     private final CountDownLatch cancelled = new CountDownLatch(1);
-    private volatile Result<NamesEstimate> estimate = Result.ok(new NamesEstimate(4, 2, 4));
+    private volatile Result<NamesEstimate> estimate = Result.ok(range(4, 2, 4));
     private volatile boolean holding;
     private volatile Runnable duringRun = () -> {};
     private volatile Runnable writes = () -> {};
@@ -114,9 +118,27 @@ public final class ScriptedNamesPass implements NamesPass {
                 EntryChanges.<GlossaryEntry>none(), EntryChanges.<LexiconEntry>none(), 0, Duration.ZERO);
     }
 
+    /**
+     * An estimate from the built-in figures, of term-reading calls only.
+     *
+     * @param calls the calls
+     * @param low the fewest minutes
+     * @param high the most minutes
+     * @return an estimate that is not measured
+     */
+    public static NamesEstimate range(final int calls, final int low, final int high) {
+        return new NamesEstimate(calls, Map.of(CallKind.TERM_READING, calls), low, high, false);
+    }
+
+    /** The stored seconds each {@code estimate} call was given, oldest first. */
+    public List<Map<CallKind, MeasuredSpeed>> estimateSeconds() {
+        return List.copyOf(estimateSeconds);
+    }
+
     @Override
-    public Result<NamesEstimate> estimate(final String projectId) {
+    public Result<NamesEstimate> estimate(final String projectId, final Map<CallKind, MeasuredSpeed> stored) {
         estimateCalls.add(projectId);
+        estimateSeconds.add(Map.copyOf(stored));
         return estimate;
     }
 

@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppRestart;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.persistence.StorageInfo;
 import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.settings.ReviewModeChoice;
@@ -60,6 +61,7 @@ final class LaunchPorts {
                 bind(StorageInfo.class).toInstance(storage);
                 bind(ReviewModeChoice.class).toInstance(reviewModeChoice);
                 bind(DialProfiles.class).toInstance(new FixedDialProfiles());
+                bind(CallLedger.class).toInstance(CallLedger.none());
                 bind(String.class).annotatedWith(BuildVersion.class).toInstance(UiTestInjector.DEV_VERSION);
                 bind(DiagnosticLog.class).toInstance(diagnosticLog);
             }

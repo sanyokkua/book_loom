@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import ua.bookloom.api.AppRestart;
 import ua.bookloom.api.EnvironmentVariables;
+import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
@@ -282,5 +283,6 @@ public final class UiModule extends AbstractModule {
         requireBinding(ReviewModeChoice.class);
         requireBinding(DialProfiles.class);
         requireBinding(SummaryRepository.class);
+        requireBinding(CallLedger.class);
     }
 }

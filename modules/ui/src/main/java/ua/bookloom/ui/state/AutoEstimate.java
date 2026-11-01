@@ -6,6 +6,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.NamesPass;
 
@@ -19,11 +20,19 @@ final class AutoEstimate {
 
     private final NamesPass namesPass;
     private final GlossaryCalls calls;
+    private final SettingsViewModel settings;
+    private final MeasuredCalls measured;
     private final ReadOnlyObjectWrapper<@Nullable NamesEstimate> estimate = new ReadOnlyObjectWrapper<>();
 
-    AutoEstimate(final NamesPass namesPass, final GlossaryCalls calls) {
+    AutoEstimate(
+            final NamesPass namesPass,
+            final GlossaryCalls calls,
+            final SettingsViewModel settings,
+            final MeasuredCalls measured) {
         this.namesPass = Objects.requireNonNull(namesPass, "namesPass");
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.measured = Objects.requireNonNull(measured, "measured");
     }
 
     ReadOnlyObjectProperty<@Nullable NamesEstimate> property() {
@@ -37,10 +46,11 @@ final class AutoEstimate {
      * @param current wraps what shows the answer so that it runs only while the opening that asked is current
      */
     void refresh(final String project, final Consumer<Runnable> current) {
-        log.debug("estimate of the automatic names pass asked for project {}", project);
+        final @Nullable ModelSelection chosen = settings.selection().orElse(null);
+        log.debug("estimate of the automatic names pass asked for project {} on {}", project, chosen);
         calls.run(
                 "names estimate",
-                () -> namesPass.estimate(project),
+                () -> namesPass.estimate(project, measured.stored(chosen)),
                 answer -> current.accept(() -> {
                     estimate.set(answer.data());
                     log.debug("estimate of project {} is now {}", project, answer.data());

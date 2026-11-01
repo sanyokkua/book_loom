@@ -469,7 +469,7 @@ WHEN the names pass is about to start, the application SHALL estimate its time a
 
 #### Scenario: Nothing measured shows the built-in figures
 
-- **WHEN** nothing is measured for the model and the plan is 5 Balanced calls
+- **WHEN** nothing is measured for the model and the plan is 15 Balanced calls
 - **THEN** the card reads "About 1–2 min, estimate."
 
 #### Scenario: The pass stores what it measured
@@ -1688,7 +1688,7 @@ once, after its last step.
 #### Scenario: The estimate of calls and minutes
 
 - **WHEN** the application estimates the names step before the first model call, from the dial's plan over the glossary as it will stand after its scan, and nothing is measured for the chosen model
-- **THEN** a call takes 3.75–7.5 seconds at Fast, 11.25–18.75 at Balanced and 11.25–22.5 at Max, and the minutes are rounded up at both ends
+- **THEN** a call takes 3.0–4.9 seconds at Fast, 3.5–5.7 at Balanced and 3.5–6.9 at Max (`NamesPlan`, measured on the reference model), and the minutes are rounded up at both ends
 - **AND** with seconds stored for the model, the estimate is the calls times those seconds, as "Estimate the names pass from the seconds measured on this model" says
 
 #### Scenario: Nothing is written when the pass stops or fails

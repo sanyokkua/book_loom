@@ -262,8 +262,9 @@ There is no Accent row and no decorative text; each screen has at most one purpo
    - The two are never printed side by side as two percentages (GL-3); the bar's tooltip says "140 of 276 steps,
      checks included".
    - **ⓘ How progress is counted** opens the breakdown per kind of step: planned, done, measured time per step.
-   - **Estimates before Start** appear only from a measured speed (the inference test or an earlier run), always marked
-     "estimate". Without one, the screen shows relative cost (Balanced ≈ 1.5× Fast, Max ≈ 3×).
+   - **Estimates before Start** follow one rule: "measured on this model" when a run measured every kind of call the
+     plan makes on the chosen model; else a range from the model's seconds per drafted segment, marked "estimate from
+     the model test" or "estimate from an earlier translation"; no time and no relative cost when nothing was measured.
 
 **Why the old estimate was wrong (replaced by 5.4).**
 - The former `state/RunClock.timeLeft(pending)` multiplied the average of the **last 20** segments by **all pending segments**, so
@@ -526,7 +527,7 @@ language more than once, for example with another model, quality or thinking set
 | Tone & style | Genre and Who reads it (each with "Suggested from the book · why ›", which opens the brief dialog), Register, Voice and period notes, Who tells the story (Unknown · “I” · “He / she”, short so a `SegmentedButton` fits in `uk`), Narrator's gender (asked at Start for a first-person story); **✦ Fill in from the book** | `BriefToneCard`, `BriefEvidenceRow`, `NarratorNotice`, `StyleSuggestion` |
 | How to translate | Names of people and places (Translate · Spell in the target alphabet · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
 | Also translate | Table of contents and chapter titles · Picture descriptions · The book's title and author · Copyright and edition notes (off) | `BriefAlsoCard` |
-| Quality and speed | Fast · Balanced · Max quality; one line on what the choice does and its relative cost; "For this book on this computer: about 2 h 30 min (estimate from the model test)" **only when measured** (G10.5); the AI-model line with "change" | `BriefQualityCard` |
+| Quality and speed | Fast · Balanced · Max quality; one line on what the choice does and its relative cost; "For this book on this computer: about 2 h 21 min, measured on this model", or a range such as "about 2–3 h, estimate from the model test"; no line when nothing was measured (G10.5); the AI-model line with "change" | `BriefQualityCard` |
 
 ### Dialog · Fill in the brief from the book (G4, short) — B1–B3
 - **Header.** "50 % · 3 of 6 steps · Left about 30 s".

@@ -20,11 +20,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.NamesEstimate;
@@ -33,7 +35,6 @@ import ua.bookloom.api.pipeline.NamesPassReport;
 import ua.bookloom.api.pipeline.NamesPassStage;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.pipeline.CallKindTotals;
 import ua.bookloom.pipeline.PrepSummary;
 import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
@@ -126,14 +127,15 @@ public final class NamesPassImpl implements NamesPass {
             AtomicInteger rejected) {}
 
     @Override
-    public Result<NamesEstimate> estimate(final String projectId) {
+    public Result<NamesEstimate> estimate(final String projectId, final Map<CallKind, MeasuredSpeed> stored) {
         Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(stored, "stored");
         return guarded(
                 "estimate",
                 projectId,
                 () -> stage(projectId)
-                        .flatMap(
-                                stage -> stage.glossaryService().scan(projectId).map(scanned -> estimateOf(stage))));
+                        .flatMap(stage ->
+                                stage.glossaryService().scan(projectId).map(scanned -> estimateOf(stage, stored))));
     }
 
     @Override
@@ -157,7 +159,7 @@ public final class NamesPassImpl implements NamesPass {
                     final Run run = new Run(
                             stage, stoppable, counter, calls, clock.instant(), ledger.mark(), new AtomicInteger());
                     final Result<NamesPassReport> result = execute(run);
-                    PrepSummary.log("names", projectId, CallKindTotals.of(ledger.since(run.mark())));
+                    PrepSummary.log("names", projectId, ledger.since(run.mark()));
                     return result;
                 }));
     }
@@ -183,20 +185,16 @@ public final class NamesPassImpl implements NamesPass {
     }
 
     // The calls of the whole pass over the open names, so an empty glossary is estimated from what its scan would hold.
-    private static NamesEstimate estimateOf(final Stage stage) {
+    private static NamesEstimate estimateOf(final Stage stage, final Map<CallKind, MeasuredSpeed> stored) {
         final List<GlossaryEntry> open =
                 stage.names().entries().stream().filter(TermReview::isOpen).toList();
         final NamesEstimate estimate = NamesPassEstimate.of(
                 open,
                 stage.book().story(),
                 stage.book().dial(),
-                stage.book().frame().analysisLanguage());
-        log.debug(
-                "Names estimate project={} calls={} minutes={}-{}",
-                stage.projectId(),
-                estimate.calls(),
-                estimate.minutesLow(),
-                estimate.minutesHigh());
+                stage.book().frame().analysisLanguage(),
+                stored);
+        log.debug("Names estimate project={} {}", stage.projectId(), estimate);
         return estimate;
     }
 
@@ -230,7 +228,7 @@ public final class NamesPassImpl implements NamesPass {
     }
 
     private static int logEstimate(final Stage stage, final int scanned) {
-        final NamesEstimate estimate = estimateOf(stage);
+        final NamesEstimate estimate = estimateOf(stage, Map.of());
         log.info(
                 "Names pass project={} scanned={} plan: about {} calls, {}-{} min",
                 stage.projectId(),

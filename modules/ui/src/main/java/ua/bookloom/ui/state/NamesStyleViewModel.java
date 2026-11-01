@@ -81,6 +81,7 @@ public final class NamesStyleViewModel {
      * @param executor the daemon executor every call runs on, never the FX thread
      * @param messages the catalogue the refusals are worded from
      * @param activities the model work under way, which the model scan and review must not overlap
+     * @param measured the seconds per call measured on the chosen model, read for and stored by the names pass
      */
     @Inject
     public NamesStyleViewModel(
@@ -92,7 +93,8 @@ public final class NamesStyleViewModel {
             final SettingsViewModel settings,
             final @BackgroundExecutor ExecutorService executor,
             final Messages messages,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final MeasuredCalls measured) {
         this(
                 glossary,
                 lexicon,
@@ -103,7 +105,8 @@ public final class NamesStyleViewModel {
                 executor,
                 messages,
                 activities,
-                () -> UUID.randomUUID().toString());
+                () -> UUID.randomUUID().toString(),
+                measured);
     }
 
     // The id source is a seam so that a test states the ids it expects, and no provider is asked for a context length.
@@ -127,7 +130,8 @@ public final class NamesStyleViewModel {
                 executor,
                 messages,
                 activities,
-                ids);
+                ids,
+                MeasuredCalls.none());
     }
 
     private NamesStyleViewModel(
@@ -140,7 +144,8 @@ public final class NamesStyleViewModel {
             final ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
-            final Supplier<String> ids) {
+            final Supplier<String> ids,
+            final MeasuredCalls measured) {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.calls = new GlossaryCalls(executor);
         this.changeLog = new ChangeLog(
@@ -149,8 +154,8 @@ public final class NamesStyleViewModel {
                 marks,
                 messages,
                 Objects.requireNonNull(activities, "activities"));
-        this.autoEstimate = new AutoEstimate(namesPass, calls);
-        this.modelRuns = newModelRuns(lexicon, namesPass, detection, models, settings, messages, activities);
+        this.autoEstimate = new AutoEstimate(namesPass, calls, settings, measured);
+        this.modelRuns = newModelRuns(lexicon, namesPass, detection, models, settings, messages, activities, measured);
         this.recurring = new RecurringTerms(
                 new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice, new ImportSummary(messages)),
                 () -> projectId,
@@ -174,7 +179,8 @@ public final class NamesStyleViewModel {
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final Messages messages,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final MeasuredCalls measured) {
         return new GlossaryModelRuns(
                 new GlossaryModelRuns.Screen(
                         glossary,
@@ -189,7 +195,8 @@ public final class NamesStyleViewModel {
                         notice,
                         () -> projectId,
                         activities,
-                        changeLog),
+                        changeLog,
+                        measured),
                 calls);
     }
 
@@ -208,21 +215,12 @@ public final class NamesStyleViewModel {
         return modelRuns.busy();
     }
 
-    /**
-     * Why the model scan and review are not offered while other model work runs.
-     *
-     * @return a read-only property, empty while they are offered or one of them runs itself
-     */
+    /** {@return why the model scan and review are not offered while other model work runs; empty while offered} */
     public ReadOnlyStringProperty modelBlockedReason() {
         return modelRuns.blockedReason();
     }
 
-    /**
-     * What the last model operation did, exactly, for the results dialog to open on.
-     *
-     * @return a read-only property holding the results of the newest operation, or {@code null} while one runs or none
-     *     has finished since the screen opened
-     */
+    /** {@return what the last model operation did, for the results dialog; null while one runs or none finished} */
     public ReadOnlyObjectProperty<@Nullable ChangeResults> results() {
         return changeLog.results();
     }

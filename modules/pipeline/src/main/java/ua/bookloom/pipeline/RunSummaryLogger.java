@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
@@ -202,9 +203,9 @@ final class RunSummaryLogger {
 
     // Counted from what each call reported, so every stage of the run is in it and a missing figure stays missing.
     private String byKind() {
-        final String line =
-                PrepSummary.byKind(CallKindTotals.of(ledger.since(mark)).totals());
-        return line.isEmpty() ? "" : " byKind[" + line + "]";
+        final List<CallRecord> records = ledger.since(mark);
+        final String line = PrepSummary.byKind(CallKindTotals.of(records).totals());
+        return (line.isEmpty() ? "" : " byKind[" + line + "]") + PrepSummary.secondsPerCall(records);
     }
 
     /** How many call times are held for the percentile; never more than {@link #PERCENTILE_WINDOW}. */

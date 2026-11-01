@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -8,6 +9,8 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.CallRecord;
+import ua.bookloom.api.llm.CallSeconds;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
@@ -24,6 +27,42 @@ public final class PrepSummary {
     static final String NOT_REPORTED = "–";
 
     private static final double PERCENT = 100.0;
+
+    /**
+     * Writes the one INFO line a preparation step ends with, with the seconds per call of each kind it measured.
+     *
+     * @param stage the step's short name, {@code names}, {@code brief} or {@code export}
+     * @param projectId the project the step worked on
+     * @param records the calls the step made; none lists no kind
+     */
+    public static void log(final String stage, final String projectId, final List<CallRecord> records) {
+        Objects.requireNonNull(stage, "stage");
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(records, "records");
+        log.info(
+                "prep summary byKind[{}]{} stage={} project={}",
+                byKind(CallKindTotals.of(records).totals()),
+                secondsPerCall(records),
+                stage,
+                projectId);
+    }
+
+    /**
+     * The seconds per answered call of each kind, as a run or a names pass stores them on the model.
+     *
+     * @param records the calls of the run or step; never null
+     * @return {@code " secondsPerCall[KIND=s …]"} in kind order, or empty when no kind but {@code DRAFT} answered
+     */
+    public static String secondsPerCall(final List<CallRecord> records) {
+        final Map<CallKind, Double> seconds = CallSeconds.of(records);
+        if (seconds.isEmpty()) {
+            return "";
+        }
+        return seconds.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> entry.getKey() + "=" + String.format(Locale.ROOT, "%.1f", entry.getValue()))
+                .collect(Collectors.joining(" ", " secondsPerCall[", "]"));
+    }
 
     /**
      * Writes the one INFO line a preparation step ends with.

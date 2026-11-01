@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.CallRecord;
@@ -169,6 +170,22 @@ class RunSummaryLoggerTest {
                 .asString()
                 .endsWith(
                         " byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600 ttftMs:400 prefill:13.3%]");
+    }
+
+    // The final line says the seconds per answered call of each kind the run stores on its model; DRAFT is per segment
+    // and left out, a failed call too.
+    @Test
+    void onEvent_finishedAfterReviewCalls_finalLineCarriesTheSecondsPerCall() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+
+        ledger.record(new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(3), null, null));
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(5), null, null));
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(7), null, null));
+        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(60), null, FailureReason.UNCLASSIFIED));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().endsWith(" secondsPerCall[REVIEW=6.0]");
     }
 
     // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.

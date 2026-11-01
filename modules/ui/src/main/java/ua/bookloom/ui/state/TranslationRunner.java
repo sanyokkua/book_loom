@@ -35,7 +35,7 @@ public final class TranslationRunner {
     private static final double MILLIS_PER_SECOND = 1000.0;
 
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
-    private record ActiveRun(TranslationJob job, RunSession session, RunContext context) {}
+    private record ActiveRun(TranslationJob job, RunSession session, RunContext context, long ledgerMark) {}
 
     private final StateMirror mirror;
     private final ExecutorService executor;
@@ -43,6 +43,7 @@ public final class TranslationRunner {
     private final ReviewDesk desk;
     private final Clock clock;
     private final RunSpeedSink speeds;
+    private final MeasuredCalls measuredCalls;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
     /**
@@ -52,20 +53,23 @@ public final class TranslationRunner {
      * @param executor the daemon executor a job runs on, never the FX thread
      * @param desk the review desk the run reads its flagged queue and kept-as-source count from
      * @param speeds where the speed a run measured on its model is kept when the run ends
+     * @param measuredCalls where the seconds per call of each kind a run measured are kept when it ends
      */
     @Inject
     public TranslationRunner(
             final StateMirror mirror,
             @BackgroundExecutor final ExecutorService executor,
             final ReviewDesk desk,
-            final ModelSpeedRecorder speeds) {
+            final ModelSpeedRecorder speeds,
+            final MeasuredCalls measuredCalls) {
         this(
                 mirror,
                 executor,
                 new FixedRateTicks(),
                 desk,
                 Clock.system(ZoneId.systemDefault()),
-                RunSpeedSink.storingIn(speeds));
+                RunSpeedSink.storingIn(speeds),
+                measuredCalls);
     }
 
     TranslationRunner(
@@ -90,6 +94,18 @@ public final class TranslationRunner {
             final ReviewDesk desk,
             final Clock clock,
             final RunSpeedSink speeds) {
+        this(mirror, executor, ticks, desk, clock, speeds, MeasuredCalls.none());
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ReviewDesk desk,
+            final Clock clock,
+            final RunSpeedSink speeds,
+            final MeasuredCalls measuredCalls) {
+        this.measuredCalls = Objects.requireNonNull(measuredCalls, "measuredCalls");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
@@ -111,7 +127,8 @@ public final class TranslationRunner {
     public boolean start(final TranslationJob job, final RunContext context) {
         Objects.requireNonNull(job, "job");
         Objects.requireNonNull(context, "context");
-        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock, context, desk, executor), context);
+        final ActiveRun run = new ActiveRun(
+                job, new RunSession(mirror, clock, context, desk, executor), context, measuredCalls.mark());
         if (!active.compareAndSet(null, run)) {
             log.warn("refusing to start a run: another run is active");
             return false;
@@ -235,6 +252,7 @@ public final class TranslationRunner {
         try {
             run.session().finish(result, () -> release(run));
             keepSpeed(run);
+            measuredCalls.keep(run.context().selection(), run.ledgerMark(), "run");
         } finally {
             release(run);
         }

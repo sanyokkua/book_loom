@@ -171,12 +171,16 @@ public enum MessageKey {
     PROGRESS_KIND_STAGE("progress.kind.stage"),
     /** Name of the model-request steps in the note on how progress is counted. */
     PROGRESS_KIND_REQUEST("progress.kind.request"),
-    /** Before Start: the time of a book from a measured speed; argument 0 is "about 2 h" or the like. */
+    /** Before Start: the time of a book measured per kind of call on this model; 0 is "about 2 h 21 min" or the like. */
     ESTIMATE_MEASURED("estimate.measured"),
-    /** Before Start: what Balanced costs against Fast when no speed was measured. */
-    ESTIMATE_RELATIVE_BALANCED("estimate.relative.balanced"),
-    /** Before Start: what Max costs against Fast when no speed was measured. */
-    ESTIMATE_RELATIVE_MAX("estimate.relative.max"),
+    /** Before Start: a range from the draft speed the model test measured; 0 is "about 2–3 h" or the like. */
+    ESTIMATE_RANGE_TEST("estimate.range.test"),
+    /** Before Start: a range from the draft speed an earlier translation measured; 0 is "about 2–3 h" or the like. */
+    ESTIMATE_RANGE_RUN("estimate.range.run"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_RANGE_TEST}. */
+    ESTIMATE_RANGE_TEST_TIP("estimate.range.test.tip"),
+    /** Hover explanation of the line labelled by {@link #ESTIMATE_RANGE_RUN}. */
+    ESTIMATE_RANGE_RUN_TIP("estimate.range.run.tip"),
     /** Progress dialog: the switch that keeps the step the work is on selected. */
     PROGRESS_FOLLOW("progress.follow"),
     /** Hover explanation of the switch labelled by {@link #PROGRESS_FOLLOW}. */
@@ -409,6 +413,10 @@ public enum MessageKey {
     DURATION_ABOUT_H("duration.about.h"),
     /** A rounded time left of hours and minutes; arguments are the hours and the minutes, Strings. */
     DURATION_ABOUT_HM("duration.about.hm"),
+    /** A range of whole hours: "about 2–3 h"; 0 and 1 are the hours. */
+    DURATION_ABOUT_RANGE_H("duration.about.range.h"),
+    /** A range of minutes: "about 5–15 min"; 0 and 1 are the minutes. */
+    DURATION_ABOUT_RANGE_M("duration.about.range.m"),
     /** Label of a button that dismisses a dialog. */
     COMMON_CLOSE("common.close"),
     /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
@@ -1968,9 +1976,12 @@ public enum MessageKey {
     RECURRING_HELP_LINK("namesStyle.recurring.helpLink"),
     RECURRING_HELP_LINK_TIP("namesStyle.recurring.helpLink.tip"),
     RECURRING_HELP("namesStyle.recurring.help"),
-    NAMES_STYLE_AUTO_ESTIMATE("namesStyle.auto.estimate"),
-    /** The estimate when the fewest and most minutes are the same; arguments are the minutes and the dial's name. */
-    NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimateOne"),
+    /** The names-pass time measured per kind of call on this model; 0 is the minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_MEASURED("namesStyle.auto.estimate.measured"),
+    /** The names-pass time from the built-in figures; 0 and 1 are the fewest and most minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_RANGE("namesStyle.auto.estimate.range"),
+    /** The same when the fewest and most minutes are the same; 0 is the minutes. */
+    NAMES_STYLE_AUTO_ESTIMATE_ONE("namesStyle.auto.estimate.one"),
     /** Why the automatic pass did not start. */
     NAMES_STYLE_AUTO_NO_MODEL("namesStyle.auto.noModel"),
     /** Line after the automatic pass; argument 0 is how many model calls it made. */
@@ -4057,11 +4068,7 @@ public enum MessageKey {
     /** Button that switches to the new provider; 0 is its name. */
     DIALOG_SWITCH_PROVIDER_USE("dialog.switchProvider.use"),
     /** Hover explanation of the button labelled by {@link #DIALOG_SWITCH_PROVIDER_USE}. */
-    DIALOG_SWITCH_PROVIDER_USE_TIP("dialog.switchProvider.use.tip"),
-    /** Before Start: the time of a book from a speed an earlier translation measured; 0 is "about 2 h" or the like. */
-    ESTIMATE_MEASURED_RUN("estimate.measured.run"),
-    /** Hover explanation of the line labelled by {@link #ESTIMATE_MEASURED_RUN}. */
-    ESTIMATE_MEASURED_RUN_TIP("estimate.measured.run.tip");
+    DIALOG_SWITCH_PROVIDER_USE_TIP("dialog.switchProvider.use.tip");
 
     private final String key;
 

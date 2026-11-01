@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -15,7 +16,10 @@ import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.ui.BackgroundExecutor;
 
-/** Keeps the seconds per segment a test or a run measured on the model, for the estimate before Start. */
+/**
+ * Keeps the seconds per segment a test or a run measured on the model, and the seconds per call of each kind a run or a
+ * names pass measured, for the estimates before Start and before the names pass.
+ */
 @Slf4j
 @Singleton
 public final class ModelSpeedRecorder {
@@ -74,6 +78,57 @@ public final class ModelSpeedRecorder {
         } catch (RejectedExecutionException closing) {
             log.warn("the speed of {}/{} was not kept: the window is closing", providerId, modelId);
         }
+    }
+
+    /**
+     * Stores the seconds per call of each kind a run or a names pass measured, in one update of the model's settings: a
+     * kind not in the map keeps its stored figure. Returns at once; the store is called off the FX thread. Any thread.
+     *
+     * @param providerId the stored provider
+     * @param modelId the model
+     * @param seconds the seconds per call of each kind measured; an empty map stores nothing
+     * @param from where they were measured
+     */
+    public void recordCalls(
+            final String providerId,
+            final String modelId,
+            final Map<CallKind, Double> seconds,
+            final MeasuredFrom from) {
+        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(seconds, "seconds");
+        Objects.requireNonNull(from, "from");
+        if (seconds.isEmpty()) {
+            log.debug("no call of a stored kind was measured for {}/{}: nothing stored", providerId, modelId);
+            return;
+        }
+        final Map<CallKind, Double> copy = Map.copyOf(seconds);
+        log.debug("recording seconds per call {} from {} for {}/{}", copy, from, providerId, modelId);
+        try {
+            executor.execute(() -> writeAll(providerId, modelId, copy, from));
+        } catch (RejectedExecutionException closing) {
+            log.warn("the seconds per call of {}/{} were not kept: the window is closing", providerId, modelId);
+        }
+    }
+
+    private void writeAll(
+            final String providerId,
+            final String modelId,
+            final Map<CallKind, Double> seconds,
+            final MeasuredFrom from) {
+        final Result<ModelSettings> saved = store.update(providerId, modelId, row -> {
+            ModelSettings next = row;
+            for (final Map.Entry<CallKind, Double> kind : seconds.entrySet()) {
+                next = next.withMeasuredSpeed(kind.getKey(), kind.getValue(), from);
+            }
+            return next;
+        });
+        if (saved.isErr()) {
+            log.warn("the seconds per call of {}/{} were not stored", providerId, modelId);
+            return;
+        }
+        log.info("seconds per call of {}/{} stored: {} from {}", providerId, modelId, seconds, from);
+        Platform.runLater(speeds::bump);
     }
 
     static double secondsOf(final Duration elapsed) {
