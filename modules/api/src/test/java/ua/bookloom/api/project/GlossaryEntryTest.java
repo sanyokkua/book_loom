@@ -22,6 +22,14 @@ class GlossaryEntryTest {
         assertThat(suggested().isSuggested()).isTrue();
     }
 
+    @Test
+    void withSuggestedTarget_lockedEntry_staysTheSame() {
+        final GlossaryEntry locked =
+                GlossaryEntry.of("e1", "p1", "Wales", "Уельс", TermType.PLACE, Gender.UNKNOWN, true);
+
+        assertThat(locked.withSuggestedTarget("Велз")).isEqualTo(locked);
+    }
+
     @ParameterizedTest
     @CsvSource(
             value = {"true,Уельс", "false,NULL", "false,'  '"},

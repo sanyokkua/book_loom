@@ -165,12 +165,12 @@ public record GlossaryEntry(
      * This entry with the model's suggested target; a locked entry stays the person's.
      *
      * @param suggested the non-blank suggested target
-     * @return a copy whose target is a suggestion, or a locked copy whose target is the person's
+     * @return a copy whose target is a suggestion, or this entry unchanged when it is locked
      */
     public GlossaryEntry withSuggestedTarget(final String suggested) {
         Objects.requireNonNull(suggested, "suggested");
         if (locked()) {
-            return copyTarget(suggested, TargetState.LOCKED, Origin.USER, genderOrigin);
+            return this;
         }
         return copyTarget(suggested, TargetState.SUGGESTED, Origin.LIKELY, genderOrigin);
     }
