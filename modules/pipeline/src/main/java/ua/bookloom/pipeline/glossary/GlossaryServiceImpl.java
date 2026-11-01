@@ -120,11 +120,10 @@ public final class GlossaryServiceImpl implements GlossaryService {
     @Override
     public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
-        final BookBrief brief = briefOf(projectId);
-        return guarded(
-                "reviewFlags",
-                projectId,
-                () -> ReviewFlags.of(glossary, projectId, brief, analysisOf(projectId, brief)));
+        return guarded("reviewFlags", projectId, () -> {
+            final BookBrief brief = briefOf(projectId);
+            return ReviewFlags.of(glossary, projectId, brief, analysisOf(projectId, brief));
+        });
     }
 
     @Override
