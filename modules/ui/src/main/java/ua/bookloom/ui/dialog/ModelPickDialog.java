@@ -12,6 +12,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Literal;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -103,7 +104,7 @@ public final class ModelPickDialog implements ModelPickPrompt {
     }
 
     private RadioButton option(final ToggleGroup group, final String modelId) {
-        final RadioButton option = new RadioButton(modelId);
+        final RadioButton option = Literal.text(new RadioButton(modelId));
         option.setToggleGroup(group);
         Tips.install(option, messages.get(MessageKey.DIALOG_MODEL_PICK_OPTION_HINT, modelId));
         return option;

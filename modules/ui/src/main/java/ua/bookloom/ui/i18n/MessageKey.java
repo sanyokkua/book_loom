@@ -1562,6 +1562,8 @@ public enum MessageKey {
     BRIEF_POLICY_APOSTROPHE_TIP("brief.policy.apostrophe.tip"),
     /** Hover explanation of one apostrophe: {0} the character, {1} its code point. */
     BRIEF_POLICY_APOSTROPHE_OPTION("brief.policy.apostrophe.option"),
+    /** Caption of one apostrophe button: {0} the character, {1} its code point, so the three look different. */
+    BRIEF_POLICY_APOSTROPHE_SEGMENT("brief.policy.apostrophe.segment"),
     /** Label of the quotation-mark choice the target language offers. */
     BRIEF_POLICY_QUOTES("brief.policy.quotes"),
     /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_QUOTES}. */

@@ -5,7 +5,10 @@ import static ua.bookloom.ui.AutoNamesFixture.HALE;
 import static ua.bookloom.ui.AutoNamesFixture.TABLE;
 
 import java.util.List;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableRow;
 import org.junit.jupiter.api.Test;
@@ -59,14 +62,27 @@ class NamesStyleHiddenScreenTest extends NamesStyleAutoScreenTestBase {
         return ThemeTestSupport.onFx(() -> banner != null && banner.isVisible() && banner.isManaged());
     }
 
+    private static Node scrolledToTheEnd(final Node table) {
+        table.lookupAll(".scroll-bar").stream()
+                .filter(ScrollBar.class::isInstance)
+                .map(ScrollBar.class::cast)
+                .filter(bar -> bar.getOrientation() == Orientation.HORIZONTAL && bar.isVisible())
+                .forEach(bar -> bar.setValue(bar.getMax()));
+        table.applyCss();
+        ((Parent) table).layout();
+        return table;
+    }
+
     private boolean isDisabled(final String id) {
         return ThemeTestSupport.onFx(() -> required(id).isDisabled());
     }
 
+    // The glossary's columns need more than half a 1920 px window, so its last columns are reached by scrolling across.
     private List<Node> inTable(final String tableId, final String selector) {
-        return ThemeTestSupport.onFx(() -> List.copyOf(required(tableId).lookupAll(selector)).stream()
-                .filter(node -> node.getScene() != null)
-                .toList());
+        return ThemeTestSupport.onFx(
+                () -> List.copyOf(scrolledToTheEnd(required(tableId)).lookupAll(selector)).stream()
+                        .filter(node -> node.getScene() != null)
+                        .toList());
     }
 
     // IF a control stayed live, THEN a person could edit a row the pass is about to rewrite.

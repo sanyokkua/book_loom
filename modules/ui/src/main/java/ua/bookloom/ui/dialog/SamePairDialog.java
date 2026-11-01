@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Literal;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -191,7 +192,7 @@ public final class SamePairDialog implements SamePairPrompt {
                 final MessageKey tip,
                 final Object[] arguments) {
             radio.setId(PREFIX + id);
-            radio.setText(messages.get(caption, arguments));
+            Literal.text(radio).setText(messages.get(caption, arguments));
             Tips.install(messages, radio, tip);
             final Label noteLabel = Wrapped.label(messages.get(note), "dialog-sub");
             return new VBox(NOTE_GAP, radio, noteLabel);

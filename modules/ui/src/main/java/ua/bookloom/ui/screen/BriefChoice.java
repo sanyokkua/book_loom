@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.LayoutClass;
+import ua.bookloom.ui.control.Literal;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -145,7 +146,7 @@ final class BriefChoice<E> {
     private ToggleButton segment(final Segment<E> option) {
         final String text = option.text();
         final E value = option.value();
-        final ToggleButton button = new ToggleButton(text);
+        final ToggleButton button = Literal.text(new ToggleButton(text));
         final String explanation = option.help();
         if (explanation != null) {
             helps.put(value, explanation);

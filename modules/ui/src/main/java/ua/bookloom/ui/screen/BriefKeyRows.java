@@ -101,7 +101,10 @@ final class BriefKeyRows {
         final List<BriefChoice.Segment<String>> segments = choices.apostrophes().stream()
                 .map(mark -> new BriefChoice.Segment<>(
                         mark,
-                        mark,
+                        messages.get(
+                                MessageKey.BRIEF_POLICY_APOSTROPHE_SEGMENT,
+                                mark,
+                                String.format(Locale.ROOT, "%04X", mark.codePointAt(0))),
                         messages.get(
                                 MessageKey.BRIEF_POLICY_APOSTROPHE_OPTION,
                                 mark,

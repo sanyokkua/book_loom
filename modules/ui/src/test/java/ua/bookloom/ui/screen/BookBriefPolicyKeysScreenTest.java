@@ -77,7 +77,7 @@ class BookBriefPolicyKeysScreenTest extends BookBriefScreenTestBase {
         openWithTarget("uk");
 
         assertThat(KEY_ROWS).allSatisfy(id -> assertThat(isShown(id)).as(id).isTrue());
-        assertThat(segmentTexts("brief-policy-apostrophe")).containsExactly("’", "ʼ", "'");
+        assertThat(segmentTexts("brief-policy-apostrophe")).containsExactly("’ U+2019", "ʼ U+02BC", "' U+0027");
         assertThat(selectedStates("brief-policy-apostrophe")).containsExactly(true, false, false);
         assertThat(segmentTexts("brief-policy-quotes")).containsExactly("«...» „...“", "„...“ ‚...‘");
         assertThat(selectedStates("brief-policy-quotes")).containsExactly(true, false);
