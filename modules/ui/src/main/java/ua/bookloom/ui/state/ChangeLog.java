@@ -117,18 +117,18 @@ final class ChangeLog {
      * @param operation the operation
      * @param names what it did to the glossary
      * @param terms what it did to the recurring terms
-     * @param untargeted the glossary terms it left without a target, for the dialog to list
+     * @param untargeted the glossary rows it left without a target, listed for the person to give one
      */
     void both(
             final ChangeOperation operation,
             final EntryChanges<GlossaryEntry> names,
             final EntryChanges<LexiconEntry> terms,
-            final List<String> untargeted) {
+            final List<GlossaryEntry> untargeted) {
         final ChangeRows rows = new ChangeRows(messages);
         final List<ChangeResults.Item> items = new ArrayList<>();
         nameItems(rows, items, names);
         termItems(rows, items, List.of(), terms);
-        publish(operation, items, untargeted);
+        publish(operation, items, untargeted.stream().map(rows::untargeted).toList());
     }
 
     private void nameItems(
@@ -173,7 +173,7 @@ final class ChangeLog {
     }
 
     private void publish(
-            final ChangeOperation operation, final List<ChangeResults.Item> items, final List<String> untargeted) {
+            final ChangeOperation operation, final List<ChangeResults.Item> items, final List<ChangeRow> untargeted) {
         log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
         final ChangeResults published = new ChangeResults(

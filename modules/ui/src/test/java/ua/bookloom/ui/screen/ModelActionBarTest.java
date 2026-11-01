@@ -97,7 +97,7 @@ class ModelActionBarTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> scene.getRoot().lookup("#results-card") != null);
         assertThat(glossary.calls()).contains("translate(p1)");
-        assertThat(textsUnder(required("results-card"))).contains("Translating names — results", "Гейл · character");
+        assertThat(textsUnder(required("results-card"))).contains("Translating names — results", "Гейл", "· character");
     }
 
     @Test

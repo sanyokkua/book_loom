@@ -64,7 +64,7 @@ public final class ChangeResults {
     private final ChangeOperation operation;
     private final boolean stopped;
     private final List<ChangeRow> rows;
-    private final List<String> untargeted;
+    private final List<ChangeRow> untargeted;
     private final Map<Long, Reversal> reversals = new HashMap<>();
     private final LiveCalls calls;
     private final StepLog steps;
@@ -97,14 +97,14 @@ public final class ChangeResults {
      * @param stopped whether the person stopped it
      * @param items the rows with their reversals, in the order the dialog lists them
      * @param calls the model calls the operation made, for the dialog's folded section
-     * @param untargeted the terms still without a target, listed for the person to give; never null
+     * @param untargeted the names still without a target, as rows to give one in; never null
      */
     public ChangeResults(
             final ChangeOperation operation,
             final boolean stopped,
             final List<Item> items,
             final LiveCalls calls,
-            final List<String> untargeted) {
+            final List<ChangeRow> untargeted) {
         this(operation, stopped, items, calls, untargeted, StepLog.EMPTY, Duration.ZERO, false);
     }
 
@@ -115,7 +115,7 @@ public final class ChangeResults {
      * @param stopped whether the person stopped it
      * @param items the rows with their reversals, in the order the dialog lists them
      * @param calls the model calls the operation made
-     * @param untargeted the terms still without a target, listed for the person to give; never null
+     * @param untargeted the names still without a target, as rows to give one in; never null
      * @param steps the steps the operation announced, for the Steps tab
      * @param elapsed how long it ran by the activity tracker's clock, pauses included
      * @param endedHidden whether its dialog was in the background when it ended, so its results open only on request
@@ -125,7 +125,7 @@ public final class ChangeResults {
             final boolean stopped,
             final List<Item> items,
             final LiveCalls calls,
-            final List<String> untargeted,
+            final List<ChangeRow> untargeted,
             final StepLog steps,
             final Duration elapsed,
             final boolean endedHidden) {
@@ -152,11 +152,11 @@ public final class ChangeResults {
     }
 
     /**
-     * The terms the operation left without a target.
+     * The names the operation left without a target, as rows the person gives a target in.
      *
-     * @return the terms for the person to give a target; empty when none
+     * @return the rows, none of which can be put back; empty when none
      */
-    public List<String> untargeted() {
+    public List<ChangeRow> untargeted() {
         return untargeted;
     }
 

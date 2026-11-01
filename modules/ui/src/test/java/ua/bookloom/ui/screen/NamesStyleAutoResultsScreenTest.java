@@ -2,12 +2,20 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.AutoNamesFixture.HALE;
+import static ua.bookloom.ui.AutoNamesFixture.MID;
+import static ua.bookloom.ui.AutoNamesFixture.PENTACLE;
 import static ua.bookloom.ui.AutoNamesFixture.WELL;
+import static ua.bookloom.ui.AutoNamesFixture.WELL_TYPED;
 
 import java.util.List;
+import javafx.event.ActionEvent;
+import javafx.scene.Node;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.NamesPassReport;
+import ua.bookloom.ui.AutoNamesFixture;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /**
@@ -107,5 +115,63 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
                 .isTrue();
         assertThat(glossaryTerms()).containsExactlyInAnyOrder("Well", "Mid");
         assertThat(recurringTerms()).containsExactly("pentacle");
+    }
+
+    // IF a target typed in the card were kept in the card, THEN the glossary would still lack it when the card closed.
+    @Test
+    void edit_targetTypedOnANameRow_isStoredThroughTheGlossaryEditTheTableUses() throws Exception {
+        showScreen();
+        runToTheResults();
+        glossary.willAnswer(Result.ok(MID));
+
+        typeInRow("Mid", "Мід");
+
+        awaitFx(() -> glossary.calls().contains("update(Mid)"));
+    }
+
+    // IF the term rows ignored the field, THEN a wrong rendering could only be fixed in the Recurring terms card.
+    @Test
+    void edit_renderingTypedOnATermRow_isStoredThroughTheLexiconEditTheCardUses() throws Exception {
+        showScreen();
+        runToTheResults();
+
+        typeInRow("pentacle", "пентакль");
+
+        awaitFx(() -> lexicon.calls().contains("edit(pentacle, пентакль)"));
+    }
+
+    // IF the pass named its untargeted terms but the card listed none, THEN they would be found only by scanning the
+    // table.
+    @Test
+    void results_passLeavesANameWithoutATarget_listsItAsARowToTypeIn() throws Exception {
+        showScreen();
+        final NamesPassReport base = AutoNamesFixture.report();
+        namesPass.willAnswer(Result.ok(
+                new NamesPassReport(base.names(), base.terms(), base.calls(), base.elapsed(), List.of(WELL.term()))));
+        namesPass.writes(() -> lexicon.replaceHeld(PENTACLE));
+        glossary.willAnswer(Result.ok(List.of(WELL_TYPED, MID)));
+        pressAuto();
+        awaitFx(() -> isCardShown("results-card"));
+
+        final List<String> texts = textsUnder(required("results-card"));
+        final long fields = ThemeTestSupport.onFx(() -> required("results-list").lookupAll("#results-target").stream()
+                .filter(Node::isVisible)
+                .count());
+
+        assertThat(texts).contains("Still without a target (1)");
+        assertThat(fields).isEqualTo(4);
+    }
+
+    private void typeInRow(final String term, final String text) {
+        onFx(() -> {
+            final TextField field = required("results-list").lookupAll(".list-cell").stream()
+                    .filter(cell -> textsUnder(cell).contains(term))
+                    .flatMap(cell -> cell.lookupAll("#results-target").stream())
+                    .map(TextField.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+            field.setText(text);
+            field.fireEvent(new ActionEvent());
+        });
     }
 }

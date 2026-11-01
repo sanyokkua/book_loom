@@ -11,8 +11,10 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.dialog.ModalCard;
@@ -36,8 +38,6 @@ final class ProgressResultsCard extends ModalCard {
 
     static final String CARD_ID = "results-card";
 
-    private static final int MAX_UNTARGETED = 20;
-    private static final double MAX_LIST_HEIGHT = 420;
     private static final double STEP_ROW_HEIGHT = 44;
 
     private final ResultsView view;
@@ -52,6 +52,9 @@ final class ProgressResultsCard extends ModalCard {
         setId(CARD_ID);
         buildHeader();
         setContent(tabs());
+        if (getContent() instanceof ScrollPane scroll) {
+            scroll.setFitToHeight(true);
+        }
         buttons();
         setOnEscape(view.onDone());
         log.info(
@@ -103,27 +106,14 @@ final class ProgressResultsCard extends ModalCard {
         switch (results.outcome()) {
             case STOPPED -> body.getChildren().add(line(MessageKey.RESULTS_STOPPED));
             case NOTHING -> body.getChildren().add(line(MessageKey.RESULTS_NOTHING));
-            case CHANGED -> body.getChildren().addAll(table());
+            case CHANGED -> {}
         }
-        if (!results.untargeted().isEmpty()) {
-            body.getChildren().add(untargeted(results.untargeted()));
+        final boolean listed = results.outcome() != ChangeResults.Outcome.STOPPED
+                && (!results.rows().isEmpty() || !results.untargeted().isEmpty());
+        if (listed) {
+            body.getChildren().addAll(table());
         }
         return body;
-    }
-
-    // The names the pass could not name in the target language are the person's to give, so they are listed, not kept
-    // silently; a long list shows its first names and says how many more there are.
-    private Label untargeted(final List<String> terms) {
-        final String shown = String.join(", ", terms.subList(0, Math.min(terms.size(), MAX_UNTARGETED)));
-        final Label line = new Label(messages.get(
-                MessageKey.RESULTS_UNTARGETED,
-                terms.size(),
-                terms.size() > MAX_UNTARGETED ? shown + Messages.ELLIPSIS : shown));
-        line.setId("results-untargeted");
-        line.setWrapText(true);
-        line.setMaxWidth(ResultRows.WIDTH);
-        line.getStyleClass().add("dialog-text");
-        return line;
     }
 
     private Label line(final MessageKey text) {
@@ -134,15 +124,16 @@ final class ProgressResultsCard extends ModalCard {
         return line;
     }
 
+    // The list takes the height and the width the dialog has: its columns share the width, and the body scrolls only
+    // when the window is too small for the rows.
     private List<Node> table() {
-        final ResultRows rows = new ResultRows(messages, results);
+        final ResultRows rows = new ResultRows(messages, results, view.edits());
         final ListView<Object> list = new ListView<>(FXCollections.observableArrayList(rows.items()));
         list.setId("results-list");
         list.getStyleClass().add("results-list");
         list.setFixedCellSize(ResultRows.ROW_HEIGHT);
         list.setCellFactory(_ -> rows.cell());
-        list.setPrefWidth(ResultRows.WIDTH);
-        list.setPrefHeight(Math.min(MAX_LIST_HEIGHT, rows.items().size() * ResultRows.ROW_HEIGHT + 2));
+        VBox.setVgrow(list, Priority.ALWAYS);
         final SetChangeListener<Long> onReverted = change -> list.refresh();
         results.reverted().addListener(onReverted);
         results.working().addListener((observed, was, now) -> list.refresh());

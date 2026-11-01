@@ -3082,8 +3082,14 @@ public enum MessageKey {
     RESULTS_CHANGED("results.changed"),
     /** Line of the results dialog when an operation changed nothing. */
     RESULTS_NOTHING("results.nothing"),
-    /** Line of the results dialog that lists the names still without a target, with their count and the names. */
+    /** Heading of the results rows for the names still without a target; the argument is their count. */
     RESULTS_UNTARGETED("results.untargeted"),
+    /** Badge of a results row for a name the pass could not give a target. */
+    PROGRESS_RESULTS_BADGE_UNTARGETED("progress.results.badge.untargeted"),
+    /** Prompt of the field in a results row where the person types the target. */
+    RESULTS_TARGET("results.target"),
+    /** Hover explanation of the target field in a results row. */
+    RESULTS_TARGET_TIP("results.target.tip"),
     /** Line of the results dialog when the person stopped an operation. */
     RESULTS_STOPPED("results.stopped"),
     /** Column of the results rows: the term. */

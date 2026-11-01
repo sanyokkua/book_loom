@@ -29,7 +29,27 @@ final class ChangeRows {
 
     ChangeRow added(final GlossaryEntry entry) {
         return row(
-                ChangeSection.NAMES, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, ChangeOrigin.MODEL);
+                ChangeSection.NAMES,
+                ChangeKind.ADDED,
+                entry.term(),
+                DASH,
+                describe(entry),
+                null,
+                ChangeOrigin.MODEL,
+                editable(entry));
+    }
+
+    // A name the pass found and could not give a target: the person types one in the results.
+    ChangeRow untargeted(final GlossaryEntry entry) {
+        return row(
+                ChangeSection.NAMES,
+                ChangeKind.UNTARGETED,
+                entry.term(),
+                describe(entry),
+                DASH,
+                null,
+                ChangeOrigin.MODEL,
+                editable(entry));
     }
 
     ChangeRow removed(final EntryChanges.Removal<GlossaryEntry> removal) {
@@ -52,7 +72,8 @@ final class ChangeRows {
                 describe(change.before()),
                 describe(change.after()),
                 change.reason(),
-                ChangeOrigin.MODEL);
+                ChangeOrigin.MODEL,
+                editable(change.after()));
     }
 
     // Accept all changes only a target's state, so its rows show the target with its state.
@@ -86,7 +107,15 @@ final class ChangeRows {
     }
 
     ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
-        return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
+        return row(
+                ChangeSection.TERMS,
+                ChangeKind.ADDED,
+                entry.term(),
+                DASH,
+                describe(entry),
+                null,
+                origin,
+                editable(entry));
     }
 
     ChangeRow removedTerm(final EntryChanges.Removal<LexiconEntry> removal) {
@@ -109,7 +138,8 @@ final class ChangeRows {
                 describe(change.before()),
                 describe(change.after()),
                 change.reason(),
-                ChangeOrigin.MODEL);
+                ChangeOrigin.MODEL,
+                editable(change.after()));
     }
 
     private ChangeRow row(
@@ -120,15 +150,39 @@ final class ChangeRows {
             final String after,
             final @Nullable String reason,
             final ChangeOrigin origin) {
-        return new ChangeRow(next++, kind, term, before, after, reason, origin, section);
+        return row(section, kind, term, before, after, reason, origin, null);
+    }
+
+    private ChangeRow row(
+            final ChangeSection section,
+            final ChangeKind kind,
+            final String term,
+            final String before,
+            final String after,
+            final @Nullable String reason,
+            final ChangeOrigin origin,
+            final @Nullable EditableTarget editable) {
+        return new ChangeRow(next++, kind, term, before, after, reason, origin, section, editable);
+    }
+
+    private EditableTarget editable(final GlossaryEntry entry) {
+        return new EditableTarget(entry.id(), Objects.requireNonNullElse(entry.target(), ""), details(entry));
+    }
+
+    private static EditableTarget editable(final LexiconEntry entry) {
+        return new EditableTarget(entry.term(), entry.established().orElse(""), "");
     }
 
     private String describe(final GlossaryEntry entry) {
+        final String target = entry.target() == null || entry.target().isBlank()
+                ? messages.get(MessageKey.NAMES_STYLE_NO_TARGET)
+                : entry.target();
+        return String.join(SEPARATOR, target, details(entry));
+    }
+
+    // The words after the target: the type, and the gender when one is known.
+    private String details(final GlossaryEntry entry) {
         final List<String> parts = new ArrayList<>();
-        parts.add(
-                entry.target() == null || entry.target().isBlank()
-                        ? messages.get(MessageKey.NAMES_STYLE_NO_TARGET)
-                        : entry.target());
         parts.add(GlossaryLabels.type(messages, entry.type()));
         if (entry.gender() != Gender.UNKNOWN) {
             final String gender = GlossaryLabels.gender(messages, entry.gender());

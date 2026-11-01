@@ -8,13 +8,20 @@ import java.util.Objects;
  * @param results what the operation did and the means to put each row back
  * @param onShowChanged what "Show changed rows" does to the screen behind the dialog; it runs before {@code onDone}
  * @param onDone what closes the view; run by Done, by Escape and after "Show changed rows"
+ * @param edits where a target typed over a row is written
  */
-public record ResultsView(ChangeResults results, Runnable onShowChanged, Runnable onDone) {
+public record ResultsView(ChangeResults results, Runnable onShowChanged, Runnable onDone, TargetEdits edits) {
+
+    /** A view whose rows cannot be edited. */
+    public ResultsView(final ChangeResults results, final Runnable onShowChanged, final Runnable onDone) {
+        this(results, onShowChanged, onDone, TargetEdits.NONE);
+    }
 
     /** Rejects a missing part. */
     public ResultsView {
         Objects.requireNonNull(results, "results");
         Objects.requireNonNull(onShowChanged, "onShowChanged");
         Objects.requireNonNull(onDone, "onDone");
+        Objects.requireNonNull(edits, "edits");
     }
 }

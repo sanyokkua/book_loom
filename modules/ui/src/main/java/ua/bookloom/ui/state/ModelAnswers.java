@@ -76,7 +76,14 @@ final class ModelAnswers {
         screen.rows().setAll(answer.glossary());
         screen.lexiconRows().setAll(answer.terms());
         info(screen.messages().get(MessageKey.NAMES_STYLE_AUTO_DONE, report.calls()));
-        screen.changes().both(operation, report.names(), report.terms(), report.untargeted());
+        screen.changes()
+                .both(operation, report.names(), report.terms(), withoutTarget(answer.glossary(), report.untargeted()));
+    }
+
+    // The pass names its untargeted terms; the dialog needs their rows to write a typed target into.
+    private static List<GlossaryEntry> withoutTarget(final List<GlossaryEntry> glossary, final List<String> terms) {
+        final Set<String> wanted = Set.copyOf(terms);
+        return glossary.stream().filter(entry -> wanted.contains(entry.term())).toList();
     }
 
     void termsChanged(final ChangeOperation operation, final Terms answer, final int changed, final MessageKey line) {

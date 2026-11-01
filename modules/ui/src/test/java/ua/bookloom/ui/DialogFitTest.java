@@ -17,13 +17,23 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ConfirmPrompt.Question;
 import ua.bookloom.ui.dialog.ContinueDialog;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.RenameDialog;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ChangeKind;
+import ua.bookloom.ui.state.ChangeOperation;
+import ua.bookloom.ui.state.ChangeOrigin;
+import ua.bookloom.ui.state.ChangeResults;
+import ua.bookloom.ui.state.ChangeRow;
+import ua.bookloom.ui.state.ChangeSection;
+import ua.bookloom.ui.state.EditableTarget;
+import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.ProjectNameRules;
+import ua.bookloom.ui.state.ResultsView;
 
 /**
  * The question cards the screens raise on their own — continue, model pick, rename, About and every confirm — in
@@ -103,6 +113,7 @@ class DialogFitTest extends ShellTestBase {
                                         model -> {},
                                         () -> {})),
                 opener("rename", DialogFitTest::askRename),
+                opener("results with names to give a target", DialogFitTest::showResults),
                 opener("about", test -> ((javafx.scene.control.Button) test.required("shell-about")).fire()));
     }
 
@@ -112,6 +123,41 @@ class DialogFitTest extends ShellTestBase {
                 test -> test.injector
                         .getInstance(ConfirmPrompt.class)
                         .ask(question, List.of(TITLE_ARGS), List.of(TEXT_ARGS), () -> {}));
+    }
+
+    // Rows with a field to type a target in, a reason and an untargeted heading: the widest row the card draws.
+    private static void showResults(final DialogFitTest test) {
+        final ModalHost host = test.injector.getInstance(ModalHost.class);
+        final ChangeRow without = new ChangeRow(
+                1,
+                ChangeKind.UNTARGETED,
+                "Brightwater",
+                "No target · character · female (suggested)",
+                "—",
+                null,
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES,
+                new EditableTarget("e1", "", "character · female (suggested)"));
+        final ChangeRow added = new ChangeRow(
+                0,
+                ChangeKind.ADDED,
+                "Frankenstein",
+                "—",
+                "Франкенштейн · character · male",
+                "found twice in chapter one",
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES,
+                new EditableTarget("e2", "Франкенштейн", "character · male"));
+        final ChangeResults results = new ChangeResults(
+                ChangeOperation.NAME_REVIEW,
+                false,
+                List.of(new ChangeResults.Item(added, done -> done.accept(true))),
+                LiveCalls.EMPTY,
+                List.of(without));
+        host.show(
+                ProgressDialog.results(
+                        new ResultsView(results, () -> {}, host::hide), test.injector.getInstance(Messages.class)),
+                false);
     }
 
     private static void askRename(final DialogFitTest test) {

@@ -24,6 +24,7 @@ import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
+import ua.bookloom.ui.state.EditableTarget;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.ResultsView;
 import ua.bookloom.ui.state.StepLog;
@@ -40,6 +41,7 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
     final List<Long> reverted = new ArrayList<>();
     final AtomicInteger shownChanged = new AtomicInteger();
     final AtomicInteger done = new AtomicInteger();
+    final List<String> typed = new ArrayList<>();
 
     List<ChangeResults.Item> items(final ChangeRow... rows) {
         final List<ChangeResults.Item> items = new ArrayList<>();
@@ -50,6 +52,10 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
             }));
         }
         return items;
+    }
+
+    ChangeResults withUntargeted(final List<ChangeRow> untargeted, final ChangeRow... rows) {
+        return new ChangeResults(ChangeOperation.NAME_REVIEW, false, items(rows), LiveCalls.EMPTY, untargeted);
     }
 
     ChangeResults results(final boolean stopped, final ChangeRow... rows) {
@@ -93,7 +99,43 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
 
     static ChangeRow added(final long id, final String term) {
         return new ChangeRow(
-                id, ChangeKind.ADDED, term, "—", "Терм · character", null, ChangeOrigin.MODEL, ChangeSection.NAMES);
+                id,
+                ChangeKind.ADDED,
+                term,
+                "—",
+                "Терм · character",
+                null,
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES,
+                new EditableTarget("key-" + term, "Терм", "character"));
+    }
+
+    /** A name the pass could not give a target, whose key is {@code "key-" + term}. */
+    static ChangeRow untargeted(final long id, final String term) {
+        return new ChangeRow(
+                id,
+                ChangeKind.UNTARGETED,
+                term,
+                "No target · character",
+                "—",
+                null,
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES,
+                new EditableTarget("key-" + term, "", "character"));
+    }
+
+    /** A recurring term the pass added with its rendering, whose key is the term. */
+    static ChangeRow addedTerm(final long id, final String term, final String rendering) {
+        return new ChangeRow(
+                id,
+                ChangeKind.ADDED,
+                term,
+                "—",
+                rendering,
+                null,
+                ChangeOrigin.MODEL,
+                ChangeSection.TERMS,
+                new EditableTarget(term, rendering, ""));
     }
 
     static ChangeRow found(final long id, final String term) {
@@ -116,10 +158,14 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
     void show(final ChangeResults results) {
         onFx(() -> {
             final ModalHost host = injector.getInstance(ModalHost.class);
-            final ResultsView view = new ResultsView(results, shownChanged::incrementAndGet, () -> {
-                done.incrementAndGet();
-                host.hide();
-            });
+            final ResultsView view = new ResultsView(
+                    results,
+                    shownChanged::incrementAndGet,
+                    () -> {
+                        done.incrementAndGet();
+                        host.hide();
+                    },
+                    (section, key, text) -> typed.add(section + ":" + key + "=" + text));
             host.show(ProgressDialog.results(view, injector.getInstance(Messages.class)), false);
         });
     }

@@ -30,6 +30,7 @@ import ua.bookloom.ui.state.ChangeOrigin;
 import ua.bookloom.ui.state.ChangeResults;
 import ua.bookloom.ui.state.ChangeRow;
 import ua.bookloom.ui.state.ChangeSection;
+import ua.bookloom.ui.state.EditableTarget;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.ResultsView;
@@ -187,7 +188,16 @@ abstract class ConformanceTestBase extends ShellTestBase {
                                         ChangeSection.NAMES),
                                 done -> done.accept(true))),
                 LiveCalls.EMPTY,
-                List.of("Mid"));
+                List.of(new ChangeRow(
+                        2,
+                        ChangeKind.UNTARGETED,
+                        "Mid",
+                        "No target · character",
+                        "—",
+                        null,
+                        ChangeOrigin.MODEL,
+                        ChangeSection.NAMES,
+                        new EditableTarget("e3", "", "character"))));
     }
 
     // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.
