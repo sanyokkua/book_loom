@@ -1,5 +1,7 @@
 package ua.bookloom.document.fb2;
 
+import static ua.bookloom.util.contract.ArgNames.DOCUMENT;
+
 import com.google.inject.Inject;
 import java.io.CharArrayReader;
 import java.io.IOException;
@@ -177,7 +179,7 @@ public final class Fb2Inspection implements FormatInspection {
      */
     @Override
     public Optional<CoverImage> cover(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Optional<ParsedFb2> parsed = registry.find(document.id());
         if (parsed.isEmpty()) {
             log.debug("No open FB2 state for cover lookup documentId={}", document.id());
@@ -224,7 +226,7 @@ public final class Fb2Inspection implements FormatInspection {
      */
     @Override
     public List<StructureNode> structure(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final Optional<ParsedFb2> parsed = registry.find(document.id());
         if (parsed.isEmpty()) {
             log.debug("No open FB2 state for structure lookup documentId={}", document.id());
@@ -254,7 +256,7 @@ public final class Fb2Inspection implements FormatInspection {
      */
     @Override
     public BookStats stats(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedFb2 parsed = requireOpen(document);
         final Element root = parsed.document().getRootElement();
         final List<Segment> bodySegments = BodySegments.of(document);
@@ -345,7 +347,7 @@ public final class Fb2Inspection implements FormatInspection {
      */
     @Override
     public Set<String> resourceIds(Document document) {
-        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(document, DOCUMENT);
         final ParsedFb2 parsed = requireOpen(document);
         final Element root = parsed.document().getRootElement();
         final Set<String> ids = new LinkedHashSet<>();

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -119,10 +120,16 @@ class OfflineParsingTest {
     /** A port nothing is listening on, so a connection through it fails immediately rather than hanging. */
     private static int closedPort() {
         final int port = ephemeralPort();
-        assertThatThrownBy(() -> new Socket(InetAddress.getLoopbackAddress(), port).close())
+        assertThatThrownBy(() -> connect(port))
                 .as("the chosen port must really be closed, or the proxy override would prove nothing")
                 .isInstanceOf(IOException.class);
         return port;
+    }
+
+    private static void connect(int port) throws IOException {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), port));
+        }
     }
 
     /** Binds and releases a port, so the number is one the operating system just confirmed was free. */

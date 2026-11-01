@@ -25,11 +25,12 @@ import ua.bookloom.api.document.SegmentKind;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SegmentKinds {
 
-    private static final Set<String> HEADING_TAGS = Set.of("h1", "h2", "h3", "h4", "h5", "h6", "subtitle", "title");
+    private static final String FB2_SECTION_TITLE_TAG = "title";
+    private static final Set<String> HEADING_TAGS =
+            Set.of("h1", "h2", "h3", "h4", "h5", "h6", "subtitle", FB2_SECTION_TITLE_TAG);
     private static final Set<String> TABLE_CELL_TAGS = Set.of("td", "th");
     private static final String LIST_ITEM_TAG = "li";
     private static final String VERSE_LINE_TAG = "v";
-    private static final String FB2_SECTION_TITLE_TAG = "title";
 
     /**
      * Classifies a segment-bearing block.
