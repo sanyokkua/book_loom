@@ -129,9 +129,37 @@ class VocabularyTest {
                 "structure.readingOrder|uk|Розділи",
                 "export.card.title|en|Where to save",
                 "export.also.title|en|Also save",
+                "namesStyle.suggestedBadge|en|likely",
+                "namesStyle.suggestedBadge|uk|ймовірно",
+                "namesStyle.origin.likely|en|likely",
+                "namesStyle.origin.likely|uk|ймовірно",
+                "namesStyle.gender.suggested|en|{0} (likely)",
+                "namesStyle.gender.noEvidence|en|not specified — no evidence in the book",
+                "namesStyle.gender.noEvidence|uk|не вказано — у книзі немає свідчень",
+                "brief.likely|en|(likely)",
+                "brief.likely|uk|(ймовірно)",
+                "brief.narrator.gender.likely|en|{0} (likely)",
+                "namesStyle.auto.estimate.measured|en|About {0} min, measured on this model. You can undo it all afterwards.",
+                "namesStyle.auto.estimate.range|en|About {0}–{1} min, estimate. You can undo it all afterwards.",
+                "progress.names.step.namesKnowledge|en|Ask what the model knows about the names",
+                "progress.names.step.check|en|Check the suggestions",
+                "progress.names.step.write|en|Write the results",
             })
     void wording_tableEntries_matchTheReadme(final String key, final String language, final String expected) {
         assertThat(Catalogues.load(language)).containsEntry(key, expected);
+    }
+
+    // IF a value the model guessed were still marked "suggested", THEN the screens would use two words for one idea:
+    // the glossary and the Book Brief mark a guess nobody confirmed as likely (glossary and book-brief specs).
+    @ParameterizedTest
+    @CsvSource({"en, (suggested)", "uk, (припущення)", "uk, «припущення»"})
+    void values_modelGuess_isMarkedLikelyNotSuggested(final String language, final String stale) {
+        final var hits = Catalogues.load(language).entrySet().stream()
+                .filter(e -> e.getValue().contains(stale))
+                .map(Map.Entry::getKey)
+                .toList();
+
+        assertThat(hits).isEmpty();
     }
 
     // IF the quit questions still said nothing survives a restart, THEN they would contradict Continue after restart.

@@ -32,6 +32,21 @@ final class NamesStyleConformanceCases {
                             new Part("#recurring-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             // The scanned term is readable, strong text in the glossary table.
                             new Part(".glossary-term", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"))),
+            // The book map's marks in a row: the likely target's label in the information role, the Unsure mark and
+            // a review flag in the warning role.
+            new Screen(
+                    "NAMES_STYLE_BOOK_MAP",
+                    ViewNames.NAMES_STYLE,
+                    Preparation.GLOSSARY_LISTED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part(".glossary-suggested-badge", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part(".glossary-suggested-badge", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"),
+                            new Part(".glossary-suggested-badge", Kind.TEXT, "info-fg", "#4d6b78", "#b3cbd4"),
+                            new Part(".glossary-unsure", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part(".glossary-unsure", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"),
+                            new Part(".glossary-review-flag", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part(".glossary-review-flag", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             // The one-press preparation button (15i.U6) is the secondary button with the muted estimate under it.
             new Screen(
                     "NAMES_STYLE_AUTO",

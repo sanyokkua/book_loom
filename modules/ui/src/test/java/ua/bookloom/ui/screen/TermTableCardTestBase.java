@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
@@ -114,8 +115,16 @@ abstract class TermTableCardTestBase extends TranslatingScreenTestBase {
                 .filter(row -> row.getItem() instanceof GlossaryEntry entry
                         && entry.term().equals(term))
                 .findFirst()
-                .map(row -> (TableCell<?, ?>) row.getChildrenUnmodifiable().get(column))
+                .flatMap(row -> cellOf(row, table("names-style").getColumns().get(column)))
                 .orElseThrow());
+    }
+
+    // A table that scrolls across makes cells only for the columns in view, so a cell is found by its column.
+    private static Optional<TableCell<?, ?>> cellOf(final TableRow<?> row, final Object column) {
+        return row.getChildrenUnmodifiable().stream()
+                .<TableCell<?, ?>>map(cell -> (TableCell<?, ?>) cell)
+                .filter(cell -> column.equals(cell.getTableColumn()))
+                .findFirst();
     }
 
     protected String shownText(final TableCell<?, ?> cell) {

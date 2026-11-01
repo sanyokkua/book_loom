@@ -139,7 +139,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         assertThat(shownText(glossaryCell("Brook", 5))).isEqualTo("—");
         assertThat(shownText(glossaryCell("Wand", 5))).isEqualTo("—");
         assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
-        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("unknown");
+        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("not specified — no evidence in the book");
     }
 
     // IF a guess were drawn like a decision, THEN the person would not know what still wants a look; only the

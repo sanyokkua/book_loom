@@ -2176,6 +2176,7 @@ public enum MessageKey {
     NAMES_STYLE_GENDER_NEUTER("namesStyle.gender.neuter"),
     /** Grammatical gender: not known. */
     NAMES_STYLE_GENDER_UNKNOWN("namesStyle.gender.unknown"),
+    NAMES_STYLE_GENDER_NOT_SPECIFIED("namesStyle.gender.notSpecified"),
     /** Heading of the Add term card. */
     DIALOG_ADD_TERM_TITLE("dialog.addTerm.title"),
     /** Line under the Add term heading. */

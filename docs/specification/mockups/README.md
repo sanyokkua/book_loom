@@ -554,25 +554,27 @@ language more than once, for example with another model, quality or thinking set
 |---|---|---|
 | Purpose line | "Decide how names and repeated words are translated. Optional — skip it and BookLoom builds both while it translates." | `NamesStyleView` |
 | While translating | Banner "Translating is going on. Changes apply to the next segments translated." While the names pass runs in the background, the screen is read-only (G4) | new |
-| Prepare names automatically | Warm card: what it does, "About 1 min. You can undo it all afterwards." → the progress dialog | `AutoNamesBar`, `AutoEstimate` |
+| Prepare names automatically | Warm card: what it does, "About 2 min, measured on this model. You can undo it all afterwards." (no speed measured on this model: "About 1–2 min, estimate. You can undo it all afterwards.") → the progress dialog | `AutoNamesBar`, `AutoEstimate` |
 | **Glossary** card | Title with count; purpose line "Names of people and places — written the same way every time. Set the gender so names take the right grammatical form." (**N1**); toolbar: search · + Add · **Scan** · **Review** · **Translate** · ⋯ (Import CSV, Export CSV, Show only changed), each with a plain tooltip; the table (G9): Term · Kind · Translation · Gender (with evidence "he ×6", or "(likely)") · **Locked** (tooltip: "always use exactly this spelling") · ×. **Empty**: "No names yet. Scan the book for them, or add one." [Scan the book] [+ Add] | `GlossaryTable`, `TermTableCard`, `TermTables`, `ModelActionBar` |
 | **Recurring terms** card | Purpose line "Words the book repeats — kept the same all through the book. Learned while translating, or set here." and **How it works** (the old long paragraph, shortened); Term · Translation · **Used** ("13 times"; new — how often the book uses it) · → Glossary. **Empty**: "No recurring terms yet. They are found when you prepare names, or while translating." | `RecurringTermsCard` |
 | Changed rows (**N3**) | Left edge plus the tooltip "Changed by the last automatic run" | `TermTables` row style |
-| Layout | Two cards side by side only when **wide** (≥ 1440 px of content); stacked otherwise, so the glossary's columns keep their minimum widths; tables fill the height (no 340 px cap) | L5, L7 |
+| Layout | Two cards side by side only when **wide** (≥ 1440 px of content); stacked otherwise, so the glossary's columns keep their minimum widths; a table narrower than its columns' minimum widths (788 px for the glossary: at a 960 or 1024 px window, and each side-by-side card) keeps them at their minimums and scrolls across with a visible scroll bar, so Gender and the remove cross stay reachable; tables fill the height (no 340 px cap) | L5, L7 |
 
 ### Dialog · Prepare names automatically → Results (G4, long) — N4, N5
-- **Steps** (the `NamesPassImpl` stages, in order):
+- **Steps** (the ten `NamesPassImpl` stages, in order):
 
   | # | Step | Code |
   |---|---|---|
   | 1 | Find candidates in the book | `scan` |
   | 2 | Decide the names | `names`: `term-reading`, `review-terms` |
-  | 3 | Find repeated words | `terms-scan` |
-  | 4 | Clean up repeated words | `terms-review` |
-  | 5 | Read repeated words in context | `terms-read` |
-  | 6 | Suggest translations for names | `names-translate` |
-  | 7 | Suggest translations for repeated words | `terms-translate` |
-  | 8 | Write the results | — |
+  | 3 | Ask what the model knows about the names | `name-knowledge` |
+  | 4 | Find repeated words | `terms-scan` |
+  | 5 | Clean up repeated words | `terms-review` |
+  | 6 | Read repeated words in context | `terms-read` |
+  | 7 | Suggest translations for names | `names-translate` |
+  | 8 | Suggest translations for repeated words | `terms-translate` |
+  | 9 | Check the suggestions (no request: every suggestion against the target language's rules) | `check` |
+  | 10 | Write the results | — |
 
   Each row has its request count ("25 requests so far" while it runs, "6 requests" when done, "no request" when it sent none, "Not started" before it begins): no step knows its total up front, so a count never reads "of N".
 - **Figures.** "53 % · 26 of about 49 steps · Left about 1 min".

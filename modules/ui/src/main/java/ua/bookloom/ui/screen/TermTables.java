@@ -15,6 +15,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.css.PseudoClass;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -39,6 +40,8 @@ final class TermTables {
     private static final double ROW_HEIGHT = 46;
     private static final PseudoClass CHANGED = PseudoClass.getPseudoClass("changed");
     private static final String LISTENER_KEY = "term-table-card-listener-";
+    private static final double SCROLL_BAR_ROOM = 16;
+    private static final String START_WIDTH_KEY = "term-table-start-width";
 
     static <R> TableView<R> of(
             final Messages messages,
@@ -70,8 +73,43 @@ final class TermTables {
         table.setFocusTraversable(false);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(rows.columns());
+        scrollAcrossWhenNarrow(table);
         refreshWhenChanged(table, rows);
         return table;
+    }
+
+    // The fitting policy never shows a horizontal scroll bar: on a table narrower than its columns' minimum widths it
+    // keeps every column at its minimum and leaves the last ones (the glossary's Gender and remove cross) out of reach.
+    // Below that width the table scrolls across instead, its columns at their minimum widths so the scroll is short,
+    // and every column stays reachable; with room again each column gets back its starting width and the table fits.
+    // Runs on every resize: no logging.
+    private static void scrollAcrossWhenNarrow(final TableView<?> table) {
+        final ChangeListener<Number> onWidth = (observed, was, now) -> {
+            final boolean fits = fitsWithoutScrolling(table);
+            final boolean fitting = !TableView.UNCONSTRAINED_RESIZE_POLICY.equals(table.getColumnResizePolicy());
+            if (fits != fitting) {
+                table.getVisibleLeafColumns().forEach(column -> startOrMinimum(column, fits));
+                table.setColumnResizePolicy(
+                        fits
+                                ? TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN
+                                : TableView.UNCONSTRAINED_RESIZE_POLICY);
+            }
+        };
+        table.widthProperty().addListener(onWidth);
+    }
+
+    private static void startOrMinimum(final TableColumnBase<?, ?> column, final boolean starting) {
+        final Object start = column.getProperties().computeIfAbsent(START_WIDTH_KEY, _ -> column.getPrefWidth());
+        column.setPrefWidth(starting ? (Double) start : column.getMinWidth());
+    }
+
+    // The room a vertical scroll bar takes is kept free, so a long list does not push the last column out of view.
+    private static boolean fitsWithoutScrolling(final TableView<?> table) {
+        final double needed = table.getVisibleLeafColumns().stream()
+                .mapToDouble(TableColumnBase::getMinWidth)
+                .sum();
+        final double room = table.getWidth() - table.snappedLeftInset() - table.snappedRightInset() - SCROLL_BAR_ROOM;
+        return needed <= room;
     }
 
     /** A row the last operation changed wears the {@code :changed} pseudo-class, which the theme draws as a left edge. */

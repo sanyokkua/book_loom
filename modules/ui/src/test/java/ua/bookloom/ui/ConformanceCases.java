@@ -71,6 +71,7 @@ final class ConformanceCases {
         GLOSSARY_WHILE_HIDDEN,
         BOOK_WITHOUT_LANGUAGE,
         BRIEF_SUGGESTED,
+        BRIEF_UKRAINIAN_TARGET,
         PROJECTS_LISTED,
         PROJECTS_EMPTY,
         PROVIDER_FORM_DIRTY,
@@ -219,6 +220,17 @@ final class ConformanceCases {
                             // The predicted Tone & style is the right column's one card, drawn like the decisions.
                             new Part("#brief-tone-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#brief-tone-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // A Ukrainian target adds the rows its language file sets — apostrophe, quotation marks, address and the
+            // hard-g convention — each labelled like every other brief field.
+            new Screen(
+                    "BOOK_BRIEF_POLICY_KEYS",
+                    ViewNames.BOOK_BRIEF,
+                    Preparation.BRIEF_UKRAINIAN_TARGET,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#brief-policy-apostrophe-label", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            new Part(
+                                    "#brief-policy-convention-hardG-label", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "BOOK_BRIEF_AUTO_SOURCE",
                     ViewNames.BOOK_BRIEF,
@@ -242,6 +254,8 @@ final class ConformanceCases {
                             new Part("#brief-evidence-genre-uncertain", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"),
                             new Part("#brief-evidence-genre-uncertain", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"),
                             new Part("#brief-evidence-genre", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
+                            // The genre nothing supported is marked "(likely)" in the hint role until it is decided.
+                            new Part("#brief-likely-genre", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
                             new Part("#brief-source-proposal-text", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"))),
             new Screen(
                     "BOOK_BRIEF_NO_BOOK",

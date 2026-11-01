@@ -1095,6 +1095,8 @@ ${blocked ? '' : `
 
 /* ============================================================ BOOK BRIEF (B1–B3, D1, I) */
 const evid = (txt) => `<div class="hint">Suggested from the book · <button class="linkbtn" title="${esc(txt)}" onclick="openWork('brief')">why ›</button></div>`;
+/* (likely): a field the analysis filled that nothing BookLoom can check supports; gone once the person confirms or changes it */
+const likely = () => `<span class="hint" title="Filled in from the book, but nothing BookLoom can check supports it. The translation already uses it; confirm or change it.">(likely)</span>`;
 S.brief = () => {
     const ro = isRunning(), locked = hasProgress();
     const dis = ro ? 'disabled' : '';
@@ -1114,13 +1116,13 @@ ${ro ? `<div class="banner banner-warn" style="margin-bottom:12px"><span class="
     <div class="card"><div class="card-h"><h3>Tone &amp; style</h3><button class="btn btn-secondary btn-sm" ${dis} onclick="openWork('brief')" title="Reads a few samples of the book and suggests genre, register, narrator and audience. Shows every step.">✦ Fill in from the book</button></div><div class="card-b">
       <div class="grid2 collapse">
         <div class="field"><label class="fld">Genre</label><select class="input" ${dis}><option>Popular science</option><option>Fiction</option></select>${evid('“Gravity is the force by which a planet…” — explains with everyday examples')}</div>
-        <div class="field"><label class="fld">Who reads it</label><input class="input" ${dis} value="Adult general reader"></div>
+        <div class="field"><label class="fld">Who reads it ${likely()}</label><input class="input" ${dis} value="Adult general reader"></div>
       </div>
-      <div class="field"><label class="fld">Register</label>${seg(['Formal', 'Neutral', 'Casual'], 1)}</div>
+      <div class="field"><label class="fld">Register ${likely()}</label>${seg(['Formal', 'Neutral', 'Casual'], 1)}</div>
       <div class="field"><label class="fld">Voice and period notes</label><textarea class="input" rows="2" ${dis}>Clear, friendly explanatory prose; modern; short sentences.</textarea></div>
       <div class="grid2 collapse">
         <div class="field" style="margin:0"><label class="fld">Who tells the story</label>${seg(['Unknown', '“I”', '“He / she”'], 2, 'title="Unknown · told by “I” (first person) · told about “he” or “she” (third person)"')}</div>
-        <div class="field" style="margin:0"><label class="fld">Narrator's gender</label>${seg(['Unknown', 'Female', 'Male'], 0, 'title="Only for a story told in the first person"')}<div class="hint">Asked at Start when the story is told in the first person and this is not known.</div></div>
+        <div class="field" style="margin:0"><label class="fld">Narrator's gender</label>${seg(['Unknown', 'Female', 'Male'], 2, 'title="Only for a story told in the first person"')}<div class="hint" title="The model's most probable answer: nothing in the book BookLoom can check confirms it. The translation takes it only as a hint; choose a gender to confirm or change it.">Male (likely)</div><div class="hint">Asked at Start when the story is told in the first person and this is not known. Found in the book it reads “Male, from the book” with the quote.</div></div>
       </div>
     </div></div>
   </div>
@@ -1129,6 +1131,10 @@ ${ro ? `<div class="banner banner-warn" style="margin-bottom:12px"><span class="
       <div class="field"><label class="fld">Names of people and places</label>${seg(['Translate', 'Spell in Ukrainian letters', 'Keep as written'], 1)}</div>
       <div class="field"><label class="fld">Text in other languages</label>${seg(['Keep as written', 'Translate', 'Translate + note'], 0)}</div>
       <div class="grid2 collapse"><div><label class="fld">Footnotes</label>${seg(['Translate', 'Keep'], 0)}</div><div><label class="fld">Units (miles, pounds)</label>${seg(['Keep', 'Change to metric'], 0)}</div></div>
+      <!-- Rows the target language's file sets (Ukrainian here), each with the file's default chosen; an English target shows none of them. -->
+      <div class="grid2 collapse mt3"><div><label class="fld">Apostrophe ${likely()}</label>${seg(['’', 'ʼ', "'"], 0, 'title="Write the apostrophe as ’ (U+2019) · ʼ (U+02BC) · \' (U+0027)"')}</div><div><label class="fld">Quotation marks</label>${seg(['«...» „...“', '„...“ ‚...‘'], 0, 'title="The outer pair, then the pair for a quote inside a quote"')}</div></div>
+      <div class="grid2 collapse mt3"><div><label class="fld">Address between strangers</label>${seg(['Ви', 'ти'], 0)}</div><div><label class="fld">Address in a family</label>${seg(['Ви', 'ти'], 1)}</div></div>
+      <div class="field mt3"><label class="fld">Hard g in foreign names</label>${seg(['г', 'ґ'], 0, 'title="Write г · write ґ. One name can still be spelled otherwise in the glossary."')}</div>
       <div class="field mt3" style="margin-bottom:0"><label class="fld">Close to the original ↔ natural Ukrainian</label><input type="range" value="55" ${dis}><div class="hint">closer · <b>balanced</b> · freer</div></div>
     </div></div>
     <div class="card"><div class="card-h"><h3>Also translate</h3></div><div class="card-b">
@@ -1148,12 +1154,15 @@ ${ro ? `<div class="banner banner-warn" style="margin-bottom:12px"><span class="
 };
 
 /* ============================================================ NAMES & STYLE (N1–N5, D1, I) */
+/* An origin chip: who decided the value — person, book (the book proves it), rule (a BookLoom rule) or likely (a guess nobody confirmed). */
+const og = (o) => `<span class="badge ${o === 'likely' ? 'b-info' : 'b-neutral'}" title="Where this value came from. Only your values and the book's are held to the text.">${o}</span>`;
 const TH = (cols) => `<tr>${cols.map(([t, w]) => `<th style="${w ? 'width:' + w : ''}" title="Drag the edge to resize">${t}<span class="rz">⋮</span></th>`).join('')}</tr>`;
 const termBar = (what, ro) => { const mro = busyModel() ? `disabled title="${isRunning() ? 'Pause the translation first — BookLoom sends one model request at a time' : 'Wait until the names pass ends'}"` : ro; return `<div class="gap8" style="padding:10px 16px 8px"><input class="input" style="flex:1;min-width:150px" placeholder="Search">
   <button class="btn btn-ghost btn-sm" ${ro} onclick="openDialog('addterm')">＋ Add</button>
   <button class="btn btn-ghost btn-sm" ${mro} onclick="openNames('scan','${what}')" title="Finds ${what === 'glossary' ? 'names' : 'repeated words'} in the book">Scan</button>
   <button class="btn btn-ghost btn-sm" ${mro} onclick="openNames('review','${what}')" title="The model removes entries that are not ${what === 'glossary' ? 'names' : 'worth keeping'} and fills in the kind">Review</button>
   <button class="btn btn-ghost btn-sm" ${mro} onclick="openNames('translate','${what}')" title="The model suggests a translation for every entry that has none">Translate</button>
+  ${what === 'glossary' ? `<button class="btn btn-ghost btn-sm" ${mro} onclick="toast('info','Accept all','Accepted 1 · left suggested 1 (not the dictionary form) — Undo all in the results')" title="Checks every suggested translation against the target language's rules and accepts those that pass; the rest stay suggested and are listed with their reason">Accept all</button>` : ''}
   <button class="btn btn-ghost btn-sm" title="Import CSV… · Export CSV… · Show only changed">⋯</button></div>`; };
 S.names = () => {
     const hiddenHere = ST.hidden && ST.hidden.screen === 'names';
@@ -1167,22 +1176,24 @@ ${demo(`Lists ${demoSeg([['full', 'With entries'], ['empty', 'Empty (before find
 <p class="page-sub prose">Decide how names and repeated words are translated. Optional — skip it and BookLoom builds both while it translates.</p>
 ${isRunning() ? `<div class="banner" style="margin-bottom:12px"><span class="ico">ℹ</span><div>Translating is going on. <b>Changes apply to the next segments translated.</b> Scan, Review and Translate wait until you pause — BookLoom sends one model request at a time.</div></div>` : ''}
 <div class="card warm pad gap8" style="justify-content:space-between">
-  <div class="prose"><b>Prepare names automatically</b><div class="small muted">Finds names and repeated words, reads each in context, suggests translations. About 1 min. You can undo it all afterwards.</div></div>
+  <div class="prose"><b>Prepare names automatically</b><div class="small muted">Finds names and repeated words, reads each in context and suggests translations. About 2 min, measured on this model. You can undo it all afterwards.<br><span class="muted">With no speed measured on this model: “About 1–2 min, estimate. You can undo it all afterwards.”</span></div></div>
   <button class="btn btn-primary" ${mro} onclick="openNames('auto')">✦ Prepare names automatically</button>
 </div>
 <div class="terms-grid mt3" style="${hiddenHere ? 'pointer-events:none;opacity:.6' : ''}" ${hiddenHere ? 'aria-disabled="true"' : ''}>
-  <div class="card"><div class="card-h"><h3>Glossary <span class="badge b-neutral">${empty ? 0 : 6}</span></h3></div>
+  <div class="card"><div class="card-h"><h3>Glossary <span class="badge b-neutral">${empty ? 0 : 8}</span></h3></div>
     <div class="card-purpose">Names of people and places — written the same way every time. Set the gender so names take the right grammatical form.</div>
     ${termBar('glossary', ro)}
     ${empty ? `<div class="empty"><p>No names yet. Scan the book for them, or add one.</p><div class="gap8" style="justify-content:center"><button class="btn btn-secondary btn-sm" onclick="openNames('scan','glossary')">Scan the book</button><button class="btn btn-ghost btn-sm" onclick="openDialog('addterm')">＋ Add</button></div></div>` : `
     <div class="tbl-wrap" style="margin:0 16px 14px"><table class="tbl">
-      ${TH([['Term', '26%'], ['Kind', '15%'], ['Translation', '27%'], ['Gender', '16%'], ['Locked', '10%'], ['', '6%']])}
-      <tr class="changed" title="Changed by the last automatic run"><td><b>Isaac Newton</b></td><td>person</td><td><input class="input" ${ro} value="Ісаак Ньютон"></td><td>male <span class="muted small" title="Found in the book: “he” 6 times">he ×6</span></td><td>${sw(true, 'title="The translation must use exactly this spelling"')}</td><td title="Remove">×</td></tr>
-      <tr class="changed" title="Changed by the last automatic run"><td><b>Earth</b></td><td>place</td><td><input class="input" ${ro} value="Земля"></td><td>—</td><td>${sw(true)}</td><td>×</td></tr>
-      <tr><td><b>Galileo Galilei</b></td><td>person</td><td><input class="input" ${ro} value="Галілео Галілей"></td><td>male <span class="muted small">(likely)</span></td><td>${sw(false)}</td><td>×</td></tr>
-      <tr><td><b title="International Space Station">International Space Station</b></td><td>organisation</td><td><input class="input" ${ro} value="Міжнародна космічна станція"></td><td>—</td><td>${sw(false)}</td><td>×</td></tr>
-      <tr><td><b>Moon</b></td><td>place</td><td><input class="input" ${ro} placeholder="Not set yet"></td><td>—</td><td>${sw(false)}</td><td>×</td></tr>
-      <tr><td><b>Markdown</b></td><td>other</td><td><input class="input" ${ro} placeholder="Not set yet"></td><td>—</td><td>${sw(false)}</td><td>×</td></tr>
+      ${TH([['Term', '17%'], ['Kind', '13%'], ['Forms', '14%'], ['Translation', '25%'], ['State', '9%'], ['Gender', '18%'], ['', '4%']])}
+      <tr class="changed" title="Changed by the last automatic run"><td><b>Isaac Newton</b></td><td>character · ${og('book')}</td><td><span title="joins 2 forms: Newton, Newton’s">Newton, Newton’s</span> <span class="badge b-warn" title="Unsure: some mentions fit two names">unsure</span></td><td><input class="input" ${ro} value="Ісаак Ньютон"> ${og('person')}</td><td>pinned</td><td>male · ${og('book')}</td><td title="Remove">×</td></tr>
+      <tr class="changed" title="Changed by the last automatic run"><td><b>Earth</b></td><td>place · ${og('person')}</td><td></td><td><input class="input" ${ro} value="Земля"> ${og('person')}</td><td>locked</td><td>—</td><td>×</td></tr>
+      <tr><td><b>Galileo Galilei</b></td><td>character · ${og('likely')}</td><td><span title="joins 1 form: Galileo">Galileo</span></td><td><input class="input" style="font-style:italic" ${ro} value="Галілео Галілей"> <span class="badge b-info" title="Suggested by the model and not confirmed yet. Accept it, change it or choose a State to make it yours.">likely</span> <button class="btn btn-ghost btn-sm" title="Accept suggestion — Enter in the unchanged field does the same">✓</button></td><td>suggested</td><td>male · likely, low confidence</td><td>×</td></tr>
+      <tr><td><b>Kepler</b></td><td>character · ${og('rule')}</td><td></td><td><input class="input" style="font-style:italic" ${ro} value="Кеплера"> <span class="badge b-info">likely</span> <span class="badge b-warn" title="Checked against the target language's rules: not the dictionary form. Accept all leaves this row out.">not the dictionary form</span> <button class="btn btn-ghost btn-sm" title="Accept suggestion">✓</button></td><td>suggested</td><td>rule: male · model: female</td><td>×</td></tr>
+      <tr><td><b>Stillwater Station</b> <span class="badge b-neutral" title="What this name means: still water">meaning</span></td><td>place · ${og('likely')}</td><td></td><td><input class="input" ${ro} placeholder="No target"></td><td></td><td>—</td><td>×</td></tr>
+      <tr><td><b>Halley</b></td><td>character · ${og('book')}</td><td></td><td><input class="input" ${ro} placeholder="No target"></td><td></td><td>not specified — no evidence in the book</td><td>×</td></tr>
+      <tr><td><b title="International Space Station">International Space Station</b></td><td>organisation · ${og('likely')}</td><td></td><td><input class="input" ${ro} value="Міжнародна космічна станція"> ${og('person')}</td><td>locked</td><td>—</td><td>×</td></tr>
+      <tr><td><b>Markdown</b></td><td>other</td><td></td><td><input class="input" ${ro} placeholder="No target"></td><td></td><td>—</td><td>×</td></tr>
     </table></div>`}</div>
   <div class="card"><div class="card-h"><h3>Recurring terms <span class="badge b-neutral">${empty ? 0 : 4}</span></h3></div>
     <div class="card-purpose">Words the book repeats — kept the same all through the book. Learned while translating, or set here. <details style="display:inline"><summary class="linkbtn" style="display:inline;list-style:none">How it works</summary> BookLoom keeps the translation the book uses most, or the one you type. A word translated several ways stays empty until one clearly wins.</details></div>
@@ -1550,27 +1561,29 @@ WORK_ESC.brief = () => closeWork();
 /* ============================================================ NAMES — progress → Results (N4, N5) · long work, hideable */
 let NAMES = {kind: 'auto', what: 'glossary', finished: false, tab: 'changes'};
 function openNames(kind, what) { NAMES = {kind, what: what || 'glossary', finished: false, tab: 'changes'}; delete PD.names; openWork('names'); }
-const NAMES_STEPS = [   // NamesPassImpl stages, in order
-    {name: '1 · Find candidates in the book', st: 'done', res: '1 of 1 · 38 candidates · no request', d: 'Counts names and phrases in the text and drops common words.', code: 'scan'},
-    {name: '2 · Decide the names', st: 'run', res: '25 of 30 requests · reading “Isaac Newton”', d: 'Reads each candidate in a few short places of the book, joins spellings of one person and finds the gender from how the book refers to them.', code: 'names: term-reading, review-terms'},
-    {name: '3 · Find repeated words', st: 'wait', res: '1 step', d: 'Finds common words and titles the book repeats.', code: 'terms-scan'},
-    {name: '4 · Clean up repeated words', st: 'wait', res: 'about 4 requests', d: 'Removes words not worth keeping the same.', code: 'terms-review'},
-    {name: '5 · Read repeated words in context', st: 'wait', res: 'about 8 requests', d: 'Reads how the book uses each word.', code: 'terms-read'},
-    {name: '6 · Suggest translations for names', st: 'wait', res: 'about 2 requests', d: 'Suggests a spelling for each name, following the brief.', code: 'names-translate'},
-    {name: '7 · Suggest translations for repeated words', st: 'wait', res: 'about 2 requests', d: 'Suggests a translation for each word.', code: 'terms-translate'},
-    {name: '8 · Write the results', st: 'wait', res: '1 step', d: 'Everything is written at once at the end — Undo all puts the tables back.', code: 'write'},
+const NAMES_STEPS = [   // NamesPassImpl stages, in order (ten)
+    {name: '1 · Find candidates in the book', st: 'done', res: 'no request', d: 'Counts names and phrases in the text and drops common words.', code: 'scan'},
+    {name: '2 · Decide the names', st: 'done', res: '6 requests', d: 'Reads each candidate in a few short places of the book, joins the forms of one name and finds the gender from how the book refers to them.', code: 'names: term-reading, review-terms'},
+    {name: '3 · Ask what the model knows about the names', st: 'run', res: '2 requests so far', d: 'For each name nobody has settled, the model gives its most probable gender and kind. They are kept as likely and never enforced.', code: 'name-knowledge'},
+    {name: '4 · Find repeated words', st: 'wait', res: 'Not started', d: 'Finds common words and titles the book repeats.', code: 'terms-scan'},
+    {name: '5 · Clean up repeated words', st: 'wait', res: 'Not started', d: 'Removes words not worth keeping the same.', code: 'terms-review'},
+    {name: '6 · Read repeated words in context', st: 'wait', res: 'Not started', d: 'Reads how the book uses each word.', code: 'terms-read'},
+    {name: '7 · Suggest translations for names', st: 'wait', res: 'Not started', d: 'Suggests a spelling for each name, following the brief.', code: 'names-translate'},
+    {name: '8 · Suggest translations for repeated words', st: 'wait', res: 'Not started', d: 'Suggests a translation for each word.', code: 'terms-translate'},
+    {name: '9 · Check the suggestions', st: 'wait', res: 'Not started', d: 'Checks every suggested spelling against the target language’s rules; one that fails stays out of Accept all, with its reason.', code: 'check'},
+    {name: '10 · Write the results', st: 'wait', res: 'Not started', d: 'Everything is written at once at the end — Undo all puts the tables back.', code: 'write'},
 ].map(x => ({...x, state: mk(x.st)}));
 NAMES_STEPS.forEach(x => { x.state = mk(x.st === 'done' ? 'ok' : x.st, x.st === 'run' ? 'working…' : undefined); });
 function namesSteps() {
     if (NAMES.kind === 'auto') return NAMES.finished ? NAMES_STEPS.map(s => ({...s, st: 'done', state: mk('ok')})) : NAMES_STEPS;
     const t = {scan: 'Scan', review: 'Review', translate: 'Translate'}[NAMES.kind];
-    return [{name: `1 · ${t} — ${NAMES.what === 'glossary' ? 'Glossary' : 'Recurring terms'}`, st: 'run', state: mk('run', 'working…'), res: '2 of 4 requests', d: 'Several requests of 8 entries each.', code: NAMES.kind}, {name: '2 · Write the results', st: 'wait', state: mk('wait'), res: '1 step', d: 'Written at once; Undo all puts the table back.', code: 'write'}];
+    return [{name: `1 · ${t} — ${NAMES.what === 'glossary' ? 'Glossary' : 'Recurring terms'}`, st: 'run', state: mk('run', 'working…'), res: '2 requests so far', d: 'Several requests of 8 entries each.', code: NAMES.kind}, {name: '2 · Write the results', st: 'wait', state: mk('wait'), res: '1 step', d: 'Written at once; Undo all puts the table back.', code: 'write'}];
 }
 function namesDetail(s, mode) {
     const h = `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}${mode === 'detailed' ? `<span class="badge b-neutral mono">${s.code}</span>` : ''}</div><div class="say">${s.d}</div>`;
     if (s.st === 'wait') return `${h}<div class="card pad muted">Not started yet — ${s.res}.</div>`;
     if (s.st === 'done') return `${h}${gridTable(['Result'], [[s.res]])}`;
-    return `${h}${mode === 'detailed' ? callInfo({'Request': 'review-terms · 25 of 30', 'Attempt': '1 of 2', 'Clock': clock(20, '0:07 of 2:00'), 'Tokens in · out': '1,140 · —'}) : ''}
+    return `${h}${mode === 'detailed' ? callInfo({'Request': 'name-knowledge · 3rd', 'Attempt': '1 of 2', 'Clock': clock(20, '0:07 of 2:00'), 'Tokens in · out': '1,140 · —'}) : ''}
   <div class="io"><div class="h">What the model reads</div><div class="h">What it says</div>
     <div class="c">Newton <span class="muted small">(4 times)</span> · Isaac Newton <span class="muted small">(6)</span> · Newton’s <span class="muted small">(2)</span><div class="small muted mt1">“…Isaac Newton imagined a cannon…” · “Newton showed that…” · “he described…”</div></div><div class="c"><span class="pending">The model is answering… 0:07</span></div>
     <div class="c last">Galileo <span class="muted small">(3)</span> · Galileo Galilei <span class="muted small">(1)</span></div><div class="c last"><span class="pending">in the same request</span></div></div>
@@ -1578,7 +1591,7 @@ function namesDetail(s, mode) {
 }
 const NAMES_RESULTS = `${gridTable(['Entry', 'Change', 'Before', 'After'], [
     ['<b>Names (2)</b>', '', '', ''],
-    ['<b>Isaac Newton</b>', '<span class="badge b-ok">added</span>', '<span class="muted">—</span>', 'Ісаак Ньютон · person · male (“he” 6 times) · locked'],
+    ['<b>Isaac Newton</b>', '<span class="badge b-ok">added</span>', '<span class="muted">—</span>', 'Ісаак Ньютон (likely) · character · male · book (“he” 6 times) · forms Newton, Newton’s'],
     ['<b>Earth</b>', '<span class="badge b-info">changed</span>', 'other · not set', 'place · Земля · locked'],
     ['<b>Recurring terms (4)</b>', '', '', ''],
     ['<b>free fall</b>', '<span class="badge b-ok">added</span>', '<span class="muted">—</span>', 'вільне падіння'],
@@ -1594,8 +1607,8 @@ WORK.names = () => {
     const auto = NAMES.kind === 'auto';
     return progressDialog({
         id: 'names', ico: '✦', title: t, sub: 'Every step, what it read and what it found. The tables change only at the last step.',
-        overall: auto ? [26, 49, true] : [2, 5], left: auto ? 'about 1 min' : 'about 20 s', extra: [['Elapsed', auto ? '1:21' : '0:14'], ['Speed', '12 tok/s']],
-        steps: namesSteps(), sel: auto ? 1 : 0, detail: namesDetail, long: auto ? {label: 'Names', screen: 'names', screenName: 'Names & style'} : null,
+        overall: auto ? [26, 49, true] : [2, 5], left: auto ? 'about 2 min' : 'about 20 s', extra: [['Elapsed', auto ? '1:21' : '0:14'], ['Speed', '12 tok/s']],
+        steps: namesSteps(), sel: auto ? 2 : 0, detail: namesDetail, long: auto ? {label: 'Names', screen: 'names', screenName: 'Names & style'} : null,
         cancelSays: 'Cancel writes nothing.',
         footer: `<button class="btn btn-ghost btn-sm" onclick="NAMES.finished=true;redrawDialog()" title="Mockup only">Mockup: finish →</button><button class="btn btn-ghost" onclick="closeWork();toast('info','Stopped','Nothing was written.')">Cancel</button>`,
     });
@@ -1738,7 +1751,7 @@ DLG.review = () => {
 /* ============================================================ SMALL DIALOGS */
 const simple = (ico, cls, title, sub, body, foot, wide) => `<div class="dialog ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${dlgHead(ico, cls, title, sub)}${body ? `<div class="dialog-b">${body}</div>` : ''}<div class="dialog-f">${foot}</div></div>`;
 const closeBtn = (t = 'Cancel') => `<button class="btn btn-ghost" onclick="closeDialog()">${t}</button>`;
-DLG.addterm = () => simple('＋', 'brand', 'Add to the glossary', '', `<div class="grid2"><div class="field"><label class="fld">As written in the book</label><input class="input" data-autofocus value="Moon"></div><div class="field"><label class="fld">Translation</label><input class="input" value="Місяць"></div><div class="field"><label class="fld">Kind</label><select class="input"><option>place</option><option>person</option><option>organisation</option><option>other</option></select></div><div class="field"><label class="fld">Gender</label>${seg(['—', 'female', 'male'], 0)}</div></div><div class="toggle-row">${sw(true)}<div class="tx">Locked<small>Always use exactly this spelling.</small></div></div>`, `${closeBtn()}<button class="btn btn-primary" onclick="closeDialog();toast('ok','Added','Moon → Місяць')">Add</button>`, true);
+DLG.addterm = () => simple('＋', 'brand', 'Add to the glossary', '', `<div class="grid2"><div class="field"><label class="fld">As written in the book</label><input class="input" data-autofocus value="Moon"></div><div class="field"><label class="fld">Translation</label><input class="input" value="Місяць"></div><div class="field"><label class="fld">Kind</label><select class="input"><option>place</option><option>person</option><option>organisation</option><option>other</option></select></div><div class="field"><label class="fld">Gender</label>${seg(['—', 'female', 'male'], 0)}</div></div><div class="field"><label class="fld">State</label>${seg(['Pinned', 'Locked'], 0, 'title="Pinned: the translation is accepted and the name may take any of its grammatical forms. Locked: this exact text everywhere. A locked term needs a translation."')}</div><div class="hint">A term already in the glossary — by itself or as a form of another name (“Moon’s” of Moon) — is refused.</div>`, `${closeBtn()}<button class="btn btn-primary" onclick="closeDialog();toast('ok','Added','Moon → Місяць')">Add</button>`, true);
 DLG.narrator = () => simple('?', 'info', 'Who tells the story?', 'The book is told in the first person. Ukrainian verbs need the narrator’s gender.', `${seg(['A woman', 'A man', 'Not stated'], 2)}<div class="hint mt2">Enter keeps “Not stated”; BookLoom then learns it from the translation.</div>`, `${closeBtn()}<button class="btn btn-primary" onclick="closeDialog()">Start translation</button>`);
 DLG.genders = () => simple('?', 'info', 'Characters without a gender', '2 characters are named often, and their gender is only a guess. Least confident first; the guess is chosen. Change a choice or tick Confirm to make it yours; a row left alone stays a hint.', gridTable(['Name', 'Where the guess comes from', 'Gender', ''], [['Ivar — 12 mentions', '<span class="muted">likely, low confidence</span>', seg(['woman', 'man', 'not known'], 1), '<label><input type="checkbox"> Confirm</label>'], ['Mira Holt — 30 mentions', '<span class="muted">rule: male · model: female</span>', seg(['woman', 'man', 'not known'], 1), '<label><input type="checkbox"> Confirm</label>']]), `${closeBtn('Back')}<button class="btn btn-primary" onclick="closeDialog()">Start anyway</button>`, true);
 DLG.meanings = () => simple('?', 'info', 'Names the book plays on', 'The book explains or plays on the meaning of these names. Choose how each is rendered; a name you leave is sounded out and its meaning kept as a note.', `<div class="field"><label class="fld">Brightwater — “bright water”</label>${seg(['Sound it out', 'Translate it', 'Sound it out, explain once'], 0)}</div><div class="field mt2"><label class="fld">Ashgrove — “ash grove”</label>${seg(['Sound it out', 'Translate it', 'Sound it out, explain once'], 0)}</div>`, `${closeBtn('Back')}<button class="btn btn-primary" onclick="closeDialog()">Save and start</button>`, true);

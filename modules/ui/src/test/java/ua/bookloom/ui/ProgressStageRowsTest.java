@@ -8,6 +8,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.ui.state.ActivityKind;
 
 /**
@@ -128,6 +130,20 @@ class ProgressStageRowsTest extends ProgressWorkTestBase {
 
         await(() -> !isDialogShown());
         assertThat(cancelled).isEmpty();
+    }
+
+    // IF a long Ukrainian step name or count were cut at a standard size, THEN the person could not read the step.
+    @ParameterizedTest(name = "uk at {0} x {1}")
+    @CsvSource({"944, 600", "1024, 700", "1280, 800", "1440, 900", "1920, 700"})
+    void namesPassDialog_ukrainianAtStandardSizes_fitsEveryStep(final double width, final double height)
+            throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        final var names = begin(ActivityKind.NAMES_PASS);
+        feed(names, PassEvents.upTo(new int[] {0, 6, 2, 0, 3, 25, 4, 2, 0}, 8, 49));
+        await(this::isDialogShown);
+        resizeScene(width, height);
+
+        FitMatrix.assertFits(scene, new double[] {width, height});
     }
 
     @Test

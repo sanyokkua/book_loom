@@ -797,7 +797,7 @@ The Names & style screen SHALL show the glossary as a table with the columns Ter
 #### Scenario: The Forms column and the Unsure mark
 
 - **WHEN** the entry `Зотов` joins the forms `Зотова` and `Зотову`, and two of its mentions also fit another entry
-- **THEN** its Forms cell reads `Зотова, Зотову` with the tooltip "joins 2 forms", and the row shows an Unsure mark whose tooltip reads "Unsure: some mentions fit two names"
+- **THEN** its Forms cell reads `Зотова, Зотову` with the tooltip "joins 2 forms: Зотова, Зотову" (a narrow column may cut the list; the tooltip keeps every form), and the row shows an Unsure mark whose tooltip reads "Unsure: some mentions fit two names"
 
 #### Scenario: A meaning chip
 
@@ -807,7 +807,8 @@ The Names & style screen SHALL show the glossary as a table with the columns Ter
 #### Scenario: A target's state and origin are shown
 
 - **WHEN** `Hale` → `Гейл` was suggested by the model and then accepted
-- **THEN** the row shows State pinned and the origin chip `likely` beside the Translation, because the chip says who produced the spelling and the state says it is accepted
+- **THEN** the row shows State pinned and the origin chip `person` beside the Translation, because accepting a suggestion is the person's decision: the chip says who decided the spelling and the state says how firmly it holds
+- **AND** before the acceptance the same row shows the slanted `Гейл` with the label `likely` and State suggested
 
 ### Requirement: Review the glossary with the model when the person asks
 

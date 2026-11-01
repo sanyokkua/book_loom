@@ -133,7 +133,7 @@ class BookBriefPolicyKeysScreenTest extends BookBriefScreenTestBase {
 
     // IF the Ukrainian rows were cut or squeezed, THEN a long Ukrainian label would end in an ellipsis.
     @ParameterizedTest(name = "{0} x {1}")
-    @CsvSource({"944, 600", "1440, 900"})
+    @CsvSource({"944, 600", "1024, 700", "1280, 800", "1440, 900", "1920, 700"})
     void briefPolicies_ukrainianInterface_fitsWhole(final double width, final double height) throws TimeoutException {
         useLocale(Locale.forLanguageTag("uk"));
         openWithTarget("uk");
@@ -181,6 +181,42 @@ class BookBriefPolicyKeysScreenTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setRegister(Register.NEUTRAL));
 
         assertThat(isShown("brief-likely-register")).isFalse();
+    }
+
+    // IF a "(ймовірно)" mark pushed a Ukrainian label or choice out of its card, THEN the mark would hide what it
+    // marks.
+    @ParameterizedTest(name = "{0} x {1}")
+    @CsvSource({"944, 600", "1024, 700", "1280, 800", "1440, 900", "1920, 700"})
+    void brief_ukrainianLikelyMarks_fitWhole(final double width, final double height) throws TimeoutException {
+        useLocale(Locale.forLanguageTag("uk"));
+        openWithTarget("uk");
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
+        answerFill(new BriefSuggestion(
+                null,
+                Register.CASUAL,
+                null,
+                null,
+                NarratorPerson.FIRST,
+                Gender.FEMALE,
+                Map.of(
+                        BriefField.REGISTER,
+                        new FieldEvidence(FieldEvidence.Basis.LIKELY, List.of(), 0, 2),
+                        BriefField.NARRATOR_GENDER,
+                        new FieldEvidence(FieldEvidence.Basis.LIKELY, List.of(), 0, 2))));
+        fillInAndApply();
+        awaitFx(() -> isShown("brief-likely-register"));
+
+        showAtSceneSize(width, height);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(((Label) required("brief-tone-narrator-gender-origin")).getText())
+                .isEqualTo("Жіноча (ймовірно)");
+        assertThat(ThemeTestSupport.onFx(() -> FitProbe.cutParts(required("brief-tone-card"))))
+                .isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> FitProbe.squeezed(required("brief-tone-card"))))
+                .isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> FitProbe.overflowing(required("brief-tone-card"), width)))
+                .isEmpty();
     }
 
     // IF a likely narrator's gender read like the book's own, THEN nobody would know to check it.

@@ -33,7 +33,8 @@ class ResponsiveGuardTest {
             "BusyHost.java", "sizes the progress card to the window",
             "control/LiveCallPanel.java", "the list takes a fixed share of its split",
             "screen/ReviewDeskCard.java", "the list takes a fixed share of its split",
-            "screen/StructureSegmentCell.java", "wraps a segment's text at the cell's width");
+            "screen/StructureSegmentCell.java", "wraps a segment's text at the cell's width",
+            "screen/TermTables.java", "lets a table narrower than its columns' minimums scroll across; no arrangement");
 
     // IF a screen measured a width and switched its own layout, THEN two widgets would decide the same thing two ways.
     @Test

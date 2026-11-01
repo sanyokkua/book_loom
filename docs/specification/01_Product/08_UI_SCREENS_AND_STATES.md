@@ -513,7 +513,7 @@ is narrower (one child order either way, so Tab reads the same); the tables fill
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |
 |------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| Prepare names automatically | A warm card (`names-style-auto-bar`) above both cards: the title, a line on what it does, a muted line under it (`names-style-auto-subtitle`) and the primary `Button` (`names-style-auto`) | One press runs the whole names pass (15i.N8) with the chosen model: scan, decide the names, scan and read the recurring terms, translate both, lock by rule. The line states the plan's estimate for the brief's dial: the calls of each kind times the seconds measured on the chosen model ("About 2 min, measured on this model."), else the built-in figures scaled by the model's seconds per segment ("About 15–25 min, estimate."), asked of the port again when the screen opens and when a change of the dial has been saved, and blank when the port cannot say. Off while any model action runs, and with no model chosen it reports so in the banner and calls nothing. Built today the shared busy card shows it and that card's Cancel is the Stop; **Planned:** it runs in the progress dialog (`#names-progress-dialog`), whose Cancel is the Stop, and a stopped or failed pass changes neither table. Its results view is "Prepare names automatically — results" with a "Names (n)" section and a "Recurring terms (n)" section, a Revert on each row and one Undo all across both; "Show changed rows" turns on both cards' changed filters |
+| Prepare names automatically | A warm card (`names-style-auto-bar`) above both cards: the title, a line on what it does, a muted line under it (`names-style-auto-subtitle`) and the primary `Button` (`names-style-auto`) | One press runs the whole names pass (15i.N8) with the chosen model: scan, decide the names, scan and read the recurring terms, translate both, lock by rule. The line states the plan's estimate for the brief's dial: the calls of each kind times the seconds measured on the chosen model ("About 2 min, measured on this model. You can undo it all afterwards."), else the built-in figures scaled by the model's seconds per segment ("About 1–2 min, estimate. You can undo it all afterwards."), asked of the port again when the screen opens and when a change of the dial has been saved, and blank when the port cannot say. Off while any model action runs, and with no model chosen it reports so in the banner and calls nothing. Built today the shared busy card shows it and that card's Cancel is the Stop; **Planned:** it runs in the progress dialog (`#names-progress-dialog`), whose Cancel is the Stop, and a stopped or failed pass changes neither table. Its results view is "Prepare names automatically — results" with a "Names (n)" section and a "Recurring terms (n)" section, a Revert on each row and one Undo all across both; "Show changed rows" turns on both cards' changed filters |
 | Confirm suggested genders | `Button` (`names-style-confirm-genders`, ghost), beside Prepare names automatically | Shown only while a character's gender is a suggestion (marked "suggested"); one press turns every suggested character gender into the person's (15j.J3), kept in the results dialog with Undo all, which puts the suggested marks back. Off while any model action runs. The export notice and the Start question name suggested genders "suggested — confirm", apart from unknown ones |
 | Glossary table         | `TableView`                             | Columns: Term, Type (Planned: Kind), Target (Planned: Translation), Gender, Locked and an unnamed last column holding the row's ✕, every one resizable (`CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN`, minimum widths 140 / 96 / 170 / 110 / 64 / 36, each raised to its header's name plus room for the sort arrow, so no header is cut in either language); Term, Type, Gender and Locked sort by header, ties by term. An empty target shows the placeholder "No target" in its field; Gender reads "—" for a row that is not a character, "(suggested)" follows only a gender the book's pronouns or the first-name list suggested (Planned: evidence "he ×6", or "(likely)"); a row the last model operation changed is marked by the row's left edge (the `:changed` row pseudo-class), never by a chip in the Term cell, with a tooltip saying so (G9). Start translation asks "N entries have no target — the model will choose" (listing them) when any entry has no target |
 | Recurring terms table  | `TableView`                             | Columns: Term, Target (the rendering the run keeps: the person's, else the learned or most used one), an unnamed "→ Glossary" column that moves the term to the glossary, and an unnamed last column holding the ✕. Built today there is no Used column: a learned rendering is the Target. **Planned (mockup README):** Term · Translation · Used ("13 times") · → Glossary. Same placeholder and changed-row mark |
@@ -552,24 +552,27 @@ and shows no table, no scan, and no `Start translation`.
 
 ### Prepare names automatically — progress and results {#names-progress-dialog}
 
-**Planned (G4, long; N4, N5).** The steps are the `NamesPassImpl` stages, in order:
+**Planned (G4, long; N4, N5).** The steps are the ten `NamesPassImpl` stages, in order:
 
 | # | Step | Code |
 |---|---|---|
 | 1 | Find candidates in the book | `scan` |
 | 2 | Decide the names | `names`: `term-reading`, `review-terms` |
-| 3 | Find repeated words | `terms-scan` |
-| 4 | Clean up repeated words | `terms-review` |
-| 5 | Read repeated words in context | `terms-read` |
-| 6 | Suggest translations for names | `names-translate` |
-| 7 | Suggest translations for repeated words | `terms-translate` |
-| 8 | Write the results | — |
+| 3 | Ask what the model knows about the names | `name-knowledge` |
+| 4 | Find repeated words | `terms-scan` |
+| 5 | Clean up repeated words | `terms-review` |
+| 6 | Read repeated words in context | `terms-read` |
+| 7 | Suggest translations for names | `names-translate` |
+| 8 | Suggest translations for repeated words | `terms-translate` |
+| 9 | Check the suggestions (no request: every suggestion against the target language's rules) | `check` |
+| 10 | Write the results | — |
 
 Each row has its request count ("25 requests so far", "6 requests", "no request", "Not started"; never "of N"). Figures: "53 % · 26 of about 49 steps · Left about 1
 min". Detail: a plain sentence; What the model reads (candidates with counts and quotes) \| What it says; Detailed adds
 the info grid, the stage code and the parsed prompt; a finished step shows its result, one not started says so.
-Footer: Continue in background · "Cancel writes nothing." · Cancel; Esc hides. The warm card on the screen says "About 1
-min. You can undo it all afterwards." **Results** (the same card when done; wide; fits the window): subtitle "5 added ·
+Footer: Continue in background · "Cancel writes nothing." · Cancel; Esc hides. The warm card on the screen says "About 2
+min, measured on this model. You can undo it all afterwards.", or with no speed measured on this model "About 1–2 min,
+estimate. You can undo it all afterwards." **Results** (the same card when done; wide; fits the window): subtitle "5 added ·
 0 removed · 1 changed · 49 steps · 1 min 48 s"; tabs **Changes** (Entry \| Change \| Before \| After, grouped) and
 **Steps**; footer Undo all · Show changed rows · Done (`ProgressDialog.results` is the Results view; `ChangeResults`
 and Undo all stay). Names & style states: **empty** (the glossary offers Scan the book and + Add), **translation at work** (a banner "Translating is going on. Changes apply to the next segments translated.", both tables stay editable), **read-only** (the pass runs in the background: a banner and every editing control off) and **Results**..

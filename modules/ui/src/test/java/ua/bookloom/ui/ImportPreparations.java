@@ -13,12 +13,16 @@ import java.util.concurrent.TimeoutException;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ProjectSummary;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.TechnicalDetails;
 
-/** The import page's two states that need more than an answered import: a held read and a book already stored. */
+/**
+ * The import page's two states that need more than an answered import — a held read and a book already stored — and
+ * the Ukrainian target the Book Brief's extra rows need.
+ */
 final class ImportPreparations {
 
     private static final long WAIT_SECONDS = 10;
@@ -37,6 +41,22 @@ final class ImportPreparations {
             injector.getInstance(TechnicalDetails.class).property().set(true);
             return null;
         });
+    }
+
+    /** Opens a book into Ukrainian, whose language file gives the brief its extra rows. */
+    void openIntoUkrainian() throws TimeoutException {
+        final Path source = Path.of("/books/Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
+        onFx(() -> {
+            injector.getInstance(ImportViewModel.class).open(source);
+            return null;
+        });
+        awaitState(ImportState.Detected.class);
+        onFx(() -> {
+            injector.getInstance(BookBriefViewModel.class).setTargetLanguage("uk");
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     // The service is held, so the page stays on "Reading..." with its bar and Cancel.

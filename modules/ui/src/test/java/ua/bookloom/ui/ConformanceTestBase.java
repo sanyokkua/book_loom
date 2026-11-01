@@ -12,8 +12,11 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.BriefChoices;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.control.ProgressDialog;
@@ -89,6 +92,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
         return UiTestInjector.builder(locale)
                 .projects(projects)
                 .glossary(glossary)
+                .languages(new BundledChoices())
                 .build();
     }
 
@@ -191,5 +195,25 @@ abstract class ConformanceTestBase extends ShellTestBase {
         final Path book = Path.of("/books/Frankenstein.uk.epub");
         return new ExportOutcome(
                 new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
+    }
+
+    /**
+     * Every language counts as having tested rules, as in the default graph, and a target's Book Brief rows (apostrophe,
+     * quotation marks, address, declared conventions) come from the bundled language files, so the brief is checked with
+     * the rows a Ukrainian target shows.
+     */
+    private static final class BundledChoices implements LanguageSupport {
+
+        private static final LanguageSupport FILES = LanguageRules.bundled();
+
+        @Override
+        public boolean hasTestedRules(final String languageTag) {
+            return true;
+        }
+
+        @Override
+        public BriefChoices briefChoices(final String targetTag) {
+            return FILES.briefChoices(targetTag);
+        }
     }
 }

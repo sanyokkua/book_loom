@@ -99,7 +99,7 @@ class GlossaryBookMapScreenTest extends TranslatingScreenTestBase {
 
         final TableCell<?, ?> forms = cell("Зотов", FORMS);
         assertThat(shownTexts(forms, "glossary-forms")).containsExactly("Зотова, Зотову");
-        assertThat(TooltipProbe.tipText(forms.lookup(".glossary-forms"))).isEqualTo("joins 2 forms");
+        assertThat(TooltipProbe.tipText(forms.lookup(".glossary-forms"))).isEqualTo("joins 2 forms: Зотова, Зотову");
         assertThat(choiceText(cell("Зотов", STATE))).isEqualTo("pinned");
         assertThat(choiceText(cell("Зотов", KIND))).isEqualTo("character · person");
         assertThat(choiceText(cell("Зотов", GENDER))).isEqualTo("male · book");
@@ -131,6 +131,13 @@ class GlossaryBookMapScreenTest extends TranslatingScreenTestBase {
 
         assertThat(glossary.updated()).containsExactly(HALE.accepted());
         assertThat(glossary.updated().getFirst().targetState()).isEqualTo(TargetState.PINNED);
+        // Accepting is the person's decision, so the chip names the person (glossary spec, "A target's state and
+        // origin are shown").
+        awaitFx(() -> rowOf("Hale") != null
+                && rowOf("Hale").getItem() instanceof GlossaryEntry shown
+                && shown.targetState() == TargetState.PINNED);
+        assertThat(shownTexts(cell("Hale", TARGET), "glossary-origin")).containsExactly("person");
+        assertThat(choiceText(cell("Hale", STATE))).isEqualTo("pinned");
     }
 
     @Test

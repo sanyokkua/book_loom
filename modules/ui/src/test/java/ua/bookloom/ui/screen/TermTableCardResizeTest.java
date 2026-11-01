@@ -33,7 +33,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     @ParameterizedTest
     @CsvSource({"names-style", "recurring"})
     void table_eitherCard_flexesItsLastColumnAndKeepsFortySixPixelRows(final String card) throws Exception {
-        showScreen("en", 1024, 700, ROSALIND);
+        showScreen("en", 1280, 700, ROSALIND);
 
         assertThat(table(card).getColumnResizePolicy()).isSameAs(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         assertThat(table(card).getFixedCellSize()).isEqualTo(46.0);

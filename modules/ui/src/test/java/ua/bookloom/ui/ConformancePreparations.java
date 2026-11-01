@@ -88,6 +88,7 @@ final class ConformancePreparations {
             case GLOSSARY_WHILE_HIDDEN -> listAGlossaryAndHideThePass();
             case BOOK_WITHOUT_LANGUAGE -> openABookWithoutLanguage();
             case BRIEF_SUGGESTED -> suggestTheBrief();
+            case BRIEF_UKRAINIAN_TARGET -> new ImportPreparations(injector, projects).openIntoUkrainian();
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
             // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
@@ -176,11 +177,8 @@ final class ConformancePreparations {
 
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
     private void listAGlossary() throws TimeoutException {
-        glossary.willAnswer(Result.ok(List.of(
-                AutoNamesFixture.character("e1", "Frankenstein", Gender.UNKNOWN).withSuggestedGender(Gender.MALE),
-                AutoNamesFixture.character("e2", "Victor", Gender.MALE).withSuggestedTarget("Віктор"),
-                AutoNamesFixture.character("e3", "Justine", Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE),
-                AutoNamesFixture.character("e4", "Clerval", Gender.UNKNOWN).withNoGenderEvidence())));
+        glossary.willAnswer(Result.ok(AutoNamesFixture.conformanceGlossary()));
+        glossary.willFlag(AutoNamesFixture.CONFORMANCE_FLAGS);
         openABook();
     }
 

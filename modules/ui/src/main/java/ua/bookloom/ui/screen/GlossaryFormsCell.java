@@ -39,11 +39,12 @@ final class GlossaryFormsCell extends GlossaryCells.EntryCell<HBox> {
     void show(final HBox shown, final GlossaryEntry entry) {
         final String text = String.join(SEPARATOR, entry.forms());
         forms.setText(text);
+        // A narrow column cuts a long list; the hover names every form, so none is lost.
         if (!entry.forms().isEmpty()) {
             Tips.rewordOnHover(
                     forms,
                     messages.get(
-                            MessageKey.NAMES_STYLE_FORMS_JOINED, entry.forms().size()));
+                            MessageKey.NAMES_STYLE_FORMS_JOINED, entry.forms().size(), text));
         }
         GlossaryCells.showIf(unsure, entry.unsureMentions() > 0);
     }
