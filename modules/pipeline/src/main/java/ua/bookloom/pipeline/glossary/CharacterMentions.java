@@ -85,7 +85,8 @@ final class CharacterMentions {
                 entry.gender(),
                 entry.isGenderSuggested() ? entry.genderOrigin() : null,
                 confidence,
-                known != null && known.disagreesWithRule(entry.gender(), entry.genderOrigin()) ? known.gender() : null);
+                known != null && known.disagreesWithRule(entry.gender(), entry.genderOrigin()) ? known.gender() : null,
+                entry.target());
     }
 
     // How sure the held value is, for the order of the question.

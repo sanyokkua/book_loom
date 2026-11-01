@@ -174,4 +174,25 @@ class UnknownGendersTest {
         assertThat(service.unknownGenders(PROJECT, 5).isOk()).isTrue();
         assertThat(service.unknownGenders(PROJECT, 5).data()).isEmpty();
     }
+
+    // The question shows what the name is called in the translation, or that it has no translation yet.
+    @Test
+    void unknownGenders_entryWithTarget_carriesItsTarget() {
+        openProjects.put(PROJECT, book(List.of("Ember came. Ember sat. Ember left. Ember ran. Ember spoke."), "Title"));
+        service.add(GlossaryEntry.of("p1:Ember", PROJECT, "Ember", "Ембер", TermType.CHARACTER, Gender.UNKNOWN, false));
+
+        final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
+
+        assertThat(asked).extracting(UnknownGender::target).containsExactly("Ембер");
+    }
+
+    @Test
+    void unknownGenders_entryWithoutTarget_hasNullTarget() {
+        openProjects.put(PROJECT, book(List.of("Ember came. Ember sat. Ember left. Ember ran. Ember spoke."), "Title"));
+        add("Ember", TermType.CHARACTER, Gender.UNKNOWN);
+
+        final List<UnknownGender> asked = service.unknownGenders(PROJECT, 5).data();
+
+        assertThat(asked).extracting(UnknownGender::target).containsOnlyNulls();
+    }
 }

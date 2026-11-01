@@ -28,9 +28,10 @@ class UnknownGendersTest extends FxTestBase {
 
     @Test
     void find_characters_arriveInTheOrderGivenWithTheirOfferedValues() {
-        final UnknownGender ivar = new UnknownGender("Ivar", 12, true, "e1", Gender.MALE, Origin.LIKELY, 0.55, null);
+        final UnknownGender ivar =
+                new UnknownGender("Ivar", 12, true, "e1", Gender.MALE, Origin.LIKELY, 0.55, null, null);
         final UnknownGender mira =
-                new UnknownGender("Mira Holt", 30, true, "e2", Gender.FEMALE, Origin.LIKELY, 0.9, null);
+                new UnknownGender("Mira Holt", 30, true, "e2", Gender.FEMALE, Origin.LIKELY, 0.9, null, null);
         glossary.willListUnknownGenders(List.of(ivar, mira));
         final List<UnknownGender> seen = new java.util.concurrent.CopyOnWriteArrayList<>();
 

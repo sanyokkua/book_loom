@@ -59,7 +59,12 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Characters without a gender", "Ember — 12 mentions", "Back", "Start anyway");
+                .contains(
+                        "Characters without a gender",
+                        "Ember → no translation yet",
+                        "12 mentions",
+                        "Back",
+                        "Start anyway");
         assertThat(engine.requests()).isEmpty();
         assertThat(glossary.unknownGenderCalls()).containsExactly("p1:5");
     }
@@ -130,8 +135,10 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         assertThat(textsUnder(required(CARD)))
                 .contains(
                         "Characters without a gender",
-                        "Ember — 12 mentions",
-                        "Dane — 9 mentions · likely, confirm it",
+                        "Ember → no translation yet",
+                        "12 mentions",
+                        "Dane → no translation yet",
+                        "9 mentions",
                         "This character has only a suggested gender, which the translation does not hold to. Confirm it"
                                 + " in Names & style (Confirm suggested genders), or start anyway: the next export"
                                 + " re-renders those segments.");
@@ -145,7 +152,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Genders to confirm", "Dane — 9 mentions · likely, confirm it")
+                .contains("Genders to confirm", "Dane → no translation yet", "9 mentions")
                 .doesNotContain("Characters without a gender");
     }
 
@@ -158,7 +165,6 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Ember — 12 згадок", "Dane — 9 згадок · ймовірно, підтвердіть")
-                .noneMatch(text -> text.contains("Dane") && !text.contains("ймовірно"));
+                .contains("Ember → ще без перекладу", "12 згадок", "Dane → ще без перекладу", "9 згадок");
     }
 }

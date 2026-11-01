@@ -2908,14 +2908,26 @@ public enum MessageKey {
     DIALOG_GENDERS_TEXT("dialog.genders.text"),
     /** One listed character; argument 0 is its name, argument 1 how often the book names it. */
     DIALOG_GENDERS_ROW("dialog.genders.row"),
+    /** A character in the Start question that has no rendering yet. */
+    DIALOG_GENDERS_ROW_UNTRANSLATED("dialog.genders.row.untranslated"),
+    /** The mentions of a character in the Start question. */
+    DIALOG_GENDERS_ROW_MENTIONS("dialog.genders.row.mentions"),
+    /** The mentions of a character followed by one note. */
+    DIALOG_GENDERS_ROW_NOTED("dialog.genders.row.noted"),
+    /** The note on a row the person has answered. */
+    DIALOG_GENDERS_ROW_ANSWERED("dialog.genders.row.answered"),
+    /** The sentence under the rows: what happens to rows left alone. */
+    DIALOG_GENDERS_FOOTER("dialog.genders.footer"),
+    /** The button that answers every suggested row with its offered gender. */
+    DIALOG_GENDERS_CONFIRM_ALL("dialog.genders.confirmAll"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_CONFIRM_ALL}. */
+    DIALOG_GENDERS_CONFIRM_ALL_TIP("dialog.genders.confirmAll.tip"),
     /** The control that starts without setting the genders. */
     DIALOG_GENDERS_START("dialog.genders.start"),
     /** Title of the question when every character it lists has a suggested gender to confirm. */
     DIALOG_GENDERS_SUGGESTED_TITLE("dialog.genders.suggested.title"),
     /** Intro to the characters whose gender is only suggested; argument 0 is how many. */
     DIALOG_GENDERS_SUGGESTED_TEXT("dialog.genders.suggested.text"),
-    /** One character whose gender is only suggested; arguments: 0 the name, 1 its mentions. */
-    DIALOG_GENDERS_SUGGESTED_ROW("dialog.genders.suggested.row"),
     /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_START}. */
     DIALOG_GENDERS_START_TIP("dialog.genders.start.tip"),
     /** The control that returns without starting. */
@@ -2930,10 +2942,6 @@ public enum MessageKey {
     DIALOG_GENDERS_ROW_RULE("dialog.genders.row.rule"),
     /** Note on a row where the rule and the model disagree; arguments: 0 the rule's gender, 1 the model's. */
     DIALOG_GENDERS_ROW_DISAGREE("dialog.genders.row.disagree"),
-    /** The tick that makes a row's gender the person's. */
-    DIALOG_GENDERS_ROW_CONFIRM("dialog.genders.row.confirm"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_ROW_CONFIRM}. */
-    DIALOG_GENDERS_ROW_CONFIRM_TIP("dialog.genders.row.confirm.tip"),
     /** Hover explanation of a row's gender choices. */
     DIALOG_GENDERS_ROW_CHOICE_HELP("dialog.genders.row.choice.help"),
     /** Title of the question asked at Start about names whose meaning the book explains or plays on. */

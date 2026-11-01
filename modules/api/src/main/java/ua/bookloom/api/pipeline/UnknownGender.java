@@ -21,6 +21,7 @@ import ua.bookloom.api.project.Origin;
  *     gender is not its answer
  * @param modelGender the model's gender when it disagrees with a rule's, so the row can read "rule: male · model:
  *     female"; null otherwise
+ * @param target the character's rendering in the translation so far; null when it has none yet
  */
 public record UnknownGender(
         String term,
@@ -30,7 +31,8 @@ public record UnknownGender(
         Gender offered,
         @Nullable Origin origin,
         @Nullable Double confidence,
-        @Nullable Gender modelGender) {
+        @Nullable Gender modelGender,
+        @Nullable String target) {
 
     /** Rejects a missing part or a negative count. */
     public UnknownGender {
@@ -50,7 +52,7 @@ public record UnknownGender(
      * @param suggested whether the glossary holds a suggested gender nobody confirmed
      */
     public UnknownGender(final String term, final int mentions, final boolean suggested) {
-        this(term, mentions, suggested, "", Gender.UNKNOWN, null, null, null);
+        this(term, mentions, suggested, "", Gender.UNKNOWN, null, null, null, null);
     }
 
     /**
