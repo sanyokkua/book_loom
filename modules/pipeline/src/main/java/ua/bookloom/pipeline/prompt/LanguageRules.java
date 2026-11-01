@@ -59,8 +59,9 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     private final PromptTemplates.ResourceLoader loader;
-    private final boolean genericOnly;
-    private final LanguageFile generic;
+    // Read by PreparationExamples too, which picks the names-pass examples from the same files.
+    final boolean genericOnly;
+    final LanguageFile generic;
     private final Map<String, LanguageFile> files = new ConcurrentHashMap<>();
     private final Map<String, String> sections = new ConcurrentHashMap<>();
     private final Map<String, String> examples = new ConcurrentHashMap<>();
@@ -365,7 +366,7 @@ public final class LanguageRules implements LanguageSupport {
         return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
     }
 
-    private LanguageFile languageFile(@Nullable final String tag) {
+    LanguageFile languageFile(@Nullable final String tag) {
         final String primary = primary(tag);
         return primary.isEmpty() ? new LanguageFile("", Map.of()) : fileOf(primary, DIRECTORY + primary + SUFFIX);
     }

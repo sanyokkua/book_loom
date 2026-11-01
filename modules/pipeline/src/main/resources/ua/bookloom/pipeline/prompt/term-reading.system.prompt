@@ -9,10 +9,7 @@ A pronoun inside quoted speech, or in a line a speaker opens with a dash, belong
 Then, for the term as a whole: "speaking" is true when the name's meaning matters to the story (a name chosen for what it says), and "brand" is true only when it is the trade name of a company or a product line; it is false for a material, a substance, a drug, a unit of measure or any other common noun, whatever its spelling. "explainsName" is the number of the window where the book explains what the name means or plays on its meaning (a pun on it, its words translated, how it was given); 0 when no window does, which is the usual answer.
 
 Examples, each from a different invented book:
-[1] [[Ottoline]] set down the oar. She looked at the reeds. → {"window":1,"quote":"She looked at the reeds","usage":"name","kind":"person","gender":"female"}
-[2] “Is [[Corvel]] coming?” she asked. → {"window":2,"quote":"none","usage":"name","kind":"person","gender":"none"}
-[3] [[Bellwick]] slept, and her fishermen were out at sea. → {"window":3,"quote":"none","usage":"name","kind":"place","gender":"none"}
-[4] [[Still]], nobody answered the door. → {"window":4,"quote":"none","usage":"word","kind":"other","gender":"none"}
+{{examples}}
 
 Output ONLY the JSON object, one entry per window: no commentary, markdown or code fences. A valid reply:
-{"windows":[{"window":1,"quote":"She looked at the reeds","usage":"name","kind":"person","gender":"female"},{"window":2,"quote":"none","usage":"name","kind":"person","gender":"none"}],"speaking":false,"brand":false,"explainsName":0}
+{{exampleReply}}

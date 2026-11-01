@@ -157,7 +157,7 @@ stopwords-iso (MIT); the source, commits and attribution are in the folder's `AT
 | `addressPositions` | words | Words that put a person in a clause as the one spoken to. |
 | `stripStressMarks` | `true` | The language's text is stripped of stress marks (ru, uk). |
 | `conventions`, `convention.<name>.choices`, `convention.<name>.default` | names; values; the default | A convention the target declares for the Book Brief; uk declares `hardG` (`г ґ`, default `г`). |
-| `readingExample`, `readingExample.answer` | an invented sentence; the JSON answer `{"quote","usage","gender"}` | The worked example of the names-pass reading. |
+| `prepExample.<kind>.N`, `prepExample.<kind>.reply` (`kind` = `termReading`, `lexiconReading`, `prescan`, `reviewTerms`) | one invented example line each; the valid JSON reply | The worked examples of the four names-pass prompts (`{{examples}}`, `{{exampleReply}}`), taken from the **source** language's file, else the generic file's neutral English ones (also under Auto); never the target's or the pair's file, since these prompts read the book. ru and uk set their own; `LanguageFilesTest` checks that each quote, evidence and term stands in its own window and each reply parses. |
 | `honorifics`, `forbiddenLetters`, `informalAddress`, `formalAddress` | words, letters | ru now sets them as uk does. |
 
 Pair files (`pairs/<source>-<target>.properties`) may also set `nameExample.<policy>` (`TRANSLITERATE`, `TRANSLATE`,
@@ -1201,13 +1201,11 @@ If gender is not inferable, use "unknown". If no candidate is a name or a term, 
 
 {{/languageRules}}
 Examples:
-- "Well" opening "Well, I never." → not a name: leave it out.
-- "Garrick Ashdown" in "Garrick Ashdown smiled at his guests." → {"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}
-- "El-Barun" in "They rode on to El-Barun." → {"term":"El-Barun","type":"place","gender":"unknown","note":"a town","confidence":0.8}
+{{examples}}
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 A valid reply:
-{"terms":[{"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}]}
+{{exampleReply}}
 ```
 
 **USER**
@@ -1298,13 +1296,11 @@ windows that shows the term used as an ordinary word. If no window shows it, do 
 "name" or "term". For "name" and "term" leave "evidence" empty ("").
 
 Examples:
-- "Still" — 120×, [1] "Still, perhaps it was the weather." → {"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"}
-- "Garrick Ashdown" — [1] "\"He is late,\" said Garrick Ashdown.", [2] "Garrick Ashdown smiled. He raised his glass." → {"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}
-- "El-Barun" — [1] "They rode on to El-Barun." → {"term":"El-Barun","verdict":"name","type":"place","gender":"unknown","windows":[1],"evidence":""}
+{{examples}}
 
 Output ONLY the JSON object, one verdict per listed term: no commentary, markdown or code fences.
 A valid reply:
-{"verdicts":[{"term":"Still","verdict":"not-a-name","type":"other","gender":"unknown","windows":[1],"evidence":"Still, perhaps it was the weather"},{"term":"Garrick Ashdown","verdict":"name","type":"person","gender":"male","windows":[2],"evidence":""}]}
+{{exampleReply}}
 ```
 
 **USER**
@@ -1374,13 +1370,10 @@ A pronoun inside quoted speech, or in a line a speaker opens with a dash, belong
 Then, for the term as a whole: "speaking" is true when the name's meaning matters to the story (a name chosen for what it says), and "brand" is true only when it is the trade name of a company or a product line; it is false for a material, a substance, a drug, a unit of measure or any other common noun, whatever its spelling. "explainsName" is the number of the window where the book explains what the name means or plays on its meaning (a pun on it, its words translated, how it was given); 0 when no window does, which is the usual answer.
 
 Examples, each from a different invented book:
-[1] [[Ottoline]] set down the oar. She looked at the reeds. → {"window":1,"quote":"She looked at the reeds","usage":"name","kind":"person","gender":"female"}
-[2] “Is [[Corvel]] coming?” she asked. → {"window":2,"quote":"none","usage":"name","kind":"person","gender":"none"}
-[3] [[Bellwick]] slept, and her fishermen were out at sea. → {"window":3,"quote":"none","usage":"name","kind":"place","gender":"none"}
-[4] [[Still]], nobody answered the door. → {"window":4,"quote":"none","usage":"word","kind":"other","gender":"none"}
+{{examples}}
 
 Output ONLY the JSON object, one entry per window: no commentary, markdown or code fences. A valid reply:
-{"windows":[{"window":1,"quote":"She looked at the reeds","usage":"name","kind":"person","gender":"female"},{"window":2,"quote":"none","usage":"name","kind":"person","gender":"none"}],"speaking":false,"brand":false,"explainsName":0}
+{{exampleReply}}
 ```
 
 **USER**
@@ -1523,12 +1516,10 @@ Then, for the term as a whole:
 - "rendering": the one rendering in {{targetLanguage}} that fits every window, in its base form, as a translator would list it (for a German book, "signal fire" is "Signalfeuer"); empty when the windows do not settle one. Never guess.
 
 Examples, each from a different invented book:
-[1] They lit the [[signal fire]] on the north ridge. → {"window":1,"quote":"lit the signal fire","usage":"term"}
-[2] A [[bank]] of fog lay on the river. → {"window":2,"quote":"A bank of fog","usage":"word"}
-[3] [[Marrow Gate]] was shut at dusk. → {"window":3,"quote":"Marrow Gate was shut","usage":"name"}
+{{examples}}
 
 Output ONLY the JSON object, one entry per window: no commentary, markdown or code fences. A valid reply:
-{"windows":[{"window":1,"quote":"lit the signal fire","usage":"term"},{"window":2,"quote":"the signal fire burned low","usage":"term"}],"senses":1,"rendering":""}
+{{exampleReply}}
 ```
 
 **USER**

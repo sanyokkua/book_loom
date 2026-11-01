@@ -8,9 +8,7 @@ Then, for the term as a whole:
 - "rendering": the one rendering in {{targetLanguage}} that fits every window, in its base form, as a translator would list it (for a German book, "signal fire" is "Signalfeuer"); empty when the windows do not settle one. Never guess.
 
 Examples, each from a different invented book:
-[1] They lit the [[signal fire]] on the north ridge. → {"window":1,"quote":"lit the signal fire","usage":"term"}
-[2] A [[bank]] of fog lay on the river. → {"window":2,"quote":"A bank of fog","usage":"word"}
-[3] [[Marrow Gate]] was shut at dusk. → {"window":3,"quote":"Marrow Gate was shut","usage":"name"}
+{{examples}}
 
 Output ONLY the JSON object, one entry per window: no commentary, markdown or code fences. A valid reply:
-{"windows":[{"window":1,"quote":"lit the signal fire","usage":"term"},{"window":2,"quote":"the signal fire burned low","usage":"term"}],"senses":1,"rendering":""}
+{{exampleReply}}

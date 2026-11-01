@@ -209,13 +209,13 @@ public enum PromptName {
             new Slots(Set.of("reports"), Set.of("title", "author", "year", "publisher", "description", "knowledge"))),
 
     /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
-    TERM_READING("term-reading", TermReadingSchema.SCHEMA, "windows"),
+    TERM_READING(PreparationSlots.READING, "term-reading", TermReadingSchema.SCHEMA, "windows"),
 
     /** The reading of one recurring term in numbered windows from across the book (15i.N7); one term per call. */
-    LEXICON_READING("lexicon-reading", LexiconReadingSchema.SCHEMA, "windows"),
+    LEXICON_READING(PreparationSlots.READING, "lexicon-reading", LexiconReadingSchema.SCHEMA, "windows"),
 
     /** At Max, one term's disagreeing reading calls summed up in one call (15i.N5). */
-    TERM_SUMMARY("term-summary", TermReadingSchema.SUMMARY, "calls"),
+    TERM_SUMMARY(PreparationSlots.SUMMARY, "term-summary", TermReadingSchema.SUMMARY, "calls"),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
@@ -225,9 +225,7 @@ public enum PromptName {
             PrescanSchema.SCHEMA,
             0.2,
             null,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage"),
-                    Set.of("styleSheet", "foreignPassageRule", "languageRules")),
+            PreparationSlots.PRESCAN,
             new Slots(Set.of("candidates"), Set.of("existingTerms"))),
 
     /**
@@ -241,7 +239,7 @@ public enum PromptName {
             ReviewTermsSchema.SCHEMA,
             0.1,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            PreparationSlots.READING,
             new Slots(Set.of("terms"), Set.of())),
 
     /**
@@ -294,7 +292,7 @@ public enum PromptName {
     private final Slots userSlots;
 
     // A reading of one glossary term (15i.N4, 15i.N5): a term reading at temperature 0, the term and one text slot.
-    PromptName(final String name, final String responseSchema, final String textSlot) {
+    PromptName(final Slots system, final String name, final String responseSchema, final String textSlot) {
         this(
                 name,
                 CallKind.TERM_READING,
@@ -302,7 +300,7 @@ public enum PromptName {
                 responseSchema,
                 0.0,
                 null,
-                new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+                system,
                 new Slots(Set.of("term", textSlot), Set.of()));
     }
 

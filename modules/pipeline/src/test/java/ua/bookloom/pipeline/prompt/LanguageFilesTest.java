@@ -41,7 +41,8 @@ class LanguageFilesTest {
             "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|moodWords|translit|namesInflect|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastNeuter|pastSkipWords|pastNotVerbs|paradigmGender|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+"
-                    + "|nameParadigms\\.\\d+|convention\\.[A-Za-z]+\\.(choices|default)|readingExample(\\.answer)?"
+                    + "|nameParadigms\\.\\d+|convention\\.[A-Za-z]+\\.(choices|default)"
+                    + "|prepExample\\.(termReading|lexiconReading|prescan|reviewTerms)\\.(\\d+|reply)"
                     + "|nameExample\\.(TRANSLATE|TRANSLITERATE|KEEP_ORIGINAL))");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
 
@@ -130,15 +131,36 @@ class LanguageFilesTest {
         assertThat(properties.getProperty("addressPositions")).startsWith("у ");
     }
 
+    static Stream<String> preparationExamples() {
+        return Stream.of("generic", "ru", "uk")
+                .flatMap(file -> Stream.of("termReading", "lexiconReading", "prescan", "reviewTerms")
+                        .map(kind -> file + ":" + kind));
+    }
+
+    // IF an example's quote, evidence or term were not in its own window, THEN the prompt would teach the model to
+    // quote what the code then refuses; and a reply the parser cannot read would teach a broken shape.
     @ParameterizedTest
-    @ValueSource(strings = {"en", "ru", "uk"})
-    void readingExample_enRuUk_parsesAsAQuoteUsageGenderAnswer(final String tag) throws IOException {
-        final Properties properties = file("languages/" + tag + ".properties");
-        final var answer = new ObjectMapper().readTree(properties.getProperty("readingExample.answer"));
-        assertThat(properties.getProperty("readingExample")).startsWith(tag.equals("en") ? "Window:" : "");
-        assertThat(answer.get("quote").asText()).isNotBlank();
-        assertThat(answer.get("usage").asText()).isEqualTo("person");
-        assertThat(answer.get("gender").asText()).isEqualTo("female");
+    @MethodSource("preparationExamples")
+    void prepExample_everyFile_quotesStandInTheirWindowAndRepliesParse(final String fileAndKind) throws IOException {
+        final int colon = fileAndKind.indexOf(':');
+        final Properties properties = file("languages/" + fileAndKind.substring(0, colon) + ".properties");
+        final String prefix = "prepExample." + fileAndKind.substring(colon + 1) + ".";
+        final List<String> lines = Stream.iterate(1, n -> properties.getProperty(prefix + n) != null, n -> n + 1)
+                .map(n -> properties.getProperty(prefix + n))
+                .toList();
+        final ObjectMapper mapper = new ObjectMapper();
+
+        assertThat(lines).hasSizeGreaterThanOrEqualTo(3);
+        assertThat(mapper.readTree(properties.getProperty(prefix + "reply")).isObject())
+                .isTrue();
+        assertThat(lines).filteredOn(line -> line.contains("→ {")).allSatisfy(line -> {
+            final String window =
+                    line.substring(0, line.indexOf(" → ")).replace("[[", "").replace("]]", "");
+            final var answer = mapper.readTree(line.substring(line.indexOf("→ {") + 2));
+            assertThat(window).contains(answer.path("quote").asText("none").replace("none", ""));
+            assertThat(window).contains(answer.path("evidence").asText(""));
+            assertThat(window).contains(answer.path("term").asText(""));
+        });
     }
 
     @ParameterizedTest

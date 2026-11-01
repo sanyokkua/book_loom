@@ -12,10 +12,8 @@ If gender is not inferable, use "unknown". If no candidate is a name or a term, 
 
 {{/languageRules}}
 Examples:
-- "Well" opening "Well, I never." → not a name: leave it out.
-- "Garrick Ashdown" in "Garrick Ashdown smiled at his guests." → {"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}
-- "El-Barun" in "They rode on to El-Barun." → {"term":"El-Barun","type":"place","gender":"unknown","note":"a town","confidence":0.8}
+{{examples}}
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 A valid reply:
-{"terms":[{"term":"Garrick Ashdown","type":"person","gender":"male","note":"a merchant","confidence":0.9}]}
+{{exampleReply}}

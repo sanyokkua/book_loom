@@ -44,6 +44,7 @@ public final class PromptTemplates {
     }
 
     private static final String EXAMPLES = "examples";
+    private static final String EXAMPLE_REPLY = "exampleReply";
     private static final String LANGUAGE_RULES = "languageRules";
     private static final String TOKEN_RULES = "tokenRules";
     private static final String NO_TOKEN_RULES = "noTokenRules";
@@ -52,6 +53,7 @@ public final class PromptTemplates {
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
+    private final PreparationExamples preparations;
 
     /** Loads the bundled templates with the bundled language rules. */
     public PromptTemplates() {
@@ -83,6 +85,7 @@ public final class PromptTemplates {
     PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
         Objects.requireNonNull(loader, "loader");
         this.rules = Objects.requireNonNull(rules, "rules");
+        this.preparations = new PreparationExamples(rules);
         for (final PromptName name : PromptName.values()) {
             name.systemSlots().ifPresent(slots -> systems.put(name, load(loader, name, "system", slots)));
             users.put(name, load(loader, name, "user", name.userSlots()));
@@ -215,7 +218,12 @@ public final class PromptTemplates {
         if (declares(name, TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
             values.putAll(tokenGate(true));
         }
-        if (declares(name, EXAMPLES) && !extra.containsKey(EXAMPLES)) {
+        final String kind = PreparationSlots.kindOf(name);
+        if (kind != null) {
+            final PreparationExample example = preparations.of(frame.sourceLanguage(), kind);
+            values.put(EXAMPLES, example.examples());
+            values.put(EXAMPLE_REPLY, example.reply());
+        } else if (declares(name, EXAMPLES) && !extra.containsKey(EXAMPLES)) {
             values.put(EXAMPLES, examplesFor(name, frame));
         }
         if (declares(name, LANGUAGE_RULES)) {
