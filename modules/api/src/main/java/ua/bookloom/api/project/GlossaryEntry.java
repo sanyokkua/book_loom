@@ -64,6 +64,7 @@ public record GlossaryEntry(
         @Nullable MeaningChoice meaningChoice,
         @Nullable NameKnowledge knowledge,
         int unsureMentions) {
+    private static final String CHANGED = "changed";
 
     /** Validates the parts and normalises the ones that cannot hold together. */
     public GlossaryEntry {
@@ -211,7 +212,7 @@ public record GlossaryEntry(
 
     /** This entry with another type and its origin ({@link Origin#USER} for the person's edit); the rest is kept. */
     public GlossaryEntry withType(final TermType changed, final Origin origin) {
-        Objects.requireNonNull(changed, "changed");
+        Objects.requireNonNull(changed, CHANGED);
         Objects.requireNonNull(origin, "origin");
         return described(forms, changed, origin, meaning, meaningChoice, unsureMentions);
     }
@@ -224,7 +225,7 @@ public record GlossaryEntry(
      * @return a copy with the gender set as the person's and marked as tried; without an origin when it is unknown
      */
     public GlossaryEntry withGender(final Gender changed) {
-        Objects.requireNonNull(changed, "changed");
+        Objects.requireNonNull(changed, CHANGED);
         return copyGender(changed, Origin.USER, true, false);
     }
 
@@ -264,7 +265,7 @@ public record GlossaryEntry(
      * @return a copy with the gender and its origin set
      */
     public GlossaryEntry withGenderFrom(final Gender changed, final Origin origin) {
-        Objects.requireNonNull(changed, "changed");
+        Objects.requireNonNull(changed, CHANGED);
         Objects.requireNonNull(origin, "origin");
         return copyGender(changed, origin, genderSeedTried, false);
     }

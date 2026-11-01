@@ -4,28 +4,29 @@ import java.time.Duration;
 
 /**
  * The fixed time and retry limits of a model call. They live here so the window can show exactly what the HTTP client
- * enforces, from one place. An interface of constants because {@code :api} holds records, enums and interfaces only.
+ * enforces, from one place. A component-less record because {@code :api} holds records, enums and interfaces only, and an
+ * interface of constants is a code smell.
  */
-public interface CallLimits {
+public record CallLimits() {
 
     /** How long a reviewer call may take. */
-    Duration REVIEW_TIMEOUT = Duration.ofSeconds(90);
+    public static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(90);
 
     /** How long a helper call (names, brief, file name, summary) may take. */
-    Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
+    public static final Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
 
     /** How long a call with no fixed limit may take per token of its expected reply. */
-    Duration PER_EXPECTED_TOKEN = Duration.ofMillis(500);
+    public static final Duration PER_EXPECTED_TOKEN = Duration.ofMillis(500);
 
     /** How long a streamed reply may send nothing before the call counts as stalled. */
-    Duration STREAM_IDLE = Duration.ofSeconds(60);
+    public static final Duration STREAM_IDLE = Duration.ofSeconds(60);
 
     /** The longest any chat call is allowed, whatever its expected length. */
-    Duration MAX_CHAT_TIMEOUT = Duration.ofMinutes(10);
+    public static final Duration MAX_CHAT_TIMEOUT = Duration.ofMinutes(10);
 
     /** The most provider requests for one logical chat. */
-    int MAX_ATTEMPTS = 3;
+    public static final int MAX_ATTEMPTS = 3;
 
     /** The most of those requests that may end in a timeout. */
-    int MAX_TIMEOUT_ATTEMPTS = 2;
+    public static final int MAX_TIMEOUT_ATTEMPTS = 2;
 }
