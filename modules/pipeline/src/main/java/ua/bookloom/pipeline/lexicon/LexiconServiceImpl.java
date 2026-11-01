@@ -208,8 +208,14 @@ public final class LexiconServiceImpl implements LexiconService {
             return Result.err(
                     AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
         }
-        final Result<List<LexiconEntry>> proposed = KeyTermScan.newTerms(
-                projectId, index, index.story(), sourceLanguage(projectId, document), glossary, lexicon);
+        final String language = sourceLanguage(projectId, document);
+        final Result<Integer> merged =
+                LexiconForms.merge(lexicon, projectId, KeyTermScan.candidates(index, index.story(), language));
+        if (merged.isErr()) {
+            return Result.err(Objects.requireNonNull(merged.error(), "error"));
+        }
+        final Result<List<LexiconEntry>> proposed =
+                KeyTermScan.newTerms(projectId, index, index.story(), language, glossary, lexicon);
         if (proposed.isErr()) {
             return proposed;
         }
@@ -235,18 +241,16 @@ public final class LexiconServiceImpl implements LexiconService {
         if (held.isErr()) {
             return Result.err(Objects.requireNonNull(held.error(), "error"));
         }
-        final List<String> candidates =
-                KeyTermScan.frequentWords(index, index.story(), sourceLanguage(projectId, document), MAX_CANDIDATES)
-                        .stream()
-                        .map(NameCandidate::term)
-                        .filter(term ->
-                                !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
-                        .filter(term -> !KeyTermScan.wasRemoved(lexicon, projectId, term))
-                        .toList();
+        final List<NameCandidate> groups = unheld(
+                projectId,
+                KeyTermScan.frequentWords(index, index.story(), sourceLanguage(projectId, document), MAX_CANDIDATES),
+                Objects.requireNonNull(held.data(), "held"));
+        final List<String> candidates = groups.stream().map(NameCandidate::term).toList();
+        final Map<String, List<String>> forms = LexiconForms.byKey(groups);
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
-                .scanTerms(projectId, candidates, model, progress)
-                .flatMap(decisions -> decisions(projectId).addDecided(projectId, candidates, decisions))
+                .scanTerms(projectId, candidates, forms, model, progress)
+                .flatMap(decisions -> decisions(projectId).addDecided(projectId, candidates, forms, decisions))
                 .flatMap(added -> {
                     log.info("Lexicon model scan project={} added={}", projectId, added);
                     return lexicon.all(projectId);
@@ -269,6 +273,7 @@ public final class LexiconServiceImpl implements LexiconService {
                             .readTerms(
                                     projectId,
                                     asked.stream().map(LexiconEntry::term).toList(),
+                                    LexiconForms.ofEntries(asked),
                                     model,
                                     progress)
                             .flatMap(decisions -> decisions(projectId).applyReview(projectId, asked, decisions));
@@ -296,9 +301,22 @@ public final class LexiconServiceImpl implements LexiconService {
                 .flatMap(names -> lexicon.all(projectId).map(terms -> {
                     final Set<String> keys = new HashSet<>();
                     names.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
-                    terms.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
+                    terms.forEach(entry -> {
+                        keys.add(LexiconEntry.keyOf(entry.term()));
+                        entry.forms().forEach(form -> keys.add(LexiconEntry.keyOf(form)));
+                    });
                     return keys;
                 }));
+    }
+
+    // The groups none of whose forms the glossary or the lexicon holds, or the person removed this session.
+    private List<NameCandidate> unheld(
+            final String projectId, final List<NameCandidate> groups, final Set<String> heldKeys) {
+        return groups.stream()
+                .filter(group -> KeyTermScan.formsOf(group).stream()
+                        .noneMatch(form -> heldKeys.contains(LexiconEntry.keyOf(form))
+                                || KeyTermScan.wasRemoved(lexicon, projectId, form)))
+                .toList();
     }
 
     private Result<List<LexiconEntry>> runSuggest(

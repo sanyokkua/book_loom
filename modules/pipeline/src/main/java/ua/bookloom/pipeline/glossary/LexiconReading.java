@@ -142,7 +142,22 @@ public final class LexiconReading {
             final QualityDial dial,
             final CallFrame frame,
             final ModelCalls calls) {
+        return read(terms, Map.of(), story, dial, frame, calls);
+    }
+
+    /**
+     * As {@link #read(List, BookSlice, QualityDial, CallFrame, ModelCalls)}, a term's windows drawn from any of the
+     * other forms {@code forms} holds for it under {@code LexiconEntry.keyOf(term)}, so one call reads one word.
+     */
+    public Result<Map<String, Decision>> read(
+            final List<String> terms,
+            final Map<String, List<String>> forms,
+            final BookSlice story,
+            final QualityDial dial,
+            final CallFrame frame,
+            final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(forms, "forms");
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(frame, "frame");
@@ -150,7 +165,7 @@ public final class LexiconReading {
         log.info("Lexicon reading started dial={} terms={}", dial, terms.size());
         final Result<Map<String, Decision>> result = dial == QualityDial.FAST
                 ? readByChoice(terms, story, frame, calls)
-                : readInWindows(terms, story, planOf(dial), frame, calls);
+                : readInWindows(terms, forms, story, planOf(dial), frame, calls);
         log.info(
                 "Lexicon reading finished decided={}",
                 result.isOk() ? Objects.requireNonNull(result.data()).size() : 0);
@@ -179,10 +194,25 @@ public final class LexiconReading {
             final QualityDial dial,
             final CallFrame frame,
             final ModelCalls calls) {
+        return scan(terms, Map.of(), story, dial, frame, calls);
+    }
+
+    /**
+     * As {@link #scan(List, BookSlice, QualityDial, CallFrame, ModelCalls)}, a candidate's windows drawn from any of
+     * the other forms {@code forms} holds for it under {@code LexiconEntry.keyOf(term)}.
+     */
+    public Result<Map<String, Decision>> scan(
+            final List<String> terms,
+            final Map<String, List<String>> forms,
+            final BookSlice story,
+            final QualityDial dial,
+            final CallFrame frame,
+            final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(forms, "forms");
         Objects.requireNonNull(dial, "dial");
         if (dial == QualityDial.FAST) {
-            return read(terms, story, dial, frame, calls);
+            return read(terms, forms, story, dial, frame, calls);
         }
         log.info("Lexicon scan reading started dial={} candidates={}", dial, terms.size());
         final List<String> first = terms.subList(0, Math.min(terms.size(), readFirst(dial)));
@@ -197,7 +227,7 @@ public final class LexiconReading {
                     first.size(),
                     chosen.size() - first.size(),
                     rest.size());
-            return readInWindows(chosen, story, planOf(dial), frame, calls)
+            return readInWindows(chosen, forms, story, planOf(dial), frame, calls)
                     .map(read -> decisionsOf(terms, read, choice));
         });
     }
@@ -235,6 +265,7 @@ public final class LexiconReading {
 
     private Result<Map<String, Decision>> readInWindows(
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final BookSlice story,
             final WindowPlan plan,
             final CallFrame frame,
@@ -245,7 +276,8 @@ public final class LexiconReading {
             if (!seen.add(LexiconEntry.keyOf(term))) {
                 continue;
             }
-            final Result<Decision> decided = readOne(term, story, plan, frame, calls);
+            final Result<Decision> decided =
+                    readOne(term, forms.getOrDefault(LexiconEntry.keyOf(term), List.of()), story, plan, frame, calls);
             if (decided.isErr()) {
                 log.warn("Lexicon reading stopped: a call failed");
                 return Result.err(Objects.requireNonNull(decided.error(), "error"));
@@ -257,13 +289,18 @@ public final class LexiconReading {
 
     private Result<Decision> readOne(
             final String term,
+            final List<String> forms,
             final BookSlice story,
             final WindowPlan plan,
             final CallFrame frame,
             final ModelCalls calls) {
-        final List<Mention> mentions = mentionsOf(term, story);
+        final List<Mention> mentions = mentionsOf(term, forms, story);
         final List<Window> windows = story.index().windows(mentions, plan);
-        log.debug("Lexicon reading term: {} mentions, {} windows", mentions.size(), windows.size());
+        log.debug(
+                "Lexicon reading term: {} forms, {} mentions, {} windows",
+                forms.size() + 1,
+                mentions.size(),
+                windows.size());
         if (windows.isEmpty()) {
             log.debug("Lexicon reading term has no window: no call, undecided");
             return Result.ok(Decision.undecided());
@@ -284,9 +321,13 @@ public final class LexiconReading {
         return Result.ok(decisionOf(term, Objects.requireNonNull(reply.data(), "reply"), windows, frame));
     }
 
-    private static List<Mention> mentionsOf(final String term, final BookSlice story) {
+    // Every form's mentions, so the windows of a word may come from any form the book writes it in.
+    private static List<Mention> mentionsOf(final String term, final List<String> forms, final BookSlice story) {
         final Set<Integer> slice = new LinkedHashSet<>(story.ordinals());
-        return story.index().mentions(List.of(term), Case.INSENSITIVE).stream()
+        final List<String> all = new ArrayList<>();
+        all.add(term);
+        all.addAll(forms);
+        return story.index().mentions(all, Case.INSENSITIVE).stream()
                 .filter(mention -> slice.contains(mention.ordinal()))
                 .toList();
     }

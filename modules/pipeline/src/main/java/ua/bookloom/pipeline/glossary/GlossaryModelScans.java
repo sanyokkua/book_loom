@@ -115,6 +115,7 @@ public final class GlossaryModelScans {
      *
      * @param projectId the non-null project whose book gives each term its windows
      * @param terms the non-null candidate terms
+     * @param forms each term's other forms by lexicon key; never null, a term absent has none
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish
      * @return a decision for every term asked, by lexicon key, or the first failed call's error
@@ -122,11 +123,12 @@ public final class GlossaryModelScans {
     public Result<Map<String, LexiconReading.Decision>> readTerms(
             final String projectId,
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         return book(projectId)
                 .flatMap(book -> lexiconReading.read(
-                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
+                        terms, forms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
     /**
@@ -134,6 +136,7 @@ public final class GlossaryModelScans {
      *
      * @param projectId the project; never null
      * @param terms the candidate words; never null
+     * @param forms each candidate's other forms by lexicon key; never null
      * @param model the model to ask; never null
      * @param progress where each call is announced; never null
      * @return a decision for every candidate, or the book's or the first failed call's error
@@ -141,12 +144,13 @@ public final class GlossaryModelScans {
     public Result<Map<String, LexiconReading.Decision>> scanTerms(
             final String projectId,
             final List<String> terms,
+            final Map<String, List<String>> forms,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
         log.debug("Lexicon model scan reading project={} candidates={}", projectId, terms.size());
         return book(projectId)
                 .flatMap(book -> lexiconReading.scan(
-                        terms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
+                        terms, forms, book.story(), book.dial(), book.frame(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {

@@ -50,7 +50,7 @@ class LexiconDecisionsTest {
 
     @Test
     void addDecided_nameMajorityOnAWordWrittenMostlyInLowerCase_isKeptAsARecurringTerm() {
-        decisions.addDecided(desk.projectId(), List.of("lantern"), promote("lantern"));
+        decisions.addDecided(desk.projectId(), List.of("lantern"), Map.of(), promote("lantern"));
 
         assertThat(lexicon.all(desk.projectId()).data())
                 .extracting(LexiconEntry::term)
@@ -60,7 +60,7 @@ class LexiconDecisionsTest {
 
     @Test
     void addDecided_nameMajorityOnAWordWrittenCapitalised_goesToTheGlossary() {
-        decisions.addDecided(desk.projectId(), List.of("Warden"), promote("Warden"));
+        decisions.addDecided(desk.projectId(), List.of("Warden"), Map.of(), promote("Warden"));
 
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
         assertThat(desk.glossary().findByTerm(desk.projectId(), "Warden").data())

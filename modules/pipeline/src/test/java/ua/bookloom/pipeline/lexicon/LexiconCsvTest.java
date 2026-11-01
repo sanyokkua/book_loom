@@ -158,6 +158,34 @@ class LexiconCsvTest {
         });
     }
 
+    // A row may name a held term by another of its forms: it is the same word, so no second entry is added.
+    @Test
+    void importCsv_rowNamingAHeldTermsForm_updatesThatEntryAndKeepsItsForms() throws IOException {
+        lexicon.put(new LexiconEntry(PROJECT, "фонарь", List.of(), null, null, null, null, List.of("фонаря")));
+        final Path file = write(HEADER, "фонаря,ліхтар");
+
+        final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
+
+        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(), List.of()));
+        assertThat(lexicon.all(PROJECT).data()).singleElement().satisfies(entry -> {
+            assertThat(entry.term()).isEqualTo("фонарь");
+            assertThat(entry.chosen()).isEqualTo("ліхтар");
+            assertThat(entry.forms()).containsExactly("фонаря");
+        });
+    }
+
+    // An edit changes the rendering and keeps the forms the entry was stored with.
+    @Test
+    void edit_entryWithForms_keepsTheForms() {
+        lexicon.put(new LexiconEntry(PROJECT, "фонарь", List.of(), null, null, null, null, List.of("фонаря")));
+
+        service.edit(PROJECT, "фонарь", "ліхтар");
+
+        assertThat(lexicon.all(PROJECT).data())
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.forms()).containsExactly("фонаря"));
+    }
+
     // IF an import replaced a chosen rendering, THEN opening a series file would undo the person's own wording.
     @Test
     void importCsv_heldTermWithAChosenRendering_isNeverReplaced() throws IOException {

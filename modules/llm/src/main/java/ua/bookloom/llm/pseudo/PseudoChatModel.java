@@ -41,6 +41,8 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
     private static final String FORMAT_TERM_READING = "term-reading";
+    private static final String FORMAT_TERM_CHOICE = "term-choice";
+    private static final String TERM_CHOICE_REPLY = "{\"terms\":[]}";
     // One numbered item of a batch draft: <s id="3">text</s>, inside the <Items> block of the user message.
     private static final Pattern BATCH_ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
     // One listed term of a glossary review: "- <term> — <count>× — ...".
@@ -121,6 +123,7 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
             case FORMAT_TERM_READING -> readingReply(source);
+            case FORMAT_TERM_CHOICE -> TERM_CHOICE_REPLY;
             case FORMAT_DRAFT_BATCH -> batchReply(source);
             default -> targetReply(translation);
         };

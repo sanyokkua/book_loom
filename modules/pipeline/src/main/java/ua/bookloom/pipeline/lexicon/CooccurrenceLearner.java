@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.LexiconEntry;
@@ -75,33 +75,12 @@ public final class CooccurrenceLearner {
      */
     public record Learned(String rendering, int support, int occurrences, double dice) {}
 
-    /** What is counted for one tracked term. */
-    private static final class Tracked {
-        private final String term;
-        private final boolean commonWord;
-        private final boolean name;
-        private final boolean capitals;
-        private final Pattern lowerCaseForm;
-        private int occurrences;
-        private int lowerCaseSegments;
-        private final Map<String, Integer> withStem = new HashMap<>();
-
-        Tracked(final String term, final boolean commonWord, final boolean name, final boolean title) {
-            this.term = term;
-            this.commonWord = commonWord;
-            this.name = name;
-            this.capitals = name || title;
-            this.lowerCaseForm = Pattern.compile("(?<![\\p{L}\\p{N}])" + Pattern.quote(term.toLowerCase(Locale.ROOT))
-                    + "(?:['’ʼ]?s|es)?(?![\\p{L}\\p{N}])");
-        }
-    }
-
     /** A stem's support under a term and its score. */
     private record Scored(String stem, int support, double dice) {}
 
     private final Vocabulary words = new Vocabulary();
     private final Vocabulary names = new Vocabulary();
-    private final Map<String, Tracked> tracked = new LinkedHashMap<>();
+    private final Map<String, TrackedTerm> tracked = new LinkedHashMap<>();
     private final List<String> obliqueEndings;
     private final @Nullable String sourceTag;
     private final @Nullable String targetTag;
@@ -165,8 +144,20 @@ public final class CooccurrenceLearner {
      *     of the segments that name it, it is a part of a title or a name ({@code The Times}) and learns nothing
      */
     public void track(final String term, final boolean commonWord) {
+        track(term, commonWord, List.of());
+    }
+
+    /**
+     * Starts counting a term with its other forms, so a segment that names any form of the word counts for it.
+     *
+     * @param term the non-blank source term
+     * @param commonWord as {@link #track(String, boolean)}
+     * @param forms the term's other forms ({@link FormGroups}); never null, empty for a word met in one form
+     */
+    public void track(final String term, final boolean commonWord, final Collection<String> forms) {
         Objects.requireNonNull(term, "term");
-        trackAs(term, new Tracked(term, commonWord, false, false));
+        Objects.requireNonNull(forms, "forms");
+        trackAs(term, new TrackedTerm(term, forms, commonWord, false, false));
     }
 
     /**
@@ -177,7 +168,7 @@ public final class CooccurrenceLearner {
      */
     public void trackTitle(final String title) {
         Objects.requireNonNull(title, "title");
-        trackAs(title, new Tracked(title, false, false, true));
+        trackAs(title, new TrackedTerm(title, List.of(), false, false, true));
     }
 
     /**
@@ -188,10 +179,10 @@ public final class CooccurrenceLearner {
      */
     public void trackName(final String name) {
         Objects.requireNonNull(name, "name");
-        trackAs(name, new Tracked(name, false, true, false));
+        trackAs(name, new TrackedTerm(name, List.of(), false, true, false));
     }
 
-    private void trackAs(final String term, final Tracked counts) {
+    private void trackAs(final String term, final TrackedTerm counts) {
         if (tracked.putIfAbsent(LexiconEntry.keyOf(term), counts) == null) {
             log.debug("Learner tracks a term; {} terms tracked", tracked.size());
             log.trace("Learner tracks term {}", term);
@@ -223,7 +214,8 @@ public final class CooccurrenceLearner {
         log.trace("Learner observed {} stems, {} terms tracked", stems.size() + nameStems.size(), tracked.size());
     }
 
-    private static Set<String> candidates(final Tracked counts, final Set<String> stems, final Set<String> nameStems) {
+    private static Set<String> candidates(
+            final TrackedTerm counts, final Set<String> stems, final Set<String> nameStems) {
         if (counts.name) {
             return nameStems;
         }
@@ -235,13 +227,14 @@ public final class CooccurrenceLearner {
         return both;
     }
 
-    // Mr matches Mrs through the plural ending, but a match another tracked term owns (Mrs) is that term's, so the
+    // A segment counts when it names any form of the term. Mr matches Mrs through the plural ending, but a match
+    // another tracked term owns (Mrs) is that term's, so the
     // two titles never count the same segment.
-    private boolean namesTerm(final Tracked counts, final String source) {
-        final String own = LexiconEntry.keyOf(counts.term);
-        return TermMatch.matches(counts.term, source).stream()
+    private boolean namesTerm(final TrackedTerm counts, final String source) {
+        final Set<String> own = counts.forms.stream().map(LexiconEntry::keyOf).collect(Collectors.toSet());
+        return TermMatch.matches(counts.forms, source).stream()
                 .map(LexiconEntry::keyOf)
-                .anyMatch(match -> match.equals(own) || !tracked.containsKey(match));
+                .anyMatch(match -> own.contains(match) || !tracked.containsKey(match));
     }
 
     /**
@@ -254,7 +247,7 @@ public final class CooccurrenceLearner {
     public Optional<Learned> established(final String term, final Collection<String> excludedWords) {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(excludedWords, "excludedWords");
-        final Tracked counts = tracked.get(LexiconEntry.keyOf(term));
+        final TrackedTerm counts = tracked.get(LexiconEntry.keyOf(term));
         if (counts == null || counts.occurrences < MIN_SUPPORT) {
             return Optional.empty();
         }
@@ -289,7 +282,7 @@ public final class CooccurrenceLearner {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(rendering, "rendering");
         Objects.requireNonNull(excludedWords, "excludedWords");
-        final Tracked counts = tracked.get(LexiconEntry.keyOf(term));
+        final TrackedTerm counts = tracked.get(LexiconEntry.keyOf(term));
         final String stem = stemOf(rendering);
         if (counts == null || excludedStems(excludedWords).contains(stem)) {
             return Optional.empty();
@@ -321,13 +314,13 @@ public final class CooccurrenceLearner {
         return excluded;
     }
 
-    private boolean isPrecise(final Tracked counts, final String stem, final int support) {
+    private boolean isPrecise(final TrackedTerm counts, final String stem, final int support) {
         return !counts.name || support >= MIN_NAME_PRECISION * carrying(stem, true, support);
     }
 
     // A name's competitors are the segments that carry the stem in any case: a sentence-start word is counted with the
     // words, a name away from a sentence start with the names, so a common word at a sentence start (Він) stays common.
-    private double dice(final Tracked counts, final String stem, final int support) {
+    private double dice(final TrackedTerm counts, final String stem, final int support) {
         return 2.0 * support / (counts.occurrences + carrying(stem, counts.capitals, support));
     }
 
@@ -336,7 +329,7 @@ public final class CooccurrenceLearner {
         return Math.max(support, found);
     }
 
-    private List<Scored> rank(final Tracked counts, final Set<String> excluded) {
+    private List<Scored> rank(final TrackedTerm counts, final Set<String> excluded) {
         final List<Scored> ranked = new ArrayList<>();
         counts.withStem.forEach((stem, support) -> {
             if (support >= MIN_SUPPORT && !excluded.contains(stem) && isPrecise(counts, stem, support)) {
@@ -351,7 +344,7 @@ public final class CooccurrenceLearner {
     }
 
     // The rivals are the other stems that are not the winner's own inflection (one a prefix of the other).
-    private Optional<Learned> gate(final Tracked counts, final List<Scored> ranked) {
+    private Optional<Learned> gate(final TrackedTerm counts, final List<Scored> ranked) {
         if (ranked.isEmpty()) {
             return Optional.empty();
         }
@@ -379,7 +372,7 @@ public final class CooccurrenceLearner {
     // господарю); a form only longer forms extend by two letters or more is the cut-off of a longer word
     // (облич of обличчя) and is no rendering. Among forms nothing extends, the shortest of the common
     // ones is the nearest to the dictionary form (консоль, not консолей), then the most used.
-    private Optional<String> baseForm(final Tracked counts, final String stem) {
+    private Optional<String> baseForm(final TrackedTerm counts, final String stem) {
         final Map<String, Integer> forms = new HashMap<>(words.formsOf(stem));
         if (counts.capitals) {
             names.formsOf(stem).forEach((form, uses) -> forms.merge(form, uses, Integer::sum));

@@ -40,7 +40,10 @@ final class LexiconDecisions {
     // A kept term enters with the rendering the reading gave, marked as the model's; a named thing goes to the
     // glossary; a dropped or undecided one is not added.
     Result<Integer> addDecided(
-            final String projectId, final List<String> candidates, final Map<String, Decision> decisions) {
+            final String projectId,
+            final List<String> candidates,
+            final Map<String, List<String>> forms,
+            final Map<String, Decision> decisions) {
         log.debug("Lexicon model scan project={} deciding {} candidates", projectId, candidates.size());
         int added = 0;
         for (final String term : candidates) {
@@ -50,7 +53,10 @@ final class LexiconDecisions {
             final Result<Boolean> stored =
                     switch (decision.verdict()) {
                         case KEEP ->
-                            lexicon.put(LexiconEntry.of(projectId, term).withModelRendering(decision.rendering()))
+                            lexicon.put(LexiconForms.with(
+                                                    LexiconEntry.of(projectId, term),
+                                                    forms.getOrDefault(LexiconEntry.keyOf(term), List.of()))
+                                            .withModelRendering(decision.rendering()))
                                     .map(entry -> true);
                         case PROMOTE ->
                             addToGlossary(projectId, term, decision.rendering(), true)

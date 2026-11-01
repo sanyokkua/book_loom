@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,6 +49,50 @@ public final class TermMatch {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(text, "text");
         return !term.isBlank() && loose(term).matcher(text).find();
+    }
+
+    /**
+     * Whether a text names any form of a word, as {@link #occursIn(String, String)} reads one form.
+     *
+     * @param forms the forms of one word (its term and its other stored forms); never null, blank ones ignored
+     * @param text the non-null text to search, tokens already removed
+     * @return {@code true} if any form occurs as a whole word or phrase, {@code false} otherwise
+     */
+    public static boolean occursIn(final Collection<String> forms, final String text) {
+        Objects.requireNonNull(forms, "forms");
+        Objects.requireNonNull(text, "text");
+        return forms.stream().anyMatch(form -> occursIn(form, text));
+    }
+
+    /**
+     * The words or phrases of a text that name any form of a word, as written.
+     *
+     * @param forms the forms of one word; never null, blank ones ignored
+     * @param text the non-null text to search, tokens already removed
+     * @return each match in text order; never null, empty when none
+     */
+    public static List<String> matches(final Collection<String> forms, final String text) {
+        Objects.requireNonNull(forms, "forms");
+        Objects.requireNonNull(text, "text");
+        return forms.stream()
+                .filter(form -> !form.isBlank())
+                .flatMap(form -> loose(form).matcher(text).results())
+                .map(MatchResult::start)
+                .distinct()
+                .sorted()
+                .map(start -> wordAt(forms, text, start))
+                .toList();
+    }
+
+    // The longest form's match at a start, so a match found by two forms is returned once.
+    private static String wordAt(final Collection<String> forms, final String text, final int start) {
+        return forms.stream()
+                .filter(form -> !form.isBlank())
+                .map(form -> loose(form).matcher(text))
+                .filter(matcher -> matcher.find(start) && matcher.start() == start)
+                .map(MatchResult::group)
+                .max(Comparator.comparingInt(String::length))
+                .orElseThrow();
     }
 
     /**

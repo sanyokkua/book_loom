@@ -52,12 +52,18 @@ public final class InjectedLexicon {
             final LexiconFilter filter) {
         final List<String> texts = Tokens.visibleTexts(segments);
         final List<SnapshotRendering> selected = lexicon.stream()
-                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(entry.term(), text)))
+                .filter(entry -> texts.stream().anyMatch(text -> isNamedIn(entry, text)))
                 .filter(entry -> !heldByGlossary(entry, glossary))
                 .flatMap(entry -> renderingOf(entry, filter).stream())
                 .toList();
         log.trace("Lexicon scoped to the text offered={} selected={}", lexicon.size(), selected.size());
         return selected;
+    }
+
+    // An entry is named by its term or by any other form the book writes it in (a recurring term's stem group).
+    private static boolean isNamedIn(final LexiconEntry entry, final String text) {
+        return TermMatch.isNamedIn(entry.term(), text)
+                || entry.forms().stream().anyMatch(form -> TermMatch.isNamedIn(form, text));
     }
 
     private static Optional<SnapshotRendering> renderingOf(final LexiconEntry entry, final LexiconFilter filter) {

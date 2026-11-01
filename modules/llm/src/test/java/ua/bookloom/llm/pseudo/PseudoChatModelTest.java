@@ -125,6 +125,15 @@ class PseudoChatModelTest {
                         + "\"speaking\":false,\"brand\":false}");
     }
 
+    // The offline model cannot tell a term from a word, so its term choice keeps and drops nothing: every candidate
+    // stays undecided and the recurring-term step goes on.
+    @Test
+    void chat_termChoiceFormat_decidesNothing() {
+        final ChatResponse response = send("[Candidates]\n1. lantern — \"He lit the lantern.\"\n", "term-choice");
+
+        assertThat(response.content()).isEqualTo("{\"terms\":[]}");
+    }
+
     // Summary is always empty and reports no facts.
     @Test
     void chat_summaryFormat_repliesWithEmptyBilingualSummary() {

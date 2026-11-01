@@ -129,6 +129,54 @@ class KeyTermScanTest {
         assertThat(terms).contains("furnace").doesNotContain(word);
     }
 
+    @Test
+    void frequentWords_inflectedForms_countAsOneGroupUnderTheBaseForm() {
+        final List<String> lines = join(
+                copies("Он поднял фонарь повыше.", 3),
+                copies("Свет фонаря дрожал.", 2),
+                copies("Она шла с фонарём.", 1));
+
+        final List<NameCandidate> words = frequentOf(lines, "ru", 20);
+
+        assertThat(words)
+                .filteredOn(word -> word.term().equals("фонарь"))
+                .singleElement()
+                .satisfies(word -> {
+                    assertThat(word.count()).isEqualTo(6);
+                    assertThat(word.aliases()).containsExactly("фонаря", "фонарём");
+                });
+    }
+
+    @Test
+    void frequentWords_groupUnderTheFloor_isNotACandidate() {
+        final List<String> lines = join(copies("Он поднял фонарь повыше.", 3), copies("Свет фонаря дрожал.", 2));
+
+        assertThat(frequentOf(lines, "ru", 20)).extracting(NameCandidate::term).doesNotContain("фонарь", "фонаря");
+    }
+
+    @Test
+    void newTerms_groupWithAFormTheLexiconHolds_isLeftOut() {
+        final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
+        final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
+        final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
+        lexicon.put(new LexiconEntry("p1", "стража", List.of(), null, null, null, null, List.of("стражу")));
+        final BookSlice book = GlossaryTestSegments.of(join(
+                copies("Тогда пришла Стража.", 3),
+                copies("Он видел стражу.", 3),
+                copies("Тогда пришёл Мастер.", 3),
+                copies("Ушёл мастер.", 2),
+                copies("У мастера дом.", 1)));
+
+        final var proposed = Objects.requireNonNull(
+                KeyTermScan.newTerms("p1", book.index(), book.ordinals(), "ru", glossary, lexicon)
+                        .data());
+
+        assertThat(proposed).singleElement().satisfies(entry -> {
+            assertThat(entry.term()).isEqualTo("мастер");
+            assertThat(entry.forms()).containsExactly("мастера");
+        });
+    }
+
     private static List<NameCandidate> termsOf(final List<String> lines, final String language) {
         final BookSlice book = GlossaryTestSegments.of(lines);
         return KeyTermScan.candidates(book.index(), book.ordinals(), language);

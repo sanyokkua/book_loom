@@ -98,6 +98,9 @@ final class LexiconFiles {
             return Result.err(Objects.requireNonNull(all.error(), "error"));
         }
         final Map<String, LexiconEntry> held = new LinkedHashMap<>();
+        // A row may name a held term by any of its forms; the term's own key wins over another entry's form.
+        Objects.requireNonNull(all.data(), "held")
+                .forEach(entry -> entry.forms().forEach(form -> held.putIfAbsent(LexiconEntry.keyOf(form), entry)));
         Objects.requireNonNull(all.data(), "held").forEach(entry -> held.put(LexiconEntry.keyOf(entry.term()), entry));
         final List<Integer> refused = new ArrayList<>();
         int imported = 0;

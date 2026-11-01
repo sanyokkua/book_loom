@@ -163,7 +163,7 @@ final class TermLearning {
         final Set<String> excluded = new HashSet<>(wordsOf(names.data()));
         excluded.addAll(stopWords);
         final List<LexiconEntry> affected = tracked.stream()
-                .filter(entry -> everyTerm || named(entry.term(), pairs))
+                .filter(entry -> everyTerm || named(formsOf(entry), pairs))
                 .toList();
         final Map<String, LexiconEntry.Learned> decided = unclaimed(terms.data(), affected, excluded);
         final long changed = affected.stream()
@@ -177,7 +177,7 @@ final class TermLearning {
         if (KeyTermScan.isTitle(entry.term(), analysisLanguage)) {
             learner.trackTitle(entry.term());
         } else {
-            learner.track(entry.term(), true);
+            learner.track(entry.term(), true, entry.forms());
         }
     }
 
@@ -198,7 +198,7 @@ final class TermLearning {
     private void learnSpellings(
             final List<GlossaryEntry> unnamed, final Set<String> excluded, final @Nullable List<Pair> pairs) {
         for (final GlossaryEntry entry : unnamed) {
-            if (pairs == null || named(entry.term(), pairs)) {
+            if (pairs == null || named(List.of(entry.term()), pairs)) {
                 learner.established(entry.term(), excluded).ifPresent(found -> suggest(entry, found));
             }
         }
@@ -303,8 +303,15 @@ final class TermLearning {
         return stripped.codePointCount(0, stripped.length()) >= MIN_FAMILY_LETTERS ? stripped : key;
     }
 
-    private static boolean named(final String term, final List<Pair> pairs) {
-        return pairs.stream().anyMatch(pair -> TermMatch.occursIn(term, pair.source()));
+    private static boolean named(final List<String> forms, final List<Pair> pairs) {
+        return pairs.stream().anyMatch(pair -> TermMatch.occursIn(forms, pair.source()));
+    }
+
+    private static List<String> formsOf(final LexiconEntry entry) {
+        final List<String> forms = new ArrayList<>();
+        forms.add(entry.term());
+        forms.addAll(entry.forms());
+        return forms;
     }
 
     private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned learned) {

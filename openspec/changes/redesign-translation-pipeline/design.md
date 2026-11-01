@@ -224,7 +224,8 @@ task edits the delta requirement and this file's line; the result is written int
   generated form is allowed), LOCKED for a non-inflecting target or a kept identifier (exact text, token-substituted).
 - **Recurring terms.** New `lexicon/FormGroups`: key = form minus its longest `nounEndings` ending, stem ≥
   `MIN_STEM_LETTERS` (4); representative from `BaseForms.of`; the 6-use floor (`MIN_GROUP_USES`) counts the group;
-  `TermMatch.matches/occursIn` work on the group (replaces the surface-form count of `NameTally`).
+  `TermMatch.matches/occursIn` work on the group (replaces the surface-form count of the recurring-term scan;
+  `NameTally` counts name runs, which D4's name forms group).
 - **Estimates.** `ModelSettings.secondsPerCall: Map<CallKind, MeasuredSpeed(seconds, MeasuredFrom from)>` replaces
   `measuredSecondsPerSegment` and `measuredFrom` (one stored speed, not two). It is written at the end of every names
   pass and run from the call ledger (D18); the Settings inference test writes the `DRAFT` entry with source `TEST`.
