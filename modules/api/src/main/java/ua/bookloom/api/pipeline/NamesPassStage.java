@@ -22,6 +22,11 @@ public enum NamesPassStage {
     NAMES_TRANSLATE("names-translate"),
     /** Suggests a translation for each repeated word. */
     TERMS_TRANSLATE("terms-translate"),
+    /**
+     * Tests every staged suggestion against the target language's rules; sends no request and accepts nothing, since
+     * accepting is the person's Accept all.
+     */
+    CHECK("check"),
     /** Writes what the pass changed to both tables, in one go; sends no request. */
     WRITE("write");
 

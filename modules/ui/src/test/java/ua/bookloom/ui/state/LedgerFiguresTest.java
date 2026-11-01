@@ -51,6 +51,19 @@ class LedgerFiguresTest {
                 .isEqualTo("53 % · 26 of about 49 steps · Left about 1 min");
     }
 
+    // IF the line left the time out for the names pass, THEN the person could not tell a two-minute wait from ten.
+    @Test
+    void of_twentySixOf49StepsEveryFourSeconds_readsLeftAboutTwoMinutes() {
+        figures.of(log, T0);
+        finish(0, 26);
+
+        final Figures read = figures.of(log, T0.plusSeconds(104));
+
+        // 23 left at 4 s each is 92 s, which reads as two minutes.
+        assertThat(read.line(new ua.bookloom.ui.i18n.Messages(() -> java.util.Locale.ENGLISH)))
+                .isEqualTo("53 % · 26 of about 49 steps · Left about 2 min");
+    }
+
     // IF the stage rows were timed, THEN a names pass would promise a time from stages that differ by hours.
     @Test
     void of_stageCountedWork_showsNoTimeLeft() {

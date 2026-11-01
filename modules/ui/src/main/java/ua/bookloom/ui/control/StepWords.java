@@ -113,6 +113,7 @@ final class StepWords {
             case TERMS_READ -> MessageKey.PROGRESS_NAMES_STEP_TERMS_READ;
             case NAMES_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_NAMES_TRANSLATE;
             case TERMS_TRANSLATE -> MessageKey.PROGRESS_NAMES_STEP_TERMS_TRANSLATE;
+            case CHECK -> MessageKey.PROGRESS_NAMES_STEP_CHECK;
             case WRITE -> MessageKey.PROGRESS_NAMES_STEP_WRITE;
         };
     }

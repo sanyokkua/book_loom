@@ -39,6 +39,20 @@ final class NamesPassCounts {
                 rejected);
     }
 
+    // An entry still without a target after the pass is the person's to give: the report lists it for the results
+    // dialog, and it is counted at WARN and listed at TRACE (15j.J10), never kept silently.
+    static List<String> untranslated(final String projectId, final List<GlossaryEntry> entries) {
+        final List<String> open = entries.stream()
+                .filter(entry -> entry.target() == null || entry.target().isBlank())
+                .map(GlossaryEntry::term)
+                .toList();
+        if (!open.isEmpty()) {
+            log.warn("Names pass project={} left {} name(s) without a target for the person", projectId, open.size());
+            log.trace("Names pass project={} names without a target: {}", projectId, open);
+        }
+        return open;
+    }
+
     private static long withOrigin(final List<GlossaryEntry> entries, final Origin origin) {
         return entries.stream()
                 .filter(entry -> entry.gender() != Gender.UNKNOWN && entry.genderOrigin() == origin)

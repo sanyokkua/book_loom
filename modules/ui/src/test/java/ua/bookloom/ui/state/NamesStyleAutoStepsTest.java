@@ -84,7 +84,7 @@ class NamesStyleAutoStepsTest extends FxTestBase {
     // IF the results forgot the steps, THEN the Steps tab of the Results view would have nothing to list.
     @Test
     void autoPrepare_ends_resultsCarryTheStepsAndTheElapsedTime() {
-        PassEvents.upTo(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0}, 9, 49).forEach(namesPass::willReport);
+        PassEvents.upTo(new int[] {0, 6, 0, 0, 3, 25, 4, 2, 0, 0}, 10, 49).forEach(namesPass::willReport);
         namesPass.duringRun(() -> clock.advance(ELAPSED));
 
         prepare();
@@ -93,7 +93,7 @@ class NamesStyleAutoStepsTest extends FxTestBase {
         assertThat(results().steps().entries().stream()
                         .filter(entry -> entry.kind() == StepKind.STAGE)
                         .count())
-                .isEqualTo(9);
+                .isEqualTo(10);
         assertThat(results().steps().entries().stream()
                         .filter(entry -> entry.kind() == StepKind.REQUEST)
                         .count())

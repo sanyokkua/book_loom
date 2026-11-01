@@ -505,9 +505,9 @@ The application SHALL establish one rendering for each recurring term by this or
 
 ### Requirement: List the steps of the names pass in its progress dialog
 
-The progress dialog of the names pass SHALL list ten steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Check and accept the suggestions, Write the results — each with the number of requests it sent, and a figures line such as "53 % · 26 of about 49 steps · Left about 2 min".
+The progress dialog of the names pass SHALL list ten steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Check the suggestions, Write the results — each with the number of requests it sent, and a figures line such as "53 % · 26 of about 49 steps · Left about 2 min".
 
-**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the person sees which part of the pass is running and how much is left; the new steps are the model's best guess about each name and the check that decides which suggestions are accepted. Grouping the forms of a name is part of finding candidates and sends no request. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
+**Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the person sees which part of the pass is running and how much is left; the new steps are the model's best guess about each name and the check that tests every suggestion against the target language's rules (it sends no request and accepts nothing: the suggestions stay "likely" until the person presses Accept all). Grouping the forms of a name is part of finding candidates and sends no request. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
 #### Scenario: The steps are listed with counts
 
@@ -1969,7 +1969,7 @@ The application SHALL learn a lexicon term's rendering from the decided segments
 
 ### Requirement: List the eight steps of the names pass in its progress dialog
 
-**Reason**: The pass has new steps (what the model knows about the names, and the check that accepts suggestions), so the fixed list of eight no longer describes it.
+**Reason**: The pass has new steps (what the model knows about the names, and the check of the suggestions), so the fixed list of eight no longer describes it.
 
 **Migration**: Replaced by "List the steps of the names pass in its progress dialog", which lists the ten steps with their request counts.
 

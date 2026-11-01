@@ -200,13 +200,7 @@ public final class NamesPassImpl implements NamesPass {
 
     private Result<NamesPassReport> execute(final Run run) {
         final Stage stage = run.stage();
-        log.info(
-                "Names pass started project={} dial={} policy={} glossary={} terms={}",
-                stage.projectId(),
-                stage.book().dial(),
-                stage.book().names(),
-                stage.namesBefore().size(),
-                stage.termsBefore().size());
+        logStarted(stage);
         run.counter().planStages();
         return step(
                         run,
@@ -224,7 +218,24 @@ public final class NamesPassImpl implements NamesPass {
                         .map(known -> reviewed))
                 .flatMap(reviewed -> readTerms(run)
                         .flatMap(read -> translate(run, reviewed))
-                        .flatMap(translated -> finish(run, reviewed)));
+                        .flatMap(translated -> step(
+                                run,
+                                NamesPassStage.CHECK.code(),
+                                () -> Result.ok(SuggestionCheck.of(
+                                        stage.projectId(),
+                                        stage.book(),
+                                        stage.names().entries()))))
+                        .flatMap(checked -> finish(run, reviewed)));
+    }
+
+    private static void logStarted(final Stage stage) {
+        log.info(
+                "Names pass started project={} dial={} policy={} glossary={} terms={}",
+                stage.projectId(),
+                stage.book().dial(),
+                stage.book().names(),
+                stage.namesBefore().size(),
+                stage.termsBefore().size());
     }
 
     private static int logEstimate(final Stage stage, final int scanned) {
@@ -323,25 +334,14 @@ public final class NamesPassImpl implements NamesPass {
                     run.counter().calls(),
                     elapsed);
             NamesPassCounts.write(stage.names().entries(), run.rejected().get());
-            return new NamesPassReport(names, terms, run.counter().calls(), elapsed, untranslated(stage));
+            return new NamesPassReport(
+                    names,
+                    terms,
+                    run.counter().calls(),
+                    elapsed,
+                    NamesPassCounts.untranslated(
+                            stage.projectId(), stage.names().entries()));
         });
-    }
-
-    // An entry still without a target after the pass is the person's to give: the report lists it for the results
-    // dialog, and it is counted at WARN and listed at TRACE (15j.J10), never kept silently.
-    private static List<String> untranslated(final Stage stage) {
-        final List<String> open = stage.names().entries().stream()
-                .filter(entry -> entry.target() == null || entry.target().isBlank())
-                .map(GlossaryEntry::term)
-                .toList();
-        if (!open.isEmpty()) {
-            log.warn(
-                    "Names pass project={} left {} name(s) without a target for the person",
-                    stage.projectId(),
-                    open.size());
-            log.trace("Names pass project={} names without a target: {}", stage.projectId(), open);
-        }
-        return open;
     }
 
     private static Map<String, String> reasonsOf(final EntryChanges<GlossaryEntry> changes) {

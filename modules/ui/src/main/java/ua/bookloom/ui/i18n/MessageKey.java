@@ -3582,6 +3582,7 @@ public enum MessageKey {
     /** Progress dialog: the name of this stage of the names pass. */
     PROGRESS_NAMES_STEP_TERMS_TRANSLATE("progress.names.step.termsTranslate"),
     /** Progress dialog: the name of this stage of the names pass. */
+    PROGRESS_NAMES_STEP_CHECK("progress.names.step.check"),
     PROGRESS_NAMES_STEP_WRITE("progress.names.step.write"),
     /** Progress dialog: a finished stage's count of requests; argument 0 is the count. */
     PROGRESS_STAGE_REQUESTS_DONE("progress.stage.requests.done"),

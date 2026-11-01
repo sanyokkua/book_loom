@@ -68,7 +68,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         showScreen();
 
-        assertThat(labelText(SUBTITLE)).isEqualTo("About 15–25 min, estimate.");
+        assertThat(labelText(SUBTITLE)).isEqualTo("About 15–25 min, estimate. You can undo it all afterwards.");
         assertThat(namesPass.estimateCalls()).contains("p1");
     }
 
@@ -79,7 +79,8 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         showScreen();
 
-        assertThat(labelText(SUBTITLE)).isEqualTo("About 2 min, measured on this model.");
+        assertThat(labelText(SUBTITLE))
+                .isEqualTo("About 2 min, measured on this model. You can undo it all afterwards.");
     }
 
     // IF the line were composed once, THEN moving the dial on the brief would leave the old minutes on this button.
@@ -92,7 +93,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         onFx(() -> injector.getInstance(BookBriefViewModel.class).setDial(QualityDial.MAX));
 
-        awaitFx(() -> "About 30–60 min, estimate.".equals(labelText(SUBTITLE)));
+        awaitFx(() -> "About 30–60 min, estimate. You can undo it all afterwards.".equals(labelText(SUBTITLE)));
         assertThat(namesPass.estimateCalls().size()).isGreaterThan(askedBefore);
     }
 
@@ -109,7 +110,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         assertThat(labelText(SUBTITLE)).isBlank();
         projects.releaseBriefSaves();
-        awaitFx(() -> "About 30–60 min, estimate.".equals(labelText(SUBTITLE)));
+        awaitFx(() -> "About 30–60 min, estimate. You can undo it all afterwards.".equals(labelText(SUBTITLE)));
     }
 
     // IF a failed estimate printed a made-up time, THEN the line would promise minutes nobody computed.
@@ -132,7 +133,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
         showScreen();
 
         assertThat(button(AUTO).getText()).isEqualTo("Підготувати імена автоматично");
-        assertThat(labelText(SUBTITLE)).isEqualTo("Близько 15–25 хв, оцінка.");
+        assertThat(labelText(SUBTITLE)).isEqualTo("Близько 15–25 хв, оцінка. Потім усе можна скасувати.");
         assertThat(TooltipProbe.tipText(required(AUTO))).isNotBlank().contains("Повторювані терміни");
     }
 

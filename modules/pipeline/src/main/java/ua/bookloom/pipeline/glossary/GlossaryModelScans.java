@@ -49,7 +49,8 @@ public final class GlossaryModelScans {
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
-    record Book(BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial) {}
+    record Book(
+            BookSlice story, CallFrame frame, NamePolicy names, QualityDial dial, Map<String, String> conventions) {}
 
     Result<EntryChanges<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
@@ -215,6 +216,6 @@ public final class GlossaryModelScans {
                 frame.sourceLanguage(),
                 frame.analysisLanguage(),
                 target);
-        return Result.ok(new Book(BookSlice.story(index), frame, brief.names(), brief.dial()));
+        return Result.ok(new Book(BookSlice.story(index), frame, brief.names(), brief.dial(), brief.conventions()));
     }
 }

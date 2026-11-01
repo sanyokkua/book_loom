@@ -30,6 +30,7 @@ class NamesPassStepsTest extends NamesPassTestBase {
             "terms-read",
             "names-translate",
             "terms-translate",
+            "check",
             "write");
 
     private List<StepChanged> changes(final StepKind kind, final StepState state) {
@@ -47,25 +48,25 @@ class NamesPassStepsTest extends NamesPassTestBase {
     // IF the planned count drifted from the stage list, THEN the dialog would show a wrong number of steps.
     @Test
     void stageCount_isTheNumberOfPassStages() {
-        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(9);
+        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(10);
         assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(ua.bookloom.api.pipeline.NamesPassStage.values().length);
     }
 
-    // IF a stage were left out of the announcements, THEN the dialog would list fewer than the nine steps the pass
+    // IF a stage were left out of the announcements, THEN the dialog would list fewer than the ten steps the pass
     // takes.
     @Test
-    void run_fullPass_announcesNineStagesInOrder() {
+    void run_fullPass_announcesTenStagesInOrder() {
         seeded("uk", NamePolicy.TRANSLITERATE);
 
         final NamesPassReport report = succeeded(run(model()));
 
         assertThat(report).isNotNull();
-        assertThat(events).contains(new StepsPlanned(StepKind.STAGE, 9, false));
+        assertThat(events).contains(new StepsPlanned(StepKind.STAGE, 10, false));
         assertThat(labels(StepKind.STAGE, StepState.STARTED)).containsExactlyElementsOf(STAGES);
         assertThat(labels(StepKind.STAGE, StepState.ENDED)).containsExactlyElementsOf(STAGES);
         assertThat(changes(StepKind.STAGE, StepState.STARTED))
                 .extracting(StepChanged::index)
-                .containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8);
+                .containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
     }
 
     // The scan of a held glossary, the scan of the words and the write send no call, so they end with no call.
@@ -76,7 +77,8 @@ class NamesPassStepsTest extends NamesPassTestBase {
         succeeded(run(model()));
 
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
-                .filteredOn(change -> List.of("scan", "terms-scan", "write").contains(change.label()))
+                .filteredOn(change ->
+                        List.of("scan", "terms-scan", "check", "write").contains(change.label()))
                 .extracting(StepChanged::result)
                 .containsOnly(StepResult.NO_CALL);
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
