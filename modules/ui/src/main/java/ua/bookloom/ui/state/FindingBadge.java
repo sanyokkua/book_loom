@@ -19,9 +19,10 @@ public enum FindingBadge {
     /** A locked or glossary name was not honoured. */
     NAME(MessageKey.REVIEW_BADGE_NAME, 3, "name", MessageKey.REVIEW_WHY_NAME),
     /** The target reads as the wrong language. */
-    WRONG_LANGUAGE(MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2, "language", MessageKey.REVIEW_WHY_WRONG_LANGUAGE),
+    WRONG_LANGUAGE(
+            MessageKey.REVIEW_BADGE_WRONG_LANGUAGE, 2, FindingBadge.LANGUAGE, MessageKey.REVIEW_WHY_WRONG_LANGUAGE),
     /** Part of the source is missing from the target. */
-    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1, "omission", MessageKey.REVIEW_WHY_OMISSION),
+    OMISSION(MessageKey.REVIEW_BADGE_OMISSION, 1, FindingBadge.OMISSION_KIND, MessageKey.REVIEW_WHY_OMISSION),
     /** Any other kind of finding, or only a score. */
     LOW_SCORE(MessageKey.REVIEW_BADGE_LOW_SCORE, 0, "score", MessageKey.REVIEW_WHY_LOW_SCORE);
 

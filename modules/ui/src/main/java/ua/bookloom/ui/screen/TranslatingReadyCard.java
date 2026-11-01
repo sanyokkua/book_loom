@@ -38,6 +38,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TranslatingReadyCard {
 
+    private static final String KV_VALUE = "kv-value";
+
     static Node build(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
@@ -52,13 +54,13 @@ final class TranslatingReadyCard {
                 viewModel.reviewMode().name().toLowerCase(Locale.ROOT));
         final Label book = boundLabel(
                 "translating-ready-book",
-                "kv-value",
+                KV_VALUE,
                 () -> bookName(mirror.runFileName().get(), current.book().get()),
                 mirror.runFileName(),
                 current.book());
         final Label pending = boundLabel(
                 "translating-ready-pending",
-                "kv-value",
+                KV_VALUE,
                 () -> grouping.format(viewModel.pendingCount().get()),
                 viewModel.pendingCount());
         return BriefCards.card(
@@ -94,7 +96,7 @@ final class TranslatingReadyCard {
     private static Label modelLabel(final TranslatingViewModel viewModel, final Messages messages) {
         return boundLabel(
                 "translating-ready-model",
-                "kv-value",
+                KV_VALUE,
                 () -> viewModel.modelText().get().isBlank()
                         ? messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN)
                         : viewModel.modelText().get(),
@@ -104,7 +106,7 @@ final class TranslatingReadyCard {
     private static Label dialLabel(final CurrentProject current, final Messages messages) {
         return boundLabel(
                 "translating-ready-dial",
-                "kv-value",
+                KV_VALUE,
                 () -> current.brief().get() == null
                         ? ""
                         : messages.get(RunMode.dialKey(current.brief().get().dial())),
@@ -134,7 +136,7 @@ final class TranslatingReadyCard {
     private static Label fixed(final String id, final String text) {
         final Label label = new Label(text);
         label.setId(id);
-        label.getStyleClass().add("kv-value");
+        label.getStyleClass().add(KV_VALUE);
         return label;
     }
 

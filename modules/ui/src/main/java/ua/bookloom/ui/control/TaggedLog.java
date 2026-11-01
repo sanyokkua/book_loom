@@ -24,6 +24,7 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -211,7 +212,7 @@ public final class TaggedLog extends ListView<LogEntry> {
         private static Label part(final String styleClass) {
             final Label label = new Label();
             label.getStyleClass().add(styleClass);
-            label.setMinWidth(Label.USE_PREF_SIZE);
+            label.setMinWidth(Region.USE_PREF_SIZE);
             return label;
         }
 

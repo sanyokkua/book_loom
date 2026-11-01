@@ -17,8 +17,8 @@ import ua.bookloom.ui.state.StorageSettings;
 final class SettingsTabEntries {
 
     private static final String MODELS = "settings-tab-models";
-    private static final String AUTOMATION = "settings-tab-automation";
-    private static final String STORAGE = "settings-tab-storage";
+    private static final String AUTOMATION_TAB = "settings-tab-automation";
+    private static final String STORAGE_TAB = "settings-tab-storage";
 
     private final ModelRoster roster;
     private final AutomationSettings automation;
@@ -47,11 +47,11 @@ final class SettingsTabEntries {
                 log.debug("models tab opened: reading the models");
                 roster.refresh();
             }
-            case AUTOMATION -> {
+            case AUTOMATION_TAB -> {
                 log.debug("automation tab opened: reading the stored choices");
                 automation.load();
             }
-            case STORAGE -> {
+            case STORAGE_TAB -> {
                 log.debug("storage tab opened: reading the saved work and the log marker");
                 diagnostics.clearStatus();
                 storage.load();

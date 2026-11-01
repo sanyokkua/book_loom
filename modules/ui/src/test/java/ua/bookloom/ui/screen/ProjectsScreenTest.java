@@ -158,7 +158,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
             throws Exception {
         useLocale(Locale.forLanguageTag(tag));
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
+        onFx(() -> ua.bookloom.ui.state.OpenedBookFixture.open(
                 injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
         showListing(exported("p1", name));
         WaitForAsyncUtils.waitForFxEvents();
@@ -215,7 +215,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
     // IF the project that is on screen offered Continue, THEN pressing it would reopen what is already open.
     @Test
     void list_openProject_carriesTheOpenChip() throws Exception {
-        onFx(() -> ua.bookloom.ui.state.OpenBookForTest.open(
+        onFx(() -> ua.bookloom.ui.state.OpenedBookFixture.open(
                 injector.getInstance(ua.bookloom.ui.state.CurrentProject.class), "en", "uk"));
         showListing(openProjectRow());
 

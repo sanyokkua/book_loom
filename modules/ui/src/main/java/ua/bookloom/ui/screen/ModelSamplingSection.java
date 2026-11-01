@@ -13,6 +13,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -173,7 +174,7 @@ final class ModelSamplingSection {
         final String name = messages.get(nameKey);
         final Label label = new Label(name);
         label.setLabelFor(input);
-        label.setMinWidth(Label.USE_PREF_SIZE);
+        label.setMinWidth(Region.USE_PREF_SIZE);
         Tips.install(messages, input, tip);
         input.setAccessibleText(name);
         input.textProperty().addListener((observed, was, now) -> {

@@ -1,5 +1,8 @@
 package ua.bookloom.ui.dialog;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
@@ -84,28 +87,28 @@ public final class NarratorDialog {
                 messages.get(MessageKey.DIALOG_NARRATOR_BACK),
                 MessageKey.DIALOG_NARRATOR_BACK_TIP,
                 ButtonBar.ButtonData.CANCEL_CLOSE,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> log.debug("going back without starting"));
         card.button(
                 UNKNOWN_ID,
                 messages.get(MessageKey.DIALOG_NARRATOR_UNKNOWN),
                 MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP,
                 ButtonBar.ButtonData.OK_DONE,
-                "btn-primary",
+                BTN_PRIMARY,
                 () -> question.answer(projectId, Gender.UNKNOWN, start));
         card.button(
                 FEMALE_ID,
                 messages.get(MessageKey.DIALOG_NARRATOR_FEMALE),
                 MessageKey.DIALOG_NARRATOR_FEMALE_TIP,
                 ButtonBar.ButtonData.OTHER,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> question.answer(projectId, Gender.FEMALE, start));
         card.button(
                 MALE_ID,
                 messages.get(MessageKey.DIALOG_NARRATOR_MALE),
                 MessageKey.DIALOG_NARRATOR_MALE_TIP,
                 ButtonBar.ButtonData.OTHER,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> question.answer(projectId, Gender.MALE, start));
     }
 }

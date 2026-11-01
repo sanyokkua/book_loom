@@ -1,5 +1,7 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.ui.theme.StyleClasses.MUTED;
+
 import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -22,6 +24,8 @@ import ua.bookloom.ui.state.StepEntry;
  * Nothing here logs: it is redrawn whenever the selected step changes.
  */
 final class RereadGrid extends GridPane {
+
+    private static final String REREAD_LABEL = "reread-label";
 
     private static final int LABEL_COLUMN = 0;
     private static final int BEFORE_COLUMN = 1;
@@ -61,18 +65,18 @@ final class RereadGrid extends GridPane {
         }
         add(cell(messages.get(MessageKey.EXPORT_REREAD_BEFORE), "reread-heading"), BEFORE_COLUMN, 0);
         add(cell(messages.get(MessageKey.EXPORT_REREAD_AFTER), "reread-heading"), AFTER_COLUMN, 0);
-        add(cell(messages.get(MessageKey.EXPORT_REREAD_PREVIOUS), "reread-label"), LABEL_COLUMN, 1);
+        add(cell(messages.get(MessageKey.EXPORT_REREAD_PREVIOUS), REREAD_LABEL), LABEL_COLUMN, 1);
         add(paragraph(around.previousSource(), around.previousTarget()), BEFORE_COLUMN, 1, SPAN, 1);
-        add(cell(messages.get(MessageKey.EXPORT_REREAD_THIS), "reread-label"), LABEL_COLUMN, 2);
+        add(cell(messages.get(MessageKey.EXPORT_REREAD_THIS), REREAD_LABEL), LABEL_COLUMN, 2);
         add(before(around.source(), text), BEFORE_COLUMN, 2);
         add(after(text, running), AFTER_COLUMN, 2);
-        add(cell(messages.get(MessageKey.EXPORT_REREAD_NEXT), "reread-label"), LABEL_COLUMN, 3);
+        add(cell(messages.get(MessageKey.EXPORT_REREAD_NEXT), REREAD_LABEL), LABEL_COLUMN, 3);
         add(paragraph(around.nextSource(), around.nextTarget()), BEFORE_COLUMN, 3, SPAN, 1);
         return true;
     }
 
     private Node paragraph(final @Nullable String source, final @Nullable String target) {
-        return new VBox(cell(source == null ? "—" : source, "muted"), cell(target == null ? "" : target, null));
+        return new VBox(cell(source == null ? "—" : source, MUTED), cell(target == null ? "" : target, null));
     }
 
     private Node before(final String source, final StepEntry.StepText text) {
@@ -85,17 +89,17 @@ final class RereadGrid extends GridPane {
         } else {
             shown = cell(old, null);
         }
-        return new VBox(cell(source, "muted"), shown);
+        return new VBox(cell(source, MUTED), shown);
     }
 
     private Node after(final StepEntry.StepText text, final boolean running) {
         if (running) {
-            return cell(messages.get(MessageKey.EXPORT_REREAD_READING), "muted");
+            return cell(messages.get(MessageKey.EXPORT_REREAD_READING), MUTED);
         }
         if (FIXED.equals(text.verdict()) && text.after() != null) {
             return cell(text.after(), null);
         }
-        return cell(messages.get(MessageKey.EXPORT_REREAD_UNCHANGED), "muted");
+        return cell(messages.get(MessageKey.EXPORT_REREAD_UNCHANGED), MUTED);
     }
 
     private static Label cell(final String text, final @Nullable String styleClass) {

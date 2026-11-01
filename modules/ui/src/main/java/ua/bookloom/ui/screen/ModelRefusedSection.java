@@ -1,5 +1,9 @@
 package ua.bookloom.ui.screen;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_GHOST;
+import static ua.bookloom.ui.theme.StyleClasses.CARD_TITLE;
+import static ua.bookloom.ui.theme.StyleClasses.MUTED;
+
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.Objects;
@@ -41,13 +45,13 @@ final class ModelRefusedSection {
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         final Label title = new Label(messages.get(MessageKey.SETTINGS_MODELS_REFUSED));
-        title.getStyleClass().add("card-title");
+        title.getStyleClass().add(CARD_TITLE);
         final Label sub = new Label(messages.get(MessageKey.SETTINGS_MODELS_REFUSED_SUB));
-        sub.getStyleClass().add("muted");
+        sub.getStyleClass().add(MUTED);
         rows.setId("models-refused");
         none.getChildren()
                 .addAll(
-                        label("models-refused-none", MessageKey.SETTINGS_MODELS_REFUSED_NONE, "muted"),
+                        label("models-refused-none", MessageKey.SETTINGS_MODELS_REFUSED_NONE, MUTED),
                         label("models-refused-none-hint", MessageKey.SETTINGS_MODELS_REFUSED_NONE_HINT, "hint"));
         failed.setId("models-refused-error");
         failed.setText(messages.get(MessageKey.SETTINGS_MODELS_REFUSED_SEND_FAILED));
@@ -78,7 +82,7 @@ final class ModelRefusedSection {
         setting.getStyleClass().add("tech-note");
         final Label scope = new Label(scope(refused));
         scope.setId("models-refused-scope-" + id);
-        scope.getStyleClass().add("muted");
+        scope.getStyleClass().add(MUTED);
         scope.setMinWidth(Region.USE_PREF_SIZE);
         final Label why = new Label(why(refused));
         why.setId("models-refused-why-" + id);
@@ -88,7 +92,7 @@ final class ModelRefusedSection {
         why.setMaxWidth(Double.MAX_VALUE);
         final Button send = new Button(messages.get(MessageKey.SETTINGS_MODELS_REFUSED_SEND));
         send.setId("models-refused-send-" + id);
-        send.getStyleClass().add("btn-ghost");
+        send.getStyleClass().add(BTN_GHOST);
         send.setMinWidth(Region.USE_PREF_SIZE);
         send.disableProperty().bind(form.sendingAgain());
         Tips.install(messages, send, MessageKey.SETTINGS_MODELS_REFUSED_SEND_TIP);

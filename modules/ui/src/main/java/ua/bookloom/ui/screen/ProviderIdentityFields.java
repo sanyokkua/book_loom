@@ -23,6 +23,8 @@ import ua.bookloom.ui.state.ProviderForm;
 /** The first rows of the connection details: the name, the kind, and how requests sign in. */
 final class ProviderIdentityFields {
 
+    private static final String W_NAME = "w-name";
+
     private final ProviderForm form;
     private final Messages messages;
     private final DraftText name;
@@ -44,7 +46,7 @@ final class ProviderIdentityFields {
                 form,
                 messages,
                 "settings-form-name",
-                "w-name",
+                W_NAME,
                 MessageKey.SETTINGS_FORM_NAME_TIP,
                 ProviderDraft::name,
                 ProviderDraft::withName);
@@ -66,7 +68,7 @@ final class ProviderIdentityFields {
                     form,
                     messages,
                     "settings-form-key-header",
-                    "w-name",
+                    W_NAME,
                     MessageKey.SETTINGS_FORM_KEY_HEADER_TIP,
                     ProviderDraft::apiKeyHeader,
                     ProviderDraft::withApiKeyHeader);
@@ -74,7 +76,7 @@ final class ProviderIdentityFields {
                     form,
                     messages,
                     "settings-form-key-variable",
-                    "w-name",
+                    W_NAME,
                     MessageKey.SETTINGS_FORM_KEY_VARIABLE_TIP,
                     ProviderDraft::credentialRef,
                     ProviderDraft::withCredentialRef);
@@ -83,7 +85,7 @@ final class ProviderIdentityFields {
 
     private ComboBox<ProviderKind> kindCombo() {
         kind.setId("settings-form-kind");
-        kind.getStyleClass().add("w-name");
+        kind.getStyleClass().add(W_NAME);
         kind.getItems().setAll(ProviderKind.values());
         kind.setConverter(new StringConverter<>() {
             @Override

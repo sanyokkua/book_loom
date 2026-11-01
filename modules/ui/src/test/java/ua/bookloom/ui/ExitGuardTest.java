@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -85,7 +85,7 @@ class ExitGuardTest extends ShellTestBase {
 
     private void runEnded(final RunState state) {
         onFx(() -> {
-            OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk");
+            OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk");
             injector.getInstance(StateMirror.class).publishRunState(state);
         });
     }

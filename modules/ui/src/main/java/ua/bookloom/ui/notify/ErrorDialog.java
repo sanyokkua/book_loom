@@ -1,5 +1,9 @@
 package ua.bookloom.ui.notify;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_TEXT;
+
 import java.util.Objects;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -112,12 +116,12 @@ final class ErrorDialog {
     }
 
     private Node body() {
-        final Label message = Wrapped.label(ErrorWords.message(messages, error), "dialog-text");
+        final Label message = Wrapped.label(ErrorWords.message(messages, error), DIALOG_TEXT);
         message.setId(MESSAGE_ID);
         final VBox body = new VBox(message);
         body.getStyleClass().add("error-body");
         if (note != null) {
-            final Label line = Wrapped.label(messages.get(note), "dialog-text");
+            final Label line = Wrapped.label(messages.get(note), DIALOG_TEXT);
             line.setId(NOTE_ID);
             body.getChildren().add(line);
         }
@@ -138,7 +142,7 @@ final class ErrorDialog {
         final Button copy = new Button(messages.get(MessageKey.ERROR_DETAILS_COPY));
         copy.setId(COPY_ID);
         Tips.install(messages, copy, MessageKey.ERROR_DETAILS_COPY_TIP);
-        copy.getStyleClass().add("btn-secondary");
+        copy.getStyleClass().add(BTN_SECONDARY);
         copy.setOnAction(event -> {
             log.debug("error details copied: code={}", error.code());
             clipboard.copy(Objects.requireNonNull(error.details(), "details"));
@@ -150,7 +154,7 @@ final class ErrorDialog {
         final ToggleButton toggle = new ToggleButton(messages.get(MessageKey.ERROR_DETAILS_SHOW));
         toggle.setId(TOGGLE_ID);
         Tips.install(messages, toggle, MessageKey.ERROR_DETAILS_SHOW_TIP);
-        toggle.getStyleClass().add("btn-secondary");
+        toggle.getStyleClass().add(BTN_SECONDARY);
         final TextArea details = detailsArea();
         toggle.setOnAction(event -> expand(toggle, body, details));
         if (detailsOpen) {
@@ -177,7 +181,7 @@ final class ErrorDialog {
         details.setEditable(false);
         details.setWrapText(true);
         details.setPrefRowCount(DETAILS_ROWS);
-        details.getStyleClass().add("error-details");
+        details.getStyleClass().add(DETAILS_ID);
         return details;
     }
 
@@ -189,7 +193,7 @@ final class ErrorDialog {
                                     messages.get(MessageKey.ERROR_RETRY),
                                     ButtonBar.ButtonData.OK_DONE,
                                     RETRY_ID,
-                                    "btn-primary"),
+                                    BTN_PRIMARY),
                             MessageKey.ERROR_RETRY_TIP)
                     .setOnAction(event -> retryAction.run());
         }
@@ -199,7 +203,7 @@ final class ErrorDialog {
                                 messages.get(MessageKey.COMMON_CLOSE),
                                 ButtonBar.ButtonData.CANCEL_CLOSE,
                                 DISMISS_ID,
-                                retryAction != null ? "btn-secondary" : "btn-primary"),
+                                retryAction != null ? BTN_SECONDARY : BTN_PRIMARY),
                         MessageKey.COMMON_CLOSE_TIP)
                 .setOnAction(event -> onDismiss.run());
     }

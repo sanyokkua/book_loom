@@ -1,5 +1,9 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.MESSAGES;
+import static ua.bookloom.util.contract.ArgNames.REPORT;
+import static ua.bookloom.util.contract.ArgNames.SUMMARY;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +40,7 @@ public final class ExportReportLines {
      * @return one name per written side file, in the order they were written; empty when none was
      */
     public static List<String> sideFileNames(final ExportReport report) {
-        Objects.requireNonNull(report, "report");
+        Objects.requireNonNull(report, REPORT);
         return report.sideFiles().stream()
                 .map(Path::getFileName)
                 .map(Path::toString)
@@ -53,8 +57,8 @@ public final class ExportReportLines {
      *     gender step was skipped without a model, or, when none of these applies, that it ran and changed nothing
      */
     public static List<String> consistency(final Messages messages, final ConsistencySummary summary) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(summary, "summary");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(summary, SUMMARY);
         final List<String> lines = new ArrayList<>();
         if (summary.status() == ConsistencySummary.Status.NOT_RUN) {
             return lines;
@@ -85,8 +89,8 @@ public final class ExportReportLines {
      * @return the line, or empty when no segment waits on a character whose gender is missing
      */
     public static Optional<String> awaitingGender(final Messages messages, final ConsistencySummary summary) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(summary, "summary");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(summary, SUMMARY);
         return waits(messages, summary, false, MessageKey.EXPORT_AWAITING_GENDER, summary.unknownGenderSegments());
     }
 
@@ -99,8 +103,8 @@ public final class ExportReportLines {
      * @return the line, or empty when no segment waits on a suggested gender
      */
     public static Optional<String> suggestedGender(final Messages messages, final ConsistencySummary summary) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(summary, "summary");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(summary, SUMMARY);
         return waits(messages, summary, true, MessageKey.EXPORT_SUGGESTED_GENDER, summary.suggestedGenderSegments());
     }
 
@@ -161,8 +165,8 @@ public final class ExportReportLines {
      * @return the line, or empty when the last check did not run
      */
     public static Optional<String> lastCheck(final Messages messages, final ConsistencySummary summary) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(summary, "summary");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(summary, SUMMARY);
         if (summary.status() == ConsistencySummary.Status.NOT_RUN) {
             return Optional.empty();
         }
@@ -201,8 +205,8 @@ public final class ExportReportLines {
      * @return the line naming the report file, or empty when no report was written or nothing was written as it is
      */
     public static Optional<String> reportFile(final Messages messages, final ExportReport report) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(report, "report");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(report, REPORT);
         if (report.sourceFallbacks().isEmpty() && report.unresolvedBlocking().isEmpty()) {
             return Optional.empty();
         }
@@ -217,8 +221,8 @@ public final class ExportReportLines {
             final ExportReport report,
             final SourceFallback.Reason reason,
             final MessageKey key) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(report, "report");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(report, REPORT);
         final List<SourceFallback> named = report.sourceFallbacks().stream()
                 .filter(fallback -> fallback.reason() == reason)
                 .toList();

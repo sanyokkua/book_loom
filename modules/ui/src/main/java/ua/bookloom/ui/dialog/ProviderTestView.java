@@ -1,5 +1,11 @@
 package ua.bookloom.ui.dialog;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_GHOST;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+import static ua.bookloom.ui.theme.StyleClasses.CARD_TITLE;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_SUB;
+
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -136,7 +142,7 @@ final class ProviderTestView {
 
     private void build() {
         card.setId("test-card");
-        card.header(title, Wrapped.label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE), "dialog-sub"));
+        card.header(title, Wrapped.label(messages.get(MessageKey.SETTINGS_TEST_SUBTITLE), DIALOG_SUB));
         buildRequestRow();
         final HBox columns = new HBox(
                 COLUMN_SPACING,
@@ -161,7 +167,7 @@ final class ProviderTestView {
         requestLine.setMaxWidth(Double.MAX_VALUE);
         copyCurl.setId("test-copy-curl");
         copyCurl.setText(messages.get(MessageKey.SETTINGS_TEST_COPY_CURL));
-        copyCurl.getStyleClass().add("btn-secondary");
+        copyCurl.getStyleClass().add(BTN_SECONDARY);
         Tips.install(messages, copyCurl, MessageKey.SETTINGS_TEST_COPY_CURL_TIP);
         copyCurl.setOnAction(event -> copy(detail.curl(), MessageKey.SETTINGS_TEST_COPIED_CURL));
         requestRow.getChildren().addAll(requestLine, copyCurl);
@@ -174,10 +180,10 @@ final class ProviderTestView {
             final String copyId,
             final Supplier<String> raw) {
         final Label name = new Label(messages.get(head));
-        name.getStyleClass().add("card-title");
+        name.getStyleClass().add(CARD_TITLE);
         copy.setId(copyId);
         copy.setText(messages.get(MessageKey.SETTINGS_TEST_COPY));
-        copy.getStyleClass().add("btn-ghost");
+        copy.getStyleClass().add(BTN_GHOST);
         Tips.install(messages, copy, MessageKey.SETTINGS_TEST_COPY_TIP);
         copy.setOnAction(event -> copy(raw.get(), MessageKey.SETTINGS_TEST_COPIED));
         final Region grow = new Region();
@@ -220,7 +226,7 @@ final class ProviderTestView {
                                 messages.get(MessageKey.SETTINGS_TEST_CLOSE),
                                 ButtonBar.ButtonData.OK_DONE,
                                 "test-close",
-                                "btn-primary"),
+                                BTN_PRIMARY),
                         MessageKey.SETTINGS_TEST_CLOSE_TIP)
                 .setOnAction(event -> closeAsked());
         card.setOnEscape(this::closeAsked);
@@ -382,8 +388,8 @@ final class ProviderTestView {
             final boolean told =
                     ran || begun || TestDetails.failedBefore(each, chips).isPresent();
             tab.setDisable(!told && each != stage);
-            tab.getStyleClass().removeAll("btn-secondary", "btn-ghost");
-            tab.getStyleClass().add(each == stage ? "btn-secondary" : "btn-ghost");
+            tab.getStyleClass().removeAll(BTN_SECONDARY, BTN_GHOST);
+            tab.getStyleClass().add(each == stage ? BTN_SECONDARY : BTN_GHOST);
         });
     }
 }

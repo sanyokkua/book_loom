@@ -42,6 +42,8 @@ import ua.bookloom.ui.BackgroundExecutor;
 @Singleton
 public final class BookBriefViewModel {
 
+    private static final String CLEARED = "cleared";
+
     private static final int MIN_BALANCE = 0;
     private static final int MAX_BALANCE = 100;
 
@@ -206,7 +208,7 @@ public final class BookBriefViewModel {
     public void setGenre(final String genre) {
         final String text = BriefRebuild.blankToNull(genre);
         log.trace("genre is now '{}'", text);
-        change("genre", text == null ? "cleared" : "set", BriefField.GENRE, brief -> brief.withGenre(text));
+        change("genre", text == null ? CLEARED : "set", BriefField.GENRE, brief -> brief.withGenre(text));
     }
 
     /**
@@ -219,7 +221,7 @@ public final class BookBriefViewModel {
         log.trace("voice and era are now '{}'", text);
         change(
                 "voice and era",
-                text == null ? "cleared" : "set",
+                text == null ? CLEARED : "set",
                 BriefField.VOICE_ERA,
                 brief -> brief.withVoiceEra(text));
     }
@@ -232,7 +234,7 @@ public final class BookBriefViewModel {
     public void setAudience(final String audience) {
         final String text = BriefRebuild.blankToNull(audience);
         log.trace("audience is now '{}'", text);
-        change("audience", text == null ? "cleared" : "set", BriefField.AUDIENCE, brief -> brief.withAudience(text));
+        change("audience", text == null ? CLEARED : "set", BriefField.AUDIENCE, brief -> brief.withAudience(text));
     }
 
     /**

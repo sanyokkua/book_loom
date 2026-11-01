@@ -63,9 +63,9 @@ public final class ModalHost {
         this.work = Objects.requireNonNull(work, "work");
         this.feedback = Objects.requireNonNull(feedback, "feedback");
         host.setId(HOST_ID);
-        host.getStyleClass().add("shell-modal-host");
+        host.getStyleClass().add(HOST_ID);
         scrim.setId(SCRIM_ID);
-        scrim.getStyleClass().add("shell-scrim");
+        scrim.getStyleClass().add(SCRIM_ID);
         scrim.setOnMouseClicked(event -> onScrimClicked());
         host.getChildren().add(scrim);
         host.setVisible(false);

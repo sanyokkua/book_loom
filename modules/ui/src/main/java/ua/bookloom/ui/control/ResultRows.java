@@ -33,6 +33,8 @@ import ua.bookloom.ui.state.TargetEdits;
  */
 final class ResultRows {
 
+    private static final String RESULTS_HEAD = "results-head";
+
     static final double ROW_HEIGHT = 40;
 
     private static final double TERM_WIDTH = 150;
@@ -155,18 +157,17 @@ final class ResultRows {
         final HBox heads = new HBox(SPACING);
         heads.setId("results-columns");
         heads.setPadding(new Insets(0, SPACING, 0, SPACING));
-        heads.getChildren()
-                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, "results-head")));
-        final Label change = text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, "results-head");
+        heads.getChildren().add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_TERM), TERM_WIDTH, RESULTS_HEAD)));
+        final Label change = text(messages.get(MessageKey.PROGRESS_RESULTS_COLUMN_CHANGE), BADGE_WIDTH, RESULTS_HEAD);
         change.setMinWidth(BADGE_WIDTH);
         heads.getChildren().add(change);
         heads.getChildren()
-                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, "results-head")));
+                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_BEFORE), VALUE_WIDTH, RESULTS_HEAD)));
         heads.getChildren()
-                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, "results-head")));
+                .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_AFTER), VALUE_WIDTH, RESULTS_HEAD)));
         if (hasReasons) {
             heads.getChildren()
-                    .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, "results-head")));
+                    .add(flexible(text(messages.get(MessageKey.RESULTS_COLUMN_WHY), WHY_WIDTH, RESULTS_HEAD)));
         }
         // The same action room as a row, so headings and rows share the width alike and stay aligned.
         final Region action = new Region();

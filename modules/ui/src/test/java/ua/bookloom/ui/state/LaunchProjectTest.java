@@ -124,7 +124,7 @@ class LaunchProjectTest extends ShellTestBase {
         settings.put(AppSetting.REOPEN_LAST_PROJECT, true);
         settings.put(AppSetting.LAST_PROJECT, LAST);
         projects.willList(List.of(stored(LAST, ProjectFixtures.BOOK_FILE)));
-        onFx(() -> OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk"));
+        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
 
         launch();
 

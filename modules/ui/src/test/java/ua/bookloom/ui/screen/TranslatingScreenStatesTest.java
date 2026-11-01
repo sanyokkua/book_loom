@@ -206,6 +206,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         publishFlaggedQueue(3);
 
         awaitFx(() -> "Review (3)".equals(button("translating-review-flagged").getText()));
+        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (3)");
     }
 
     // IF the button counted only the flagged while the outcome showed the audit's doubts, THEN the two figures
@@ -220,6 +221,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         mirror().live().publishSuspicious(45);
 
         awaitFx(() -> "Review (92)".equals(button("translating-review-flagged").getText()));
+        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review (92)");
     }
 
     // IF a completed run showed only counts, THEN a person would have nowhere to go next.

@@ -20,6 +20,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -289,7 +290,7 @@ public final class LiveRowList extends ListView<LiveRow> {
             this.messages = messages;
             this.list = list;
             locator.getStyleClass().addAll("live-row-locator", "muted");
-            locator.setMinWidth(Label.USE_PREF_SIZE);
+            locator.setMinWidth(Region.USE_PREF_SIZE);
             text.getStyleClass().add("live-row-text");
             text.setMinWidth(0);
             text.setMaxWidth(Double.MAX_VALUE);

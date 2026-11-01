@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +36,7 @@ final class ProviderStorage {
     Result<Boolean> persist(final ProviderConfig config, final @Nullable String currentModel) {
         final Result<ProviderConfig> stored = configs.save(config);
         if (stored.isErr()) {
-            return Result.err(Objects.requireNonNull(stored.error(), "error"));
+            return Result.err(Objects.requireNonNull(stored.error(), ERROR));
         }
         if (currentModel == null) {
             return Result.ok(true);
@@ -43,7 +45,7 @@ final class ProviderStorage {
                 ? settings.remove(AppSetting.CURRENT_MODEL)
                 : settings.put(AppSetting.CURRENT_MODEL, new ModelSelection(config.id(), currentModel));
         if (written.isErr()) {
-            final AppError error = Objects.requireNonNull(written.error(), "error");
+            final AppError error = Objects.requireNonNull(written.error(), ERROR);
             log.warn("provider '{}' was saved but its current model was not: {}", config.id(), error.code());
             return Result.err(error);
         }
@@ -55,7 +57,7 @@ final class ProviderStorage {
         final Result<?> written = settings.put(AppSetting.CURRENT_MODEL, chosen);
         if (written.isErr()) {
             log.warn("provider '{}' could not be made current", chosen.providerId());
-            return Result.err(Objects.requireNonNull(written.error(), "error"));
+            return Result.err(Objects.requireNonNull(written.error(), ERROR));
         }
         return Result.ok(true);
     }

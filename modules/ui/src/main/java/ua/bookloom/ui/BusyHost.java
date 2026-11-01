@@ -73,9 +73,9 @@ public final class BusyHost {
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
     private final Map<Long, Shown> dialogs = new HashMap<>();
-    private final PauseTransition delay = new PauseTransition(DELAY);
-    private final PauseTransition coalesce = new PauseTransition(COALESCE);
-    private final FadeTransition fade = new FadeTransition(FADE, host);
+    private final PauseTransition delayTimer = new PauseTransition(DELAY);
+    private final PauseTransition coalesceTimer = new PauseTransition(COALESCE);
+    private final FadeTransition fadeTransition = new FadeTransition(FADE, host);
     private final Timeline clock = new Timeline(new KeyFrame(TICK, event -> tick()));
     private final BusyKeyboard keyboard;
     private final DialogFeedback feedback;
@@ -128,9 +128,9 @@ public final class BusyHost {
         host.setVisible(false);
         host.widthProperty().addListener((observed, was, now) -> fit());
         host.heightProperty().addListener((observed, was, now) -> fit());
-        clock.setCycleCount(Timeline.INDEFINITE);
-        delay.setOnFinished(event -> reveal());
-        coalesce.setOnFinished(event -> flush());
+        clock.setCycleCount(Animation.INDEFINITE);
+        delayTimer.setOnFinished(event -> reveal());
+        coalesceTimer.setOnFinished(event -> flush());
         activities.blockingActivity().addListener((observed, was, now) -> follow(now));
         activities.running().addListener((ListChangeListener<Activity>) change -> changed());
         follow(activities.blockingActivity().get());
@@ -147,8 +147,8 @@ public final class BusyHost {
 
     // Many changes a second reach the tracker during a pass; the dialogs redraw at most every COALESCE.
     private void changed() {
-        if (coalesce.getStatus() != Animation.Status.RUNNING) {
-            coalesce.playFromStart();
+        if (coalesceTimer.getStatus() != Animation.Status.RUNNING) {
+            coalesceTimer.playFromStart();
         }
     }
 
@@ -166,14 +166,14 @@ public final class BusyHost {
     private void follow(final @Nullable Activity now) {
         if (now == null) {
             log.debug("work layer: no shown work blocks any more");
-            delay.stop();
+            delayTimer.stop();
             conceal();
         } else if (revealed && now.id() != shownId) {
             log.debug("work layer: the dialog of {} #{} replaces #{}", now.kind(), now.id(), shownId);
             show(now);
-        } else if (!revealed && delay.getStatus() != Animation.Status.RUNNING) {
+        } else if (!revealed && delayTimer.getStatus() != Animation.Status.RUNNING) {
             log.debug("work layer: {} #{} blocks; its dialog follows after the delay", now.kind(), now.id());
-            delay.playFromStart();
+            delayTimer.playFromStart();
         }
     }
 
@@ -188,14 +188,14 @@ public final class BusyHost {
         host.setVisible(true);
         show(now);
         work.visibleProperty().set(true);
-        fade.stop();
+        fadeTransition.stop();
         if (Motion.isReduced()) {
             host.setOpacity(1);
         } else {
-            fade.setFromValue(0);
-            fade.setToValue(1);
-            fade.setOnFinished(null);
-            fade.playFromStart();
+            fadeTransition.setFromValue(0);
+            fadeTransition.setToValue(1);
+            fadeTransition.setOnFinished(null);
+            fadeTransition.playFromStart();
         }
         clock.playFromStart();
     }
@@ -241,20 +241,20 @@ public final class BusyHost {
         feedback.close(DialogFeedback.Layer.WORK);
         clock.stop();
         keyboard.release();
-        fade.stop();
+        fadeTransition.stop();
         if (Motion.isReduced()) {
             host.setOpacity(0);
             hideHost();
             return;
         }
-        fade.setFromValue(host.getOpacity());
-        fade.setToValue(0);
-        fade.setOnFinished(event -> {
+        fadeTransition.setFromValue(host.getOpacity());
+        fadeTransition.setToValue(0);
+        fadeTransition.setOnFinished(event -> {
             if (!revealed) {
                 hideHost();
             }
         });
-        fade.playFromStart();
+        fadeTransition.playFromStart();
     }
 
     // A dialog that has gone is not left in the scene behind the invisible layer; the next one is put there again.

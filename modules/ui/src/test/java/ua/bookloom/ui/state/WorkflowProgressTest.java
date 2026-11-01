@@ -32,7 +32,7 @@ class WorkflowProgressTest extends FxTestBase {
     }
 
     private void open(final @Nullable String source, final @Nullable String target) {
-        interact(() -> OpenBookForTest.open(project, source, target));
+        interact(() -> OpenedBookFixture.open(project, source, target));
     }
 
     private void runEndedWith(final RunState state, final int accepted, final int pending) {

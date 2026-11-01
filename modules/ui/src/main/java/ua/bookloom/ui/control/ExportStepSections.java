@@ -25,7 +25,7 @@ final class ExportStepSections extends VBox {
     private static final int WRITING = ExportStages.WRITING;
 
     private final ProgressDialogModel model;
-    private final Label reread = new Label();
+    private final Label rereadHeading = new Label();
 
     ExportStepSections(final ProgressDialogModel model, final Messages messages) {
         super(SPACING);
@@ -43,13 +43,13 @@ final class ExportStepSections extends VBox {
         final ProgressStepList finish = new ProgressStepList(
                 model, messages, row -> row.kind() == StepKind.STAGE && row.index() == WRITING, false);
         finish.sizeToRows(true);
-        reread.setId("export-group-reread");
-        reread.getStyleClass().add("progress-heading");
+        rereadHeading.setId("export-group-reread");
+        rereadHeading.getStyleClass().add("progress-heading");
         getChildren()
                 .addAll(
                         heading(messages.get(MessageKey.EXPORT_GROUP_STEPS)),
                         stages,
-                        reread,
+                        rereadHeading,
                         items,
                         heading(messages.get(MessageKey.EXPORT_GROUP_FINISH)),
                         finish);
@@ -64,9 +64,9 @@ final class ExportStepSections extends VBox {
                 .map(StepEntry::label)
                 .findFirst()
                 .orElse("");
-        reread.setText(label);
-        reread.setVisible(!label.isEmpty());
-        reread.setManaged(!label.isEmpty());
+        rereadHeading.setText(label);
+        rereadHeading.setVisible(!label.isEmpty());
+        rereadHeading.setManaged(!label.isEmpty());
     }
 
     private static Label heading(final String text) {

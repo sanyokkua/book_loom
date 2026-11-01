@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.net.URI;
@@ -178,7 +180,7 @@ public final class LocalModelProbe {
             log.debug(
                     "{} did not answer: {}",
                     id,
-                    Objects.requireNonNull(listed.error(), "error").code());
+                    Objects.requireNonNull(listed.error(), ERROR).code());
             return Optional.empty();
         }
         final List<ModelInfo> rows = Objects.requireNonNull(listed.data(), "data");
@@ -233,7 +235,7 @@ public final class LocalModelProbe {
             log.warn(
                     "provider {} not saved: {}",
                     answered.config().id(),
-                    Objects.requireNonNull(saved.error(), "error").code());
+                    Objects.requireNonNull(saved.error(), ERROR).code());
         }
     }
 
@@ -282,7 +284,7 @@ public final class LocalModelProbe {
         if (written.isErr()) {
             log.warn(
                     "model.current not stored: {}",
-                    Objects.requireNonNull(written.error(), "error").code());
+                    Objects.requireNonNull(written.error(), ERROR).code());
         } else {
             log.info("model.current set to {}/{}", chosen.providerId(), chosen.modelId());
         }
@@ -293,7 +295,7 @@ public final class LocalModelProbe {
         if (written.isErr()) {
             log.warn(
                     "the first-launch flag was not stored: {}",
-                    Objects.requireNonNull(written.error(), "error").code());
+                    Objects.requireNonNull(written.error(), ERROR).code());
         } else {
             log.info("first-launch look recorded");
         }

@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import static ua.bookloom.util.contract.ArgNames.DEFAULT;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -117,7 +119,7 @@ final class BriefKeyRows {
                 choice,
                 BriefField.APOSTROPHE);
         showers.add(() -> choice.show(Objects.requireNonNullElse(
-                current().apostrophe(), Objects.requireNonNull(choices.defaultApostrophe(), "default"))));
+                current().apostrophe(), Objects.requireNonNull(choices.defaultApostrophe(), DEFAULT))));
     }
 
     private void quoteRow(final BriefChoices choices) {
@@ -130,11 +132,11 @@ final class BriefKeyRows {
         final BriefChoice<QuoteStyle> choice = new BriefChoice<>("brief-policy-quotes", segments, keys::setQuoteStyle);
         addRow(MessageKey.BRIEF_POLICY_QUOTES, MessageKey.BRIEF_POLICY_QUOTES_TIP, choice, BriefField.QUOTE_STYLE);
         showers.add(() -> choice.show(Objects.requireNonNullElse(
-                current().quoteStyle(), Objects.requireNonNull(choices.defaultQuoteStyle(), "default"))));
+                current().quoteStyle(), Objects.requireNonNull(choices.defaultQuoteStyle(), DEFAULT))));
     }
 
     private void addressRows(final BriefChoices choices, final BriefChoices.AddressWords words) {
-        final Address fallback = Objects.requireNonNull(choices.defaultAddress(), "default");
+        final Address fallback = Objects.requireNonNull(choices.defaultAddress(), DEFAULT);
         final BriefChoice<AddressForm> strangers =
                 addressChoice("brief-policy-address-strangers", words, keys::setStrangersAddress);
         final BriefChoice<AddressForm> family =

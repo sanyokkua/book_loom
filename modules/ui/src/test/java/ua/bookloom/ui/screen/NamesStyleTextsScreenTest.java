@@ -105,6 +105,7 @@ class NamesStyleTextsScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-empty-add").fire());
 
         awaitFx(() -> optional("add-term-card") != null);
+        assertThat(optional("add-term-card")).isNotNull();
     }
 
     @Test
@@ -114,6 +115,7 @@ class NamesStyleTextsScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("names-style-empty-scan").fire());
 
         awaitFx(() -> glossary.calls().contains("scan(p1)"));
+        assertThat(glossary.calls()).contains("scan(p1)");
     }
 
     @Test

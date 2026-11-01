@@ -1,5 +1,8 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.util.contract.ArgNames.DURATION;
+import static ua.bookloom.util.contract.ArgNames.MESSAGES;
+
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
@@ -30,8 +33,8 @@ public final class DurationText {
      * @return the text, such as {@code 1h 02m}, {@code 12m} or {@code 45s}
      */
     public static String format(final Messages messages, final Duration duration) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(duration, "duration");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(duration, DURATION);
         final long seconds = duration.toSeconds();
         final long minutes = seconds / SECONDS_PER_MINUTE;
         if (minutes >= MINUTES_PER_HOUR) {
@@ -54,8 +57,8 @@ public final class DurationText {
      * @return the text, which starts with the word for "about"
      */
     public static String about(final Messages messages, final Duration duration) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(duration, "duration");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(duration, DURATION);
         final long minutes = duration.toMinutes();
         if (minutes < MINUTES_PER_HOUR) {
             return messages.get(MessageKey.DURATION_ABOUT_M, Long.toString(Math.max(1, minutes)));
@@ -76,8 +79,8 @@ public final class DurationText {
      * @return the text, a whole minute giving no seconds
      */
     public static String spelled(final Messages messages, final Duration duration) {
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(duration, "duration");
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(duration, DURATION);
         final long seconds = duration.toSeconds();
         final long minutes = seconds / SECONDS_PER_MINUTE;
         final long rest = seconds % SECONDS_PER_MINUTE;

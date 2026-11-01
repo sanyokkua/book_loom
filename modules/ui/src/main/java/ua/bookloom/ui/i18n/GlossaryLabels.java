@@ -1,5 +1,7 @@
 package ua.bookloom.ui.i18n;
 
+import static ua.bookloom.util.contract.ArgNames.MESSAGES;
+
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -27,7 +29,7 @@ public final class GlossaryLabels {
      * @return the type in the display language
      */
     public static String type(final Messages messages, final TermType type) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return messages.get(
                 switch (Objects.requireNonNull(type, "type")) {
                     case CHARACTER -> MessageKey.NAMES_STYLE_TYPE_CHARACTER;
@@ -50,7 +52,7 @@ public final class GlossaryLabels {
      * @return the gender in the display language
      */
     public static String gender(final Messages messages, final Gender gender) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return messages.get(
                 switch (Objects.requireNonNull(gender, "gender")) {
                     case FEMALE -> MessageKey.NAMES_STYLE_GENDER_FEMALE;
@@ -68,7 +70,7 @@ public final class GlossaryLabels {
      * @return the state in the display language
      */
     public static String state(final Messages messages, final TargetState state) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return messages.get(
                 switch (Objects.requireNonNull(state, "state")) {
                     case SUGGESTED -> MessageKey.NAMES_STYLE_STATE_SUGGESTED;
@@ -85,7 +87,7 @@ public final class GlossaryLabels {
      * @return the origin in the display language
      */
     public static String origin(final Messages messages, final Origin origin) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return messages.get(
                 switch (Objects.requireNonNull(origin, "origin")) {
                     case USER -> MessageKey.NAMES_STYLE_ORIGIN_USER;
@@ -104,7 +106,7 @@ public final class GlossaryLabels {
      * @return the reason in the display language
      */
     public static String issue(final Messages messages, final TargetIssue issue) {
-        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(messages, MESSAGES);
         return messages.get(
                 switch (Objects.requireNonNull(issue, "issue")) {
                     case FORBIDDEN_LETTER -> MessageKey.NAMES_STYLE_ISSUE_FORBIDDEN_LETTER;

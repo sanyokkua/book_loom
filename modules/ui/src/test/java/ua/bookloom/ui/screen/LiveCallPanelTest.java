@@ -22,7 +22,7 @@ import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.LiveRow.Stage;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.TechnicalDetails;
 
 /** The live card as a whole: its two tabs, its Simple and Detailed choice, its scene summary and the log tab. */
@@ -137,7 +137,7 @@ class LiveCallPanelTest extends LiveCardTestBase {
     // IF the line did not read the summary the run keeps, THEN it would stay "none" while the model remembers a story.
     @Test
     void sceneSummary_runSavedOne_showsItsTargetText() {
-        onFx(() -> OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk"));
+        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
         showCard();
         final String id = ThemeTestSupport.onFx(
                 () -> injector.getInstance(CurrentProject.class).book().get().projectId());

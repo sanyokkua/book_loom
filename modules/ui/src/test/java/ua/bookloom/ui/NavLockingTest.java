@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 
@@ -29,7 +29,7 @@ class NavLockingTest extends ShellTestBase {
 
     private void openBook(final String source, final @Nullable String target) {
         final CurrentProject project = injector.getInstance(CurrentProject.class);
-        onFx(() -> OpenBookForTest.open(project, source, target));
+        onFx(() -> OpenedBookFixture.open(project, source, target));
     }
 
     @ParameterizedTest

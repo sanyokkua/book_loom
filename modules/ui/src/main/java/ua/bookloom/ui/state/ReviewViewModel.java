@@ -28,6 +28,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.util.contract.ArgNames;
 
 /**
  * What the review desk does: list the segments of a filter through the review desk port, hold the selected segment's
@@ -95,7 +96,7 @@ public final class ReviewViewModel {
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
         this.refusals = new ReviewRefusals(toasts, errors, refused::show, messages);
-        this.retry = Objects.requireNonNull(retry, "retry");
+        this.retry = Objects.requireNonNull(retry, ArgNames.RETRY);
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {
             refreshAvailability();

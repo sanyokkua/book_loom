@@ -18,7 +18,7 @@ import ua.bookloom.api.pipeline.StepsPlanned;
 final class ActionSteps {
 
     private static final int STAGES = 2;
-    private static final int ACTION = 0;
+    private static final int ACTION_STEP = 0;
     private static final int WRITE = 1;
 
     private final ActivityTracker.Handle handle;
@@ -41,7 +41,7 @@ final class ActionSteps {
         Objects.requireNonNull(action, "action");
         log.debug("action steps begin: {}", action);
         handle.steps(new StepsPlanned(StepKind.STAGE, STAGES, false));
-        handle.steps(new StepChanged(StepKind.STAGE, action, ACTION, StepState.STARTED, null, null));
+        handle.steps(new StepChanged(StepKind.STAGE, action, ACTION_STEP, StepState.STARTED, null, null));
         return new ActionSteps(handle, action);
     }
 
@@ -52,7 +52,7 @@ final class ActionSteps {
      */
     void written(final boolean sentRequests) {
         log.debug("action steps written: {}, requests sent {}", action, sentRequests);
-        ended(ACTION, action, sentRequests ? StepResult.DONE : StepResult.NO_CALL);
+        ended(ACTION_STEP, action, sentRequests ? StepResult.DONE : StepResult.NO_CALL);
         final String write = NamesPassStage.WRITE.code();
         handle.steps(new StepChanged(StepKind.STAGE, write, WRITE, StepState.STARTED, null, null));
         ended(WRITE, write, StepResult.NO_CALL);
@@ -61,7 +61,7 @@ final class ActionSteps {
     /** Ends the action as failed; the write step never starts. */
     void failed() {
         log.debug("action steps failed: {}", action);
-        ended(ACTION, action, StepResult.FAILED);
+        ended(ACTION_STEP, action, StepResult.FAILED);
     }
 
     private void ended(final int index, final String label, final StepResult result) {

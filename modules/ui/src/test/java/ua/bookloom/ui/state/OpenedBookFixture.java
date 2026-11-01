@@ -13,7 +13,7 @@ import ua.bookloom.ui.BookFixtures;
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class OpenBookForTest {
+public final class OpenedBookFixture {
 
     /**
      * Opens the Frankenstein fixture with the given languages; call on the FX thread.

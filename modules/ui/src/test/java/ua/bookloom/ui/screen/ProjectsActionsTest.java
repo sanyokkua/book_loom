@@ -15,7 +15,7 @@ import ua.bookloom.ui.state.BookGroup;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
-import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.ProjectRow;
 
 /**
@@ -216,7 +216,7 @@ class ProjectsActionsTest extends ProjectsScreenTestBase {
     // IF "+ New translation" closed the open project, THEN a person who changed their mind would lose their place.
     @Test
     void newTranslation_projectOpen_showsAnIdleImportAndTheProjectStaysOpen() throws Exception {
-        onFx(() -> OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk"));
+        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
         showListing(ukrainianRunning());
 
         press((Button) node("projects-new"));

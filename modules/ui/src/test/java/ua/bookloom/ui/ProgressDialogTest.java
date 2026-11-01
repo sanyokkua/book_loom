@@ -333,6 +333,7 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         awaitDialog();
 
         await(() -> required("progress-call").isVisible());
+        assertThat(required("progress-call").isVisible()).isTrue();
     }
 
     private static CallSnapshot call() {

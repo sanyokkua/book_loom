@@ -46,6 +46,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @Singleton
 public final class RunStatusBar {
 
+    private static final String RUN_STATUS_DETAIL = "run-status-detail";
+
     private static final double PART_SPACING = 12;
     // The project name shrinks to about twenty characters before any other part is hidden.
     private static final double NAME_COMFORT = 150;
@@ -127,10 +129,10 @@ public final class RunStatusBar {
         name(projectName, "shell-run-project", "run-status-text");
         name(stateText, "shell-run-state", "run-status-text");
         stateText.getStyleClass().add("run-status-state");
-        name(modeText, "shell-run-mode", "run-status-detail");
+        name(modeText, "shell-run-mode", RUN_STATUS_DETAIL);
         Tips.install(messages, modeText, MessageKey.SHELL_RUN_MODE_TIP);
-        name(elapsed, "shell-run-elapsed", "run-status-detail");
-        name(rate, "shell-run-rate", "run-status-detail");
+        name(elapsed, "shell-run-elapsed", RUN_STATUS_DETAIL);
+        name(rate, "shell-run-rate", RUN_STATUS_DETAIL);
         Tips.install(messages, rate, MessageKey.SHELL_RUN_RATE_TIP);
         projectName.setMinWidth(0);
         projectName.setTextOverrun(OverrunStyle.ELLIPSIS);

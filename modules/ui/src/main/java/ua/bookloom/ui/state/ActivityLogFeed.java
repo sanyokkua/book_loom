@@ -32,12 +32,12 @@ import ua.bookloom.ui.i18n.MessageKey;
 final class ActivityLogFeed {
 
     static final String STAGE_STARTED = "stageStarted";
-    static final String PAUSED = "paused";
-    static final String RESUMED = "resumed";
-    static final String FINISHED = "finished";
+    static final String PAUSED_KEY = "paused";
+    static final String RESUMED_KEY = "resumed";
+    static final String FINISHED_KEY = "finished";
     static final String RESUME_AFTER_ERROR = "resume";
     static final String GLOSSARY = "glossary";
-    static final String MEMORY = "memory";
+    static final String MEMORY_KEY = "memory";
 
     /** A chunk holds a handful of segments, so far fewer locators than this are ever looked up after their start. */
     static final int MAX_LOCATORS = 256;
@@ -170,7 +170,7 @@ final class ActivityLogFeed {
     LogEntry memory(final MemoryUpdated event) {
         return switch (event.kind()) {
             case GLOSSARY -> new LogEntry(LogKind.MEMORY, List.of(GLOSSARY, event.label()));
-            case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY, event.label()));
+            case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY_KEY, event.label()));
             case SUMMARY -> new LogEntry(LogKind.SUMMARY, List.of(event.label()));
         };
     }
@@ -181,13 +181,13 @@ final class ActivityLogFeed {
 
     LogEntry paused(final Paused event) {
         pausedOnError = event.reason() == PauseReason.ON_ERROR;
-        return milestone(PAUSED);
+        return milestone(PAUSED_KEY);
     }
 
     LogEntry resumed() {
         final boolean afterError = pausedOnError;
         pausedOnError = false;
-        return afterError ? new LogEntry(LogKind.RETRIED, List.of(RESUME_AFTER_ERROR, "")) : milestone(RESUMED);
+        return afterError ? new LogEntry(LogKind.RETRIED, List.of(RESUME_AFTER_ERROR, "")) : milestone(RESUMED_KEY);
     }
 
     /**
@@ -226,7 +226,7 @@ final class ActivityLogFeed {
     }
 
     LogEntry finished() {
-        return milestone(FINISHED);
+        return milestone(FINISHED_KEY);
     }
 
     private static LogEntry milestone(final String token) {

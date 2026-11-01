@@ -93,7 +93,7 @@ class ContinueGuardTest extends ShellTestBase {
 
     private void confirm(final ModelSelection current) {
         onFx(() -> {
-            OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk");
+            OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk");
             injector.getInstance(ContinueGuard.class).confirm(current, proceeded::add, cancelled::incrementAndGet);
         });
         WaitForAsyncUtils.waitForFxEvents();

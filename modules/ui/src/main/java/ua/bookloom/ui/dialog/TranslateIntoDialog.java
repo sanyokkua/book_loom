@@ -1,5 +1,10 @@
 package ua.bookloom.ui.dialog;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_PRIMARY;
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_SUB;
+import static ua.bookloom.ui.theme.StyleClasses.DIALOG_TEXT;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.List;
@@ -81,7 +86,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         private final FormCard card;
         private final SearchableCombo<String> into;
         private final NameField name;
-        private final Label hint = Wrapped.label("", "dialog-sub");
+        private final Label hint = Wrapped.label("", DIALOG_SUB);
         private final Button create;
 
         Card(
@@ -104,7 +109,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             card.onEscape(cancelled);
             configureList();
             card.body(
-                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_BODY, group.title()), "dialog-text"),
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_BODY, group.title()), DIALOG_TEXT),
                     languagePair(),
                     name.view(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_NAME)),
                     hint,
@@ -119,14 +124,14 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
                     messages.get(MessageKey.COMMON_CANCEL),
                     MessageKey.COMMON_CANCEL_TIP,
                     ButtonBar.ButtonData.CANCEL_CLOSE,
-                    "btn-secondary",
+                    BTN_SECONDARY,
                     cancelled);
             return card.button(
                     PREFIX + "create",
                     messages.get(MessageKey.DIALOG_TRANSLATE_INTO_CREATE),
                     MessageKey.DIALOG_TRANSLATE_INTO_CREATE_TIP,
                     ButtonBar.ButtonData.OK_DONE,
-                    "btn-primary",
+                    BTN_PRIMARY,
                     () -> {
                         final String typed = name.field().getText().strip();
                         onCreate.accept(
@@ -202,8 +207,8 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             return new VBox(
                     ROW_GAP,
                     caption,
-                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_BRIEF), "dialog-text"),
-                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_GLOSSARY), "dialog-text"));
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_BRIEF), DIALOG_TEXT),
+                    Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_START_FROM_GLOSSARY), DIALOG_TEXT));
         }
 
         private String automaticName() {

@@ -230,6 +230,7 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
         ImportScreenTestBase.awaitFx(() -> !pick.asked().isEmpty());
 
         ImportScreenTestBase.awaitFx(() -> footerText().equals("Шукаємо модель ШІ..."));
+        assertThat(footerText()).isEqualTo("Шукаємо модель ШІ...");
     }
 
     @Test

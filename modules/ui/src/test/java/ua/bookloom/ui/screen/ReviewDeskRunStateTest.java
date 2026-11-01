@@ -137,5 +137,6 @@ class ReviewDeskRunStateTest extends ReviewDeskTestBase {
         publish(RunState.PAUSED);
 
         awaitFx(() -> button(REVIEW).getText().equals("Review (4)"));
+        assertThat(button(REVIEW).getText()).isEqualTo("Review (4)");
     }
 }

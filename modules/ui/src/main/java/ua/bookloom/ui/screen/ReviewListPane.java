@@ -87,7 +87,7 @@ final class ReviewListPane extends VBox {
     private final ObservableIntegerValue suspicious;
     private final Guard guard;
     private final ListView<ReviewRow> list = new ListView<>();
-    private final ComboBox<ReviewFilter> filters = new ComboBox<>();
+    private final ComboBox<ReviewFilter> filterBox = new ComboBox<>();
     private final FilterCell buttonCell = new FilterCell();
     // True while the view model's state is written into the controls, so that the write is not read as a pick.
     private boolean applying;
@@ -125,19 +125,19 @@ final class ReviewListPane extends VBox {
     }
 
     private HBox filterRow() {
-        filters.setId("review-filter");
-        filters.getItems().setAll(FILTERS);
-        filters.setCellFactory(view -> new FilterCell());
-        filters.setButtonCell(buttonCell);
-        filters.setMaxWidth(Double.MAX_VALUE);
-        Tips.install(messages, filters, MessageKey.REVIEW_FILTER_TIP);
-        filters.setAccessibleText(messages.get(MessageKey.REVIEW_FILTER));
-        HBox.setHgrow(filters, Priority.ALWAYS);
+        filterBox.setId("review-filter");
+        filterBox.getItems().setAll(FILTERS);
+        filterBox.setCellFactory(view -> new FilterCell());
+        filterBox.setButtonCell(buttonCell);
+        filterBox.setMaxWidth(Double.MAX_VALUE);
+        Tips.install(messages, filterBox, MessageKey.REVIEW_FILTER_TIP);
+        filterBox.setAccessibleText(messages.get(MessageKey.REVIEW_FILTER));
+        HBox.setHgrow(filterBox, Priority.ALWAYS);
         showFilter(viewModel.filter().get());
-        filters.valueProperty().addListener((observed, was, now) -> chosen(now));
+        filterBox.valueProperty().addListener((observed, was, now) -> chosen(now));
         final Button previous = arrow("review-prev", Feather.CHEVRON_LEFT, Words.PREVIOUS, PREVIOUS, -1);
         final Button next = arrow("review-next", Feather.CHEVRON_RIGHT, Words.NEXT, NEXT, 1);
-        final HBox row = new HBox(SPACING / 2, filters, previous, next);
+        final HBox row = new HBox(SPACING / 2, filterBox, previous, next);
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
@@ -160,7 +160,7 @@ final class ReviewListPane extends VBox {
     private void showFilter(final ReviewFilter filter) {
         applying = true;
         try {
-            filters.setValue(filter);
+            filterBox.setValue(filter);
         } finally {
             applying = false;
         }
@@ -278,7 +278,7 @@ final class ReviewListPane extends VBox {
             HBox.setHgrow(spacer, Priority.ALWAYS);
             top.setAlignment(Pos.CENTER_LEFT);
             locator.getStyleClass().addAll("review-locator", "muted");
-            locator.setMinWidth(Label.USE_PREF_SIZE);
+            locator.setMinWidth(Region.USE_PREF_SIZE);
             line.getStyleClass().add("review-row-line");
             line.setMinWidth(0);
             line.setMaxWidth(Double.MAX_VALUE);

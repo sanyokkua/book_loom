@@ -1,5 +1,7 @@
 package ua.bookloom.ui.dialog;
 
+import static ua.bookloom.ui.theme.StyleClasses.BTN_SECONDARY;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
@@ -77,7 +79,7 @@ public final class LeaveDialog {
                 messages.get(MessageKey.DIALOG_LEAVE_KEEP),
                 MessageKey.DIALOG_LEAVE_KEEP_TIP,
                 ButtonBar.ButtonData.OTHER,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> {
                     log.debug("leaving with the work still running");
                     leaveRunning.run();
@@ -149,14 +151,14 @@ public final class LeaveDialog {
                 messages.get(MessageKey.DIALOG_WORK_STAY),
                 MessageKey.DIALOG_WORK_STAY_TIP,
                 ButtonBar.ButtonData.CANCEL_CLOSE,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> log.debug("staying with {} in view", activity));
         card.button(
                 WORK_BACKGROUND_ID,
                 messages.get(MessageKey.DIALOG_WORK_BACKGROUND),
                 MessageKey.DIALOG_WORK_BACKGROUND_TIP,
                 ButtonBar.ButtonData.OTHER,
-                "btn-secondary",
+                BTN_SECONDARY,
                 () -> {
                     log.info("leaving with {} continuing in the background", activity);
                     continueInBackground.run();
@@ -236,7 +238,7 @@ public final class LeaveDialog {
             final MessageKey tip,
             final ButtonBar.ButtonData data,
             final Runnable then) {
-        return card.button(id, messages.get(caption), tip, data, "btn-secondary", () -> {
+        return card.button(id, messages.get(caption), tip, data, BTN_SECONDARY, () -> {
             log.debug("leave question answered with {}", id);
             then.run();
         });

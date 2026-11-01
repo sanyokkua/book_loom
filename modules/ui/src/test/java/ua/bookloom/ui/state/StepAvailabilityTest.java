@@ -19,7 +19,7 @@ class StepAvailabilityTest {
     private final StepAvailability availability = new StepAvailability(project);
 
     private void openBook(final @Nullable String source, final @Nullable String target) {
-        OpenBookForTest.open(project, source, target);
+        OpenedBookFixture.open(project, source, target);
     }
 
     @ParameterizedTest

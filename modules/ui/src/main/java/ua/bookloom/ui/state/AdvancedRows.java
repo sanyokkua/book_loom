@@ -28,9 +28,9 @@ import ua.bookloom.ui.state.TestDetail.CheckRow;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AdvancedRows {
 
-    private static final Set<String> OUTCOMES = Set.of("honoured", "ignored", "refused");
     private static final String HONOURED = "honoured";
     private static final String IGNORED = "ignored";
+    private static final Set<String> OUTCOMES = Set.of(HONOURED, IGNORED, "refused");
     private static final int STATUS_CLASS = 100;
     private static final int SUCCESS_CLASS = 2;
 

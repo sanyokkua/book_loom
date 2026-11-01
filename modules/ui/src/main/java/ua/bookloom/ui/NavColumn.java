@@ -102,7 +102,7 @@ final class NavColumn {
         // The column is a scroll pane so a short window can still reach every entry; it keeps the column's id and
         // width and carries its background, and the entries sit in a transparent box inside it.
         scroll.setId(COLUMN_ID);
-        scroll.getStyleClass().addAll("shell-nav", "nav-scroll");
+        scroll.getStyleClass().addAll(COLUMN_ID, "nav-scroll");
         // Fitting the height lets the spacer push the footer to the bottom of a tall window.
         scroll.setFitToHeight(true);
         log.debug("built navigation column with {} entries", entries.size());

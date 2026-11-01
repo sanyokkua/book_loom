@@ -118,5 +118,9 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> table().lookupAll(".glossary-empty").stream()
                 .anyMatch(node -> node.isVisible() && "No name matches the search.".equals(((Label) node).getText())));
+        assertThat(table().lookupAll(".glossary-empty").stream()
+                        .filter(Node::isVisible)
+                        .map(node -> ((Label) node).getText()))
+                .contains("No name matches the search.");
     }
 }

@@ -28,7 +28,7 @@ class SceneSummaryTest extends FxTestBase {
 
     private void openBook() {
         onFx(() -> {
-            OpenBookForTest.open(project, "en", "uk");
+            OpenedBookFixture.open(project, "en", "uk");
             return null;
         });
     }

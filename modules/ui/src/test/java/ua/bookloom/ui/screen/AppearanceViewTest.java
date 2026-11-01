@@ -284,6 +284,7 @@ class AppearanceViewTest extends ShellTestBase {
         pickLanguage(LanguageChoice.SYSTEM);
 
         awaitStored(AppSetting.LANGUAGE, false);
+        assertThat(store.stored(AppSetting.LANGUAGE)).isEmpty();
     }
 
     // IF the follow-the-computer option did not name the language it would give, THEN a person could not tell it from
@@ -392,9 +393,8 @@ class AppearanceViewTest extends ShellTestBase {
         useLocale(Locale.ENGLISH);
         showAppearance();
 
-        WaitForAsyncUtils.waitFor(
-                WAIT_SECONDS,
-                TimeUnit.SECONDS,
-                () -> ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("appearance-technical")).isSelected()));
+        final ToggleSwitch technical = (ToggleSwitch) required("appearance-technical");
+        WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(technical::isSelected));
+        assertThat(technical.isSelected()).isTrue();
     }
 }

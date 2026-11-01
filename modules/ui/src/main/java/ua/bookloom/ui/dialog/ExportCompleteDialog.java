@@ -35,6 +35,8 @@ import ua.bookloom.ui.state.Tone;
 @Singleton
 public final class ExportCompleteDialog {
 
+    private static final String EXPORT_COMPLETE_BUTTON_PRESSED = "export-complete button {} pressed";
+
     static final String CARD_ID = "export-complete-card";
     static final String CLOSE_ID = "export-complete-close";
     static final String FOLDER_ID = "export-complete-folder";
@@ -223,7 +225,7 @@ public final class ExportCompleteDialog {
                 MessageKey.COMMON_CLOSE_TIP,
                 ButtonBar.ButtonData.CANCEL_CLOSE,
                 "btn-ghost",
-                () -> log.debug("export-complete button {} pressed", CLOSE_ID));
+                () -> log.debug(EXPORT_COMPLETE_BUTTON_PRESSED, CLOSE_ID));
         card.button(
                 FOLDER_ID,
                 messages.get(MessageKey.EXPORT_REVEAL),
@@ -231,7 +233,7 @@ public final class ExportCompleteDialog {
                 ButtonBar.ButtonData.OTHER,
                 "btn-secondary",
                 () -> {
-                    log.debug("export-complete button {} pressed", FOLDER_ID);
+                    log.debug(EXPORT_COMPLETE_BUTTON_PRESSED, FOLDER_ID);
                     revealer.reveal(file);
                 });
         card.button(
@@ -241,7 +243,7 @@ public final class ExportCompleteDialog {
                 ButtonBar.ButtonData.OK_DONE,
                 "btn-primary",
                 () -> {
-                    log.debug("export-complete button {} pressed", OPEN_ID);
+                    log.debug(EXPORT_COMPLETE_BUTTON_PRESSED, OPEN_ID);
                     revealer.open(file);
                 });
     }

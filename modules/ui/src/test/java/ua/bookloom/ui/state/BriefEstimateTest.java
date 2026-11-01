@@ -49,7 +49,7 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         final SettingsViewModel viewModel = viewModel();
         onFx(() -> {
             viewModel.adopt(CHOSEN);
-            OpenBookForTest.open(current, "p1", "en", "uk");
+            OpenedBookFixture.open(current, "p1", "en", "uk");
             return null;
         });
         final Project stored = ProjectFixtures.project(

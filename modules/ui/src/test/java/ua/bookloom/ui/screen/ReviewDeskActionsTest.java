@@ -44,6 +44,8 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         awaitFx(() -> desk.calls().contains("accept(" + projectId() + ", " + LOW_SCORE_ID + ")"));
         awaitFx(() -> "ch7 · p40".equals(selectedLocator()));
+        assertThat(desk.calls()).contains("accept(" + projectId() + ", " + LOW_SCORE_ID + ")");
+        assertThat(selectedLocator()).isEqualTo("ch7 · p40");
     }
 
     // IF ⌘+Enter did not work, THEN a Mac user would have no shortcut; it saves what was typed.
@@ -57,6 +59,7 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         awaitFx(() ->
                 desk.calls().contains("saveEdit(" + projectId() + ", " + LOW_SCORE_ID + ", " + TYPED_STORED + ")"));
+        assertThat(desk.calls()).contains("saveEdit(" + projectId() + ", " + LOW_SCORE_ID + ", " + TYPED_STORED + ")");
     }
 
     // IF the saved note stayed, THEN "Saved — ch5 · p12." would sit beside another segment the person picked later.
@@ -98,6 +101,7 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
         key(required("review-list"), KeyCode.UP, true, true, false);
 
         awaitFx(() -> "ch5 · p12".equals(selectedLocator()));
+        assertThat(selectedLocator()).isEqualTo("ch5 · p12");
     }
 
     // IF Alt+↑ in the editor moved rows, THEN a person editing would be thrown to another segment.
@@ -151,6 +155,8 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
 
         awaitFx(() ->
                 desk.calls().contains("retry(" + projectId() + ", ch07.xhtml:39, note=null, lowerTemperature=false)"));
+        assertThat(desk.calls())
+                .contains("retry(" + projectId() + ", ch07.xhtml:39, note=null, lowerTemperature=false)");
     }
 
     // IF the note were asked in a second dialog, THEN it would replace the desk and the segment would be out of sight.
