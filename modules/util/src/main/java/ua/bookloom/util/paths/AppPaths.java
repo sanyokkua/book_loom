@@ -24,6 +24,8 @@ import java.util.Objects;
  */
 public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFile, boolean onNetworkFilesystem) {
 
+    private static final String DATA_DIR = "dataDir";
+
     /** The single-instance lock file's fixed name inside the data directory. */
     public static final String LOCK_FILE_NAME = "bookloom.lock";
 
@@ -72,11 +74,11 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
      * point each candidate path is chosen.
      */
     public AppPaths {
-        Objects.requireNonNull(dataDir, "dataDir");
+        Objects.requireNonNull(dataDir, DATA_DIR);
         Objects.requireNonNull(logDir, "logDir");
         Objects.requireNonNull(lockFile, "lockFile");
         Objects.requireNonNull(databaseFile, "databaseFile");
-        requireAbsolute(dataDir, "dataDir");
+        requireAbsolute(dataDir, DATA_DIR);
         requireAbsolute(logDir, "logDir");
         if (!lockFile.equals(dataDir.resolve(LOCK_FILE_NAME))) {
             throw new IllegalArgumentException("lockFile must be " + LOCK_FILE_NAME + " inside dataDir");
@@ -98,7 +100,7 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
      * @return the resolved paths, with {@code onNetworkFilesystem} not yet probed
      */
     public static AppPaths of(Path dataDir, Path logDir) {
-        Objects.requireNonNull(dataDir, "dataDir");
+        Objects.requireNonNull(dataDir, DATA_DIR);
         return new AppPaths(
                 dataDir, logDir, dataDir.resolve(LOCK_FILE_NAME), dataDir.resolve(DATABASE_FILE_NAME), false);
     }
