@@ -20,6 +20,8 @@ class StressMarksTest {
                 "Зо\u00B4тов|Зотов|a spacing acute after a Cyrillic vowel",
                 "Mak\u00B4s|Mak\u00B4s|a spacing acute after a consonant stays",
                 "Зо\u00ADтов|Зотов|a soft hyphen",
+                "Pok\u00E9mon|Pok\u00E9mon|a precomposed Latin accent stays",
+                "Rene\u0301e|Ren\u00E9e|a combining Latin accent stays",
                 "Гейл|Гейл|plain text is unchanged",
             })
     void strip_marks_returnsExpected(final String input, final String expected, final String why) {

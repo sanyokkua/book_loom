@@ -17,8 +17,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class StressMarks {
 
-    /** The combining acute and grave accents, and the soft hyphen, which no stored spelling holds. */
-    private static final Pattern COMBINING = Pattern.compile("[\u0301\u0300\u00AD]");
+    /**
+     * The soft hyphen, which no stored spelling holds, and the combining acute and grave accents on a Cyrillic letter
+     * (up to two marks, like the breve or diaeresis, may sit between); a Latin letter keeps its accent ({@code é}).
+     */
+    private static final Pattern COMBINING = Pattern.compile("(?<=\\p{IsCyrillic}\\p{M}{0,2})[\u0301\u0300]|\u00AD");
 
     /** A spacing acute is a stress mark only right after a Cyrillic vowel; elsewhere it may be an apostrophe. */
     private static final Pattern SPACING_ACUTE = Pattern.compile("(?<=[аеєиіїоуюяыэёАЕЄИІЇОУЮЯЫЭЁ])\u00B4");
