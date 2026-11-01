@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -41,7 +43,7 @@ public final class InMemoryTmRepository implements TmRepository {
 
     @Override
     public Result<List<TmEntry>> exact(final String projectId, final String sourceHash) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(sourceHash, "sourceHash");
         try {
             return Result.ok(store.tm(projectId).values().stream()
@@ -54,7 +56,7 @@ public final class InMemoryTmRepository implements TmRepository {
 
     @Override
     public Result<Optional<TmEntry>> context(final String projectId, final String sourceHash, final String contextKey) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(sourceHash, "sourceHash");
         Objects.requireNonNull(contextKey, "contextKey");
         try {
@@ -66,7 +68,7 @@ public final class InMemoryTmRepository implements TmRepository {
 
     @Override
     public Result<List<TmEntry>> candidates(final String projectId, final int minChars, final int maxChars) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(store.tm(projectId).values().stream()
                     .filter(entry -> {

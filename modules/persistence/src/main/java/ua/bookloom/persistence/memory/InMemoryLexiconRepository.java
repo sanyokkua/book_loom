@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.Comparator;
 import java.util.List;
@@ -28,7 +30,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<List<LexiconEntry>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             final List<LexiconEntry> entries = store.lexicon(projectId).entrySet().stream()
                     .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
@@ -62,7 +64,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
     @Override
     public Result<Optional<LexiconEntry>> update(
             final String projectId, final String term, final UnaryOperator<LexiconEntry> change) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(change, "change");
         try {
@@ -77,7 +79,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<LexiconEntry> record(final String projectId, final String term, final String rendering) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(rendering, "rendering");
         try {
@@ -96,7 +98,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<Boolean> remove(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         try {
             final String key = LexiconEntry.keyOf(term);
@@ -113,7 +115,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
 
     @Override
     public Result<Boolean> wasRemoved(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.lexiconRemoved(projectId).contains(LexiconEntry.keyOf(term)));

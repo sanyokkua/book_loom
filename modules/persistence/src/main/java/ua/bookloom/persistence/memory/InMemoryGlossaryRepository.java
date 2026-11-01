@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -75,7 +77,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
     @Override
     public Result<Optional<GlossaryEntry>> update(
             final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(change, "change");
         try {
@@ -89,7 +91,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> remove(final String projectId, final String entryId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entryId, "entryId");
         try {
             final ProjectGlossary glossary = store.glossary(projectId);
@@ -104,7 +106,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(foldedId, "foldedId");
         Objects.requireNonNull(kept, "kept");
         try {
@@ -124,7 +126,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(store.glossary(projectId).allInInsertionOrder());
         } catch (Throwable cause) {
@@ -134,7 +136,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Optional<GlossaryEntry>> findByTerm(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.glossary(projectId).findByKey(GlossaryKeys.of(term)));
@@ -145,7 +147,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> wasRemoved(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.glossary(projectId).removedKeys().contains(GlossaryKeys.of(term)));

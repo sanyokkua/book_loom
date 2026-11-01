@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.OPERATION;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -167,7 +169,7 @@ public final class SqliteDatabase implements AutoCloseable {
      * @throws IllegalStateException on the JavaFX thread when {@code bookloom.storage.failOnFxThread} is true
      */
     public <T> Result<T> read(final String operation, final Function<Handle, T> work) {
-        Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(operation, OPERATION);
         Objects.requireNonNull(work, "work");
         checkThread(operation);
         log.debug("Read operation={}", operation);
@@ -206,7 +208,7 @@ public final class SqliteDatabase implements AutoCloseable {
      * @throws IllegalStateException on the JavaFX thread when {@code bookloom.storage.failOnFxThread} is true
      */
     public <T> Result<T> write(final String operation, final Function<Handle, T> work) {
-        Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(operation, OPERATION);
         Objects.requireNonNull(work, "work");
         checkThread(operation);
         use.readLock().lock();
@@ -222,7 +224,7 @@ public final class SqliteDatabase implements AutoCloseable {
      * refuses inside one; asked from inside a write it is refused, like a nested write.
      */
     <T> Result<T> exclusive(final String operation, final Function<Handle, T> work) {
-        Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(operation, OPERATION);
         Objects.requireNonNull(work, "work");
         checkThread(operation);
         use.readLock().lock();

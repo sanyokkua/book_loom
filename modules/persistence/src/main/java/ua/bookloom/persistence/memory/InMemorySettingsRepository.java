@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.SETTING;
+
 import com.google.inject.Inject;
 import java.util.Map;
 import java.util.Objects;
@@ -22,7 +24,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
 
     @Override
     public <T> Result<Optional<T>> get(final AppSetting<T> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         try {
             final String raw = values.get(setting.key());
             final Optional<T> value = Optional.ofNullable(setting.parse(raw));
@@ -35,7 +37,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
 
     @Override
     public <T> Result<T> put(final AppSetting<T> setting, final T value) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         Objects.requireNonNull(value, "value");
         try {
             values.put(setting.key(), setting.format(value));
@@ -48,7 +50,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
 
     @Override
     public Result<Boolean> remove(final AppSetting<?> setting) {
-        Objects.requireNonNull(setting, "setting");
+        Objects.requireNonNull(setting, SETTING);
         try {
             final boolean removed = values.remove(setting.key()) != null;
             log.debug("Setting removed key={} existed={}", setting.key(), removed);

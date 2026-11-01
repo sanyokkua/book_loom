@@ -1,5 +1,9 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.CONTEXT_KEY;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+import static ua.bookloom.util.contract.ArgNames.SOURCE_HASH;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +22,8 @@ import ua.bookloom.api.project.TmEntry;
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteTmRepository implements TmRepository {
+
+    private static final String PROJECT = "project";
 
     private static final String UPSERT = """
             INSERT INTO tm_entries (project_id, source_hash, context_key, json)
@@ -50,14 +56,14 @@ public final class SqliteTmRepository implements TmRepository {
 
     @Override
     public Result<List<TmEntry>> exact(final String projectId, final String sourceHash) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(sourceHash, "sourceHash");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(sourceHash, SOURCE_HASH);
         log.debug("TM exact projectId={} sourceHash={}", projectId, sourceHash);
         return db.read(
                 "tm exact",
                 h -> List.copyOf(h.createQuery(SELECT + "AND source_hash = :sourceHash ORDER BY rowid")
-                        .bind("project", projectId)
-                        .bind("sourceHash", sourceHash)
+                        .bind(PROJECT, projectId)
+                        .bind(SOURCE_HASH, sourceHash)
                         .mapTo(String.class)
                         .map(json -> codec.read(json, TmEntry.class))
                         .list()));
@@ -65,15 +71,15 @@ public final class SqliteTmRepository implements TmRepository {
 
     @Override
     public Result<Optional<TmEntry>> context(final String projectId, final String sourceHash, final String contextKey) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(sourceHash, "sourceHash");
-        Objects.requireNonNull(contextKey, "contextKey");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(sourceHash, SOURCE_HASH);
+        Objects.requireNonNull(contextKey, CONTEXT_KEY);
         log.debug("TM context projectId={} sourceHash={} contextKey={}", projectId, sourceHash, contextKey);
         return db.read(
                 "tm context",
                 h -> h.createQuery(SELECT + "AND source_hash = :sourceHash AND context_key = :contextKey")
-                        .bind("project", projectId)
-                        .bind("sourceHash", sourceHash)
+                        .bind(PROJECT, projectId)
+                        .bind(SOURCE_HASH, sourceHash)
                         .bind("contextKey", contextKey)
                         .mapTo(String.class)
                         .findOne()
@@ -82,10 +88,10 @@ public final class SqliteTmRepository implements TmRepository {
 
     @Override
     public Result<List<TmEntry>> candidates(final String projectId, final int minChars, final int maxChars) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return db.read("tm candidates", h -> {
             final List<TmEntry> found = List.copyOf(h.createQuery(SELECT + IN_BAND)
-                    .bind("project", projectId)
+                    .bind(PROJECT, projectId)
                     .bind("min", minChars)
                     .bind("max", maxChars)
                     .mapTo(String.class)
@@ -99,8 +105,8 @@ public final class SqliteTmRepository implements TmRepository {
     /** Inserts or replaces one entry under a project; the checkpoint shares it. */
     static void upsert(final Handle h, final JsonCodec codec, final String projectId, final TmEntry entry) {
         h.createUpdate(UPSERT)
-                .bind("project", projectId)
-                .bind("sourceHash", entry.sourceHash())
+                .bind(PROJECT, projectId)
+                .bind(SOURCE_HASH, entry.sourceHash())
                 .bind("contextKey", entry.contextKey())
                 .bind("json", codec.write(entry))
                 .execute();

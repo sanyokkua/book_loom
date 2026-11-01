@@ -1,5 +1,9 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.CONTENT_HASH;
+import static ua.bookloom.util.contract.ArgNames.NAME_KEY;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.sql.ResultSet;
@@ -79,7 +83,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
     private Result<Project> saveIn(final Handle h, final Project project) {
         final int clashes = h.createQuery(NAME_CLASH)
                 .bind("hash", project.contentHash())
-                .bind("nameKey", project.nameKey())
+                .bind(NAME_KEY, project.nameKey())
                 .bind("id", project.id())
                 .mapTo(Integer.class)
                 .one();
@@ -111,7 +115,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
                 .bind("id", project.id())
                 .bind("hash", project.contentHash())
                 .bind("name", project.name())
-                .bind("nameKey", project.nameKey())
+                .bind(NAME_KEY, project.nameKey())
                 .bind("nameOrigin", project.nameOrigin().name())
                 .bind("source", language(project.brief().sourceLanguage()))
                 .bind("target", language(project.brief().targetLanguage()))
@@ -123,7 +127,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<Project>> find(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Project find projectId={}", projectId);
         return db.read(
                 "project find",
@@ -135,7 +139,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Boolean> delete(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return db.write("project delete", h -> {
                     final boolean removed = h.createUpdate("DELETE FROM projects WHERE id = :id")
                                     .bind("id", projectId)
@@ -184,7 +188,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
     @Override
     public Result<Optional<Project>> findByPair(
             final String contentHash, @Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
-        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
         log.debug("Project findByPair hash={} source={} target={}", contentHash, sourceLanguage, targetLanguage);
         return db.read(
                 "project findByPair",
@@ -198,21 +202,21 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<Project>> findByNameKey(final String contentHash, final String nameKey) {
-        Objects.requireNonNull(contentHash, "contentHash");
-        Objects.requireNonNull(nameKey, "nameKey");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
+        Objects.requireNonNull(nameKey, NAME_KEY);
         log.debug("Project findByNameKey hash={} nameKey={}", contentHash, nameKey);
         return db.read(
                 "project findByNameKey",
                 h -> projects(h, "WHERE p.content_hash = :hash AND p.name_key = :nameKey")
                         .bind("hash", contentHash)
-                        .bind("nameKey", nameKey)
+                        .bind(NAME_KEY, nameKey)
                         .map((rs, ctx) -> toProject(rs))
                         .findFirst());
     }
 
     @Override
     public Result<List<Project>> relocateBook(final String contentHash, final Path newPath) {
-        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
         Objects.requireNonNull(newPath, "newPath");
         return db.write("project relocateBook", h -> {
             final int books = h.createUpdate("UPDATE books SET source_path = :path WHERE content_hash = :hash")
@@ -230,7 +234,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     @Override
     public Result<ExportRecord> recordExport(final String projectId, final ExportRecord record) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(record, "record");
         log.debug("Export recorded projectId={} written={}", projectId, record.written());
         return db.write("project recordExport", h -> {
@@ -241,7 +245,7 @@ public final class SqliteProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<ExportRecord>> lastExport(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Last export projectId={}", projectId);
         return db.read(
                 "project lastExport",

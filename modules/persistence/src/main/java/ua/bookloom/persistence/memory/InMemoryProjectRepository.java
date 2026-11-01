@@ -1,5 +1,8 @@
 package ua.bookloom.persistence.memory;
 
+import static ua.bookloom.util.contract.ArgNames.CONTENT_HASH;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.List;
@@ -75,7 +78,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<Project>> find(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(Optional.ofNullable(store.projects().get(projectId)));
         } catch (Throwable cause) {
@@ -85,7 +88,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Boolean> delete(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         final Lock writeLock = store.lock().writeLock();
         writeLock.lock();
         try {
@@ -112,7 +115,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
     @Override
     public Result<Optional<Project>> findByPair(
             final String contentHash, @Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
-        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
         try {
             final Optional<Project> found = store.projects().values().stream()
                     .filter(p -> p.contentHash().equals(contentHash))
@@ -133,7 +136,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<Project>> findByNameKey(final String contentHash, final String nameKey) {
-        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
         Objects.requireNonNull(nameKey, "nameKey");
         try {
             final Optional<Project> found = store.projects().values().stream()
@@ -149,7 +152,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<List<Project>> relocateBook(final String contentHash, final Path newPath) {
-        Objects.requireNonNull(contentHash, "contentHash");
+        Objects.requireNonNull(contentHash, CONTENT_HASH);
         Objects.requireNonNull(newPath, "newPath");
         try {
             final List<Project> moved = store.projects().values().stream()
@@ -166,7 +169,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<ExportRecord> recordExport(final String projectId, final ExportRecord record) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(record, "record");
         try {
             store.exports().put(projectId, record);
@@ -179,7 +182,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
 
     @Override
     public Result<Optional<ExportRecord>> lastExport(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             final Optional<ExportRecord> found =
                     Optional.ofNullable(store.exports().get(projectId));

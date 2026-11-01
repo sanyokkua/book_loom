@@ -1,5 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -76,7 +78,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     // One read-modify-write of the document for all of them; a refused entry leaves the document as it was.
     @Override
     public Result<List<GlossaryEntry>> putAll(final String projectId, final List<GlossaryEntry> entries) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entries, "entries");
         return db.write("glossary putAll", h -> {
                     final Optional<GlossaryDocument> next =
@@ -98,7 +100,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
     @Override
     public Result<Optional<GlossaryEntry>> update(
             final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(change, "change");
         return db.write("glossary updateByTerm", h -> {
@@ -113,7 +115,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> remove(final String projectId, final String entryId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(entryId, "entryId");
         return db.write("glossary remove", h -> {
             final GlossaryDocument doc = load(h, codec, projectId);
@@ -126,7 +128,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<GlossaryEntry> fold(final String projectId, final String foldedId, final GlossaryEntry kept) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(foldedId, "foldedId");
         Objects.requireNonNull(kept, "kept");
         return db.write("glossary fold", h -> {
@@ -148,7 +150,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<List<GlossaryEntry>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return db.read("glossary all", h -> {
             final List<GlossaryEntry> entries = load(h, codec, projectId).entries();
             log.debug("Glossary all projectId={} count={}", projectId, entries.size());
@@ -158,7 +160,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Optional<GlossaryEntry>> findByTerm(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         log.debug("Glossary findByTerm projectId={} termLength={}", projectId, term.length());
         return db.read("glossary findByTerm", h -> load(h, codec, projectId).findByKey(GlossaryKeys.of(term)));
@@ -166,7 +168,7 @@ public final class SqliteGlossaryRepository implements GlossaryRepository {
 
     @Override
     public Result<Boolean> wasRemoved(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         log.debug("Glossary wasRemoved projectId={} termLength={}", projectId, term.length());
         return db.read("glossary wasRemoved", h -> load(h, codec, projectId).wasRemoved(GlossaryKeys.of(term)));

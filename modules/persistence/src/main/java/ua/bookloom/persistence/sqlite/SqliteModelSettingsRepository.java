@@ -1,5 +1,8 @@
 package ua.bookloom.persistence.sqlite;
 
+import static ua.bookloom.util.contract.ArgNames.MODEL_ID;
+import static ua.bookloom.util.contract.ArgNames.PROVIDER_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +19,9 @@ import ua.bookloom.api.persistence.ModelSettingsRepository;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqliteModelSettingsRepository implements ModelSettingsRepository {
 
+    private static final String MODEL = "model";
+    private static final String PROVIDER = "provider";
+
     private static final String UPSERT = """
             INSERT INTO model_settings (provider_id, model_id, json) VALUES (:provider, :model, :json)
             ON CONFLICT (provider_id, model_id) DO UPDATE SET json = excluded.json
@@ -26,13 +32,13 @@ public final class SqliteModelSettingsRepository implements ModelSettingsReposit
 
     @Override
     public Result<Optional<ModelSettings>> find(final String providerId, final String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         return db.read("modelSettings find", h -> {
             final Optional<ModelSettings> found = h.createQuery(
                             "SELECT json FROM model_settings WHERE provider_id = :provider AND model_id = :model")
-                    .bind("provider", providerId)
-                    .bind("model", modelId)
+                    .bind(PROVIDER, providerId)
+                    .bind(MODEL, modelId)
                     .mapTo(String.class)
                     .findOne()
                     .map(json -> codec.read(json, ModelSettings.class));
@@ -48,8 +54,8 @@ public final class SqliteModelSettingsRepository implements ModelSettingsReposit
             final String json = codec.write(settings);
             log.trace("Model settings document {}", json);
             h.createUpdate(UPSERT)
-                    .bind("provider", settings.providerId())
-                    .bind("model", settings.modelId())
+                    .bind(PROVIDER, settings.providerId())
+                    .bind(MODEL, settings.modelId())
                     .bind("json", json)
                     .execute();
             log.debug(
@@ -64,22 +70,22 @@ public final class SqliteModelSettingsRepository implements ModelSettingsReposit
     @Override
     public Result<ModelSettings> update(
             final String providerId, final String modelId, final UnaryOperator<ModelSettings> change) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         Objects.requireNonNull(change, "change");
         return db.write("modelSettings update", h -> {
             final ModelSettings current = h.createQuery(
                             "SELECT json FROM model_settings WHERE provider_id = :provider AND model_id = :model")
-                    .bind("provider", providerId)
-                    .bind("model", modelId)
+                    .bind(PROVIDER, providerId)
+                    .bind(MODEL, modelId)
                     .mapTo(String.class)
                     .findOne()
                     .map(json -> codec.read(json, ModelSettings.class))
                     .orElseGet(() -> ModelSettings.defaults(providerId, modelId));
             final ModelSettings changed = change.apply(current);
             h.createUpdate(UPSERT)
-                    .bind("provider", providerId)
-                    .bind("model", modelId)
+                    .bind(PROVIDER, providerId)
+                    .bind(MODEL, modelId)
                     .bind("json", codec.write(changed))
                     .execute();
             log.debug("Model settings updated provider={} model={}", providerId, modelId);
@@ -89,13 +95,13 @@ public final class SqliteModelSettingsRepository implements ModelSettingsReposit
 
     @Override
     public Result<Boolean> delete(final String providerId, final String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         return db.write("modelSettings delete", h -> {
             final int rows = h.createUpdate(
                             "DELETE FROM model_settings WHERE provider_id = :provider AND model_id = :model")
-                    .bind("provider", providerId)
-                    .bind("model", modelId)
+                    .bind(PROVIDER, providerId)
+                    .bind(MODEL, modelId)
                     .execute();
             log.debug("Model settings deleted provider={} model={} existed={}", providerId, modelId, rows > 0);
             return rows > 0;
