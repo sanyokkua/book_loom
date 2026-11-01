@@ -35,6 +35,9 @@ import ua.bookloom.pipeline.RenderingConsistency;
 @Slf4j
 final class RunReport {
 
+    private static final String REASON = "reason";
+    private static final String SEGMENT_ID = "segmentId";
+
     private static final double MILLIS_PER_SECOND = 1000.0;
 
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -106,7 +109,7 @@ final class RunReport {
         }
         final ArrayNode reasons = run.putArray("flaggedSegments");
         for (final FlaggedSegment segment : report.flaggedSegments()) {
-            reasons.addObject().put("segmentId", segment.segmentId()).put("reason", String.valueOf(segment.reason()));
+            reasons.addObject().put(SEGMENT_ID, segment.segmentId()).put(REASON, String.valueOf(segment.reason()));
         }
     }
 
@@ -139,9 +142,9 @@ final class RunReport {
         for (final SourceFallback fallback : report.sourceFallbacks()) {
             fallbacks
                     .addObject()
-                    .put("segmentId", fallback.segmentId())
+                    .put(SEGMENT_ID, fallback.segmentId())
                     .put("locator", fallback.locator())
-                    .put("reason", fallback.reason().name());
+                    .put(REASON, fallback.reason().name());
         }
     }
 
@@ -152,7 +155,7 @@ final class RunReport {
         final ArrayNode segments = audit.putArray("segments");
         for (final SuspiciousSegment segment : suspicious) {
             final ObjectNode node = segments.addObject();
-            node.put("segmentId", segment.segmentId()).put("locator", segment.locator());
+            node.put(SEGMENT_ID, segment.segmentId()).put("locator", segment.locator());
             final ArrayNode checks = node.putArray("checks");
             segment.checks().forEach(checks::add);
         }
@@ -219,9 +222,9 @@ final class RunReport {
         final ArrayNode flagged = root.putArray("flagged");
         for (final UnattendedRun.FlaggedDetail detail : watch.flagged()) {
             final ObjectNode node = flagged.addObject();
-            node.put("segmentId", detail.segmentId());
+            node.put(SEGMENT_ID, detail.segmentId());
             final @Nullable ErrorCode reason = detail.reason();
-            node.put("reason", reason == null ? null : reason.name());
+            node.put(REASON, reason == null ? null : reason.name());
             final ArrayNode kinds = node.putArray("findings");
             detail.findingKinds().forEach(kinds::add);
         }

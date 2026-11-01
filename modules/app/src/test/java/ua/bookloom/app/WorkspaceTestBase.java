@@ -243,7 +243,7 @@ abstract class WorkspaceTestBase {
         return open.projectId();
     }
 
-    protected void openBook(final Path book, final int segments) throws Exception {
+    protected OpenedBook openBook(final Path book, final int segments) throws Exception {
         onFx(() -> injector.getInstance(ImportViewModel.class).open(book));
         waitUntil(() -> injector.getInstance(CurrentProject.class).book().get() != null);
         final OpenedBook opened =
@@ -253,6 +253,7 @@ abstract class WorkspaceTestBase {
         assertThat(opened.source()).isEqualTo(book);
         assertThat(opened.profile()).isNotNull();
         assertThat(Objects.requireNonNull(opened.profile()).stats().segments()).isEqualTo(segments);
+        return opened;
     }
 
     /** Chooses the source the TXT does not declare and a target, and checks the proposed destination follows the target. */

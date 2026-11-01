@@ -36,6 +36,11 @@ record TranslateArguments(
         @Nullable Duration requestTimeout,
         RunOptions options) {
 
+    private static final String BASE_URL_OPTION = "--base-url";
+    private static final String MODEL_OPTION = "--model";
+    private static final String PROVIDER_OPTION = "--provider";
+    private static final String TIMEOUT_OPTION = "--timeout";
+
     private static final String DEFAULT_TARGET_LANGUAGE = "uk";
     private static final String AUTO_SOURCE = "auto";
     private static final String PSEUDO_PROVIDER = "pseudo";
@@ -105,10 +110,10 @@ record TranslateArguments(
                 case "--to" -> consumeLanguage(index, true);
                 case "--from" -> consumeLanguage(index, false);
                 case "--overwrite" -> consumeOverwrite(index);
-                case "--provider" -> consumeProvider(index);
-                case "--model" -> consumeModel(index);
-                case "--base-url" -> consumeBaseUrl(index);
-                case "--timeout" -> consumeTimeout(index);
+                case PROVIDER_OPTION -> consumeProvider(index);
+                case MODEL_OPTION -> consumeModel(index);
+                case BASE_URL_OPTION -> consumeBaseUrl(index);
+                case TIMEOUT_OPTION -> consumeTimeout(index);
                 default -> runOptions.consume(args, index).orElseGet(() -> invalidOption(argument, "unknown option"));
             };
         }
@@ -160,12 +165,12 @@ record TranslateArguments(
         }
 
         private Result<Integer> consumeProvider(int index) {
-            final Result<String> value = requiredValue(index, "--provider", "--provider needs a provider");
+            final Result<String> value = requiredValue(index, PROVIDER_OPTION, "--provider needs a provider");
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
             if (providerSpecified) {
-                return invalidOption("--provider", "--provider was repeated");
+                return invalidOption(PROVIDER_OPTION, "--provider was repeated");
             }
             providerId = dataOf(value);
             providerSpecified = true;
@@ -174,12 +179,12 @@ record TranslateArguments(
         }
 
         private Result<Integer> consumeModel(int index) {
-            final Result<String> value = requiredValue(index, "--model", "--model needs a model id");
+            final Result<String> value = requiredValue(index, MODEL_OPTION, "--model needs a model id");
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
             if (modelSpecified) {
-                return invalidOption("--model", "--model was repeated");
+                return invalidOption(MODEL_OPTION, "--model was repeated");
             }
             modelId = dataOf(value);
             modelSpecified = true;
@@ -188,17 +193,17 @@ record TranslateArguments(
         }
 
         private Result<Integer> consumeBaseUrl(int index) {
-            final Result<String> value = requiredValue(index, "--base-url", "--base-url needs a URL");
+            final Result<String> value = requiredValue(index, BASE_URL_OPTION, "--base-url needs a URL");
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
             if (baseUrlSpecified) {
-                return invalidOption("--base-url", "--base-url was repeated");
+                return invalidOption(BASE_URL_OPTION, "--base-url was repeated");
             }
             try {
                 baseUrl = URI.create(dataOf(value));
             } catch (IllegalArgumentException exception) {
-                return invalidOption("--base-url", "--base-url is invalid");
+                return invalidOption(BASE_URL_OPTION, "--base-url is invalid");
             }
             baseUrlSpecified = true;
             log.debug("translate parser option=--base-url value={} outcome=accepted", baseUrl);
@@ -206,12 +211,12 @@ record TranslateArguments(
         }
 
         private Result<Integer> consumeTimeout(int index) {
-            final Result<String> value = requiredValue(index, "--timeout", "--timeout needs seconds");
+            final Result<String> value = requiredValue(index, TIMEOUT_OPTION, "--timeout needs seconds");
             if (value.isErr()) {
                 return Result.err(errorOf(value));
             }
             if (timeoutSpecified) {
-                return invalidOption("--timeout", "--timeout was repeated");
+                return invalidOption(TIMEOUT_OPTION, "--timeout was repeated");
             }
             final Result<Duration> parsed = parseTimeout(dataOf(value));
             if (parsed.isErr()) {

@@ -71,7 +71,7 @@ class ImportNotTextTest extends WorkspaceTestBase {
         final Path file = Files.write(booksDir.resolve("wide.txt"), marked);
         startStoredWindow();
 
-        openBook(file, 1);
+        assertThat(openBook(file, 1).source()).isEqualTo(file);
     }
 
     private Path write(final String content, final Path file) throws Exception {
