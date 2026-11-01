@@ -13,6 +13,30 @@ import com.github.jk1.license.render.TextReportRenderer
 plugins {
     base
     alias(libs.plugins.license.report)
+    alias(libs.plugins.sonarqube)
+}
+
+apply(from = "gradle/sonar-coverage.gradle.kts")
+
+sonar {
+    properties {
+        property("sonar.projectKey", "local:bookloom")
+        property("sonar.projectName", "BookLoom")
+        property("sonar.coverage.jacoco.xmlReportPaths", layout.buildDirectory.file("reports/jacoco/sonar/sonar.xml").get().asFile.absolutePath)
+    }
+}
+
+subprojects {
+    extensions.configure<org.sonarqube.gradle.SonarExtension> {
+        properties {
+            property("sonar.coverage.jacoco.xmlReportPaths", rootProject.layout.buildDirectory.file("reports/jacoco/sonar/sonar.xml").get().asFile.absolutePath)
+        }
+    }
+}
+
+tasks.named("sonar") {
+    dependsOn("sonarCoverageReport")
+    dependsOn(":app:compileArchTestJava")
 }
 
 // The git tag is the single source of truth for the app version; local and CI snapshot builds get `dev`

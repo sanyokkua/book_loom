@@ -159,6 +159,15 @@ val collectDist =
 // `settings.gradle.kts` fixes the module set at eight; this is a source set, not a ninth module.
 val archTest: SourceSet by sourceSets.creating
 
+// The scanner's Java defaults include only main and test; the architecture suite is test code too.
+extensions.configure<org.sonarqube.gradle.SonarExtension> {
+    properties {
+        property("sonar.tests", files(sourceSets.test.get().allJava.srcDirs, archTest.allJava.srcDirs))
+        property("sonar.java.test.binaries", files(sourceSets.test.get().output.classesDirs, archTest.output.classesDirs))
+        property("sonar.java.test.libraries", files(sourceSets.test.get().compileClasspath, archTest.compileClasspath))
+    }
+}
+
 // The rules must see everything `:app` sees (the seven module jars, Guice, JavaFX), plus `:app`'s own classes.
 configurations["archTestImplementation"].extendsFrom(configurations["implementation"])
 configurations["archTestRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])

@@ -9,6 +9,8 @@ docs/specification/assets/icon/dist/macos/BookLoom.iconset/
 
 # Gradle
 .gradle/
+.scannerwork/
+.sonar-reports/
 gradle-app.setting
 # Kotlin Gradle plugin >= 2.0 writes build-session state here. `build-logic` is the only Kotlin build in the
 # repository, but this is left unanchored so a future one is covered too.

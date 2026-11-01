@@ -2213,6 +2213,32 @@ The gate is **branch coverage ≥ 0.80 per module**, applied to `:api`, `:util`,
 `:persistence`; `:ui` and `:app` are covered behaviourally and exempt. A module whose only sources are
 `module-info.java`/`package-info.java` skips the check; a module with sources and no tests fails at 0%.
 
+### Local SonarQube analysis
+
+With the local SonarQube server running and a token supplied in the environment, run from the repository root:
+
+```bash
+export SONAR_HOST_URL=http://localhost:9000
+export SONAR_TOKEN='your-token'
+./gradlew sonar -PsonarLocal
+```
+
+The Gradle scanner compiles the eight application modules, runs their normal offline tests, and imports JaCoCo XML
+coverage. Coverage includes execution across modules and also reports `:ui` and `:app`, without adding a branch
+threshold for them. Local-only model, corpus, visual, and soak tests are not part of this run. The included
+`modules/build-logic` build is outside the analysis. The server's installed analyzers and quality profile determine
+which issues are reported.
+
+The project key is `local:bookloom`. To export findings and the quality-gate result using the separately installed
+`sonar-local` helper:
+
+```bash
+SONAR_PROJECT_KEY=local:bookloom sonar-local report
+```
+
+Keep the token out of repository files. Run the Gradle scanner rather than `sonar-local scan`, which uses the generic
+CLI scanner. Sonar analysis is opt-in: `build`, `check`, hooks, and CI do not run it or require the local server.
+
 ---
 
 ## 9. Quality gate, hooks and CI {#quality-gate}
