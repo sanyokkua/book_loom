@@ -240,7 +240,8 @@ class ReadingVerdictCallsTest {
     @Test
     void verdict_personSetGender_sendsNoCall() {
         final ScriptedChatModel model = new ScriptedChatModel();
-        final GlossaryEntry person = untyped().withType(TermType.CHARACTER).withGender(Gender.MALE);
+        final GlossaryEntry person =
+                untyped().withType(TermType.CHARACTER, Origin.USER).withGender(Gender.MALE);
 
         decided(verdicts.verdict(tiebreakCase(person), FRAME, calls(model)));
 

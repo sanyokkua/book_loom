@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 
@@ -33,7 +34,7 @@ final class GlossaryEdits {
     }
 
     static GlossaryEntry type(final GlossaryEntry held, final TermType type) {
-        return held.withType(type);
+        return held.withType(type, Origin.USER);
     }
 
     static GlossaryEntry gender(final GlossaryEntry held, final Gender gender) {

@@ -61,6 +61,10 @@ class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
 
         assertThat(suggested.getPseudoClassStates()).contains(PseudoClass.getPseudoClass("suggested"));
         assertThat(persons.getPseudoClassStates()).doesNotContain(PseudoClass.getPseudoClass("suggested"));
+        // The system face has no italic JavaFX can draw on macOS, so a suggestion is set in a face that has one.
+        assertThat(ThemeTestSupport.onFx(() -> suggested.getFont().getStyle())).containsIgnoringCase("italic");
+        assertThat(ThemeTestSupport.onFx(() -> suggested.getFont().getFamily())).isNotEqualTo("System");
+        assertThat(ThemeTestSupport.onFx(() -> persons.getFont().getStyle())).doesNotContainIgnoringCase("italic");
         assertThat(rowParts("glossary-suggested-badge"))
                 .filteredOn(Node::isVisible)
                 .extracting(node -> ((Label) node).getText())

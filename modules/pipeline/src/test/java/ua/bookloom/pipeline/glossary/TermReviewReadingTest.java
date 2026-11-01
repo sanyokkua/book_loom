@@ -193,7 +193,9 @@ class TermReviewReadingTest {
     @org.junit.jupiter.params.provider.CsvSource({"name,place,PLACE", "title,other,TITLE", "name,thing,TERM"})
     void review_seededCharacterTheReadingsTypeOtherwise_takesTheirTypeAndNoGender(
             final String usage, final String kind, final TermType type) {
-        glossary.add(entry("Varnholt", TermType.CHARACTER).withSuggestedGender(Gender.MALE));
+        glossary.add(entry("Varnholt", TermType.CHARACTER)
+                .withType(TermType.CHARACTER, Origin.LIKELY)
+                .withSuggestedGender(Gender.MALE));
         final BookSlice book = GlossaryTestSegments.of(days(repeated("Varnholt stood there. He waited.", 4)));
 
         review.review(

@@ -14,8 +14,9 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * The Gender column never reads "unknown": a character with no gender yet — the scan found no evidence (15i.N5), nobody
- * has read it, or the person cleared it — reads "not specified" with the reason (glossary spec, "The Gender column").
+ * The Gender column never reads "unknown": a character with no gender yet reads "not specified", and adds "no evidence in
+ * the book" only when the names pass read the book and found none (15i.N5); a character nobody has read, or whose gender
+ * the person cleared, says no more than that (glossary spec, "The Gender column").
  */
 class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
 
@@ -38,22 +39,23 @@ class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
     }
 
     @Test
-    void table_englishNoEvidenceCharacter_saysNotSpecifiedWithTheReason() throws Exception {
+    void table_englishNoEvidenceCharacter_saysNotSpecifiedWithTheReasonOnlyWhenTheBookGaveNone() throws Exception {
         assertThat(genderLabels(Locale.ENGLISH))
                 .doesNotContain("unknown")
-                .filteredOn("not specified — no evidence in the book"::equals)
-                .hasSize(2);
+                .filteredOn(label -> label.startsWith("not specified"))
+                .containsExactly("not specified — no evidence in the book", "not specified");
     }
 
     @Test
     void table_ukrainianNoEvidenceCharacter_saysItInUkrainian() throws Exception {
         assertThat(genderLabels(Locale.forLanguageTag("uk")))
                 .doesNotContain("невідомо")
-                .filteredOn("не вказано — у книзі немає свідчень"::equals)
-                .hasSize(2);
+                .filteredOn(label -> label.startsWith("не вказано"))
+                .containsExactly("не вказано — у книзі немає свідчень", "не вказано");
     }
 
-    // IF a gender the person cleared read "unknown", THEN the column would show the word the spec rules out.
+    // IF a gender the person cleared read "unknown", THEN the column would show the word the spec rules out; IF it read
+    // "no evidence in the book", THEN it would misstate why it is empty.
     @Test
     void table_personClearedTheGender_readsNotSpecified() throws Exception {
         readyToStart();
@@ -66,6 +68,8 @@ class GlossaryGenderNoEvidenceTest extends TranslatingScreenTestBase {
                         .map(label -> ((Label) label).getText())
                         .toList());
 
-        assertThat(labels).contains("not specified — no evidence in the book").doesNotContain("unknown");
+        assertThat(labels)
+                .contains("not specified")
+                .doesNotContain("not specified — no evidence in the book", "unknown");
     }
 }

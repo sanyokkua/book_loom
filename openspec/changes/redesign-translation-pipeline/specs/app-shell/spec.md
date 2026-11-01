@@ -248,7 +248,7 @@ WHEN the application asks the model for the brief, the names, a file name or a t
 
 #### Scenario: The figures line
 
-- **WHEN** the names pass has done 26 of about 49 steps
+- **WHEN** the model work in the dialog has done 26 of about 49 steps
 - **THEN** the bar sits at 51 % and the figures line reads `51 % · 26 of about 49 steps · Left about 1 min`
 
 #### Scenario: A finished step stays selectable

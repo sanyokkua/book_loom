@@ -131,7 +131,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
                 .contains(
                         "Characters without a gender",
                         "Ember — 12 mentions",
-                        "Dane — 9 mentions · suggested, confirm it",
+                        "Dane — 9 mentions · likely, confirm it",
                         "This character has only a suggested gender, which the translation does not hold to. Confirm it"
                                 + " in Names & style (Confirm suggested genders), or start anyway: the next export"
                                 + " re-renders those segments.");
@@ -145,7 +145,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Genders to confirm", "Dane — 9 mentions · suggested, confirm it")
+                .contains("Genders to confirm", "Dane — 9 mentions · likely, confirm it")
                 .doesNotContain("Characters without a gender");
     }
 
@@ -158,7 +158,7 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
         awaitAsking();
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Ember — 12 згадок", "Dane — 9 згадок · припущення, підтвердіть")
-                .noneMatch(text -> text.contains("Dane") && !text.contains("припущення"));
+                .contains("Ember — 12 згадок", "Dane — 9 згадок · ймовірно, підтвердіть")
+                .noneMatch(text -> text.contains("Dane") && !text.contains("ймовірно"));
     }
 }

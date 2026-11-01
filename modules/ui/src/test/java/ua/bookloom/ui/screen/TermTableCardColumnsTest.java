@@ -10,6 +10,10 @@ import javafx.scene.control.TextField;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /** The columns and cells of the two term tables (15i.U5): what each shows, where the remove cross sits, what is gone. */
@@ -139,7 +143,8 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         assertThat(shownText(glossaryCell("Brook", 5))).isEqualTo("—");
         assertThat(shownText(glossaryCell("Wand", 5))).isEqualTo("—");
         assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
-        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("not specified — no evidence in the book");
+        // Nobody read the book for Hale, so it does not claim the book holds no evidence.
+        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("not specified");
     }
 
     // IF a guess were drawn like a decision, THEN the person would not know what still wants a look; only the
@@ -151,4 +156,26 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         assertThat(shownText(glossaryCell("John", 5))).isEqualTo("male · likely");
         assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
     }
+
+    // IF the Kind cell ended "character · person" in an ellipsis, THEN the origin would be lost at the window sizes the
+    // person uses most; the origin goes to a second line instead.
+    @ParameterizedTest
+    @CsvSource({"en, 960", "en, 1280", "uk, 960", "uk, 1280"})
+    void kindCell_smallWindow_showsTheKindAndItsOriginWhole(final String tag, final double width) throws Exception {
+        showScreen(tag, width, 700, ROSALIND, BROOK, WAND, ACME);
+
+        assertThat(ThemeTestSupport.onFx(() -> List.of("Rosalind", "Brook", "Wand", "Acme").stream()
+                        .map(term -> glossaryCell(term, 1))
+                        .flatMap(cell -> cell.lookupAll(".text").stream())
+                        .filter(javafx.scene.text.Text.class::isInstance)
+                        .map(node -> ((javafx.scene.text.Text) node).getText())
+                        .filter(drawn -> drawn.endsWith("…") || drawn.endsWith("..."))
+                        .toList()))
+                .as("kind cells drawn with an ellipsis")
+                .isEmpty();
+    }
+
+    private static final GlossaryEntry ACME = GlossaryEntry.of(
+                    "e7", "p1", "Acme", null, TermType.ORGANISATION, Gender.UNKNOWN, false)
+            .withType(TermType.ORGANISATION, Origin.LIKELY);
 }

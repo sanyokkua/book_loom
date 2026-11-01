@@ -28,6 +28,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
@@ -43,7 +44,6 @@ class PreScanTest {
 
     private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
     private static final NamePolicy POLICY = NamePolicy.TRANSLITERATE;
-
     private static final String PROJECT = "p1";
     private static final Pattern SLASH = Pattern.compile("/");
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
@@ -80,8 +80,9 @@ class PreScanTest {
         final Result<EntryChanges<GlossaryEntry>> result =
                 preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, POLICY, calls(model));
 
-        final GlossaryEntry milton =
-                GlossaryEntry.of("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
+        final GlossaryEntry milton = GlossaryEntry.of(
+                        "p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false)
+                .withType(TermType.PLACE, Origin.LIKELY);
         assertThat(added(result)).containsExactly(milton);
         assertThat(glossary.all(PROJECT).data()).containsExactlyInAnyOrder(held, milton);
     }
@@ -144,8 +145,8 @@ class PreScanTest {
         preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
-                .containsExactly(
-                        GlossaryEntry.of("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false));
+                .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::typeOrigin, GlossaryEntry::gender)
+                .containsExactly(tuple("Moreau", TermType.OTHER, Origin.LIKELY, Gender.UNKNOWN));
     }
 
     @ParameterizedTest

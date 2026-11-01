@@ -106,6 +106,30 @@ class AddTermDialogTest extends ShellTestBase {
         assertThat(glossary.added()).isEmpty();
     }
 
+    // IF the refusal outlived the edit, THEN the card would still say the term is a duplicate after it was corrected.
+    @Test
+    void sourceEdited_afterARefusal_clearsTheReason() {
+        openDialogOver(List.of(justine()));
+        fill("justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, false);
+        confirm();
+
+        onFx(() -> ((TextField) required("add-term-source")).setText("Justina"));
+
+        assertThat(required("add-term-message").isVisible()).isFalse();
+        assertThat(message()).isEmpty();
+    }
+
+    // IF the card said "unknown" where the table says "not specified", THEN one gender would have two names.
+    @Test
+    @SuppressWarnings("unchecked")
+    void genderField_opened_namesNoGenderAsTheTableDoes() {
+        openDialogOver(List.of());
+
+        final ComboBox<Gender> gender = (ComboBox<Gender>) required("add-term-gender");
+
+        assertThat(gender.getConverter().toString(Gender.UNKNOWN)).isEqualTo("not specified");
+    }
+
     // IF a lock with no target were accepted, THEN a locked name with nothing to put back would vanish.
     @Test
     void confirm_lockedWithNoTarget_staysOpenWithTheReasonAndAddsNothing() {

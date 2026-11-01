@@ -78,6 +78,7 @@ class TermReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
                         entry("p1:hale", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                                .withType(TermType.CHARACTER, Origin.LIKELY)
                                 .withSuggestedGender(Gender.MALE),
                         entry("p1:moreau", "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
                                 .withSuggestedGender(Gender.FEMALE),
@@ -214,6 +215,7 @@ class TermReviewTest {
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
                         suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN)
+                                .withType(TermType.CHARACTER, Origin.LIKELY)
                                 .withSuggestedGender(Gender.MALE),
                         suggested("p1:moreau", "Moreau", "Моро", TermType.CHARACTER, Gender.UNKNOWN)
                                 .withSuggestedGender(Gender.FEMALE),

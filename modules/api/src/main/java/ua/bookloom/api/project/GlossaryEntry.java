@@ -209,10 +209,11 @@ public record GlossaryEntry(
         return copyTarget(target, locked() ? TargetState.LOCKED : TargetState.PINNED, Origin.USER, genderOrigin);
     }
 
-    /** This entry with another type; the type's origin and the target's are kept. */
-    public GlossaryEntry withType(final TermType changed) {
+    /** This entry with another type and its origin ({@link Origin#USER} for the person's edit); the rest is kept. */
+    public GlossaryEntry withType(final TermType changed, final Origin origin) {
         Objects.requireNonNull(changed, "changed");
-        return described(forms, changed, meaning, meaningChoice, unsureMentions);
+        Objects.requireNonNull(origin, "origin");
+        return described(forms, changed, origin, meaning, meaningChoice, unsureMentions);
     }
 
     /**
@@ -283,22 +284,22 @@ public record GlossaryEntry(
 
     /** This entry with the other spellings the book uses for its term; never null. */
     public GlossaryEntry withForms(final List<String> folded) {
-        return described(folded, type, meaning, meaningChoice, unsureMentions);
+        return described(folded, type, typeOrigin, meaning, meaningChoice, unsureMentions);
     }
 
     /** This entry with a note on what its term means; a null or blank note is none. */
     public GlossaryEntry withMeaning(@Nullable final String note) {
-        return described(forms, type, note, meaningChoice, unsureMentions);
+        return described(forms, type, typeOrigin, note, meaningChoice, unsureMentions);
     }
 
     /** This entry with how its meaning-bearing name is rendered; null for a name the book does not play on. */
     public GlossaryEntry withMeaningChoice(@Nullable final MeaningChoice choice) {
-        return described(forms, type, meaning, choice, unsureMentions);
+        return described(forms, type, typeOrigin, meaning, choice, unsureMentions);
     }
 
     /** This entry with the count of its mentions the clause left undecided between it and another name. */
     public GlossaryEntry withUnsureMentions(final int count) {
-        return described(forms, type, meaning, meaningChoice, count);
+        return described(forms, type, typeOrigin, meaning, meaningChoice, count);
     }
 
     /**
@@ -320,6 +321,7 @@ public record GlossaryEntry(
     private GlossaryEntry described(
             final List<String> newForms,
             final TermType newType,
+            final Origin newTypeOrigin,
             @Nullable final String newMeaning,
             @Nullable final MeaningChoice newChoice,
             final int newUnsure) {
@@ -334,7 +336,7 @@ public record GlossaryEntry(
                 targetOrigin,
                 newType,
                 placeKind,
-                typeOrigin,
+                newTypeOrigin,
                 gender,
                 genderOrigin,
                 genderSeedTried,

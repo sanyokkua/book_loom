@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import javafx.beans.property.ReadOnlyLongProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.CallLedger;
@@ -29,6 +30,7 @@ public final class MeasuredCalls {
     private final CallLedger ledger;
     private final Function<ModelSelection, Map<CallKind, MeasuredSpeed>> read;
     private final BiConsumer<ModelSelection, Map<CallKind, Double>> write;
+    private final ReadOnlyLongProperty storedChanges;
 
     /**
      * Reads and stores through the model settings.
@@ -44,7 +46,8 @@ public final class MeasuredCalls {
                 ledger,
                 model -> stored(store, model),
                 (model, seconds) ->
-                        recorder.recordCalls(model.providerId(), model.modelId(), seconds, MeasuredFrom.RUN));
+                        recorder.recordCalls(model.providerId(), model.modelId(), seconds, MeasuredFrom.RUN),
+                recorder.storedChanges());
         Objects.requireNonNull(store, "store");
         Objects.requireNonNull(recorder, "recorder");
     }
@@ -52,10 +55,12 @@ public final class MeasuredCalls {
     MeasuredCalls(
             final CallLedger ledger,
             final Function<ModelSelection, Map<CallKind, MeasuredSpeed>> read,
-            final BiConsumer<ModelSelection, Map<CallKind, Double>> write) {
+            final BiConsumer<ModelSelection, Map<CallKind, Double>> write,
+            final ReadOnlyLongProperty storedChanges) {
         this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.read = Objects.requireNonNull(read, "read");
         this.write = Objects.requireNonNull(write, "write");
+        this.storedChanges = Objects.requireNonNull(storedChanges, "storedChanges");
     }
 
     /**
@@ -64,7 +69,18 @@ public final class MeasuredCalls {
      * @return an instance whose reads are empty and whose stores do nothing
      */
     static MeasuredCalls none() {
-        return new MeasuredCalls(CallLedger.none(), model -> Map.of(), (model, seconds) -> {});
+        return new MeasuredCalls(
+                CallLedger.none(), model -> Map.of(), (model, seconds) -> {}, new ModelSpeeds().revision());
+    }
+
+    /**
+     * A count that grows each time a stored speed changed. A store is written off the FX thread after the work that
+     * measured it ends, so an estimate follows this count rather than the end of the work.
+     *
+     * @return the count; FX thread only
+     */
+    ReadOnlyLongProperty storedChanges() {
+        return storedChanges;
     }
 
     /**

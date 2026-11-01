@@ -281,9 +281,9 @@ final class ReviewCommit {
                     "Glossary review: entry {} was a character by its pronouns only, the readings make it {}",
                     now.id(),
                     verdict.type());
-            return now.withType(verdict.type()).withGender(Gender.UNKNOWN);
+            return now.withType(verdict.type(), Origin.LIKELY).withGender(Gender.UNKNOWN);
         }
-        final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
+        final GlossaryEntry typed = takesType(now, verdict) ? now.withType(verdict.type(), Origin.LIKELY) : now;
         if (typed.type() != TermType.CHARACTER) {
             return typed;
         }
@@ -306,6 +306,11 @@ final class ReviewCommit {
         return replaces ? verified(typed, verdict.gender()) : typed;
     }
 
+    // A review reading is a likely kind (design D3); it fills only the unset kind, other.
+    private static boolean takesType(final GlossaryEntry now, final Verdict verdict) {
+        return now.type() == TermType.OTHER && verdict.type() != TermType.OTHER;
+    }
+
     private static GlossaryEntry marked(final GlossaryEntry typed) {
         log.debug("Glossary review: the book gives entry {} no evidence of a gender", typed.id());
         return typed.withNoGenderEvidence();
@@ -318,6 +323,7 @@ final class ReviewCommit {
         return verdict.read()
                 && !now.locked()
                 && now.type() == TermType.CHARACTER
+                && now.typeOrigin() != Origin.USER
                 && now.genderOrigin() == Origin.LIKELY
                 && verdict.type() != TermType.CHARACTER
                 && verdict.type() != TermType.OTHER;

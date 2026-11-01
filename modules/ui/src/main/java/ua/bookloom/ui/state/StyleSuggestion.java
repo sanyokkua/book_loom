@@ -144,9 +144,10 @@ public final class StyleSuggestion {
     }
 
     private void forget() {
-        log.debug("the style suggestion's evidence is forgotten: the open book changed");
+        log.debug("the style suggestion's evidence and outcome are forgotten: the open book changed");
         dropHeld();
         applied = null;
+        outcome.set(StyleSuggestionOutcome.NONE);
         evidence.set(Map.of());
         languageProposal.set(null);
     }

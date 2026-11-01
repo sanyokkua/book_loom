@@ -38,6 +38,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.theme.MonoFont;
+import ua.bookloom.ui.theme.SlantFace;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -190,6 +191,10 @@ public final class AppShellView {
         LayoutClass.install(shell); // the window's width class: the navigation column and the title bar follow it (L9)
         MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
             log.debug("the activity log is set in {}", face.family());
+            shell.getStyleClass().add(face.styleClass());
+        });
+        SlantFace.pick(Font.getFamilies()).ifPresent(face -> {
+            log.debug("a suggested glossary target is slanted in {}", face.family());
             shell.getStyleClass().add(face.styleClass());
         });
         if (Motion.isReduced()) {

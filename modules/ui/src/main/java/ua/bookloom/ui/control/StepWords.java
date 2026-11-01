@@ -75,7 +75,8 @@ final class StepWords {
                     ? DONE
                     : switch (ended) {
                         case DONE -> DONE;
-                        case NO_CALL -> NO_CALL;
+                        // A stage that needed no request still did its work (found, checked, wrote).
+                        case NO_CALL -> step.kind() == StepKind.STAGE ? DONE : NO_CALL;
                         case FAILED -> FAILED;
                     };
         }

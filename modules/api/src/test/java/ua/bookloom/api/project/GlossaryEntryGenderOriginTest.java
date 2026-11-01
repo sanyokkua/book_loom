@@ -200,8 +200,8 @@ class GlossaryEntryGenderOriginTest {
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of("withTarget", entry -> entry.withTarget("Рен"))),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
                         "withSuggestedTarget", entry -> entry.withSuggestedTarget("Рен"))),
-                Arguments.of(
-                        Named.<UnaryOperator<GlossaryEntry>>of("withType", entry -> entry.withType(TermType.OTHER))),
+                Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
+                        "withType", entry -> entry.withType(TermType.OTHER, Origin.USER))),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of("accepted", GlossaryEntry::accepted)),
                 Arguments.of(Named.<UnaryOperator<GlossaryEntry>>of(
                         "withForms", entry -> entry.withForms(List.of("Wrens")))));

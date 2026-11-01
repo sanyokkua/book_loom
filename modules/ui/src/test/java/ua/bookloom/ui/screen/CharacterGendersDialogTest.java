@@ -56,11 +56,13 @@ class CharacterGendersDialogTest extends TranslatingScreenTestBase {
         ask(List.of(likely("e1", "Ivar", Gender.MALE, 0.55), likely("e2", "Mira Holt", Gender.FEMALE, 0.9)));
 
         final List<String> texts = textsUnder(required(CARD));
-        assertThat(texts.indexOf("Ivar — 12 mentions · suggested, confirm it"))
+        assertThat(texts.indexOf("Ivar — 12 mentions · likely, confirm it"))
                 .isNotNegative()
-                .isLessThan(texts.indexOf("Mira Holt — 12 mentions · suggested, confirm it"));
+                .isLessThan(texts.indexOf("Mira Holt — 12 mentions · likely, confirm it"));
         assertThat(chosen("male", 0)).isTrue();
         assertThat(chosen("female", 1)).isTrue();
+        // The choices name a missing gender as the table does.
+        assertThat(texts).contains("not specified").doesNotContain("unknown");
         assertThat(ticked(0)).isFalse();
         assertThat(ticked(1)).isFalse();
     }

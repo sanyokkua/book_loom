@@ -325,7 +325,7 @@ public final class PronounGender {
         }
         log.trace(
                 "Glossary entry {} gets the gender {} from the book's pronouns and verbs", entry.id(), dominant.get());
-        final GlossaryEntry character = entry.withType(TermType.CHARACTER);
+        final GlossaryEntry character = retypes(entry) ? entry.withType(TermType.CHARACTER, origin) : entry;
         return origin == Origin.BOOK
                 ? character.withGenderFrom(dominant.get(), Origin.BOOK)
                 : character.withSuggestedGender(dominant.get());
@@ -378,6 +378,20 @@ public final class PronounGender {
             log.info("Pronoun gender seeding project={} language={} entriesSeeded={}", projectId, languageTag, changed);
             return Result.ok(changed);
         });
+    }
+
+    // The count makes a character of the unset kind or of an automatic one, as the book's or a likely kind like the
+    // gender it sets; a kind the person chose stays theirs (design D3).
+    private static boolean retypes(final GlossaryEntry entry) {
+        final boolean retypes = entry.type() == TermType.OTHER
+                || (entry.type() != TermType.CHARACTER && entry.typeOrigin() != Origin.USER);
+        log.debug(
+                "Glossary entry {} kind {} from {}: made a character {}",
+                entry.id(),
+                entry.type(),
+                entry.typeOrigin(),
+                retypes);
+        return retypes;
     }
 
     private static boolean isPersonLike(final TermType type) {

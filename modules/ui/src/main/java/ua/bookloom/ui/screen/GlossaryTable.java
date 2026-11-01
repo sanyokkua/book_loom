@@ -155,9 +155,11 @@ final class GlossaryTable {
         return entry.target() != null && !entry.target().isBlank();
     }
 
+    // The Kind column is narrow and "character · person" long, so its origin wraps to a second line of the row rather
+    // than ending in an ellipsis.
     private static GlossaryCells.EntryCell<?> typeCell(
             final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
-        return new GlossaryChoiceCell<>(
+        final GlossaryChoiceCell<TermType> cell = new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
                 TermType.values(),
@@ -166,6 +168,8 @@ final class GlossaryTable {
                 entry -> typeLabel(messages, entry),
                 model::setType,
                 frozen);
+        cell.control().getStyleClass().add("glossary-kind");
+        return cell;
     }
 
     // "other" is what a scan proposes before anything is known, so it carries no origin.
@@ -194,7 +198,7 @@ final class GlossaryTable {
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
                 Gender.values(),
-                gender -> genderChoice(messages, gender),
+                gender -> GlossaryLabels.gender(messages, gender),
                 GlossaryEntry::gender,
                 entry -> genderLabel(messages, entry),
                 model::setGender,
@@ -202,15 +206,20 @@ final class GlossaryTable {
     }
 
     // Only a character has a gender to settle; a place or a term shows a dash. The column never reads "unknown": a
-    // character with no gender yet — the scan found no evidence, nobody has read it, or the person cleared it — says
-    // that the book gave none. A known gender says where it came from, a likely one the model gave with low confidence
-    // says so, and a rule's gender the model disagrees with shows both.
+    // character with no gender yet reads "not specified", and adds that the book gave none only when the names pass
+    // read
+    // it and found none; one nobody has read, or the person cleared, says no more. A known gender says where it came
+    // from, a likely one the model gave with low confidence says so, and a rule's gender the model disagrees with shows
+    // both.
     private static String genderLabel(final Messages messages, final GlossaryEntry entry) {
         if (entry.type() != TermType.CHARACTER) {
             return NOT_A_CHARACTER;
         }
-        if (entry.noGenderEvidence() || entry.gender() == Gender.UNKNOWN) {
+        if (entry.noGenderEvidence()) {
             return messages.get(MessageKey.NAMES_STYLE_GENDER_NO_EVIDENCE);
+        }
+        if (entry.gender() == Gender.UNKNOWN) {
+            return messages.get(MessageKey.NAMES_STYLE_GENDER_NOT_SPECIFIED);
         }
         final String label = GlossaryLabels.gender(messages, entry.gender());
         final Origin origin = entry.genderOrigin();
@@ -228,13 +237,6 @@ final class GlossaryTable {
             return messages.get(MessageKey.NAMES_STYLE_GENDER_LOW_CONFIDENCE, label);
         }
         return withOrigin(messages, label, origin);
-    }
-
-    // The choice that clears a gender reads "not specified", like the cell it leaves behind.
-    private static String genderChoice(final Messages messages, final Gender gender) {
-        return gender == Gender.UNKNOWN
-                ? messages.get(MessageKey.NAMES_STYLE_GENDER_NOT_SPECIFIED)
-                : GlossaryLabels.gender(messages, gender);
     }
 
     private static String withOrigin(final Messages messages, final String value, final Origin origin) {

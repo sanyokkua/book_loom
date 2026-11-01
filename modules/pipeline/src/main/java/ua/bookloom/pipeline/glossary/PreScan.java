@@ -160,7 +160,8 @@ public final class PreScan {
         final GlossaryEntry proposed = verdict.entry();
         final TermType type = verdict.type() == TermType.OTHER ? proposed.type() : verdict.type();
         final GlossaryEntry judged = ReviewCommit.guessed(
-                proposed.withType(TermType.OTHER).withInferredGender(Gender.UNKNOWN), verdict.withType(type));
+                proposed.withType(TermType.OTHER, proposed.typeOrigin()).withInferredGender(Gender.UNKNOWN),
+                verdict.withType(type));
         if (judged.gender() == Gender.UNKNOWN && proposed.gender() != Gender.UNKNOWN) {
             log.debug("Pre-scan entry {} keeps the proposal's gender as a suggestion", proposed.id());
             return judged.withSuggestedGender(proposed.gender());
@@ -337,7 +338,7 @@ public final class PreScan {
                 null,
                 proposal.type(),
                 null,
-                Origin.USER,
+                Origin.LIKELY,
                 proposal.gender(),
                 Origin.LIKELY,
                 false,

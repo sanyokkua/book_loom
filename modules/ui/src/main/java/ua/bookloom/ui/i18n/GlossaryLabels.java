@@ -42,7 +42,8 @@ public final class GlossaryLabels {
     }
 
     /**
-     * The word for a gender.
+     * The word for a gender; no gender reads "not specified" everywhere (the table, its choices, the Add term card, the
+     * genders question, the results), never "unknown".
      *
      * @param messages the catalogue to read
      * @param gender the gender to name
@@ -55,7 +56,7 @@ public final class GlossaryLabels {
                     case FEMALE -> MessageKey.NAMES_STYLE_GENDER_FEMALE;
                     case MALE -> MessageKey.NAMES_STYLE_GENDER_MALE;
                     case NEUTER -> MessageKey.NAMES_STYLE_GENDER_NEUTER;
-                    case UNKNOWN -> MessageKey.NAMES_STYLE_GENDER_UNKNOWN;
+                    case UNKNOWN -> MessageKey.NAMES_STYLE_GENDER_NOT_SPECIFIED;
                 });
     }
 

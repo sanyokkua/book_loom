@@ -45,6 +45,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -291,6 +292,7 @@ class GlossaryServiceImplTest {
         assertThat(Objects.requireNonNull(added.data()).added())
                 .containsExactly(GlossaryEntry.of(
                                 "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withType(TermType.CHARACTER, Origin.LIKELY)
                         .withSuggestedGender(Gender.MALE)
                         .withSuggestedTarget("Моро"));
         assertThat(model.requests()).hasSize(3);

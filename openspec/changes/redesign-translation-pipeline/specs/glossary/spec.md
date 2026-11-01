@@ -505,7 +505,7 @@ The application SHALL establish one rendering for each recurring term by this or
 
 ### Requirement: List the steps of the names pass in its progress dialog
 
-The progress dialog of the names pass SHALL list ten steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Check the suggestions, Write the results — each with the number of requests it sent, and a figures line such as "53 % · 26 of about 49 steps · Left about 2 min".
+The progress dialog of the names pass SHALL list ten steps in order — Find candidates in the book, Decide the names, Ask what the model knows about the names, Find repeated words, Clean up repeated words, Read repeated words in context, Suggest translations for names, Suggest translations for repeated words, Check the suggestions, Write the results — each with the number of requests it sent and a done mark once ended, and a figures line that counts those ten steps and times them by the requests.
 
 **Source**: `docs/specification/mockups/README.md#dialog--prepare-names-automatically--results-g4-long--n4-n5`, N4 (`docs/proposals/2026-10-19-ui-finalization-and-persistence.md`), `design.md#d3--the-book-map-lemma-entries-origin-target-state`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the person sees which part of the pass is running and how much is left; the new steps are the model's best guess about each name and the check that tests every suggestion against the target language's rules (it sends no request and accepts nothing: the suggestions stay "likely" until the person presses Accept all). Grouping the forms of a name is part of finding candidates and sends no request. The dialog itself follows the progress-dialog pattern of the `app-shell` capability.
 
@@ -519,6 +519,11 @@ The progress dialog of the names pass SHALL list ten steps in order — Find can
 - **WHEN** a step is running with 25 requests, has ended with 6, ended with none, or has not begun
 - **THEN** its row reads "25 requests so far", "6 requests", "no request" or "Not started"
 - **AND** no count reads "of N", because no step knows its total up front
+
+#### Scenario: The figures count the ten steps
+
+- **WHEN** the pass has ended three steps, one of them with 2 requests and two with none, and the results open after it
+- **THEN** the figures line reads "30 % · 3 of about 10 steps", the three ended rows carry the done mark, and the results header counts 10 steps
 
 ## MODIFIED Requirements
 
@@ -753,7 +758,7 @@ The Names & style screen SHALL show the glossary as a table with the columns Ter
 #### Scenario: The Gender column
 
 - **WHEN** the table shows a row's gender
-- **THEN** it reads female, male or neuter for a character, followed by its origin (`male · book`, `female · rule`, `female · person` or `male · likely`), "not specified — no evidence in the book" for a character with no value yet, and "—" for any other kind; it never reads "unknown"
+- **THEN** it reads female, male or neuter for a character, followed by its origin (`male · book`, `female · rule`, `female · person` or `male · likely`), "not specified" for a character with no value yet, "not specified — no evidence in the book" for one the names pass read and found no evidence for, and "—" for any other kind; it never reads "unknown"
 - **AND** a likely value below a confidence of 0.7 reads `likely, low confidence`, and a rule value the model disagrees with reads `rule: male · model: female`
 
 #### Scenario: A changed row is marked

@@ -19,6 +19,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.util.text.GlossaryKeys;
 
@@ -222,7 +223,7 @@ public final class ScanEntries {
                 base.targetOrigin(),
                 base.type(),
                 base.placeKind(),
-                base.typeOrigin(),
+                Origin.RULE,
                 base.gender(),
                 base.genderOrigin(),
                 base.genderSeedTried(),

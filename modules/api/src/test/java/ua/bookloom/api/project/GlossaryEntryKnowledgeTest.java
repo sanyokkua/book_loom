@@ -48,7 +48,7 @@ class GlossaryEntryKnowledgeTest {
 
         assertThat(known.withTarget("Івар")
                         .withGender(Gender.FEMALE)
-                        .withType(TermType.CHARACTER)
+                        .withType(TermType.CHARACTER, Origin.USER)
                         .withForms(List.of("Ivara"))
                         .withLocked(true)
                         .knowledge())

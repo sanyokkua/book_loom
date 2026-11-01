@@ -74,7 +74,8 @@ class PronounGenderTest {
 
     @Test
     void seeded_aTermWithPersonPronouns_becomesACharacterSuggestion() {
-        final GlossaryEntry seeded = PronounGender.seeded(entry("Chisel", TermType.TERM), FEMALE_TEXTS, "en");
+        final GlossaryEntry seeded = PronounGender.seeded(
+                entry("Chisel", TermType.TERM).withType(TermType.TERM, Origin.LIKELY), FEMALE_TEXTS, "en");
 
         assertThat(seeded.type()).isEqualTo(TermType.CHARACTER);
         assertThat(seeded.gender()).isEqualTo(Gender.FEMALE);

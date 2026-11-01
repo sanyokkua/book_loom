@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyLongProperty;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.MeasuredFrom;
@@ -47,6 +48,11 @@ public final class ModelSpeedRecorder {
         this.store = Objects.requireNonNull(store, "store");
         this.speeds = Objects.requireNonNull(speeds, "speeds");
         this.executor = Objects.requireNonNull(executor, "executor");
+    }
+
+    /** {@return a count that grows each time this recorder stored a speed; FX thread only} */
+    ReadOnlyLongProperty storedChanges() {
+        return speeds.revision();
     }
 
     /**

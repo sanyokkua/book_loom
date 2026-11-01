@@ -94,7 +94,7 @@ class GlossaryEntryNoEvidenceTest {
                 edit("withSuggestedTarget", entry -> entry.withSuggestedTarget("Врен")),
                 edit("withLocked", entry -> entry.withLocked(true)),
                 edit("withRuleLock", GlossaryEntry::withRuleLock),
-                edit("withType", entry -> entry.withType(TermType.CHARACTER)),
+                edit("withType", entry -> entry.withType(TermType.CHARACTER, Origin.USER)),
                 edit("accepted", GlossaryEntry::accepted),
                 edit("withForms", entry -> entry.withForms(List.of("Wrens"))));
     }

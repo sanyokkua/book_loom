@@ -226,7 +226,7 @@ class GenderOriginReviewTest {
     // code from a strong pronoun case; the seed's origin is what makes it person-like.
     @Test
     void review_untypedEntryWithASuggestedGender_isDecidedByTheCodeFromStrongPronouns() {
-        glossary.add(holding(Origin.LIKELY, Gender.MALE, "p1:hale", "Hale").withType(TermType.OTHER));
+        glossary.add(holding(Origin.LIKELY, Gender.MALE, "p1:hale", "Hale").withType(TermType.OTHER, Origin.RULE));
         final List<CallKind> kinds = new ArrayList<>();
         final ModelCalls calls = (kind, segmentId, request) -> {
             kinds.add(kind);

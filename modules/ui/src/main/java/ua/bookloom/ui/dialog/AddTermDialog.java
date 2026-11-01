@@ -71,6 +71,12 @@ public final class AddTermDialog {
         message.getStyleClass().add("dialog-sub");
         message.setVisible(false);
         message.setManaged(false);
+        // A refusal speaks of what was confirmed; once a field changes it no longer holds, and Add asks again.
+        source.textProperty().addListener((observed, was, now) -> clearRefusal());
+        target.textProperty().addListener((observed, was, now) -> clearRefusal());
+        type.valueProperty().addListener((observed, was, now) -> clearRefusal());
+        gender.valueProperty().addListener((observed, was, now) -> clearRefusal());
+        state.valueProperty().addListener((observed, was, now) -> clearRefusal());
     }
 
     /**
@@ -144,6 +150,15 @@ public final class AddTermDialog {
         message.setText(reason);
         message.setVisible(true);
         message.setManaged(true);
+    }
+
+    private void clearRefusal() {
+        if (message.isVisible()) {
+            log.debug("a field changed after a refusal: the reason is cleared");
+            message.setText("");
+            message.setVisible(false);
+            message.setManaged(false);
+        }
     }
 
     private static TextField field(final String id) {

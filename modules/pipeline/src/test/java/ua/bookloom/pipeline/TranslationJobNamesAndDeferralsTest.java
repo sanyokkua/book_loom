@@ -41,6 +41,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
@@ -87,13 +88,14 @@ class TranslationJobNamesAndDeferralsTest {
                 .containsExactlyInAnyOrder(
                         hale,
                         GlossaryEntry.of(
-                                GlossaryIds.of(project.id(), "Moreau"),
-                                project.id(),
-                                "Moreau",
-                                null,
-                                TermType.OTHER,
-                                Gender.UNKNOWN,
-                                false));
+                                        GlossaryIds.of(project.id(), "Moreau"),
+                                        project.id(),
+                                        "Moreau",
+                                        null,
+                                        TermType.OTHER,
+                                        Gender.UNKNOWN,
+                                        false)
+                                .withType(TermType.OTHER, Origin.RULE));
         assertThat(events).filteredOn(event -> event.startsWith("GLOSSARY")).containsExactly("GLOSSARY +1");
         assertThat(events).containsSubsequence("decided " + LAST_OF_CHAPTER_TWO, "GLOSSARY +1");
     }

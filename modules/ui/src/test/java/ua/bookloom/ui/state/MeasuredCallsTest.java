@@ -41,7 +41,8 @@ class MeasuredCallsTest {
     private final MeasuredCalls measured = new MeasuredCalls(
             ledger,
             model -> Map.of(CallKind.TERM_READING, new MeasuredSpeed(5.0, MeasuredFrom.RUN)),
-            (model, seconds) -> written.add(seconds));
+            (model, seconds) -> written.add(seconds),
+            new ModelSpeeds().revision());
 
     // The spec's names pass: 40 name-reading calls in 200 s store 5.0 s per name-reading call.
     @Test

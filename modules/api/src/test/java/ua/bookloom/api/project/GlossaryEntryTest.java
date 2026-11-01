@@ -7,8 +7,9 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
-/** Who chose a target follows the edit: the person's edits confirm it, a type or gender change keeps it. */
+/** Who chose a target follows the edit: the person's edits confirm it, a type or gender change keeps it; a type carries the origin it is given. */
 class GlossaryEntryTest {
 
     private static GlossaryEntry suggested() {
@@ -63,9 +64,19 @@ class GlossaryEntryTest {
 
     @Test
     void withTypeAndGender_onASuggestion_keepItSuggested() {
-        final GlossaryEntry edited = suggested().withType(TermType.TERM).withGender(Gender.MALE);
+        final GlossaryEntry edited =
+                suggested().withType(TermType.TERM, Origin.USER).withGender(Gender.MALE);
 
         assertThat(edited.targetOrigin()).isEqualTo(Origin.LIKELY);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Origin.class)
+    void withType_statedOrigin_isTheTypesOrigin(final Origin origin) {
+        final GlossaryEntry typed = suggested().withType(TermType.CHARACTER, origin);
+
+        assertThat(typed.type()).isEqualTo(TermType.CHARACTER);
+        assertThat(typed.typeOrigin()).isEqualTo(origin);
     }
 
     @Test
@@ -137,7 +148,7 @@ class GlossaryEntryTest {
                 .withMeaningChoice(MeaningChoice.TRANSCRIBE_GLOSS);
 
         final GlossaryEntry later =
-                entry.withSuggestedTarget("Брайтвотер").withLocked(true).withType(TermType.CHARACTER);
+                entry.withSuggestedTarget("Брайтвотер").withLocked(true).withType(TermType.CHARACTER, Origin.USER);
 
         assertThat(later.meaning()).isEqualTo("bright water");
         assertThat(later.meaningChoice()).isEqualTo(MeaningChoice.TRANSCRIBE_GLOSS);

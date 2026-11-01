@@ -20,6 +20,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
@@ -43,15 +44,17 @@ class NewTermsTest {
 
         assertThat(entries)
                 .containsExactly(
-                        GlossaryEntry.of("p1:hale", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false),
+                        GlossaryEntry.of("p1:hale", PROJECT, "Hale", null, TermType.OTHER, Gender.UNKNOWN, false)
+                                .withType(TermType.OTHER, Origin.RULE),
                         GlossaryEntry.of(
-                                "p1:baker street",
-                                PROJECT,
-                                "Baker Street",
-                                null,
-                                TermType.OTHER,
-                                Gender.UNKNOWN,
-                                false));
+                                        "p1:baker street",
+                                        PROJECT,
+                                        "Baker Street",
+                                        null,
+                                        TermType.OTHER,
+                                        Gender.UNKNOWN,
+                                        false)
+                                .withType(TermType.OTHER, Origin.RULE));
         assertThat(glossary.all(PROJECT).data()).isEmpty();
     }
 

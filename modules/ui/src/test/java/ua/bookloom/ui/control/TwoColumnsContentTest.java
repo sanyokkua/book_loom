@@ -62,6 +62,10 @@ class TwoColumnsContentTest extends FxTestBase {
             scene.getStylesheets().add(Theme.stylesheet());
             stage.setScene(scene);
             stage.sizeToScene();
+            // The headless screen is 1000 x 1000 and its blit does not clip: a 1440 x 900 window placed lower than
+            // about y = 100 (where the stage was left, or centred when this class runs first) writes past the frame.
+            stage.setX(0);
+            stage.setY(0);
             stage.show();
             return null;
         });

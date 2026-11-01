@@ -2536,19 +2536,21 @@
     -fx-border-width: 0 0 1px 0;
 }
 
+/* The header's words start 3px further in, over the rows' left edge. */
 .glossary-table .column-header .label {
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-alignment: CENTER_LEFT;
-    -fx-padding: 0 0 0 6px;
+    -fx-padding: 0 0 0 9px;
 }
 
-/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. */
+/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. Every row */
+/* keeps a transparent left edge as wide as a changed row's mark, so marking a row never moves its cells. */
 .glossary-table .table-row-cell {
     -fx-background-color: transparent;
     -fx-border-color: transparent transparent -color-divider transparent;
-    -fx-border-width: 0 0 1px 0;
+    -fx-border-width: 0 0 1px 3px;
 }
 
 .glossary-table .table-row-cell:empty {
@@ -2558,7 +2560,6 @@
 /* A row the last operation changed: a left edge, so no chip in the term cell can cut a long term (G9). */
 .glossary-table .table-row-cell:changed {
     -fx-border-color: transparent transparent -color-divider -color-info;
-    -fx-border-width: 0 0 1px 3px;
 }
 
 .glossary-table .table-row-cell:hover {
@@ -2640,6 +2641,28 @@
     -fx-font-style: italic;
 }
 
+/* JavaFX draws macOS's system font upright even in italic, so the slanted face is one with a real italic (SlantFace, */
+/* a class on the shell root). */
+.slant-segoe .glossary-table .text-field:suggested {
+    -fx-font-family: "Segoe UI";
+}
+
+.slant-helvetica .glossary-table .text-field:suggested {
+    -fx-font-family: "Helvetica Neue";
+}
+
+.slant-dejavu .glossary-table .text-field:suggested {
+    -fx-font-family: "DejaVu Sans";
+}
+
+.slant-liberation .glossary-table .text-field:suggested {
+    -fx-font-family: "Liberation Sans";
+}
+
+.slant-arial .glossary-table .text-field:suggested {
+    -fx-font-family: "Arial";
+}
+
 .glossary-suggested-badge {
     -fx-background-color: -color-info-bg;
     -fx-border-color: -color-info-bd;
@@ -2665,6 +2688,12 @@
     -fx-border-radius: 6px;
     -fx-padding: 4px 8px 4px 0;
     -fx-cursor: hand;
+}
+
+/* The Kind cell's origin wraps under the kind instead of ending in an ellipsis; two lines fit the 46px row. */
+.glossary-choice.glossary-kind {
+    -fx-wrap-text: true;
+    -fx-line-spacing: -2px;
 }
 
 .glossary-choice:hover {
