@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import javafx.application.Platform;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
@@ -190,11 +191,25 @@ final class GlossaryCells {
             field.focusedProperty().addListener((observed, was, now) -> {
                 if (!now) {
                     commit();
+                    typingEnded();
                 }
             });
+            field.textProperty().addListener((observed, was, now) -> typingBegan());
             control().setAlignment(Pos.CENTER_LEFT);
             control().getChildren().addAll(field, origin, flag, accept);
             control().disableProperty().bind(frozen);
+        }
+
+        private void typingBegan() {
+            if (field.isFocused() && getTableView() != null) {
+                TypingGuard.of(getTableView()).typing(true);
+            }
+        }
+
+        private void typingEnded() {
+            if (getTableView() != null) {
+                TypingGuard.of(getTableView()).typing(false);
+            }
         }
 
         private void onEnter() {
@@ -213,21 +228,42 @@ final class GlossaryCells {
             }
         }
 
+        // The text is written for the row it was typed for, which is the cell's remembered row, never the one the cell
+        // shows by now.
         private void commit() {
-            final GlossaryEntry shown = getItem();
             final String typed = field.getText();
-            if (shown == null || !shown.id().equals(syncedId) || typed.equals(syncedText)) {
+            if (syncedId == null || typed.equals(syncedText)) {
                 return;
             }
             syncedText = typed;
-            model.setTarget(shown.id(), typed);
+            model.setTarget(syncedId, typed);
+        }
+
+        // A recycled cell that is handed another row while its field has the keyboard: what was typed is written for
+        // its own row, later, outside the table's layout pass, and the keyboard goes back to the table.
+        private void leaveRowBeingEdited(final String nextId) {
+            if (!field.isFocused() || nextId.equals(syncedId)) {
+                return;
+            }
+            final String ownId = syncedId;
+            final String typed = field.getText();
+            if (ownId != null && !typed.equals(syncedText)) {
+                Platform.runLater(() -> model.setTarget(ownId, typed));
+            }
+            if (getTableView() != null) {
+                getTableView().requestFocus();
+            }
         }
 
         @Override
         void show(final HBox shown, final GlossaryEntry entry) {
-            syncedId = entry.id();
-            syncedText = entry.target() == null ? "" : entry.target();
-            field.setText(syncedText);
+            leaveRowBeingEdited(entry.id());
+            final boolean typing = field.isFocused() && entry.id().equals(syncedId);
+            if (!typing) {
+                syncedId = entry.id();
+                syncedText = entry.target() == null ? "" : entry.target();
+                field.setText(syncedText);
+            }
             final boolean suggested = entry.isSuggested();
             field.pseudoClassStateChanged(SUGGESTED, suggested);
             showOrigin(entry, suggested);

@@ -101,6 +101,28 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         }
     }
 
+    private static boolean isCharacterKey(final KeyCode code) {
+        return code.isLetterKey() || code.isDigitKey();
+    }
+
+    // A closed list does not pick a value by the letters typed over it: typing aimed at another row must not change
+    // this one. Enter opens the list, and in the open list it confirms.
+    private void keysOf(final ComboBox<T> made) {
+        made.addEventFilter(KeyEvent.ANY, event -> {
+            if (!made.isShowing() && (event.getEventType() == KeyEvent.KEY_TYPED || isCharacterKey(event.getCode()))) {
+                event.consume();
+            }
+        });
+        made.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER && !made.isShowing()) {
+                made.show();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                confirm(made.getSelectionModel().getSelectedItem());
+            }
+        });
+    }
+
     private ComboBox<T> editor() {
         final ComboBox<T> existing = combo;
         if (existing != null) {
@@ -118,14 +140,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
             }
         });
         made.setCellFactory(list -> new ChoiceListCell());
-        made.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ENTER && !made.isShowing()) {
-                made.show();
-                event.consume();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                confirm(made.getSelectionModel().getSelectedItem());
-            }
-        });
+        keysOf(made);
         combo = made;
         return made;
     }

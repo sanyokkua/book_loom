@@ -15,11 +15,18 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.css.PseudoClass;
+import javafx.scene.Node;
+import javafx.scene.control.ButtonBase;
+import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
@@ -71,11 +78,47 @@ final class TermTables {
         table.setFixedCellSize(ROW_HEIGHT);
         table.setPlaceholder(EmptyState.of(messages, id, texts, search.textProperty(), emptyActions));
         table.setFocusTraversable(false);
+        keyboardFollowsTheRow(table);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(rows.columns());
         scrollAcrossWhenNarrow(table);
         refreshWhenChanged(table, rows);
         return table;
+    }
+
+    // A press on a row's plain part, or a cell's label, takes the keyboard from whichever recycled cell's field had it,
+    // so what is typed next goes to the table and edits nothing; F2 or Enter on the selected row opens its field.
+    private static void keyboardFollowsTheRow(final TableView<?> table) {
+        table.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (!(event.getTarget() instanceof Node target) || !isEditor(target, table)) {
+                table.requestFocus();
+            }
+        });
+        table.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.F2 || event.getCode() == KeyCode.ENTER) {
+                focusFieldOfSelectedRow(table);
+                event.consume();
+            }
+        });
+    }
+
+    private static boolean isEditor(final Node target, final TableView<?> table) {
+        for (Node at = target; at != null && !at.equals(table); at = at.getParent()) {
+            if (at instanceof TextInputControl || at instanceof ComboBoxBase || at instanceof ButtonBase) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void focusFieldOfSelectedRow(final TableView<?> table) {
+        final int selected = table.getSelectionModel().getSelectedIndex();
+        table.lookupAll(".table-row-cell").stream()
+                .map(TableRow.class::cast)
+                .filter(row -> row.getIndex() == selected && !row.isEmpty())
+                .findFirst()
+                .flatMap(row -> row.lookupAll(".text-field").stream().findFirst())
+                .ifPresent(Node::requestFocus);
     }
 
     // The fitting policy never shows a horizontal scroll bar: on a table narrower than its columns' minimum widths it
@@ -177,8 +220,9 @@ final class TermTables {
     private static <R> void refreshWhenChanged(final TableView<R> table, final TermTableCard.Rows<R> rows) {
         final List<ObservableValue<? extends Number>> triggers = new ArrayList<>(rows.refreshOn());
         triggers.add(rows.marks().revision());
+        final TypingGuard guard = TypingGuard.of(table);
         for (int at = 0; at < triggers.size(); at++) {
-            final ChangeListener<Number> onChange = (observed, was, now) -> table.refresh();
+            final ChangeListener<Number> onChange = (observed, was, now) -> guard.redraw();
             table.getProperties().put(LISTENER_KEY + at, onChange);
             triggers.get(at).addListener(new WeakChangeListener<>(onChange));
         }

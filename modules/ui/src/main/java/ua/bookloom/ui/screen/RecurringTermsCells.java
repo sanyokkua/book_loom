@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import javafx.application.Platform;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -91,10 +92,21 @@ final class RecurringTermsCells {
             control().focusedProperty().addListener((observed, was, now) -> {
                 if (!now) {
                     commit();
+                    typing(false);
                 }
             });
+            control()
+                    .textProperty()
+                    .addListener((observed, was, now) -> typing(control().isFocused()));
         }
 
+        private void typing(final boolean now) {
+            if (getTableView() != null) {
+                TypingGuard.of(getTableView()).typing(now);
+            }
+        }
+
+        // The text is written for the term it was typed for, never the one the cell shows by now.
         private void commit() {
             final String typed = control().getText();
             if (syncedTerm == null || typed.equals(syncedText)) {
@@ -104,8 +116,28 @@ final class RecurringTermsCells {
             recurring.setRendering(syncedTerm, typed);
         }
 
+        // A recycled cell handed another term while its field has the keyboard: what was typed is written for its own
+        // term, later and outside the table's layout pass, and the keyboard goes back to the table.
+        private void leaveTermBeingEdited(final String nextTerm) {
+            if (!control().isFocused() || nextTerm.equals(syncedTerm)) {
+                return;
+            }
+            final String ownTerm = syncedTerm;
+            final String typed = control().getText();
+            if (ownTerm != null && !typed.equals(syncedText)) {
+                Platform.runLater(() -> recurring.setRendering(ownTerm, typed));
+            }
+            if (getTableView() != null) {
+                getTableView().requestFocus();
+            }
+        }
+
         @Override
         void show(final TextField shown, final LexiconEntry entry) {
+            leaveTermBeingEdited(entry.term());
+            if (shown.isFocused() && entry.term().equals(syncedTerm)) {
+                return;
+            }
             syncedTerm = entry.term();
             syncedText = entry.established().orElse("");
             shown.setText(syncedText);
