@@ -111,8 +111,9 @@ public interface GlossaryService {
 
     /**
      * Stores the person's answers to the once-per-name question about names whose meaning the book plays on (design
-     * D5). Transcribe and transcribe-and-gloss keep the target; translate drops a suggested target, so the next
-     * suggestion asks for the name by its meaning; {@link MeaningChoice#PENDING}, the question closed unanswered, is
+     * D5). Every answer keeps the target, so a run that starts at once still renders the name; translate leaves an
+     * earlier suggestion for the next suggestion call to replace by asking for the name by its meaning;
+     * {@link MeaningChoice#PENDING}, the question closed unanswered, is
      * stored as transcribe. No model is called.
      *
      * @param projectId the non-null project id

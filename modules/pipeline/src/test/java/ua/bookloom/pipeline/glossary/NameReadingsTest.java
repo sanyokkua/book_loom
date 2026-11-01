@@ -129,16 +129,18 @@ class NameReadingsTest {
         assertThat(marked).isZero();
     }
 
-    // Translate drops the suggestion so the next suggestion call asks by meaning; the other answers keep the target.
+    // IF translate dropped the suggestion, THEN a run that starts at once would render the name with no target at all.
     @ParameterizedTest
-    @CsvSource({"TRANSLATE,", "TRANSCRIBE,Брайтвотер", "TRANSCRIBE_GLOSS,Брайтвотер"})
-    void answered_choice_storesItAndKeepsOrDropsTheSuggestion(final MeaningChoice choice, final String target) {
+    @EnumSource(
+            value = MeaningChoice.class,
+            names = {"TRANSLATE", "TRANSCRIBE", "TRANSCRIBE_GLOSS"})
+    void answered_anyChoice_storesItAndKeepsTheSuggestion(final MeaningChoice choice) {
         final GlossaryEntry entry = held("Брайтвотер", TermType.CHARACTER).withMeaningChoice(MeaningChoice.PENDING);
 
         final GlossaryEntry answered = MeaningQuestions.answered(entry, choice);
 
         assertThat(answered)
                 .extracting(GlossaryEntry::meaningChoice, GlossaryEntry::target, GlossaryEntry::targetOrigin)
-                .containsExactly(choice, target, target == null ? null : Origin.LIKELY);
+                .containsExactly(choice, "Брайтвотер", Origin.LIKELY);
     }
 }

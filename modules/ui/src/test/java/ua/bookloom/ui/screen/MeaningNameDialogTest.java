@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import javafx.event.Event;
 import javafx.scene.control.RadioButton;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -37,6 +40,7 @@ class MeaningNameDialogTest extends TranslatingScreenTestBase {
             .withSuggestedTarget("Ешґроув")
             .withMeaningChoice(MeaningChoice.PENDING);
     private static final String CARD = "meaning-card";
+    private static final int MANY_NAMES = 40;
 
     private void showNamesStyle(final List<GlossaryEntry> pending) throws Exception {
         projects.on(
@@ -120,6 +124,17 @@ class MeaningNameDialogTest extends TranslatingScreenTestBase {
         assertThat(glossary.meaningAnswers()).isEmpty();
     }
 
+    // IF a glossary that cannot be read stopped Start, THEN a courtesy question would block the whole run.
+    @Test
+    void dialog_glossaryUnreadable_startsWithoutAsking() throws Exception {
+        glossary.willFailMeanings(AppError.of(ErrorCode.internal, "Glossary", "The glossary could not be read."));
+
+        showNamesStyle(List.of(BRIGHTWATER));
+
+        job.awaitRunStarted();
+        assertThat(isVisibleInScene(CARD)).isFalse();
+    }
+
     @Test
     void dialog_inUkrainian_wordsTheQuestion() throws Exception {
         useLocale(java.util.Locale.forLanguageTag("uk"));
@@ -128,5 +143,30 @@ class MeaningNameDialogTest extends TranslatingScreenTestBase {
 
         assertThat(textsUnder(required(CARD)))
                 .contains("Brightwater — «bright water»", "Транскрибувати", "Перекласти", "Зберегти й почати");
+    }
+
+    // IF forty names made the card taller than the window, THEN Save would lie below the screen and the question could
+    // not be answered.
+    @Test
+    void dialog_manyNames_scrollsInsideTheWindowAndKeepsSaveReachable() throws Exception {
+        final List<GlossaryEntry> many = IntStream.range(0, MANY_NAMES)
+                .mapToObj(index -> GlossaryEntry.of(
+                                "p1:name" + index, "p1", "Name" + index, null, TermType.PLACE, Gender.UNKNOWN, false)
+                        .withMeaning("a long meaning that the book plays on, number " + index)
+                        .withMeaningChoice(MeaningChoice.PENDING))
+                .toList();
+        showNamesStyle(many);
+        awaitAsking();
+
+        final double[] edges = ThemeTestSupport.onFx(() -> new double[] {
+            scene.getHeight(),
+            required("meaning-confirm")
+                    .localToScene(required("meaning-confirm").getLayoutBounds())
+                    .getMaxY(),
+            required(CARD).getLayoutBounds().getHeight()
+        });
+
+        assertThat(edges[1]).as("Save inside the window").isLessThanOrEqualTo(edges[0]);
+        assertThat(edges[2]).as("card shorter than the window").isLessThan(edges[0]);
     }
 }

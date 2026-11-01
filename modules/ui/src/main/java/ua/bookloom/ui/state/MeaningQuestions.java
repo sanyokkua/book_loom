@@ -49,6 +49,12 @@ public final class MeaningQuestions {
         Objects.requireNonNull(onFx, "onFx");
         log.debug("looking for names of project {} whose meaning question waits", projectId);
         calls.run("meaning questions", () -> glossary.meaningQuestions(projectId), answer -> {
+            if (answer.isErr()) {
+                log.warn(
+                        "the meaning questions of project {} could not be read, so none is asked: {}",
+                        projectId,
+                        Objects.requireNonNull(answer.error(), "error").code());
+            }
             final List<GlossaryEntry> found = answer.data() == null ? List.of() : answer.data();
             log.debug("project {} has {} names to ask about, ok {}", projectId, found.size(), answer.isOk());
             onFx.accept(found);

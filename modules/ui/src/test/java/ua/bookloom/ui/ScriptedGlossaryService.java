@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -44,6 +45,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final List<Map<String, Gender>> genderAnswers = new CopyOnWriteArrayList<>();
     private volatile List<UnknownGender> unknownGenders = List.of();
     private volatile List<GlossaryEntry> meaningQuestions = List.of();
+    private volatile @Nullable AppError meaningFailure;
     private volatile Map<String, List<TargetIssue>> reviewFlags = Map.of();
     private volatile boolean holding;
 
@@ -184,10 +186,16 @@ public final class ScriptedGlossaryService implements GlossaryService {
         meaningQuestions = List.copyOf(pending);
     }
 
+    /** Makes {@code meaningQuestions} fail with {@code failure}, as a glossary that cannot be read would. */
+    public void willFailMeanings(final AppError failure) {
+        meaningFailure = failure;
+    }
+
     // Kept apart from the queued answers, as unknownGenders is, so every Start does not consume a scripted answer.
     @Override
     public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
-        return Result.ok(meaningQuestions);
+        final AppError failure = meaningFailure;
+        return failure == null ? Result.ok(meaningQuestions) : Result.err(failure);
     }
 
     /** Every {@code answerMeaning} call's answers, in order. */

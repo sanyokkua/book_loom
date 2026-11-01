@@ -165,8 +165,8 @@ class GlossaryServiceAcceptTest {
         assertThat(service.entries(PROJECT).data()).isEmpty();
     }
 
-    // Closing the question unanswered is transcribe; translate drops the suggestion for the next call to ask by
-    // meaning.
+    // Closing the question unanswered is transcribe; translate keeps the suggestion as the run's rendering until
+    // the next call asks by meaning.
     @Test
     void answerMeaning_threeAnswers_storesEachAndAsksNoMore() {
         suggest("Hale", "Гейл", TermType.CHARACTER);
@@ -190,7 +190,7 @@ class GlossaryServiceAcceptTest {
                 .extracting(GlossaryEntry::term, GlossaryEntry::target, GlossaryEntry::meaningChoice)
                 .containsExactlyInAnyOrder(
                         tuple("Hale", "Гейл", MeaningChoice.TRANSCRIBE),
-                        tuple("Velk", null, MeaningChoice.TRANSLATE),
+                        tuple("Velk", "Велк", MeaningChoice.TRANSLATE),
                         tuple("Orrin", "Оррін", MeaningChoice.TRANSCRIBE_GLOSS));
         assertThat(asked).hasSize(3);
         assertThat(service.meaningQuestions(PROJECT).data()).isEmpty();

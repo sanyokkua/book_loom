@@ -115,9 +115,10 @@ final class MeaningQuestions {
     }
 
     /**
-     * The entry as the person's answer leaves it. Transcribe and transcribe-and-gloss keep the target and the note;
-     * translate drops a target nobody accepted, so the next suggestion call asks for the name by its meaning; an answer
-     * of {@link MeaningChoice#PENDING} (the question closed unanswered) is transcribe.
+     * The entry as the person's answer leaves it: the choice is stored and the target stays whatever its state. A
+     * suggested target that translate leaves in place is only an earlier suggestion, which the next suggestion call
+     * replaces by asking for the name by its meaning; until then the run still renders the name one way instead of
+     * starting with none. An answer of {@link MeaningChoice#PENDING} (the question closed unanswered) is transcribe.
      *
      * @param entry the entry asked about; never null
      * @param choice the answer; never null
@@ -127,9 +128,7 @@ final class MeaningQuestions {
         Objects.requireNonNull(entry, "entry");
         Objects.requireNonNull(choice, "choice");
         final MeaningChoice stored = choice == MeaningChoice.PENDING ? MeaningChoice.TRANSCRIBE : choice;
-        final boolean dropsTarget = stored == MeaningChoice.TRANSLATE && entry.isSuggested();
-        log.debug("Meaning answer for entry {}: {} dropsTarget={}", entry.id(), stored, dropsTarget);
-        final GlossaryEntry chosen = entry.withMeaningChoice(stored);
-        return dropsTarget ? chosen.withTarget(null) : chosen;
+        log.debug("Meaning answer for entry {}: {} target kept={}", entry.id(), stored, entry.target() != null);
+        return entry.withMeaningChoice(stored);
     }
 }
