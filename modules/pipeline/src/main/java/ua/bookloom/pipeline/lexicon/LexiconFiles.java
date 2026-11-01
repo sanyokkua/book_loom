@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -73,7 +75,7 @@ final class LexiconFiles {
     Result<Path> exportTo(final String projectId, final Path destination) {
         final Result<List<LexiconEntry>> held = lexicon.all(projectId);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final List<LexiconEntry> entries = Objects.requireNonNull(held.data(), "held");
         try {
@@ -95,7 +97,7 @@ final class LexiconFiles {
     private Result<GlossaryImportReport> applyRows(final String projectId, final LexiconCsv.Parsed parsed) {
         final Result<List<LexiconEntry>> all = lexicon.all(projectId);
         if (all.isErr()) {
-            return Result.err(Objects.requireNonNull(all.error(), "error"));
+            return Result.err(Objects.requireNonNull(all.error(), ERROR));
         }
         final Map<String, LexiconEntry> held = new LinkedHashMap<>();
         // A row may name a held term by any of its forms; the term's own key wins over another entry's form.
@@ -107,7 +109,7 @@ final class LexiconFiles {
         for (final LexiconCsv.Row row : parsed.rows()) {
             final Result<Outcome> applied = applyRow(projectId, row, held.get(LexiconEntry.keyOf(row.term())));
             if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
+                return Result.err(Objects.requireNonNull(applied.error(), ERROR));
             }
             switch (Objects.requireNonNull(applied.data(), "outcome")) {
                 case CHANGED -> imported++;
@@ -122,7 +124,7 @@ final class LexiconFiles {
             final String projectId, final LexiconCsv.Row row, @Nullable final LexiconEntry held) {
         final Result<Optional<GlossaryEntry>> inGlossary = glossary.findByTerm(projectId, row.term());
         if (inGlossary.isErr()) {
-            return Result.err(Objects.requireNonNull(inGlossary.error(), "error"));
+            return Result.err(Objects.requireNonNull(inGlossary.error(), ERROR));
         }
         if (Objects.requireNonNull(inGlossary.data(), "glossary").isPresent()) {
             log.debug("Lexicon import refused line {}: the glossary holds the term", row.line());

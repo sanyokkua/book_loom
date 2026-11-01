@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.INDEX;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +115,7 @@ public final class FrequencyScan {
             final int minCount,
             @Nullable final String sourceLanguage,
             final boolean forReading) {
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         log.debug(
                 "Name scan over {} segments, minimum count {}, language {}, for reading {}",
                 ordinals.size(),
@@ -326,7 +328,7 @@ public final class FrequencyScan {
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         Objects.requireNonNull(ordinals, "ordinals");
         Objects.requireNonNull(glossary, "glossary");
         final List<NameCandidate> found = candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage);
@@ -352,7 +354,7 @@ public final class FrequencyScan {
             @Nullable final String sourceLanguage,
             final GlossaryRepository glossary) {
         Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(index, INDEX);
         Objects.requireNonNull(ordinals, "ordinals");
         Objects.requireNonNull(glossary, "glossary");
         final List<NameCandidate> found = candidates(index, ordinals, PROPOSAL_MIN_COUNT, sourceLanguage, true);

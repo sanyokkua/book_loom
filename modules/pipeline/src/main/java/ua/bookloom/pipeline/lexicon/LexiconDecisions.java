@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.lexicon;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,7 +66,7 @@ final class LexiconDecisions {
                         case DROP, UNDECIDED -> Result.ok(false);
                     };
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
             added += Boolean.TRUE.equals(stored.data()) ? 1 : 0;
         }
@@ -89,7 +91,7 @@ final class LexiconDecisions {
                         case UNDECIDED -> Result.ok(false);
                     };
             if (applied.isErr()) {
-                return Result.err(Objects.requireNonNull(applied.error(), "error"));
+                return Result.err(Objects.requireNonNull(applied.error(), ERROR));
             }
         }
         return lexicon.all(projectId);
@@ -131,7 +133,7 @@ final class LexiconDecisions {
         }
         final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
         log.info("Lexicon term promoted project={} hadRendering={}", projectId, rendering != null);
-        return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), "error")) : added;
+        return removed.isErr() ? Result.err(Objects.requireNonNull(removed.error(), ERROR)) : added;
     }
 
     // The glossary holds a named thing as a term; the rendering is a suggestion unless a person wrote it. A term the
@@ -140,7 +142,7 @@ final class LexiconDecisions {
             final String projectId, final String term, @Nullable final String rendering, final boolean isModels) {
         final Result<Optional<GlossaryEntry>> held = glossary.findByTerm(projectId, term);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final Optional<GlossaryEntry> found = Objects.requireNonNull(held.data(), "held");
         if (found.isPresent()) {

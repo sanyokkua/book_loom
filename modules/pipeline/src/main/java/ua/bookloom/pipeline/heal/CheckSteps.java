@@ -15,6 +15,7 @@ import ua.bookloom.pipeline.prompt.StepAnnouncer;
 final class CheckSteps {
 
     private static final String PREFIX = "check:";
+    private static final String STEP_PREFIX = "check-";
 
     private final StepAnnouncer steps;
     private final String firstId;
@@ -31,7 +32,7 @@ final class CheckSteps {
     }
 
     void started(final int pass) {
-        steps.started(StepKind.CHECK, "check-" + pass, key(pass), firstId);
+        steps.started(StepKind.CHECK, STEP_PREFIX + pass, key(pass), firstId);
     }
 
     void done(final int pass) {
@@ -42,7 +43,7 @@ final class CheckSteps {
     void skipFrom(final int fromPass) {
         for (int pass = fromPass; pass <= passes; pass++) {
             log.debug("Check pass skipped chunkFirst={} pass={}", firstId, pass);
-            steps.instant(StepKind.CHECK, "check-" + pass, key(pass), firstId, StepResult.NO_CALL);
+            steps.instant(StepKind.CHECK, STEP_PREFIX + pass, key(pass), firstId, StepResult.NO_CALL);
         }
     }
 
@@ -51,7 +52,7 @@ final class CheckSteps {
         steps.endOpen(StepKind.CHECK, PREFIX + firstId + ":", StepResult.FAILED);
         for (int pass = 1; pass <= passes; pass++) {
             if (!steps.hasStarted(StepKind.CHECK, key(pass))) {
-                steps.instant(StepKind.CHECK, "check-" + pass, key(pass), firstId, StepResult.NO_CALL);
+                steps.instant(StepKind.CHECK, STEP_PREFIX + pass, key(pass), firstId, StepResult.NO_CALL);
             }
         }
     }

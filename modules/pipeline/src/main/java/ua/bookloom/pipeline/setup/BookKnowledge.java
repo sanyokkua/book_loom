@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.TITLE;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,7 +94,7 @@ public final class BookKnowledge {
 
     private Result<ChatResponse> send(final BookFacts facts, final CallFrame frame, final ModelCalls calls) {
         final Map<String, String> user = new HashMap<>();
-        user.put("title", Objects.requireNonNull(facts.title(), "title"));
+        user.put(TITLE, Objects.requireNonNull(facts.title(), TITLE));
         if (facts.author() != null) {
             user.put("author", facts.author());
         }

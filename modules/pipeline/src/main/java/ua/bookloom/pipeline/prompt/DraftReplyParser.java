@@ -18,6 +18,8 @@ import ua.bookloom.pipeline.ControlCharacters;
 @Slf4j
 public final class DraftReplyParser {
 
+    private static final String TARGET = "target";
+
     private static final String INVALID_OBJECT = "was not one JSON object with exactly a nonblank target field";
 
     /** The diagnostic of a reply whose control codes could not be mapped back to quote marks and dashes. */
@@ -91,7 +93,7 @@ public final class DraftReplyParser {
                     .readTree(replyText);
             return logged(
                     validTarget(root)
-                            ? read(root.path("target").textValue(), source, targetLanguage, dropEdgeCodes)
+                            ? read(root.path(TARGET).textValue(), source, targetLanguage, dropEdgeCodes)
                             : invalid(INVALID_OBJECT));
         } catch (JsonProcessingException ignored) {
             return withoutTrailingClosers(replyText)
@@ -144,8 +146,8 @@ public final class DraftReplyParser {
         return root != null
                 && root.isObject()
                 && root.size() == 1
-                && root.path("target").isTextual()
-                && !root.path("target").textValue().isBlank();
+                && root.path(TARGET).isTextual()
+                && !root.path(TARGET).textValue().isBlank();
     }
 
     private static String withoutEdgeCodes(final String raw) {

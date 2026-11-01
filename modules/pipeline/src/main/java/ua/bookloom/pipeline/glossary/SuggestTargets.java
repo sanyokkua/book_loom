@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -302,7 +304,7 @@ public final class SuggestTargets {
     private Result<List<Suggestion>> runBatch(final int index, final List<GlossaryEntry> batch, final Run run) {
         final Result<Replies> first = exchange(index, batch, Map.of(), run);
         if (first.isErr()) {
-            return Result.err(Objects.requireNonNull(first.error(), "error"));
+            return Result.err(Objects.requireNonNull(first.error(), ERROR));
         }
         final Replies replies = Objects.requireNonNull(first.data(), "replies");
         final List<Suggestion> kept = new ArrayList<>(replies.kept());
@@ -315,7 +317,7 @@ public final class SuggestTargets {
                 refused.values().stream().map(Refusal::entry).toList();
         final Result<Replies> second = exchange(index, again, refused, run);
         if (second.isErr()) {
-            return Result.err(Objects.requireNonNull(second.error(), "error"));
+            return Result.err(Objects.requireNonNull(second.error(), ERROR));
         }
         final List<Suggestion> retried =
                 Objects.requireNonNull(second.data(), "replies").kept();
@@ -332,7 +334,7 @@ public final class SuggestTargets {
                 .calls()
                 .callAbout(CallKind.SUGGEST_TARGETS, List.of(), request, SuggestionReplies.asking(batch));
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             log.warn(
                     "Glossary suggestion batch {} of size {} failed code={} reason={}",
                     index,

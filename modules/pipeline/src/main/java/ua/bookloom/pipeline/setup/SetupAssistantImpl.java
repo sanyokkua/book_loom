@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -93,7 +95,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     @Override
     public Result<FileNameSuggestion> suggestFileName(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         log.debug("File name suggestion requested project={}", projectId);
@@ -115,7 +117,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final ChatModel model,
             final @Nullable Integer detectedContext,
             final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         log.debug("Brief suggestion requested project={} detectedContext={}", projectId, detectedContext);
@@ -134,7 +136,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     @Override
     public Result<Narrator> recheckNarrator(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Narrator re-check requested project={}", projectId);
         try {
             return opened(projectId).flatMap(book -> glossary.all(projectId).map(people -> rechecked(book, people)));
@@ -145,7 +147,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     @Override
     public Result<NarratorHint> detectNarrator(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Narrator detection requested project={}", projectId);
         try {
             return opened(projectId).map(SetupAssistantImpl::detected);

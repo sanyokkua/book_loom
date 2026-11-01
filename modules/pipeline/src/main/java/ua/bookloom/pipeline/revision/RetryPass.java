@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -77,7 +79,7 @@ final class RetryPass {
             final PassTally tally) {
         final Result<List<SegmentRecord>> read = segments.all(inputs.projectId());
         if (read.isErr()) {
-            return Result.err(Objects.requireNonNull(read.error(), "error"));
+            return Result.err(Objects.requireNonNull(read.error(), ERROR));
         }
         final List<SegmentRecord> records = Objects.requireNonNull(read.data(), "records");
         final Map<String, SegmentRecord> byId = new HashMap<>();
@@ -111,7 +113,7 @@ final class RetryPass {
             if (one.isErr()) {
                 return EarlyStop.isStop(one, calls, "Retry of doubted segments")
                         ? Result.ok(true)
-                        : Result.err(Objects.requireNonNull(one.error(), "error"));
+                        : Result.err(Objects.requireNonNull(one.error(), ERROR));
             }
             rememberIfKept(inputs, record, fingerprints.get(record.segmentId()), Objects.requireNonNull(one.data()));
             calls.advanced(ModelCalls.Stage.RETRY_DOUBTED, done + 1);
@@ -205,7 +207,7 @@ final class RetryPass {
         final String id = record.segmentId();
         final Result<RetryCandidate> drafted = retryDraft.candidate(record, calls);
         if (drafted.isErr()) {
-            final AppError error = Objects.requireNonNull(drafted.error(), "error");
+            final AppError error = Objects.requireNonNull(drafted.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {
                 return Result.err(error);
             }
@@ -269,7 +271,7 @@ final class RetryPass {
                     .withStatus(SegmentStatus.REVISED);
         });
         if (updated.isErr()) {
-            return Result.err(Objects.requireNonNull(updated.error(), "error"));
+            return Result.err(Objects.requireNonNull(updated.error(), ERROR));
         }
         log.debug("Retry of doubted segmentId={} stored={}", id, written.get());
         if (log.isTraceEnabled()) {

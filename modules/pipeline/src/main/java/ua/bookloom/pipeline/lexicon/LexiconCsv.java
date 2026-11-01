@@ -29,7 +29,7 @@ final class LexiconCsv {
 
     private static final String RECORD_END = "\r\n";
     private static final int FIELD_COUNT = 2;
-    private static final char BYTE_ORDER_MARK = '﻿';
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
 
     /**
      * One well-formed row.

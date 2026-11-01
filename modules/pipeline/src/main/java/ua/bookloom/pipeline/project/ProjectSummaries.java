@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.project;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -32,18 +34,18 @@ final class ProjectSummaries {
     Result<List<ProjectSummary>> list() {
         final Result<List<Project>> all = projects.all();
         if (all.isErr()) {
-            return Result.err(Objects.requireNonNull(all.error(), "error"));
+            return Result.err(Objects.requireNonNull(all.error(), ERROR));
         }
         final List<ProjectSummary> summaries = new ArrayList<>();
         for (final Project project : Objects.requireNonNull(all.data(), "projects")) {
             final Result<List<SegmentRecord>> records = segments.all(project.id());
             if (records.isErr()) {
-                return Result.err(Objects.requireNonNull(records.error(), "error"));
+                return Result.err(Objects.requireNonNull(records.error(), ERROR));
             }
             final List<SegmentRecord> stored = Objects.requireNonNull(records.data(), "records");
             final Result<ProjectSummary> summary = summaryOf(project, stored);
             if (summary.isErr()) {
-                return Result.err(Objects.requireNonNull(summary.error(), "error"));
+                return Result.err(Objects.requireNonNull(summary.error(), ERROR));
             }
             summaries.add(Objects.requireNonNull(summary.data(), "summary"));
         }
@@ -67,11 +69,11 @@ final class ProjectSummaries {
     private Result<ProjectSummary> summaryOf(final Project project, final List<SegmentRecord> records) {
         final Result<Optional<RunRecord>> run = runs.latest(project.id());
         if (run.isErr()) {
-            return Result.err(Objects.requireNonNull(run.error(), "error"));
+            return Result.err(Objects.requireNonNull(run.error(), ERROR));
         }
         final Result<Optional<ExportRecord>> export = projects.lastExport(project.id());
         if (export.isErr()) {
-            return Result.err(Objects.requireNonNull(export.error(), "error"));
+            return Result.err(Objects.requireNonNull(export.error(), ERROR));
         }
         return Result.ok(new ProjectSummary(
                 project,

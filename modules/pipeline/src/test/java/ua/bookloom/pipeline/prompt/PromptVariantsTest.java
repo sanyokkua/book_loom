@@ -46,6 +46,6 @@ class PromptVariantsTest {
                 .with(binder -> binder.bind(PromptVariants.class)
                         .toInstance(new PromptVariants(LanguageRulesVariant.GENERIC_ONLY))));
 
-        assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.genericOnly());
+        assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.genericRulesOnly());
     }
 }

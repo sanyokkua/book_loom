@@ -34,7 +34,8 @@ public final class ControlCharacterMapper {
     private enum Side {
         OPEN,
         CLOSE,
-        NONE
+        NONE,
+        UNCHANGED
     }
 
     /**
@@ -82,27 +83,46 @@ public final class ControlCharacterMapper {
             if (!ControlCharacters.isControl(c)) {
                 out.append(c);
                 open = realMarkOpens(c, pair, open);
-            } else if (isDash(text, i)) {
-                out.append(EM_DASH);
-            } else if (Character.isLetter(before(text, i)) && Character.isLetter(after(text, i))) {
-                log.debug("Control code at {} sits between two letters; written as an apostrophe", i);
-                out.append(APOSTROPHE);
-            } else if (besideRealMark(text, i, pair)) {
-                log.debug("Control code at {} dropped: it stands beside a real mark", i);
-            } else {
-                final Side side = sideOf(text, i, open, pair);
-                if (side == Side.NONE) {
-                    log.debug("Control code at {} of {} has no clear place; not mapped", i, text.length());
-                    return Optional.empty();
-                }
-                open = side == Side.OPEN;
-                if (sourceQuotes) {
-                    out.append(open ? pair.open() : pair.close());
-                }
+                continue;
             }
+            final Side side = mapControl(text, i, open, pair, sourceQuotes, out);
+            if (side == Side.NONE) {
+                log.debug("Control code at {} of {} has no clear place; not mapped", i, text.length());
+                return Optional.empty();
+            }
+            open = side == Side.UNCHANGED ? open : side == Side.OPEN;
         }
         log.debug("Control codes mapped sourceQuotes={} pairedUp={}", sourceQuotes, !open);
         return open ? Optional.empty() : Optional.of(out.toString());
+    }
+
+    // Writes what one control code becomes and says which side of a quote it took; UNCHANGED when it opened or closed
+    // none.
+    private static Side mapControl(
+            final String text,
+            final int at,
+            final boolean open,
+            final QuotePair pair,
+            final boolean sourceQuotes,
+            final StringBuilder out) {
+        if (isDash(text, at)) {
+            out.append(EM_DASH);
+            return Side.UNCHANGED;
+        }
+        if (Character.isLetter(before(text, at)) && Character.isLetter(after(text, at))) {
+            log.debug("Control code at {} sits between two letters; written as an apostrophe", at);
+            out.append(APOSTROPHE);
+            return Side.UNCHANGED;
+        }
+        if (besideRealMark(text, at, pair)) {
+            log.debug("Control code at {} dropped: it stands beside a real mark", at);
+            return Side.UNCHANGED;
+        }
+        final Side side = sideOf(text, at, open, pair);
+        if (side != Side.NONE && sourceQuotes) {
+            out.append(side == Side.OPEN ? pair.open() : pair.close());
+        }
+        return side;
     }
 
     // A real mark the reply already holds counts with the codes: it opens or closes the quote the codes pair with.

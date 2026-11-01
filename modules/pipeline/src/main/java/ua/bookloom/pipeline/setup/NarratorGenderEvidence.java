@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.QUOTE;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -79,7 +81,7 @@ final class NarratorGenderEvidence {
      * @return the gender the name or the address terms prove, or empty if the quote proves none
      */
     Optional<Gender> genderOf(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> words = words(quote);
         if (!name.isBlank()) {
@@ -105,7 +107,7 @@ final class NarratorGenderEvidence {
      */
     boolean isSaidToAnother(final BookSample sample, final String quote, final String name) {
         Objects.requireNonNull(sample, "sample");
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         return NarratorSpeech.isToAnother(sample.passages(), quote, name, firstPersonPronouns);
     }
@@ -118,7 +120,7 @@ final class NarratorGenderEvidence {
      * @return {@code true} if the name's words stand together in the quote, {@code false} otherwise and for a blank name
      */
     boolean isNamedIn(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> nameWords = words(name);
         return !nameWords.isEmpty() && contains(words(quote), nameWords);
@@ -133,7 +135,7 @@ final class NarratorGenderEvidence {
      * @return the gender when the name is in the quote and names glossary people of one gender only, empty otherwise
      */
     Optional<Gender> glossaryGenderOf(final String quote, final String name) {
-        Objects.requireNonNull(quote, "quote");
+        Objects.requireNonNull(quote, QUOTE);
         Objects.requireNonNull(name, "name");
         final List<String> nameWords = words(name);
         if (nameWords.isEmpty() || !contains(words(quote), nameWords)) {

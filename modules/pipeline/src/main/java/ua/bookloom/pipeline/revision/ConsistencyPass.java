@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.EnumMap;
@@ -150,7 +152,7 @@ public final class ConsistencyPass {
             final PassInputs inputs, @Nullable final ModelCalls calls, final PassOptions options) {
         final Result<List<Deferral>> read = deferrals.open(inputs.projectId());
         if (read.isErr()) {
-            return Result.err(Objects.requireNonNull(read.error(), "error"));
+            return Result.err(Objects.requireNonNull(read.error(), ERROR));
         }
         final List<Deferral> open = Objects.requireNonNull(read.data(), "open");
         log.info("Backward revision started project={} deferrals={}", inputs.projectId(), byReason(open));
@@ -261,7 +263,7 @@ public final class ConsistencyPass {
     private Result<PassInputs> inputs(final String projectId) {
         final Result<Optional<Project>> found = projects.find(projectId);
         if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
+            return Result.err(Objects.requireNonNull(found.error(), ERROR));
         }
         final BookBrief brief = Objects.requireNonNull(found.data(), "found")
                 .map(Project::brief)
@@ -288,7 +290,7 @@ public final class ConsistencyPass {
     private Result<BookContext> bookContext(final String projectId) {
         final Result<Optional<RollingSummary>> summary = summaries.latest(projectId);
         if (summary.isErr()) {
-            return Result.err(Objects.requireNonNull(summary.error(), "error"));
+            return Result.err(Objects.requireNonNull(summary.error(), ERROR));
         }
         final String text = Objects.requireNonNull(summary.data(), "summary")
                 .map(RollingSummary::target)

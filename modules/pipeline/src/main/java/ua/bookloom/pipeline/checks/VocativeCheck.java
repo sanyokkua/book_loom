@@ -65,7 +65,7 @@ final class VocativeCheck {
 
     private static List<String> renderingsOf(final List<String> glossaryPairs) {
         return glossaryPairs.stream()
-                .filter(pair -> pair.indexOf(ARROW) > 0)
+                .filter(pair -> pair.indexOf(ARROW) >= 1)
                 .map(pair ->
                         pair.substring(pair.indexOf(ARROW) + ARROW.length()).strip())
                 .toList();

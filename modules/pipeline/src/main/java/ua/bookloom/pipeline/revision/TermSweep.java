@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,7 +71,7 @@ final class TermSweep {
             final PassTally tally) {
         final Result<Optional<SegmentRecord>> found = segments.find(inputs.projectId(), segmentId);
         if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
+            return Result.err(Objects.requireNonNull(found.error(), ERROR));
         }
         final SegmentRecord record =
                 Objects.requireNonNull(found.data(), "found").orElse(null);
@@ -82,7 +84,7 @@ final class TermSweep {
         }
         final Result<Sweep> applied = substitute(inputs.projectId(), segmentId, base.masked(), pending);
         if (applied.isErr()) {
-            return Result.err(Objects.requireNonNull(applied.error(), "error"));
+            return Result.err(Objects.requireNonNull(applied.error(), ERROR));
         }
         final Sweep sweep = Objects.requireNonNull(applied.data(), "sweep");
         return sweep.swept().isEmpty() ? Result.ok(true) : restoreAndStore(inputs, source, base, sweep, tally);
@@ -108,7 +110,7 @@ final class TermSweep {
         for (final Deferral term : terms) {
             final Result<Optional<String>> replaced = replaceOne(projectId, segmentId, working, term);
             if (replaced.isErr()) {
-                return Result.err(Objects.requireNonNull(replaced.error(), "error"));
+                return Result.err(Objects.requireNonNull(replaced.error(), ERROR));
             }
             final Optional<String> next = Objects.requireNonNull(replaced.data(), "replaced");
             if (next.isPresent()) {
@@ -127,7 +129,7 @@ final class TermSweep {
         final Result<Optional<GlossaryEntry>> found =
                 waitingOn == null ? Result.ok(Optional.empty()) : glossary.findByTerm(projectId, waitingOn);
         if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
+            return Result.err(Objects.requireNonNull(found.error(), ERROR));
         }
         final GlossaryEntry entry =
                 Objects.requireNonNull(found.data(), "found").orElse(null);
@@ -199,7 +201,7 @@ final class TermSweep {
         final Result<RevisionWriter.Stored> stored =
                 writer.store(base.read(), restored, base.answering(sweep.swept()), RevisionWriter.Change.NAME_SWAP);
         if (stored.isErr()) {
-            return Result.err(Objects.requireNonNull(stored.error(), "error"));
+            return Result.err(Objects.requireNonNull(stored.error(), ERROR));
         }
         final RevisionWriter.Stored how = Objects.requireNonNull(stored.data(), "stored");
         log.debug(

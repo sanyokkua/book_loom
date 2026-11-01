@@ -1,5 +1,10 @@
 package ua.bookloom.pipeline.lexicon;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+import static ua.bookloom.util.contract.ArgNames.MODEL;
+import static ua.bookloom.util.contract.ArgNames.PROGRESS;
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -48,6 +53,8 @@ import ua.bookloom.pipeline.project.OpenProjects;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class LexiconServiceImpl implements LexiconService {
 
+    private static final String NO_BOOK_IS_OPEN = "No book is open";
+
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
     private final ProjectRepository projects;
@@ -59,31 +66,31 @@ public final class LexiconServiceImpl implements LexiconService {
 
     @Override
     public Result<List<LexiconEntry>> entries(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded("entries", projectId, () -> lexicon.all(projectId));
     }
 
     @Override
     public Result<EntryChanges<LexiconEntry>> scan(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded("scan", projectId, () -> changes(projectId, () -> runScan(projectId)));
     }
 
     @Override
     public Result<EntryChanges<LexiconEntry>> suggest(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded("suggest", projectId, () -> changes(projectId, () -> runSuggest(projectId, model, progress)));
     }
 
     @Override
     public Result<EntryChanges<LexiconEntry>> scanWithModel(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded(
                 "model scan", projectId, () -> changes(projectId, () -> runModelScan(projectId, model, progress)));
     }
@@ -91,22 +98,22 @@ public final class LexiconServiceImpl implements LexiconService {
     @Override
     public Result<EntryChanges<LexiconEntry>> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(progress, "progress");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(model, MODEL);
+        Objects.requireNonNull(progress, PROGRESS);
         return guarded("review", projectId, () -> changes(projectId, () -> runReview(projectId, model, progress)));
     }
 
     @Override
     public Result<LexiconEntry> add(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         return guarded("add", projectId, () -> addTerm(projectId, term.strip()));
     }
 
     @Override
     public Result<LexiconEntry> edit(final String projectId, final String term, @Nullable final String rendering) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         return guarded("edit", projectId, () -> {
             final String chosen = TargetText.clean(rendering, target(projectId));
@@ -117,7 +124,7 @@ public final class LexiconServiceImpl implements LexiconService {
 
     @Override
     public Result<GlossaryEntry> promote(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         return guarded(
                 "promote",
@@ -136,7 +143,7 @@ public final class LexiconServiceImpl implements LexiconService {
 
     @Override
     public Result<Map<String, Integer>> usage(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded("usage", projectId, () -> usageOf(projectId));
     }
 
@@ -144,22 +151,21 @@ public final class LexiconServiceImpl implements LexiconService {
         final BookIndex index = openProjects.index(projectId);
         if (index == null) {
             log.warn("Lexicon usage project={} refused: no book is open", projectId);
-            return Result.err(
-                    AppError.of(ErrorCode.validation, "No book is open", "Open the book to count the terms."));
+            return Result.err(AppError.of(ErrorCode.validation, NO_BOOK_IS_OPEN, "Open the book to count the terms."));
         }
         return lexicon.all(projectId).map(entries -> LexiconUsage.of(entries, index));
     }
 
     @Override
     public Result<Boolean> remove(final String projectId, final String term) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(term, "term");
         return guarded("remove", projectId, () -> lexicon.remove(projectId, term));
     }
 
     @Override
     public Result<GlossaryImportReport> importCsv(final String projectId, final Path source) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(source, "source");
         return guarded(
                 "importCsv",
@@ -169,7 +175,7 @@ public final class LexiconServiceImpl implements LexiconService {
 
     @Override
     public Result<Path> exportCsv(final String projectId, final Path destination) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(destination, "destination");
         return guarded(
                 "exportCsv",
@@ -206,13 +212,13 @@ public final class LexiconServiceImpl implements LexiconService {
         if (document == null || index == null) {
             log.warn("Lexicon scan project={} refused: no book is open", projectId);
             return Result.err(
-                    AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
+                    AppError.of(ErrorCode.validation, NO_BOOK_IS_OPEN, "Open the book before looking for terms."));
         }
         final String language = sourceLanguage(projectId, document);
         final Result<Integer> merged =
                 LexiconForms.merge(lexicon, projectId, KeyTermScan.candidates(index, index.story(), language));
         if (merged.isErr()) {
-            return Result.err(Objects.requireNonNull(merged.error(), "error"));
+            return Result.err(Objects.requireNonNull(merged.error(), ERROR));
         }
         final Result<List<LexiconEntry>> proposed =
                 KeyTermScan.newTerms(projectId, index, index.story(), language, glossary, lexicon);
@@ -222,7 +228,7 @@ public final class LexiconServiceImpl implements LexiconService {
         for (final LexiconEntry entry : Objects.requireNonNull(proposed.data(), "proposed")) {
             final Result<LexiconEntry> stored = lexicon.put(entry);
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
         }
         log.info("Lexicon scan project={} added={}", projectId, proposed.data().size());
@@ -235,11 +241,11 @@ public final class LexiconServiceImpl implements LexiconService {
         final BookIndex index = openProjects.index(projectId);
         if (document == null || index == null) {
             return Result.err(
-                    AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
+                    AppError.of(ErrorCode.validation, NO_BOOK_IS_OPEN, "Open the book before looking for terms."));
         }
         final Result<Set<String>> held = heldKeys(projectId);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final List<NameCandidate> groups = unheld(
                 projectId,
@@ -332,11 +338,11 @@ public final class LexiconServiceImpl implements LexiconService {
         }
         final Result<Optional<GlossaryEntry>> inGlossary = glossary.findByTerm(projectId, term);
         if (inGlossary.isErr()) {
-            return Result.err(Objects.requireNonNull(inGlossary.error(), "error"));
+            return Result.err(Objects.requireNonNull(inGlossary.error(), ERROR));
         }
         final Result<Optional<LexiconEntry>> inLexicon = held(projectId, term);
         if (inLexicon.isErr()) {
-            return Result.err(Objects.requireNonNull(inLexicon.error(), "error"));
+            return Result.err(Objects.requireNonNull(inLexicon.error(), ERROR));
         }
         if (Objects.requireNonNull(inGlossary.data(), "glossary").isPresent()
                 || Objects.requireNonNull(inLexicon.data(), "lexicon").isPresent()) {

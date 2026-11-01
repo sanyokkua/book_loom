@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.run;
 
+import static ua.bookloom.util.contract.ArgNames.REVISION;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -59,7 +61,7 @@ public final class StageRunner {
             final ModelCalls calls,
             final NarratorStage narrator) {
         this.chunks = Objects.requireNonNull(chunks, "chunks");
-        this.revision = Objects.requireNonNull(revision, "revision");
+        this.revision = Objects.requireNonNull(revision, REVISION);
         this.settings = Objects.requireNonNull(settings, "settings");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");

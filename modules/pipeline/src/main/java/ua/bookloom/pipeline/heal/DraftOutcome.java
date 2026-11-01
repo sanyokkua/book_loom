@@ -1,5 +1,9 @@
 package ua.bookloom.pipeline.heal;
 
+import static ua.bookloom.util.contract.ArgNames.LOCKED_RENDERINGS;
+import static ua.bookloom.util.contract.ArgNames.MASKED_SOURCE;
+import static ua.bookloom.util.contract.ArgNames.SEGMENT;
+
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -137,9 +141,9 @@ public sealed interface DraftOutcome {
          * come from the one successful gate call.
          */
         public Drafted {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedReply, "maskedReply");
             if ((restoredTarget == null) != (gateFinding != null)) {
                 throw new IllegalArgumentException(
@@ -172,9 +176,9 @@ public sealed interface DraftOutcome {
 
         /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
         public FlaggedAtOnce {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(error, "error");
             lockedRenderings = List.copyOf(lockedRenderings);
         }
@@ -203,9 +207,9 @@ public sealed interface DraftOutcome {
 
         /** Rejects a missing component and copies the list. */
         public Reused {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedTarget, "maskedTarget");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(qa, "qa");
@@ -236,9 +240,9 @@ public sealed interface DraftOutcome {
 
         /** Rejects a missing component and copies the list. */
         public Verbatim {
-            Objects.requireNonNull(segment, "segment");
-            Objects.requireNonNull(maskedSource, "maskedSource");
-            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(segment, SEGMENT);
+            Objects.requireNonNull(maskedSource, MASKED_SOURCE);
+            Objects.requireNonNull(lockedRenderings, LOCKED_RENDERINGS);
             Objects.requireNonNull(maskedTarget, "maskedTarget");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(rule, "rule");

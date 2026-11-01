@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -104,7 +106,7 @@ final class JobBoundaries implements RunBoundaries {
 
     @Override
     public Optional<RunEnd> afterRoutedError(final AppError error, final JobProgress progress, final FailingStep step) {
-        Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(error, ERROR);
         Objects.requireNonNull(step, "step");
         forgetSkip();
         final BoundaryDecision decision = control.failureBoundary(error);
@@ -163,7 +165,7 @@ final class JobBoundaries implements RunBoundaries {
         final String segmentId = paused.error() == null ? paused.segmentId() : null;
         final Result<Integer> flushed = pending.flush();
         if (flushed.isErr()) {
-            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(flushed.error(), "error")));
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(flushed.error(), ERROR)));
         }
         recorder.paused();
         emit.accept(paused);
@@ -185,7 +187,7 @@ final class JobBoundaries implements RunBoundaries {
     private Optional<RunEnd> reread(final String segmentId) {
         final Result<Optional<SegmentRecord>> read = segments.find(projectId, segmentId);
         if (read.isErr()) {
-            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(read.error(), "error")));
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(read.error(), ERROR)));
         }
         final Optional<SegmentRecord> record = Objects.requireNonNull(read.data(), "record");
         log.debug(

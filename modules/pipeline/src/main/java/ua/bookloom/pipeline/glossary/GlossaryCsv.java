@@ -34,7 +34,7 @@ public final class GlossaryCsv {
 
     private static final String RECORD_END = "\r\n";
     private static final int FIELD_COUNT = 5;
-    private static final char BYTE_ORDER_MARK = '﻿';
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
     private static final List<String> COLUMNS = List.of(HEADER.split(","));
     private static final int TERM = 0;
     private static final int TARGET = 1;

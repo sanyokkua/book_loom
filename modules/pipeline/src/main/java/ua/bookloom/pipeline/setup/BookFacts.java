@@ -31,7 +31,7 @@ public record BookFacts(
     /** The most characters of description a call is shown. */
     public static final int DESCRIPTION_LIMIT = 600;
 
-    private static final Pattern YEAR = Pattern.compile("\\d{4}");
+    private static final Pattern FOUR_DIGITS = Pattern.compile("\\d{4}");
 
     /**
      * Reads the facts of a parsed book.
@@ -65,7 +65,7 @@ public record BookFacts(
     }
 
     private static @Nullable Integer yearOf(final @Nullable String date) {
-        return date != null && YEAR.matcher(date).matches() ? Integer.valueOf(date) : null;
+        return date != null && FOUR_DIGITS.matcher(date).matches() ? Integer.valueOf(date) : null;
     }
 
     private static @Nullable String descriptionOf(final Document document) {

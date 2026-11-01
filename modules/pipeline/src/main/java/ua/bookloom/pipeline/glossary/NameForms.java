@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.GENDER;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -68,7 +70,7 @@ public final class NameForms {
         /** Validates the components. */
         public Reading {
             Objects.requireNonNull(lemma, "lemma");
-            Objects.requireNonNull(gender, "gender");
+            Objects.requireNonNull(gender, GENDER);
         }
     }
 
@@ -86,7 +88,7 @@ public final class NameForms {
         /** Validates the components. */
         public Declension {
             Objects.requireNonNull(lemma, "lemma");
-            Objects.requireNonNull(gender, "gender");
+            Objects.requireNonNull(gender, GENDER);
             Objects.requireNonNull(row, "row");
         }
 
@@ -204,7 +206,7 @@ public final class NameForms {
      */
     public static TargetForms forms(final String target, final Gender gender, @Nullable final String language) {
         Objects.requireNonNull(target, "target");
-        Objects.requireNonNull(gender, "gender");
+        Objects.requireNonNull(gender, GENDER);
         if (language == null || !hasParadigm(language) || target.isBlank()) {
             return new TargetForms(target, Set.of(), Set.of());
         }

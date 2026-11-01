@@ -115,7 +115,7 @@ public final class FormGroups {
      */
     public static String keyOf(final String form, final List<String> nounEndings) {
         Objects.requireNonNull(form, "form");
-        Objects.requireNonNull(nounEndings, "nounEndings");
+        Objects.requireNonNull(nounEndings, NOUN_ENDINGS);
         final String lower = form.strip().toLowerCase(Locale.ROOT);
         return nounEndings.stream()
                 .filter(lower::endsWith)

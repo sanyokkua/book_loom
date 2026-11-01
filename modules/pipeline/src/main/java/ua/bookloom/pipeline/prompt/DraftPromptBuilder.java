@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
+import static ua.bookloom.util.contract.ArgNames.SEGMENT;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +48,7 @@ public final class DraftPromptBuilder {
 
     /** Builds the catalog system and user messages for one masked segment with its available prior targets. */
     public List<ChatMessage> messagesFor(final Segment segment, final DraftContext context) {
-        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(segment, SEGMENT);
         return messagesFor(segment, context, segment.masked());
     }
 
@@ -68,7 +70,7 @@ public final class DraftPromptBuilder {
      */
     public List<ChatMessage> messagesFor(
             final Segment segment, final DraftContext context, final String shownText, final String extraInstruction) {
-        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(segment, SEGMENT);
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(shownText, "shownText");
         Objects.requireNonNull(extraInstruction, "extraInstruction");
@@ -91,7 +93,7 @@ public final class DraftPromptBuilder {
     /** Builds a correction request after a reply does not match the required response object. */
     public List<ChatMessage> messagesForStructuredRepair(
             final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
-        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(segment, SEGMENT);
         return messagesForStructuredRepair(segment, context, segment.masked(), rejectedReply, diagnostic);
     }
 
@@ -131,7 +133,7 @@ public final class DraftPromptBuilder {
             final DraftContext context,
             final String rejectedTarget,
             @Nullable final String gateNote) {
-        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(segment, SEGMENT);
         return messagesForPlaceholderRepair(segment, context, segment.masked(), rejectedTarget, gateNote);
     }
 

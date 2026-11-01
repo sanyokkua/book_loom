@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -109,7 +111,7 @@ final class NameReadings {
                 log.warn(
                         "Names reading stopped at entry {}: a call failed",
                         candidate.entry().id());
-                return Result.err(Objects.requireNonNull(read.error(), "error"));
+                return Result.err(Objects.requireNonNull(read.error(), ERROR));
             }
             byId.put(candidate.entry().id(), Objects.requireNonNull(read.data(), "read"));
         }
@@ -128,7 +130,7 @@ final class NameReadings {
         for (final List<Window> group : plan.calls(plan.windowsOf(entry, in.story()))) {
             final Result<Reading> answered = reading.read(subject, group, in.frame(), in.calls());
             if (answered.isErr()) {
-                return Result.err(Objects.requireNonNull(answered.error(), "error"));
+                return Result.err(Objects.requireNonNull(answered.error(), ERROR));
             }
             read.add(new ReadCall(group, Objects.requireNonNull(answered.data(), "reading")));
         }
@@ -158,7 +160,7 @@ final class NameReadings {
                     midSentence(entry, counts));
             final Result<Decision> verdict = verdicts.verdict(facts, in.frame(), in.calls());
             if (verdict.isErr()) {
-                return Result.err(Objects.requireNonNull(verdict.error(), "error"));
+                return Result.err(Objects.requireNonNull(verdict.error(), ERROR));
             }
             decided.add(verdictOf(entry, Objects.requireNonNull(verdict.data(), "decision")));
         }

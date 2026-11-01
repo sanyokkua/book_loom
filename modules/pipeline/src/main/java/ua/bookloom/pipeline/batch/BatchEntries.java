@@ -27,6 +27,8 @@ import ua.bookloom.pipeline.prompt.JsonReplies;
 @RequiredArgsConstructor
 final class BatchEntries {
 
+    private static final String TARGET = "target";
+
     /** One entry of a reply, with the term renderings the model reported for it, if any. */
     record Entry(String id, String text, Map<String, String> terms) {
 
@@ -81,7 +83,7 @@ final class BatchEntries {
         final JsonNode id = node.path("id");
         return node.isObject()
                 && (id.isTextual() || id.isNumber())
-                && node.path("target").isTextual();
+                && node.path(TARGET).isTextual();
     }
 
     /** The complete entries of a reply cut off before its JSON closed, as a model stopped by its cap leaves it. */
@@ -104,7 +106,7 @@ final class BatchEntries {
     private static void entry(final JsonNode node, final List<Entry> entries) {
         entries.add(new Entry(
                 node.path("id").asText().strip(),
-                ControlCharacters.stripSpacing(node.path("target").textValue()),
+                ControlCharacters.stripSpacing(node.path(TARGET).textValue()),
                 termsOf(node.path("terms"))));
     }
 
@@ -117,7 +119,7 @@ final class BatchEntries {
         if (node.isObject()) {
             node.properties().forEach(field -> put(terms, field.getKey(), field.getValue()));
         } else if (node.isArray()) {
-            node.forEach(pair -> put(terms, pair.path("source").asText(""), pair.path("target")));
+            node.forEach(pair -> put(terms, pair.path("source").asText(""), pair.path(TARGET)));
         }
         return terms;
     }

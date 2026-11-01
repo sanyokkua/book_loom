@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.memory;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -205,12 +207,12 @@ public final class RollingSummaryKeeper {
         final Optional<RollingSummary> previous = Objects.requireNonNull(stored.data(), "stored");
         final Result<List<GlossaryEntry>> entries = glossary.all(project);
         if (entries.isErr()) {
-            return Result.err(Objects.requireNonNull(entries.error(), "error"));
+            return Result.err(Objects.requireNonNull(entries.error(), ERROR));
         }
         final SummaryText text = condensed(Objects.requireNonNull(entries.data(), "entries"));
         final Result<Optional<String>> target = targetFor(trigger, previous);
         if (target.isErr()) {
-            return Result.err(Objects.requireNonNull(target.error(), "error"));
+            return Result.err(Objects.requireNonNull(target.error(), ERROR));
         }
         final Optional<String> written = Objects.requireNonNull(target.data(), "target");
         if (written.isEmpty()) {
@@ -229,7 +231,7 @@ public final class RollingSummaryKeeper {
                 ChapterText.capped(unitSources, sourceLanguage, ChapterText.MAX_TOKENS),
                 ChapterText.capped(unitTargets, targetLanguage, ChapterText.MAX_TOKENS));
         if (asked.isErr()) {
-            return unanswered(Objects.requireNonNull(asked.error(), "error"));
+            return unanswered(Objects.requireNonNull(asked.error(), ERROR));
         }
         if (Objects.requireNonNull(asked.data(), "asked").isEmpty()) {
             log.warn("Summary reply unreadable or empty, previous version kept");
@@ -273,7 +275,7 @@ public final class RollingSummaryKeeper {
                 acceptedSinceRefresh);
         final Result<RollingSummary> saved = summaries.save(next);
         if (saved.isErr()) {
-            return Result.err(Objects.requireNonNull(saved.error(), "error"));
+            return Result.err(Objects.requireNonNull(saved.error(), ERROR));
         }
         acceptedSinceRefresh = 0;
         log.debug(

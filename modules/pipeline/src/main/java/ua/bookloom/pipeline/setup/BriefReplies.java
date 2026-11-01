@@ -34,8 +34,9 @@ final class BriefReplies {
 
     private static final String LANGUAGE = "language";
     private static final double SURE = 1.0;
-    private static final Set<String> NEUTRAL = Set.of("", "neutral", "unspecified", "unknown");
-    private static final Answer UNKNOWN = new Answer("unknown", "");
+    private static final String UNKNOWN_WORD = "unknown";
+    private static final Set<String> NEUTRAL = Set.of("", "neutral", "unspecified", UNKNOWN_WORD);
+    private static final Answer UNKNOWN = new Answer(UNKNOWN_WORD, "");
 
     /**
      * One supported answer of one sample.
@@ -208,7 +209,7 @@ final class BriefReplies {
                     default -> "neutral";
                 };
             case NARRATOR -> "first".equals(word) || "third".equals(word) ? word : "unspecified";
-            case NARRATOR_GENDER -> "male".equals(word) || "female".equals(word) ? word : "unknown";
+            case NARRATOR_GENDER -> "male".equals(word) || "female".equals(word) ? word : UNKNOWN_WORD;
         };
     }
 }

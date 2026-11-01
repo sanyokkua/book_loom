@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -119,7 +121,7 @@ public final class PreScan {
         final String existing = existingTerms(Objects.requireNonNull(held.data(), "held"));
         final Result<Collection<Proposal>> proposals = ask(candidates, existing, frame, calls);
         if (proposals.isErr()) {
-            final AppError failed = Objects.requireNonNull(proposals.error(), "error");
+            final AppError failed = Objects.requireNonNull(proposals.error(), ERROR);
             log.info("Model pre-scan finished project={} ok=false code={}", projectId, failed.code());
             return Result.err(failed);
         }
@@ -218,7 +220,7 @@ public final class PreScan {
         for (final GlossaryEntry entry : entries) {
             final Result<GlossaryEntry> stored = glossary.add(entry);
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
             added.add(Objects.requireNonNull(stored.data(), "stored"));
         }
@@ -235,7 +237,7 @@ public final class PreScan {
             final List<NameCandidate> batch = candidates.subList(from, Math.min(candidates.size(), from + BATCH_SIZE));
             final Result<List<Proposal>> answered = runBatch(index, batch, existing, frame, calls);
             if (answered.isErr()) {
-                return Result.err(Objects.requireNonNull(answered.error(), "error"));
+                return Result.err(Objects.requireNonNull(answered.error(), ERROR));
             }
             for (final Proposal proposal : Objects.requireNonNull(answered.data(), "proposals")) {
                 proposals.putIfAbsent(PreScanReplies.key(proposal.candidate().term()), proposal);
@@ -258,7 +260,7 @@ public final class PreScan {
                 PromptName.PRESCAN, batch.stream().map(NameCandidate::term).toList());
         final Result<ChatResponse> reply = calls.callAbout(CallKind.PRESCAN, List.of(), request, asked);
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             log.warn(
                     "Pre-scan batch {} of size {} failed code={} reason={}",
                     index,
@@ -313,7 +315,7 @@ public final class PreScan {
             }
             final Result<Boolean> removed = glossary.wasRemoved(projectId, term);
             if (removed.isErr()) {
-                return Result.err(Objects.requireNonNull(removed.error(), "error"));
+                return Result.err(Objects.requireNonNull(removed.error(), ERROR));
             }
             if (!heldKeys.contains(PreScanReplies.key(term)) && !Boolean.TRUE.equals(removed.data())) {
                 fresh.add(entryOf(projectId, proposal));

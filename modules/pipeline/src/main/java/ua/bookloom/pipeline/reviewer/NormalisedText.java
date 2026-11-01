@@ -12,7 +12,7 @@ import java.util.Objects;
 final class NormalisedText {
 
     private static final String APOSTROPHES = "’‘ʼ";
-    private static final String NO_BREAK_SPACES = "   ";
+    private static final String NO_BREAK_SPACES = "\u00A0\u202F\u2007";
 
     private final String text;
     private final int[] starts;

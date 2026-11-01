@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -48,7 +50,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
     Result<GlossaryImportReport> importFrom(final String projectId, final Path source) {
         final Result<String> text = readUtf8(projectId, source);
         if (text.isErr()) {
-            return Result.err(Objects.requireNonNull(text.error(), "error"));
+            return Result.err(Objects.requireNonNull(text.error(), ERROR));
         }
         final GlossaryCsv.Parsed parsed = GlossaryCsv.parse(Objects.requireNonNull(text.data(), "text"));
         if (parsed.headerRefused()) {
@@ -62,7 +64,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
         log.debug("Glossary import project={} rows={} duplicates={}", projectId, rows.size(), duplicates);
         final Result<List<GlossaryEntry>> before = glossary.all(projectId);
         if (before.isErr()) {
-            return Result.err(Objects.requireNonNull(before.error(), "error"));
+            return Result.err(Objects.requireNonNull(before.error(), ERROR));
         }
         final Result<GlossaryImportReport> report = applyAll(rows, parsed, duplicates);
         if (report.isErr()) {
@@ -75,7 +77,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
     Result<Path> exportTo(final String projectId, final Path destination) {
         final Result<List<GlossaryEntry>> held = glossary.all(projectId);
         if (held.isErr()) {
-            return Result.err(Objects.requireNonNull(held.error(), "error"));
+            return Result.err(Objects.requireNonNull(held.error(), ERROR));
         }
         final List<GlossaryEntry> entries = Objects.requireNonNull(held.data(), "held");
         try {

@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -200,7 +202,7 @@ public final class TermReview {
         final Result<Decided> verdicts = verdictsOn(open, held, in);
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
-            return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
+            return Result.err(Objects.requireNonNull(verdicts.error(), ERROR));
         }
         final Decided decided = Objects.requireNonNull(verdicts.data(), "verdicts");
         return answersFor(projectId, open, held, decided, in).flatMap(answers -> commit(projectId, answers, in));
@@ -217,13 +219,13 @@ public final class TermReview {
         final Result<List<GlossaryEntry>> known = knowledge.applied(survivors, in.frame(), in.calls());
         if (known.isErr()) {
             log.warn("Glossary review project={} changed nothing: a name-knowledge call failed", projectId);
-            return Result.err(Objects.requireNonNull(known.error(), "error"));
+            return Result.err(Objects.requireNonNull(known.error(), ERROR));
         }
         final List<GlossaryEntry> answered = Objects.requireNonNull(known.data(), "known");
         final Result<List<Suggestion>> suggested = suggest(withAnswers(survivors, answered), held, decided, in);
         if (suggested.isErr()) {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
-            return Result.err(Objects.requireNonNull(suggested.error(), "error"));
+            return Result.err(Objects.requireNonNull(suggested.error(), ERROR));
         }
         return Result.ok(new ReviewCommit.Answers(
                 decided.verdicts(), answered, Objects.requireNonNull(suggested.data(), "suggestions")));

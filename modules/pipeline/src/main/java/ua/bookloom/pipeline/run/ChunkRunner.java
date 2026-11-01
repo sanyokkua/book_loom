@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.run;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -124,7 +126,7 @@ public final class ChunkRunner {
             }
             final Result<Integer> refreshed = work.refresh();
             if (refreshed.isErr()) {
-                return RoutedCalls.failedBy(Objects.requireNonNull(refreshed.error(), "error"));
+                return RoutedCalls.failedBy(Objects.requireNonNull(refreshed.error(), ERROR));
             }
         }
         return new RunEnd(JobState.COMPLETED, null);
@@ -135,7 +137,7 @@ public final class ChunkRunner {
     private Optional<RunEnd> runUnit(final WorkList work, final List<WorkItem> items) {
         final Result<List<GlossaryEntry>> glossary = stores.glossary().all(settings.projectId());
         if (glossary.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), ERROR)));
         }
         announced.unitEntered();
         return runChunks(work, planner.walk(items));
@@ -165,7 +167,7 @@ public final class ChunkRunner {
                 steps.translator(),
                 steps.batch());
         if (read.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), ERROR)));
         }
         final PromptRequests requests = Objects.requireNonNull(read.data(), "requests");
         final Current current = Current.of(work, items, requests, budget);
@@ -259,7 +261,7 @@ public final class ChunkRunner {
                 unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
         if (earlierMaskedTargets.isErr()) {
             return new Step.Stopped<>(
-                    RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
+                    RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), ERROR)));
         }
         final MemoryReuse.Offer offer =
                 memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
@@ -381,7 +383,7 @@ public final class ChunkRunner {
         final Result<Integer> committed = sinks.pending().flush();
         log.debug("Committed chunk={} decided={} ok={}", index, decided, committed.isOk());
         if (committed.isErr()) {
-            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), "error")));
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), ERROR)));
         }
         learning.committed();
         return Optional.empty();

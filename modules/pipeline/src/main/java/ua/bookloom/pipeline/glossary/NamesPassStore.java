@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -51,7 +53,7 @@ final class NamesPassStore {
         final Result<List<SegmentRecord>> decided = segments.all(projectId);
         for (final Result<?> read : List.of(namesBefore, termsBefore, decided)) {
             if (read.isErr()) {
-                return Result.err(Objects.requireNonNull(read.error(), "error"));
+                return Result.err(Objects.requireNonNull(read.error(), ERROR));
             }
         }
         log.debug(
@@ -87,7 +89,7 @@ final class NamesPassStore {
         for (final GlossaryEntry added : names.added()) {
             final Result<GlossaryEntry> done = glossary.add(added);
             if (done.isErr()) {
-                return Result.err(Objects.requireNonNull(done.error(), "error"));
+                return Result.err(Objects.requireNonNull(done.error(), ERROR));
             }
         }
         return Result.ok(true);
@@ -99,7 +101,7 @@ final class NamesPassStore {
         for (final Deferral deferral : DeferralRegister.termChanged(before, after, decided)) {
             final Result<Deferral> added = deferrals.add(deferral);
             if (added.isErr()) {
-                return Result.err(Objects.requireNonNull(added.error(), "error"));
+                return Result.err(Objects.requireNonNull(added.error(), ERROR));
             }
         }
         return Result.ok(true);
@@ -119,7 +121,7 @@ final class NamesPassStore {
         for (final LexiconEntry entry : written) {
             final Result<LexiconEntry> done = lexicon.put(entry);
             if (done.isErr()) {
-                return Result.err(Objects.requireNonNull(done.error(), "error"));
+                return Result.err(Objects.requireNonNull(done.error(), ERROR));
             }
         }
         return Result.ok(true);

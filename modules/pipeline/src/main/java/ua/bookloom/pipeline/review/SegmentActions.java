@@ -1,5 +1,8 @@
 package ua.bookloom.pipeline.review;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+import static ua.bookloom.util.contract.ArgNames.SEGMENT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Locale;
@@ -62,8 +65,8 @@ public final class SegmentActions {
      *     no machine target, or for an unknown id, with nothing changed
      */
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         log.debug("accept project={} segment={}", projectId, segmentId);
         return load(ACCEPT, projectId, segmentId).flatMap(this::accepted);
     }
@@ -79,8 +82,8 @@ public final class SegmentActions {
      *     nothing changed
      */
     public Result<SegmentRecord> saveEdit(final String projectId, final String segmentId, final String maskedText) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         Objects.requireNonNull(maskedText, "maskedText");
         log.debug("saveEdit project={} segment={} length={}", projectId, segmentId, maskedText.length());
         log.trace("saveEdit segment={} text={}", segmentId, maskedText);
@@ -96,8 +99,8 @@ public final class SegmentActions {
      *     segment that is not REVISED, for one with no machine target to go back to, or for an unknown id
      */
     public Result<SegmentRecord> revert(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         log.debug("revert project={} segment={}", projectId, segmentId);
         return load(REVERT, projectId, segmentId).flatMap(this::reverted);
     }
@@ -111,8 +114,8 @@ public final class SegmentActions {
      *     {@code validation} for a segment that is not REVISED, for one with no proposal waiting, or for an unknown id
      */
     public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         log.debug("acceptProposal project={} segment={}", projectId, segmentId);
         return load(APPLY_PROPOSAL, projectId, segmentId).flatMap(this::proposed);
     }

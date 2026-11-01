@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.run;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -80,13 +82,13 @@ final class DecisionFollowUp {
     Optional<RunEnd> readSummary() {
         final Result<Optional<RollingSummary>> latest = summaries.latest(projectId);
         if (latest.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(latest.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(latest.error(), ERROR)));
         }
         final Optional<RollingSummary> stored = Objects.requireNonNull(latest.data(), "latest");
         stored.ifPresent(this::hold);
         final Result<List<SegmentRecord>> records = segments.all(projectId);
         if (records.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(records.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(records.error(), ERROR)));
         }
         keeper.seed(Objects.requireNonNull(records.data(), "records"), stored);
         log.debug("Read the latest summary projectId={} present={}", projectId, summary != null);
@@ -122,7 +124,7 @@ final class DecisionFollowUp {
         decidedInUnit.add(segment);
         final Result<Optional<RollingSummary>> counted = keeper.onDecided(segment, record);
         if (counted.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(counted.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(counted.error(), ERROR)));
         }
         announce(Objects.requireNonNull(counted.data(), "counted"), "count");
         return work.endsUnit(item) ? unitEnded(work, item) : Optional.empty();
@@ -160,7 +162,7 @@ final class DecisionFollowUp {
                         projectId, index, scanned, analysisLanguage, glossary)
                 .flatMap(scan -> extendHeldForms(scan.heldForms()).map(extended -> scan));
         if (found.isErr()) {
-            return Optional.of(Objects.requireNonNull(found.error(), "error"));
+            return Optional.of(Objects.requireNonNull(found.error(), ERROR));
         }
         final List<GlossaryEntry> proposals =
                 Objects.requireNonNull(found.data(), "found").proposals();
@@ -171,7 +173,7 @@ final class DecisionFollowUp {
         sinks.pending().proposed(proposals);
         final Result<Integer> added = sinks.pending().flush().flatMap(applied -> countHeld(proposals));
         if (added.isErr()) {
-            return Optional.of(Objects.requireNonNull(added.error(), "error"));
+            return Optional.of(Objects.requireNonNull(added.error(), ERROR));
         }
         final int count = Objects.requireNonNull(added.data(), "added");
         logScan(unitId, scanned.size(), proposals.size(), count);
@@ -190,7 +192,7 @@ final class DecisionFollowUp {
                 return entry.withForms(List.copyOf(all));
             });
             if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                return Result.err(Objects.requireNonNull(stored.error(), ERROR));
             }
         }
         log.debug("Held entry forms extended project={} entries={}", projectId, heldForms.size());

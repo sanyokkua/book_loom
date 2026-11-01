@@ -44,7 +44,7 @@ public record PromptVariants(LanguageRulesVariant languageRules) {
     public LanguageRules rules() {
         return switch (languageRules) {
             case BUNDLED -> LanguageRules.bundled();
-            case GENERIC_ONLY -> LanguageRules.genericOnly();
+            case GENERIC_ONLY -> LanguageRules.genericRulesOnly();
         };
     }
 }

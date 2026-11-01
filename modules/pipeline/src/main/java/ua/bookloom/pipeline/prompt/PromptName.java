@@ -1,5 +1,19 @@
 package ua.bookloom.pipeline.prompt;
 
+import static ua.bookloom.pipeline.prompt.SlotNames.AUTHOR;
+import static ua.bookloom.pipeline.prompt.SlotNames.CHARACTERS;
+import static ua.bookloom.pipeline.prompt.SlotNames.EXAMPLES;
+import static ua.bookloom.pipeline.prompt.SlotNames.FOREIGN_PASSAGE_RULE;
+import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
+import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE;
+import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE_LANGUAGE;
+import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
+import static ua.bookloom.pipeline.prompt.SlotNames.SUMMARY_SLOT;
+import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
+import static ua.bookloom.pipeline.prompt.SlotNames.TERMS;
+import static ua.bookloom.pipeline.prompt.SlotNames.TITLE;
+import static ua.bookloom.pipeline.prompt.SlotNames.TOKENS;
+
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -29,19 +43,19 @@ public enum PromptName {
             0.2,
             0.1,
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("examples", "languageRules", "tokenRules", "noTokenRules")),
+                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
+                    Set.of(EXAMPLES, LANGUAGE_RULES, "tokenRules", "noTokenRules")),
             new Slots(
-                    Set.of("source", "target", "text"),
+                    Set.of(SOURCE, "target", "text"),
                     Set.of(
-                            "tokens",
-                            "summary",
+                            TOKENS,
+                            SUMMARY_SLOT,
                             "glossaryTerms",
                             "lockedNames",
                             "suggestedTerms",
                             "memoryHint",
                             "lexiconTerms",
-                            "characters",
+                            CHARACTERS,
                             "precedingTargets",
                             "followingTarget",
                             "extraInstruction"))),
@@ -72,7 +86,7 @@ public enum PromptName {
             0.2,
             null,
             null,
-            new Slots(Set.of("rejectedTarget", "tokens"), Set.of("gateNote"))),
+            new Slots(Set.of("rejectedTarget", TOKENS), Set.of("gateNote"))),
 
     /**
      * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a
@@ -86,11 +100,11 @@ public enum PromptName {
             0.0,
             null,
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("languageRules")),
+                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
+                    Set.of(LANGUAGE_RULES)),
             new Slots(
                     Set.of("pairs"),
-                    Set.of("glossaryTerms", "suggestedTerms", "usualRenderings", "characters", "passFocus"))),
+                    Set.of("glossaryTerms", "suggestedTerms", "usualRenderings", CHARACTERS, "passFocus"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
     DIRECTED_FIX(
@@ -100,9 +114,8 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(Set.of("source", "text", "findings"), Set.of("expectedTokens"))),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
+            new Slots(Set.of(SOURCE, "text", "findings"), Set.of("expectedTokens"))),
 
     /**
      * Backward revision's re-render of one decided segment whose character's gender became known after it was
@@ -115,9 +128,8 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "tokens"))),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
+            new Slots(Set.of(SOURCE, "text"), Set.of("resolvedFacts", TOKENS))),
 
     /**
      * The consistency pass's check of one decided paragraph against the translated paragraph before it and after it, the
@@ -130,11 +142,10 @@ public enum PromptName {
             ConsistencySchema.SCHEMA,
             0.1,
             null,
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(
-                    Set.of("source", "text"),
-                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", "characters", "summary", "tokens"))),
+                    Set.of(SOURCE, "text"),
+                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", CHARACTERS, SUMMARY_SLOT, TOKENS))),
 
     /** The Fast dial's choice among recurring words (15i.N7): keep or drop, a batch of candidates a call. */
     TERM_CHOICE(
@@ -144,8 +155,8 @@ public enum PromptName {
             TermChoiceSchema.SCHEMA,
             0.1,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("terms"), Set.of())),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            new Slots(Set.of(TERMS), Set.of())),
 
     /**
      * The most probable gender and kind of bare names, with no book text (design D5): a batch of names a call, at
@@ -158,7 +169,7 @@ public enum PromptName {
             NameKnowledgeSchema.SCHEMA,
             0.0,
             null,
-            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
+            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("names"), Set.of())),
 
     /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
@@ -169,8 +180,8 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("fileName"), Set.of("title", "author", "titleTarget", "authorTarget", "correction"))),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            new Slots(Set.of("fileName"), Set.of(TITLE, AUTHOR, "titleTarget", "authorTarget", "correction"))),
 
     /** The proposal of the Book Brief's tone and style from one passage of the book; one small call per passage. */
     BRIEF_SUGGESTION(
@@ -180,8 +191,8 @@ public enum PromptName {
             BriefSuggestionSchema.SCHEMA,
             0.1,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("sample", "dialogueShare"), Set.of("title", "author", "askLanguage"))),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            new Slots(Set.of("sample", "dialogueShare"), Set.of(TITLE, AUTHOR, "askLanguage"))),
 
     /** The question what the model knows of the book by its title and author; one small call, checked against the metadata. */
     BOOK_KNOWLEDGE(
@@ -191,8 +202,8 @@ public enum PromptName {
             BookKnowledgeSchema.SCHEMA,
             0.0,
             null,
-            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("title"), Set.of("author"))),
+            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            new Slots(Set.of(TITLE), Set.of(AUTHOR))),
 
     /**
      * The one call that decides the brief's genre, audience and voice from the book's facts, the accepted knowledge of
@@ -205,8 +216,8 @@ public enum PromptName {
             BriefSynthesisSchema.SCHEMA,
             0.0,
             null,
-            new Slots(Set.of(), Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("reports"), Set.of("title", "author", "year", "publisher", "description", "knowledge"))),
+            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            new Slots(Set.of("reports"), Set.of(TITLE, AUTHOR, "year", "publisher", "description", "knowledge"))),
 
     /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
     TERM_READING(PreparationSlots.READING, "term-reading", TermReadingSchema.SCHEMA, "windows"),
@@ -240,7 +251,7 @@ public enum PromptName {
             0.1,
             null,
             PreparationSlots.READING,
-            new Slots(Set.of("terms"), Set.of())),
+            new Slots(Set.of(TERMS), Set.of())),
 
     /**
      * The glossary's target suggestions, run after the review's or the name scan's verdicts: a batch of held names and
@@ -254,9 +265,9 @@ public enum PromptName {
             0.1,
             null,
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "nameRule"),
-                    Set.of("styleSheet", "foreignPassageRule", "examples", "languageRules")),
-            new Slots(Set.of("terms"), Set.of())),
+                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, "nameRule"),
+                    Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, EXAMPLES, LANGUAGE_RULES)),
+            new Slots(Set.of(TERMS), Set.of())),
 
     /** The optional garbled-word check: finished target texts answered with the words that are not real words. */
     SUSPICIOUS_WORDS(
@@ -266,7 +277,7 @@ public enum PromptName {
             SuspiciousWordsSchema.SCHEMA,
             0.0,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("items"), Set.of())),
 
     /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
@@ -278,8 +289,8 @@ public enum PromptName {
             0.2,
             null,
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage"),
-                    Set.of("styleSheet", "foreignPassageRule", "languageRules")),
+                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE),
+                    Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, LANGUAGE_RULES)),
             new Slots(Set.of("chapterSource", "chapterTarget"), Set.of("previousSummary")));
 
     private final String resourceBaseName;

@@ -24,6 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class CriterionFit {
 
+    private static final String NON_LETTERS = "[^\\p{L}]+";
+
     private static final int MIN_NAME_LETTERS = 4;
     private static final int MIN_NAME_STEM = 4;
     private static final int NAME_ENDING_LETTERS = 2;
@@ -84,7 +86,7 @@ final class CriterionFit {
         // Only a rendering that starts with a capital is a name's: the lexicon's common-noun renderings (господар) are
         // meant to be inflected and are never held to their spelling.
         final List<String> stems = renderings.stream()
-                .flatMap(rendering -> Arrays.stream(rendering.split("[^\\p{L}]+")))
+                .flatMap(rendering -> Arrays.stream(rendering.split(NON_LETTERS)))
                 .filter(word -> word.length() >= MIN_NAME_LETTERS && Character.isUpperCase(word.codePointAt(0)))
                 .map(word -> word.toLowerCase(Locale.ROOT))
                 .map(word -> word.substring(0, Math.max(MIN_NAME_STEM, word.length() - NAME_ENDING_LETTERS)))
@@ -94,7 +96,7 @@ final class CriterionFit {
     }
 
     private static List<String> nameWords(final String text, final List<String> stems) {
-        return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+        return Arrays.stream(text.toLowerCase(Locale.ROOT).split(NON_LETTERS))
                 .filter(word -> stems.stream().anyMatch(word::startsWith))
                 .sorted()
                 .toList();
@@ -111,7 +113,7 @@ final class CriterionFit {
         final String known = candidate.toLowerCase(Locale.ROOT)
                 + " "
                 + String.join(" ", renderings).toLowerCase(Locale.ROOT);
-        return Arrays.stream(replacement.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+        return Arrays.stream(replacement.toLowerCase(Locale.ROOT).split(NON_LETTERS))
                 .filter(word -> !word.isEmpty() && !quoted.contains(word))
                 .anyMatch(known::contains);
     }

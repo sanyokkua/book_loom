@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.project;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+
 import com.google.inject.Singleton;
 import java.util.Map;
 import java.util.Objects;
@@ -41,7 +43,7 @@ public final class OpenProjects {
     public void put(final String projectId, final Document document, @Nullable final BookIndex index) {
         log.debug("Holding the open book project={} indexBuilt={}", projectId, index != null);
         opened.put(
-                Objects.requireNonNull(projectId, "projectId"),
+                Objects.requireNonNull(projectId, PROJECT_ID),
                 new Opened(Objects.requireNonNull(document, "document"), new AtomicReference<>(index)));
     }
 
@@ -52,7 +54,7 @@ public final class OpenProjects {
      * @return the document, or {@code null} when none is open for that id
      */
     public @Nullable Document get(final String projectId) {
-        final Opened found = opened.get(Objects.requireNonNull(projectId, "projectId"));
+        final Opened found = opened.get(Objects.requireNonNull(projectId, PROJECT_ID));
         return found == null ? null : found.document();
     }
 
@@ -63,7 +65,7 @@ public final class OpenProjects {
      * @return the document that was held, or {@code null} when none was
      */
     public @Nullable Document remove(final String projectId) {
-        final Opened removed = opened.remove(Objects.requireNonNull(projectId, "projectId"));
+        final Opened removed = opened.remove(Objects.requireNonNull(projectId, PROJECT_ID));
         log.debug("Forgetting the open book project={} wasOpen={}", projectId, removed != null);
         return removed == null ? null : removed.document();
     }
@@ -75,7 +77,7 @@ public final class OpenProjects {
      * @return {@code true} if a book is open for the id and its index exists, {@code false} otherwise
      */
     public boolean hasIndex(final String projectId) {
-        final Opened found = opened.get(Objects.requireNonNull(projectId, "projectId"));
+        final Opened found = opened.get(Objects.requireNonNull(projectId, PROJECT_ID));
         return found != null && found.index().get() != null;
     }
 
@@ -87,7 +89,7 @@ public final class OpenProjects {
      * @return the index, or {@code null} when no book is open for that id
      */
     public @Nullable BookIndex index(final String projectId) {
-        final Opened found = opened.get(Objects.requireNonNull(projectId, "projectId"));
+        final Opened found = opened.get(Objects.requireNonNull(projectId, PROJECT_ID));
         if (found == null) {
             log.debug("No index for project={}: no book is open", projectId);
             return null;

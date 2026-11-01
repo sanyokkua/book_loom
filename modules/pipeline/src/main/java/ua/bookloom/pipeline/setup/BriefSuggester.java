@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.setup;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -134,7 +136,7 @@ final class BriefSuggester {
             final BriefSteps steps) {
         final Result<Readings> readings = readWindows(book, windows, genders, calls, steps);
         if (readings.isErr()) {
-            return Result.err(Objects.requireNonNull(readings.error(), "error"));
+            return Result.err(Objects.requireNonNull(readings.error(), ERROR));
         }
         final Readings read = Objects.requireNonNull(readings.data(), "readings");
         if (read.failures().size() == windows.size()) {
@@ -147,7 +149,7 @@ final class BriefSuggester {
         }
         final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), calls, steps);
         if (synthesis.isErr()) {
-            return Result.err(Objects.requireNonNull(synthesis.error(), "error"));
+            return Result.err(Objects.requireNonNull(synthesis.error(), ERROR));
         }
         final boolean wholeStory = windows.size() == 1 && windows.getFirst().wholeStory();
         return Result.ok(decided(
@@ -190,7 +192,7 @@ final class BriefSuggester {
                 languages.add(reading.language());
                 continue;
             }
-            final AppError error = Objects.requireNonNull(one.error(), "error");
+            final AppError error = Objects.requireNonNull(one.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {
                 log.info("Brief suggestion stopped by the person at window {} of {}", index + 1, windows.size());
                 return Result.err(error);
@@ -213,7 +215,7 @@ final class BriefSuggester {
         steps.sampleStarted(number, window.location());
         final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             steps.sampleFailed(number, error);
             return Result.err(error);
         }
@@ -246,7 +248,7 @@ final class BriefSuggester {
         steps.synthesisStarted();
         final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls);
         if (reply.isErr()) {
-            final AppError error = Objects.requireNonNull(reply.error(), "error");
+            final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {
                 log.info("Brief synthesis stopped by the person");
                 return Result.err(error);

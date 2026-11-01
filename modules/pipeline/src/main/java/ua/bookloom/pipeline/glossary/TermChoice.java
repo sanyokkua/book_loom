@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
+import static ua.bookloom.util.contract.ArgNames.TERMS;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -90,7 +92,7 @@ public final class TermChoice {
      */
     public Result<Choice> choose(
             final List<String> terms, final BookSlice story, final CallFrame frame, final ModelCalls calls) {
-        Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(terms, TERMS);
         Objects.requireNonNull(story, "story");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(calls, "calls");

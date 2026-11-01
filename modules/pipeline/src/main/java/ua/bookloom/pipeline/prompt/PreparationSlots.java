@@ -1,5 +1,12 @@
 package ua.bookloom.pipeline.prompt;
 
+import static ua.bookloom.pipeline.prompt.SlotNames.EXAMPLES;
+import static ua.bookloom.pipeline.prompt.SlotNames.FOREIGN_PASSAGE_RULE;
+import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
+import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE_LANGUAGE;
+import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
+import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
+
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -13,18 +20,18 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class PreparationSlots {
 
-    private static final Set<String> LANGUAGES = Set.of("sourceLanguage", "targetLanguage");
+    private static final Set<String> LANGUAGES = Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE);
 
     /** A reading of one term and the glossary review: the frame's slots and the examples. */
     static final Slots READING =
-            new Slots(LANGUAGES, Set.of("styleSheet", "foreignPassageRule", "examples", "exampleReply"));
+            new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, EXAMPLES, "exampleReply"));
 
     /** The summary of one term's readings at Max, which shows no examples. */
-    static final Slots SUMMARY = new Slots(LANGUAGES, Set.of("styleSheet", "foreignPassageRule"));
+    static final Slots SUMMARY = new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE));
 
     /** The name proposal: the frame's slots, the language rules and the examples. */
-    static final Slots PRESCAN = new Slots(
-            LANGUAGES, Set.of("styleSheet", "foreignPassageRule", "languageRules", "examples", "exampleReply"));
+    static final Slots PRESCAN =
+            new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, LANGUAGE_RULES, EXAMPLES, "exampleReply"));
 
     /**
      * The key of the worked examples a names-pass prompt takes from the book's language file.

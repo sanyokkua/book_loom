@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -131,7 +133,7 @@ final class GenderRevision {
             final PassTally tally) {
         final Result<List<Known>> known = known(inputs, segmentId, waiting);
         if (known.isErr()) {
-            return Result.err(Objects.requireNonNull(known.error(), "error"));
+            return Result.err(Objects.requireNonNull(known.error(), ERROR));
         }
         final List<Known> ready = Objects.requireNonNull(known.data(), "known");
         if (ready.isEmpty()) {
@@ -139,7 +141,7 @@ final class GenderRevision {
         }
         final Result<Optional<SegmentRecord>> found = segments.find(inputs.projectId(), segmentId);
         if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
+            return Result.err(Objects.requireNonNull(found.error(), ERROR));
         }
         final SegmentRecord record =
                 Objects.requireNonNull(found.data(), "found").orElse(null);
@@ -161,7 +163,7 @@ final class GenderRevision {
                     ? Result.ok(narratorFact(inputs.frame().narrator()))
                     : characterFact(inputs.projectId(), deferral.waitingOn());
             if (fact.isErr()) {
-                return Result.err(Objects.requireNonNull(fact.error(), "error"));
+                return Result.err(Objects.requireNonNull(fact.error(), ERROR));
             }
             final Optional<String> known = Objects.requireNonNull(fact.data(), "fact");
             log.debug("Gender deferral segmentId={} genderKnown={}", segmentId, known.isPresent());

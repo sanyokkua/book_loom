@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.qa;
 
+import static ua.bookloom.util.contract.ArgNames.CHECK;
+
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.QaFinding;
@@ -33,7 +35,7 @@ public record CheckResult(
      * Validates the invariants a caller is entitled to assume.
      */
     public CheckResult {
-        Objects.requireNonNull(check, "check");
+        Objects.requireNonNull(check, CHECK);
         if (margin < MIN_MARGIN || margin > MAX_MARGIN) {
             throw new IllegalArgumentException("margin must be within [0,1], but was " + margin);
         }
@@ -108,7 +110,7 @@ public record CheckResult(
      * @return a failed, blocking result with margin 0.0 and a {@code high} finding
      */
     public static CheckResult hardGateFailed(final CheckName check, final String note) {
-        Objects.requireNonNull(check, "check");
+        Objects.requireNonNull(check, CHECK);
         Objects.requireNonNull(note, "note");
         return new CheckResult(
                 check,
@@ -128,7 +130,7 @@ public record CheckResult(
      * @return a passed, non-blocking result carrying {@code notice}
      */
     public static CheckResult passWithNotice(final CheckName check, final QaFinding notice) {
-        Objects.requireNonNull(check, "check");
+        Objects.requireNonNull(check, CHECK);
         Objects.requireNonNull(notice, "notice");
         return new CheckResult(check, MAX_MARGIN, true, false, false, notice);
     }

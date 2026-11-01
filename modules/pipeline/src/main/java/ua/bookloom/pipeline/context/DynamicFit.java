@@ -99,10 +99,7 @@ record DynamicFit(
 
     private static <T> Kept<T> take(
             final List<T> items, final ToIntFunction<T> cost, final int room, final boolean newestFirst) {
-        final List<T> ordered = new ArrayList<>(items);
-        if (newestFirst) {
-            Collections.reverse(ordered);
-        }
+        final List<T> ordered = newestFirst ? items.reversed() : items;
         final List<T> kept = new ArrayList<>();
         int tokens = 0;
         for (final T item : ordered) {

@@ -1,5 +1,8 @@
 package ua.bookloom.pipeline.review;
 
+import static ua.bookloom.util.contract.ArgNames.PROJECT_ID;
+import static ua.bookloom.util.contract.ArgNames.SEGMENT_ID;
+
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +40,7 @@ import ua.bookloom.pipeline.project.OriginalTitles;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ReviewDeskImpl implements ReviewDesk {
 
-    private static final String ACTIONS = "SegmentActions";
+    private static final String PART_NAME = "SegmentActions";
 
     private final SegmentActions actions;
     private final ReviewQueries queries;
@@ -49,27 +52,31 @@ public final class ReviewDeskImpl implements ReviewDesk {
 
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
-        log.debug("accept project={} segment={} part={}", projectId, segmentId, ACTIONS);
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
+        log.debug("accept project={} segment={} part={}", projectId, segmentId, PART_NAME);
         return guarded("accept", segmentId, () -> actions.accept(projectId, segmentId));
     }
 
     @Override
     public Result<SegmentRecord> saveEdit(final String projectId, final String segmentId, final String maskedText) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         Objects.requireNonNull(maskedText, "maskedText");
         log.debug(
-                "saveEdit project={} segment={} length={} part={}", projectId, segmentId, maskedText.length(), ACTIONS);
+                "saveEdit project={} segment={} length={} part={}",
+                projectId,
+                segmentId,
+                maskedText.length(),
+                PART_NAME);
         return guarded("saveEdit", segmentId, () -> actions.saveEdit(projectId, segmentId, maskedText));
     }
 
     @Override
     public Result<SegmentRecord> revert(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
-        log.debug("revert project={} segment={} part={}", projectId, segmentId, ACTIONS);
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
+        log.debug("revert project={} segment={} part={}", projectId, segmentId, PART_NAME);
         return guarded("revert", segmentId, () -> actions.revert(projectId, segmentId));
     }
 
@@ -81,8 +88,8 @@ public final class ReviewDeskImpl implements ReviewDesk {
             final boolean lowerTemperature,
             final ChatModel model,
             final Consumer<JobEvent> progress) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         log.debug(
@@ -99,29 +106,29 @@ public final class ReviewDeskImpl implements ReviewDesk {
 
     @Override
     public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
-        log.debug("acceptProposal project={} segment={} part={}", projectId, segmentId, ACTIONS);
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
+        log.debug("acceptProposal project={} segment={} part={}", projectId, segmentId, PART_NAME);
         return guarded("acceptProposal", segmentId, () -> actions.acceptProposal(projectId, segmentId));
     }
 
     @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(filter, "filter");
         return guarded("queue", null, () -> queries.queue(projectId, filter));
     }
 
     @Override
     public Result<SegmentView> segment(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
         return guarded("segment", segmentId, () -> queries.segment(projectId, segmentId));
     }
 
     @Override
     public Result<ReviewCounts> counts(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         return guarded(
                 "counts",
                 null,
@@ -133,14 +140,14 @@ public final class ReviewDeskImpl implements ReviewDesk {
 
     @Override
     public Result<List<SuspiciousSegment>> audit(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("audit project={} part=AuditRecorder", projectId);
         return guarded("audit", null, () -> audits.run(projectId));
     }
 
     @Override
     public Result<OriginalTitle> originalTitle(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("originalTitle project={}", projectId);
         return guarded(
                 "originalTitle",

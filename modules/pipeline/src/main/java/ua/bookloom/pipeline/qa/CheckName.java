@@ -8,94 +8,94 @@ package ua.bookloom.pipeline.qa;
 public enum CheckName {
 
     /** Whether the target's letters are written in the target language's script. */
-    SCRIPT(0.20, "language", "script", false),
+    SCRIPT(0.20, FindingKinds.LANGUAGE, "script", false),
 
     /** Whether the target merely copies its source back untranslated. */
-    ECHO(0.15, "language", "echo", false),
+    ECHO(0.15, FindingKinds.LANGUAGE, "echo", false),
 
     /** Whether the target is caught in a decode-loop repetition. */
-    REPETITION(0.10, "fluency", "repetition", false),
+    REPETITION(0.10, FindingKinds.FLUENCY, "repetition", false),
 
     /** Whether the target's length sits inside the language pair's expected band. */
-    LENGTH(0.25, "omission", "length", false),
+    LENGTH(0.25, FindingKinds.OMISSION, "length", false),
 
     /** Whether every locked glossary term present in the segment is rendered as entered. */
-    GLOSSARY(0.30, "glossary", "glossary", false),
+    GLOSSARY(0.30, FindingKinds.GLOSSARY, "glossary", false),
 
     /** Hard gate: the target is empty or opens with a refusal phrase. */
-    REFUSAL(0.0, "meaning", "refusal", true),
+    REFUSAL(0.0, FindingKinds.MEANING, "refusal", true),
 
     /** Hard gate: placeholder integrity — multiset, pair order and nesting. */
-    PLACEHOLDER(0.0, "markup", "placeholder", true),
+    PLACEHOLDER(0.0, FindingKinds.MARKUP, "placeholder", true),
 
     /** Hard gate: a locked term's protected span did not come back exactly once. */
-    LOCKED_TERM(0.0, "glossary", "locked-term", true),
+    LOCKED_TERM(0.0, FindingKinds.GLOSSARY, "locked-term", true),
 
     /** Hard gate: a kept-foreign-run protected span did not come back exactly once. */
-    KEPT_RUN(0.0, "markup", "kept-run", true),
+    KEPT_RUN(0.0, FindingKinds.MARKUP, "kept-run", true),
 
     /** Text check, blocking: a word mixing the target script with a letter of another script or a digit. */
-    SCRIPT_PURITY(0.0, "language", "script-purity", true),
+    SCRIPT_PURITY(0.0, FindingKinds.LANGUAGE, "script-purity", true),
 
     /** Text check, blocking: a quote pair the source balanced that the target leaves open, stray or crossed. */
-    QUOTE_BALANCE(0.0, "fluency", "quote-balance", true),
+    QUOTE_BALANCE(0.0, FindingKinds.FLUENCY, "quote-balance", true),
 
     /** Text check, blocking: a paragraph of at least 12 words still in the source language. */
-    LANGUAGE_IDENTITY(0.0, "language", "language-identity", true),
+    LANGUAGE_IDENTITY(0.0, FindingKinds.LANGUAGE, "language-identity", true),
 
     /** Text check, blocking: a significant sentence of the source with no counterpart in the target. */
-    SENTENCE_COUNT(0.0, "omission", "sentence-count", true),
+    SENTENCE_COUNT(0.0, FindingKinds.OMISSION, "sentence-count", true),
 
     /** Text check, blocking: a glossary name the source calls out that the target has lost. */
-    VOCATIVE(0.0, "omission", "vocative", true),
+    VOCATIVE(0.0, FindingKinds.OMISSION, "vocative", true),
 
     /** Text check, blocking: reply structure (braces, brackets, a wrapper label) left inside the text; a format defect, not a meaning one. */
-    PROTOCOL_LEAK(0.0, "markup", "protocol-leak", true),
+    PROTOCOL_LEAK(0.0, FindingKinds.MARKUP, "protocol-leak", true),
 
     /** Text check, blocking: a glossary name of the source replaced by another glossary name in the target. */
-    NAME_SWAP(0.0, "glossary", "name-swap", true),
+    NAME_SWAP(0.0, FindingKinds.GLOSSARY, "name-swap", true),
 
     /** Text check, soft: the same word twice in a row. */
-    DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
+    DUPLICATE_WORD(0.0, FindingKinds.FLUENCY, "duplicate-word", false),
 
     /** Text check, soft: a doubled space, or a space before a full stop or comma or inside a bracket. */
-    SPACING(0.0, "fluency", "spacing", false),
+    SPACING(0.0, FindingKinds.FLUENCY, "spacing", false),
 
     /** Text check, soft: a past-tense word after the narrator's «я» whose gender is not the narrator's. */
-    GENDER(0.0, "gender", "gender", false),
+    GENDER(0.0, FindingKinds.GENDER, "gender", false),
 
     /** Text check, soft: a woman's name followed by a masculine verb or declined like a man's name. */
-    NAME_GENDER(0.0, "gender", "name-gender", false),
+    NAME_GENDER(0.0, FindingKinds.GENDER, "name-gender", false),
 
     /** Text check, blocking: a UUID, hexadecimal string, ISBN, web address or e-mail address the target changed or lost. */
-    IDENTIFIER(0.0, "meaning", "identifier", true),
+    IDENTIFIER(0.0, FindingKinds.MEANING, "identifier", true),
 
     /** Text check, soft: a number the source writes in digits that the target changed or lost. */
-    NUMBER(0.0, "meaning", "number", false),
+    NUMBER(0.0, FindingKinds.MEANING, "number", false),
 
     /** Text check, blocking: a run of Latin words of the source left as it is in a target of another script. */
-    LATIN_RUN(0.0, "language", "latin-run", true),
+    LATIN_RUN(0.0, FindingKinds.LANGUAGE, "latin-run", true),
 
     /** Text check, soft: a glossary name of the source that the target has lost. */
-    NAME_MISSING(0.0, "glossary", "name-missing", false),
+    NAME_MISSING(0.0, FindingKinds.GLOSSARY, "name-missing", false),
 
     /** Text check, soft: a glossary name the target spells another way, with the exact replacement. */
-    NAME_SPELLING(0.0, "glossary", "name-spelling", false),
+    NAME_SPELLING(0.0, FindingKinds.GLOSSARY, "name-spelling", false),
 
     /** Text check, soft: a word of another language the target language's file replaces (тоже → теж). */
-    FOREIGN_WORD(0.0, "language", "foreign-word", false),
+    FOREIGN_WORD(0.0, FindingKinds.LANGUAGE, "foreign-word", false),
 
     /** Text check, soft: one quoted speech that mixes ти-forms and capitalised Ви-forms for one listener. */
-    ADDRESS_MIX(0.0, "language", "address-mix", false),
+    ADDRESS_MIX(0.0, FindingKinds.LANGUAGE, "address-mix", false),
 
     /** Text check, soft: a word the word validator doubts is a real word of the target language. */
-    UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),
+    UNKNOWN_WORD(0.0, FindingKinds.FLUENCY, "unknown-word", false),
 
     /** Text check, blocking: a word with a letter outside the target language's alphabet (ы ъ э ё in Ukrainian). */
-    ALPHABET(0.0, "language", "alphabet", true),
+    ALPHABET(0.0, FindingKinds.LANGUAGE, "alphabet", true),
 
     /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
-    TYPOGRAPHY(0.0, "fluency", "normalised", false);
+    TYPOGRAPHY(0.0, FindingKinds.FLUENCY, "normalised", false);
 
     private final double weight;
     private final String findingKind;

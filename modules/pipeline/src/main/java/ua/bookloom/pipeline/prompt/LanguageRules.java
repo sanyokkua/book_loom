@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.prompt;
 
+import static ua.bookloom.util.contract.ArgNames.TARGET_TAG;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,7 +34,7 @@ public final class LanguageRules implements LanguageSupport {
     static final String DIRECTORY = "languages/";
     static final String PAIR_DIRECTORY = DIRECTORY + "pairs/";
     private static final String SUFFIX = ".properties";
-    private static final String GENERIC = "generic";
+    private static final String GENERIC_FILE = "generic";
     private static final String STATUS = "status";
     private static final String TESTED = "tested";
     private static final String PITFALLS = "pitfalls";
@@ -78,10 +80,10 @@ public final class LanguageRules implements LanguageSupport {
     LanguageRules(final PromptTemplates.ResourceLoader loader, final boolean genericOnly) {
         this.loader = Objects.requireNonNull(loader, "loader");
         this.genericOnly = genericOnly;
-        this.generic = LanguageFile.load(GENERIC, DIRECTORY + GENERIC + SUFFIX, loader);
+        this.generic = LanguageFile.load(GENERIC_FILE, DIRECTORY + GENERIC_FILE + SUFFIX, loader);
         for (final String key : GENERIC_REQUIRED) {
             if (generic.get(key) == null) {
-                throw new IllegalStateException(DIRECTORY + GENERIC + SUFFIX + " lacks key '" + key + "'");
+                throw new IllegalStateException(DIRECTORY + GENERIC_FILE + SUFFIX + " lacks key '" + key + "'");
             }
         }
     }
@@ -92,7 +94,7 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /** The bundled map that states only the generic rules, for the eval's {@link PromptVariants} choice. */
-    static LanguageRules genericOnly() {
+    static LanguageRules genericRulesOnly() {
         return Holder.GENERIC_ONLY;
     }
 
@@ -109,7 +111,7 @@ public final class LanguageRules implements LanguageSupport {
     /** Read from the target's own file whatever the eval's generic-only choice, because the screen offers them. */
     @Override
     public BriefChoices briefChoices(final String targetTag) {
-        return BriefKeys.read(languageFile(Objects.requireNonNull(targetTag, "targetTag")));
+        return BriefKeys.read(languageFile(Objects.requireNonNull(targetTag, TARGET_TAG)));
     }
 
     /**
@@ -122,7 +124,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the section starting {@code [Language rules: <Source> -> <Target>]}; never null, built once per pair
      */
     public String section(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {
-        Objects.requireNonNull(targetTag, "targetTag");
+        Objects.requireNonNull(targetTag, TARGET_TAG);
         final String key = primary(sourceTag) + ">" + primary(targetTag) + (reviewing ? "!" : "");
         return sections.computeIfAbsent(key, ignored -> build(sourceTag, targetTag, reviewing));
     }
@@ -240,12 +242,7 @@ public final class LanguageRules implements LanguageSupport {
         });
     }
 
-    /**
-     * A name-rendering line the generic file holds.
-     *
-     * @param key the non-null key, such as {@code names.terms}
-     * @return the text; never null
-     */
+    /** A name-rendering line the generic file holds under a key such as {@code names.terms}; never null. */
     String genericValue(final String key) {
         return Objects.requireNonNull(generic.get(key), key);
     }
@@ -263,7 +260,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the value of the file's {@code genderCheck} key, or null when the language has no file or names none
      */
     public @Nullable String genderCheck(final String targetTag) {
-        return targetValue(Objects.requireNonNull(targetTag, "targetTag"), "genderCheck");
+        return targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "genderCheck");
     }
 
     /**
@@ -294,7 +291,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the lower-case letters, such as {@code ыъэё}; never null, empty when the language lists none
      */
     public String forbiddenLetters(final String targetTag) {
-        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "forbiddenLetters");
+        final String value = targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "forbiddenLetters");
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
@@ -305,7 +302,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return {@code false} only when the language's file says {@code namesInflect=false}
      */
     public boolean namesInflect(final String targetTag) {
-        return !"false".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, "targetTag"), "namesInflect"));
+        return !"false".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "namesInflect"));
     }
 
     /**

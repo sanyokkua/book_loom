@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.project;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,24 +47,24 @@ final class RoundTripCheck {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(source, "source");
         log.debug("round-trip check project={} source={}", projectId, source);
-        final Path directory = createDirectory();
+        final Path directory = createDirectory(source);
         Document original = null;
         Document copy = null;
         try {
             final Result<Document> opened = documents.open(source);
             original = opened.data();
             if (original == null) {
-                return Result.err(Objects.requireNonNull(opened.error(), "error"));
+                return Result.err(Objects.requireNonNull(opened.error(), ERROR));
             }
             final Path written = directory.resolve(source.getFileName().toString());
             final Result<Path> writeResult = write(original, written);
             if (writeResult.isErr()) {
-                return Result.err(Objects.requireNonNull(writeResult.error(), "error"));
+                return Result.err(Objects.requireNonNull(writeResult.error(), ERROR));
             }
             final Result<Document> reopened = documents.open(written);
             copy = reopened.data();
             if (copy == null) {
-                return Result.err(Objects.requireNonNull(reopened.error(), "error"));
+                return Result.err(Objects.requireNonNull(reopened.error(), ERROR));
             }
             return compare(projectId, original, copy);
         } finally {
@@ -82,11 +84,11 @@ final class RoundTripCheck {
     private Result<RoundTripReport> compare(final String projectId, final Document original, final Document copy) {
         final Result<BookProfile> originalProfile = inspector.profile(original);
         if (originalProfile.isErr()) {
-            return Result.err(Objects.requireNonNull(originalProfile.error(), "error"));
+            return Result.err(Objects.requireNonNull(originalProfile.error(), ERROR));
         }
         final Result<BookProfile> copyProfile = inspector.profile(copy);
         if (copyProfile.isErr()) {
-            return Result.err(Objects.requireNonNull(copyProfile.error(), "error"));
+            return Result.err(Objects.requireNonNull(copyProfile.error(), ERROR));
         }
         final Set<String> copyIds =
                 Objects.requireNonNull(copyProfile.data(), "profile").resourceIds();
@@ -140,12 +142,18 @@ final class RoundTripCheck {
                 .sum();
     }
 
-    private static Path createDirectory() {
+    // Beside the source rather than in the shared temporary folder: the person owns that folder, so no other account
+    // can swap or read the copy while it is written.
+    private static Path createDirectory(final Path source) {
         try {
-            return Files.createTempDirectory("bookloom-roundtrip-");
+            return Files.createTempDirectory(parentOf(source), ".bookloom-roundtrip-");
         } catch (IOException cause) {
             throw new IllegalStateException("cannot create the round-trip directory", cause);
         }
+    }
+
+    private static Path parentOf(final Path source) {
+        return Objects.requireNonNull(source.toAbsolutePath().getParent(), "parent");
     }
 
     private void close(final @Nullable Document document) {
