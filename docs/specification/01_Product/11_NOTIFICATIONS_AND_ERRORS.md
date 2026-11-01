@@ -101,7 +101,7 @@ reads "The run was refused" with its message. `RunStateMappingTest` checks this 
 
 Other banners are in-screen and appear with their screen (`mockups/README.md`, Changes while translating): Names &
 style ("Changes apply to the next segments translated."), Book Brief read-only ("Pause the translation to change the
-brief…" [Pause]), Export while translating or partial, and the hidden-work banner ("Names is running in the background
+brief…" [Pause]), Export while translating or partial, and the hidden-work banner ("Names & style work is running in the background
 — this screen is read-only until it ends"). A progress dialog's own verdict (for example a provider test) is a banner
 inside that dialog.
 

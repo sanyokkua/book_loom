@@ -25,7 +25,7 @@ import ua.bookloom.ui.ViewNames;
  */
 class NamesStyleHiddenScreenTest extends NamesStyleAutoScreenTestBase {
 
-    static final String BANNER = "Names is running in the background";
+    static final String BANNER = "Names & style work is running in the background";
 
     private static final GlossaryEntry SUGGESTED = GlossaryEntry.of(
                     "e1", "p1", "Well", null, TermType.CHARACTER, Gender.MALE, false)

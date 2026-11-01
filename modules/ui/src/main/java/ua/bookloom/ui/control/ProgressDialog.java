@@ -378,6 +378,7 @@ public final class ProgressDialog extends ModalCard {
      * @param now the moment the clocks read
      */
     public void tick(final Instant now) {
+        model.advance();
         detail.tick(now);
     }
 }

@@ -226,6 +226,28 @@ public enum MessageKey {
     PROGRESS_DETAIL_NOT_KEPT("progress.detail.notKept"),
     /** Progress dialog, Detailed: said of a step that made no model call. */
     PROGRESS_DETAIL_NO_CALL("progress.detail.noCall"),
+    /** Progress dialog: heading of the list of requests a stage sent. */
+    PROGRESS_REQUESTS_HEADING("progress.requests"),
+    /** Hover explanation of the list of a stage's requests. */
+    PROGRESS_REQUESTS_TIP("progress.requests.tip"),
+    /** Progress dialog, a request row announced and not yet seen by the model panel; argument: 0 its number. */
+    PROGRESS_REQUEST_SENDING("progress.request.sending"),
+    /** Progress dialog, a request row waiting; arguments: 0 number, 1 the clock, 2 the attempt or none. */
+    PROGRESS_REQUEST_WAITING("progress.request.waiting"),
+    /** Progress dialog, a request row answered; arguments: 0 number, 1 the time, 2 tokens a second or none. */
+    PROGRESS_REQUEST_ANSWERED("progress.request.answered"),
+    /** Progress dialog, a request row that failed; arguments: 0 number, 1 the time, 2 the attempt or none. */
+    PROGRESS_REQUEST_FAILED("progress.request.failed"),
+    /** Progress dialog, a request row that was stopped; argument: 0 its number. */
+    PROGRESS_REQUEST_STOPPED("progress.request.stopped"),
+    /** Progress dialog, an older request row whose call is no longer kept, ended well; argument: 0 its number. */
+    PROGRESS_REQUEST_DONE("progress.request.done"),
+    /** Progress dialog, an older request row whose call is no longer kept, ended badly; argument: 0 its number. */
+    PROGRESS_REQUEST_LOST("progress.request.lost"),
+    /** Progress dialog: one line asked beside the answer read for it; arguments: 0 what was asked, 1 the answer. */
+    PROGRESS_ITEM_LINE("progress.item.line"),
+    /** Progress dialog: the answer shown for a line the reply gave nothing for. */
+    PROGRESS_ITEM_NO_ANSWER("progress.item.noAnswer"),
     /** Progress dialog: the footer button that puts long work in the background. */
     PROGRESS_BACKGROUND("progress.background"),
     /** Hover explanation of the button labelled by {@link #PROGRESS_BACKGROUND}. */

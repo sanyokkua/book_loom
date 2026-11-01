@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -39,7 +40,9 @@ final class CallFeed {
     private final Set<Long> stepsOfCalls = new HashSet<>();
     private final Map<String, StepChanged> latest = new HashMap<>();
     private final Map<String, StepEntry.StepText> texts = new HashMap<>();
+    private final Map<Long, String> requestOf = new LinkedHashMap<>();
     private boolean announcesSteps;
+    private @Nullable String runningRequest;
 
     CallFeed(final ActivityTracker.Handle handle, final Supplier<Instant> now) {
         this(handle, now, read -> {});
@@ -66,9 +69,7 @@ final class CallFeed {
             return;
         }
         if (event instanceof StepChanged changed) {
-            announcesSteps = true;
-            latest.put(changed.label(), changed);
-            handle.step(changed, texts.get(changed.label()));
+            stepChanged(changed);
             return;
         }
         if (event instanceof StepsPlanned) {
@@ -77,14 +78,39 @@ final class CallFeed {
             return;
         }
         if (event instanceof CallSnapshotUpdated updated) {
-            final CallSnapshot snapshot = updated.snapshot();
-            log.debug("work call {} {} shown on the progress dialog", snapshot.callId(), snapshot.state());
-            calls.snapshot(snapshot);
-            handle.calls(calls.view(now.get()));
-            if (!announcesSteps) {
-                stepOfCall(snapshot);
-            }
+            callUpdated(updated.snapshot());
         }
+    }
+
+    private void stepChanged(final StepChanged changed) {
+        announcesSteps = true;
+        latest.put(changed.label(), changed);
+        if (changed.kind() == StepKind.REQUEST) {
+            runningRequest =
+                    changed.state() == StepState.STARTED ? StepEntry.keyOf(changed.kind(), changed.index()) : null;
+        }
+        handle.step(changed, texts.get(changed.label()));
+    }
+
+    private void callUpdated(final CallSnapshot snapshot) {
+        log.debug("work call {} {} shown on the progress dialog", snapshot.callId(), snapshot.state());
+        calls.snapshot(snapshot);
+        if (!announcesSteps) {
+            stepOfCall(snapshot);
+        }
+        // The call belongs to the request announced just before it: events arrive in the order they happened.
+        if (runningRequest != null) {
+            requestOf.putIfAbsent(snapshot.callId(), runningRequest);
+        }
+        handle.calls(viewOfCalls());
+    }
+
+    private LiveCalls viewOfCalls() {
+        final LiveCalls view = calls.view(now.get());
+        requestOf
+                .keySet()
+                .retainAll(view.recent().stream().map(CallSnapshot::callId).toList());
+        return view.withRequestOf(requestOf);
     }
 
     // The sample's step has ended by the time its answer arrives; it keeps its state and gains what it was sent.
@@ -109,6 +135,7 @@ final class CallFeed {
             log.debug("work call {} becomes request step {}", id, index);
             handle.steps(new StepsPlanned(StepKind.REQUEST, 1, true));
             handle.steps(new StepChanged(StepKind.REQUEST, snapshot.label(), index, StepState.STARTED, null, null));
+            runningRequest = StepEntry.keyOf(StepKind.REQUEST, index);
         }
         // A failed attempt may be followed by another, so only an answer or a stop ends the step.
         final @Nullable StepResult result =

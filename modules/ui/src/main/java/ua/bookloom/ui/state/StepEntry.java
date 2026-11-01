@@ -70,6 +70,17 @@ public record StepEntry(
      * @return the kind and index, never null
      */
     public String key() {
+        return keyOf(kind, index);
+    }
+
+    /**
+     * The key a step of this kind and position has, which an event can compute before any row exists.
+     *
+     * @param kind the step's kind
+     * @param index the step's position within its kind, from zero
+     * @return the kind and index
+     */
+    public static String keyOf(final StepKind kind, final int index) {
         return kind.name() + ":" + index;
     }
 

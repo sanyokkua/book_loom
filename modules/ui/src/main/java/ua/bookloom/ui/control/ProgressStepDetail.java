@@ -3,7 +3,6 @@ package ua.bookloom.ui.control;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
@@ -36,7 +35,6 @@ final class ProgressStepDetail extends VBox {
     private static final double SPACING = 8;
     private static final String NONE = "none";
     private static final String PARAGRAPHS = "\n\n";
-    private static final double MILLIS_PER_SECOND = 1000.0;
 
     private final ProgressDialogModel model;
     private final Messages messages;
@@ -52,6 +50,7 @@ final class ProgressStepDetail extends VBox {
     private final PromptView prompt;
     private final ReplyView reply;
     private final RereadGrid grid;
+    private final ProgressRequestList requests;
     private @Nullable Instant lastTick;
 
     ProgressStepDetail(final ProgressDialogModel model, final Messages messages) {
@@ -67,6 +66,7 @@ final class ProgressStepDetail extends VBox {
         prompt = new PromptView("progress-prompt", messages);
         reply = new ReplyView("progress-reply", messages);
         grid = new RereadGrid(messages);
+        requests = new ProgressRequestList(model, messages);
         name();
         layOut(mode);
         wireMode(mode);
@@ -80,6 +80,7 @@ final class ProgressStepDetail extends VBox {
                 .addAll(
                         mode,
                         say,
+                        requests,
                         grid,
                         heading(MessageKey.PROGRESS_INPUT),
                         input,
@@ -172,7 +173,10 @@ final class ProgressStepDetail extends VBox {
     }
 
     private void showCall(final boolean technical, final @Nullable CallSnapshot made) {
-        Visibility.show(call, technical);
+        final StepEntry step = model.selected().get();
+        // A stage that sent requests did make calls; its list above says which, so no "no call" is claimed.
+        final boolean sentRequests = step != null && step.requests() > 0;
+        Visibility.show(call, technical && (made != null || !sentRequests));
         Visibility.show(clock, technical && made != null);
         Visibility.show(tokens, technical && made != null && made.usage() != null);
         if (made == null) {
@@ -191,7 +195,10 @@ final class ProgressStepDetail extends VBox {
         final TokenUsage usage = made.usage();
         if (usage != null) {
             tokens.setText(messages.get(
-                    MessageKey.PROGRESS_DETAIL_TOKENS, count(usage.prompt()), count(usage.completion()), speed(usage)));
+                    MessageKey.PROGRESS_DETAIL_TOKENS,
+                    count(usage.prompt()),
+                    count(usage.completion()),
+                    RequestWords.speed(usage)));
         }
     }
 
@@ -202,6 +209,7 @@ final class ProgressStepDetail extends VBox {
      */
     void tick(final Instant now) {
         lastTick = Objects.requireNonNull(now, "now");
+        requests.tick(now);
         final StepEntry step = model.selected().get();
         final CallSnapshot made = step == null ? null : model.callOf(step);
         if (made == null) {
@@ -222,8 +230,11 @@ final class ProgressStepDetail extends VBox {
         if (text != null && text.before() != null) {
             return text.before();
         }
-        return made == null || made.segments().isEmpty()
-                ? null
+        if (made == null) {
+            return null;
+        }
+        return made.segments().isEmpty()
+                ? made.items().stream().map(CallItem::id).collect(Collectors.joining("\n"))
                 : made.segments().stream().map(CallSegment::displaySource).collect(Collectors.joining(PARAGRAPHS));
     }
 
@@ -240,11 +251,27 @@ final class ProgressStepDetail extends VBox {
         if (made == null) {
             return null;
         }
+        if (made.segments().isEmpty() && !made.items().isEmpty()) {
+            return answersOf(made);
+        }
         final String targets = made.items().stream()
                 .map(CallItem::target)
                 .filter(Objects::nonNull)
                 .collect(Collectors.joining(PARAGRAPHS));
         return plainOutput(technical, targets, made.reply(), decidedValues());
+    }
+
+    // A call about no segment: each line it asked beside the answer read for it, once the reply is in.
+    private @Nullable String answersOf(final CallSnapshot made) {
+        if (made.state() != CallState.ANSWERED) {
+            return null;
+        }
+        return made.items().stream()
+                .map(item -> messages.get(
+                        MessageKey.PROGRESS_ITEM_LINE,
+                        item.id(),
+                        item.target() == null ? messages.get(MessageKey.PROGRESS_ITEM_NO_ANSWER) : item.target()))
+                .collect(Collectors.joining("\n"));
     }
 
     /**
@@ -321,14 +348,5 @@ final class ProgressStepDetail extends VBox {
 
     private static String count(final @Nullable Integer value) {
         return value == null ? "—" : Integer.toString(value);
-    }
-
-    private static String speed(final TokenUsage usage) {
-        final Integer written = usage.completion();
-        final Duration generation = usage.generation();
-        if (written == null || generation == null || generation.isZero()) {
-            return NONE;
-        }
-        return String.format(Locale.ROOT, "%.1f", written * MILLIS_PER_SECOND / generation.toMillis());
     }
 }

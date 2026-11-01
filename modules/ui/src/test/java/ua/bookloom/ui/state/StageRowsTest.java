@@ -69,4 +69,16 @@ class StageRowsTest {
 
         assertThat(counts(StageRows.of(log))).containsExactly(1, 0);
     }
+
+    // IF only the last request were kept, THEN the earlier requests of a stage could not be listed or chosen.
+    @Test
+    void of_stageWithRequests_listsEveryRequestOfTheStageInOrder() {
+        final StageRows rows = StageRows.of(PassEvents.logUpTo(new int[] {0, 3, 2}, 2, 49));
+
+        assertThat(rows.requests().get("STAGE:1"))
+                .extracting(StepEntry::key)
+                .containsExactly("REQUEST:0", "REQUEST:1", "REQUEST:2");
+        assertThat(rows.requests().get("STAGE:2")).extracting(StepEntry::key).containsExactly("REQUEST:3", "REQUEST:4");
+        assertThat(rows.requests()).doesNotContainKey("STAGE:0");
+    }
 }

@@ -175,7 +175,7 @@ It is used by:
   cannot.
 - Hiding collapses the dialog into the title bar's **activity chip** ("▬ Names · 53 % · open"). Clicking the chip
   reopens the same dialog with its state.
-- While it is hidden, **the screen it writes to is read-only** behind a banner ("Names is running in the background —
+- While it is hidden, **the screen it writes to is read-only** behind a banner ("Names & style work is running in the background —
   this screen is read-only until it ends").
 - Other model work is refused with a toast that offers "Show progress".
 - When it finishes, the chip goes and a toast with **Review the results** appears. Nothing pops up by itself.
