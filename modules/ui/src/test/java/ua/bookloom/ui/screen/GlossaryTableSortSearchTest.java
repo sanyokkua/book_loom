@@ -32,12 +32,18 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
     private static final GlossaryEntry BETA =
             GlossaryEntry.of("e4", "p1", "Beta", null, TermType.OTHER, Gender.UNKNOWN, false);
 
+    private static final int STATE_COLUMN = 4;
+
     private void showGlossary() throws Exception {
+        showGlossary(List.of(ZETA, ALPHA, MID, BETA));
+    }
+
+    private void showGlossary(final List<GlossaryEntry> rows) throws Exception {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
         chooseTarget();
-        glossary.willAnswer(Result.ok(List.of(ZETA, ALPHA, MID, BETA)));
+        glossary.willAnswer(Result.ok(rows));
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
@@ -103,6 +109,35 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
                 search, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
         assertThat(ThemeTestSupport.onFx(() -> search.getText())).isEmpty();
         assertThat(shownTerms()).hasSize(4);
+    }
+
+    // IF the states sorted by their names, THEN a locked row would sit between suggestions; ties by the term.
+    @Test
+    void glossaryTable_sortByState_ordersSuggestedPinnedLockedThenByTerm() throws Exception {
+        showGlossary(List.of(
+                GlossaryEntry.of("e1", "p1", "Zeta", "Зета", TermType.PLACE, Gender.UNKNOWN, true),
+                GlossaryEntry.of("e2", "p1", "Alpha", "Альфа", TermType.CHARACTER, Gender.FEMALE, false),
+                GlossaryEntry.of("e3", "p1", "Mid", null, TermType.OTHER, Gender.UNKNOWN, false)
+                        .withSuggestedTarget("Мід"),
+                GlossaryEntry.of("e4", "p1", "Beta", null, TermType.OTHER, Gender.UNKNOWN, false)
+                        .withSuggestedTarget("Бета")));
+
+        sortBy(STATE_COLUMN);
+
+        assertThat(shownTerms()).containsExactly("Beta", "Mid", "Alpha", "Zeta");
+    }
+
+    // IF the search read only the lemma, THEN a name the book writes in another case could not be found.
+    @Test
+    void search_typedForm_showsTheEntryThatHoldsIt() throws Exception {
+        showGlossary(List.of(
+                ZETA,
+                GlossaryEntry.of("e5", "p1", "Велемир", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withForms(List.of("Велемиром"))));
+
+        onFx(() -> ((TextField) required("names-style-search")).setText("велемиром"));
+
+        assertThat(shownTerms()).containsExactly("Велемир");
     }
 
     // IF the review button did not reach the service, THEN the model could never clean the list.

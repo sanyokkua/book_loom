@@ -136,7 +136,9 @@ public final class ChangeResults {
         this.operation = Objects.requireNonNull(operation, "operation");
         this.stopped = stopped;
         this.rows = items.stream().map(Item::row).toList();
-        items.forEach(item -> reversals.put(item.row().id(), item.reversal()));
+        items.stream()
+                .filter(item -> item.row().kind().isRevertible())
+                .forEach(item -> reversals.put(item.row().id(), item.reversal()));
         this.calls = Objects.requireNonNull(calls, "calls");
     }
 
@@ -246,10 +248,12 @@ public final class ChangeResults {
     /**
      * Whether any row can still be put back.
      *
-     * @return {@code true} if a row is neither reverted nor waiting, {@code false} otherwise
+     * @return {@code true} if a row that can be put back is neither reverted nor waiting, {@code false} otherwise
      */
     public boolean hasRowsToRevert() {
-        return rows.stream().anyMatch(row -> !reverted.contains(row.id()) && !queued.contains(row.id()));
+        return rows.stream()
+                .filter(row -> row.kind().isRevertible())
+                .anyMatch(row -> !reverted.contains(row.id()) && !queued.contains(row.id()));
     }
 
     /**
@@ -270,7 +274,7 @@ public final class ChangeResults {
     /** Puts every row back, one after the other; the first failure stops the rest. */
     public void undoAll() {
         log.info("undo all of the {} results: {} rows", operation, rows.size());
-        rows.forEach(row -> revert(row.id()));
+        rows.stream().filter(row -> row.kind().isRevertible()).forEach(row -> revert(row.id()));
     }
 
     private void drain() {

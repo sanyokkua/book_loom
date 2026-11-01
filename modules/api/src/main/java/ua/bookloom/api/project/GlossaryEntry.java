@@ -41,6 +41,8 @@ import org.jspecify.annotations.Nullable;
  *     it (or nobody was asked)
  * @param knowledge what the model answered for the bare name ({@link NameKnowledge}), or null when never asked; every
  *     copy keeps it
+ * @param unsureMentions how many mentions of the entry's names also fit another name the book writes and were left
+ *     undecided by the clause around them, so the table marks the entry Unsure; zero or more, set by the name scan
  */
 public record GlossaryEntry(
         String id,
@@ -60,7 +62,8 @@ public record GlossaryEntry(
         boolean noGenderEvidence,
         @Nullable String meaning,
         @Nullable MeaningChoice meaningChoice,
-        @Nullable NameKnowledge knowledge) {
+        @Nullable NameKnowledge knowledge,
+        int unsureMentions) {
 
     /** Validates the parts and normalises the ones that cannot hold together. */
     public GlossaryEntry {
@@ -82,6 +85,7 @@ public record GlossaryEntry(
         placeKind = type == TermType.PLACE ? placeKind : null;
         genderOrigin = gender == Gender.UNKNOWN ? null : Objects.requireNonNullElse(genderOrigin, Origin.USER);
         noGenderEvidence = noGenderEvidence && gender == Gender.UNKNOWN;
+        unsureMentions = Math.max(0, unsureMentions);
     }
 
     /**
@@ -123,41 +127,26 @@ public record GlossaryEntry(
                 false,
                 null,
                 null,
-                null);
+                null,
+                0);
     }
 
-    /**
-     * Whether the target is exact text replaced by a token in the book.
-     *
-     * @return {@code true} if the target state is {@link TargetState#LOCKED}, {@code false} otherwise
-     */
+    /** {@return whether the target is exact text replaced by a token in the book: the state is locked} */
     public boolean locked() {
         return targetState == TargetState.LOCKED;
     }
 
-    /**
-     * Whether the target is the model's suggestion nobody has confirmed.
-     *
-     * @return {@code true} if the target state is {@link TargetState#SUGGESTED}, {@code false} otherwise
-     */
+    /** {@return whether the target is the model's suggestion nobody has confirmed} */
     public boolean isSuggested() {
         return targetState == TargetState.SUGGESTED;
     }
 
-    /**
-     * Whether the gender is a guess nobody has confirmed, which the person only has to confirm.
-     *
-     * @return {@code true} when the known gender came from a rule or a guess, {@code false} otherwise
-     */
+    /** {@return whether the known gender came from a rule or a guess, which the person only has to confirm} */
     public boolean isGenderSuggested() {
         return genderOrigin == Origin.RULE || genderOrigin == Origin.LIKELY;
     }
 
-    /**
-     * Whether the gender is one the run may hold a text to: the person's or the book's, not a rule's or a guess.
-     *
-     * @return {@code true} when the gender is known and its origin is enforced, {@code false} otherwise
-     */
+    /** {@return whether the gender is known and one the run may hold a text to: the person's or the book's} */
     public boolean hasConfirmedGender() {
         return gender != Gender.UNKNOWN && genderOrigin != null && genderOrigin.isEnforced();
     }
@@ -223,7 +212,7 @@ public record GlossaryEntry(
     /** This entry with another type; the type's origin and the target's are kept. */
     public GlossaryEntry withType(final TermType changed) {
         Objects.requireNonNull(changed, "changed");
-        return described(forms, changed, meaning, meaningChoice);
+        return described(forms, changed, meaning, meaningChoice, unsureMentions);
     }
 
     /**
@@ -294,17 +283,22 @@ public record GlossaryEntry(
 
     /** This entry with the other spellings the book uses for its term; never null. */
     public GlossaryEntry withForms(final List<String> folded) {
-        return described(folded, type, meaning, meaningChoice);
+        return described(folded, type, meaning, meaningChoice, unsureMentions);
     }
 
     /** This entry with a note on what its term means; a null or blank note is none. */
     public GlossaryEntry withMeaning(@Nullable final String note) {
-        return described(forms, type, note, meaningChoice);
+        return described(forms, type, note, meaningChoice, unsureMentions);
     }
 
     /** This entry with how its meaning-bearing name is rendered; null for a name the book does not play on. */
     public GlossaryEntry withMeaningChoice(@Nullable final MeaningChoice choice) {
-        return described(forms, type, meaning, choice);
+        return described(forms, type, meaning, choice, unsureMentions);
+    }
+
+    /** This entry with the count of its mentions the clause left undecided between it and another name. */
+    public GlossaryEntry withUnsureMentions(final int count) {
+        return described(forms, type, meaning, meaningChoice, count);
     }
 
     /**
@@ -327,7 +321,8 @@ public record GlossaryEntry(
             final List<String> newForms,
             final TermType newType,
             @Nullable final String newMeaning,
-            @Nullable final MeaningChoice newChoice) {
+            @Nullable final MeaningChoice newChoice,
+            final int newUnsure) {
         return new GlossaryEntry(
                 id,
                 projectId,
@@ -346,7 +341,8 @@ public record GlossaryEntry(
                 noGenderEvidence,
                 newMeaning,
                 newChoice,
-                knowledge);
+                knowledge,
+                newUnsure);
     }
 
     private GlossaryEntry copyTarget(
@@ -391,7 +387,8 @@ public record GlossaryEntry(
                 newNoEvidence,
                 meaning,
                 meaningChoice,
-                knowledge);
+                knowledge,
+                unsureMentions);
     }
 
     private static @Nullable String blankAsNull(@Nullable final String text) {

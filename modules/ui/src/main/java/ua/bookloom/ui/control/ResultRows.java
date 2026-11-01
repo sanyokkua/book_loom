@@ -111,6 +111,7 @@ final class ResultRows {
             case ADDED -> MessageKey.RESULTS_ADDED;
             case REMOVED -> MessageKey.RESULTS_REMOVED;
             case CHANGED -> MessageKey.RESULTS_CHANGED;
+            case LEFT -> MessageKey.RESULTS_LEFT;
         };
     }
 
@@ -119,6 +120,7 @@ final class ResultRows {
             case ADDED -> MessageKey.PROGRESS_RESULTS_BADGE_ADDED;
             case REMOVED -> MessageKey.PROGRESS_RESULTS_BADGE_REMOVED;
             case CHANGED -> MessageKey.PROGRESS_RESULTS_BADGE_CHANGED;
+            case LEFT -> MessageKey.PROGRESS_RESULTS_BADGE_LEFT;
         };
     }
 
@@ -127,6 +129,7 @@ final class ResultRows {
             case ADDED -> "chip-ok";
             case REMOVED -> "chip-err";
             case CHANGED -> "chip-info";
+            case LEFT -> "chip-warn";
         };
     }
 
@@ -246,8 +249,10 @@ final class ResultRows {
             }
             reverted.setVisible(done);
             reverted.setManaged(done);
-            revert.setVisible(!done);
-            revert.setManaged(!done);
+            // A row the operation left as it was has nothing to put back.
+            final boolean revertible = shown.kind().isRevertible();
+            revert.setVisible(!done && revertible);
+            revert.setManaged(!done && revertible);
             revert.setDisable(results.working().get());
             revert.setAccessibleText(messages.get(MessageKey.RESULTS_REVERT_FOR, shown.term()));
         }

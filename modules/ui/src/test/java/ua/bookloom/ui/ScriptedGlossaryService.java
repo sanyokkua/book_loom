@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -43,6 +44,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final List<Map<String, Gender>> genderAnswers = new CopyOnWriteArrayList<>();
     private volatile List<UnknownGender> unknownGenders = List.of();
     private volatile List<GlossaryEntry> meaningQuestions = List.of();
+    private volatile Map<String, List<TargetIssue>> reviewFlags = Map.of();
     private volatile boolean holding;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
@@ -164,6 +166,17 @@ public final class ScriptedGlossaryService implements GlossaryService {
     @Override
     public Result<AcceptReport> acceptSuggested(final String projectId) {
         return answer("acceptSuggested(" + projectId + ")");
+    }
+
+    /** Sets the review flags {@code reviewFlags} answers with; none until a test says so. */
+    public void willFlag(final Map<String, List<TargetIssue>> flagged) {
+        reviewFlags = Map.copyOf(flagged);
+    }
+
+    // Kept apart from the queued answers, as unknownGenders is: the table asks after every load and edit.
+    @Override
+    public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
+        return Result.ok(reviewFlags);
     }
 
     /** Sets the names {@code meaningQuestions} answers with; none until a test says so. */

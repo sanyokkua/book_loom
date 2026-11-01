@@ -8,9 +8,9 @@ import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
@@ -21,8 +21,8 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * The glossary's rows stay cheap to scroll: type and gender are text until used, a row's tooltips wait for the pointer,
- * and a row's switch draws no shadow until it has focus.
+ * The glossary's rows stay cheap to scroll: kind, state and gender are text until used, and a row's tooltips wait for
+ * the pointer.
  */
 class GlossaryCellsTest extends TranslatingScreenTestBase {
 
@@ -75,7 +75,7 @@ class GlossaryCellsTest extends TranslatingScreenTestBase {
     void row_notUsed_showsTypeAsTextWithNoComboBox() throws Exception {
         showGlossary();
 
-        assertThat(ThemeTestSupport.onFx(() -> typeLabel().getText())).isEqualTo("character");
+        assertThat(ThemeTestSupport.onFx(() -> typeLabel().getText())).isEqualTo("character · person");
         assertThat(required("names-style-table").lookupAll(".combo-box")).isEmpty();
     }
 
@@ -122,28 +122,14 @@ class GlossaryCellsTest extends TranslatingScreenTestBase {
     // IF each row built its tooltips up front, THEN every row the table makes would pay for popups never shown; the
     // tooltip arrives with the pointer.
     @Test
-    void lockSwitch_firstHovered_getsItsTooltipThen() throws Exception {
+    void targetField_firstHovered_getsItsTooltipThen() throws Exception {
         showGlossary();
-        final ToggleSwitch lock = (ToggleSwitch) required("names-style-table").lookup(".toggle-switch");
-        assertThat(lock.getTooltip()).isNull();
+        final TextField target = (TextField) required("names-style-table").lookup(".glossary-table .text-field");
+        assertThat(target.getTooltip()).isNull();
 
-        onFx(() -> Event.fireEvent(lock, mouse(MouseEvent.MOUSE_ENTERED)));
+        onFx(() -> Event.fireEvent(target, mouse(MouseEvent.MOUSE_ENTERED)));
 
-        assertThat(lock.getTooltip()).isNotNull();
-        assertThat(lock.getTooltip().getText()).isEqualTo(lock.getAccessibleHelp());
-    }
-
-    // IF each row's switch carried a shadow, THEN every scrolled frame would recompute an effect per row.
-    @Test
-    void lockSwitch_notFocused_drawsNoThumbShadowUntilFocused() throws Exception {
-        showGlossary();
-        final ToggleSwitch lock = (ToggleSwitch) required("names-style-table").lookup(".toggle-switch");
-        final Node thumb = lock.lookup(".thumb");
-
-        assertThat(ThemeTestSupport.onFx(thumb::getEffect)).isNull();
-
-        onFx(lock::requestFocus);
-
-        assertThat(ThemeTestSupport.onFx(thumb::getEffect)).isNotNull();
+        assertThat(target.getTooltip()).isNotNull();
+        assertThat(target.getTooltip().getText()).isEqualTo(target.getAccessibleHelp());
     }
 }

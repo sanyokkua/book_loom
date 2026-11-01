@@ -20,18 +20,19 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     // IF the glossary kept its Check column or hid the remove cross inside the Term cell, THEN the table would not
     // match the Recurring terms table beside it.
     @ParameterizedTest
-    @CsvSource({"en, Term, Kind, Translation, Gender, Locked", "uk, Термін, Вид, Переклад, Рід, Закріплено"})
-    void glossaryColumns_shown_areTermKindTranslationGenderLockedThenAnUnnamedRemoveColumn(
+    @CsvSource({"en, Term, Kind, Forms, Translation, State, Gender", "uk, Термін, Вид, Форми, Переклад, Стан, Рід"})
+    void glossaryColumns_shown_areTermKindFormsTranslationStateGenderThenAnUnnamedRemoveColumn(
             final String tag,
             final String term,
             final String type,
+            final String forms,
             final String target,
-            final String gender,
-            final String locked)
+            final String state,
+            final String gender)
             throws Exception {
         showScreen(tag, 1024, 700, ROSALIND);
 
-        assertThat(headers("names-style")).containsExactly(term, type, target, gender, locked, "");
+        assertThat(headers("names-style")).containsExactly(term, type, forms, target, state, gender, "");
     }
 
     // IF a column were squeezed below its header, THEN "Закріплено" would read "Закріпл..." at the smallest window.
@@ -65,7 +66,8 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     @CsvSource({"names-style", "recurring"})
     void removeCross_eachRow_sitsInTheLastColumnOnly(final String card) throws Exception {
         lexicon.holds(MASTER);
-        showScreen("en", 1024, 700, ROSALIND);
+        // Wide enough that the glossary's seven columns all fit, so its last cell is laid out.
+        showScreen("en", 1400, 700, ROSALIND);
         awaitFx(() -> !firstRowCells(card).isEmpty());
 
         final List<TableCell<?, ?>> cells = firstRowCells(card);
@@ -121,9 +123,9 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         showScreen(tag, 1024, 700, HALE, ROSALIND);
 
         final TextField empty =
-                (TextField) ThemeTestSupport.onFx(() -> glossaryCell("Hale", 2).lookup(".text-field"));
+                (TextField) ThemeTestSupport.onFx(() -> glossaryCell("Hale", 3).lookup(".text-field"));
         final TextField filled = (TextField)
-                ThemeTestSupport.onFx(() -> glossaryCell("Rosalind", 2).lookup(".text-field"));
+                ThemeTestSupport.onFx(() -> glossaryCell("Rosalind", 3).lookup(".text-field"));
 
         assertThat(ThemeTestSupport.<String>onFx(() -> empty.getPromptText())).isEqualTo(placeholder);
         assertThat(ThemeTestSupport.<String>onFx(() -> filled.getText())).isEqualTo("Розалінда");
@@ -134,10 +136,10 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     void genderCell_nonCharacters_showADashAndCharactersTheirGender() throws Exception {
         showScreen("en", 1024, 700, ROSALIND, HALE, BROOK, WAND);
 
-        assertThat(shownText(glossaryCell("Brook", 3))).isEqualTo("—");
-        assertThat(shownText(glossaryCell("Wand", 3))).isEqualTo("—");
-        assertThat(shownText(glossaryCell("Rosalind", 3))).isEqualTo("female");
-        assertThat(shownText(glossaryCell("Hale", 3))).isEqualTo("unknown");
+        assertThat(shownText(glossaryCell("Brook", 5))).isEqualTo("—");
+        assertThat(shownText(glossaryCell("Wand", 5))).isEqualTo("—");
+        assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
+        assertThat(shownText(glossaryCell("Hale", 5))).isEqualTo("unknown");
     }
 
     // IF a guess were drawn like a decision, THEN the person would not know what still wants a look; only the
@@ -146,7 +148,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
     void genderCell_suggestedCharacter_isMarkedAndAConfirmedOneIsNot() throws Exception {
         showScreen("en", 1024, 700, JOHN, ROSALIND);
 
-        assertThat(shownText(glossaryCell("John", 3))).isEqualTo("male (suggested)");
-        assertThat(shownText(glossaryCell("Rosalind", 3))).isEqualTo("female");
+        assertThat(shownText(glossaryCell("John", 5))).isEqualTo("male · likely");
+        assertThat(shownText(glossaryCell("Rosalind", 5))).isEqualTo("female · person");
     }
 }

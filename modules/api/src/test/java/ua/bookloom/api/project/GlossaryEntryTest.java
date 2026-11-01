@@ -44,7 +44,8 @@ class GlossaryEntryTest {
                 false,
                 null,
                 null,
-                null);
+                null,
+                0);
 
         assertThat(entry.isSuggested()).isFalse();
         assertThat(entry.targetOrigin()).isNotEqualTo(Origin.LIKELY);

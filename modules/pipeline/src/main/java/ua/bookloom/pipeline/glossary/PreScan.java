@@ -344,7 +344,8 @@ public final class PreScan {
                 false,
                 null,
                 null,
-                null);
+                null,
+                0);
     }
 
     private static String existingTerms(final List<GlossaryEntry> held) {

@@ -47,7 +47,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
 
     @Test
     void table_suggestedAndConfirmedGenders_markOnlyTheSuggestedOne() throws Exception {
-        assertThat(genderLabels()).contains("male (suggested)", "female").doesNotContain("female (suggested)");
+        assertThat(genderLabels()).contains("male · likely", "female · person").doesNotContain("female · likely");
     }
 
     // IF a verified gender were drawn like a guess, THEN the table would ask the person to confirm what the book
@@ -57,15 +57,15 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
     void table_personsVerifiedAndSuggestedGenders_markExactlyTheSuggestedOne() throws Exception {
         final List<String> labels = genderLabels();
 
-        assertThat(labels).filteredOn(label -> label.contains("(suggested)")).containsExactly("male (suggested)");
-        assertThat(labels).contains("male", "female");
+        assertThat(labels).filteredOn(label -> label.endsWith("· likely")).containsExactly("male · likely");
+        assertThat(labels).contains("male · book", "female · person");
     }
 
     // IF choosing the shown value did nothing, THEN "choose a value to confirm it" would be false for the value the
     // person agrees with; the suggestion is stored as the person's.
     @Test
     void suggestedGender_theSameValueChosenAgain_isStoredAsConfirmed() throws Exception {
-        choose("male (suggested)", "male");
+        choose("male · likely", "male");
 
         assertThat(glossary.updated())
                 .singleElement()
@@ -76,7 +76,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
     // IF a person's correction of a verified gender stayed "verified", THEN the next review could overwrite it.
     @Test
     void verifiedGender_anotherValueChosen_isStoredAsThePersons() throws Exception {
-        final ComboBox<Gender> combo = openEditor("male");
+        final ComboBox<Gender> combo = openEditor("male · book");
 
         // A popup click only reports the value already held; a different value arrives as the combo's own selection.
         onFx(() -> combo.setValue(Gender.FEMALE));

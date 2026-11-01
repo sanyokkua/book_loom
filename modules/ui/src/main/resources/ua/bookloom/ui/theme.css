@@ -1730,22 +1730,6 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
 }
 
-/* A glossary row's switch draws no shadow until it has focus: an effect on every row is repainted on every scroll
-   frame, and the table's switches sit in a row of text where position and colour already tell the state. */
-.root .glossary-table .toggle-switch .thumb {
-    -fx-effect: null;
-}
-
-.root .glossary-table .toggle-switch:focused .thumb {
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
-}
-
-/* A pooled glossary row is rebound to another entry while it scrolls: the thumb must be where the state says at once,
-   not slide there over 200 ms, or a row shows the previous row's switch for a moment. */
-.glossary-table .toggle-switch {
-    -thumb-move-animation-time: 1;
-}
-
 /* Reduced motion (Motion.isReduced): the switch's thumb jumps to its side instead of sliding there. */
 .reduce-motion .toggle-switch {
     -thumb-move-animation-time: 1;
@@ -2662,6 +2646,12 @@
     -fx-text-fill: -color-info-fg;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
+    -fx-padding: 1px 6px 1px 6px;
+}
+
+/* The small chips of a glossary row: a value's origin, a review flag, the Unsure mark, a kept meaning. */
+.glossary-chip {
+    -fx-font-size: 12px;
     -fx-padding: 1px 6px 1px 6px;
 }
 

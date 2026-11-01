@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
@@ -117,6 +118,16 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     @Override
+    public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        final BookBrief brief = briefOf(projectId);
+        return guarded(
+                "reviewFlags",
+                projectId,
+                () -> ReviewFlags.of(glossary, projectId, brief, analysisOf(projectId, brief)));
+    }
+
+    @Override
     public Result<List<GlossaryEntry>> meaningQuestions(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         return guarded("meaningQuestions", projectId, () -> MeaningQuestions.pending(glossary, projectId));
@@ -134,24 +145,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(answers, "answers");
         return guarded(
-                "answerGenders",
-                projectId,
-                () -> glossary.all(projectId).flatMap(held -> {
-                    final List<GlossaryEntry> stored = new ArrayList<>();
-                    for (final GlossaryEntry entry : held.stream()
-                            .filter(asked -> answers.containsKey(asked.id()))
-                            .toList()) {
-                        final Gender answer = Objects.requireNonNull(answers.get(entry.id()), "answer");
-                        log.debug("Gender answer entryId={} gender={}", entry.id(), answer);
-                        final Result<GlossaryEntry> updated = updateEntry(entry.withGender(answer));
-                        if (updated.isErr()) {
-                            return Result.err(Objects.requireNonNull(updated.error(), "error"));
-                        }
-                        stored.add(Objects.requireNonNull(updated.data(), "updated"));
-                    }
-                    log.info("Gender answers project={} asked={} stored={}", projectId, answers.size(), stored.size());
-                    return Result.ok(List.copyOf(stored));
-                }));
+                "answerGenders", projectId, () -> GenderAnswers.store(glossary, projectId, answers, this::updateEntry));
     }
 
     @Override
@@ -245,9 +239,14 @@ public final class GlossaryServiceImpl implements GlossaryService {
                     "No target language",
                     "Choose the target language before accepting the suggestions."));
         }
+        return new SuggestionAcceptance(glossary, this::recordTermChange)
+                .accept(projectId, brief, target, analysisOf(projectId, brief));
+    }
+
+    private @Nullable String analysisOf(final String projectId, @Nullable final BookBrief brief) {
         final Document document = openProjects.get(projectId);
-        final String analysis = document == null ? brief.sourceLanguage() : languageOf(brief, document);
-        return new SuggestionAcceptance(glossary, this::recordTermChange).accept(projectId, brief, target, analysis);
+        final String fallback = brief == null ? null : brief.sourceLanguage();
+        return document == null ? fallback : languageOf(brief, document);
     }
 
     // A typed or edited target is stored without the stress marks its language asks to remove; a target left blank by

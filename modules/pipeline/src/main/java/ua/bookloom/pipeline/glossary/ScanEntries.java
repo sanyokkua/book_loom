@@ -229,6 +229,7 @@ public final class ScanEntries {
                 base.noGenderEvidence(),
                 base.meaning(),
                 base.meaningChoice(),
-                base.knowledge());
+                base.knowledge(),
+                base.unsureMentions());
     }
 }

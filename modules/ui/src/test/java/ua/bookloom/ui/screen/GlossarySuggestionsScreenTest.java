@@ -12,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Origin;
@@ -21,7 +22,7 @@ import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * A target the model suggested reads as one in the glossary table — slanted, badged AI, with a tick that accepts it — and
+ * A target the model suggested reads as one in the glossary table — slanted, its chip reading likely, with a tick that accepts it — and
  * the toolbar's Accept all and the start notice act on every such row.
  */
 class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
@@ -63,7 +64,7 @@ class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
         assertThat(rowParts("glossary-suggested-badge"))
                 .filteredOn(Node::isVisible)
                 .extracting(node -> ((Label) node).getText())
-                .containsExactly("AI");
+                .containsExactly("likely");
         assertThat(rowParts("glossary-accept")).filteredOn(Node::isVisible).hasSize(1);
         assertThat(ThemeTestSupport.onFx(() -> TooltipProbe.tipText(
                         rowParts("glossary-suggested-badge").getFirst())))
@@ -119,18 +120,21 @@ class GlossarySuggestionsScreenTest extends TranslatingScreenTestBase {
 
         assertThat(button("names-style-accept-all").isVisible()).isFalse();
         assertThat(button("names-style-accept-all").getText()).isEqualTo("Accept all");
-        assertThat(TooltipProbe.tipText(required("names-style-accept-all"))).startsWith("Confirms every target");
+        assertThat(TooltipProbe.tipText(required("names-style-accept-all")))
+                .startsWith("Checks every target the model suggested");
     }
 
+    // Accept all is one validated call of the service, never a row-by-row confirmation.
     @Test
-    void acceptAll_pressed_storesEverySuggestionAsThePersons() throws Exception {
+    void acceptAll_pressed_asksTheServiceOnceAndShowsTheAcceptedRow() throws Exception {
         showGlossary(HALE, MILTON);
-        glossary.willAnswer(Result.ok(HALE.accepted()));
+        glossary.willAnswer(Result.ok(new AcceptReport(List.of(HALE.accepted()), List.of())));
 
         onFx(() -> button("names-style-accept-all").fire());
         awaitFx(() -> !button("names-style-accept-all").isVisible());
 
-        assertThat(glossary.updated()).containsExactly(HALE.accepted());
+        assertThat(glossary.calls()).containsOnlyOnce("acceptSuggested(p1)");
+        assertThat(glossary.updated()).isEmpty();
     }
 
     // IF a run started on unconfirmed suggestions without a word, THEN the person would not know they are only hints;

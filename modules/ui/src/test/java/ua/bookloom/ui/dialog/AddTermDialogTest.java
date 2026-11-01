@@ -11,12 +11,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.ScriptedGlossaryService;
@@ -55,7 +55,8 @@ class AddTermDialogTest extends ShellTestBase {
             ((TextField) required("add-term-target")).setText(target);
             ((ComboBox<TermType>) required("add-term-type")).setValue(type);
             ((ComboBox<Gender>) required("add-term-gender")).setValue(gender);
-            ((ToggleSwitch) required("add-term-lock")).setSelected(locked);
+            ((ComboBox<TargetState>) required("add-term-state"))
+                    .setValue(locked ? TargetState.LOCKED : TargetState.PINNED);
         });
     }
 
@@ -114,8 +115,34 @@ class AddTermDialogTest extends ShellTestBase {
         confirm();
 
         assertThat(isShowing()).isTrue();
-        assertThat(message()).isEqualTo("A locked term needs a target.");
+        assertThat(message()).isEqualTo("A pinned or locked term needs a target.");
         assertThat(glossary.added()).isEmpty();
+    }
+
+    // IF a form the glossary lists were added as a term, THEN one name would be held twice.
+    @Test
+    void addTermDialog_duplicateByForm_isRefused() {
+        openDialogOver(List.of(GlossaryEntry.of("e4", PROJECT, "Велемир", null, TermType.CHARACTER, Gender.MALE, false)
+                .withForms(List.of("Велемира"))));
+        fill("Велемира", "", TermType.CHARACTER, Gender.FEMALE, false);
+
+        confirm();
+
+        assertThat(isShowing()).isTrue();
+        assertThat(message()).isEqualTo("Велемира is already a form of Велемир");
+        assertThat(glossary.added()).isEmpty();
+    }
+
+    // IF the State were not offered as pinned first, THEN a typed target would be locked and never declined.
+    @Test
+    @SuppressWarnings("unchecked")
+    void stateField_opened_offersPinnedThenLockedWithPinnedChosen() {
+        openDialogOver(List.of());
+
+        final ComboBox<TargetState> state = (ComboBox<TargetState>) required("add-term-state");
+
+        assertThat(state.getItems()).containsExactly(TargetState.PINNED, TargetState.LOCKED);
+        assertThat(state.getValue()).isEqualTo(TargetState.PINNED);
     }
 
     // IF Cancel added the term, THEN backing out would not be safe.

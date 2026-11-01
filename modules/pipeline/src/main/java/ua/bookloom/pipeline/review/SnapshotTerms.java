@@ -41,7 +41,8 @@ final class SnapshotTerms {
                         false,
                         null,
                         null,
-                        null))
+                        null,
+                        0))
                 .toList();
     }
 

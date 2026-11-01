@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -166,6 +167,11 @@ class TranslateCommandNamesReviewTest {
         @Override
         public Result<AcceptReport> acceptSuggested(final String projectId) {
             return real.acceptSuggested(projectId);
+        }
+
+        @Override
+        public Result<Map<String, List<TargetIssue>>> reviewFlags(final String projectId) {
+            return real.reviewFlags(projectId);
         }
 
         @Override

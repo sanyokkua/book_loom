@@ -90,6 +90,17 @@ public interface GlossaryService {
     Result<AcceptReport> acceptSuggested(String projectId);
 
     /**
+     * The review flags of the targets the glossary holds (an oblique-looking target, a word count unlike the term's),
+     * computed on each call from the target language's file and never stored, so a changed target or file changes them
+     * at once.
+     *
+     * @param projectId the non-null project id
+     * @return the flags per entry id, only for the entries that carry one; never null, empty when none is flagged or no
+     *     target language is chosen
+     */
+    Result<Map<String, List<TargetIssue>>> reviewFlags(String projectId);
+
+    /**
      * The names the names pass marked for the once-per-name question about a meaning the book plays on, still
      * unanswered ({@link MeaningChoice#PENDING}); the question at Start translation lists them.
      *

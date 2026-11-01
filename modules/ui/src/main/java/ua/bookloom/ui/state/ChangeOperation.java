@@ -19,7 +19,9 @@ public enum ChangeOperation {
     /** The one autonomous pass that prepares both tables; its results hold a Names and a Recurring terms section. */
     AUTO_NAMES(MessageKey.RESULTS_OP_AUTO_NAMES),
     /** "Confirm suggested genders": every suggested character gender became the person's; no model is asked. */
-    CONFIRM_GENDERS(MessageKey.RESULTS_OP_CONFIRM_GENDERS);
+    CONFIRM_GENDERS(MessageKey.RESULTS_OP_CONFIRM_GENDERS),
+    /** Accept all: the suggested targets that pass the target language's checks became the person's; no model. */
+    ACCEPT_TARGETS(MessageKey.RESULTS_OP_ACCEPT_TARGETS);
 
     private final MessageKey label;
 

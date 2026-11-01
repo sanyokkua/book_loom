@@ -207,7 +207,8 @@ class JsonCodecTest {
                 false,
                 "a note " + UK,
                 MeaningChoice.TRANSCRIBE_GLOSS,
-                null);
+                null,
+                2);
     }
 
     private static LexiconEntry lexicon() {

@@ -13,6 +13,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -90,13 +91,13 @@ class NamesStyleSuggestionsTest extends FxTestBase {
     }
 
     @Test
-    void acceptAll_twoSuggestions_storesEachAsThePersonsAndLeavesTheOtherRowAlone() {
-        glossary.willAnswer(Result.ok(HALE.accepted()));
-        glossary.willAnswer(Result.ok(WALES.accepted()));
+    void acceptAll_twoSuggestions_asksTheServiceOnceAndShowsBothAccepted() {
+        glossary.willAnswer(Result.ok(new AcceptReport(List.of(HALE.accepted(), WALES.accepted()), List.of())));
 
         run(vm::acceptAll);
 
-        assertThat(glossary.updated()).containsExactly(HALE.accepted(), WALES.accepted());
+        assertThat(glossary.calls()).containsOnlyOnce("acceptSuggested(p1)");
+        assertThat(glossary.updated()).isEmpty();
         assertThat(onFx(() -> vm.suggestedCount().get())).isZero();
     }
 

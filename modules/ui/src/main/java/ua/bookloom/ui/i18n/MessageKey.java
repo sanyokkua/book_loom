@@ -1860,10 +1860,6 @@ public enum MessageKey {
     /** A type or gender cell's explanation: {0} is the value it shows, whole, {1} the column's explanation. */
     NAMES_STYLE_CHOICE_EXPLAINED("namesStyle.choice.explained"),
     NAMES_STYLE_GENDER_NO_EVIDENCE("namesStyle.gender.noEvidence"),
-    /** Glossary column of the lock switch. */
-    NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
-    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
-    NAMES_STYLE_COLUMN_LOCKED_TIP("namesStyle.column.locked.tip"),
     /** Placeholder of a target field that is empty. */
     NAMES_STYLE_NO_TARGET("namesStyle.noTarget"),
     /** Accessible name of the row's remove action. */
@@ -1956,6 +1952,76 @@ public enum MessageKey {
     NAMES_STYLE_LOCK_NEEDS_TARGET("namesStyle.lockNeedsTarget"),
     /** Refusal of a duplicate term; argument 0 is the typed term. */
     NAMES_STYLE_DUPLICATE("namesStyle.duplicate"),
+    /** Header of the glossary table's Forms column. */
+    NAMES_STYLE_COLUMN_FORMS("namesStyle.column.forms"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_FORMS}. */
+    NAMES_STYLE_COLUMN_FORMS_TIP("namesStyle.column.forms.tip"),
+    /** Hover explanation of a Forms cell: how many forms the entry joins. */
+    NAMES_STYLE_FORMS_JOINED("namesStyle.forms.joined"),
+    /** The Unsure mark of a glossary row whose mentions also fit another name. */
+    NAMES_STYLE_UNSURE("namesStyle.unsure"),
+    /** Hover explanation of the mark labelled by {@link #NAMES_STYLE_UNSURE}. */
+    NAMES_STYLE_UNSURE_TIP("namesStyle.unsure.tip"),
+    /** The chip of a glossary row whose name's meaning is kept as a note. */
+    NAMES_STYLE_MEANING("namesStyle.meaning"),
+    /** Hover explanation of the chip labelled by {@link #NAMES_STYLE_MEANING}; {0} is the meaning. */
+    NAMES_STYLE_MEANING_TIP("namesStyle.meaning.tip"),
+    /** Header of the glossary table's State column. */
+    NAMES_STYLE_COLUMN_STATE("namesStyle.column.state"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_STATE}. */
+    NAMES_STYLE_COLUMN_STATE_TIP("namesStyle.column.state.tip"),
+    /** A target's state: a suggestion nobody accepted. */
+    NAMES_STYLE_STATE_SUGGESTED("namesStyle.state.suggested"),
+    /** A target's state: accepted, and the name may be declined. */
+    NAMES_STYLE_STATE_PINNED("namesStyle.state.pinned"),
+    /** A target's state: this exact text everywhere. */
+    NAMES_STYLE_STATE_LOCKED("namesStyle.state.locked"),
+    /** Origin chip: the person set the value. */
+    NAMES_STYLE_ORIGIN_USER("namesStyle.origin.user"),
+    /** Origin chip: the book proved the value. */
+    NAMES_STYLE_ORIGIN_BOOK("namesStyle.origin.book"),
+    /** Origin chip: a rule of the program set the value. */
+    NAMES_STYLE_ORIGIN_RULE("namesStyle.origin.rule"),
+    /** Origin chip: a guess nobody confirmed. */
+    NAMES_STYLE_ORIGIN_LIKELY("namesStyle.origin.likely"),
+    /** Hover explanation of an origin chip. */
+    NAMES_STYLE_ORIGIN_EXPLAINED("namesStyle.originExplained"),
+    /** A value followed by its origin; {0} the value, {1} the origin. */
+    NAMES_STYLE_WITH_ORIGIN("namesStyle.withOrigin"),
+    /** A likely gender the model gave with low confidence; {0} the gender. */
+    NAMES_STYLE_GENDER_LOW_CONFIDENCE("namesStyle.gender.lowConfidence"),
+    /** A rule's gender the model disagrees with; {0} the rule's, {1} the model's. */
+    NAMES_STYLE_GENDER_RULE_VERSUS_MODEL("namesStyle.gender.ruleVersusModel"),
+    /** Hover explanation of a review flag on a target; {0} the flags. */
+    NAMES_STYLE_FLAG_EXPLAINED("namesStyle.flagExplained"),
+    /** Why a target is refused: a letter the language forbids. */
+    NAMES_STYLE_ISSUE_FORBIDDEN_LETTER("namesStyle.issue.forbiddenLetter"),
+    /** Why a target is refused: a Latin letter. */
+    NAMES_STYLE_ISSUE_LATIN("namesStyle.issue.latin"),
+    /** Why a target is refused: a stress mark. */
+    NAMES_STYLE_ISSUE_STRESS_MARK("namesStyle.issue.stressMark"),
+    /** Why a target is refused: no capital letter. */
+    NAMES_STYLE_ISSUE_CAPITALISATION("namesStyle.issue.capitalisation"),
+    /** Why a target is refused or flagged: another number of words. */
+    NAMES_STYLE_ISSUE_WORD_COUNT("namesStyle.issue.wordCount"),
+    /** Why a target is refused: spelled against a convention the Book Brief stores. */
+    NAMES_STYLE_ISSUE_CONVENTION("namesStyle.issue.convention"),
+    /** Why a target is refused: not a form of the accepted name. */
+    NAMES_STYLE_ISSUE_RESPELLING("namesStyle.issue.respelling"),
+    /** Why a target is flagged: it is not the dictionary form. */
+    NAMES_STYLE_ISSUE_OBLIQUE_ENDING("namesStyle.issue.obliqueEnding"),
+    /** Refusal of a term that is a form of a held entry; {0} the term, {1} the entry. */
+    NAMES_STYLE_DUPLICATE_FORM("namesStyle.duplicateForm"),
+    /** Caption of the Add term dialog's State field. */
+    DIALOG_ADD_TERM_STATE("dialog.addTerm.state"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_STATE}. */
+    DIALOG_ADD_TERM_STATE_TIP("dialog.addTerm.state.tip"),
+    /** Name of the Accept all operation in its results. */
+    RESULTS_OP_ACCEPT_TARGETS("results.op.acceptTargets"),
+    /** Heading of the rows Accept all left suggested; {0} their count. */
+    RESULTS_LEFT("results.left"),
+    /** Badge of a row Accept all left suggested. */
+    PROGRESS_RESULTS_BADGE_LEFT("progress.results.badge.left"),
     /** Why the model scan did not start. */
     NAMES_STYLE_NO_MODEL("namesStyle.noModel"),
     /** Why the model review did not start. */
@@ -2088,10 +2154,6 @@ public enum MessageKey {
     DIALOG_ADD_TERM_GENDER("dialog.addTerm.gender"),
     /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_GENDER}. */
     DIALOG_ADD_TERM_GENDER_TIP("dialog.addTerm.gender.tip"),
-    /** Label of the lock switch. */
-    DIALOG_ADD_TERM_LOCK("dialog.addTerm.lock"),
-    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_LOCK}. */
-    DIALOG_ADD_TERM_LOCK_TIP("dialog.addTerm.lock.tip"),
     /** Button that closes the Add term card without adding. */
     DIALOG_ADD_TERM_CANCEL("dialog.addTerm.cancel"),
     /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_CANCEL}. */

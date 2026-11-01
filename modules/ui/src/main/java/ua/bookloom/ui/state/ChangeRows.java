@@ -55,6 +55,36 @@ final class ChangeRows {
                 ChangeOrigin.MODEL);
     }
 
+    // Accept all changes only a target's state, so its rows show the target with its state.
+    ChangeRow accepted(final EntryChanges.Change<GlossaryEntry> change) {
+        return row(
+                ChangeSection.NAMES,
+                ChangeKind.CHANGED,
+                change.after().term(),
+                stated(change.before()),
+                stated(change.after()),
+                null,
+                ChangeOrigin.MODEL);
+    }
+
+    ChangeRow left(final GlossaryEntry entry, final String reason) {
+        return row(
+                ChangeSection.NAMES,
+                ChangeKind.LEFT,
+                entry.term(),
+                stated(entry),
+                stated(entry),
+                reason,
+                ChangeOrigin.MODEL);
+    }
+
+    private String stated(final GlossaryEntry entry) {
+        return String.join(
+                SEPARATOR,
+                Objects.requireNonNullElse(entry.target(), DASH),
+                GlossaryLabels.state(messages, entry.targetState()));
+    }
+
     ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
         return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin);
     }

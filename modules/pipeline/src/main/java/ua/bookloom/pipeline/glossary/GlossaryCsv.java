@@ -254,7 +254,8 @@ public final class GlossaryCsv {
                 row.gender() == Gender.UNKNOWN && existing.noGenderEvidence(),
                 existing.meaning(),
                 existing.meaningChoice(),
-                existing.knowledge());
+                existing.knowledge(),
+                existing.unsureMentions());
         logOrigin(existing, result);
         return result;
     }

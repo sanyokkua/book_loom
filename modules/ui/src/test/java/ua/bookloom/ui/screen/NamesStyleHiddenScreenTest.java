@@ -119,7 +119,7 @@ class NamesStyleHiddenScreenTest extends NamesStyleAutoScreenTestBase {
     @ValueSource(
             strings = {
                 "names-style-table|.text-field",
-                "names-style-table|.toggle-switch",
+                "names-style-table|.glossary-choice",
                 "names-style-table|.glossary-remove",
                 "names-style-table|.glossary-accept",
                 "recurring-table|.text-field",

@@ -23,6 +23,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
@@ -42,6 +43,7 @@ class GlossaryServiceAcceptTest {
 
     private GlossaryService service;
     private GlossaryRepository repository;
+    private ProjectRepository injectorProjects;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +53,8 @@ class GlossaryServiceAcceptTest {
                 binder -> binder.bind(Clock.class).toInstance(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC)));
         service = injector.getInstance(GlossaryServiceImpl.class);
         repository = injector.getInstance(GlossaryRepository.class);
-        injector.getInstance(ProjectRepository.class).save(project(withTarget(BookBrief.defaults("en"), "uk")));
+        injectorProjects = injector.getInstance(ProjectRepository.class);
+        injectorProjects.save(project(withTarget(BookBrief.defaults("en"), "uk")));
         injector.getInstance(OpenProjects.class)
                 .put(PROJECT, book(List.of("Hale and Velk met Valdor by the ZX-81 near Zotov's door."), "Title"));
     }
@@ -79,8 +82,8 @@ class GlossaryServiceAcceptTest {
                         tuple("ZX-81", "ZX-81", TargetState.LOCKED),
                         tuple("Zotov", "Зотов", TargetState.PINNED));
         assertThat(report.rejected())
-                .extracting(rejected -> rejected.entry().term(), AcceptReport.Rejected::reasons)
-                .containsExactly(tuple("Valdor", List.of("not the dictionary form")));
+                .extracting(rejected -> rejected.entry().term(), AcceptReport.Rejected::issues)
+                .containsExactly(tuple("Valdor", List.of(TargetIssue.OBLIQUE_ENDING)));
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::targetState, GlossaryEntry::targetOrigin)
                 .contains(
@@ -88,6 +91,48 @@ class GlossaryServiceAcceptTest {
                         tuple("Valdor", TargetState.SUGGESTED, Origin.LIKELY))
                 .contains(tuple("Mirel", chosen.targetState(), chosen.targetOrigin()))
                 .contains(tuple("Orrin", open.targetState(), open.targetOrigin()));
+    }
+
+    // Undo all of an Accept all writes each row back as it was before: the store keeps the suggestion it is given.
+    @Test
+    void update_acceptedRowWrittenBack_isSuggestedAgain() {
+        suggest("Hale", "Гейл", TermType.CHARACTER);
+        final GlossaryEntry before =
+                Objects.requireNonNull(repository.all(PROJECT).data()).getFirst();
+        service.acceptSuggested(PROJECT);
+
+        final Result<GlossaryEntry> undone = service.update(before);
+
+        assertThat(undone.isOk()).as("%s", undone.error()).isTrue();
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::targetState, GlossaryEntry::targetOrigin)
+                .containsExactly(tuple("Гейл", TargetState.SUGGESTED, Origin.LIKELY));
+    }
+
+    // The flags are computed on each call: an oblique-looking target and a lost word are flagged in any state, a clean
+    // target and a row with no target are not.
+    @Test
+    void reviewFlags_heldTargets_flagsObliqueAndWordCountOnly() {
+        suggest("Valdor", "Валдором", TermType.CHARACTER);
+        repository.add(entry("Varno City", "Варно", TermType.PLACE, false));
+        repository.add(entry("Hale", "Гейл", TermType.CHARACTER, false));
+        repository.add(entry("Orrin", null, TermType.CHARACTER, false));
+
+        final Result<Map<String, List<TargetIssue>>> flags = service.reviewFlags(PROJECT);
+
+        assertThat(flags.isOk()).as("%s", flags.error()).isTrue();
+        assertThat(flags.data())
+                .containsExactlyInAnyOrderEntriesOf(Map.of(
+                        GlossaryIds.of(PROJECT, "Valdor"), List.of(TargetIssue.OBLIQUE_ENDING),
+                        GlossaryIds.of(PROJECT, "Varno City"), List.of(TargetIssue.WORD_COUNT_DIFFERS)));
+    }
+
+    @Test
+    void reviewFlags_noTargetLanguage_isEmpty() {
+        injectorProjects.save(project(BookBrief.defaults("en")));
+        suggest("Valdor", "Валдором", TermType.CHARACTER);
+
+        assertThat(service.reviewFlags(PROJECT).data()).isEmpty();
     }
 
     @Test

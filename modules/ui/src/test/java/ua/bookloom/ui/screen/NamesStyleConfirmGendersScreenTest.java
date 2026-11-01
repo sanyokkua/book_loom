@@ -57,7 +57,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         assertThat(button(CONFIRM).isVisible()).isFalse();
     }
 
-    // IF the press stored nothing, THEN the (suggested) mark would stay and the run would still not hold the gender.
+    // IF the press stored nothing, THEN the likely origin would stay and the run would still not hold the gender.
     @Test
     void press_suggestedGendersStand_storesThemAsThePersonsAndTheMarkGoes() throws Exception {
         showGlossary(ANNE, BORIS, CARL);
@@ -70,7 +70,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::genderOrigin)
                 .containsExactly(Origin.USER, Origin.USER);
-        awaitFx(() -> genderLabels().stream().noneMatch(label -> label.contains("(suggested)")));
+        awaitFx(() -> genderLabels().stream().noneMatch(label -> label.endsWith("· likely")));
         awaitFx(() -> !button(CONFIRM).isVisible());
     }
 
@@ -89,7 +89,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> button("results-undo-all").isDisabled());
         awaitFx(() -> genderLabels().stream()
-                        .filter(label -> label.contains("(suggested)"))
+                        .filter(label -> label.endsWith("· likely"))
                         .count()
                 == 2);
         assertThat(button(CONFIRM).isVisible()).isTrue();
@@ -126,7 +126,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("results-undo-all").fire());
 
         awaitFx(() -> genderLabels().stream()
-                        .filter(label -> label.contains("(припущення)"))
+                        .filter(label -> label.endsWith("· ймовірно"))
                         .count()
                 == 2);
     }

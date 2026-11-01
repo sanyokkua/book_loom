@@ -38,7 +38,8 @@ class GlossaryEntryKnowledgeTest {
                 false,
                 null,
                 null,
-                known);
+                known,
+                0);
     }
 
     @Test

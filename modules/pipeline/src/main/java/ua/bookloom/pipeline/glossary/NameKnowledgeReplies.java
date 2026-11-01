@@ -140,7 +140,8 @@ final class NameKnowledgeReplies {
                 entry.noGenderEvidence(),
                 entry.meaning(),
                 entry.meaningChoice(),
-                known);
+                known,
+                entry.unsureMentions());
     }
 
     private static Iterable<JsonNode> items(final ObjectMapper mapper, final String reply) {

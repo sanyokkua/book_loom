@@ -87,7 +87,8 @@ public final class ProjectCopies {
                     entry.noGenderEvidence(),
                     entry.meaning(),
                     entry.meaningChoice(),
-                    entry.knowledge()));
+                    entry.knowledge(),
+                    entry.unsureMentions()));
             if (added.isErr()) {
                 return Result.err(failure(added));
             }

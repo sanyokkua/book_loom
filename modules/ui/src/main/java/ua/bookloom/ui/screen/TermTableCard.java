@@ -118,7 +118,7 @@ final class TermTableCard<R> extends VBox {
      * @param importFile reads the chosen file
      * @param exportFile writes the chosen file
      * @param exportName the file name the save dialog starts with
-     * @param extra a button that only this card carries, shown before the changed filter, or {@code null}
+     * @param extra a button that only this card carries, shown right after Review, or {@code null}
      * @param frozen whether the screen is read-only because work in the background writes to it; the editing actions
      *     of the toolbar follow it
      */
@@ -283,7 +283,7 @@ final class TermTableCard<R> extends VBox {
         scan = model.scan();
         row.getChildren().addAll(model.buttons());
         if (bar.extra() != null) {
-            row.getChildren().add(bar.extra());
+            row.getChildren().add(row.getChildren().indexOf(model.review()) + 1, bar.extra());
         }
         row.getChildren()
                 .addAll(ChangedMarks.filter(messages, id + "-changed-filter", marks), importButton, exportButton, more);

@@ -71,6 +71,32 @@ final class ChangeLog {
     }
 
     /**
+     * Publishes what Accept all did: the rows it accepted, each to be put back, then the rows it left suggested with
+     * their reasons, which have nothing to put back.
+     *
+     * @param accepted the accepted rows as changes from their suggested state
+     * @param left the rows left suggested, with the reason worded for the person
+     */
+    void acceptance(final EntryChanges<GlossaryEntry> accepted, final List<Left> left) {
+        final ChangeRows rows = new ChangeRows(messages);
+        final List<ChangeResults.Item> items = new ArrayList<>();
+        accepted.changed().forEach(change -> {
+            items.add(new ChangeResults.Item(rows.accepted(change), reverts.setNameBack(change)));
+            marks.glossary().mark(change.after().id());
+        });
+        left.forEach(each -> items.add(new ChangeResults.Item(rows.left(each.entry(), each.reason()), done -> {})));
+        publish(ChangeOperation.ACCEPT_TARGETS, items);
+    }
+
+    /**
+     * A row an operation left as it was.
+     *
+     * @param entry the row as it stays
+     * @param reason why, in the display language
+     */
+    record Left(GlossaryEntry entry, String reason) {}
+
+    /**
      * Publishes the changes of a recurring-terms operation.
      *
      * @param operation the operation
@@ -165,7 +191,9 @@ final class ChangeLog {
 
     // The line that announced the operation is no longer true once every row it changed is put back, so it says so.
     private void followUndo(final ChangeResults published) {
-        final int changed = published.rows().size();
+        final int changed = (int) published.rows().stream()
+                .filter(row -> row.kind().isRevertible())
+                .count();
         if (changed == 0) {
             return;
         }

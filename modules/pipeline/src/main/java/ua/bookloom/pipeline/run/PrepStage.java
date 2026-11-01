@@ -22,6 +22,7 @@ import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.PronounGender;
+import ua.bookloom.pipeline.glossary.UnsureMarks;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -143,6 +144,7 @@ public final class PrepStage {
                 .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
                 .map(proposals -> PronounGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
                 .map(proposals -> DeclensionGender.seeded(proposals, index.visibleTexts(index.story()), sourceLanguage))
+                .map(proposals -> UnsureMarks.marked(proposals, index.visibleTexts(index.story()), sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added, added));
     }

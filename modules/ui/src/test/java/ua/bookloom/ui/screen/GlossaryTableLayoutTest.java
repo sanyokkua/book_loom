@@ -76,6 +76,25 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
                 .allSatisfy(offset -> assertThat(offset).isCloseTo(ROW_CENTRE, within(ONE_PIXEL)));
     }
 
+    // IF a column could be dragged narrower than its header and a typical value, THEN its content would vanish.
+    @Test
+    void glossaryColumns_minimumWidths_holdTheHeaderAndAValue() throws Exception {
+        showGlossary(List.of(VICTOR));
+
+        assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
+                        .map(column -> column.getMinWidth())
+                        .toList()))
+                .satisfiesExactly(
+                        term -> assertThat(term).isGreaterThanOrEqualTo(140),
+                        kind -> assertThat(kind).isGreaterThanOrEqualTo(96),
+                        forms -> assertThat(forms).isGreaterThanOrEqualTo(140),
+                        target -> assertThat(target).isGreaterThanOrEqualTo(170),
+                        state -> assertThat(state).isGreaterThanOrEqualTo(96),
+                        gender -> assertThat(gender).isGreaterThanOrEqualTo(110),
+                        remove -> assertThat(remove).isGreaterThanOrEqualTo(36));
+        assertThat(ThemeTestSupport.onFx(() -> table().getFixedCellSize())).isEqualTo(46);
+    }
+
     // IF an empty table drew nothing, THEN a person would not know whether the scan is pending or found nothing.
     @Test
     void table_withNoNames_saysSoAndHowToAddSome() throws Exception {

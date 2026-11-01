@@ -11,9 +11,12 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.text.Text;
 import lombok.AccessLevel;
@@ -123,7 +126,7 @@ public final class FitProbe {
                     + Math.round(Math.min(viewportRight, cardRight)));
             return;
         }
-        if (node instanceof TextInputControl || node instanceof VirtualFlow<?>) {
+        if (node instanceof TextInputControl || node instanceof VirtualFlow<?> || isScrolledHeader(node)) {
             return;
         }
         final double card = node.getStyleClass().contains("card") ? Math.min(cardRight, box.getMaxX()) : cardRight;
@@ -151,6 +154,25 @@ public final class FitProbe {
         final double right = Math.min(
                 viewportRight, viewport.localToScene(viewport.getLayoutBounds()).getMaxX());
         overflow(content, right, cardRight, found);
+    }
+
+    // A table whose columns' minimum widths are wider than the table scrolls across, its header with its rows: a header
+    // label past the table's edge is reached with the scroll bar, like the cells the virtual flow already holds.
+    private static boolean isScrolledHeader(final Node node) {
+        if (!(node instanceof TableHeaderRow)) {
+            return false;
+        }
+        Parent table = node.getParent();
+        while (table != null && !(table instanceof TableView<?>)) {
+            table = table.getParent();
+        }
+        if (!(table instanceof TableView<?> view)) {
+            return false;
+        }
+        final double columns = view.getVisibleLeafColumns().stream()
+                .mapToDouble(TableColumnBase::getMinWidth)
+                .sum();
+        return columns > view.getWidth() - view.snappedLeftInset() - view.snappedRightInset();
     }
 
     // A closed fold keeps its content laid out at full size under a clip of no height; nothing in it is shown.

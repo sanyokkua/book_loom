@@ -62,7 +62,8 @@ class NamesTranslationTest {
                 false,
                 null,
                 null,
-                null);
+                null,
+                0);
     }
 
     private GlossaryEntry entryOf(final String term) {

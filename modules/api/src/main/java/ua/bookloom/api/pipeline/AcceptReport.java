@@ -23,14 +23,14 @@ public record AcceptReport(List<GlossaryEntry> accepted, List<Rejected> rejected
      * A suggested target Accept all left out.
      *
      * @param entry the entry as it stays, still suggested
-     * @param reasons why, in words the person reads ({@code not the dictionary form}); never null or empty
+     * @param issues why, each once, refusals before review flags; never null or empty
      */
-    public record Rejected(GlossaryEntry entry, List<String> reasons) {
+    public record Rejected(GlossaryEntry entry, List<TargetIssue> issues) {
 
-        /** Validates the entry and copies the reasons. */
+        /** Validates the entry and copies the issues. */
         public Rejected {
             Objects.requireNonNull(entry, "entry");
-            reasons = List.copyOf(Objects.requireNonNull(reasons, "reasons"));
+            issues = List.copyOf(Objects.requireNonNull(issues, "issues"));
         }
     }
 

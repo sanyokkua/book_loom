@@ -43,8 +43,11 @@ public record ScanProposals(List<GlossaryEntry> entries, Set<String> readingOnly
             final BookSlice story, @Nullable final String language, @Nullable final QualityDial dial) {
         Objects.requireNonNull(story, "story");
         final List<String> texts = story.visibleTexts();
-        final List<GlossaryEntry> seeded = DeclensionGender.seeded(
-                PronounGender.seeded(GivenNames.seeded(entries, language), texts, language), texts, language);
+        final List<GlossaryEntry> seeded = UnsureMarks.marked(
+                DeclensionGender.seeded(
+                        PronounGender.seeded(GivenNames.seeded(entries, language), texts, language), texts, language),
+                texts,
+                language);
         if (readingOnly.isEmpty()) {
             return seeded;
         }

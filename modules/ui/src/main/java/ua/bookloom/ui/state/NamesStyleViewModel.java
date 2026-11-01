@@ -20,6 +20,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -29,9 +30,11 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.NamesPass;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
@@ -61,6 +64,8 @@ public final class NamesStyleViewModel {
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
     private final GenderConfirmations genderConfirmations;
+    private final TargetAcceptances acceptances;
+    private final ReviewFlagsMirror flags;
     private final GlossaryAdditions additions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
@@ -70,18 +75,9 @@ public final class NamesStyleViewModel {
     private final Openings openings = new Openings();
 
     /**
-     * Receives the collaborators the injector owns.
-     *
-     * @param glossary the port the glossary is read and edited through
-     * @param lexicon the port the recurring terms are read and edited through
-     * @param namesPass the port that prepares both tables in one pass
-     * @param capabilities where the chosen model's context length is detected for that pass
-     * @param models where the model of a model scan is built
-     * @param settings where the chosen provider and model are read
-     * @param executor the daemon executor every call runs on, never the FX thread
-     * @param messages the catalogue the refusals are worded from
-     * @param activities the model work under way, which the model scan and review must not overlap
-     * @param measured the seconds per call measured on the chosen model, read for and stored by the names pass
+     * Receives the collaborators the injector owns: every call runs on the daemon {@code executor}, never the FX thread;
+     * {@code activities} is the model work the scan and review must not overlap; {@code measured} holds the seconds per
+     * call measured on the chosen model, read for and stored by the names pass.
      */
     @Inject
     public NamesStyleViewModel(
@@ -168,6 +164,8 @@ public final class NamesStyleViewModel {
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
         this.genderConfirmations =
                 new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
+        this.acceptances = new TargetAcceptances(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
+        this.flags = new ReviewFlagsMirror(glossary, calls, rows, () -> projectId);
         rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
                 (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
     }
@@ -245,11 +243,7 @@ public final class NamesStyleViewModel {
         return restorations.getReadOnlyProperty();
     }
 
-    /**
-     * Loads a project's glossary and, when it is empty, runs the deterministic scan.
-     *
-     * @param project the stored project whose glossary is shown
-     */
+    /** Loads the stored project's glossary and, when it is empty, runs the deterministic scan. */
     public void show(final String project) {
         Objects.requireNonNull(project, "project");
         final boolean sameProject = project.equals(projectId);
@@ -280,9 +274,10 @@ public final class NamesStyleViewModel {
                 openings.whileCurrent());
     }
 
-    /** Locks or unlocks a row's term. */
-    public void setLocked(final String entryId, final boolean locked) {
-        edits.change(entryId, "locked", held -> GlossaryEdits.locked(held, locked), openings.whileCurrent());
+    /** Sets a row's State, which makes its target the person's; a row with no target is refused. */
+    public void setState(final String entryId, final TargetState state) {
+        Objects.requireNonNull(state, "state");
+        edits.state(entryId, state, openings.whileCurrent());
     }
 
     /** Sets a row's type. */
@@ -371,14 +366,19 @@ public final class NamesStyleViewModel {
         edits.change(entryId, "accept", GlossaryEntry::accepted, openings.whileCurrent());
     }
 
-    /** Confirms every row's suggested target, each as {@link #accept(String)} would. */
+    /** Accepts every suggested target that passes the target language's checks; the results list the rest. */
     public void acceptAll() {
-        final List<String> suggested = rows.stream()
-                .filter(GlossaryEntry::isSuggested)
-                .map(GlossaryEntry::id)
-                .toList();
-        log.info("accepting {} suggested targets of project {}", suggested.size(), projectId);
-        suggested.forEach(this::accept);
+        acceptances.acceptAll();
+    }
+
+    /** {@return the review flags of the shown rows by entry id, computed by the service and never stored} */
+    public ObservableMap<String, List<TargetIssue>> reviewFlags() {
+        return flags.flags();
+    }
+
+    /** {@return a read-only count of the times the review flags were read again, which only ever grows} */
+    public ReadOnlyIntegerProperty reviewFlagRefreshes() {
+        return flags.refreshes();
     }
 
     /** {@return a read-only count of the rows that hold a suggested target nobody confirmed} */

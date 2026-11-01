@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.AcceptReport;
+import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.pipeline.glossary.LockRule.Decision;
@@ -140,23 +141,23 @@ final class SuggestionAcceptance {
                 accepted.add(each.after());
                 continue;
             }
-            rejected.add(new AcceptReport.Rejected(each.after(), reasonsOf(verdict)));
+            rejected.add(new AcceptReport.Rejected(each.after(), issuesOf(verdict)));
             verdict.rejections().forEach(reason -> refusals.merge(reason, 1, Integer::sum));
             verdict.flags().forEach(flag -> flags.merge(flag, 1, Integer::sum));
             log.trace(
                     "Accept suggested left '{}' -> '{}': {}",
                     each.after().term(),
                     each.after().target(),
-                    verdict.reasons());
+                    issuesOf(verdict));
         }
         log.info("Accept suggested project={} accepted={} rejected={}", projectId, accepted.size(), rejected.size());
         log.debug("Accept suggested project={} refusals={} flags={}", projectId, refusals, flags);
         return new AcceptReport(accepted, rejected);
     }
 
-    // A target that is nothing but marks is left blank by the cleaning: it is no target to accept.
-    private static List<String> reasonsOf(final Verdict verdict) {
-        final List<String> reasons = verdict.reasons();
-        return reasons.isEmpty() ? List.of("no target left after the stress marks") : reasons;
+    // A target that is nothing but marks is left blank by the cleaning: it is no target to accept, for its marks.
+    private static List<TargetIssue> issuesOf(final Verdict verdict) {
+        final List<TargetIssue> issues = TargetIssues.of(verdict);
+        return issues.isEmpty() ? List.of(TargetIssue.STRESS_MARK) : issues;
     }
 }
