@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -128,36 +129,33 @@ class DialogFitTest extends ShellTestBase {
     // Rows with a field to type a target in, a reason and an untargeted heading: the widest row the card draws.
     private static void showResults(final DialogFitTest test) {
         final ModalHost host = test.injector.getInstance(ModalHost.class);
-        final ChangeRow without = new ChangeRow(
-                1,
-                ChangeKind.UNTARGETED,
-                "Brightwater",
-                "No target · character · female (suggested)",
-                "—",
-                null,
-                ChangeOrigin.MODEL,
-                ChangeSection.NAMES,
-                new EditableTarget("e1", "", "character · female (suggested)"));
-        final ChangeRow added = new ChangeRow(
-                0,
-                ChangeKind.ADDED,
-                "Frankenstein",
-                "—",
-                "Франкенштейн · character · male",
-                "found twice in chapter one",
-                ChangeOrigin.MODEL,
-                ChangeSection.NAMES,
-                new EditableTarget("e2", "Франкенштейн", "character · male"));
         final ChangeResults results = new ChangeResults(
                 ChangeOperation.NAME_REVIEW,
                 false,
-                List.of(new ChangeResults.Item(added, done -> done.accept(true))),
+                List.of(new ChangeResults.Item(
+                        editableRow(0, ChangeKind.ADDED, "Frankenstein", "Франкенштейн", "found twice in chapter one"),
+                        done -> done.accept(true))),
                 LiveCalls.EMPTY,
-                List.of(without));
+                List.of(editableRow(1, ChangeKind.UNTARGETED, "Brightwater", "", null)));
         host.show(
                 ProgressDialog.results(
                         new ResultsView(results, () -> {}, host::hide), test.injector.getInstance(Messages.class)),
                 false);
+    }
+
+    private static ChangeRow editableRow(
+            final long id, final ChangeKind kind, final String term, final String target, final @Nullable String why) {
+        final String rest = "character · female (suggested)";
+        return new ChangeRow(
+                id,
+                kind,
+                term,
+                "—",
+                target + " · " + rest,
+                why,
+                ChangeOrigin.MODEL,
+                ChangeSection.NAMES,
+                new EditableTarget("e" + id, target, rest));
     }
 
     private static void askRename(final DialogFitTest test) {

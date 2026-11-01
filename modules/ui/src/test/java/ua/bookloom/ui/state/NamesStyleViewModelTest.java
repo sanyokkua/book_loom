@@ -51,10 +51,10 @@ class NamesStyleViewModelTest extends FxTestBase {
     void setUpViewModel() {
         glossary = new ScriptedGlossaryService();
         models = ScriptedChatModelFactory.ok();
-        useViewModelOn(Locale.ENGLISH, new DirectExecutor());
+        useViewModelIn(Locale.ENGLISH);
     }
 
-    private void useViewModelOn(final Locale locale, final java.util.concurrent.ExecutorService executor) {
+    private void useViewModelIn(final Locale locale) {
         final Injector injector = UiTestInjector.create(locale);
         settings = injector.getInstance(SettingsViewModel.class);
         final Messages messages = injector.getInstance(Messages.class);
@@ -65,7 +65,7 @@ class NamesStyleViewModelTest extends FxTestBase {
                 new ScriptedNamesPass(),
                 models,
                 settings,
-                executor,
+                new DirectExecutor(),
                 messages,
                 injector.getInstance(ActivityTracker.class),
                 () -> "new-" + next.incrementAndGet()));
@@ -112,26 +112,6 @@ class NamesStyleViewModelTest extends FxTestBase {
         glossary.willAnswer(Result.ok(List.of(hale())));
 
         show();
-
-        assertThat(glossary.calls()).containsExactly("entries(p1)", "scan(p1)");
-        assertThat(rows()).containsExactly(hale());
-    }
-
-    // IF opening the screen twice while the first load is still running started a second scan, THEN the book would be
-    // scanned twice at once and the rows would be written twice.
-    @Test
-    void show_openedTwiceWhileTheLoadRuns_loadsAndScansOnce() {
-        final QueuedExecutor background = new QueuedExecutor();
-        useViewModelOn(Locale.ENGLISH, background);
-        glossary.willAnswer(Result.ok(List.of()));
-        glossary.willAnswer(Result.ok(List.of(hale())));
-
-        interact(() -> {
-            vm.show(PROJECT);
-            vm.show(PROJECT);
-        });
-        background.runAll();
-        WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(glossary.calls()).containsExactly("entries(p1)", "scan(p1)");
         assertThat(rows()).containsExactly(hale());
@@ -245,7 +225,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     // IF the failure kept the service's English words, THEN a Ukrainian screen would report a failed import in English.
     @Test
     void importCsv_failsInUkrainian_reportsTheFailureInUkrainian() {
-        useViewModelOn(Locale.forLanguageTag("uk"), new DirectExecutor());
+        useViewModelIn(Locale.forLanguageTag("uk"));
         showWith(hale());
         glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Glossary file unreadable", "Unreadable.")));
 

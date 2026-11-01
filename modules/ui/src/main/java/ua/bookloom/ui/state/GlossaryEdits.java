@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Origin;
@@ -20,8 +19,9 @@ import ua.bookloom.api.project.TermType;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryEdits {
 
-    static GlossaryEntry target(final GlossaryEntry held, final @Nullable String target) {
-        return held.withTarget(target);
+    // Typed text becomes the target; blank text clears it.
+    static GlossaryEntry target(final GlossaryEntry held, final String text) {
+        return held.withTarget(text.isBlank() ? null : text.strip());
     }
 
     // Choosing a State makes the target the person's: pinned accepts a suggestion or unlocks, locked locks.

@@ -165,28 +165,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
                 ChangeOperation.NAME_REVIEW,
                 false,
                 List.of(
-                        new ChangeResults.Item(
-                                new ChangeRow(
-                                        0,
-                                        ChangeKind.REMOVED,
-                                        "Hale",
-                                        "No target · other",
-                                        "—",
-                                        "not a name",
-                                        ChangeOrigin.MODEL,
-                                        ChangeSection.NAMES),
-                                done -> done.accept(true)),
-                        new ChangeResults.Item(
-                                new ChangeRow(
-                                        1,
-                                        ChangeKind.CHANGED,
-                                        "Well",
-                                        "No target · other",
-                                        "No target · character",
-                                        null,
-                                        ChangeOrigin.MODEL,
-                                        ChangeSection.NAMES),
-                                done -> done.accept(true))),
+                        sampleItem(0, ChangeKind.REMOVED, "Hale", "—", "not a name"),
+                        sampleItem(1, ChangeKind.CHANGED, "Well", "No target · character", null)),
                 LiveCalls.EMPTY,
                 List.of(new ChangeRow(
                         2,
@@ -198,6 +178,13 @@ abstract class ConformanceTestBase extends ShellTestBase {
                         ChangeOrigin.MODEL,
                         ChangeSection.NAMES,
                         new EditableTarget("e3", "", "character"))));
+    }
+
+    private static ChangeResults.Item sampleItem(
+            final long id, final ChangeKind kind, final String term, final String after, final @Nullable String why) {
+        return new ChangeResults.Item(
+                new ChangeRow(id, kind, term, "No target · other", after, why, ChangeOrigin.MODEL, ChangeSection.NAMES),
+                done -> done.accept(true));
     }
 
     // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.

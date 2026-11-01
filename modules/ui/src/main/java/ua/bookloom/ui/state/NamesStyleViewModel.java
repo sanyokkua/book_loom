@@ -72,9 +72,7 @@ public final class NamesStyleViewModel {
     private final ResultsReview review = new ResultsReview();
     private final AutoEstimate autoEstimate;
     private String projectId = "";
-    // The project whose load (and, for an empty glossary, scan) is still running: opening the screen again meanwhile
-    // joins it instead of starting a second scan.
-    private @Nullable String loading;
+    private final InFlight loads = new InFlight();
     private final Openings openings = new Openings();
 
     /**
@@ -250,11 +248,9 @@ public final class NamesStyleViewModel {
     public void show(final String project) {
         Objects.requireNonNull(project, "project");
         final boolean sameProject = project.equals(projectId);
-        if (project.equals(loading)) {
-            log.debug("the glossary of project {} is already loading: joining it", project);
+        if (!loads.begin(project)) {
             return;
         }
-        loading = project;
         projectId = project;
         final long ticket = openings.begin();
         log.debug("showing the glossary of project {} (opening {})", project, ticket);
@@ -266,9 +262,7 @@ public final class NamesStyleViewModel {
         }
         recurring.show(project);
         calls.run("load", () -> GlossaryLoad.loadOrScan(glossary, project), answer -> {
-            if (project.equals(loading)) {
-                loading = null;
-            }
+            loads.end(project);
             openings.ifCurrent(ticket, () -> edits.loaded(answer));
         });
         refreshAutoEstimate();
@@ -277,11 +271,7 @@ public final class NamesStyleViewModel {
     /** Sets a row's target; a blank {@code text} clears it. */
     public void setTarget(final String entryId, final String text) {
         Objects.requireNonNull(text, "text");
-        edits.change(
-                entryId,
-                "target",
-                held -> GlossaryEdits.target(held, text.isBlank() ? null : text.strip()),
-                openings.whileCurrent());
+        edits.change(entryId, "target", held -> GlossaryEdits.target(held, text), openings.whileCurrent());
     }
 
     /** Sets a row's State, which makes its target the person's; a row with no target is refused. */
