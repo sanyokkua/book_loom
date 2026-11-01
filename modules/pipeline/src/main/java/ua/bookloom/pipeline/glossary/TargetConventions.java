@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.BriefChoices;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
@@ -52,22 +53,16 @@ final class TargetConventions {
     static TargetConventions of(final String targetLanguage, final Map<String, String> chosen) {
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         Objects.requireNonNull(chosen, "chosen");
-        final LanguageRules rules = LanguageRules.bundled();
         final List<Convention> declared = new ArrayList<>();
-        for (final String name : rules.wordsOf(targetLanguage, "conventions")) {
-            final List<String> choices = rules.wordsOf(targetLanguage, "convention." + name + ".choices").stream()
-                    .map(letter -> letter.toLowerCase(Locale.ROOT))
-                    .toList();
-            final List<String> fallback = rules.wordsOf(targetLanguage, "convention." + name + ".default");
-            if (choices.size() < 2 || fallback.isEmpty()) {
-                log.warn("Convention {} of {} names no two choices and a default and is ignored", name, targetLanguage);
-                continue;
-            }
-            final String stored = chosen.get(name);
+        for (final BriefChoices.DeclaredConvention convention :
+                LanguageRules.bundled().briefChoices(targetLanguage).conventions()) {
+            final String stored = chosen.get(convention.key());
             declared.add(new Convention(
-                    name,
-                    choices,
-                    fallback.getFirst().toLowerCase(Locale.ROOT),
+                    convention.key(),
+                    convention.choices().stream()
+                            .map(letter -> letter.toLowerCase(Locale.ROOT))
+                            .toList(),
+                    convention.fallback().toLowerCase(Locale.ROOT),
                     stored == null ? null : stored.toLowerCase(Locale.ROOT)));
         }
         log.debug("Target conventions language={} declared={} chosen={}", targetLanguage, declared.size(), chosen);

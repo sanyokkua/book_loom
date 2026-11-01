@@ -50,6 +50,7 @@ public final class BookBriefViewModel {
     private final BriefLanguageFlags flags;
     private final NarratorNotice narratorNotice;
     private final StyleSuggestion style;
+    private final BriefPolicyKeys policyKeys;
 
     /**
      * Follows the open book's brief.
@@ -76,8 +77,9 @@ public final class BookBriefViewModel {
                 Objects.requireNonNull(projects, "projects"),
                 Objects.requireNonNull(executor, "executor"),
                 Objects.requireNonNull(outcomes, "outcomes"));
-        project.brief().addListener((observed, was, now) -> flags.derive(now));
-        flags.derive(project.brief().get());
+        this.policyKeys = new BriefPolicyKeys(languages, this::change);
+        project.brief().addListener((observed, was, now) -> derive(now));
+        derive(project.brief().get());
         this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
@@ -247,21 +249,13 @@ public final class BookBriefViewModel {
                 brief -> BriefRebuild.of(brief, register, null, null, null, null, null, null));
     }
 
-    /**
-     * Sets how character and place names are rendered.
-     *
-     * @param names the name policy
-     */
+    /** Sets how character and place names are rendered. */
     public void setNames(final NamePolicy names) {
         Objects.requireNonNull(names, "names");
         change("name policy", names.name(), brief -> BriefRebuild.of(brief, null, names, null, null, null, null, null));
     }
 
-    /**
-     * Sets how foreign-language passages are handled.
-     *
-     * @param foreign the foreign-passage policy
-     */
+    /** Sets how foreign-language passages are handled. */
     public void setForeignPassages(final ForeignPassagePolicy foreign) {
         Objects.requireNonNull(foreign, "foreign");
         change(
@@ -270,11 +264,7 @@ public final class BookBriefViewModel {
                 brief -> BriefRebuild.of(brief, null, null, foreign, null, null, null, null));
     }
 
-    /**
-     * Sets how footnotes are handled.
-     *
-     * @param footnotes the footnote policy
-     */
+    /** Sets how footnotes are handled. */
     public void setFootnotes(final FootnotePolicy footnotes) {
         Objects.requireNonNull(footnotes, "footnotes");
         change(
@@ -283,11 +273,7 @@ public final class BookBriefViewModel {
                 brief -> BriefRebuild.of(brief, null, null, null, footnotes, null, null, null));
     }
 
-    /**
-     * Sets how units of measurement are handled.
-     *
-     * @param units the unit policy
-     */
+    /** Sets how units of measurement are handled. */
     public void setUnits(final UnitPolicy units) {
         Objects.requireNonNull(units, "units");
         change("unit policy", units.name(), brief -> BriefRebuild.of(brief, null, null, null, null, units, null, null));
@@ -387,6 +373,16 @@ public final class BookBriefViewModel {
         }
         project.replaceBrief(changed);
         saver.enqueue(book.projectId(), changed);
+    }
+
+    private void derive(final @Nullable BookBrief brief) {
+        flags.derive(brief);
+        policyKeys.derive(brief);
+    }
+
+    /** The apostrophe, quotation-mark, address and convention choices the target offers, and their setters. */
+    public BriefPolicyKeys policyKeys() {
+        return policyKeys;
     }
 
     /**

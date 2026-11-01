@@ -309,9 +309,9 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(isShown("brief-evidence-register")).isFalse();
     }
 
-    // IF a gender the model proved looked like the person's own choice, THEN nobody would know to check it.
+    // IF a gender the book proved looked like the person's own choice, THEN nobody would know to check it.
     @Test
-    void suggestStyle_provenNarratorGender_isShownAsSuggestedUntilThePersonChangesIt() throws TimeoutException {
+    void suggestStyle_provenNarratorGender_isShownFromTheBookUntilThePersonChangesIt() throws TimeoutException {
         openFrankensteinThenShowBrief();
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b"));
         onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
@@ -329,16 +329,16 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
                                         FieldEvidence.Basis.PASSAGES, List.of("Hold on tight, Ray"), 1, 2)))));
 
         fillInAndApply();
-        awaitFx(() -> isShown("brief-tone-narrator-gender-suggested"));
+        awaitFx(() -> isShown("brief-tone-narrator-gender-origin"));
 
-        assertThat(((Label) required("brief-tone-narrator-gender-suggested")).getText())
-                .isEqualTo("Male (suggested)");
+        assertThat(((Label) required("brief-tone-narrator-gender-origin")).getText())
+                .isEqualTo("Male, from the book");
         assertThat(((Label) required("brief-evidence-narrator-gender")).getText())
                 .isEqualTo("“Hold on tight, Ray” · 1 of 2 passages");
         assertThat(isShown("brief-evidence-narrator-gender-uncertain")).isFalse();
 
         onFx(() -> briefModel().setNarratorGender(Gender.FEMALE));
 
-        assertThat(isShown("brief-tone-narrator-gender-suggested")).isFalse();
+        assertThat(isShown("brief-tone-narrator-gender-origin")).isFalse();
     }
 }

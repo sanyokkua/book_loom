@@ -55,6 +55,15 @@ final class BriefChoice<E> {
         }
     }
 
+    /**
+     * One segment with its words already in the interface language, for a choice whose options come from data.
+     *
+     * @param value the value the segment stands for
+     * @param text the words on the segment
+     * @param help what the option does, shown on hover; or null
+     */
+    record Segment<E>(E value, String text, @Nullable String help) {}
+
     private final SegmentedButton node;
     private final Map<E, ToggleButton> buttons = new HashMap<>();
     private final Map<ToggleButton, E> values = new HashMap<>();
@@ -66,10 +75,21 @@ final class BriefChoice<E> {
     private boolean applying;
 
     BriefChoice(final String id, final Messages messages, final List<Option<E>> options, final Consumer<E> onPick) {
+        this(
+                id,
+                options.stream()
+                        .map(option -> new Segment<>(
+                                option.value(),
+                                messages.get(option.label()),
+                                option.help() == null ? null : messages.get(option.help())))
+                        .toList(),
+                onPick);
+    }
+
+    BriefChoice(final String id, final List<Segment<E>> options, final Consumer<E> onPick) {
         Objects.requireNonNull(id, "id");
         this.onPick = Objects.requireNonNull(onPick, "onPick");
-        final ToggleButton[] segments =
-                options.stream().map(option -> segment(messages, option)).toArray(ToggleButton[]::new);
+        final ToggleButton[] segments = options.stream().map(this::segment).toArray(ToggleButton[]::new);
         help.getStyleClass().add("hint");
         help.setWrapText(true);
         help.setId(id + "-help");
@@ -122,13 +142,14 @@ final class BriefChoice<E> {
         help.setManaged(text != null);
     }
 
-    private ToggleButton segment(final Messages messages, final Option<E> option) {
-        final String text = messages.get(option.label());
+    private ToggleButton segment(final Segment<E> option) {
+        final String text = option.text();
         final E value = option.value();
         final ToggleButton button = new ToggleButton(text);
-        if (option.help() != null) {
-            helps.put(value, messages.get(option.help()));
-            Tips.install(messages, button, option.help());
+        final String explanation = option.help();
+        if (explanation != null) {
+            helps.put(value, explanation);
+            Tips.install(button, explanation);
         }
         button.setWrapText(true);
         button.setMinWidth(Region.USE_PREF_SIZE);

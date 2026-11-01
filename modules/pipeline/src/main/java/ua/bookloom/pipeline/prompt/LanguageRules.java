@@ -14,6 +14,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.BriefChoices;
 import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.project.NamePolicy;
 
@@ -103,6 +104,12 @@ public final class LanguageRules implements LanguageSupport {
         final boolean tested = file.exists() && TESTED.equals(file.get(STATUS));
         log.debug("Language {} tested={}", tag, tested);
         return tested;
+    }
+
+    /** Read from the target's own file whatever the eval's generic-only choice, because the screen offers them. */
+    @Override
+    public BriefChoices briefChoices(final String targetTag) {
+        return BriefKeys.read(languageFile(Objects.requireNonNull(targetTag, "targetTag")));
     }
 
     /**
@@ -323,13 +330,7 @@ public final class LanguageRules implements LanguageSupport {
         return wordsOf(targetTag, "voicingPairs");
     }
 
-    /**
-     * The particles and negations a target language uses for mood or polarity: its {@code negationWords} and
-     * {@code moodWords} keys together, so an agreement-only reviewer edit can be held to leaving them alone.
-     *
-     * @param targetTag the non-null target language tag
-     * @return the lower-case words; never null, empty when the language lists none
-     */
+    /** The {@code negationWords} and {@code moodWords} together, which an agreement-only reviewer edit leaves alone. */
     public Set<String> negationAndMoodWords(final String targetTag) {
         final Set<String> words = new HashSet<>(negationWords(targetTag));
         words.addAll(wordsOf(targetTag, "moodWords"));

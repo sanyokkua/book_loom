@@ -1522,10 +1522,52 @@ public enum MessageKey {
     BRIEF_NARRATOR_GENDER_MALE("brief.narrator.gender.male"),
     /** Narrator gender option: female. */
     BRIEF_NARRATOR_GENDER_FEMALE("brief.narrator.gender.female"),
-    /** The narrator gender the style suggestion proved from the book, marked so it is not taken for the person's. */
-    BRIEF_NARRATOR_GENDER_SUGGESTED("brief.narrator.gender.suggested"),
-    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_SUGGESTED}. */
-    BRIEF_NARRATOR_GENDER_SUGGESTED_TIP("brief.narrator.gender.suggested.tip"),
+    /** The narrator gender the style suggestion proved from the book's own words. */
+    BRIEF_NARRATOR_GENDER_FROM_BOOK("brief.narrator.gender.fromBook"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_FROM_BOOK}. */
+    BRIEF_NARRATOR_GENDER_FROM_BOOK_TIP("brief.narrator.gender.fromBook.tip"),
+    /** The narrator gender the model gave with nothing the code could check, marked likely. */
+    BRIEF_NARRATOR_GENDER_LIKELY("brief.narrator.gender.likely"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_LIKELY}. */
+    BRIEF_NARRATOR_GENDER_LIKELY_TIP("brief.narrator.gender.likely.tip"),
+    /** The mark beside a brief field the analysis filled that the person has not confirmed. */
+    BRIEF_LIKELY("brief.likely"),
+    /** Hover explanation of the mark {@link #BRIEF_LIKELY}. */
+    BRIEF_LIKELY_TIP("brief.likely.tip"),
+    /** Label of the apostrophe choice the target language offers. */
+    BRIEF_POLICY_APOSTROPHE("brief.policy.apostrophe"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_APOSTROPHE}. */
+    BRIEF_POLICY_APOSTROPHE_TIP("brief.policy.apostrophe.tip"),
+    /** Hover explanation of one apostrophe: {0} the character, {1} its code point. */
+    BRIEF_POLICY_APOSTROPHE_OPTION("brief.policy.apostrophe.option"),
+    /** Label of the quotation-mark choice the target language offers. */
+    BRIEF_POLICY_QUOTES("brief.policy.quotes"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_QUOTES}. */
+    BRIEF_POLICY_QUOTES_TIP("brief.policy.quotes.tip"),
+    /** Hover explanation of one quotation-mark style: {0} the outer marks, {1} the inner marks. */
+    BRIEF_POLICY_QUOTES_OPTION("brief.policy.quotes.option"),
+    /** Label of the default address between strangers. */
+    BRIEF_POLICY_ADDRESS_STRANGERS("brief.policy.address.strangers"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_ADDRESS_STRANGERS}. */
+    BRIEF_POLICY_ADDRESS_STRANGERS_TIP("brief.policy.address.strangers.tip"),
+    /** Label of the default address inside a family. */
+    BRIEF_POLICY_ADDRESS_FAMILY("brief.policy.address.family"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_ADDRESS_FAMILY}. */
+    BRIEF_POLICY_ADDRESS_FAMILY_TIP("brief.policy.address.family.tip"),
+    /** Hover explanation of the familiar address: {0} the word. */
+    BRIEF_POLICY_ADDRESS_INFORMAL("brief.policy.address.informal"),
+    /** Hover explanation of the polite address: {0} the word. */
+    BRIEF_POLICY_ADDRESS_FORMAL("brief.policy.address.formal"),
+    /** Label of the Ukrainian-style hard-g convention ({@code hardG}). */
+    BRIEF_CONVENTION_HARD_G("brief.convention.hardG"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_CONVENTION_HARD_G}. */
+    BRIEF_CONVENTION_HARD_G_TIP("brief.convention.hardG.tip"),
+    /** Label of a convention the interface has no words for: {0} the convention's key. */
+    BRIEF_CONVENTION_OTHER("brief.convention.other"),
+    /** Hover explanation of a convention the interface has no words for. */
+    BRIEF_CONVENTION_OTHER_TIP("brief.convention.other.tip"),
+    /** Hover explanation of one convention choice: {0} the value. */
+    BRIEF_CONVENTION_OPTION("brief.convention.option"),
     /** Label of the character-and-place-names policy. */
     BRIEF_POLICY_NAMES("brief.policy.names"),
     /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_NAMES}. */

@@ -3,6 +3,7 @@ package ua.bookloom.ui.screen;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -68,7 +69,9 @@ final class BriefToneCard {
     private final TextArea voice = TabMovesFocus.install(new TextArea());
     private final TextField audience = new TextField();
     private final Map<BriefField, BriefEvidenceRow> evidence;
-    private final Label genderSuggested = new Label();
+    private final NarratorGenderOrigin genderOrigin;
+    private final Map<ua.bookloom.api.project.BriefField, Label> likelyMarks =
+            new EnumMap<>(ua.bookloom.api.project.BriefField.class);
     private final BookBriefViewModel viewModel;
     private final Node node;
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.
@@ -79,7 +82,7 @@ final class BriefToneCard {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.evidence = evidenceRows(messages);
-        configureGenderSuggested();
+        this.genderOrigin = new NarratorGenderOrigin(messages);
         this.genre = genreBox(viewModel);
         this.register = registerChoice(viewModel, messages);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
@@ -106,37 +109,12 @@ final class BriefToneCard {
                         (observed, was, now) -> showEvidence(viewModel.brief().get()));
     }
 
-    // The gender choice, its "(suggested)" mark and the evidence line under them.
+    // The gender choice, the line that says where its value came from and the evidence line under them.
     private Node genderField() {
         return field(
                 MessageKey.BRIEF_TONE_NARRATOR_GENDER,
-                new VBox(FIELD_SPACING, narratorGender.withHelp(), genderSuggested),
+                new VBox(FIELD_SPACING, narratorGender.withHelp(), genderOrigin.node()),
                 BriefField.NARRATOR_GENDER);
-    }
-
-    private void configureGenderSuggested() {
-        genderSuggested.setId("brief-tone-narrator-gender-suggested");
-        genderSuggested.getStyleClass().add("hint");
-        Tips.install(messages, genderSuggested, MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED_TIP);
-        Visibility.show(genderSuggested, false);
-    }
-
-    // The gender the model proved reads "Male (suggested)" until the person changes it.
-    private void showGenderSuggested(final BookBrief brief) {
-        final boolean suggested = viewModel.styleSuggestion().isNarratorGenderSuggested(brief);
-        if (suggested != genderSuggested.isVisible()) {
-            log.debug(
-                    "narrator gender {} shown as suggested: {}",
-                    brief.narrator().gender(),
-                    suggested);
-        }
-        Visibility.show(genderSuggested, suggested);
-        if (suggested) {
-            final MessageKey gender = brief.narrator().gender() == Gender.MALE
-                    ? MessageKey.BRIEF_NARRATOR_GENDER_MALE
-                    : MessageKey.BRIEF_NARRATOR_GENDER_FEMALE;
-            genderSuggested.setText(messages.get(MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED, messages.get(gender)));
-        }
     }
 
     private static Map<BriefField, BriefEvidenceRow> evidenceRows(final Messages messages) {
@@ -147,9 +125,30 @@ final class BriefToneCard {
         return rows;
     }
 
-    // A labelled field with the suggestion's evidence line under its control.
+    // A labelled field with the suggestion's evidence line under its control, and the likely mark beside the label of
+    // a field the analysis can fill.
     private Node field(final MessageKey label, final Node control, final BriefField field) {
-        return BriefCards.field(messages, label, withEvidence(control, field));
+        final Node body = withEvidence(control, field);
+        final ua.bookloom.api.project.BriefField stored = storedField(field);
+        if (stored == null) {
+            return BriefCards.field(messages, label, body);
+        }
+        final String id =
+                "brief-likely-" + field.name().toLowerCase(Locale.ROOT).replace('_', '-');
+        final Label mark = BriefCards.likelyMark(messages, id);
+        likelyMarks.put(stored, mark);
+        return BriefCards.field(messages.get(label), id + "-label", body, mark);
+    }
+
+    private static ua.bookloom.api.project.@Nullable BriefField storedField(final BriefField field) {
+        return switch (field) {
+            case GENRE -> ua.bookloom.api.project.BriefField.GENRE;
+            case REGISTER -> ua.bookloom.api.project.BriefField.REGISTER;
+            case VOICE -> ua.bookloom.api.project.BriefField.VOICE_ERA;
+            case AUDIENCE -> ua.bookloom.api.project.BriefField.AUDIENCE;
+            case NARRATOR -> ua.bookloom.api.project.BriefField.NARRATOR;
+            case NARRATOR_GENDER -> null;
+        };
     }
 
     private Node withEvidence(final Node control, final BriefField field) {
@@ -161,11 +160,9 @@ final class BriefToneCard {
 
     // A field shows the suggestion's evidence only while it holds what the suggestion wrote into it.
     private void showEvidence(final @Nullable BookBrief brief) {
-        if (brief == null) {
-            Visibility.show(genderSuggested, false);
-        } else {
-            showGenderSuggested(brief);
-        }
+        genderOrigin.show(brief);
+        likelyMarks.forEach((field, mark) ->
+                Visibility.show(mark, brief != null && brief.likely().contains(field)));
         evidence.forEach((field, row) -> row.show(
                 brief == null
                         ? null
