@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
@@ -298,6 +299,28 @@ class TestDetailsTest {
 
         assertThat(detail.severity()).isEqualTo(Severity.INFO);
         assertThat(detail.verdict()).isEqualTo("Testing...");
+    }
+
+    // IF a stage that has begun but sent nothing read "Testing...", THEN a loading model would look like a hung window.
+    @Test
+    void of_stageBegunNoRequest_namesTheStepWhatItWaitsForAndHowLongInBothLanguages() {
+        final Instant begun = Instant.parse("2026-11-01T10:00:00Z");
+        final TestLive live = new TestLive(
+                List.of(),
+                List.of(new StageStart(VerificationStage.INFERENCE, begun)),
+                List.of(),
+                4,
+                begun.plusSeconds(12));
+        final TestDetails.Subject subject = new TestDetails.Subject("Ollama", true, true);
+
+        final TestDetail english = TestDetails.of(EN, VerificationStage.INFERENCE, List.of(), true, subject, live);
+        final TestDetail ukrainian = TestDetails.of(UK, VerificationStage.INFERENCE, List.of(), true, subject, live);
+
+        assertThat(english.verdict()).isEqualTo("Step 3 of 4 · Inference · waiting for the model to load or answer");
+        assertThat(english.response()).isEqualTo("Waiting for the model");
+        assertThat(english.metrics()).extracting(Metric::value).containsExactly("12.0 s");
+        assertThat(ukrainian.verdict())
+                .isEqualTo("Крок 3 з 4 · Відповідь моделі · чекаємо, поки модель завантажиться або відповість");
     }
 
     @Test

@@ -222,6 +222,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                     VerificationStage.CONNECTION, VerificationReports.loading(config, selection.modelId())));
             return VerificationReports.completed(selection, policy, stages, null);
         }
+        VerificationReports.started(VerificationStage.CONNECTION, run.listener());
         final EngineStage.Checked connection = connectionStage(client, config, run.detect());
         VerificationReports.finished(stages, connection.outcome(), run.listener());
         if (connection.outcome().status() == StageStatus.FAILED || policy == VerificationPolicy.CONNECTION) {
@@ -229,6 +230,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         }
         final ProviderConfig detected = detectedConfig(config, connection.engine());
         final ProviderClient asDetected = detected.equals(config) ? client : clients.createUncached(detected);
+        VerificationReports.started(VerificationStage.MODELS, run.listener());
         final StageOutcome models = modelsStage(asDetected, detected, selection.modelId());
         VerificationReports.finished(stages, models, run.listener());
         if (models.status() == StageStatus.FAILED
@@ -236,14 +238,24 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return VerificationReports.completed(selection, policy, stages, connection.engine());
         }
-        final StageOutcome inference =
-                inferenceStage(asDetected.forChecks(), detected, selection.modelId(), run.listener());
+        final StageOutcome inference = inferenceStep(asDetected, detected, selection.modelId(), run.listener());
         VerificationReports.finished(stages, inference, run.listener());
         if (policy == VerificationPolicy.ADVANCED && inference.status() != StageStatus.FAILED) {
-            VerificationReports.finished(
-                    stages, advancedStage(detected, selection.modelId(), run.listener()), run.listener());
+            advancedStep(stages, detected, selection.modelId(), run.listener());
         }
         return VerificationReports.completed(selection, policy, stages, connection.engine());
+    }
+
+    private void advancedStep(
+            List<StageOutcome> stages, ProviderConfig config, String modelId, VerificationListener listener) {
+        VerificationReports.started(VerificationStage.ADVANCED, listener);
+        VerificationReports.finished(stages, advancedStage(config, modelId, listener), listener);
+    }
+
+    private StageOutcome inferenceStep(
+            ProviderClient client, ProviderConfig config, String modelId, VerificationListener listener) {
+        VerificationReports.started(VerificationStage.INFERENCE, listener);
+        return inferenceStage(client.forChecks(), config, modelId, listener);
     }
 
     // The models, inference and advanced stages are shaped by the engine this Test just found (an LM Studio id check,

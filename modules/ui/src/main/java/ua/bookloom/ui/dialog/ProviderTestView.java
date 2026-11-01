@@ -36,6 +36,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
 import ua.bookloom.ui.state.TestDetail;
 import ua.bookloom.ui.state.TestDetails;
+import ua.bookloom.ui.state.TestLive;
 import ua.bookloom.ui.state.TestProgress;
 import ua.bookloom.ui.state.TestSubject;
 import ua.bookloom.ui.state.Tone;
@@ -73,6 +74,8 @@ final class ProviderTestView {
     private final Map<VerificationStage, Button> tabs = new EnumMap<>(VerificationStage.class);
     private final InvalidationListener onRunner = observed -> refresh();
     private VerificationStage stage;
+    // Until the person picks a tab, the card follows the stage the running test is in.
+    private boolean picked;
     private TestDetail detail = new TestDetail(TestDetail.Severity.INFO, "", "", "", "", "", List.of(), "", "");
 
     ProviderTestView(
@@ -94,6 +97,7 @@ final class ProviderTestView {
         viewModel.tests().stages().addListener(onRunner);
         viewModel.tests().running().addListener(onRunner);
         viewModel.tests().progress().sent().addListener(onRunner);
+        viewModel.tests().progress().started().addListener(onRunner);
         viewModel.tests().progress().finished().addListener(onRunner);
         card.sceneProperty().addListener((observed, was, now) -> {
             if (now == null && was != null) {
@@ -115,6 +119,7 @@ final class ProviderTestView {
         viewModel.tests().stages().removeListener(onRunner);
         viewModel.tests().running().removeListener(onRunner);
         viewModel.tests().progress().sent().removeListener(onRunner);
+        viewModel.tests().progress().started().removeListener(onRunner);
         viewModel.tests().progress().finished().removeListener(onRunner);
     }
 
@@ -204,7 +209,7 @@ final class ProviderTestView {
             card.getButtonTypes().add(type);
             final Button tab = (Button) card.lookupButton(type);
             tab.setId("test-tab-" + each.name().toLowerCase(Locale.ROOT));
-            Tips.install(messages, tab, tabTip(each));
+            Tips.install(messages, tab, TestCardWords.tabTip(each));
             tab.setOnAction(event -> show(each));
             tabs.put(each, tab);
         }
@@ -249,18 +254,10 @@ final class ProviderTestView {
                 () -> log.info("the test card closed with {} still running", runningTest));
     }
 
-    private static MessageKey tabTip(final VerificationStage which) {
-        return switch (which) {
-            case CONNECTION -> MessageKey.SETTINGS_STAGE_CONNECTION_TIP;
-            case MODELS -> MessageKey.SETTINGS_STAGE_MODELS_TIP;
-            case INFERENCE -> MessageKey.SETTINGS_STAGE_INFERENCE_TIP;
-            case ADVANCED -> MessageKey.SETTINGS_STAGE_ADVANCED_TIP;
-        };
-    }
-
     private void show(final VerificationStage next) {
         log.debug("the test dialog now shows {}", next);
         stage = next;
+        picked = true;
         card.clearFeedback();
         refresh();
     }
@@ -287,17 +284,12 @@ final class ProviderTestView {
     // The clock's tick redraws without a log line: it fires ten times a second while a test runs.
     private void redraw() {
         final ProviderTest runningTest = viewModel.tests().running().get();
+        final TestProgress live = viewModel.tests().progress();
+        followRunningStage(runningTest, live);
         final boolean running = runningTest != null && stage.compareTo(runningTest.lastStage()) <= 0;
         final List<StageChip> chips = viewModel.tests().stages();
-        final TestProgress live = viewModel.tests().progress();
-        detail = TestDetails.of(
-                messages,
-                stage,
-                chips,
-                running,
-                subject(),
-                new TestDetails.Live(live.sent(), live.finished(), live.now()));
-        title.setText(messages.get(titleOf(stage)));
+        detail = TestDetails.of(messages, stage, chips, running, subject(), liveOf(runningTest, live));
+        title.setText(messages.get(TestCardWords.titleOf(stage)));
         showVerdict();
         requestLine.setText(detail.requestLine());
         requestRow.setVisible(!detail.requestLine().isEmpty());
@@ -310,6 +302,18 @@ final class ProviderTestView {
         copyResponse.setDisable(detail.rawResponse().isEmpty());
         showMetrics();
         showTabs(chips);
+    }
+
+    private static TestLive liveOf(final @Nullable ProviderTest runningTest, final TestProgress live) {
+        final int steps = runningTest == null ? 0 : TestDetails.stepOf(runningTest.lastStage());
+        return new TestLive(live.sent(), live.started(), live.finished(), steps, live.now());
+    }
+
+    private void followRunningStage(final @Nullable ProviderTest runningTest, final TestProgress live) {
+        if (runningTest == null || picked || live.started().isEmpty()) {
+            return;
+        }
+        stage = live.started().getLast().stage();
     }
 
     // Setting the same text again would move the caret and the scroll back to the top on every tick.
@@ -332,15 +336,6 @@ final class ProviderTestView {
         } else if (!testRunning && ticking) {
             ticker.stop();
         }
-    }
-
-    private static MessageKey titleOf(final VerificationStage which) {
-        return switch (which) {
-            case CONNECTION -> MessageKey.SETTINGS_TEST_CONNECTION;
-            case MODELS -> MessageKey.SETTINGS_TEST_MODELS;
-            case INFERENCE -> MessageKey.SETTINGS_TEST_INFERENCE;
-            case ADVANCED -> MessageKey.SETTINGS_TEST_ADVANCED_TITLE;
-        };
     }
 
     private void showVerdict() {
@@ -382,7 +377,10 @@ final class ProviderTestView {
         tabs.forEach((each, tab) -> {
             final boolean ran = chips.stream().anyMatch(chip -> chip.stage() == each);
             // A stage never tried because an earlier one failed still opens, to say so.
-            final boolean told = ran || TestDetails.failedBefore(each, chips).isPresent();
+            final boolean begun =
+                    viewModel.tests().progress().started().stream().anyMatch(start -> start.stage() == each);
+            final boolean told =
+                    ran || begun || TestDetails.failedBefore(each, chips).isPresent();
             tab.setDisable(!told && each != stage);
             tab.getStyleClass().removeAll("btn-secondary", "btn-ghost");
             tab.getStyleClass().add(each == stage ? "btn-secondary" : "btn-ghost");

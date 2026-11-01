@@ -30,28 +30,85 @@ final class LiveDetail {
      * The waiting card of one stage.
      *
      * @param sent the stage's requests so far, oldest first; not empty
+     * @param steps how many stages the running test covers
      * @param now the time the card shows the wait up to
      */
     static TestDetail waiting(
-            final Messages messages, final VerificationStage stage, final List<SentCall> sent, final Instant now) {
+            final Messages messages,
+            final VerificationStage stage,
+            final List<SentCall> sent,
+            final int steps,
+            final Instant now) {
         final VerificationExchange last = sent.getLast().request();
         final String body = stage == VerificationStage.ADVANCED ? listed(messages, sent) : last.shownRequestBody();
-        final Duration open = Duration.between(sent.getFirst().sentAt(), now);
-        final Duration shown = open.isNegative() ? Duration.ZERO : open;
+        final Duration shown = openFor(sent.getFirst().sentAt(), now);
         log.trace("test card waits on {}: {} requests, open {}", stage, sent.size(), shown);
         return new TestDetail(
                 Severity.INFO,
-                messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING),
+                step(messages, stage, steps),
                 last.method() + " " + last.url(),
                 CurlCommand.of(last),
                 body,
                 messages.get(MessageKey.SETTINGS_TEST_WAITING),
-                List.of(new Metric(
-                        "time",
-                        messages.get(MessageKey.SETTINGS_TEST_METRIC_TIME),
-                        CheckSentences.durationText(messages, shown))),
+                timeOnly(messages, shown),
                 body,
                 "");
+    }
+
+    /**
+     * The card of a stage that has begun but sent no request yet, as a model that is still loading leaves it.
+     *
+     * @param steps how many stages the running test covers
+     * @param begun when the stage began
+     * @param now the time the card shows the wait up to
+     */
+    static TestDetail starting(
+            final Messages messages,
+            final VerificationStage stage,
+            final int steps,
+            final Instant begun,
+            final Instant now) {
+        final Duration shown = openFor(begun, now);
+        log.trace("test card waits on {} before its first request, open {}", stage, shown);
+        return new TestDetail(
+                Severity.INFO,
+                step(messages, stage, steps),
+                "",
+                "",
+                "",
+                waitsOnModel(stage) ? messages.get(MessageKey.SETTINGS_TEST_WAITING) : "",
+                timeOnly(messages, shown),
+                "",
+                "");
+    }
+
+    // "Step 3 of 4 · Inference · waiting for the model to load or answer": the line a person reads while a model loads.
+    private static String step(final Messages messages, final VerificationStage stage, final int steps) {
+        return messages.get(
+                MessageKey.SETTINGS_TEST_STEP,
+                TestDetails.stepOf(stage),
+                steps,
+                CheckSentences.stageName(messages, stage),
+                messages.get(
+                        waitsOnModel(stage)
+                                ? MessageKey.SETTINGS_TEST_STEP_MODEL
+                                : MessageKey.SETTINGS_TEST_STEP_SERVER));
+    }
+
+    private static boolean waitsOnModel(final VerificationStage stage) {
+        return stage == VerificationStage.INFERENCE || stage == VerificationStage.ADVANCED;
+    }
+
+    private static Duration openFor(final Instant since, final Instant now) {
+        final Duration open = Duration.between(since, now);
+        return open.isNegative() ? Duration.ZERO : open;
+    }
+
+    private static List<Metric> timeOnly(final Messages messages, final Duration shown) {
+        return List.of(new Metric(
+                "time",
+                messages.get(MessageKey.SETTINGS_TEST_METRIC_TIME),
+                CheckSentences.durationText(messages, shown)));
     }
 
     private static String listed(final Messages messages, final List<SentCall> sent) {

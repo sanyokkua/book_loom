@@ -24,6 +24,14 @@ public interface VerificationListener {
     default void requestSent(VerificationStage stage, @Nullable AdvancedCheck check, VerificationExchange request) {}
 
     /**
+     * Called just before a stage begins, so a card can say what the verification is doing while a slow stage (a
+     * model that is still loading) has sent no request yet.
+     *
+     * @param stage the stage that is about to run
+     */
+    default void stageStarted(VerificationStage stage) {}
+
+    /**
      * Called once each stage has its outcome, before the next stage starts.
      *
      * @param outcome the stage's outcome with its exchange, as the finished report will hold it

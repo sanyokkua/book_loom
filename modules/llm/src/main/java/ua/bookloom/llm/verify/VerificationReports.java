@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.provider.ProviderClient;
 
 /**
@@ -31,6 +32,18 @@ import ua.bookloom.llm.provider.ProviderClient;
 final class VerificationReports {
 
     // A listener that fails must not fail the verification: the report still arrives whole.
+    static void started(VerificationStage stage, VerificationListener listener) {
+        if (VerificationListener.NONE.equals(listener)) {
+            return;
+        }
+        log.debug("Provider verification stage starting stage={}", stage);
+        try {
+            listener.stageStarted(stage);
+        } catch (RuntimeException failure) {
+            log.warn("Provider verification listener failed on a stage start stage={}", stage, failure);
+        }
+    }
+
     static void finished(List<StageOutcome> stages, StageOutcome outcome, VerificationListener listener) {
         stages.add(outcome);
         if (VerificationListener.NONE.equals(listener)) {

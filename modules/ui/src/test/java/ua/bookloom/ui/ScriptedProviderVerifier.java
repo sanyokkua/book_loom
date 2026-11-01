@@ -40,6 +40,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
             VerificationStage stage, @Nullable AdvancedCheck check, VerificationExchange request) {}
 
     private final List<Announced> announcements = new CopyOnWriteArrayList<>();
+    private final List<VerificationStage> beginnings = new CopyOnWriteArrayList<>();
     private volatile @Nullable Result<VerificationReport> answer;
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
@@ -154,8 +155,14 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         announcements.addAll(List.of(heard));
     }
 
+    /** From now on tells a listening check that each of {@code begun} has started, in order, before anything else. */
+    public void begin(final VerificationStage... begun) {
+        beginnings.clear();
+        beginnings.addAll(List.of(begun));
+    }
+
     /**
-     * Tells the listener of every scripted request, then answers as the unheard form does, then tells it of each stage
+     * Tells the listener of every scripted stage start and request, then answers as the unheard form does, then tells it of each stage
      * of the answer, the order the real verifier keeps.
      */
     @Override
@@ -164,6 +171,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
             final String modelId,
             final VerificationPolicy policy,
             final VerificationListener listener) {
+        beginnings.forEach(listener::stageStarted);
         announcements.forEach(heard -> listener.requestSent(heard.stage(), heard.check(), heard.request()));
         final Result<VerificationReport> result = verify(draft, modelId, policy);
         final VerificationReport report = result.data();

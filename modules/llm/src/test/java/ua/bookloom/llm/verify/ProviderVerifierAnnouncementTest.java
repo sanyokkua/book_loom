@@ -81,6 +81,7 @@ class ProviderVerifierAnnouncementTest {
         private final List<@Nullable AdvancedCheck> checks = new CopyOnWriteArrayList<>();
         private final List<Integer> chatsServedWhenAnnounced = new CopyOnWriteArrayList<>();
         private final List<VerificationStage> finished = new CopyOnWriteArrayList<>();
+        private final List<VerificationStage> started = new CopyOnWriteArrayList<>();
 
         @Override
         public void requestSent(
@@ -90,6 +91,11 @@ class ProviderVerifierAnnouncementTest {
             requests.add(request);
             checks.add(check);
             chatsServedWhenAnnounced.add(chatsServed());
+        }
+
+        @Override
+        public void stageStarted(final VerificationStage stage) {
+            started.add(stage);
         }
 
         @Override
@@ -154,6 +160,21 @@ class ProviderVerifierAnnouncementTest {
 
         assertThat(heard.finished)
                 .containsExactly(VerificationStage.CONNECTION, VerificationStage.MODELS, VerificationStage.INFERENCE);
+    }
+
+    // IF the Advanced run said nothing until its first request, THEN the card would be blank through a slow model load.
+    @Test
+    void verify_advancedPolicy_hearsEachStageStartInOrderBeforeItsFirstRequest() {
+        stubOllama(OLLAMA_REPLY);
+
+        report(verifier(Map.of()).verify(ollamaDraft(), MODEL_ID, VerificationPolicy.ADVANCED, heard));
+
+        assertThat(heard.started)
+                .containsExactly(
+                        VerificationStage.CONNECTION,
+                        VerificationStage.MODELS,
+                        VerificationStage.INFERENCE,
+                        VerificationStage.ADVANCED);
     }
 
     // IF the bodies were shown on one line, THEN a person would read a long request as one unbroken run of text.

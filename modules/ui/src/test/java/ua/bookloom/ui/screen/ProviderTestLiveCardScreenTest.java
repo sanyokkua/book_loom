@@ -99,6 +99,50 @@ class ProviderTestLiveCardScreenTest extends SettingsScreenTestBase {
         assertThat(area("test-response")).isEqualTo("OK");
     }
 
+    private void startAdvancedHeldInInference() throws Exception {
+        verifier.begin(VerificationStage.CONNECTION, VerificationStage.MODELS, VerificationStage.INFERENCE);
+        verifier.respondWith(ProviderReports.allPassedWithExchanges());
+        verifier.hold();
+        openSettings();
+        onFx(() -> viewModel().draftModel().set(MODEL));
+        onFx(() -> button("settings-test-advanced-details").fire());
+        verifier.awaitEntered();
+    }
+
+    // IF the Advanced card said only "Testing..." until its first request, THEN a model that loads for a minute would
+    // look like a frozen window; it names the step it is in and what it waits for.
+    @Test
+    void advancedCard_modelStillLoading_namesTheStepAndWhatItWaitsFor() throws Exception {
+        startAdvancedHeldInInference();
+
+        awaitFx(() -> optionalNode("test-verdict-text") != null
+                && shown("test-verdict-text").startsWith("Step 3 of 4"));
+        final List<String> waiting = List.of(shown("test-verdict-text"), area("test-response"));
+        verifier.release();
+        awaitFx(() -> !viewModel().tests().checking().get());
+
+        assertThat(waiting)
+                .containsExactly(
+                        "Step 3 of 4 · Inference · waiting for the model to load or answer", "Waiting for the model");
+    }
+
+    // IF only the tabs of finished stages opened, THEN the stage that is working could not be looked at.
+    @Test
+    void advancedCard_inferenceRunning_opensTheTabsOfStagesThatBegunAndNotTheRest() throws Exception {
+        startAdvancedHeldInInference();
+        awaitFx(() -> optionalNode("test-verdict-text") != null
+                && shown("test-verdict-text").startsWith("Step 3 of 4"));
+
+        final List<Boolean> disabled = ThemeTestSupport.onFx(() -> List.of(
+                button("test-tab-connection").isDisabled(),
+                button("test-tab-models").isDisabled(),
+                button("test-tab-inference").isDisabled(),
+                button("test-tab-advanced").isDisabled()));
+        verifier.release();
+
+        assertThat(disabled).containsExactly(false, false, false, true);
+    }
+
     // IF the quiet test opened a card or the progress overlay, THEN there would be no way to test without one.
     @Test
     void quietTest_pressed_opensNoCardAndNoProgressDialog() throws Exception {

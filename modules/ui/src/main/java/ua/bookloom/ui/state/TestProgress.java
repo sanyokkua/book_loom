@@ -26,6 +26,8 @@ public final class TestProgress {
     private final Clock clock;
     private final ObservableList<SentCall> sent = FXCollections.observableArrayList();
     private final ObservableList<SentCall> sentView = FXCollections.unmodifiableObservableList(sent);
+    private final ObservableList<StageStart> started = FXCollections.observableArrayList();
+    private final ObservableList<StageStart> startedView = FXCollections.unmodifiableObservableList(started);
     private final ObservableList<StageChip> finished = FXCollections.observableArrayList();
     private final ObservableList<StageChip> finishedView = FXCollections.unmodifiableObservableList(finished);
 
@@ -48,6 +50,15 @@ public final class TestProgress {
     }
 
     /**
+     * The stages of the running test that have begun, ended or not, oldest first.
+     *
+     * @return a read-only list; empty before the first stage and after the test is made stale
+     */
+    public ObservableList<StageStart> started() {
+        return startedView;
+    }
+
+    /**
      * The stages of the running test that have ended, before its report arrives.
      *
      * @return a read-only list in the order the stages ended
@@ -67,6 +78,7 @@ public final class TestProgress {
 
     void clear() {
         sent.clear();
+        started.clear();
         finished.clear();
     }
 
@@ -88,6 +100,11 @@ public final class TestProgress {
             }
 
             @Override
+            public void stageStarted(final VerificationStage stage) {
+                Platform.runLater(() -> began(epoch, current, new StageStart(stage, clock.instant())));
+            }
+
+            @Override
             public void stageFinished(final StageOutcome outcome) {
                 Platform.runLater(() -> ended(epoch, current, outcome));
             }
@@ -101,6 +118,15 @@ public final class TestProgress {
         }
         log.debug("test {} sent a {} request, check {}", epoch, call.stage(), call.check());
         sent.add(call);
+    }
+
+    private void began(final long epoch, final LongSupplier current, final StageStart start) {
+        if (epoch != current.getAsLong()) {
+            log.debug("stage start of stale test {} not shown", epoch);
+            return;
+        }
+        log.debug("test {} began stage {}", epoch, start.stage());
+        started.add(start);
     }
 
     private void ended(final long epoch, final LongSupplier current, final StageOutcome outcome) {

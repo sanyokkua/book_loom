@@ -1,8 +1,8 @@
 package ua.bookloom.ui.state;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,7 +54,7 @@ public final class TestDetails {
             final String providerName,
             final boolean localProgram,
             final boolean modelChosen) {
-        return of(messages, stage, chips, running, new Subject(providerName, localProgram, modelChosen), Live.NONE);
+        return of(messages, stage, chips, running, new Subject(providerName, localProgram, modelChosen), TestLive.NONE);
     }
 
     /**
@@ -75,7 +75,7 @@ public final class TestDetails {
             final List<StageChip> chips,
             final boolean running,
             final Subject subject,
-            final Live live) {
+            final TestLive live) {
         Objects.requireNonNull(live, "live");
         if (running) {
             return runningDetail(messages, stage, subject, live);
@@ -101,7 +101,7 @@ public final class TestDetails {
     }
 
     private static TestDetail runningDetail(
-            final Messages messages, final VerificationStage stage, final Subject subject, final Live live) {
+            final Messages messages, final VerificationStage stage, final Subject subject, final TestLive live) {
         final Optional<StageChip> ended =
                 live.finished().stream().filter(chip -> chip.stage() == stage).findFirst();
         if (ended.isPresent()) {
@@ -109,29 +109,24 @@ public final class TestDetails {
         }
         final List<SentCall> sent =
                 live.sent().stream().filter(call -> call.stage() == stage).toList();
-        return sent.isEmpty()
-                ? plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING))
-                : LiveDetail.waiting(messages, stage, sent, live.now());
+        if (!sent.isEmpty()) {
+            return LiveDetail.waiting(messages, stage, sent, live.steps(), live.now());
+        }
+        return live.started().stream()
+                .filter(begun -> begun.stage() == stage)
+                .findFirst()
+                .map(begun -> LiveDetail.starting(messages, stage, live.steps(), begun.startedAt(), live.now()))
+                .orElseGet(() -> plain(Severity.INFO, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING)));
     }
 
     /**
-     * What the running test has said so far.
+     * The place of a stage among the stages a test goes through, counted from one.
      *
-     * @param sent its requests, oldest first
-     * @param finished its stages that have ended
-     * @param now the time the card shows a wait up to
+     * @param stage the stage
+     * @return how many stages up to and including {@code stage} a test runs
      */
-    public record Live(List<SentCall> sent, List<StageChip> finished, Instant now) {
-
-        /** Nothing said: a test not running, or one that has sent nothing yet. */
-        static final Live NONE = new Live(List.of(), List.of(), Instant.EPOCH);
-
-        /** Copies the lists and rejects a missing part. */
-        public Live {
-            sent = List.copyOf(sent);
-            finished = List.copyOf(finished);
-            Objects.requireNonNull(now, "now");
-        }
+    public static int stepOf(final VerificationStage stage) {
+        return EnumSet.range(VerificationStage.CONNECTION, stage).size();
     }
 
     /**

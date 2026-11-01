@@ -4040,6 +4040,12 @@ public enum MessageKey {
     SETTINGS_TEST_WITH_DETAILS_TIP("settings.test.withDetails.tip"),
     /** Shown where the reply will be while the request is out. */
     SETTINGS_TEST_WAITING("settings.test.waiting"),
+    /** Verdict line of the running test card: which step of how many, which stage, and what it waits for. */
+    SETTINGS_TEST_STEP("settings.test.step"),
+    /** What a connection or models step waits for, the last part of {@link #SETTINGS_TEST_STEP}. */
+    SETTINGS_TEST_STEP_SERVER("settings.test.step.server"),
+    /** What an inference or advanced step waits for, the last part of {@link #SETTINGS_TEST_STEP}. */
+    SETTINGS_TEST_STEP_MODEL("settings.test.step.model"),
     /** Button of the test card that stops the running test. */
     SETTINGS_TEST_STOP("settings.test.stop"),
     /** Hover explanation of the button labelled by {@link #SETTINGS_TEST_STOP}. */
