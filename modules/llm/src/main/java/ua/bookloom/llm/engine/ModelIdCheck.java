@@ -1,5 +1,7 @@
 package ua.bookloom.llm.engine;
 
+import static ua.bookloom.util.contract.ArgNames.TYPED_ID;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -66,7 +68,7 @@ public final class ModelIdCheck {
      * @return the check, or {@code modelNotFound} naming the id when the server's list does not hold it
      */
     public Result<CheckedModelId> check(final String typedId) {
-        Objects.requireNonNull(typedId, "typedId");
+        Objects.requireNonNull(typedId, TYPED_ID);
         final CheckedModelId kept = checked.get(typedId);
         if (kept != null) {
             log.debug("Model id check kept provider={} model={} verdict={}", config.id(), typedId, kept.verdict());
@@ -82,7 +84,7 @@ public final class ModelIdCheck {
      * @return the check, or {@code modelNotFound} naming the id when the server's list does not hold it
      */
     public Result<CheckedModelId> recheck(final String typedId) {
-        Objects.requireNonNull(typedId, "typedId");
+        Objects.requireNonNull(typedId, TYPED_ID);
         checked.remove(typedId);
         return read(typedId);
     }
@@ -94,7 +96,7 @@ public final class ModelIdCheck {
      * @return the kept check if the id was checked this session, or empty if it was not
      */
     public Optional<CheckedModelId> kept(final String typedId) {
-        return Optional.ofNullable(checked.get(Objects.requireNonNull(typedId, "typedId")));
+        return Optional.ofNullable(checked.get(Objects.requireNonNull(typedId, TYPED_ID)));
     }
 
     /**

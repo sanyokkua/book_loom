@@ -14,6 +14,8 @@ import ua.bookloom.api.llm.ModelProfile;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MistralRows {
 
+    private static final String MINISTRAL = "ministral";
+
     private static final String NO_THINKING =
             "A plain instruct model with a native system role; it never thinks, so" + " no thinking control is sent. ";
     private static final String NOT_RECOMMENDED = "not recommended";
@@ -43,20 +45,20 @@ final class MistralRows {
         return List.of(
                 plain(
                                 "ministral-3-3b",
-                                family("ministral").version("3").sizes(3.0),
+                                family(MINISTRAL).version("3").sizes(3.0),
                                 NOT_RECOMMENDED,
                                 "Ukrainian is not declared by the maker.",
                                 "ministral-3:3b")
                         .batch(2),
                 plain(
                         "ministral-3-8b",
-                        family("ministral").version("3").sizes(8.0),
+                        family(MINISTRAL).version("3").sizes(8.0),
                         EXPERIMENTAL,
                         MINISTRAL_UK + "The maker's temperature is below 0.1 while Ollama defaults to 0.15.",
                         "ministral-3:8b"),
                 plain(
                         "ministral-3-14b",
-                        family("ministral").version("3").sizes(14.0),
+                        family(MINISTRAL).version("3").sizes(14.0),
                         EXPERIMENTAL,
                         MINISTRAL_UK
                                 + "Its pattern takes no reasoning variant, so ministral-3-14b-reasoning never lands here.",
@@ -101,7 +103,7 @@ final class MistralRows {
     private static BuiltInRow ministralReasoning() {
         return BuiltInRow.of(
                         "ministral-3-reasoning",
-                        family("ministral").version("3").sizes(3.0, 8.0, 14.0).requiring("reasoning"),
+                        family(MINISTRAL).version("3").sizes(3.0, 8.0, 14.0).requiring("reasoning"),
                         RowReasoning.ALWAYS_NO_SWITCH,
                         EXPERIMENTAL,
                         "Ministral 3 Reasoning always reasons and has no switch, so no thinking control is sent and"

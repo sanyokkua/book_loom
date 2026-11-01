@@ -19,6 +19,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GemmaRows {
 
+    private static final String GEMMA = "gemma";
+
     private static final String NO_SYSTEM_ROLE = "Gemma 3's template has no system role, so the system text is folded"
             + " into the first user message; it never thinks, so no thinking control is sent. ";
     private static final String GEMMA4 = "Gemma 4 thinks by default and has a boolean switch: Ollama takes think false,"
@@ -103,7 +105,7 @@ final class GemmaRows {
             final String name, final double size, final String verdict, final String note, final String example) {
         return BuiltInRow.of(
                         name,
-                        family("gemma").version("3").sizes(size),
+                        family(GEMMA).version("3").sizes(size),
                         RowReasoning.NONE,
                         verdict,
                         NO_SYSTEM_ROLE + note,
@@ -156,7 +158,7 @@ final class GemmaRows {
     private static BuiltInRow gemma4(
             final String name, final double size, final String verdict, final String note, final String... examples) {
         return BuiltInRow.of(
-                name, family("gemma").version("4").sizes(size), RowReasoning.BOOLEAN, verdict, GEMMA4 + note, examples);
+                name, family(GEMMA).version("4").sizes(size), RowReasoning.BOOLEAN, verdict, GEMMA4 + note, examples);
     }
 
     private static BuiltInRow gemma4Effective(
@@ -167,7 +169,7 @@ final class GemmaRows {
             final String... examples) {
         return BuiltInRow.of(
                 name,
-                family("gemma").version("4").effective(effective),
+                family(GEMMA).version("4").effective(effective),
                 RowReasoning.BOOLEAN,
                 verdict,
                 GEMMA4 + note,

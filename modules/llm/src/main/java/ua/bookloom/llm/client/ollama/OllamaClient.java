@@ -1,5 +1,9 @@
 package ua.bookloom.llm.client.ollama;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+import static ua.bookloom.util.contract.ArgNames.REPLY;
+import static ua.bookloom.util.contract.ArgNames.REQUEST;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -106,10 +110,10 @@ public final class OllamaClient implements ProviderClient {
             final Result<HttpReply> result = call.result();
             if (result.isErr()) {
                 return new ProviderCallResult<>(
-                        discoveryError(Objects.requireNonNull(result.error(), "error")), call.retryAfter());
+                        discoveryError(Objects.requireNonNull(result.error(), ERROR)), call.retryAfter());
             }
             return new ProviderCallResult<>(
-                    readModels(Objects.requireNonNull(result.data(), "reply").body()), call.retryAfter());
+                    readModels(Objects.requireNonNull(result.data(), REPLY).body()), call.retryAfter());
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(discoveryFailure(failure)));
         }
@@ -118,7 +122,7 @@ public final class OllamaClient implements ProviderClient {
     @Override
     public ProviderCallResult<ChatResponse> chat(String modelId, ChatRequest request) {
         Objects.requireNonNull(modelId, "modelId");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(request, REQUEST);
         log.debug(
                 "Ollama chat started provider={} host={} model={} messageCount={} temperature={} contextWindow={} maxOutputTokens={} responseFormatPresent={} keepLoaded={}",
                 config.id(),
@@ -140,7 +144,7 @@ public final class OllamaClient implements ProviderClient {
     @Override
     public String requestBody(String modelId, ChatRequest request) {
         Objects.requireNonNull(modelId, "modelId");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(request, REQUEST);
         try {
             final Result<ParsedFormat> parsed = parseFormat(request.responseFormat(), modelId);
             if (parsed.isErr()) {
@@ -180,7 +184,7 @@ public final class OllamaClient implements ProviderClient {
         final Result<ParsedFormat> parsedFormat = parseFormat(request.responseFormat(), modelId);
         if (parsedFormat.isErr()) {
             return ProviderCallResult.withoutRetryAfter(
-                    Result.err(Objects.requireNonNull(parsedFormat.error(), "error")));
+                    Result.err(Objects.requireNonNull(parsedFormat.error(), ERROR)));
         }
         return exchangeChat(
                 modelId,
@@ -195,18 +199,17 @@ public final class OllamaClient implements ProviderClient {
             String modelId, ChatRequest request, @Nullable JsonNode schema, boolean mayReask) {
         final Result<String> requestBody = serializeRequest(modelId, request, schema);
         if (requestBody.isErr()) {
-            return ProviderCallResult.withoutRetryAfter(
-                    Result.err(Objects.requireNonNull(requestBody.error(), "error")));
+            return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(requestBody.error(), ERROR)));
         }
         final ProviderCallResult<HttpReply> call =
                 postChat(modelId, Objects.requireNonNull(requestBody.data(), "body"), request);
         final Result<HttpReply> response = call.result();
         if (response.isErr()) {
-            final AppError error = Objects.requireNonNull(response.error(), "error");
+            final AppError error = Objects.requireNonNull(response.error(), ERROR);
             logOutcome("chat", modelId, error);
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         return ReasoningBudget.settled(
                 request,
                 replies.spentOnReasoning(request, reply),
@@ -279,7 +282,7 @@ public final class OllamaClient implements ProviderClient {
 
     @Override
     public Duration chatTimeout(ChatRequest request) {
-        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, "request"))
+        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, REQUEST))
                 .requestTimeout();
     }
 
@@ -295,7 +298,7 @@ public final class OllamaClient implements ProviderClient {
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         final Result<HttpReply> mapped = HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId);
         return ProviderCallResult.fromHttpReply(
                 mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
@@ -329,7 +332,7 @@ public final class OllamaClient implements ProviderClient {
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         return ProviderCallResult.fromHttpReply(HttpErrorMapper.map(reply, config, purpose, modelId), reply);
     }
 

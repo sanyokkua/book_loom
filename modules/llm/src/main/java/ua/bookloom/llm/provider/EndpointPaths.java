@@ -1,5 +1,7 @@
 package ua.bookloom.llm.provider;
 
+import static ua.bookloom.util.contract.ArgNames.CONFIG;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
@@ -27,7 +29,7 @@ public final class EndpointPaths {
      * @return the override when it is not blank, else {@code defaultPath}
      */
     public static String modelsPath(ProviderConfig config, String defaultPath) {
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         return choose("models", config.modelsPath(), defaultPath);
     }
 
@@ -39,7 +41,7 @@ public final class EndpointPaths {
      * @return the override when it is not blank, else {@code defaultPath}
      */
     public static String chatPath(ProviderConfig config, String defaultPath) {
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         return choose("chat", config.chatPath(), defaultPath);
     }
 
@@ -51,7 +53,7 @@ public final class EndpointPaths {
      * @return the description with the path of its base URL removed, or empty if the URL has no usable host root
      */
     public static Optional<ProviderConfig> atHostRoot(ProviderConfig config) {
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         final URI base = config.baseUrl();
         try {
             return Optional.of(config.withBaseUrl(

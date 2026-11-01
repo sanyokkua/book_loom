@@ -70,6 +70,7 @@ final class AdvancedChecks {
             {"type":"object","properties":{"k":{"enum":["ZX-91"]}},"required":["k"],"additionalProperties":false}
             """);
     private static final String SCHEMA_PROMPT = "Return a JSON object whose field k holds any short product code.";
+    private static final String THINKING_NAME = "thinking";
     private static final String THINK_PROMPT = "Think step by step: what is 17 plus 25? Answer with the number.";
     private static final String SAMPLE_PROMPT = "Write one short sentence about a lighthouse on a quiet coast.";
     private static final String COUNT_PROMPT = "Count from 1 to 100, separated by spaces.";
@@ -159,7 +160,7 @@ final class AdvancedChecks {
                 continue;
             }
             // An empty answer under "off" is a reply the reasoning used up: the switch was accepted and did nothing.
-            final Outcome failed = refusedOrStop("thinking", call);
+            final Outcome failed = refusedOrStop(THINKING_NAME, call);
             if (stopped != null) {
                 return null;
             }
@@ -178,7 +179,7 @@ final class AdvancedChecks {
         if (call.result().isOk()) {
             return new ThinkingVerdict(OffSwitch.REASONING_EFFORT.wireName(), verdict(Outcome.HONOURED));
         }
-        final Outcome outcome = refusedOrStop("thinking", call);
+        final Outcome outcome = refusedOrStop(THINKING_NAME, call);
         return outcome == null ? null : new ThinkingVerdict(null, verdict(outcome));
     }
 
@@ -189,7 +190,7 @@ final class AdvancedChecks {
         if (call.result().isOk()) {
             return new ThinkingVerdict(NATIVE_SWITCH, verdict(Outcome.HONOURED));
         }
-        final Outcome outcome = refusedOrStop("thinking", call);
+        final Outcome outcome = refusedOrStop(THINKING_NAME, call);
         return outcome == null ? null : new ThinkingVerdict(null, verdict(outcome));
     }
 

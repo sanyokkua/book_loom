@@ -236,7 +236,7 @@ final class OllamaReplyReader {
         }
         return switch (doneReason) {
             case "stop" -> FinishReason.STOP;
-            case "length" -> FinishReason.LENGTH;
+            case CUT_REASON -> FinishReason.LENGTH;
             default -> FinishReason.OTHER;
         };
     }

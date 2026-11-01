@@ -21,6 +21,8 @@ import ua.bookloom.api.llm.ModelKind;
 @Slf4j
 public final class ModelIdentityParser {
 
+    private static final String IMATRIX = "imatrix";
+
     private static final String EMBEDDING = "embedding";
     private static final String TEXT = "text";
     private static final String MLX = "mlx";
@@ -73,7 +75,7 @@ public final class ModelIdentityParser {
             return model(shape, ctx);
         }
         if (aux.stem() != null) {
-            return model(splitter.split(new PasteContext(aux.stem())).withSidecar("imatrix"), ctx);
+            return model(splitter.split(new PasteContext(aux.stem())).withSidecar(IMATRIX), ctx);
         }
         final NameFacts facts = emptyFacts(aux.format(), aux.shard(), aux.sidecar());
         return new ParsedName(identityOnly(aux.kind()), facts, origin(ctx, null, null, null, null));
@@ -204,7 +206,7 @@ public final class ModelIdentityParser {
                 reading.experts,
                 reading.expertSize,
                 QuantTypes.of(quant.quant()),
-                reading.imatrix || "imatrix".equals(shape.sidecar()),
+                reading.imatrix || IMATRIX.equals(shape.sidecar()),
                 reading.dwq,
                 implied ? MLX : null,
                 shape.sidecar(),
@@ -234,7 +236,7 @@ public final class ModelIdentityParser {
                 null,
                 null,
                 null,
-                "imatrix".equals(sidecar),
+                IMATRIX.equals(sidecar),
                 false,
                 null,
                 sidecar,

@@ -17,10 +17,12 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 final class LinkReader {
 
+    private static final String MODELS = "models";
+
     private static final Set<String> HUB_HOSTS = Set.of("huggingface.co", "www.huggingface.co", "hf.co");
     private static final Set<String> OLLAMA_HOSTS = Set.of("ollama.com", "www.ollama.com", "registry.ollama.ai");
     private static final Set<String> NOT_REPOS =
-            Set.of("datasets", "spaces", "docs", "models", "collections", "papers", "api");
+            Set.of("datasets", "spaces", "docs", MODELS, "collections", "papers", "api");
     private static final Set<String> REVISION_MARKERS = Set.of("tree", "blob", "resolve", "raw");
     private static final String MAIN = "main";
     private static final String GGUF = ".gguf";
@@ -45,10 +47,10 @@ final class LinkReader {
             return ollama(link, parts, ctx);
         }
         if ("lmstudio.ai".equals(host) || "www.lmstudio.ai".equals(host)) {
-            return twoParts(dropFirst(parts, "models"), "url:lmstudio", ctx);
+            return twoParts(dropFirst(parts, MODELS), "url:lmstudio", ctx);
         }
         if ("openrouter.ai".equals(host)) {
-            return twoParts(dropFirst(parts, "models"), "url:openrouter", ctx);
+            return twoParts(dropFirst(parts, MODELS), "url:openrouter", ctx);
         }
         return link;
     }

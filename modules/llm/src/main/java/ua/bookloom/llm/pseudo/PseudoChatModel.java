@@ -30,6 +30,11 @@ import ua.bookloom.api.llm.FinishReason;
 @Slf4j
 public final class PseudoChatModel implements ChatModel {
 
+    private static final String GENDER = "gender";
+    private static final String OTHER = "other";
+    private static final String TARGET = "target";
+    private static final String UNKNOWN = "unknown";
+
     private static final Pattern PROTECTED_REFERENCE =
             Pattern.compile("⟦g\\d+⟧|&(?:#(?:x|X)[0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
@@ -137,7 +142,7 @@ public final class PseudoChatModel implements ChatModel {
         while (matcher.find()) {
             final Map<String, String> item = new LinkedHashMap<>();
             item.put("id", matcher.group(1));
-            item.put("target", uppercasePreservingReferences(matcher.group(2)));
+            item.put(TARGET, uppercasePreservingReferences(matcher.group(2)));
             items.add(item);
         }
         log.debug("Pseudo batch draft answered {} items", items.size());
@@ -145,7 +150,7 @@ public final class PseudoChatModel implements ChatModel {
     }
 
     private String targetReply(String translation) {
-        return writeValue(Map.of("target", translation));
+        return writeValue(Map.of(TARGET, translation));
     }
 
     private String prescanReply(String source) {
@@ -162,8 +167,8 @@ public final class PseudoChatModel implements ChatModel {
             final Map<String, String> verdict = new LinkedHashMap<>();
             verdict.put("term", matcher.group(1));
             verdict.put("verdict", "name");
-            verdict.put("type", "other");
-            verdict.put("gender", "unknown");
+            verdict.put("type", OTHER);
+            verdict.put(GENDER, UNKNOWN);
             verdicts.add(verdict);
         }
         log.debug("Pseudo glossary review judged {} terms names", verdicts.size());
@@ -177,8 +182,8 @@ public final class PseudoChatModel implements ChatModel {
         while (matcher.find()) {
             final Map<String, String> suggestion = new LinkedHashMap<>();
             suggestion.put("term", matcher.group(1));
-            suggestion.put("target", "");
-            suggestion.put("gender", "unknown");
+            suggestion.put(TARGET, "");
+            suggestion.put(GENDER, UNKNOWN);
             suggestions.add(suggestion);
         }
         log.debug("Pseudo glossary suggestion answered {} terms with no suggestion", suggestions.size());
@@ -194,8 +199,8 @@ public final class PseudoChatModel implements ChatModel {
             window.put("window", Integer.parseInt(matcher.group(1)));
             window.put("quote", "none");
             window.put("usage", "name");
-            window.put("kind", "other");
-            window.put("gender", "none");
+            window.put("kind", OTHER);
+            window.put(GENDER, "none");
             windows.add(window);
         }
         log.debug("Pseudo term reading answered {} windows with no pronoun", windows.size());
@@ -209,8 +214,8 @@ public final class PseudoChatModel implements ChatModel {
     private static Map<String, String> termEntry(String term) {
         final Map<String, String> entry = new LinkedHashMap<>();
         entry.put("term", term);
-        entry.put("type", "other");
-        entry.put("gender", "unknown");
+        entry.put("type", OTHER);
+        entry.put(GENDER, UNKNOWN);
         return entry;
     }
 

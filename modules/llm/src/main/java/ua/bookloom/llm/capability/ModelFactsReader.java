@@ -41,6 +41,8 @@ public final class ModelFactsReader {
     private static final String MODELS = "/models";
     private static final String CONTEXT_SUFFIX = ".context_length";
     private static final String UNKNOWN = "unknown";
+    private static final String MODELS_FIELD = "models";
+    private static final String CONTEXT_LENGTH = "context_length";
     private static final int HTTP_OK = 200;
 
     private final HttpExchange exchange;
@@ -119,11 +121,11 @@ public final class ModelFactsReader {
     }
 
     private static void readOllamaPs(final JsonNode ps, final String modelId, final Draft draft) {
-        for (final JsonNode entry : ps.path("models")) {
+        for (final JsonNode entry : ps.path(MODELS_FIELD)) {
             if (modelId.equals(entry.path("name").asText())
                     || modelId.equals(entry.path("model").asText())) {
-                draft.loadedContext = positive(entry.path("context_length"))
-                        ? Integer.valueOf(entry.path("context_length").intValue())
+                draft.loadedContext = positive(entry.path(CONTEXT_LENGTH))
+                        ? Integer.valueOf(entry.path(CONTEXT_LENGTH).intValue())
                         : null;
                 final String runner = text(entry.path("runner"));
                 draft.runner = runner != null ? runner : draft.runner;
@@ -158,7 +160,7 @@ public final class ModelFactsReader {
     }
 
     private static void readLmStudioReasoning(final JsonNode list, final String modelId, final Draft draft) {
-        final JsonNode rows = list.path("models").isArray() ? list.path("models") : list.path("data");
+        final JsonNode rows = list.path(MODELS_FIELD).isArray() ? list.path(MODELS_FIELD) : list.path("data");
         for (final JsonNode row : rows) {
             if (modelId.equals(row.path("key").asText())
                     || modelId.equals(row.path("id").asText())) {
@@ -201,7 +203,7 @@ public final class ModelFactsReader {
     private static void readListingRow(final JsonNode row, final Draft draft) {
         draft.quant = text(row.path("quant"));
         final Integer slot = positiveOrNull(row.path("meta").path("n_ctx"));
-        final Integer window = positiveOrNull(row.path("context_length"));
+        final Integer window = positiveOrNull(row.path(CONTEXT_LENGTH));
         final Integer most = positiveOrNull(row.path("max_context_length"));
         final Integer served = positiveOrNull(row.path("max_model_len"));
         final boolean loaded = row.path("loaded").asBoolean(false);

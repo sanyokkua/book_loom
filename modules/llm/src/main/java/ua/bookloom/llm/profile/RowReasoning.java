@@ -11,20 +11,22 @@ import ua.bookloom.api.llm.ReasoningControl;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class RowReasoning {
 
+    private static final String OFF = "false";
+    private static final String MEDIUM = "medium";
+
     /** A model that does not think: no control is ever sent. */
     static final ReasoningControl NONE = ReasoningControl.NONE;
 
     /** A model that thinks by default and has an on/off switch; the engine's own off value is chosen per engine. */
     static final ReasoningControl BOOLEAN =
-            new ReasoningControl(ReasoningControl.Kind.BOOLEAN, List.of("true", "false"), "false", "true");
+            new ReasoningControl(ReasoningControl.Kind.BOOLEAN, List.of("true", OFF), OFF, "true");
 
     /** A model with named levels that is switched off with {@code false} and is never sent {@code true}. */
-    static final ReasoningControl LEVELS =
-            new ReasoningControl(ReasoningControl.Kind.LEVELS, List.of(), "false", "medium");
+    static final ReasoningControl LEVELS = new ReasoningControl(ReasoningControl.Kind.LEVELS, List.of(), OFF, MEDIUM);
 
     /** The harmony format of gpt-oss: it always reasons and its lowest level is {@code low}. */
     static final ReasoningControl HARMONY =
-            new ReasoningControl(ReasoningControl.Kind.ALWAYS, List.of("low", "medium", "high"), "low", "medium");
+            new ReasoningControl(ReasoningControl.Kind.ALWAYS, List.of("low", MEDIUM, "high"), "low", MEDIUM);
 
     /** The muse-glimmer template: it always reasons and its lowest level is {@code low}, never {@code max}. */
     static final ReasoningControl GLIMMER =

@@ -1,5 +1,7 @@
 package ua.bookloom.llm.http;
 
+import static ua.bookloom.util.contract.ArgNames.CONFIG;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.http.HttpConnectTimeoutException;
@@ -63,7 +65,7 @@ public final class HttpErrorMapper {
     public static Result<HttpReply> map(
             HttpReply reply, ProviderConfig config, CallPurpose purpose, @Nullable String modelName) {
         Objects.requireNonNull(reply, "reply");
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         Objects.requireNonNull(purpose, "purpose");
         log.debug(
                 "HTTP error mapping input purpose={} host={} status={} bodyLength={} modelPresent={}",
@@ -119,7 +121,7 @@ public final class HttpErrorMapper {
      * @return the failure: the matching row's, or {@code upstream} with {@code unclassified} when no row explains it
      */
     public static AppError mapStreamedError(ProviderConfig config, @Nullable String modelName, String errorText) {
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         Objects.requireNonNull(errorText, "errorText");
         log.debug(
                 "Streamed error mapping host={} textLength={} modelPresent={}",
@@ -159,7 +161,7 @@ public final class HttpErrorMapper {
     static AppError map(
             Throwable failure, ProviderConfig config, @Nullable String modelName, String method, String path) {
         Objects.requireNonNull(failure, "failure");
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         Objects.requireNonNull(method, "method");
         Objects.requireNonNull(path, "path");
         final Mapping mapping = classify(failure);

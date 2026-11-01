@@ -6,34 +6,34 @@ import java.util.Optional;
 /** A request capability that a provider explicitly rejected and may be retried without. */
 public enum RejectedCapability {
     /** The provider rejected the requested structured response format. */
-    STRUCTURED_OUTPUT("response_format", "omitted"),
+    STRUCTURED_OUTPUT("response_format"),
 
     /** The provider rejected its native reasoning-output control. */
-    REASONING_CONTROL("reasoning", "omitted"),
+    REASONING_CONTROL("reasoning"),
 
     /** The provider rejected the sampling temperature. */
-    TEMPERATURE("temperature", "omitted"),
+    TEMPERATURE("temperature"),
 
     /** The provider rejected {@code top_p}. */
-    TOP_P("top_p", "omitted"),
+    TOP_P("top_p"),
 
     /** The provider rejected {@code top_k}. */
-    TOP_K("top_k", "omitted"),
+    TOP_K("top_k"),
 
     /** The provider rejected {@code min_p}. */
-    MIN_P("min_p", "omitted"),
+    MIN_P("min_p"),
 
     /** The provider rejected the repeat penalty. */
-    REPEAT_PENALTY("repeat_penalty", "omitted"),
+    REPEAT_PENALTY("repeat_penalty"),
 
     /** The provider rejected the sampling seed. */
-    SEED("seed", "omitted"),
+    SEED("seed"),
 
     /** The provider rejected {@code max_tokens}; {@code max_completion_tokens} is sent instead. */
     OUTPUT_FIELD("max_tokens", "max_completion_tokens"),
 
     /** The provider rejected {@code num_ctx}. */
-    NUM_CTX("num_ctx", "omitted"),
+    NUM_CTX("num_ctx"),
 
     /** The model's chat template has no system role; the system text goes into the first user message instead. */
     SYSTEM_ROLE("system_role", "folded"),
@@ -47,6 +47,10 @@ public enum RejectedCapability {
     private final String settingName;
     private final String insteadDid;
     private final boolean remembered;
+
+    RejectedCapability(final String settingName) {
+        this(settingName, "omitted");
+    }
 
     RejectedCapability(final String settingName, final String insteadDid) {
         this(settingName, insteadDid, true);

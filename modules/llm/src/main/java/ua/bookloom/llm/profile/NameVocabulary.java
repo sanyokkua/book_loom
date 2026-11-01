@@ -13,6 +13,14 @@ import ua.bookloom.api.llm.ModelKind;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class NameVocabulary {
 
+    private static final String CODER = "coder";
+    private static final String EMBEDDING = "embedding";
+    private static final String INSTRUCT = "instruct";
+    private static final String MODIFIED = "modified";
+    private static final String SAFETENSORS = "safetensors";
+    private static final String THINKING = "thinking";
+    private static final String VISION = "vision";
+
     /** Words some repositories put in front of the model name to repeat its publisher. */
     static final Set<String> VENDOR_TOKENS =
             Set.of("qwen", "mistralai", "google", "meta", "nvidia", "ibm", "openai", "insait");
@@ -36,29 +44,29 @@ final class NameVocabulary {
     static final Map<String, String> FAMILY_ALIAS = Map.of("magistral-small", "magistral", "gemma-", "gemma");
 
     static final Map<String, String> VARIANTS = Map.ofEntries(
-            Map.entry("instruct", "instruct"),
-            Map.entry("it", "instruct"),
-            Map.entry("chat", "instruct"),
+            Map.entry(INSTRUCT, INSTRUCT),
+            Map.entry("it", INSTRUCT),
+            Map.entry("chat", INSTRUCT),
             Map.entry("base", "base"),
             Map.entry("pt", "base"),
-            Map.entry("thinking", "thinking"),
+            Map.entry(THINKING, THINKING),
             Map.entry("reasoning", "reasoning"),
-            Map.entry("coder", "coder"),
-            Map.entry("coding", "coder"),
-            Map.entry("vl", "vision"),
-            Map.entry("vision", "vision"),
+            Map.entry(CODER, CODER),
+            Map.entry("coding", CODER),
+            Map.entry("vl", VISION),
+            Map.entry(VISION, VISION),
             Map.entry("omni", "omni"),
-            Map.entry("abliterated", "modified"),
-            Map.entry("uncensored", "modified"),
-            Map.entry("heretic", "modified"),
+            Map.entry("abliterated", MODIFIED),
+            Map.entry("uncensored", MODIFIED),
+            Map.entry("heretic", MODIFIED),
             Map.entry("h", "hybrid"),
-            Map.entry("embed", "embedding"),
-            Map.entry("embedding", "embedding"),
+            Map.entry("embed", EMBEDDING),
+            Map.entry("embedding", EMBEDDING),
             Map.entry("text", "text"),
             Map.entry("dev", "dev"));
 
     static final Map<String, String> FORMATS =
-            Map.of("gguf", "gguf", "mlx", "mlx", "safetensors", "safetensors", "awq", "awq", "gptq", "gptq");
+            Map.of("gguf", "gguf", "mlx", "mlx", SAFETENSORS, SAFETENSORS, "awq", "awq", "gptq", "gptq");
 
     static final Set<String> SPEC = Set.of("mtp", "dflash", "dflash2", "assistant", "draft");
 
@@ -130,12 +138,12 @@ final class NameVocabulary {
             "readme.md",
             ".gitattributes",
             ".src_sha");
-    static final Set<String> WEIGHT_EXTENSIONS = Set.of("safetensors", "bin", "pt", "pth");
+    static final Set<String> WEIGHT_EXTENSIONS = Set.of(SAFETENSORS, "bin", "pt", "pth");
     static final Set<String> WEIGHT_STEMS = Set.of("model-", "model.", "pytorch_model", "consolidated");
 
     /** Variant words a router such as OpenRouter appends to an id after a colon. */
     static final Set<String> ROUTER_VARIANTS =
-            Set.of("free", "batch", "thinking", "extended", "nitro", "floor", "exacto", "online");
+            Set.of("free", "batch", THINKING, "extended", "nitro", "floor", "exacto", "online");
 
     /** The families a distillation is trained from. */
     static final Set<String> DISTILL_BASES =

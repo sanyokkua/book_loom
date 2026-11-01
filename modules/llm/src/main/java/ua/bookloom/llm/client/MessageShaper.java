@@ -1,5 +1,7 @@
 package ua.bookloom.llm.client;
 
+import static ua.bookloom.util.contract.ArgNames.REQUEST;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,7 +33,7 @@ public final class MessageShaper {
     public static final String DEFAULT_SYSTEM = "Follow the instructions in the user message exactly.";
 
     /** The invisible word joiner put after the slash of a thinking switch in book text. */
-    public static final char WORD_JOINER = '⁠';
+    public static final char WORD_JOINER = '\u2060';
 
     private static final String BLANK_LINE = "\n\n";
     private static final Pattern THINK_SWITCH = Pattern.compile("/(?=(?:no_)?think\\b)");
@@ -53,7 +55,7 @@ public final class MessageShaper {
      */
     public static ChatRequest shaped(final ModelProfile profile, final ChatRequest request) {
         Objects.requireNonNull(profile, "profile");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(request, REQUEST);
         List<ChatMessage> messages = withSystem(request.messages());
         messages = withoutReasoningLines(profile, messages);
         if (profile.quirks().contains(Quirk.ESCAPE_THINK_TOGGLES)) {
@@ -78,7 +80,7 @@ public final class MessageShaper {
      * @return the folded request; the same request when it has no system message
      */
     public static ChatRequest folded(final ChatRequest request) {
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(request, REQUEST);
         final List<ChatMessage> messages = request.messages();
         final String system = messages.stream()
                 .filter(message -> message.role() == ChatRole.SYSTEM)
@@ -108,7 +110,7 @@ public final class MessageShaper {
      * @return the merged request; the same request when no two neighbouring messages share a role
      */
     public static ChatRequest merged(final ChatRequest request) {
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(request, REQUEST);
         final List<ChatMessage> joined = joinedRuns(request.messages());
         log.debug(
                 "Message runs merged kind={} before={} after={}",
@@ -125,7 +127,7 @@ public final class MessageShaper {
      * @return {@code true} if a merge would change the request, {@code false} otherwise
      */
     public static boolean hasRuns(final ChatRequest request) {
-        return joinedRuns(Objects.requireNonNull(request, "request").messages()).size()
+        return joinedRuns(Objects.requireNonNull(request, REQUEST).messages()).size()
                 != request.messages().size();
     }
 
@@ -136,7 +138,7 @@ public final class MessageShaper {
      * @return {@code true} if a message has the system role, {@code false} otherwise
      */
     public static boolean hasSystem(final ChatRequest request) {
-        return Objects.requireNonNull(request, "request").messages().stream()
+        return Objects.requireNonNull(request, REQUEST).messages().stream()
                 .anyMatch(message -> message.role() == ChatRole.SYSTEM);
     }
 

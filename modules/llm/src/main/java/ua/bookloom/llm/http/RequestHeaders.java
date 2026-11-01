@@ -1,5 +1,7 @@
 package ua.bookloom.llm.http;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -30,6 +32,8 @@ import ua.bookloom.api.llm.ProviderConfigRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RequestHeaders {
 
+    private static final String APPLICATION_JSON = "application/json";
+
     /** What a masked header value shows in place of the secret. */
     public static final String MASK = "••••";
 
@@ -57,12 +61,12 @@ public final class RequestHeaders {
                 config.auth(),
                 config.headers().keySet());
         final Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Content-Type", "application/json");
-        headers.put("Accept", "application/json");
+        headers.put("Content-Type", APPLICATION_JSON);
+        headers.put("Accept", APPLICATION_JSON);
         for (final Map.Entry<String, String> custom : config.headers().entrySet()) {
             final Result<String> value = customValue(custom.getKey(), custom.getValue(), env);
             if (value.isErr()) {
-                return Result.err(Objects.requireNonNull(value.error(), "error"));
+                return Result.err(Objects.requireNonNull(value.error(), ERROR));
             }
             put(headers, custom.getKey(), Objects.requireNonNull(value.data(), "value"));
         }
@@ -79,8 +83,8 @@ public final class RequestHeaders {
     public static Map<String, String> masked(ProviderConfig config) {
         Objects.requireNonNull(config, "config");
         final Map<String, String> shown = new LinkedHashMap<>();
-        shown.put("Content-Type", "application/json");
-        shown.put("Accept", "application/json");
+        shown.put("Content-Type", APPLICATION_JSON);
+        shown.put("Accept", APPLICATION_JSON);
         config.headers().forEach((name, value) -> put(shown, name, isSecret(name, value) ? MASK : value));
         switch (config.auth()) {
             case BEARER -> put(shown, AUTHORIZATION, "Bearer " + MASK);
@@ -99,7 +103,7 @@ public final class RequestHeaders {
         final String variable = config.credentialRef() == null ? "" : config.credentialRef();
         final Result<String> key = lookup(variable, env);
         if (key.isErr()) {
-            return Result.err(Objects.requireNonNull(key.error(), "error"));
+            return Result.err(Objects.requireNonNull(key.error(), ERROR));
         }
         final String name = config.auth() == ProviderAuth.BEARER ? AUTHORIZATION : headerName(config);
         if (!isHeaderName(name)) {
@@ -108,7 +112,7 @@ public final class RequestHeaders {
         final String value = config.auth() == ProviderAuth.BEARER ? "Bearer " + key.data() : key.data();
         final Result<String> checked = checkedValue(name, Objects.requireNonNull(value, "value"));
         if (checked.isErr()) {
-            return Result.err(Objects.requireNonNull(checked.error(), "error"));
+            return Result.err(Objects.requireNonNull(checked.error(), ERROR));
         }
         put(headers, name, value);
         return Result.ok(headers);

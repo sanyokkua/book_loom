@@ -22,6 +22,7 @@ final class OtherRows {
     private static final int GPT_OSS_TEMPLATE_OVERHEAD = 135;
     private static final String GRANITE =
             "A plain instruct model with a native system role; it never thinks, so no" + " thinking control is sent. ";
+    private static final String NEMOTRON_FAMILY = "nemotron";
     private static final String NEMOTRON = "A Mamba-transformer hybrid with a boolean thinking switch (Ollama think"
             + " false, an OpenAI-style server reasoning effort none); it thinks by default. ";
     private static final String OLD_RENDERER = "Its older renderer reads /think and /no_think written in book text as a"
@@ -63,7 +64,7 @@ final class OtherRows {
                         "nemotron-cascade-2:30b"),
                 nemotronNamed(
                         "nemotron3-33b",
-                        family("nemotron").version("3").sizes(33.0),
+                        family(NEMOTRON_FAMILY).version("3").sizes(33.0),
                         "not offered for uk/ru",
                         "The Omni build takes English input only, so Start refuses a non-English source.",
                         "nemotron3:33b"),
@@ -101,13 +102,13 @@ final class OtherRows {
 
     private static BuiltInRow nano(final String name, final double size, final String example, final String note) {
         return nemotronNamed(
-                name, family("nemotron").version("3").line("nano").sizes(size), EXPERIMENTAL, note, example);
+                name, family(NEMOTRON_FAMILY).version("3").line("nano").sizes(size), EXPERIMENTAL, note, example);
     }
 
     private static BuiltInRow nemotronNewRenderer() {
         return BuiltInRow.of(
                         "nemotron-3.5-lightning-30b",
-                        family("nemotron").version("3.5").line("lightning").sizes(30.0),
+                        family(NEMOTRON_FAMILY).version("3.5").line("lightning").sizes(30.0),
                         RowReasoning.BOOLEAN,
                         EXPERIMENTAL,
                         NEMOTRON + "Its newer renderer treats /think as plain text, so nothing is escaped.",

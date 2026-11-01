@@ -1,5 +1,10 @@
 package ua.bookloom.llm.client.openai;
 
+import static ua.bookloom.util.contract.ArgNames.ERROR;
+import static ua.bookloom.util.contract.ArgNames.MODEL_ID;
+import static ua.bookloom.util.contract.ArgNames.REPLY;
+import static ua.bookloom.util.contract.ArgNames.REQUEST;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.time.Duration;
@@ -127,8 +132,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     @Override
     public ProviderCallResult<CheckReply> checkChat(
             String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
-        Objects.requireNonNull(modelId, "modelId");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(modelId, MODEL_ID);
+        Objects.requireNonNull(request, REQUEST);
         log.debug(
                 "OpenAI-compatible check started provider={} model={} responseFormatPresent={} offSwitch={}",
                 config.id(),
@@ -140,8 +145,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                     config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck, factsReader);
             final Result<CheckedModelId> checked = idCheck.check(modelId);
             if (checked.isErr()) {
-                return ProviderCallResult.withoutRetryAfter(
-                        Result.err(Objects.requireNonNull(checked.error(), "error")));
+                return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(checked.error(), ERROR)));
             }
             return checker.sendCheck(
                     Objects.requireNonNull(checked.data(), "checked").sentId(), request);
@@ -153,8 +157,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public String checkRequestBody(String modelId, ChatRequest request, @Nullable OffSwitch offSwitch) {
-        Objects.requireNonNull(modelId, "modelId");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(modelId, MODEL_ID);
+        Objects.requireNonNull(request, REQUEST);
         log.debug(
                 "OpenAI-compatible check body asked provider={} model={} offSwitch={}",
                 config.id(),
@@ -170,7 +174,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         final Result<String> body =
                 parsed.flatMap(format -> requestMapper.serializeRequest(modelId, request, format.format()));
         if (body.isErr()) {
-            return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(body.error(), "error")));
+            return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(body.error(), ERROR)));
         }
         final long startNanos = nanoTime.getAsLong();
         final ProviderCallResult<HttpReply> call =
@@ -178,7 +182,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - startNanos);
         final HttpReply reply = call.result().data();
         if (reply == null) {
-            final AppError error = Objects.requireNonNull(call.result().error(), "error");
+            final AppError error = Objects.requireNonNull(call.result().error(), ERROR);
             logOutcome("check", modelId, error);
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
@@ -220,10 +224,10 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             final Result<HttpReply> result = call.result();
             if (result.isErr()) {
                 return new ProviderCallResult<>(
-                        models.failed(Objects.requireNonNull(result.error(), "error")), call.retryAfter());
+                        models.failed(Objects.requireNonNull(result.error(), ERROR)), call.retryAfter());
             }
             return new ProviderCallResult<>(
-                    models.read(Objects.requireNonNull(result.data(), "reply").body()), call.retryAfter());
+                    models.read(Objects.requireNonNull(result.data(), REPLY).body()), call.retryAfter());
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(models.failure(failure)));
         }
@@ -231,8 +235,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public ProviderCallResult<ChatResponse> chat(String modelId, ChatRequest request) {
-        Objects.requireNonNull(modelId, "modelId");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(modelId, MODEL_ID);
+        Objects.requireNonNull(request, REQUEST);
         log.debug(
                 "OpenAI-compatible chat started provider={} host={} model={} messageCount={} temperature={} maxOutputTokens={} responseFormatPresent={}",
                 config.id(),
@@ -245,8 +249,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         try {
             final Result<CheckedModelId> checked = idCheck.check(modelId);
             if (checked.isErr()) {
-                return ProviderCallResult.withoutRetryAfter(
-                        Result.err(Objects.requireNonNull(checked.error(), "error")));
+                return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(checked.error(), ERROR)));
             }
             final String sentId =
                     Objects.requireNonNull(checked.data(), "checked").sentId();
@@ -284,7 +287,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public Result<CheckedModelId> recheckModelId(String modelId) {
-        return idCheck.recheck(Objects.requireNonNull(modelId, "modelId"));
+        return idCheck.recheck(Objects.requireNonNull(modelId, MODEL_ID));
     }
 
     @Override
@@ -316,7 +319,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         final Result<ParsedFormat> parsedFormat = requestMapper.parseFormat(request.responseFormat(), modelId);
         if (parsedFormat.isErr()) {
             return ProviderCallResult.withoutRetryAfter(
-                    Result.err(Objects.requireNonNull(parsedFormat.error(), "error")));
+                    Result.err(Objects.requireNonNull(parsedFormat.error(), ERROR)));
         }
         return exchangeChat(
                 modelId,
@@ -334,8 +337,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             boolean mayReask) {
         final Result<String> requestBody = requestMapper.serializeRequest(modelId, request, format);
         if (requestBody.isErr()) {
-            return ProviderCallResult.withoutRetryAfter(
-                    Result.err(Objects.requireNonNull(requestBody.error(), "error")));
+            return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(requestBody.error(), ERROR)));
         }
         final long startNanos = nanoTime.getAsLong();
         final ProviderCallResult<HttpReply> call =
@@ -343,11 +345,11 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - startNanos);
         final Result<HttpReply> response = call.result();
         if (response.isErr()) {
-            final AppError error = Objects.requireNonNull(response.error(), "error");
+            final AppError error = Objects.requireNonNull(response.error(), ERROR);
             logOutcome("chat", modelId, error);
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         return ReasoningBudget.settled(
                 request,
                 replies.spentOnReasoning(request, reply.body()),
@@ -359,7 +361,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public Duration chatTimeout(ChatRequest request) {
-        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, "request"))
+        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, REQUEST))
                 .requestTimeout();
     }
 
@@ -369,7 +371,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         final Result<HttpReply> mapped = HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId);
         return ProviderCallResult.fromHttpReply(
                 mapped, reply, CapabilityRejections.fromMapped(mapped, reply, request, chatConfig.kind()));
@@ -380,7 +382,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
-        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
         return ProviderCallResult.fromHttpReply(HttpErrorMapper.map(reply, config, purpose, modelId), reply);
     }
 

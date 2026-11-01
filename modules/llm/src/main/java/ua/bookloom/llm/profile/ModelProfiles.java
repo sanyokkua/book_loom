@@ -37,10 +37,10 @@ import ua.bookloom.llm.engine.EngineTraits;
 public final class ModelProfiles {
 
     private static final String THINKING = "thinking";
-    private static final Set<String> OFF_WORDS = Set.of("false", "off", "none");
-    private static final Set<String> BOOLEAN_WORDS = Set.of("true", "false", "on", "off");
-    private static final Pattern BILLIONS = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*[Bb]\\b");
     private static final String BOOLEAN_OFF = "false";
+    private static final Set<String> OFF_WORDS = Set.of(BOOLEAN_OFF, "off", "none");
+    private static final Set<String> BOOLEAN_WORDS = Set.of("true", BOOLEAN_OFF, "on", "off");
+    private static final Pattern BILLIONS = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*[Bb]\\b");
     private static final ModelReport.Match DEFAULT_MATCH = ModelReport.Match.DEFAULT;
 
     // The default profile's request half as a row, so a model with no row goes through the same layering.

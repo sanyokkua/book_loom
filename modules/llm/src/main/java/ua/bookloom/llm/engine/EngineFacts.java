@@ -1,5 +1,9 @@
 package ua.bookloom.llm.engine;
 
+import static ua.bookloom.util.contract.ArgNames.CONFIG;
+import static ua.bookloom.util.contract.ArgNames.MODEL_ID;
+import static ua.bookloom.util.contract.ArgNames.PROVIDER_ID;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -38,7 +42,7 @@ public final class EngineFacts {
 
     private final HttpExchange exchange;
     private final ReplyShapes shapes;
-    private final Map<String, Props> props = new ConcurrentHashMap<>();
+    private final Map<String, Props> propsByKey = new ConcurrentHashMap<>();
     private final Map<String, ModelFacts> modelFacts = new ConcurrentHashMap<>();
 
     /** Shares the provider exchange, so the GET signs in and is logged like every other request. */
@@ -56,8 +60,8 @@ public final class EngineFacts {
      * @return {@code true} if the template reads the variable, {@code false} if it does not or cannot be read
      */
     public boolean readsEnableThinking(final ProviderConfig config, final String modelId) {
-        Objects.requireNonNull(config, "config");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(config, CONFIG);
+        Objects.requireNonNull(modelId, MODEL_ID);
         final String serverKey = config.id() + KEY_SEPARATOR + config.baseUrl();
         final Props server = known(config, serverKey, PROPS);
         log.debug("Engine facts template check provider={} model={} router={}", config.id(), modelId, server.router());
@@ -80,8 +84,8 @@ public final class EngineFacts {
      *     else the facts unchanged
      */
     public ModelFacts withTemplateSwitch(final ProviderConfig config, final String modelId, final ModelFacts facts) {
-        Objects.requireNonNull(config, "config");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(config, CONFIG);
+        Objects.requireNonNull(modelId, MODEL_ID);
         Objects.requireNonNull(facts, "facts");
         final boolean templateEngine = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
                         .offSwitch()
@@ -107,7 +111,7 @@ public final class EngineFacts {
      * @return {@code true} if its {@code /props} says {@code "role":"router"}, {@code false} otherwise
      */
     public boolean isRouter(final ProviderConfig config) {
-        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(config, CONFIG);
         final boolean router = known(config, config.id() + KEY_SEPARATOR + config.baseUrl(), PROPS)
                 .router();
         log.debug("Engine facts router check provider={} router={}", config.id(), router);
@@ -120,9 +124,9 @@ public final class EngineFacts {
      * @param providerId the provider's id; non-null
      */
     public void forget(final String providerId) {
-        Objects.requireNonNull(providerId, "providerId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
         final String prefix = providerId + KEY_SEPARATOR;
-        final boolean removed = props.keySet().removeIf(key -> key.startsWith(prefix));
+        final boolean removed = propsByKey.keySet().removeIf(key -> key.startsWith(prefix));
         modelFacts.keySet().removeIf(key -> key.startsWith(prefix));
         log.debug("Engine facts forgotten provider={} removed={}", providerId, removed);
     }
@@ -135,8 +139,8 @@ public final class EngineFacts {
      * @param facts what the server said; non-null
      */
     public void remember(final String providerId, final String modelId, final ModelFacts facts) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         Objects.requireNonNull(facts, "facts");
         modelFacts.put(providerId + KEY_SEPARATOR + modelId, facts);
     }
@@ -149,18 +153,18 @@ public final class EngineFacts {
      * @return the facts, or empty when none were read this session
      */
     public Optional<ModelFacts> lastRead(final String providerId, final String modelId) {
-        Objects.requireNonNull(providerId, "providerId");
-        Objects.requireNonNull(modelId, "modelId");
+        Objects.requireNonNull(providerId, PROVIDER_ID);
+        Objects.requireNonNull(modelId, MODEL_ID);
         return Optional.ofNullable(modelFacts.get(providerId + KEY_SEPARATOR + modelId));
     }
 
     private Props known(final ProviderConfig config, final String key, final String path) {
-        final Props kept = props.get(key);
+        final Props kept = propsByKey.get(key);
         if (kept != null) {
             return kept;
         }
         final Optional<Props> read = read(config, path);
-        read.ifPresent(found -> props.putIfAbsent(key, found));
+        read.ifPresent(found -> propsByKey.putIfAbsent(key, found));
         return read.orElse(Props.NONE);
     }
 
