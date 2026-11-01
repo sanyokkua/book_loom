@@ -44,7 +44,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     // IF a minimum were lower, THEN a column could be dragged until its content vanished. A header wider than the
     // minimum raises it (glossaryHeaders_smallWindow_areWhole), so the figure is a floor.
     @ParameterizedTest
-    @CsvSource({"0, 140", "1, 96", "2, 140", "3, 170", "4, 96", "5, 110", "6, 36"})
+    @CsvSource({"0, 140", "1, 150", "2, 140", "3, 170", "4, 96", "5, 130", "6, 36"})
     void glossaryColumns_eachOne_hasItsSpecifiedMinimumWidth(final int column, final double minimum) throws Exception {
         showScreen("en", 1024, 700, ROSALIND);
 
@@ -56,7 +56,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     // IF widening Term squeezed Translation below 170, THEN the target field a person types in would be cut.
     @Test
     void termColumn_draggedTo220_staysThereAndTranslationKeepsItsMinimum() throws Exception {
-        showScreen("en", 1280, 800, ROSALIND);
+        showScreen("en", 1500, 800, ROSALIND);
 
         drag("names-style", 0, 220);
 

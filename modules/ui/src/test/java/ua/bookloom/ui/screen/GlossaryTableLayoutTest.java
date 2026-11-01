@@ -86,11 +86,11 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
                         .toList()))
                 .satisfiesExactly(
                         term -> assertThat(term).isGreaterThanOrEqualTo(140),
-                        kind -> assertThat(kind).isGreaterThanOrEqualTo(96),
+                        kind -> assertThat(kind).isGreaterThanOrEqualTo(150),
                         forms -> assertThat(forms).isGreaterThanOrEqualTo(140),
                         target -> assertThat(target).isGreaterThanOrEqualTo(170),
                         state -> assertThat(state).isGreaterThanOrEqualTo(96),
-                        gender -> assertThat(gender).isGreaterThanOrEqualTo(110),
+                        gender -> assertThat(gender).isGreaterThanOrEqualTo(130),
                         remove -> assertThat(remove).isGreaterThanOrEqualTo(36));
         assertThat(ThemeTestSupport.onFx(() -> table().getFixedCellSize())).isEqualTo(46);
     }

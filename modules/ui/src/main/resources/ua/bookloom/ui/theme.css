@@ -2690,8 +2690,8 @@
     -fx-cursor: hand;
 }
 
-/* The Kind cell's origin wraps under the kind instead of ending in an ellipsis; two lines fit the 46px row. */
-.glossary-choice.glossary-kind {
+/* A Kind or Gender value's origin wraps under it instead of ending in an ellipsis; two lines fit the 46px row. */
+.glossary-choice.glossary-wraps {
     -fx-wrap-text: true;
     -fx-line-spacing: -2px;
 }

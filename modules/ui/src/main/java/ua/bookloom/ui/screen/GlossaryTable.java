@@ -39,13 +39,15 @@ final class GlossaryTable {
 
     // Each minimum keeps its header and a typical value whole; each column starts about a third wider.
     private static final double TERM_MIN = 140;
-    private static final double KIND_MIN = 96;
+    private static final double KIND_MIN = 150;
     private static final double FORMS_MIN = 140;
     private static final double TARGET_MIN = 170;
     private static final double STATE_MIN = 96;
-    private static final double GENDER_MIN = 110;
+    private static final double GENDER_MIN = 130;
     private static final double REMOVE_MIN = 36;
     private static final double START_SHARE = 1.3;
+    // A value with its origin ("female · book") wraps under itself instead of ending in an ellipsis.
+    private static final String WRAPPING_CHOICE = "glossary-wraps";
     private static final double REMOVE_WIDTH = 40;
     private static final String NOT_A_CHARACTER = "—";
     private static final List<TargetState> STATE_ORDER =
@@ -155,8 +157,8 @@ final class GlossaryTable {
         return entry.target() != null && !entry.target().isBlank();
     }
 
-    // The Kind column is narrow and "character · person" long, so its origin wraps to a second line of the row rather
-    // than ending in an ellipsis.
+    // The Kind column holds "character · person" on one line; a narrower window or a longer word wraps the origin to a
+    // second line of the row rather than ending in an ellipsis.
     private static GlossaryCells.EntryCell<?> typeCell(
             final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
         final GlossaryChoiceCell<TermType> cell = new GlossaryChoiceCell<>(
@@ -168,7 +170,7 @@ final class GlossaryTable {
                 entry -> typeLabel(messages, entry),
                 model::setType,
                 frozen);
-        cell.control().getStyleClass().add("glossary-kind");
+        cell.control().getStyleClass().add(WRAPPING_CHOICE);
         return cell;
     }
 
@@ -194,7 +196,7 @@ final class GlossaryTable {
 
     private static GlossaryCells.EntryCell<?> genderCell(
             final Messages messages, final NamesStyleViewModel model, final ObservableBooleanValue frozen) {
-        return new GlossaryChoiceCell<>(
+        final GlossaryChoiceCell<Gender> cell = new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
                 Gender.values(),
@@ -203,6 +205,8 @@ final class GlossaryTable {
                 entry -> genderLabel(messages, entry),
                 model::setGender,
                 frozen);
+        cell.control().getStyleClass().add(WRAPPING_CHOICE);
+        return cell;
     }
 
     // Only a character has a gender to settle; a place or a term shows a dash. The column never reads "unknown": a

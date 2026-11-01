@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Optional;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.TableView;
 import javafx.scene.control.skin.TableColumnHeader;
@@ -15,13 +16,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.FitProbe;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * The glossary's seven columns need 788 px at their minimum widths. A table narrower than that — the stacked card of a
+ * The glossary's seven columns need 862 px at their minimum widths. A table narrower than that — the stacked card of a
  * 960 or 1024 px window, or each of the two side-by-side cards of a wide one — scrolls across with a visible scroll
  * bar, so the Gender column and the remove cross stay reachable; a wider table fits every column with no scroll bar.
  */
@@ -29,16 +32,23 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
 
     private static final double HEIGHT = 700;
     private static final double TOLERANCE = 0.5;
+    // One line of a value is about 17 px high, two lines are over this.
+    private static final double TWO_LINES = 24;
     private static final GlossaryEntry VICTOR =
             GlossaryEntry.of("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
 
     private TableView<?> showGlossaryAt(final double width, final String language) throws Exception {
+        return showGlossaryAt(width, language, List.of(VICTOR));
+    }
+
+    private TableView<?> showGlossaryAt(final double width, final String language, final List<GlossaryEntry> entries)
+            throws Exception {
         useLocale(Locale.forLanguageTag(language));
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
         chooseTarget();
-        glossary.willAnswer(Result.ok(List.of(VICTOR)));
+        glossary.willAnswer(Result.ok(entries));
         resizeScene(width, HEIGHT);
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
@@ -107,5 +117,28 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> visibleAcrossBar(table))).isEmpty();
         assertThat(ThemeTestSupport.onFx(() -> headersOutside(table))).isEmpty();
+    }
+
+    // IF the Kind and Gender columns were left at the width of their headings, THEN the values with their origin read
+    // "ma…" and "character · bo…" at the window sizes people use, or wrapped to a second line.
+    @ParameterizedTest
+    @CsvSource({"944, en", "944, uk", "1008, en", "1008, uk", "1264, en", "1264, uk", "1700, en", "1700, uk"})
+    void values_withTheirOrigin_areWholeAndStayOnOneLine(final double width, final String language) throws Exception {
+        final GlossaryEntry sourced =
+                VICTOR.withType(TermType.CHARACTER, Origin.BOOK).withGenderFrom(Gender.FEMALE, Origin.BOOK);
+        final TableView<?> table = showGlossaryAt(width, language, List.of(sourced));
+
+        final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(table));
+        final List<Double> valueHeights = ThemeTestSupport.onFx(() -> table.lookupAll(".glossary-wraps").stream()
+                .filter(Node::isVisible)
+                .flatMap(node -> node.lookupAll(".text").stream())
+                .map(text -> text.getLayoutBounds().getHeight())
+                .toList());
+
+        assertThat(cut).as("labels cut in an ellipsis").isEmpty();
+        assertThat(valueHeights)
+                .as("the Kind and Gender values' text height")
+                .isNotEmpty()
+                .allSatisfy(height -> assertThat(height).isLessThan(TWO_LINES));
     }
 }
