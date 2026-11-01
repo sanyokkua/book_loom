@@ -18,7 +18,6 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Standing;
-import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.glossary.TransliterationCheck.Problem;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.LanguageRules;
@@ -212,10 +211,8 @@ final class TargetValidator implements SuggestionReplies.Judge {
             log.trace("Rendering '{}' of '{}' holds a letter outside the alphabet", rendering, term);
             return Standing.ALPHABET;
         }
-        final Reading reading = context.readings().get(entry.id());
-        final boolean isSpeaking = reading != null && reading.speaking();
         final boolean isName = SuggestionLocks.isNameLike(entry, context);
-        if (policy == NamePolicy.KEEP_ORIGINAL || !isName || isSpeaking) {
+        if (policy == NamePolicy.KEEP_ORIGINAL || !isName || SuggestionLocks.isTranslatable(entry, context)) {
             return Standing.OPEN;
         }
         return nameStanding(entry, rendering);
@@ -261,8 +258,8 @@ final class TargetValidator implements SuggestionReplies.Judge {
     // rightly differ (a speaking name, or a name under a policy that translates: Silverbrook, Срібний Струмок).
     @Override
     public @Nullable String suggestionRefusal(final GlossaryEntry entry, final String rendering) {
-        final Reading reading = context.readings().get(entry.id());
-        final boolean isCountFree = policy != NamePolicy.TRANSLITERATE || (reading != null && reading.speaking());
+        final boolean isCountFree =
+                policy != NamePolicy.TRANSLITERATE || SuggestionLocks.isTranslatable(entry, context);
         final Optional<Refusal> first = validate(entry, rendering).refusals().stream()
                 .filter(refusal -> !(isCountFree && refusal.reason() == Reason.WORD_COUNT))
                 .findFirst();

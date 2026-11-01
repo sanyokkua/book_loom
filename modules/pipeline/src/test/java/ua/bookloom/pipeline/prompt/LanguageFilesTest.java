@@ -38,7 +38,7 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|moodWords|translit|namesInflect|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastNeuter|pastSkipWords|pastNotVerbs|paradigmGender|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio|briefApostrophes|briefQuotes"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|moodWords|translit|namesInflect|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|titleRenderings|foreignWords|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastNeuter|pastSkipWords|pastNotVerbs|paradigmGender|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio|briefApostrophes|briefQuotes"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+"
                     + "|nameParadigms\\.\\d+|convention\\.[A-Za-z]+\\.(choices|default)"
@@ -70,6 +70,13 @@ class LanguageFilesTest {
         assertThat(properties.stringPropertyNames())
                 .contains("status", "quotes", "agreement", "pitfalls.1", "reviewerChecks.1", "sourceNotes.1");
         assertThat(properties.getProperty("status")).isIn("tested", "untested");
+    }
+
+    @Test
+    void pairFile_enUkTitleRenderings_mapLowerCaseSourceWordsToTargetScriptWords() throws IOException {
+        final String rows = file("languages/pairs/en-uk.properties").getProperty("titleRenderings");
+
+        assertThat(rows.split("\\s+")).isNotEmpty().allMatch(row -> row.matches("\\p{Ll}+>\\p{IsCyrillic}+"));
     }
 
     @ParameterizedTest

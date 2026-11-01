@@ -321,17 +321,8 @@ public final class LexiconServiceImpl implements LexiconService {
 
     private Result<List<LexiconEntry>> runSuggest(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
-        return lexicon.all(projectId).flatMap(all -> {
-            final List<LexiconEntry> open =
-                    all.stream().filter(entry -> entry.established().isEmpty()).toList();
-            log.info("Lexicon suggestions project={} terms={} open={}", projectId, all.size(), open.size());
-            if (open.isEmpty()) {
-                return Result.ok(all);
-            }
-            return modelScans
-                    .suggestOnto(projectId, LexiconSuggestions.asGlossary(projectId, open), model, progress)
-                    .flatMap(answered -> LexiconSuggestions.store(lexicon, projectId, open, answered));
-        });
+        return LexiconSuggestions.run(
+                lexicon, glossary, modelScans, projectId, sourceLanguageOf(projectId), model, progress);
     }
 
     private Result<LexiconEntry> addTerm(final String projectId, final String term) {
@@ -362,6 +353,11 @@ public final class LexiconServiceImpl implements LexiconService {
                 .map(all -> all.stream()
                         .filter(entry -> LexiconEntry.keyOf(entry.term()).equals(key))
                         .findFirst());
+    }
+
+    private @Nullable String sourceLanguageOf(final String projectId) {
+        final Document document = openProjects.get(projectId);
+        return document == null ? null : sourceLanguage(projectId, document);
     }
 
     private @Nullable String sourceLanguage(final String projectId, final Document document) {

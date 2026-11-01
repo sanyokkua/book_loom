@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -145,28 +146,37 @@ public final class SuggestTargets {
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         Objects.requireNonNull(context, "context");
-        final List<Suggestion> kept = new ArrayList<>(keptAsWritten(entries, policy, context));
-        final List<GlossaryEntry> asked = entries.stream()
-                .filter(entry -> !SuggestionLocks.isKeptAsWritten(entry, policy, context))
-                .toList();
+        final TargetContext known = context.withCommonWords(CommonWords.of(entries, story, frame.analysisLanguage()));
+        final List<Suggestion> kept = new ArrayList<>(SettledSuggestions.of(entries, frame, policy, known));
+        final List<GlossaryEntry> asked = unsettled(entries, kept);
         final SuggestionGroups groups = SuggestionGroups.of(asked, policy, SUGGEST_BATCH);
         logStart(policy, entries.size(), kept.size(), groups);
         final Result<List<Suggestion>> answered =
-                askAll(groups, new Setting(story, frame, policy, calls, context, rejected));
+                askAll(groups, new Setting(story, frame, policy, calls, known, rejected));
         if (answered.isErr()) {
             log.warn("Glossary suggestions failed; nothing is suggested");
             return answered;
         }
         kept.addAll(Objects.requireNonNull(answered.data(), "answered"));
-        final List<Suggestion> locked = SuggestionLocks.apply(kept, frame, policy, context);
+        final List<Suggestion> locked = SuggestionLocks.apply(kept, frame, policy, known);
+        logFinish(locked, entries.size());
+        return Result.ok(locked);
+    }
+
+    private static List<GlossaryEntry> unsettled(final List<GlossaryEntry> entries, final List<Suggestion> settled) {
+        final Set<String> ids =
+                settled.stream().map(suggestion -> suggestion.entry().id()).collect(Collectors.toSet());
+        return entries.stream().filter(entry -> !ids.contains(entry.id())).toList();
+    }
+
+    private static void logFinish(final List<Suggestion> locked, final int entries) {
         log.info(
                 "Glossary suggestions finished suggested={} of {} meaningNotes={}",
                 locked.size(),
-                entries.size(),
+                entries,
                 locked.stream()
                         .filter(suggestion -> suggestion.meaning() != null)
                         .count());
-        return Result.ok(locked);
     }
 
     private static void logStart(
@@ -214,14 +224,6 @@ public final class SuggestTargets {
             final NamePolicy policy,
             final ModelCalls calls) {
         return suggest(entries, story, frame, policy, calls, TargetContext.none());
-    }
-
-    private static List<Suggestion> keptAsWritten(
-            final List<GlossaryEntry> entries, final NamePolicy policy, final TargetContext context) {
-        return entries.stream()
-                .filter(entry -> SuggestionLocks.isKeptAsWritten(entry, policy, context))
-                .map(entry -> new Suggestion(entry, entry.term()))
-                .toList();
     }
 
     /** What every call of one suggestion run shares. */
@@ -376,7 +378,8 @@ public final class SuggestTargets {
                         run.evidence().getOrDefault(entry.term(), Evidence.NONE),
                         setting.context().readings().get(entry.id()),
                         run.cluster().statementFor(entry),
-                        refused.get(entry.id())))
+                        refused.get(entry.id()),
+                        setting.context().commonWordsOf(entry)))
                 .collect(Collectors.joining("\n"));
         final List<ChatMessage> messages = List.of(
                 new ChatMessage(ChatRole.SYSTEM, run.system()),

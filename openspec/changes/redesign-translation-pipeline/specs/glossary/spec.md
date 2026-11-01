@@ -146,9 +146,9 @@ WHEN the names pass or a model review finds characters with no gender from the p
 
 ### Requirement: Ask at Start for the genders nobody has settled
 
-WHEN Start translation is pressed and a character the book names at least 5 times has a gender that is only likely or by rule, the application SHALL ask once for those genders, the least confident first and each with its likely value already chosen, and SHALL make a value the person confirms or changes the person's.
+WHEN Start translation is pressed and a character the book names at least 5 times has a gender that is only likely or by rule, the application SHALL ask once for those genders, the least confident first and each with its likely value already chosen, and SHALL make a value the person confirms or changes the person's: a click on any gender of a row, the offered one included, answers that row, a row left alone stays a hint, and each row shows the name with its current rendering (or that it has none yet).
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first. A row left as offered stays a hint.
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: the model's guess is cheap but a wrong one spreads, so before the long run the person sees the characters whose gender nobody has checked and can fix the doubtful ones first. A click on the offered gender is a confirmation; a row nobody clicked stays a hint, and the dialog says so.
 
 #### Scenario: The least confident comes first
 
@@ -169,6 +169,27 @@ WHEN Start translation is pressed and a character the book names at least 5 time
 
 - **WHEN** every character the book names 5 times or more has a gender from the person or the book
 - **THEN** no question is shown
+
+### Requirement: Render forms of address and common words by data and by the book, not by sound
+
+WHEN targets are suggested for the glossary or the recurring terms, the application SHALL render a form of address that the language pair's `titleRenderings` lists (`mr`, `mrs`, `ms`, `miss`, `sir`, `dr` and so on) by that data, without asking the model and locked with the rule as its origin, with a capital first letter where the term has one; SHALL pass a recurring term that the source language's title list holds as a title, not as a bare noun; and SHALL treat a place, organisation or other name whose word the book also writes in lower case at least as often as the scan's limit as an ordinary word to translate, not to sound out, telling the model to translate such a word inside a longer name. A term that the glossary already renders under the same lower-case key (`houses` beside `Houses`) SHALL take that rendering in its own case and not be asked.
+
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, `design.md#d5--likely-model-knowledge-and-target-suggestions-under-the-name-policy`. In plain words: a small model sounds `ms` out as `міз`, writes `Mr` in Latin letters and turns the plain word `Houses` into `Хаузиз`. The pair's file states the few certain words once, and the book itself shows which capitalised words are ordinary words.
+
+#### Scenario: A title of the pair's data is not asked
+
+- **WHEN** the pair is English to Ukrainian and the terms `ms` and `Mr` are suggested
+- **THEN** they get `пані` and `Пан` with no model call, locked with the rule as origin
+
+#### Scenario: A place that is a common word is translated
+
+- **WHEN** the book writes `houses` three times and `Houses` once, and `Houses` is a place under Transliterate
+- **THEN** it is asked as a common word and `Будинки` is accepted
+
+#### Scenario: The glossary's rendering is reused
+
+- **WHEN** the glossary renders `Houses` as `Палати` and the recurring term `houses` has no rendering
+- **THEN** `houses` is suggested `палати` without a model call
 
 ### Requirement: Check a suggested target against the target language's rules
 

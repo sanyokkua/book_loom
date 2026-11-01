@@ -47,7 +47,9 @@ final class SuggestionLocks {
         suggestions.forEach(suggestion -> byId.putIfAbsent(suggestion.entry().id(), suggestion));
         log.debug("Lock facts for {} suggestions, names inflect {}", byId.size(), inflects);
         return byId.values().stream()
-                .map(suggestion -> suggestion.locking(basisOf(suggestion.entry(), policy, context), inflects))
+                .map(suggestion -> suggestion.fixedByRule()
+                        ? suggestion
+                        : suggestion.locking(basisOf(suggestion.entry(), policy, context), inflects))
                 .toList();
     }
 
@@ -55,9 +57,13 @@ final class SuggestionLocks {
      * Whether the entry is a name, or a brand, which a name policy treats as a name. A character or a place is a
      * name; a title or another entry is one only when the readings verified it as a proper name or it is a phrase of
      * capitalised words ({@code Harbour Guild}); a term is one only when called a brand; a demoted common noun is
-     * translated, whatever the policy.
+     * translated, whatever the policy. A single word the book also writes in lower case ({@code Houses}) is an ordinary
+     * word, not a name, whatever type it was given.
      */
     static boolean isNameLike(final GlossaryEntry entry, final TargetContext context) {
+        if (isCommonWord(entry, context)) {
+            return false;
+        }
         final Reading reading = context.readings().get(entry.id());
         if (reading != null && reading.brand()) {
             return true;
@@ -68,6 +74,22 @@ final class SuggestionLocks {
                 context.verified().contains(entry.id()) || isCapitalisedPhrase(entry.term());
             case TERM, MATERIAL -> false;
         };
+    }
+
+    // A speaking name or a name holding a common word is translated in part, so no letter table or word count binds it.
+    static boolean isTranslatable(final GlossaryEntry entry, final TargetContext context) {
+        final Reading reading = context.readings().get(entry.id());
+        return (reading != null && reading.speaking()) || hasCommonWord(entry, context);
+    }
+
+    static boolean hasCommonWord(final GlossaryEntry entry, final TargetContext context) {
+        return !context.commonWordsOf(entry).isEmpty();
+    }
+
+    // One word, and the book writes it in lower case too.
+    static boolean isCommonWord(final GlossaryEntry entry, final TargetContext context) {
+        return !context.commonWordsOf(entry).isEmpty()
+                && SPACES.split(entry.term().strip()).length == 1;
     }
 
     // A single capitalised word may be a demoted common noun (Rose); a run of capitalised words is a proper name.

@@ -20,6 +20,8 @@ How to render:
 - A row may say "speaking name": its meaning matters to the story. Render it by the rule for names above and give its meaning in "meaning".
 - A row may say "brand": render it by the rule for names, exactly as a person's name.
 - A row that says "term" is a common noun, even when it names a material, a substance, a drug or a unit: translate it as an ordinary word, never keep its spelling.
+- A row that says "title" is a form of address (Mr, Lady): give the word {{targetLanguage}} puts before a name, in its own alphabet.
+- A row that says "common word", or "translate the common word: X", holds an ordinary word: translate it, never sound it out; render the rest of a name by the rule above.
 - A row may say "Full Name → Rendering, so Part → Word": the person is already rendered that way, so use exactly that word for the same part of the name.
 - A row may say "refused": the rendering quoted there was rejected for the reason given; answer with a different rendering that follows the rules.
 - Never answer with the listed term itself, unless it is an identifier such as "ZX-81" or names are kept as written.

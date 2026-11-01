@@ -85,9 +85,15 @@ final class SuggestionReplies {
      *     gave none or the entry takes no note
      * @param basis what is known of the entry that decides whether its rendering is locked as it is written
      * @param namesInflect whether the target language declines names, which the lock rule weighs
+     * @param fixedByRule whether the pair's data, not the model, gave the rendering: it is locked with the rule's origin
      */
     record Suggestion(
-            GlossaryEntry entry, String target, @Nullable String meaning, LockRule.Basis basis, boolean namesInflect) {
+            GlossaryEntry entry,
+            String target,
+            @Nullable String meaning,
+            LockRule.Basis basis,
+            boolean namesInflect,
+            boolean fixedByRule) {
 
         private static final LockRule.Basis UNKNOWN = new LockRule.Basis(false, false, false, false);
 
@@ -98,22 +104,27 @@ final class SuggestionReplies {
 
         /** A suggestion with the meaning the reply gave, never locked. */
         Suggestion(final GlossaryEntry entry, final String target, @Nullable final String meaning) {
-            this(entry, target, meaning, UNKNOWN, true);
+            this(entry, target, meaning, UNKNOWN, true, false);
+        }
+
+        /** A rendering the pair's data fixes: nothing was asked, and nothing can override it. */
+        static Suggestion byRule(final GlossaryEntry entry, final String target) {
+            return new Suggestion(entry, target, null, UNKNOWN, true, true);
         }
 
         /** This suggestion under the facts the lock rule weighs, its entry, target and meaning unchanged. */
         Suggestion locking(final LockRule.Basis facts, final boolean inflects) {
-            return new Suggestion(entry, target, meaning, facts, inflects);
+            return new Suggestion(entry, target, meaning, facts, inflects, fixedByRule);
         }
 
         /** This suggestion with another target (a cluster's agreed spelling), the rest unchanged. */
         Suggestion retargeted(final String agreed) {
-            return new Suggestion(entry, agreed, meaning, basis, namesInflect);
+            return new Suggestion(entry, agreed, meaning, basis, namesInflect, fixedByRule);
         }
 
         /** This suggestion without a meaning note. */
         Suggestion withoutMeaning() {
-            return meaning == null ? this : new Suggestion(entry, target, null, basis, namesInflect);
+            return meaning == null ? this : new Suggestion(entry, target, null, basis, namesInflect, fixedByRule);
         }
 
         /**
@@ -124,7 +135,9 @@ final class SuggestionReplies {
         GlossaryEntry onto(final GlossaryEntry now) {
             final GlossaryEntry noted = meaning != null && now.meaning() == null ? now.withMeaning(meaning) : now;
             final GlossaryEntry suggested = noted.withSuggestedTarget(target);
-            return LockRule.locks(now.term(), target, basis, namesInflect) ? suggested.withRuleLock() : suggested;
+            return fixedByRule || LockRule.locks(now.term(), target, basis, namesInflect)
+                    ? suggested.withRuleLock()
+                    : suggested;
         }
     }
 

@@ -372,7 +372,7 @@ public final class LanguageRules implements LanguageSupport {
         return primary.isEmpty() ? new LanguageFile("", Map.of()) : fileOf(primary, DIRECTORY + primary + SUFFIX);
     }
 
-    private LanguageFile pairFile(final String sourceTag, final String targetTag) {
+    LanguageFile pairFile(final String sourceTag, final String targetTag) {
         final String source = primary(sourceTag);
         final String target = primary(targetTag);
         if (source.isEmpty() || target.isEmpty()) {

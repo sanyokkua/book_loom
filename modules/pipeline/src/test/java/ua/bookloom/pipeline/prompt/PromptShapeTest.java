@@ -65,8 +65,9 @@ class PromptShapeTest {
     // language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 720;
     private static final int SYSTEM_BUDGET = 900;
-    // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.
-    private static final int LARGE_SYSTEM_BUDGET = 1230;
+    // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples, and
+    // since the title and common-word rows 1302 of them (1230 before), about 72 tokens for two rules.
+    private static final int LARGE_SYSTEM_BUDGET = 1310;
 
     @ParameterizedTest
     @EnumSource(PromptName.class)
