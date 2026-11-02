@@ -89,30 +89,27 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 exchange,
                 mapper,
                 nanoTime,
-                new EngineShaping(config, facts, verdicts, false),
-                new ChatRoute(config, exchange, mapper),
-                new ModelIdCheck(config, exchange, mapper, facts),
-                new ModelFactsReader(exchange, mapper, facts));
+                new Shared(
+                        new EngineShaping(config, facts, verdicts, false),
+                        new ChatRoute(config, exchange, mapper),
+                        new ModelIdCheck(config, exchange, mapper, facts),
+                        new ModelFactsReader(exchange, mapper, facts)));
     }
+
+    /** The pieces a client and its Test copy share. */
+    private record Shared(EngineShaping shaping, ChatRoute route, ModelIdCheck idCheck, ModelFactsReader factsReader) {}
 
     // The Test's copy shares the session's route and id checks, so a fallback or a check made by one is the other's.
     private OpenAiCompatibleClient(
-            ProviderConfig config,
-            HttpExchange exchange,
-            ObjectMapper mapper,
-            LongSupplier nanoTime,
-            EngineShaping shaping,
-            ChatRoute route,
-            ModelIdCheck idCheck,
-            ModelFactsReader factsReader) {
+            ProviderConfig config, HttpExchange exchange, ObjectMapper mapper, LongSupplier nanoTime, Shared shared) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
-        this.shaping = Objects.requireNonNull(shaping, "shaping");
-        this.route = Objects.requireNonNull(route, "route");
-        this.idCheck = Objects.requireNonNull(idCheck, "idCheck");
-        this.factsReader = Objects.requireNonNull(factsReader, "factsReader");
+        this.shaping = shared.shaping();
+        this.route = shared.route();
+        this.idCheck = shared.idCheck();
+        this.factsReader = shared.factsReader();
         this.models = new OpenAiModelList(config, mapper, exchange);
         this.replies = new OpenAiReplyReader(config, mapper);
         this.requestMapper = new OpenAiRequestMapper(
@@ -124,8 +121,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
 
     @Override
     public ProviderClient forChecks() {
-        return new OpenAiCompatibleClient(
-                config, exchange, mapper, nanoTime, shaping.forChecks(), route, idCheck, factsReader);
+        return withShaping(shaping.forChecks());
     }
 
     // A check is sent once as asked: no raised cap after a reply spent on reasoning, since that reply is the finding.
@@ -141,8 +137,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 request.responseFormat() != null,
                 offSwitch == null ? "engine" : offSwitch.wireName());
         try {
-            final OpenAiCompatibleClient checker = new OpenAiCompatibleClient(
-                    config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck, factsReader);
+            final OpenAiCompatibleClient checker = withShaping(shaping.forCheck(offSwitch));
             final Result<CheckedModelId> checked = idCheck.check(modelId);
             if (checked.isErr()) {
                 return ProviderCallResult.withoutRetryAfter(Result.err(Objects.requireNonNull(checked.error(), ERROR)));
@@ -164,9 +159,12 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 config.id(),
                 modelId,
                 offSwitch == null ? "engine" : offSwitch.wireName());
+        return withShaping(shaping.forCheck(offSwitch)).requestBody(modelId, request);
+    }
+
+    private OpenAiCompatibleClient withShaping(final EngineShaping changed) {
         return new OpenAiCompatibleClient(
-                        config, exchange, mapper, nanoTime, shaping.forCheck(offSwitch), route, idCheck, factsReader)
-                .requestBody(modelId, request);
+                config, exchange, mapper, nanoTime, new Shared(changed, route, idCheck, factsReader));
     }
 
     private ProviderCallResult<CheckReply> sendCheck(String modelId, ChatRequest request) {

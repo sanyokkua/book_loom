@@ -66,13 +66,13 @@ class ProviderVerifierFailureStatusTest {
         final var verifier = new ProviderVerifierImpl(
                 configs,
                 factory,
-                new InferenceGate(),
-                new RetryPolicy(CLOCK, () -> 0.5, delay -> {}),
-                mapper,
-                System::nanoTime,
+                new RetriedCalls(new InferenceGate(), new RetryPolicy(CLOCK, () -> 0.5, delay -> {})),
                 new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
-                new FakeModelSettingsRepository(),
-                ProbeShapings.over(new FakeModelSettingsRepository()));
+                new ProbeTools(
+                        mapper,
+                        System::nanoTime,
+                        new FakeModelSettingsRepository(),
+                        ProbeShapings.over(new FakeModelSettingsRepository())));
         return Objects.requireNonNull(verifier.verify(config, "m", VerificationPolicy.CONNECTION_AND_MODELS)
                         .data())
                 .stages()

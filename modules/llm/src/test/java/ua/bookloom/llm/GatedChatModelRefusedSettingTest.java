@@ -34,7 +34,6 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttempt;
 import ua.bookloom.api.llm.CallAttemptListener;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -388,12 +387,11 @@ class GatedChatModelRefusedSettingTest {
                 modelId,
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
-                cache::current,
-                new RefusalMemory(cache),
-                CallLedger.none(),
-                new BuiltWrongLog(),
-                new CapIgnoredLog(),
-                stored -> new ModelProfiles(new BuiltInRows())
-                        .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored));
+                new ModelSettingsSource(
+                        cache::current,
+                        new RefusalMemory(cache),
+                        stored -> new ModelProfiles(new BuiltInRows())
+                                .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored)),
+                CallObservers.none());
     }
 }

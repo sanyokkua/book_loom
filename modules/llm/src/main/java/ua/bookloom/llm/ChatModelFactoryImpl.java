@@ -95,21 +95,20 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                 modelId,
                 gate,
                 retryPolicy,
-                modelSettings::current,
-                refusals,
-                ledger,
-                builtWrong,
-                capIgnored,
-                stored -> profiles.resolve(
-                        registered.effectiveEngine(),
-                        modelId,
-                        requestFacts(
-                                registered,
-                                engineFacts
-                                        .lastRead(registered.id(), modelId)
-                                        .orElseGet(() -> engineFacts.withTemplateSwitch(
-                                                registered, modelId, ModelFacts.unknown()))),
-                        stored));
+                new ModelSettingsSource(
+                        modelSettings::current,
+                        refusals,
+                        stored -> profiles.resolve(
+                                registered.effectiveEngine(),
+                                modelId,
+                                requestFacts(
+                                        registered,
+                                        engineFacts
+                                                .lastRead(registered.id(), modelId)
+                                                .orElseGet(() -> engineFacts.withTemplateSwitch(
+                                                        registered, modelId, ModelFacts.unknown()))),
+                                stored)),
+                new CallObservers(ledger, builtWrong, capIgnored));
     }
 
     // The Ollama-native client sends the window on every request, so the window Ollama loaded the model with last does

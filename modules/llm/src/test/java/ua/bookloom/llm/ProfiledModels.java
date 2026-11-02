@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
@@ -126,13 +125,12 @@ final class ProfiledModels {
                 modelId,
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
-                cache::current,
-                new RefusalMemory(cache),
-                CallLedger.none(),
-                new BuiltWrongLog(),
-                new CapIgnoredLog(),
-                stored -> new ModelProfiles(new BuiltInRows())
-                        .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored));
+                new ModelSettingsSource(
+                        cache::current,
+                        new RefusalMemory(cache),
+                        stored -> new ModelProfiles(new BuiltInRows())
+                                .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored)),
+                CallObservers.none());
     }
 
     /** Answers the chat path with these replies in order, the last one for every later request. */

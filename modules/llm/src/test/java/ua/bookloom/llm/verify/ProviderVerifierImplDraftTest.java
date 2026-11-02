@@ -378,13 +378,13 @@ class ProviderVerifierImplDraftTest {
         return new ProviderVerifierImpl(
                 configs,
                 factory,
-                new InferenceGate(),
-                new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {}),
-                mapper,
-                System::nanoTime,
+                new RetriedCalls(new InferenceGate(), new RetryPolicy(FIXED_CLOCK, () -> 0.5, delay -> {})),
                 new EngineRegistry(configs, new EngineDetector(exchange, mapper), new EngineFacts(exchange, mapper)),
-                new FakeModelSettingsRepository(),
-                ProbeShapings.over(new FakeModelSettingsRepository()));
+                new ProbeTools(
+                        mapper,
+                        System::nanoTime,
+                        new FakeModelSettingsRepository(),
+                        ProbeShapings.over(new FakeModelSettingsRepository())));
     }
 
     private static VerificationReport report(Result<VerificationReport> result) {

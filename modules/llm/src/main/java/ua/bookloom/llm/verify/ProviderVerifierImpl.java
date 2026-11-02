@@ -1,6 +1,5 @@
 package ua.bookloom.llm.verify;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -27,13 +26,10 @@ import ua.bookloom.api.llm.VerificationListener;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.llm.engine.EngineRegistry;
-import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.ProviderClientFactory;
-import ua.bookloom.llm.retry.RetryPolicy;
 
 /** Runs ordered provider verification stages with the shared inference gate and typed retry policy. */
 @Slf4j
@@ -52,33 +48,28 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     private final PrettyJson pretty;
 
     /**
-     * Shares the provider registry, real dialect clients, process-wide gate, retry policy, time source, the engine
-     * detection that stores what it finds on the saved provider, the models' settings, where the check verdicts
-     * are kept, and the shaping that lays the inference probe out the way the model's template reads it.
+     * Shares the provider registry, real dialect clients, the retried calls through the process-wide gate, the engine
+     * detection that stores what it finds on the saved provider, and the tools the probes use.
      */
     @Inject
     public ProviderVerifierImpl(
             ProviderConfigs providerConfigs,
             ProviderClientFactory clients,
-            InferenceGate gate,
-            RetryPolicy retryPolicy,
-            ObjectMapper mapper,
-            LongSupplier nanoTime,
+            RetriedCalls calls,
             EngineRegistry engines,
-            ModelSettingsRepository settings,
-            ProbeShaping shaping) {
+            ProbeTools tools) {
         this.providerConfigs = Objects.requireNonNull(providerConfigs, "providerConfigs");
         this.clients = Objects.requireNonNull(clients, "clients");
-        this.calls = new RetriedCalls(gate, Objects.requireNonNull(retryPolicy, "retryPolicy"));
-        this.inference = new InferenceStage(calls, Objects.requireNonNull(mapper, "mapper"));
-        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.calls = Objects.requireNonNull(calls, "calls");
+        this.inference = new InferenceStage(calls, tools.mapper());
+        this.nanoTime = tools.nanoTime();
         this.engines = Objects.requireNonNull(engines, "engines");
-        this.shaping = Objects.requireNonNull(shaping, "shaping");
+        this.shaping = tools.shaping();
         this.engineStage = new EngineStage(engines);
         this.models = new ModelsStage(calls);
-        this.pretty = new PrettyJson(mapper);
-        this.advanced = new AdvancedStage(
-                calls, mapper, Objects.requireNonNull(settings, "settings"), retryPolicy.clock(), nanoTime, pretty);
+        this.pretty = new PrettyJson(tools.mapper());
+        this.advanced =
+                new AdvancedStage(calls, tools.mapper(), tools.settings(), calls.clock(), tools.nanoTime(), pretty);
     }
 
     @Override

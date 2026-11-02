@@ -224,11 +224,8 @@ class GatedChatModelLedgerTest {
                 "test-model",
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
-                ModelSettings::defaults,
-                null,
-                ledger,
-                new BuiltWrongLog(),
-                new CapIgnoredLog(),
-                BoundSettings.unrowed(clients.create(config), "test-model"));
+                new ModelSettingsSource(
+                        ModelSettings::defaults, null, BoundSettings.unrowed(clients.create(config), "test-model")),
+                new CallObservers(ledger, new BuiltWrongLog(), new CapIgnoredLog()));
     }
 }

@@ -1,5 +1,7 @@
 package ua.bookloom.llm.verify;
 
+import com.google.inject.Inject;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
@@ -21,9 +23,14 @@ final class RetriedCalls {
     private final InferenceGate gate;
     private final RetryPolicy retryPolicy;
 
+    @Inject
     RetriedCalls(final InferenceGate gate, final RetryPolicy retryPolicy) {
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+    }
+
+    Clock clock() {
+        return retryPolicy.clock();
     }
 
     <T> ProviderCallResult<T> run(

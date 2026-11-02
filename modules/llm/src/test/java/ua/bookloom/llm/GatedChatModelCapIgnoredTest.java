@@ -197,12 +197,11 @@ class GatedChatModelCapIgnoredTest {
                 modelId,
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
-                ModelSettings::defaults,
-                null,
-                CallLedger.none(),
-                new BuiltWrongLog(),
-                capIgnored,
-                stored -> new ModelProfiles(new BuiltInRows())
-                        .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored));
+                new ModelSettingsSource(
+                        ModelSettings::defaults,
+                        null,
+                        stored -> new ModelProfiles(new BuiltInRows())
+                                .resolve(config.effectiveEngine(), modelId, ModelFacts.unknown(), stored)),
+                new CallObservers(CallLedger.none(), new BuiltWrongLog(), capIgnored));
     }
 }

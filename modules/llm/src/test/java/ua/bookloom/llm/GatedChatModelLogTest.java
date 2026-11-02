@@ -211,11 +211,8 @@ class GatedChatModelLogTest {
                 modelId,
                 new InferenceGate(),
                 new RetryPolicy(CLOCK, () -> 0.5, ignored -> {}),
-                ModelSettings::defaults,
-                null,
-                CallLedger.none(),
-                builtWrong,
-                new CapIgnoredLog(),
-                BoundSettings.unrowed(clients.create(config), modelId));
+                new ModelSettingsSource(
+                        ModelSettings::defaults, null, BoundSettings.unrowed(clients.create(config), modelId)),
+                new CallObservers(CallLedger.none(), builtWrong, new CapIgnoredLog()));
     }
 }

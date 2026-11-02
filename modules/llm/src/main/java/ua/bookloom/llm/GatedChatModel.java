@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -12,7 +11,6 @@ import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttempt;
 import ua.bookloom.api.llm.CallAttemptListener;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -22,7 +20,6 @@ import ua.bookloom.llm.CallRecorder.TimedCall;
 import ua.bookloom.llm.RetryChoice.Resend;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.RetryRule;
-import ua.bookloom.llm.profile.ResolvedProfile;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -80,41 +77,32 @@ public final class GatedChatModel implements ChatModel {
                 modelId,
                 gate,
                 retryPolicy,
-                settings,
-                refusals,
-                CallLedger.none(),
-                new BuiltWrongLog(),
-                new CapIgnoredLog(),
-                BoundSettings.unrowed(client, modelId));
+                new ModelSettingsSource(settings, refusals, BoundSettings.unrowed(client, modelId)),
+                CallObservers.none());
     }
 
     /**
-     * As the seven-argument form, keeping a record of every attempt that has a call kind in {@code ledger}, writing a
-     * BookLoom fault's ERROR line once per model through {@code builtWrong} and a server's ignored answer cap's WARN
-     * once per model through {@code capIgnored}, and resolving the model's profile from its stored settings through
-     * {@code profiles} at every call.
+     * The full form: the model's settings, refusals and profile come from {@code source}, and the records of its calls
+     * are kept by {@code observers}.
      */
-    public GatedChatModel(
+    GatedChatModel(
             ProviderClient client,
             String providerId,
             String modelId,
             InferenceGate gate,
             RetryPolicy retryPolicy,
-            BiFunction<String, String, ModelSettings> settings,
-            @org.jspecify.annotations.Nullable RefusalMemory refusals,
-            CallLedger ledger,
-            BuiltWrongLog builtWrong,
-            CapIgnoredLog capIgnored,
-            Function<ModelSettings, ResolvedProfile> profiles) {
-        this.builtWrong = Objects.requireNonNull(builtWrong, "builtWrong");
-        this.refusals = refusals;
+            ModelSettingsSource source,
+            CallObservers observers) {
+        this.builtWrong = Objects.requireNonNull(observers, "observers").builtWrong();
+        this.refusals = Objects.requireNonNull(source, "source").refusals();
         this.providerId = Objects.requireNonNull(providerId, "providerId");
-        this.bound = new BoundSettings(providerId, modelId, settings, refusals, profiles);
+        this.bound = new BoundSettings(providerId, modelId, source.settings(), source.refusals(), source.profiles());
         this.client = Objects.requireNonNull(client, "client");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.gate = Objects.requireNonNull(gate, "gate");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
-        this.recorder = new CallRecorder(ledger, providerId, modelId, client.kind(), capIgnored);
+        this.recorder =
+                new CallRecorder(observers.ledger(), providerId, modelId, client.kind(), observers.capIgnored());
     }
 
     @Override
