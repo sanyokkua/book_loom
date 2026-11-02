@@ -870,7 +870,7 @@ so group 7 merges first and group 8 rebases onto it before its gate.
   - **Test first:** `OpenAiUsageTest.read_costAndSlugs_arePresentOnlyWhenReported`; `RunSummaryLoggerTest.summary_withCosts_totalsThemAndWithoutPrintsDash`; `OpenRouterRequestTest.chat_debugLine_carriesSlugsAndCostButNoText` (log capture).
   - **Done when:** tests green.
 
-- [ ] 8.5 Let Test list the models, add the English and Ukrainian sentences, fix the clauses this group made wrong, run the whole gate and do the hand check. → :llm, :ui, docs
+- [x] 8.5 Let Test list the models, add the English and Ukrainian sentences, fix the clauses this group made wrong, run the whole gate and do the hand check. → :llm, :ui, docs
   - **Satisfies:** "Verify a provider and a model in three stages" (llm-provider; OpenRouter lists its models in the models stage), "Discover the models a provider offers" (llm-provider; the OpenRouter catalog as the listing)
   - **Depends on:** 8.3, 8.4
   - **Read:** design.md D21; llm: `ModelCatalogService`, `verify/ModelsProbe`; ui: `i18n/MessageKey`, `state/AppErrors`, bundles `messages_en.properties`, `messages_uk.properties`
@@ -878,6 +878,7 @@ so group 7 merges first and group 8 rebases onto it before its gate.
   - **Test first:** `ModelCatalogServiceTest.discover_openRouterCatalog_returnsTextModelsOnly`; `ProviderVerifierImplTest.verify_openRouter_modelsStageListsTheCatalog`; i18n parity and vocabulary tests for the three new keys; Ukrainian fit check for the banner.
   - **Docs:** the list above.
   - **Done when:** `./gradlew clean build check spotlessCheck` is green and its tail is pasted; `scripts/ci-linux-ui.sh` passed; the acceptance method of 8.1 is green. Hand check (needs the owner's OpenRouter key in an environment variable named in the provider form; the owner supplies it — if there is none, record the hand check as not done): (1) add `https://openrouter.ai/api/v1` as OpenAI-compatible, press Test, see "Detected: OpenRouter" and a model list; (2) run the inference test on one inexpensive model and read the call line in the log folder's run log: the served provider and model slugs and a cost appear, no book text; (3) remove the key's credit or use a deliberately wrong model id and see the matching sentence rather than an unreadable-reply message.
+  - **Gate and hand check (2026-11-02):** `./gradlew clean build check spotlessCheck` green (BUILD SUCCESSFUL in 17m 17s); `scripts/ci-linux-ui.sh` green (4m 12s); `./gradlew sonar -PsonarLocal`: 0 open issues, quality gate OK after two findings of this group were fixed. Hand check **not done in the window**: it was replaced by `OpenRouterLiveTest` (`liveLocal`, `OPENROUTER_API_KEY`) plus tiny curl probes on `:free` models: detection reads OPENROUTER and the models stage lists text models only (passed); a wrong model id is `validation` (passed); a real free-model reply carries `provider`, `model`, `usage.cost: 0` and `reasoning_tokens` as the reader expects, but the call-line assertion with the served slugs was not seen green live because the free model answered 429 (quota). The owner's hand check in the window (steps 1-3) remains to be done.
 
 ## 9. model-advice — Quant and language advice for every model (needs groups 6 and 8; may run beside none)
 
