@@ -1,6 +1,9 @@
 package ua.bookloom.document.md;
 
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -17,20 +20,26 @@ final class YamlScalars {
     private static final Pattern NULL_OR_BOOLEAN =
             Pattern.compile("~|null|true|false|yes|no|on|off|y|n", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern NUMBER = Pattern.compile(
-            "[-+]?\\d[\\d_]*(?:\\.[\\d_]*)?(?:[eE][-+]?\\d+)?"
-                    + "|[-+]?\\.\\d[\\d_]*(?:[eE][-+]?\\d+)?"
-                    + "|[-+]?0[xX][0-9a-fA-F_]+|[-+]?0[oO][0-7_]+|[-+]?0[bB][01_]+"
-                    + "|[-+]?\\.inf|\\.nan",
-            Pattern.CASE_INSENSITIVE);
+    // Each form of a YAML number is its own pattern, so no single expression grows past a reviewable size.
+    private static final List<Pattern> NUMBERS = Stream.of(
+                    "[-+]?\\d[\\d_]*(?:\\.[\\d_]*)?(?:[eE][-+]?\\d+)?",
+                    "[-+]?\\.\\d[\\d_]*(?:[eE][-+]?\\d+)?",
+                    "[-+]?0(?:[xX][0-9a-fA-F_]+|[oO][0-7_]+|[bB][01_]+)",
+                    "[-+]?\\.inf|\\.nan")
+            .map(regex -> Pattern.compile(regex, Pattern.CASE_INSENSITIVE))
+            .toList();
 
-    private static final Pattern DATE = Pattern.compile(
-            "\\d{4}-\\d{1,2}-\\d{1,2}"
-                    + "(?:(?:T|[ \\t]+)\\d{1,2}:\\d{2}(?::\\d{2}(?:\\.\\d*)?)?(?:[ \\t]*(?:Z|[-+]\\d{1,2}(?::?\\d{2})?))?)?",
-            Pattern.CASE_INSENSITIVE);
+    // A date, then optionally a time, then optionally a zone; each part is read where the one before it ended.
+    private static final Pattern DAY = Pattern.compile("\\d{4}-\\d{1,2}-\\d{1,2}");
+    private static final Pattern TIME =
+            Pattern.compile("(?:T|[ \\t]+)\\d{1,2}:\\d{2}(?::\\d{2}(?:\\.\\d*)?)?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ZONE =
+            Pattern.compile("[ \\t]*(?:Z|[-+]\\d{1,2}(?::?\\d{2})?)", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern ADDRESS = Pattern.compile(
-            "[A-Za-z][A-Za-z0-9+.-]*://.*|www\\..*|mailto:.*|[^\\s@]+@[^\\s@]+\\.[^\\s@]+", Pattern.CASE_INSENSITIVE);
+    private static final List<Pattern> ADDRESSES = Stream.of(
+                    "[A-Za-z][A-Za-z0-9+.-]*://.*", "www\\..*", "mailto:.*", "[^\\s@]+@[^\\s@]+\\.[^\\s@]+")
+            .map(regex -> Pattern.compile(regex, Pattern.CASE_INSENSITIVE))
+            .toList();
 
     /** A plain scalar starting with any of these is not a plain scalar: it is structure, or must be quoted. */
     private static final String INDICATORS = "-?:,[]{}#&*!|>'\"%@`";
@@ -44,12 +53,29 @@ final class YamlScalars {
     static boolean isTyped(String plain) {
         return plain.isEmpty()
                 || NULL_OR_BOOLEAN.matcher(plain).matches()
-                || NUMBER.matcher(plain).matches()
-                || DATE.matcher(plain).matches();
+                || NUMBERS.stream().anyMatch(number -> number.matcher(plain).matches())
+                || isDate(plain);
+    }
+
+    private static boolean isDate(final String plain) {
+        final Matcher day = DAY.matcher(plain);
+        if (!day.lookingAt()) {
+            return false;
+        }
+        final String afterDay = plain.substring(day.end());
+        if (afterDay.isEmpty()) {
+            return true;
+        }
+        final Matcher time = TIME.matcher(afterDay);
+        if (!time.lookingAt()) {
+            return false;
+        }
+        final String afterTime = afterDay.substring(time.end());
+        return afterTime.isEmpty() || ZONE.matcher(afterTime).matches();
     }
 
     static boolean isAddress(String text) {
-        return ADDRESS.matcher(text).matches();
+        return ADDRESSES.stream().anyMatch(address -> address.matcher(text).matches());
     }
 
     static boolean hasLetter(String text) {

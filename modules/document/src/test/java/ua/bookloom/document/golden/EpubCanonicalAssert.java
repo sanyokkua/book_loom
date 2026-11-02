@@ -52,7 +52,8 @@ public final class EpubCanonicalAssert {
     private static final int FIRST_ENTRY_INDEX = 0;
 
     /**
-     * Byte-for-byte duplicate of {@code XhtmlParser.SELF_CLOSED_ELEMENT} (design.md D2) — matches any element
+     * The rule {@code XhtmlParser} applies by scanning ({@code TagScanner}), kept here as a regular expression so the
+     * golden comparison is an independent oracle (design.md D2) — matches any element
      * written in XML self-closing form, for any tag name; whether a given match is rewritten is decided per match
      * by {@link #isKnownNonVoidTag(String)}, the duplicate of {@code XhtmlParser}'s identically-named method. The
      * attribute-value alternation ({@code "[^"]*"} / {@code '[^']*'}) exists so a quoted value containing
@@ -145,8 +146,7 @@ public final class EpubCanonicalAssert {
         return lowerName.endsWith(".xhtml")
                 || lowerName.endsWith(".html")
                 || lowerName.endsWith(".htm")
-                || (lowerName.endsWith(".xml")
-                        && XML_HTML_ROOT.matcher(prologFree(sourceContent)).find());
+                || (lowerName.endsWith(".xml") && opensWithHtmlRoot(prologFree(sourceContent)));
     }
 
     /** The source's text past any XML declaration, comments and DOCTYPE, so only the root element is inspected. */
@@ -172,8 +172,30 @@ public final class EpubCanonicalAssert {
         return kept.append(text, from, text.length()).toString();
     }
 
-    private static final Pattern XML_HTML_ROOT =
-            Pattern.compile("^\\s*\\uFEFF?\\s*<html[\\s>]", Pattern.CASE_INSENSITIVE);
+    // Blanks, an optional byte-order mark, blanks, then "<html" and a blank or ">", read by hand: two adjacent blank
+    // runs in one regular expression are retried against each other.
+    private static boolean opensWithHtmlRoot(String text) {
+        int at = skipBlanks(text, 0);
+        if (at < text.length() && text.charAt(at) == '\uFEFF') {
+            at = skipBlanks(text, at + 1);
+        }
+        final int after = at + "<html".length();
+        return text.regionMatches(true, at, "<html", 0, "<html".length())
+                && after < text.length()
+                && (text.charAt(after) == '>' || isBlank(text.charAt(after)));
+    }
+
+    private static int skipBlanks(String text, int from) {
+        int at = from;
+        while (at < text.length() && isBlank(text.charAt(at))) {
+            at++;
+        }
+        return at;
+    }
+
+    private static boolean isBlank(char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r';
+    }
 
     /**
      * Duplicates {@link ua.bookloom.document.epub}'s package-private {@code SecureXml.builder()} four lines
