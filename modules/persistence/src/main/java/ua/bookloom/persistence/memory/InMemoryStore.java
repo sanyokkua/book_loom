@@ -4,10 +4,12 @@ import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.UnaryOperator;
@@ -235,11 +237,11 @@ final class InMemoryStore {
      */
     static final class ProjectSegments {
 
-        private volatile List<String> orderedIds = List.of();
+        private final AtomicReference<List<String>> orderedIds = new AtomicReference<>(List.of());
         private final Map<String, SegmentRecord> byId = new ConcurrentHashMap<>();
 
         List<String> orderedIds() {
-            return orderedIds;
+            return Objects.requireNonNull(orderedIds.get(), "orderedIds");
         }
 
         Map<String, SegmentRecord> byId() {
@@ -258,7 +260,7 @@ final class InMemoryStore {
                 byId.put(record.segmentId(), record);
                 ids.add(record.segmentId());
             }
-            orderedIds = List.copyOf(ids);
+            orderedIds.set(List.copyOf(ids));
         }
     }
 }

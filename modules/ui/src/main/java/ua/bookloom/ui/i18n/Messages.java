@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -35,7 +36,7 @@ public final class Messages {
 
     private final LocaleProvider localeProvider;
     private final ReentrantLock decision = new ReentrantLock();
-    private volatile @Nullable Resolved resolved;
+    private final AtomicReference<@Nullable Resolved> resolved = new AtomicReference<>();
 
     /**
      * Keeps the provider; the language is decided at the first use, not here, because the injector builds this class
@@ -52,16 +53,16 @@ public final class Messages {
     private record Resolved(Locale locale, ResourceBundle active, ResourceBundle english) {}
 
     private Resolved resolved() {
-        final Resolved done = resolved;
+        final Resolved done = resolved.get();
         if (done != null) {
             return done;
         }
         decision.lock();
         try {
-            if (resolved == null) {
-                resolved = decide();
+            if (resolved.get() == null) {
+                resolved.set(decide());
             }
-            return Objects.requireNonNull(resolved, "resolved");
+            return Objects.requireNonNull(resolved.get(), "resolved");
         } finally {
             decision.unlock();
         }

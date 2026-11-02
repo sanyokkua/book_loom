@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -37,8 +38,8 @@ final class UnattendedRecovery {
     private final Clock clock;
     private final RecoveryTimer timer;
     private final Consumer<JobEvent> emit;
-    private volatile ProviderProbe probe = ProviderProbe.ASSUME_REACHABLE;
-    private volatile Duration maxOutage = RecoverySchedule.MAX_OUTAGE;
+    private final AtomicReference<Probing> probing =
+            new AtomicReference<>(new Probing(ProviderProbe.ASSUME_REACHABLE, RecoverySchedule.MAX_OUTAGE));
     private @Nullable Instant downSince;
     private int wakes;
     private int cappedWakes;
@@ -53,13 +54,20 @@ final class UnattendedRecovery {
         this.emit = Objects.requireNonNull(emit, "emit");
     }
 
+    /** The probe and the longest outage waited out, replaced together so a wake never reads one of each pair. */
+    private record Probing(ProviderProbe probe, Duration maxOutage) {}
+
+    private Probing probing() {
+        return Objects.requireNonNull(probing.get(), "probing");
+    }
+
     void probeWith(final ProviderProbe probe, final Duration maxOutage) {
-        this.probe = Objects.requireNonNull(probe, "probe");
+        Objects.requireNonNull(probe, "probe");
         Objects.requireNonNull(maxOutage, "maxOutage");
         if (maxOutage.isNegative() || maxOutage.isZero()) {
             throw new IllegalArgumentException("maxOutage must be positive: " + maxOutage);
         }
-        this.maxOutage = maxOutage;
+        probing.set(new Probing(probe, maxOutage));
         log.debug("Recovery probe set maxOutage={}", maxOutage);
     }
 
@@ -116,8 +124,8 @@ final class UnattendedRecovery {
         final int cap = PauseDecider.recovery(error).wakesPerOutage();
         while (true) {
             final Instant now = clock.instant();
-            final Optional<Duration> delay =
-                    RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now), maxOutage);
+            final Optional<Duration> delay = RecoverySchedule.delayBefore(
+                    wakes + 1, Duration.between(since, now), probing().maxOutage());
             if (delay.isEmpty() || cappedWakes >= cap) {
                 logGivingUp(error, since, cap);
                 return holdFor(RecoveryWaiting.Status.GAVE_UP, error, progress, since, lastProbe);
@@ -139,7 +147,10 @@ final class UnattendedRecovery {
                     FailureReason.tokenIn(error.details()));
             return;
         }
-        log.warn("Provider down since {} for over {}; waiting for the person", since, maxOutage);
+        log.warn(
+                "Provider down since {} for over {}; waiting for the person",
+                since,
+                probing().maxOutage());
     }
 
     // One wait and its probe: empty to wait again, or how the pause ended.
@@ -232,7 +243,8 @@ final class UnattendedRecovery {
     // A probe that throws is a failed probe, never a reason to leave the wait.
     private @Nullable ErrorCode probeOnce(final AppError pausedOn) {
         try {
-            final Result<Duration> probed = Objects.requireNonNull(probe.probe(pausedOn), "probe result");
+            final Result<Duration> probed =
+                    Objects.requireNonNull(probing().probe().probe(pausedOn), "probe result");
             if (probed.isOk()) {
                 log.info("Provider probe at wake {} passed in {} ms", wakes, millisOf(probed));
                 return null;

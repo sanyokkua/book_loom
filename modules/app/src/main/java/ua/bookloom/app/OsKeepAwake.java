@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.KeepAwake;
@@ -27,7 +28,7 @@ final class OsKeepAwake implements KeepAwake {
     private final Processes processes;
     private final ExecutorService worker;
     // Read and written only on the worker thread, and by the shutdown hook after the worker is gone.
-    private volatile @Nullable Process held;
+    private final AtomicReference<@Nullable Process> held = new AtomicReference<>();
 
     @Inject
     OsKeepAwake() {
@@ -69,7 +70,7 @@ final class OsKeepAwake implements KeepAwake {
     }
 
     private void hold() {
-        final Process running = held;
+        final Process running = held.get();
         if (running != null && running.isAlive()) {
             log.debug("keep-awake already held by pid {}", running.pid());
             return;
@@ -78,8 +79,8 @@ final class OsKeepAwake implements KeepAwake {
             log.debug("keep-awake asked for, but this OS has no command for it");
             return;
         }
-        held = processes.start(command).orElse(null);
-        final Process started = held;
+        final Process started = processes.start(command).orElse(null);
+        held.set(started);
         if (started != null) {
             log.info("keep-awake started: {} pid {}", command.getFirst(), started.pid());
         } else {
@@ -88,8 +89,7 @@ final class OsKeepAwake implements KeepAwake {
     }
 
     private void end() {
-        final Process running = held;
-        held = null;
+        final Process running = held.getAndSet(null);
         if (running != null) {
             running.destroy();
             log.info("keep-awake stopped: pid {}", running.pid());
