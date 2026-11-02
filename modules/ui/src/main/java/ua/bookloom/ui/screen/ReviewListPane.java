@@ -214,25 +214,6 @@ final class ReviewListPane extends VBox {
         }
     }
 
-    private String wordOf(final ReviewFilter filter) {
-        return switch (filter) {
-            case SUSPICIOUS -> messages.get(MessageKey.REVIEW_FILTER_SECOND_LOOK, suspicious.get());
-            case ALL_SEGMENTS -> messages.get(MessageKey.REVIEW_FILTER_ALL);
-            default ->
-                messages.get(
-                        MessageKey.REVIEW_FILTER_TO_REVIEW,
-                        viewModel.flaggedCount().get());
-        };
-    }
-
-    private static MessageKey tipOf(final ReviewFilter filter) {
-        return switch (filter) {
-            case SUSPICIOUS -> MessageKey.REVIEW_FILTER_SECOND_LOOK_TIP;
-            case ALL_SEGMENTS -> MessageKey.REVIEW_FILTER_ALL_TIP;
-            default -> MessageKey.REVIEW_FILTER_TO_REVIEW_TIP;
-        };
-    }
-
     /** A filter's word with its count, and its explanation on hover. Logs nothing: it is redrawn with the counts. */
     private final class FilterCell extends ListCell<ReviewFilter> {
 
@@ -256,6 +237,25 @@ final class ReviewListPane extends VBox {
             if (item != null) {
                 setText(wordOf(item));
             }
+        }
+
+        private String wordOf(final ReviewFilter filter) {
+            return switch (filter) {
+                case SUSPICIOUS -> messages.get(MessageKey.REVIEW_FILTER_SECOND_LOOK, suspicious.get());
+                case ALL_SEGMENTS -> messages.get(MessageKey.REVIEW_FILTER_ALL);
+                default ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_TO_REVIEW,
+                            viewModel.flaggedCount().get());
+            };
+        }
+
+        private static MessageKey tipOf(final ReviewFilter filter) {
+            return switch (filter) {
+                case SUSPICIOUS -> MessageKey.REVIEW_FILTER_SECOND_LOOK_TIP;
+                case ALL_SEGMENTS -> MessageKey.REVIEW_FILTER_ALL_TIP;
+                default -> MessageKey.REVIEW_FILTER_TO_REVIEW_TIP;
+            };
         }
     }
 

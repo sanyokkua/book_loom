@@ -107,7 +107,7 @@ public final class ScanEntries {
                     .distinct()
                     .toList();
             if (!holders.isEmpty() || names.stream().map(GlossaryKeys::of).anyMatch(proposedKeys::contains)) {
-                holderOf(candidate, holders, this).ifPresent(entry -> newForms(entry, candidate, heldForms));
+                holderOf(candidate, holders).ifPresent(entry -> newForms(entry, candidate, heldForms));
                 skippedHeld++;
                 return Optional.empty();
             }
@@ -123,27 +123,85 @@ public final class ScanEntries {
             names.forEach(name -> proposedKeys.add(GlossaryKeys.of(name)));
             return Optional.empty();
         }
-    }
 
-    // The entry that holds the candidate's own spelling takes it; else one held entry its readings name takes it, and
-    // two take it only when their targets are the same (LemmaCollapse), else the form is unsure and attaches to
-    // neither.
-    private static Optional<GlossaryEntry> holderOf(
-            final NameCandidate candidate, final List<GlossaryEntry> holders, final Pass pass) {
-        final GlossaryEntry own = pass.heldByKey.get(GlossaryKeys.of(candidate.term()));
-        if (own != null || holders.size() <= 1) {
-            return own != null ? Optional.of(own) : holders.stream().findFirst();
+        // The entry that holds the candidate's own spelling takes it; else one held entry its readings name takes it,
+        // and two take it only when their targets are the same (LemmaCollapse), else the form is unsure and attaches
+        // to neither.
+        private Optional<GlossaryEntry> holderOf(final NameCandidate candidate, final List<GlossaryEntry> holders) {
+            final GlossaryEntry own = heldByKey.get(GlossaryKeys.of(candidate.term()));
+            if (own != null || holders.size() <= 1) {
+                return own != null ? Optional.of(own) : holders.stream().findFirst();
+            }
+            final Map<String, String> targets = new LinkedHashMap<>();
+            holders.stream()
+                    .filter(entry -> entry.target() != null)
+                    .forEach(entry -> targets.put(entry.term(), Objects.requireNonNull(entry.target(), "target")));
+            final Optional<String> lemma =
+                    LemmaCollapse.collapse(candidate.term(), language, targets, namesPerRow(held, language));
+            log.debug("Name form fits {} held entries; collapsed {}", holders.size(), lemma.isPresent());
+            return lemma.flatMap(name -> holders.stream()
+                    .filter(entry -> GlossaryKeys.of(entry.term()).equals(GlossaryKeys.of(name)))
+                    .findFirst());
         }
-        final Map<String, String> targets = new LinkedHashMap<>();
-        holders.stream()
-                .filter(entry -> entry.target() != null)
-                .forEach(entry -> targets.put(entry.term(), Objects.requireNonNull(entry.target(), "target")));
-        final Optional<String> lemma =
-                LemmaCollapse.collapse(candidate.term(), pass.language, targets, namesPerRow(pass.held, pass.language));
-        log.debug("Name form fits {} held entries; collapsed {}", holders.size(), lemma.isPresent());
-        return lemma.flatMap(name -> holders.stream()
-                .filter(entry -> GlossaryKeys.of(entry.term()).equals(GlossaryKeys.of(name)))
-                .findFirst());
+
+        private static void newForms(
+                final GlossaryEntry entry, final NameCandidate candidate, final Map<String, List<String>> heldForms) {
+            final Set<String> known = new HashSet<>();
+            entry.names().forEach(name -> known.add(GlossaryKeys.of(name)));
+            heldForms.getOrDefault(entry.term(), List.of()).forEach(form -> known.add(GlossaryKeys.of(form)));
+            final List<String> found = new ArrayList<>();
+            found.add(candidate.term());
+            found.addAll(candidate.aliases());
+            final List<String> added = found.stream()
+                    .filter(form -> known.add(GlossaryKeys.of(form)))
+                    .toList();
+            if (!added.isEmpty()) {
+                heldForms.computeIfAbsent(entry.term(), _ -> new ArrayList<>()).addAll(added);
+                log.trace("Held entry {} gains the forms {}", entry.term(), added);
+            }
+        }
+
+        private static Result<Boolean> anyRemoved(
+                final String projectId, final List<String> names, final GlossaryRepository glossary) {
+            for (final String name : names) {
+                final Result<Boolean> removed = glossary.wasRemoved(projectId, name);
+                if (removed.isErr() || Boolean.TRUE.equals(removed.data())) {
+                    return removed;
+                }
+            }
+            return Result.ok(false);
+        }
+
+        private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {
+            final GlossaryEntry base = GlossaryEntry.of(
+                    GlossaryIds.of(projectId, candidate.term()),
+                    projectId,
+                    candidate.term(),
+                    null,
+                    TermType.OTHER,
+                    Gender.UNKNOWN,
+                    false);
+            return new GlossaryEntry(
+                    base.id(),
+                    base.projectId(),
+                    base.term(),
+                    candidate.aliases(),
+                    candidate.lemmaInferred(),
+                    base.target(),
+                    base.targetState(),
+                    base.targetOrigin(),
+                    base.type(),
+                    base.placeKind(),
+                    Origin.RULE,
+                    base.gender(),
+                    base.genderOrigin(),
+                    base.genderSeedTried(),
+                    base.noGenderEvidence(),
+                    base.meaning(),
+                    base.meaningChoice(),
+                    base.knowledge(),
+                    base.unsureMentions());
+        }
     }
 
     // How many held names decline by each row, read from their terms' gendered nominative rows.
@@ -174,63 +232,5 @@ public final class ScanEntries {
             readings.forEach(reading -> names.add(reading.lemma()));
         }
         return List.copyOf(names);
-    }
-
-    private static void newForms(
-            final GlossaryEntry entry, final NameCandidate candidate, final Map<String, List<String>> heldForms) {
-        final Set<String> known = new HashSet<>();
-        entry.names().forEach(name -> known.add(GlossaryKeys.of(name)));
-        heldForms.getOrDefault(entry.term(), List.of()).forEach(form -> known.add(GlossaryKeys.of(form)));
-        final List<String> found = new ArrayList<>();
-        found.add(candidate.term());
-        found.addAll(candidate.aliases());
-        final List<String> added =
-                found.stream().filter(form -> known.add(GlossaryKeys.of(form))).toList();
-        if (!added.isEmpty()) {
-            heldForms.computeIfAbsent(entry.term(), _ -> new ArrayList<>()).addAll(added);
-            log.trace("Held entry {} gains the forms {}", entry.term(), added);
-        }
-    }
-
-    private static Result<Boolean> anyRemoved(
-            final String projectId, final List<String> names, final GlossaryRepository glossary) {
-        for (final String name : names) {
-            final Result<Boolean> removed = glossary.wasRemoved(projectId, name);
-            if (removed.isErr() || Boolean.TRUE.equals(removed.data())) {
-                return removed;
-            }
-        }
-        return Result.ok(false);
-    }
-
-    private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {
-        final GlossaryEntry base = GlossaryEntry.of(
-                GlossaryIds.of(projectId, candidate.term()),
-                projectId,
-                candidate.term(),
-                null,
-                TermType.OTHER,
-                Gender.UNKNOWN,
-                false);
-        return new GlossaryEntry(
-                base.id(),
-                base.projectId(),
-                base.term(),
-                candidate.aliases(),
-                candidate.lemmaInferred(),
-                base.target(),
-                base.targetState(),
-                base.targetOrigin(),
-                base.type(),
-                base.placeKind(),
-                Origin.RULE,
-                base.gender(),
-                base.genderOrigin(),
-                base.genderSeedTried(),
-                base.noGenderEvidence(),
-                base.meaning(),
-                base.meaningChoice(),
-                base.knowledge(),
-                base.unsureMentions());
     }
 }

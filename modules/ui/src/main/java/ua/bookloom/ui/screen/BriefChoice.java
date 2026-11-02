@@ -212,17 +212,17 @@ final class BriefChoice<E> {
             }
             return width;
         }
-    }
 
-    private static String onTwoLines(final String text) {
-        final int middle = text.length() / 2;
-        int split = -1;
-        for (int at = text.indexOf(' '); at >= 0; at = text.indexOf(' ', at + 1)) {
-            if (split < 0 || Math.abs(at - middle) < Math.abs(split - middle)) {
-                split = at;
+        private static String onTwoLines(final String text) {
+            final int middle = text.length() / 2;
+            int split = -1;
+            for (int at = text.indexOf(' '); at >= 0; at = text.indexOf(' ', at + 1)) {
+                if (split < 0 || Math.abs(at - middle) < Math.abs(split - middle)) {
+                    split = at;
+                }
             }
+            return split < 0 ? text : text.substring(0, split) + "\n" + text.substring(split + 1);
         }
-        return split < 0 ? text : text.substring(0, split) + "\n" + text.substring(split + 1);
     }
 
     private void onToggled(final @Nullable Toggle was, final @Nullable Toggle now) {

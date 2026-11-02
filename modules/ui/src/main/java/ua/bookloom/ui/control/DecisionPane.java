@@ -115,33 +115,33 @@ final class DecisionPane extends VBox {
                 getStyleClass().add("progress-decision-uncertain");
             }
         }
-    }
 
-    private String valueOf(final DecisionRow row) {
-        if (row.value().isEmpty()) {
-            return shownHeld ? NO_VALUE : messages.get(MessageKey.BRIEF_DECIDES_PENDING);
+        private String valueOf(final DecisionRow row) {
+            if (row.value().isEmpty()) {
+                return shownHeld ? NO_VALUE : messages.get(MessageKey.BRIEF_DECIDES_PENDING);
+            }
+            return DecisionWords.value(messages, row);
         }
-        return DecisionWords.value(messages, row);
-    }
 
-    // The value and, once a sample has answered, how many agree: "Casual — 3 of 4 samples agree · so far".
-    private String valueLine(final DecisionRow row) {
-        final String agreement = agreementOf(row);
-        return agreement.isEmpty() ? valueOf(row) : valueOf(row) + " — " + agreement;
-    }
+        // The value and, once a sample has answered, how many agree: "Casual — 3 of 4 samples agree · so far".
+        private String valueLine(final DecisionRow row) {
+            final String agreement = agreementOf(row);
+            return agreement.isEmpty() ? valueOf(row) : valueOf(row) + " — " + agreement;
+        }
 
-    private String agreementOf(final DecisionRow row) {
-        if (row.samples() == 0 || row.value().isEmpty()) {
-            return "";
+        private String agreementOf(final DecisionRow row) {
+            if (row.samples() == 0 || row.value().isEmpty()) {
+                return "";
+            }
+            final StringBuilder line =
+                    new StringBuilder(messages.get(MessageKey.BRIEF_DECIDES_AGREE, row.agreeing(), row.samples()));
+            if (!shownHeld) {
+                line.append(PART_JOIN).append(messages.get(MessageKey.BRIEF_DECIDES_SO_FAR));
+            }
+            if (row.isUncertain()) {
+                line.append(PART_JOIN).append(messages.get(MessageKey.BRIEF_DECIDES_UNCERTAIN));
+            }
+            return line.toString();
         }
-        final StringBuilder line =
-                new StringBuilder(messages.get(MessageKey.BRIEF_DECIDES_AGREE, row.agreeing(), row.samples()));
-        if (!shownHeld) {
-            line.append(PART_JOIN).append(messages.get(MessageKey.BRIEF_DECIDES_SO_FAR));
-        }
-        if (row.isUncertain()) {
-            line.append(PART_JOIN).append(messages.get(MessageKey.BRIEF_DECIDES_UNCERTAIN));
-        }
-        return line.toString();
     }
 }

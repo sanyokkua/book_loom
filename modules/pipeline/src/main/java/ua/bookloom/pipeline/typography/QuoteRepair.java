@@ -175,10 +175,6 @@ public final class QuoteRepair {
         return text.replaceAll("[«»„“”‹›\"]", "");
     }
 
-    private static boolean isQuoteMark(final List<QuotePair> pairs, final char c) {
-        return c == STRAIGHT || pairs.stream().anyMatch(pair -> pair.open() == c || pair.close() == c);
-    }
-
     /** One left-to-right scan that mirrors the balance check and fixes the defects it can fix with certainty. */
     private static final class Fixer {
 
@@ -312,6 +308,10 @@ public final class QuoteRepair {
             }
             final int start = out.lastIndexOf("⟦g", end - 1);
             return start < 0 ? 0 : start;
+        }
+
+        private static boolean isQuoteMark(final List<QuotePair> pairs, final char c) {
+            return c == STRAIGHT || pairs.stream().anyMatch(pair -> pair.open() == c || pair.close() == c);
         }
     }
 }
