@@ -77,6 +77,35 @@ final class PronounReader {
         return new PronounReader(namePattern(term), probeOf(term), tables, language, openingTitle(term, language));
     }
 
+    /**
+     * The uses of a name that follow a form of address showing a gender, for a book whose language is not known: no
+     * pronoun table can be read then, but the forms of address of every bundled language still show the gender.
+     *
+     * @param term the glossary term
+     * @param text the visible text to read
+     * @return a mention for each use after such a form, in reading order; never null
+     */
+    static List<Mention> titledUses(final String term, final String text) {
+        final List<Mention> uses = new ArrayList<>();
+        if (term.isBlank()) {
+            return uses;
+        }
+        final Matcher found = namePattern(term).matcher(text);
+        while (found.find()) {
+            final Matcher before =
+                    WORD_BEFORE.matcher(text.substring(Math.max(0, found.start() - LOOK_BACK), found.start()));
+            final String word = before.find() ? before.group(1) : "";
+            final int end = found.end();
+            final int start = found.start();
+            if (!word.isEmpty()) {
+                GenderedTitles.genderOf(word, null)
+                        .ifPresent(gender ->
+                                uses.add(new Mention(start, null, null, new Pronoun(bare(word), gender, end))));
+            }
+        }
+        return uses;
+    }
+
     // A name of two words or more that opens with a gendered form of address has that gender at every use.
     private static @Nullable Pronoun openingTitle(final String term, final String language) {
         final List<String> words = SPACES.splitAsStream(term.strip()).toList();

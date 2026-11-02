@@ -35,14 +35,14 @@ final class NameEvidence {
         Objects.requireNonNull(lemma, "lemma");
         Objects.requireNonNull(texts, "texts");
         final PronounReader reader = PronounReader.of(term, languageTag);
-        if (reader == null) {
+        if (reader == null && languageTag != null) {
             log.trace("Pronoun evidence skipped term={} language={}: no pronoun table", term, languageTag);
             return new PronounGender.Evidence(List.of(), List.of());
         }
         final List<Use> uses = new ArrayList<>();
         final PastTenseReader past = PastTenseReader.of(languageTag);
         final Predicate<String> namedElsewhere = namedInsideASentence(texts);
-        texts.forEach(text -> reader.read(text, namedElsewhere).stream()
+        texts.forEach(text -> mentionsIn(reader, term, text, namedElsewhere).stream()
                 .filter(use -> keep.test(text, use))
                 .forEach(use -> uses.add(new Use(use, verbAfter(past, text, use, lemma)))));
         // A surname written after both a man's and a woman's form of address is a family's: those uses are the
@@ -60,6 +60,15 @@ final class NameEvidence {
                 .forEach(use -> tally.add(use.mention(), use.verb()));
         log.trace("Pronoun evidence for {}: {} uses, family name {}", term, uses.size(), family);
         return tally.evidence();
+    }
+
+    // With no language only the forms of address are read: no pronoun table is known.
+    private static List<Mention> mentionsIn(
+            final @Nullable PronounReader reader,
+            final String term,
+            final String text,
+            final Predicate<String> namedElsewhere) {
+        return reader == null ? PronounReader.titledUses(term, text) : reader.read(text, namedElsewhere);
     }
 
     private record Use(Mention mention, PastTenseReader.@Nullable Vote verb) {}

@@ -309,7 +309,7 @@ public final class PronounGender {
             return entry;
         }
         final Evidence evidence = of(entry, texts, languageTag);
-        final Optional<Gender> dominant = evidence.dominant();
+        final Optional<Gender> dominant = TitledGender.dominant(entry.term(), texts, evidence);
         final boolean sets = dominant.isPresent() && (open || evidence.isStrong());
         final Origin origin = evidence.isStrong() ? Origin.BOOK : Origin.LIKELY;
         log.debug(
