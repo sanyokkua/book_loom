@@ -336,13 +336,34 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         assertThat(required("progress-call").isVisible()).isTrue();
     }
 
+    // IF a name call said "0 segments", THEN the line would claim a count of something the call does not work on.
+    @Test
+    void detailed_callWithNoSegments_saysNoSegmentCount() throws TimeoutException {
+        onFx(() -> injector.getInstance(ProgressDialogDefaults.class)
+                .initialMode()
+                .set(ProgressDialogModel.Mode.DETAILED));
+        final ActivityTracker.Handle brief = begin(ActivityKind.SUGGEST_STYLE);
+        plan(brief, 2);
+        start(brief, 0);
+        onFx(() -> brief.calls(new LiveCalls(call(CallKind.TERM_READING, List.of()), null, java.util.Map.of(), null)));
+        awaitDialog();
+
+        await(() -> required("progress-call").isVisible());
+        assertThat(((Label) required("progress-call")).getText()).isEqualTo("Call 42 · Name reading · attempt 1 of 2");
+    }
+
     private static CallSnapshot call() {
-        final List<CallSegment> segments = IntStream.rangeClosed(1, 4)
-                .mapToObj(n -> new CallSegment("s" + n, "p" + n, "Line " + n + "."))
-                .toList();
+        return call(
+                CallKind.DRAFT,
+                IntStream.rangeClosed(1, 4)
+                        .mapToObj(n -> new CallSegment("s" + n, "p" + n, "Line " + n + "."))
+                        .toList());
+    }
+
+    private static CallSnapshot call(final CallKind kind, final List<CallSegment> segments) {
         return CallSnapshot.waiting(
                 42,
-                CallKind.DRAFT,
+                kind,
                 "draft-batch-json",
                 null,
                 segments,
