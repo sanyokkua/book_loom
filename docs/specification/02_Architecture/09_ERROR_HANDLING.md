@@ -95,7 +95,8 @@ integers read from the body, never its sentence). The **failure reason** is a fi
 `think-level-invalid`, `server-busy`, `option-type`, `host-forbidden`, `cloud-disabled`, `cloud-signin`,
 `cloud-unreachable`, `runner-crashed`, `out-of-memory`, `repeat-limit`, `context-overflow`, `terminated`,
 `no-model-loaded`, `model-unloaded`, `grammar-too-large`, `schema-invalid`, `structured-unavailable`,
-`engine-unreachable`, `template-rejected`, `model-loading`, `schema-not-applied`, `unclassified`), rendered first as
+`engine-unreachable`, `template-rejected`, `model-loading`, `schema-not-applied`, `provider-unavailable`, `credits`,
+`blocked`, `no-endpoint-for-parameters`, `unclassified`), rendered first as
 `reason=<token>`, for a failure whose code
 alone cannot say what to fix: the services word failures in English, and the window words a failure in another display
 language by its reason when it has advice of its own, else by its code. Every HTTP failure of a provider carries a

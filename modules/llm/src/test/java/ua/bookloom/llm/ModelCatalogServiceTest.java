@@ -9,7 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -178,6 +181,31 @@ class ModelCatalogServiceTest {
 
         assertThat(result.isErr()).isTrue();
         assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.unreachable);
+    }
+
+    // IF the provider is OpenRouter, THEN its catalog lists only models that answer in text.
+    @Test
+    void discover_openRouterCatalog_returnsTextModelsOnly() throws IOException {
+        final ProviderConfig config = new ProviderConfig(
+                        "openrouter",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        URI.create(server.baseUrl() + "/api/v1"),
+                        CONNECT_TIMEOUT,
+                        REQUEST_TIMEOUT)
+                .withEngine(ServerEngine.GENERIC, ServerEngine.OPENROUTER, null);
+        assertThat(configs.save(config).isOk()).isTrue();
+        try (InputStream in = Objects.requireNonNull(
+                getClass().getResourceAsStream("/ua/bookloom/llm/openrouter/catalog-modalities.json"))) {
+            server.stubFor(get(urlEqualTo("/api/v1/models"))
+                    .willReturn(okJson(new String(in.readAllBytes(), StandardCharsets.UTF_8))));
+        }
+
+        final Result<List<ModelInfo>> result = catalog.listModels("openrouter");
+
+        assertThat(result.isOk()).as("result: " + result.error()).isTrue();
+        assertThat(Objects.requireNonNull(result.data(), "models"))
+                .extracting(ModelInfo::id)
+                .containsExactly("example/text-chat", "example/vision-chat", "example/text-and-image");
     }
 
     // IF the composition root is built, THEN ModelCatalog resolves to the service.

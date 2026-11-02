@@ -77,6 +77,9 @@ class ErrorWordsTest {
                 "NOT_SUITABLE_STRUCTURED",
                 "NOT_SUITABLE_DOCUMENTS",
                 "ENGINE_MISMATCH",
+                "CREDITS",
+                "BLOCKED",
+                "NO_ENDPOINT_FOR_PARAMETERS",
                 "UNCLASSIFIED"
             })
     void message_inUkrainian_tokensWithoutWords_keepTheCodeWords(final FailureReason reason) {
@@ -109,7 +112,11 @@ class ErrorWordsTest {
                         + " модель зі списку.",
                 "NOT_SUITABLE_STRUCTURED | Ця програма не підтримує структурованих відповідей, тому BookLoom не може нею"
                         + " користуватися.",
-                "NOT_SUITABLE_DOCUMENTS | Ця адреса веде розмову з документами, а не з моделлю."
+                "NOT_SUITABLE_DOCUMENTS | Ця адреса веде розмову з документами, а не з моделлю.",
+                "CREDITS | OpenRouter відхилив запит: кредити закінчилися або досягнуто ліміту ключа.",
+                "BLOCKED | Провайдер відмовився обробляти цей уривок.",
+                "NO_ENDPOINT_FOR_PARAMETERS | Жоден провайдер цієї моделі не підтримує структурованих відповідей або"
+                        + " вимкнення міркування."
             })
     void message_ukrainianDisplay_wordsEachNewReasonToken(final FailureReason reason, final String expected) {
         final AppError error = AppError.of(

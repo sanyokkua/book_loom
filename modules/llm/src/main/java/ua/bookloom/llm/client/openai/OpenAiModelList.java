@@ -28,7 +28,7 @@ import ua.bookloom.llm.provider.EndpointPaths;
  * Reads an OpenAI-shaped model list with only its chat models, and words a list that could not be read. LM Studio's
  * OpenAI list says nothing about a model's kind, so its own {@code /api/v0/models} is read first and its
  * {@code embeddings} entries are left out; an Ollama model whose name ends {@code :cloud} or {@code -cloud} is labelled
- * cloud, never hidden.
+ * cloud, never hidden. OpenRouter lists every kind of model, so only those that answer in text are kept.
  */
 @Slf4j
 final class OpenAiModelList {
@@ -84,6 +84,7 @@ final class OpenAiModelList {
             }
             final List<ModelInfo> models = response.data().stream()
                     .filter(model -> !Objects.requireNonNull(model, "model").isEmbedding())
+                    .filter(model -> config.effectiveEngine() != ServerEngine.OPENROUTER || model.answersInText())
                     .filter(model -> listed.isChat(Objects.requireNonNull(model.id(), "model id")))
                     .map(this::modelInfo)
                     .toList();

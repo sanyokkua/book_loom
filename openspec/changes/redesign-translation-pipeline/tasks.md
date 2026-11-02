@@ -866,7 +866,7 @@ so group 7 merges first and group 8 rebases onto it before its gate.
   - **Satisfies:** "Log OpenRouter's served provider, model and cost" (llm-provider)
   - **Depends on:** 8.2
   - **Read:** design.md D18, D21; api: `llm/CallLedger` and `llm/CallRecord` (group 3); llm: `CallLedgerImpl`, `client/openai/OpenAiUsage`, `GatedChatModel`; pipeline: `RunSummaryLogger`, `CallKindTotals`
-  - **Change:** `OpenAiUsage` reads `usage.cost` and the reply's `provider` and `model` slugs (missing stays missing, never 0); each call's DEBUG line gains `servedProvider=… servedModel=… cost=…` (slugs and numbers only); `api: llm/CallRecord` gains `@Nullable cost` (missing stays missing) and `CallKindTotals` sums it; `RunSummaryLogger` prints the run's total cost on the run summary line when any call reported one, and `–` otherwise. The cost never appears in a prompt or a book-text log line.
+  - **Change:** `OpenAiUsage` reads `usage.cost` and the reply's `provider` and `model` slugs (missing stays missing, never 0); each call's DEBUG line gains `servedProvider=… servedModel=… cost=…` (slugs and numbers only); `api: llm/CallRecord` gains `@Nullable cost` (missing stays missing) and `CallKindTotals` sums it; `RunSummaryLogger` prints the run's total cost on the run summary line when any call reported one, and `-` otherwise. The cost never appears in a prompt or a book-text log line.
   - **Test first:** `OpenAiUsageTest.read_costAndSlugs_arePresentOnlyWhenReported`; `RunSummaryLoggerTest.summary_withCosts_totalsThemAndWithoutPrintsDash`; `OpenRouterRequestTest.chat_debugLine_carriesSlugsAndCostButNoText` (log capture).
   - **Done when:** tests green.
 

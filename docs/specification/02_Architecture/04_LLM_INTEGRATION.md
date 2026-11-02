@@ -188,7 +188,7 @@ public record ChatResponse(String content, FinishReason finishReason, @Nullable 
 
 `ChatRequest` carries no model field: the model is bound on the `ChatModel` obtained from `ModelSelection`. Every
 nullable component is omitted from the serialized JSON when unset. There is no streaming field: the Ollama-native client
-streams internally and both clients hand back one whole reply. `GatedChatModel` applies the model's stored settings and
+streams internally and both clients hand back one whole reply (the OpenAI-compatible client posts `stream:false`). `GatedChatModel` applies the model's stored settings and
 profile to each call (`BoundSettings.applied`): the temperature choice, the Custom samplers, the cap, the reasoning
 decision and the structured rung.
 
@@ -262,7 +262,16 @@ an inference round trip. Lists are chat-only: an entry whose own listing shows a
 `embeddings`) is dropped, and an Ollama entry whose name ends `:cloud` or `-cloud`, or that carries `remote_host` in
 `/api/tags`, gets `ModelInfo.cloud = true` (a neutral label, nothing hidden, no consent; an Ollama behind an
 OpenAI-compatible provider is labelled by name suffix only). Dropping sidecar files and other kinds that only the name
-or `/api/show` reveals belongs to the model-profile work of a later group.
+or `/api/show` reveals belongs to the model-profile work of a later group. OpenRouter's catalog lists every kind of model,
+so for an effective engine `OPENROUTER` only entries whose `architecture.output_modalities` contains `text` are kept (an
+image-only or embeddings-only entry is left out); the Test's models stage and the model pickers use this same list.
+
+### openrouter-call-line {#openrouter-call-line}
+
+When a reply names its host or its price, the call's DEBUG line gains `servedProvider=<slug> servedModel=<slug>
+cost=<number>`; a field the reply did not carry is `-`, never 0, and nothing but slugs and a number is logged. `CallRecord`
+carries a nullable `cost`; `CallKindTotals` sums it, and the run summary line prints `cost=<total>` when any call reported
+one and `cost=-` otherwise (a free model's reported 0 is a 0).
 
 ## effective-context {#effective-context}
 
@@ -381,6 +390,16 @@ A context-overflow failure carries the prompt and window token counts when the p
 and `(512 tokens)` in its words, or the typed `n_prompt_tokens` and `n_ctx`), so the flag can say "696 of 512 tokens".
 The rows that name an engine in their id match by text alone unless an engine set limits them, so the same words from
 another engine read the same way.
+
+**OpenRouter rows (design D21).** Four rows are limited to the OpenRouter engine (`llm/http/OpenRouterRows`), tried
+before the generic rows, so another server's 402 or 403 keeps its own meaning: an `error_type` of `provider_unavailable`
+(any status, also inside a 200) is `upstream` with reason `provider-unavailable`, retried with backoff and waited out
+like any outage; a `no endpoints` body that names parameters is `validation` with `no-endpoint-for-parameters` (no
+provider supports the structured answer or the reasoning switch; the person is asked); a `402` is `auth` with `credits`;
+a `403` whose body says content policy, moderation or flagged is `validation` with `blocked` (the segment is flagged, the
+run goes on). A `200` whose body holds an `error` object, or a choice that carries one, is parsed before `choices` and
+goes through the same rows. A choice that finished with `finish_reason` `error` carries the failure of that body, not an empty answer. Statuses 408, 504 and 524 are `timeout` on OpenRouter only (`StatusMappings`; elsewhere a 504 is a proxy's
+fault and stays `upstream`); 502, 503 and 529 and a 429 follow Table B.
 
 **Table B — the status alone, for a reply no row explains.** Every failure here carries the reason `unclassified`.
 

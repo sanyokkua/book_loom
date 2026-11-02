@@ -889,13 +889,15 @@ task edits the delta requirement and this file's line; the result is written int
   (`none` listed → `{effort:"none"}`; an object without efforts → `{enabled:false}`; mandatory → the lowest effort;
   absent → omitted), checked by `reasoning_tokens`; reasoning read from `message.reasoning`.
 - **Request.** `provider.require_parameters:true`, `plugins:[{"id":"context-compression","enabled":false}]`,
-  `stream:false`, only the endpoint's `supported_parameters`, `repetition_penalty` as the penalty name; the cap
+  `stream:false`, only the endpoint's `supported_parameters` (smallest window and cap, union of parameters over a model's endpoints; no `HOSTED` field, the reader sets the window as fixed), `repetition_penalty` as the penalty name; the cap
   clamped to the endpoint's `max_completion_tokens`; the window from its `context_length`. `ModelFactsReader` reads
   the catalog as a metadata source.
-- **Errors.** An error inside a 200 is parsed before `choices`; rows for 402, 403, 408/504/524, 502/503/529, 429 and
-  "no endpoint for parameters", each with a WireMock fixture.
+- **Errors.** An error inside a 200 is parsed before `choices`; `OpenRouterRows` holds four rows (provider-unavailable, 402 credits,
+  403 blocked, no endpoint for parameters); 408/504/524 are `timeout` through `StatusMappings.of(status, engine)` (a row must carry a
+  reason and a retry rule), 502/503/529 and 429 use the generic mappings; each has a WireMock fixture. The OpenAI client never streams,
+  so there is no stream-chunk case.
 - **Ledger.** Served provider and model slugs and `usage.cost` on the call line and in the run summary (numbers and
-  slugs only).
+  slugs only; a missing value prints `-`).
 - **Not built** (owner decision D-7): routing, data-collection, quantisation filters, pinning, `session_id`, key and
   free-tier counters.
 - **Why.** Correct answers need the reasoning switch and parameter enforcement; routing is a product choice the owner
