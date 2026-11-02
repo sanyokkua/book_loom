@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -15,14 +14,12 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesEstimate;
-import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -51,11 +48,8 @@ public final class NamesStyleViewModel {
     private final GlossaryRowEdits edits;
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
-    private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
-    private final GenderConfirmations genderConfirmations;
-    private final TargetAcceptances acceptances;
-    private final ReviewFlagsMirror flags;
     private final GlossaryAdditions additions;
+    private final Suggestions suggestions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
     private final ResultsReview review = new ResultsReview();
@@ -120,12 +114,7 @@ public final class NamesStyleViewModel {
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages), messages);
         this.additions = new GlossaryAdditions(
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
-        this.genderConfirmations =
-                new GenderConfirmations(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
-        this.acceptances = new TargetAcceptances(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
-        this.flags = new ReviewFlagsMirror(glossary, calls, rows, () -> projectId);
-        rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
-                (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
+        this.suggestions = new Suggestions(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
     }
 
     private GlossaryModelRuns newModelRuns(
@@ -307,33 +296,8 @@ public final class NamesStyleViewModel {
         edits.change(entryId, "accept", GlossaryEntry::accepted, openings.whileCurrent());
     }
 
-    /** Accepts every suggested target that passes the target language's checks; the results list the rest. */
-    public void acceptAll() {
-        acceptances.acceptAll();
-    }
-
-    /** {@return the review flags of one shown row, computed by the service and never stored; empty when it has none} */
-    public List<TargetIssue> reviewFlagsOf(final String entryId) {
-        return flags.flags().getOrDefault(entryId, List.of());
-    }
-
-    /** {@return a read-only count of the times the review flags were read again, which only ever grows} */
-    public ReadOnlyIntegerProperty reviewFlagRefreshes() {
-        return flags.refreshes();
-    }
-
-    /** {@return a read-only count of the rows that hold a suggested target nobody confirmed} */
-    public ReadOnlyIntegerProperty suggestedCount() {
-        return suggestedCount.getReadOnlyProperty();
-    }
-
-    /** Turns every suggested character gender into the person's; the results list can put each back. */
-    public void confirmGenders() {
-        genderConfirmations.confirmAll();
-    }
-
-    /** {@return a read-only count of the characters whose gender is a suggestion nobody has confirmed} */
-    public ReadOnlyIntegerProperty suggestedGenderCount() {
-        return genderConfirmations.suggestedCount();
+    /** {@return the suggested targets and genders, their review flags and the counts that tell a person to look} */
+    public Suggestions suggestions() {
+        return suggestions;
     }
 }

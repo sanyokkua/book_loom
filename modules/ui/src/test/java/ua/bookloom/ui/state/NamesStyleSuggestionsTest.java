@@ -72,7 +72,7 @@ class NamesStyleSuggestionsTest extends FxTestBase {
 
     @Test
     void suggestedCount_rowsWithSuggestions_countsOnlyThose() {
-        assertThat(onFx(() -> vm.suggestedCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isEqualTo(2);
     }
 
     @Test
@@ -84,18 +84,18 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::target, GlossaryEntry::targetOrigin)
                 .containsExactly(tuple("Гейл", Origin.USER));
-        assertThat(onFx(() -> vm.suggestedCount().get())).isEqualTo(1);
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isEqualTo(1);
     }
 
     @Test
     void acceptAll_twoSuggestions_asksTheServiceOnceAndShowsBothAccepted() {
         glossary.willAnswer(Result.ok(new AcceptReport(List.of(HALE.accepted(), WALES.accepted()), List.of())));
 
-        run(vm::acceptAll);
+        run(vm.suggestions()::acceptAll);
 
         assertThat(glossary.calls()).containsOnlyOnce("acceptSuggested(p1)");
         assertThat(glossary.updated()).isEmpty();
-        assertThat(onFx(() -> vm.suggestedCount().get())).isZero();
+        assertThat(onFx(() -> vm.suggestions().suggestedCount().get())).isZero();
     }
 
     // IF the suggestion stage showed only "request 3", THEN a long glossary would give no sense of how far it is.

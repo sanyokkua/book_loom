@@ -88,7 +88,7 @@ final class GlossaryTable {
                 GlossaryTable::searchable,
                 BY_TERM,
                 columns(messages, model, frozen),
-                List.of(model.restorations(), model.reviewFlagRefreshes()));
+                List.of(model.restorations(), model.suggestions().reviewFlagRefreshes()));
     }
 
     // A name is found by any spelling the book uses, or by its translation.

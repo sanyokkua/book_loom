@@ -77,7 +77,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         run(() -> vm.show(PROJECT));
         glossary.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Refused", "Not stored.")));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.notice().get().text()))
                 .isEqualTo("Щось у введених даних або в книжці не так. Подробиці пояснюють, що саме.");
@@ -85,7 +85,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
 
     @Test
     void suggestedGenderCount_mixedRows_countsOnlySuggestedCharacters() {
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     // IF the action only relabelled the rows, THEN the next run would still treat the genders as guesses.
@@ -94,14 +94,14 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(glossary.updated())
                 .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple("Anne", Gender.FEMALE, Origin.USER),
                         org.assertj.core.groups.Tuple.tuple("Boris", Gender.MALE, Origin.USER));
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isZero();
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isZero();
     }
 
     @Test
@@ -109,7 +109,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         final ChangeResults results = onFx(() -> vm.results().get());
         assertThat(results.operation()).isEqualTo(ChangeOperation.CONFIRM_GENDERS);
@@ -121,14 +121,14 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     void undoAll_afterConfirming_putsTheSuggestedGendersBack() {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(BORIS.withGender(Gender.MALE)));
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
         glossary.willAnswer(Result.ok(ANNE));
         glossary.willAnswer(Result.ok(BORIS));
 
         run(() -> vm.results().get().undoAll());
 
         assertThat(glossary.updated().subList(2, 4)).containsExactly(ANNE, BORIS);
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     @Test
@@ -136,7 +136,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(List.of(CARL, DORA, RIVER)));
         run(() -> vm.show(PROJECT));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(glossary.updated()).isEmpty();
         assertThat(onFx(() -> vm.results().get())).isNull();
@@ -156,7 +156,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(embers.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
         glossary.willAnswer(Result.ok(ember));
         glossary.willAnswer(Result.ok(embers));
@@ -164,7 +164,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         run(() -> vm.results().get().undoAll());
 
         assertThat(glossary.updated()).endsWith(ember, embers);
-        assertThat(onFx(() -> vm.suggestedGenderCount().get())).isEqualTo(2);
+        assertThat(onFx(() -> vm.suggestions().suggestedGenderCount().get())).isEqualTo(2);
     }
 
     // IF the glossary shared the gender with a spelling nobody asked about, THEN the results must list that row too.
@@ -180,7 +180,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ember.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.ok(List.of(ember.withGender(Gender.FEMALE), embers.withGender(Gender.FEMALE))));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(2);
     }
@@ -191,7 +191,7 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
         glossary.willAnswer(Result.ok(ANNE.withGender(Gender.FEMALE)));
         glossary.willAnswer(Result.err(AppError.of(ErrorCode.internal, "Refused", "Boris could not be stored.")));
 
-        run(vm::confirmGenders);
+        run(vm.suggestions()::confirmGenders);
 
         assertThat(onFx(() -> vm.results().get()).count(ChangeKind.CHANGED)).isEqualTo(1);
         final GlossaryNotice notice = onFx(() -> vm.notice().get());

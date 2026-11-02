@@ -31,7 +31,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF the screen did not ask for the list when shown, THEN the combo would stay empty until something else
     // refreshed it; and IF it asked about another provider, THEN it would list another server's models.
     @Test
-    void modelControl_screenShown_asksTheCatalogueOnceForTheSelectedProvider() throws InterruptedException {
+    void modelControl_screenShown_asksTheCatalogueOnceForTheSelectedProvider() {
         openSettings();
         catalog.awaitEntered();
         WaitForAsyncUtils.waitForFxEvents();

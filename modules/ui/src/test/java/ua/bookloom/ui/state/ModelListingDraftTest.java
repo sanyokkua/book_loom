@@ -43,7 +43,7 @@ class ModelListingDraftTest extends SettingsViewModelTestBase {
 
     // IF a second tap stacked a request on a slow server, THEN revisiting the form would pile them up.
     @Test
-    void refresh_sameDraftInFlight_isNotAskedAgain() throws InterruptedException {
+    void refresh_sameDraftInFlight_isNotAskedAgain() {
         catalog = ScriptedModelCatalog.gated("qwen3:8b");
         useCountingPool();
         final ModelListing listing = newModelListing();
@@ -62,7 +62,7 @@ class ModelListingDraftTest extends SettingsViewModelTestBase {
 
     // IF another address were taken for the one in flight, THEN the answer of the old server would fill the list.
     @Test
-    void refresh_otherDraftWhileInFlight_isAskedAnew() throws InterruptedException {
+    void refresh_otherDraftWhileInFlight_isAskedAnew() {
         catalog = ScriptedModelCatalog.gated("qwen3:8b");
         useCountingPool();
         final ModelListing listing = newModelListing();

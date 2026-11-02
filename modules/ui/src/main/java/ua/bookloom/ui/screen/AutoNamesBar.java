@@ -102,10 +102,10 @@ final class AutoNamesBar {
         confirm.getStyleClass().add("btn-ghost");
         confirm.setMinWidth(Region.USE_PREF_SIZE);
         confirm.disableProperty().bind(names.busy().or(frozen));
-        Visibility.bind(confirm, names.suggestedGenderCount().greaterThan(0));
+        Visibility.bind(confirm, names.suggestions().suggestedGenderCount().greaterThan(0));
         confirm.setOnAction(event -> {
             log.debug("names-style-confirm-genders pressed");
-            names.confirmGenders();
+            names.suggestions().confirmGenders();
         });
         return confirm;
     }
