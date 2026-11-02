@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.util.paths.AppPaths;
+import ua.bookloom.util.paths.NameLookup;
 
 class TranslateLauncherTest {
 
@@ -338,15 +338,15 @@ class TranslateLauncherTest {
         };
     }
 
-    private static Function<String, String> environment(Path dataDir) {
+    private static NameLookup environment(Path dataDir) {
         return Map.of("BOOKLOOM_DATA_DIR", dataDir.toString())::get;
     }
 
-    private static Function<String, String> environment(Path dataDir, String level) {
+    private static NameLookup environment(Path dataDir, String level) {
         return Map.of("BOOKLOOM_DATA_DIR", dataDir.toString(), "BOOKLOOM_LOG_LEVEL", level)::get;
     }
 
-    private static Function<String, String> emptyProperties() {
+    private static NameLookup emptyProperties() {
         return Map.<String, String>of()::get;
     }
 

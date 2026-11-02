@@ -7,7 +7,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +26,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.util.paths.NameLookup;
 import ua.bookloom.util.text.Slashes;
 
 /** Builds the real {@code :llm} services for the env-gated live tests, which skip when their variable is unset. */
@@ -75,7 +75,7 @@ public final class LiveServers {
         if (!configs.save(config).isOk()) {
             throw new IllegalStateException("provider refused: " + config.id());
         }
-        final Function<String, @Nullable String> env = environment::get;
+        final NameLookup env = environment::get;
         return Guice.createInjector(new LlmModule(env), new LlmTestStorageModule(configs));
     }
 

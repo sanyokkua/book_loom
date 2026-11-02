@@ -4,8 +4,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import org.jspecify.annotations.Nullable;
+import ua.bookloom.util.paths.NameLookup;
 
 /** The operating system's own store of a user's environment variables, asked one name at a time. */
 public interface OsEnvironment {
@@ -37,8 +36,8 @@ public interface OsEnvironment {
      */
     static OsEnvironment forOs(
             final String osName,
-            final Function<String, @Nullable String> processEnv,
-            final Function<String, @Nullable String> getProperty,
+            final NameLookup processEnv,
+            final NameLookup getProperty,
             final CommandRunner runner) {
         Objects.requireNonNull(osName, "osName");
         Objects.requireNonNull(processEnv, "processEnv");

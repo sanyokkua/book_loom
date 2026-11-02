@@ -3,11 +3,10 @@ package ua.bookloom.app.bootstrap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.util.paths.AppEnvironment;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * The block written at the top of every detailed-log file, so one file is self-explanatory when shared: the build, the
@@ -30,7 +29,7 @@ public record SessionHeader(
         AppEnvironment environment,
         ResolvedLogLevel level,
         ResolvedTraceFile trace,
-        Function<String, @Nullable String> properties,
+        NameLookup properties,
         Supplier<Map<String, String>> session) {
 
     private static final String UNKNOWN = "unknown";

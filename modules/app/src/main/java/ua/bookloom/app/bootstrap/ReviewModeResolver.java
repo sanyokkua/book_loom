@@ -2,11 +2,11 @@ package ua.bookloom.app.bootstrap;
 
 import java.util.Locale;
 import java.util.Objects;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.util.paths.NameLookup;
 
 /**
  * Purely resolves the review mode from injected environment and property lookups.
@@ -25,8 +25,7 @@ public final class ReviewModeResolver {
     private static final String PROPERTY_MODE = "bookloom.review.mode";
 
     /** Resolves the first configured mode, or Unattended when none is set or the configured one is unknown. */
-    public static ResolvedReviewMode resolve(
-            Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+    public static ResolvedReviewMode resolve(NameLookup getEnv, NameLookup getProperty) {
         Objects.requireNonNull(getEnv, "getEnv");
         Objects.requireNonNull(getProperty, "getProperty");
 

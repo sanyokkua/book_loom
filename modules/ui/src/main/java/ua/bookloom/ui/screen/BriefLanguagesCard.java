@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Pos;
@@ -249,8 +250,8 @@ final class BriefLanguagesCard {
     private static SearchableCombo<String> box(
             final String id,
             final List<String> tags,
-            final Function<String, String> name,
-            final Function<String, String> searchText,
+            final UnaryOperator<String> name,
+            final UnaryOperator<String> searchText,
             final Function<String, Optional<String>> parse) {
         final SearchableCombo<String> box = SearchableCombo.parsed(tags, name, searchText, parse);
         box.setId(id);

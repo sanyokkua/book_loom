@@ -13,7 +13,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -33,6 +32,7 @@ import ua.bookloom.app.StartupContext;
 import ua.bookloom.persistence.memory.InMemorySettingsRepository;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
+import ua.bookloom.util.paths.NameLookup;
 
 /** The review mode a run starts with: a flag set on purpose, else the stored choice, else Unattended. */
 class ReviewModeSourceTest {
@@ -59,13 +59,13 @@ class ReviewModeSourceTest {
     }
 
     private StartupContext startup(@Nullable String env, @Nullable String property) {
-        final Function<String, @Nullable String> getEnv = lookup("BOOKLOOM_REVIEW_MODE", env);
-        final Function<String, @Nullable String> getProperty = lookup("bookloom.review.mode", property);
+        final NameLookup getEnv = lookup("BOOKLOOM_REVIEW_MODE", env);
+        final NameLookup getProperty = lookup("bookloom.review.mode", property);
         return new StartupContext(
                 AppPaths.of(dataDir, dataDir), AppEnvironment.DEV, ReviewModeResolver.resolve(getEnv, getProperty));
     }
 
-    private static Function<String, @Nullable String> lookup(String name, @Nullable String value) {
+    private static NameLookup lookup(String name, @Nullable String value) {
         final Map<String, String> values = new HashMap<>();
         values.put(name, value);
         return values::get;

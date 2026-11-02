@@ -1,7 +1,6 @@
 package ua.bookloom.util.paths;
 
 import java.util.Locale;
-import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -36,7 +35,7 @@ enum OsFamily {
      * any remaining Unix, and guessing Windows on an unrecognised system would put the database behind a
      * drive-letter path that cannot exist there.
      */
-    static OsFamily from(Function<String, @Nullable String> getProperty) {
+    static OsFamily from(NameLookup getProperty) {
         final String osName = getProperty.apply("os.name");
         if (osName == null) {
             return LINUX;

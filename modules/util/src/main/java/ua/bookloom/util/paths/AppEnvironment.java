@@ -1,7 +1,6 @@
 package ua.bookloom.util.paths;
 
 import java.util.Objects;
-import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -51,8 +50,7 @@ public enum AppEnvironment {
      * @param getProperty reads a system property, returning {@code null} when unset
      * @return the resolved environment
      */
-    public static AppEnvironment resolve(
-            Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+    public static AppEnvironment resolve(NameLookup getEnv, NameLookup getProperty) {
         Objects.requireNonNull(getEnv, "getEnv");
         Objects.requireNonNull(getProperty, "getProperty");
 

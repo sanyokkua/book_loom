@@ -3,13 +3,13 @@ package ua.bookloom.app.bootstrap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.event.Level;
 import ua.bookloom.util.paths.AppEnvironment;
+import ua.bookloom.util.paths.NameLookup;
 
 class LoggingLevelResolverTest {
 
@@ -79,7 +79,7 @@ class LoggingLevelResolverTest {
                 Arguments.of(AppEnvironment.PROD, Map.of(), Map.of("bookloom.log.level", "LOUD"), Level.INFO, "LOUD"));
     }
 
-    private static Function<String, String> lookup(Map<String, String> values) {
+    private static NameLookup lookup(Map<String, String> values) {
         return values::get;
     }
 }

@@ -11,9 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Function;
 import javafx.application.Platform;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.persistence.SettingsRepository;
@@ -26,6 +24,7 @@ import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.state.AutomationSettings;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
+import ua.bookloom.util.paths.NameLookup;
 
 /** A mode chosen in Settings reaches the next run start through the real source and the real store. */
 class AutomationReviewModeTest {
@@ -36,7 +35,7 @@ class AutomationReviewModeTest {
     @TempDir
     private Path dataDir;
 
-    private Injector launch(final Function<String, @Nullable String> env) throws Exception {
+    private Injector launch(final NameLookup env) throws Exception {
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
         final StartupContext startup = new StartupContext(
                 AppPaths.of(dataDir, logDir), AppEnvironment.DEV, ReviewModeResolver.resolve(env, name -> null));

@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.util.paths.NameLookup;
 import ua.bookloom.util.text.Slashes;
 
 /** Sends one JSON request per call; the provider client owns response decoding and HTTP-purpose decisions. */
@@ -27,7 +27,7 @@ public final class HttpExchange {
 
     private final HttpClients clients;
     private final LongSupplier nanoTime;
-    private final Function<String, @Nullable String> env;
+    private final NameLookup env;
 
     /**
      * Shares the configured client holder while keeping each request's timeout independent. A streamed reply's waits
@@ -44,7 +44,7 @@ public final class HttpExchange {
     }
 
     /** Also takes the lookup that resolves a credential or header variable, so a test never changes the real environment. */
-    public HttpExchange(HttpClients clients, LongSupplier nanoTime, Function<String, @Nullable String> env) {
+    public HttpExchange(HttpClients clients, LongSupplier nanoTime, NameLookup env) {
         this.clients = Objects.requireNonNull(clients, "clients");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
         this.env = Objects.requireNonNull(env, "env");
