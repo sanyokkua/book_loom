@@ -31,7 +31,7 @@ class ModelFactsTest {
     void new_nonPositiveContext_isRefused() {
         assertThatThrownBy(() -> new ModelFacts(
                         null, null, null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, 0,
-                        null))
+                        null, List.of(), null, false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -52,6 +52,9 @@ class ModelFactsTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                List.of(),
+                null,
+                false);
     }
 }

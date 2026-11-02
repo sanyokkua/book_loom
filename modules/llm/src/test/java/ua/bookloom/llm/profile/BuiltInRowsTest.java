@@ -244,6 +244,9 @@ class BuiltInRowsTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                List.of(),
+                null,
+                false);
     }
 }

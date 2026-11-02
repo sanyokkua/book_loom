@@ -348,6 +348,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), REPLY);
+        replies.checkReasoningOff(modelId, request, reply.body());
         return ReasoningBudget.settled(
                 request,
                 replies.spentOnReasoning(request, reply.body()),

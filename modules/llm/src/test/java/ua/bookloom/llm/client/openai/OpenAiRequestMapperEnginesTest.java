@@ -189,11 +189,12 @@ class OpenAiRequestMapperEnginesTest {
         assertThat(body.has("reasoning_effort")).isFalse();
     }
 
-    @Test
-    void serializeRequest_openRouterWithoutVerdict_isTreatedAsGeneric() throws IOException {
+    @Test // OpenRouter's own row (D21): a schema needs no verdict; with no catalog read no reasoning is declared.
+    void serializeRequest_openRouterWithoutCatalog_sendsSchemaAndNoReasoningControl() throws IOException {
         final JsonNode body = sentBody(client(ServerEngine.OPENROUTER), MODEL_ID, off(schema()));
 
-        assertThat(body.has("response_format")).isFalse();
+        assertThat(body.path("response_format").path("type").asText()).isEqualTo("json_schema");
+        assertThat(body.has("reasoning")).isFalse();
         assertThat(body.has("reasoning_effort")).isFalse();
     }
 

@@ -69,12 +69,13 @@ public final class ModelFactsReader {
         final ServerEngine engine = config.effectiveEngine();
         log.debug(
                 "Model facts read host={} engine={} model={}", config.baseUrl().getHost(), engine, modelId);
-        final Draft draft = new Draft();
+        final FactsDraft draft = new FactsDraft();
         switch (engine) {
             case OLLAMA -> ollama(config, modelId, draft);
             case LM_STUDIO -> lmStudio(config, modelId, draft);
             case LLAMA_CPP -> llamaServer(config, modelId, draft);
-            case UNSLOTH, OPENROUTER -> listingRow(config, modelId, draft);
+            case UNSLOTH -> listingRow(config, modelId, draft);
+            case OPENROUTER -> openRouter(config, modelId, draft);
             case GENERIC -> {
                 lmStudioModel(config, modelId, draft);
                 if (draft.contextLength == null) {
@@ -88,7 +89,7 @@ public final class ModelFactsReader {
         return facts;
     }
 
-    private void ollama(final ProviderConfig config, final String modelId, final Draft draft) {
+    private void ollama(final ProviderConfig config, final String modelId, final FactsDraft draft) {
         final Optional<ProviderConfig> root = ollamaRoot(config);
         if (root.isEmpty()) {
             return;
@@ -98,7 +99,7 @@ public final class ModelFactsReader {
         body(exchange.get(root.get(), OLLAMA_PS)).ifPresent(ps -> readOllamaPs(ps, modelId, draft));
     }
 
-    private static void readOllamaShow(final JsonNode show, final Draft draft) {
+    private static void readOllamaShow(final JsonNode show, final FactsDraft draft) {
         draft.capabilities = strings(show.path("capabilities"));
         draft.thinkingOptions = strings(show.path("thinking").path("values"));
         draft.thinkingDefault = text(show.path("thinking").path("default"));
@@ -120,7 +121,7 @@ public final class ModelFactsReader {
         }
     }
 
-    private static void readOllamaPs(final JsonNode ps, final String modelId, final Draft draft) {
+    private static void readOllamaPs(final JsonNode ps, final String modelId, final FactsDraft draft) {
         for (final JsonNode entry : ps.path(MODELS_FIELD)) {
             if (modelId.equals(entry.path("name").asText())
                     || modelId.equals(entry.path("model").asText())) {
@@ -134,7 +135,7 @@ public final class ModelFactsReader {
         }
     }
 
-    private void lmStudio(final ProviderConfig config, final String modelId, final Draft draft) {
+    private void lmStudio(final ProviderConfig config, final String modelId, final FactsDraft draft) {
         lmStudioModel(config, modelId, draft);
         final Optional<ProviderConfig> root = EndpointPaths.atHostRoot(config);
         root.flatMap(at -> body(exchange.get(at, LM_STUDIO_V1)))
@@ -142,7 +143,7 @@ public final class ModelFactsReader {
     }
 
     // Asked for LM Studio and for a server of unknown engine, whose answer (or its 404) then decides.
-    private void lmStudioModel(final ProviderConfig config, final String modelId, final Draft draft) {
+    private void lmStudioModel(final ProviderConfig config, final String modelId, final FactsDraft draft) {
         final Optional<JsonNode> model =
                 EndpointPaths.atHostRoot(config).flatMap(root -> body(exchange.get(root, LM_STUDIO_V0 + modelId)));
         model.ifPresent(found -> {
@@ -159,7 +160,7 @@ public final class ModelFactsReader {
         });
     }
 
-    private static void readLmStudioReasoning(final JsonNode list, final String modelId, final Draft draft) {
+    private static void readLmStudioReasoning(final JsonNode list, final String modelId, final FactsDraft draft) {
         final JsonNode rows = list.path(MODELS_FIELD).isArray() ? list.path(MODELS_FIELD) : list.path("data");
         for (final JsonNode row : rows) {
             if (modelId.equals(row.path("key").asText())
@@ -173,7 +174,7 @@ public final class ModelFactsReader {
     }
 
     // A router's own /props describes no model and says n_ctx 0, so the model's own page is asked.
-    private void llamaServer(final ProviderConfig config, final String modelId, final Draft draft) {
+    private void llamaServer(final ProviderConfig config, final String modelId, final FactsDraft draft) {
         final String path = session.isRouter(config) ? PROPS + "?model=" + encode(modelId) : PROPS;
         final Optional<Integer> window = EndpointPaths.atHostRoot(config)
                 .flatMap(root -> body(exchange.get(root, path)))
@@ -189,7 +190,7 @@ public final class ModelFactsReader {
 
     // Unsloth and generic servers put what they know on the model's own row of the OpenAI list; llama-server's
     // per-slot window is in the row's meta.
-    private void listingRow(final ProviderConfig config, final String modelId, final Draft draft) {
+    private void listingRow(final ProviderConfig config, final String modelId, final FactsDraft draft) {
         body(exchange.get(config, EndpointPaths.modelsPath(config, MODELS))).ifPresent(list -> {
             for (final JsonNode row : list.path("data")) {
                 if (modelId.equals(row.path("id").asText())) {
@@ -200,7 +201,17 @@ public final class ModelFactsReader {
         });
     }
 
-    private static void readListingRow(final JsonNode row, final Draft draft) {
+    // OpenRouter's catalog row says how the model reasons and what it honours; its endpoints say the limits a call
+    // meets, which can be smaller than the model's own, so they win where they answer.
+    private void openRouter(final ProviderConfig config, final String modelId, final FactsDraft draft) {
+        body(exchange.get(config, EndpointPaths.modelsPath(config, MODELS)))
+                .flatMap(list -> OpenRouterCatalog.row(list, modelId))
+                .ifPresent(row -> OpenRouterCatalog.readModel(row, draft));
+        body(exchange.get(config, MODELS + "/" + modelId + "/endpoints"))
+                .ifPresent(endpoints -> OpenRouterCatalog.readEndpoints(endpoints, draft));
+    }
+
+    private static void readListingRow(final JsonNode row, final FactsDraft draft) {
         draft.quant = text(row.path("quant"));
         final Integer slot = positiveOrNull(row.path("meta").path("n_ctx"));
         final Integer window = positiveOrNull(row.path(CONTEXT_LENGTH));
@@ -266,11 +277,11 @@ public final class ModelFactsReader {
         return URLEncoder.encode(id, StandardCharsets.UTF_8);
     }
 
-    private static @Nullable String text(final JsonNode node) {
+    static @Nullable String text(final JsonNode node) {
         return node.isTextual() && !node.asText().isBlank() ? node.asText() : null;
     }
 
-    private static List<String> strings(final JsonNode node) {
+    static List<String> strings(final JsonNode node) {
         final List<String> values = new ArrayList<>();
         for (final JsonNode item : node) {
             if (item.isTextual()) {
@@ -284,74 +295,7 @@ public final class ModelFactsReader {
         return value.canConvertToInt() && value.intValue() > 0;
     }
 
-    private static @Nullable Integer positiveOrNull(final JsonNode value) {
+    static @Nullable Integer positiveOrNull(final JsonNode value) {
         return positive(value) ? Integer.valueOf(value.intValue()) : null;
-    }
-
-    private static final class Draft {
-        @Nullable
-        String architecture;
-
-        @Nullable
-        String family;
-
-        @Nullable
-        String format;
-
-        @Nullable
-        String quant;
-
-        @Nullable
-        String parameterSize;
-
-        List<String> capabilities = List.of();
-        List<String> thinkingOptions = List.of();
-
-        @Nullable
-        String thinkingDefault;
-
-        @Nullable
-        String renderer;
-
-        @Nullable
-        String parser;
-
-        @Nullable
-        String runner;
-
-        @Nullable
-        String type;
-
-        @Nullable
-        String state;
-
-        @Nullable
-        String compatibility;
-
-        @Nullable
-        Integer contextLength;
-
-        @Nullable
-        Integer loadedContext;
-
-        ModelFacts toFacts() {
-            return new ModelFacts(
-                    architecture,
-                    family,
-                    format,
-                    quant,
-                    parameterSize,
-                    capabilities,
-                    thinkingOptions,
-                    thinkingDefault,
-                    renderer,
-                    parser,
-                    runner,
-                    type,
-                    state,
-                    compatibility,
-                    contextLength,
-                    loadedContext);
-        }
     }
 }

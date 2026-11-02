@@ -1,6 +1,7 @@
 package ua.bookloom.llm.engine;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -9,7 +10,7 @@ import ua.bookloom.api.llm.ServerEngine;
 /**
  * What one server engine reads on its OpenAI-compatible path: where the answer cap goes, how thinking is switched off,
  * the fields every call carries and whether any model id is answered. Computed from the stored engine on each call and
- * never stored, so a change of engine applies at once; OpenRouter speaks the generic row until it gets its own.
+ * never stored, so a change of engine applies at once.
  *
  * @param capField which cap fields the engine honours
  * @param offSwitch the request field that switches the engine's thinking off
@@ -17,23 +18,37 @@ import ua.bookloom.api.llm.ServerEngine;
  * @param extraSamplers the neutral sampler values, by the engine's own field names, sent when the request carries no
  *     value of that sampler; never null, empty where the engine's defaults are neutral already
  * @param servesUnknownModel whether the engine answers an id it does not list with whatever model it has loaded
+ * @param penaltyField the engine's name for the request's repeat penalty
+ * @param endpointLimited whether a call carries only the parameters the model's endpoint lists, with its cap lowered
+ *     to the endpoint's answer limit (a hosted gateway that routes a model to endpoints of differing abilities)
  */
 public record EngineTraits(
         CapField capField,
         OffSwitch offSwitch,
         Map<String, Object> alwaysSend,
         Map<String, Object> extraSamplers,
-        boolean servesUnknownModel) {
+        boolean servesUnknownModel,
+        String penaltyField,
+        boolean endpointLimited) {
 
+    private static final String REPEAT_PENALTY = "repeat_penalty";
+    private static final String REPETITION_PENALTY = "repetition_penalty";
     // These engines' own defaults are not neutral (a repeat penalty above 1, a top_k of 40), so each value is sent.
-    private static final Map<String, Object> NEUTRAL_REPEAT_PENALTY = neutral("repeat_penalty");
-    private static final Map<String, Object> NEUTRAL_REPETITION_PENALTY = neutral("repetition_penalty");
+    private static final Map<String, Object> NEUTRAL_REPEAT_PENALTY = neutral(REPEAT_PENALTY);
+    private static final Map<String, Object> NEUTRAL_REPETITION_PENALTY = neutral(REPETITION_PENALTY);
     private static final Map<String, Object> TOOLS_OFF = Map.of("enable_tools", false);
+    // Only endpoints that honour every parameter sent are chosen, and no prompt is shortened by cutting its middle.
+    private static final Map<String, Object> OPENROUTER_ALWAYS = Map.of(
+            "provider",
+            Map.of("require_parameters", true),
+            "plugins",
+            List.of(Map.of("id", "context-compression", "enabled", false)));
 
     /** Copies the always-sent fields so a caller cannot change them later. */
     public EngineTraits {
         Objects.requireNonNull(capField, "capField");
         Objects.requireNonNull(offSwitch, "offSwitch");
+        Objects.requireNonNull(penaltyField, "penaltyField");
         alwaysSend = Map.copyOf(Objects.requireNonNull(alwaysSend, "alwaysSend"));
         extraSamplers = Map.copyOf(Objects.requireNonNull(extraSamplers, "extraSamplers"));
     }
@@ -52,17 +67,35 @@ public record EngineTraits(
         Objects.requireNonNull(engine, "engine");
         return switch (engine) {
             // Ollama's OpenAI path ignores max_completion_tokens, so a call capped that way would run uncapped.
-            case OLLAMA ->
-                new EngineTraits(CapField.MAX_TOKENS_ONLY, OffSwitch.REASONING_EFFORT, Map.of(), Map.of(), false);
+            case OLLAMA -> local(CapField.MAX_TOKENS_ONLY, OffSwitch.REASONING_EFFORT, Map.of(), Map.of(), false);
             case LM_STUDIO ->
-                new EngineTraits(CapField.EITHER, OffSwitch.REASONING_EFFORT, Map.of(), NEUTRAL_REPEAT_PENALTY, true);
-            case LLAMA_CPP ->
-                new EngineTraits(CapField.EITHER, OffSwitch.TEMPLATE_KWARG, Map.of(), NEUTRAL_REPEAT_PENALTY, false);
+                local(CapField.EITHER, OffSwitch.REASONING_EFFORT, Map.of(), NEUTRAL_REPEAT_PENALTY, true);
+            case LLAMA_CPP -> local(CapField.EITHER, OffSwitch.TEMPLATE_KWARG, Map.of(), NEUTRAL_REPEAT_PENALTY, false);
             case UNSLOTH ->
+                local(CapField.EITHER, OffSwitch.ENABLE_THINKING, TOOLS_OFF, NEUTRAL_REPETITION_PENALTY, true);
+            // An absent sampler is left out upstream, so the serving host's own default applies.
+            case OPENROUTER ->
                 new EngineTraits(
-                        CapField.EITHER, OffSwitch.ENABLE_THINKING, TOOLS_OFF, NEUTRAL_REPETITION_PENALTY, true);
-            case OPENROUTER, GENERIC -> new EngineTraits(CapField.EITHER, OffSwitch.PROBED, Map.of(), Map.of(), false);
+                        CapField.MAX_TOKENS_ONLY,
+                        OffSwitch.REASONING_OBJECT,
+                        OPENROUTER_ALWAYS,
+                        Map.of(),
+                        false,
+                        REPETITION_PENALTY,
+                        true);
+            case GENERIC -> local(CapField.EITHER, OffSwitch.PROBED, Map.of(), Map.of(), false);
         };
+    }
+
+    // A server that runs the model itself: the penalty under its usual name, every parameter sent as asked.
+    private static EngineTraits local(
+            final CapField capField,
+            final OffSwitch offSwitch,
+            final Map<String, Object> alwaysSend,
+            final Map<String, Object> extraSamplers,
+            final boolean servesUnknownModel) {
+        return new EngineTraits(
+                capField, offSwitch, alwaysSend, extraSamplers, servesUnknownModel, REPEAT_PENALTY, false);
     }
 
     /** Which cap fields an engine honours. */

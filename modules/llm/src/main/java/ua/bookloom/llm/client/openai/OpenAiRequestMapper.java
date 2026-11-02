@@ -3,6 +3,7 @@ package ua.bookloom.llm.client.openai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -82,8 +83,14 @@ final class OpenAiRequestMapper {
 
     Result<String> serializeRequest(String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
         try {
-            return Result.ok(mapper.writeValueAsString(payload(modelId, request, responseFormat)));
-        } catch (JsonProcessingException failure) {
+            final OpenAiChatRequest payload = payload(modelId, request, responseFormat);
+            if (!shaping.reshapesBody()) {
+                return Result.ok(mapper.writeValueAsString(payload));
+            }
+            final ObjectNode body = mapper.valueToTree(payload);
+            shaping.toEndpoint(modelId, body);
+            return Result.ok(mapper.writeValueAsString(body));
+        } catch (JsonProcessingException | IllegalArgumentException failure) {
             return Result.err(serializationFailure.apply(modelId, failure));
         }
     }
@@ -91,7 +98,7 @@ final class OpenAiRequestMapper {
     private OpenAiChatRequest payload(String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
         final List<OpenAiChatRequest.Message> messages =
                 request.messages().stream().map(this::toOpenAiMessage).toList();
-        final Integer cap = request.maxOutputTokens();
+        final Integer cap = shaping.endpointCap(modelId, request.maxOutputTokens());
         final boolean completionField = isCompletionField(modelId, request);
         log.debug("OpenAI output cap model={} cap={} completionField={}", modelId, cap, completionField);
         final ReasoningFields reasoning = shaping.reasoning(modelId, request.reasoningEnabled());

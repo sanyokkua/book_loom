@@ -1,13 +1,18 @@
 package ua.bookloom.llm.client.openai;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ReasoningLevel;
@@ -31,6 +36,9 @@ final class EngineShaping {
 
     private static final String ENABLE_THINKING = "enable_thinking";
     private static final String ENABLED = "enabled";
+    private static final String REPEAT_PENALTY = "repeat_penalty";
+    // The body itself, never a parameter an endpoint lists.
+    private static final Set<String> BODY_FIELDS = Set.of("model", "messages", "stream");
 
     private final ProviderConfig config;
     private final EngineTraits traits;
@@ -161,9 +169,76 @@ final class EngineShaping {
             case REASONING_EFFORT -> ReasoningFields.effort(effort(level));
             case TEMPLATE_KWARG -> new ReasoningFields(null, Map.of(ENABLE_THINKING, thinks), null, null);
             case ENABLE_THINKING -> new ReasoningFields(null, null, thinks, null);
-            case REASONING_OBJECT -> new ReasoningFields(null, null, null, Map.of(ENABLED, thinks));
+            case REASONING_OBJECT -> new ReasoningFields(null, null, null, reasoningObject(modelId, level, thinks));
             case PROBED -> ReasoningFields.NONE;
         };
+    }
+
+    // The engine's own object is chosen from the catalog read when the person acted; a check names the plain switch.
+    private @Nullable Map<String, Object> reasoningObject(String modelId, ReasoningLevel level, boolean thinks) {
+        if (forced != null || traits.offSwitch() != OffSwitch.REASONING_OBJECT) {
+            return Map.of(ENABLED, thinks);
+        }
+        return OpenRouterReasoning.object(facts.lastRead(config.id(), modelId).orElse(null), level);
+    }
+
+    /**
+     * The answer cap lowered to the endpoint's answer limit, on an engine whose endpoints set one.
+     *
+     * @param cap the cap the request asks for, or null for none
+     * @return the cap sent, or null for none
+     */
+    @Nullable
+    Integer endpointCap(String modelId, @Nullable Integer cap) {
+        if (!traits.endpointLimited() || cap == null) {
+            return cap;
+        }
+        final Integer limit = facts.lastRead(config.id(), modelId)
+                .map(ModelFacts::maxCompletionTokens)
+                .orElse(null);
+        final boolean lowered = limit != null && cap > limit;
+        log.debug(
+                "Endpoint answer limit provider={} model={} cap={} limit={} lowered={}",
+                config.id(),
+                modelId,
+                cap,
+                limit,
+                lowered);
+        return lowered ? limit : cap;
+    }
+
+    /** Whether a written body is reshaped by {@link #toEndpoint} before it is sent. */
+    boolean reshapesBody() {
+        return traits.endpointLimited() || !REPEAT_PENALTY.equals(traits.penaltyField());
+    }
+
+    /**
+     * Gives the body the engine's penalty name and, on an engine whose endpoints list what they honour, removes every
+     * parameter the model's endpoint does not list; with nothing read, every parameter goes as asked.
+     */
+    void toEndpoint(String modelId, ObjectNode body) {
+        final String penalty = traits.penaltyField();
+        if (!REPEAT_PENALTY.equals(penalty) && body.has(REPEAT_PENALTY)) {
+            body.set(penalty, body.remove(REPEAT_PENALTY));
+        }
+        if (!traits.endpointLimited()) {
+            return;
+        }
+        final List<String> listed = facts.lastRead(config.id(), modelId)
+                .map(ModelFacts::supportedParameters)
+                .orElse(List.of());
+        if (listed.isEmpty()) {
+            log.debug("Endpoint parameters unknown, all sent provider={} model={}", config.id(), modelId);
+            return;
+        }
+        final List<String> dropped = new ArrayList<>();
+        body.fieldNames().forEachRemaining(name -> {
+            if (!BODY_FIELDS.contains(name) && !traits.alwaysSend().containsKey(name) && !listed.contains(name)) {
+                dropped.add(name);
+            }
+        });
+        body.remove(dropped);
+        log.debug("Endpoint parameters provider={} model={} dropped={}", config.id(), modelId, dropped);
     }
 
     // The field this engine switches thinking with for this model, or null when none can be sent.

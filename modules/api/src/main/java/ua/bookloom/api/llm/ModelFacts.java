@@ -27,6 +27,10 @@ import org.jspecify.annotations.Nullable;
  * @param contextLength the window a run should size against: the loaded one where the server fixes it at load, else
  *     the most the model supports; null when the server did not say; positive when set
  * @param loadedContext the window the model is loaded with now, or null when unknown or not loaded; positive when set
+ * @param supportedParameters the request parameters a hosted endpoint honours (OpenRouter's
+ *     {@code supported_parameters}); never null, empty when the server did not say, and then nothing is filtered
+ * @param maxCompletionTokens the longest answer a hosted endpoint gives, or null when it did not say; positive when set
+ * @param reasoningMandatory whether the model reasons on every call and refuses to have it turned off
  */
 public record ModelFacts(
         @Nullable String architecture,
@@ -44,7 +48,10 @@ public record ModelFacts(
         @Nullable String state,
         @Nullable String compatibility,
         @Nullable Integer contextLength,
-        @Nullable Integer loadedContext) {
+        @Nullable Integer loadedContext,
+        List<String> supportedParameters,
+        @Nullable Integer maxCompletionTokens,
+        boolean reasoningMandatory) {
 
     private static final String COMPLETION = "completion";
     private static final String EMBEDDINGS = "embeddings";
@@ -55,8 +62,10 @@ public record ModelFacts(
         Objects.requireNonNull(thinkingOptions, "thinkingOptions");
         capabilities = List.copyOf(capabilities);
         thinkingOptions = List.copyOf(thinkingOptions);
+        supportedParameters = List.copyOf(Objects.requireNonNull(supportedParameters, "supportedParameters"));
         requirePositive(contextLength, "contextLength");
         requirePositive(loadedContext, "loadedContext");
+        requirePositive(maxCompletionTokens, "maxCompletionTokens");
     }
 
     /**
@@ -67,7 +76,7 @@ public record ModelFacts(
     public static ModelFacts unknown() {
         return new ModelFacts(
                 null, null, null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, null,
-                null);
+                null, List.of(), null, false);
     }
 
     /**
@@ -93,7 +102,10 @@ public record ModelFacts(
                 state,
                 compatibility,
                 contextLength,
-                null);
+                null,
+                supportedParameters,
+                maxCompletionTokens,
+                reasoningMandatory);
     }
 
     /**
@@ -119,7 +131,10 @@ public record ModelFacts(
                 state,
                 compatibility,
                 contextLength,
-                loadedContext);
+                loadedContext,
+                supportedParameters,
+                maxCompletionTokens,
+                reasoningMandatory);
     }
 
     /**

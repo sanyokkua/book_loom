@@ -71,12 +71,25 @@ public record OpenAiChatResponse(
      * @param promptTokens nullable because a provider may omit the prompt token count
      * @param completionTokens nullable because a provider may omit the completion token count
      * @param promptTokensDetails nullable; the split of the prompt tokens, which only some providers send
+     * @param completionTokensDetails nullable; the split of the completion tokens, which only some providers send
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Usage(
             @JsonProperty("prompt_tokens") @Nullable Integer promptTokens,
             @JsonProperty("completion_tokens") @Nullable Integer completionTokens,
-            @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails) {}
+            @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails,
+
+            @JsonProperty("completion_tokens_details") @Nullable
+            CompletionTokensDetails completionTokensDetails) {}
+
+    /**
+     * The part of the completion a provider reports on.
+     *
+     * @param reasoningTokens nullable count of completion tokens spent reasoning; OpenRouter sends it on every reply
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record CompletionTokensDetails(
+            @JsonProperty("reasoning_tokens") @Nullable Integer reasoningTokens) {}
 
     /**
      * The part of the prompt a provider reports on.

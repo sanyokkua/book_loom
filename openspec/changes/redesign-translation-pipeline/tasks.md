@@ -560,6 +560,7 @@ once more (per-model overrides and the refused-setting scope are new stored fiel
     - `chat_llamaServerQwen38_sendsEnableThinkingJsonBooleanAndNoReasoningEffortInKwargs`.
   - **Test first:** run it; methods 1, 2, 3 and 4 fail on their assertions (method 5 may already pass from group 5: say so).
   - **Done when:** the red result is recorded in the task notes.
+  - **Notes (red recorded 2026-11-02):** fails with `expected: upstream but was: validation` (reason `wrong-path`): `HttpErrorMapper.errorOnlySuccess` catches the error-only 200 before the reply reader, so the reply is classified a wrong path, not unreadable. 8.3 gives OpenRouter its own row ahead of it.
   - **Red result (commit 20ef8859):** methods 1–4 fail on their assertions (1: `think` key sent to `qwen2.5:1.5b`; 2: two messages instead of one; 3: `mmproj-BF16.gguf` offered; 4: `think` present, the `num_predict` check not reached); method 5 passes already from group 5. Method 4 pins the total 500 + 3,340; S and n feed through once 6.7 builds the reserve.
 
 - [x] 6.2 Add the model identity records, the input normaliser and the first version of the name parser, and prove it on the 108 name cases the research collected. A pasted URL, command, file name or id must be understood the same way every time, without opening or running anything. → :api, :llm
@@ -828,7 +829,7 @@ counters are not built (owner decision). No database reset. Besides bundle keys,
 `CallRecord`, `CallKindTotals` and `RunSummaryLogger` (7.9 writes the measured seconds per call kind from the ledger),
 so group 7 merges first and group 8 rebases onto it before its gate.
 
-- [ ] 8.1 Write the group's acceptance test and see it red. It proves that an OpenRouter reply with HTTP 200 and only an error object is classified as an upstream outage with the reason `provider-unavailable`, not as an unreadable reply. → :llm
+- [x] 8.1 Write the group's acceptance test and see it red. It proves that an OpenRouter reply with HTTP 200 and only an error object is classified as an upstream outage with the reason `provider-unavailable`, not as an unreadable reply. → :llm
   - **Satisfies:** enabling work for design D21 (the group's acceptance test)
   - **Depends on:** group 6
   - **Read:** design.md D21; llm: `client/openai/OpenAiCompatibleClient`, `http/HttpErrorMapper`, `http/UnreadableReply`; api: `FailureReason`
@@ -836,7 +837,7 @@ so group 7 merges first and group 8 rebases onto it before its gate.
   - **Test first:** run it; it fails today (the reply is classified unreadable, not as the outage).
   - **Done when:** the red result is recorded in the task notes.
 
-- [ ] 8.2 Add the OpenRouter traits and request fields, and read the catalog as a facts source. Without the parameter enforcement a provider that cannot honour the schema or the thinking switch is chosen silently, and middle-out compression silently cuts book text. → :llm
+- [x] 8.2 Add the OpenRouter traits and request fields, and read the catalog as a facts source. Without the parameter enforcement a provider that cannot honour the schema or the thinking switch is chosen silently, and middle-out compression silently cuts book text. → :llm
   - **Satisfies:** "Ask OpenRouter only for endpoints that honour every parameter sent" (llm-provider), "Turn off OpenRouter's context compression" (llm-provider), "Keep an OpenRouter call within its endpoint's limits" (llm-provider), "Send OpenRouter no routing, data-policy or free-tier controls" (llm-provider), "Send reasoning Off as the engine's own off value" (inference; the OpenRouter case)
   - **Depends on:** 8.1
   - **Excludes:** the error rows (8.3)

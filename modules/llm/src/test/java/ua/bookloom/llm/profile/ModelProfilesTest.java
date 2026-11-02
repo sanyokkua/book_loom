@@ -176,7 +176,10 @@ class ModelProfilesTest {
                 null,
                 null,
                 null,
-                null);
+                null,
+                List.of(),
+                null,
+                false);
 
         final ResolvedProfile resolved =
                 profiles.resolve(ServerEngine.LM_STUDIO, "mara-7b", facts, ModelSettings.defaults("lms", "mara-7b"));
@@ -233,7 +236,10 @@ class ModelProfilesTest {
                 null,
                 null,
                 contextLength,
-                loaded);
+                loaded,
+                List.of(),
+                null,
+                false);
     }
 
     private static ModelCapabilityService capabilities(final WireMockServer server) {

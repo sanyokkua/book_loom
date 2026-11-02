@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelVariant;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.engine.EngineTraits;
@@ -37,11 +38,14 @@ final class OpenAiReplyReader {
     private final ProviderConfig config;
     private final ObjectMapper mapper;
     private final boolean servesUnknownModel;
+    private final boolean checksReasoningOff;
 
     OpenAiReplyReader(final ProviderConfig config, final ObjectMapper mapper) {
         this.config = Objects.requireNonNull(config, "config");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.servesUnknownModel = EngineTraits.of(config.effectiveEngine()).servesUnknownModel();
+        final EngineTraits traits = EngineTraits.of(config.effectiveEngine());
+        this.servesUnknownModel = traits.servesUnknownModel();
+        this.checksReasoningOff = traits.offSwitch() == EngineTraits.OffSwitch.REASONING_OBJECT;
     }
 
     Result<ChatResponse> read(final String requestedModel, final HttpReply reply, final Duration elapsed) {
@@ -72,6 +76,31 @@ final class OpenAiReplyReader {
         } catch (JsonProcessingException _) {
             log.debug("Reasoning budget check skipped: the reply is not JSON");
             return false;
+        }
+    }
+
+    // OpenRouter counts reasoning tokens on every reply, so a call sent with reasoning off shows whether the endpoint
+    // honoured it; the reply is kept either way, and the line says which model's off value to doubt.
+    void checkReasoningOff(final String modelId, final ChatRequest request, final String body) {
+        if (!checksReasoningOff || request.reasoningEnabled() != ReasoningLevel.OFF) {
+            return;
+        }
+        try {
+            final OpenAiChatResponse decoded = mapper.readValue(body, OpenAiChatResponse.class);
+            final OpenAiChatResponse.@Nullable Usage usage = decoded == null ? null : decoded.usage();
+            final OpenAiChatResponse.@Nullable CompletionTokensDetails details =
+                    usage == null ? null : usage.completionTokensDetails();
+            final Integer tokens = details == null ? null : details.reasoningTokens();
+            log.debug("Reasoning off checked provider={} model={} reasoningTokens={}", config.id(), modelId, tokens);
+            if (tokens != null && tokens > 0) {
+                log.warn(
+                        "Reasoning sent off but the reply reasoned provider={} model={} reasoningTokens={}",
+                        config.id(),
+                        modelId,
+                        tokens);
+            }
+        } catch (JsonProcessingException _) {
+            log.debug("Reasoning off check skipped: the reply is not JSON");
         }
     }
 
