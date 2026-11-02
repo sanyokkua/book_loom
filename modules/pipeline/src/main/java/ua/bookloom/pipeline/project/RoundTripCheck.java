@@ -47,7 +47,7 @@ final class RoundTripCheck {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(source, "source");
         log.debug("round-trip check project={} source={}", projectId, source);
-        final Path directory = createDirectory(source);
+        final Path directory = createDirectory();
         Document original = null;
         Document copy = null;
         try {
@@ -142,18 +142,14 @@ final class RoundTripCheck {
                 .sum();
     }
 
-    // Beside the source rather than in the shared temporary folder: the person owns that folder, so no other account
-    // can swap or read the copy while it is written.
-    private static Path createDirectory(final Path source) {
+    // Files.createTempDirectory makes the folder private to this account (POSIX 700), so a source in a read-only folder
+    // still round-trips and no other account can swap or read the copy while it is written.
+    private static Path createDirectory() {
         try {
-            return Files.createTempDirectory(parentOf(source), ".bookloom-roundtrip-");
+            return Files.createTempDirectory("bookloom-roundtrip-");
         } catch (IOException cause) {
             throw new IllegalStateException("cannot create the round-trip directory", cause);
         }
-    }
-
-    private static Path parentOf(final Path source) {
-        return Objects.requireNonNull(source.toAbsolutePath().getParent(), "parent");
     }
 
     private void close(final @Nullable Document document) {

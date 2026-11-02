@@ -123,6 +123,22 @@ class RoundTripCheckTest {
     }
 
     @Test
+    void roundTrip_sourceInReadOnlyFolder_stillRoundTrips() {
+        final RecordingPort port = new RecordingPort(injector.getInstance(DocumentPort.class), path -> {});
+        final Path book = book("en");
+        final java.io.File folder = Objects.requireNonNull(book.getParent()).toFile();
+        assertThat(folder.setWritable(false)).isTrue();
+        try {
+            final RoundTripReport report = roundTrip(port, book);
+
+            assertThat(report.structurePreserved()).isTrue();
+            assertThat(report.idsPreserved()).isTrue();
+        } finally {
+            assertThat(folder.setWritable(true)).isTrue();
+        }
+    }
+
+    @Test
     void roundTrip_unknownProject_answersValidation() {
         final ProjectServiceImpl service = service(injector.getInstance(DocumentPort.class));
 
