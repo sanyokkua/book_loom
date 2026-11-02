@@ -27,4 +27,22 @@ class EdgesTest {
         assertTimeoutPreemptively(
                 Duration.ofSeconds(5), () -> assertThat(Edges.strip(text, "*")).hasSize(200_002));
     }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {"Mr. Smith | Smith", "Smith | Smith", "Smith. | ''", "'' | ''", "ab cd-ef | cd-ef"})
+    void trailingRun_letterOrHyphenRun_isTheEndOfTheText(final String text, final String expected) {
+        assertThat(Edges.trailingRun(text, c -> Character.isLetter(c) || c == '-'))
+                .isEqualTo(expected);
+    }
+
+    @Test
+    void trailingRun_longRunBehindAMark_isLinear() {
+        final String text = ("a".repeat(100_000) + ".").repeat(3) + "b".repeat(200_000);
+
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(5),
+                () -> assertThat(Edges.trailingRun(text, Character::isLetter)).hasSize(200_000));
+    }
 }

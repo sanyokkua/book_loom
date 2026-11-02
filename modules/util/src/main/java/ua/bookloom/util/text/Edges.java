@@ -50,6 +50,24 @@ public final class Edges {
     }
 
     /**
+     * Reads the last run of code points that {@code member} accepts, standing in for the regular expression
+     * {@code (?<!M)(M+)$}, which rescans a long run once per start.
+     *
+     * @param text the text to read
+     * @param member tells whether a code point belongs to the run
+     * @return the run that ends the text; empty when the text's last code point is not accepted
+     */
+    public static String trailingRun(final String text, final IntPredicate member) {
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(member, "member");
+        int start = text.length();
+        while (start > 0 && member.test(text.codePointBefore(start))) {
+            start -= Character.charCount(text.codePointBefore(start));
+        }
+        return text.substring(start);
+    }
+
+    /**
      * Removes every leading and trailing character found in {@code characters}.
      *
      * @param text the text to strip
