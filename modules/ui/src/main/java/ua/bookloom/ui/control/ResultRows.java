@@ -1,5 +1,7 @@
 package ua.bookloom.ui.control;
 
+import static ua.bookloom.ui.theme.StyleClasses.MUTED;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -213,7 +215,7 @@ final class ResultRows {
         private final TextField target = new TextField();
         private final Label rest = new Label();
         private final HBox afterBox = new HBox(REST_GAP, after, target, rest);
-        private final Label why = flexible(text("", WHY_WIDTH, "muted"));
+        private final Label why = flexible(text("", WHY_WIDTH, MUTED));
         private final Label reverted = new Label(messages.get(MessageKey.RESULTS_REVERTED));
         private final Button revert = Tips.installOnHover(
                 messages, new Button(messages.get(MessageKey.RESULTS_REVERT)), MessageKey.RESULTS_REVERT_TIP);
@@ -221,7 +223,7 @@ final class ResultRows {
 
         ResultCell() {
             heading.getStyleClass().add("card-title");
-            reverted.getStyleClass().add("muted");
+            reverted.getStyleClass().add(MUTED);
             revert.getStyleClass().add("btn-ghost");
             revert.setMinWidth(Region.USE_PREF_SIZE);
             revert.setOnAction(event -> {
@@ -261,7 +263,7 @@ final class ResultRows {
             target.setPromptText(messages.get(MessageKey.RESULTS_TARGET));
             target.setMinWidth(TARGET_MIN_WIDTH);
             Tips.install(messages, target, MessageKey.RESULTS_TARGET_TIP);
-            rest.getStyleClass().add("muted");
+            rest.getStyleClass().add(MUTED);
             target.setOnAction(event -> {
                 commit();
                 event.consume();

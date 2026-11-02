@@ -127,6 +127,7 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
         typeInRow("Mid", "Мід");
 
         awaitFx(() -> glossary.calls().contains("update(Mid)"));
+        assertThat(glossary.calls()).contains("update(Mid)");
     }
 
     // IF the term rows ignored the field, THEN a wrong rendering could only be fixed in the Recurring terms card.
@@ -138,6 +139,7 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
         typeInRow("pentacle", "пентакль");
 
         awaitFx(() -> lexicon.calls().contains("edit(pentacle, пентакль)"));
+        assertThat(lexicon.calls()).contains("edit(pentacle, пентакль)");
     }
 
     // IF the pass named its untargeted terms but the card listed none, THEN they would be found only by scanning the
