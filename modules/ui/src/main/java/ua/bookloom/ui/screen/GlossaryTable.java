@@ -37,15 +37,16 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class GlossaryTable {
 
-    // Each minimum keeps its header and a typical value whole; each column starts about a third wider.
-    private static final double TERM_MIN = 140;
-    private static final double KIND_MIN = 150;
-    private static final double FORMS_MIN = 140;
+    // Each minimum keeps its header and a typical value whole; each column starts about 60 % wider; the sum fits a 1024
+    // px window.
+    private static final double TERM_MIN = 96;
+    private static final double KIND_MIN = 104;
+    private static final double FORMS_MIN = 76;
     private static final double TARGET_MIN = 170;
-    private static final double STATE_MIN = 96;
-    private static final double GENDER_MIN = 130;
+    private static final double STATE_MIN = 80;
+    private static final double GENDER_MIN = 84;
     private static final double REMOVE_MIN = 36;
-    private static final double START_SHARE = 1.3;
+    private static final double START_SHARE = 1.6;
     // A value with its origin ("female · book") wraps under itself instead of ending in an ellipsis.
     private static final String WRAPPING_CHOICE = "glossary-wraps";
     private static final double REMOVE_WIDTH = 40;

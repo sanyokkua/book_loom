@@ -58,23 +58,21 @@ class GlossaryTableEditingTest extends TermTableCardTestBase {
         assertThat(typed).isEqualTo("Гейл");
     }
 
-    // IF the pressed row did not take the keyboard from the field of the row typed in before, THEN the next letters
-    // would still land in that field; a press on another row's term hands the keyboard to the table.
+    // IF a press on another row left the keyboard in the field typed in before, THEN the next letters would land in
+    // that field; a press on any part of a row hands the keyboard to that row's own target field, never to another.
     @Test
-    void rowPress_afterTypingInAnotherRowsField_movesTheKeyboardToTheTable() throws Exception {
+    void rowPress_afterTypingInAnotherRowsField_movesTheKeyboardToThePressedRowsField() throws Exception {
         showScreen("en", 1400, 900, ROSALIND, HALE, JOHN);
         final TextField hale = targetField("Hale");
+        final TextField rosalind = targetField("Rosalind");
         final TableCell<?, ?> rosalindTerm = glossaryCell("Rosalind", TERM_COLUMN);
         onFx(hale::requestFocus);
-        final boolean had = ThemeTestSupport.onFx(hale::isFocused);
-        assertThat(had).isTrue();
+        assertThat(ThemeTestSupport.onFx(hale::isFocused)).isTrue();
 
         onFx(() -> rosalindTerm.fireEvent(press()));
 
-        final boolean kept = ThemeTestSupport.onFx(hale::isFocused);
-        assertThat(kept).isFalse();
-        assertThat(ThemeTestSupport.onFx(() -> table("names-style").isFocused()))
-                .isTrue();
+        awaitFx(rosalind::isFocused);
+        assertThat(ThemeTestSupport.onFx(hale::isFocused)).isFalse();
     }
 
     // IF Enter or F2 on a selected row did nothing, THEN a keyboard user could not reach the field of the row they

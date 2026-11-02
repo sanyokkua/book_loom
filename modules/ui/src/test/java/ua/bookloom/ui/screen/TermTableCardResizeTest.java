@@ -44,7 +44,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
     // IF a minimum were lower, THEN a column could be dragged until its content vanished. A header wider than the
     // minimum raises it (glossaryHeaders_smallWindow_areWhole), so the figure is a floor.
     @ParameterizedTest
-    @CsvSource({"0, 140", "1, 150", "2, 140", "3, 170", "4, 96", "5, 130", "6, 36"})
+    @CsvSource({"0, 96", "1, 104", "2, 76", "3, 170", "4, 80", "5, 84", "6, 36"})
     void glossaryColumns_eachOne_hasItsSpecifiedMinimumWidth(final int column, final double minimum) throws Exception {
         showScreen("en", 1024, 700, ROSALIND);
 
@@ -61,7 +61,7 @@ class TermTableCardResizeTest extends TermTableCardTestBase {
         drag("names-style", 0, 220);
 
         assertThat(width("names-style", 0)).isCloseTo(220, within(TOLERANCE));
-        assertThat(width("names-style", 2)).isGreaterThanOrEqualTo(170 - TOLERANCE);
+        assertThat(width("names-style", 3)).isGreaterThanOrEqualTo(170 - TOLERANCE);
     }
 
     // IF Locked could be dragged under 64, THEN its switch would be cut in half.

@@ -5,8 +5,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
@@ -86,12 +88,15 @@ final class TermTables {
         return table;
     }
 
-    // A press on a row's plain part, or a cell's label, takes the keyboard from whichever recycled cell's field had it,
-    // so what is typed next goes to the table and edits nothing; F2 or Enter on the selected row opens its field.
+    // A press on a row's plain part, or a cell's label, takes the keyboard from whichever recycled cell's field had it
+    // and hands it to the pressed row's own target field (after the table has taken its own focus), so what is typed
+    // next goes to the row clicked and never to another; a row with no field leaves it on the table. F2 or Enter on
+    // the selected row opens its field.
     private static void keyboardFollowsTheRow(final TableView<?> table) {
         table.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             if (!(event.getTarget() instanceof Node target) || !isEditor(target, table)) {
                 table.requestFocus();
+                rowOf(event.getTarget(), table).ifPresent(row -> Platform.runLater(() -> focusFieldOf(row)));
             }
         });
         table.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
@@ -100,6 +105,21 @@ final class TermTables {
                 event.consume();
             }
         });
+    }
+
+    private static Optional<TableRow<?>> rowOf(final Object target, final TableView<?> table) {
+        for (Object at = target; at instanceof Node node && !node.equals(table); at = node.getParent()) {
+            if (node instanceof TableRow<?> row) {
+                return Optional.of(row);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static void focusFieldOf(final TableRow<?> row) {
+        if (!row.isEmpty()) {
+            row.lookupAll(".text-field").stream().findFirst().ifPresent(Node::requestFocus);
+        }
     }
 
     private static boolean isEditor(final Node target, final TableView<?> table) {

@@ -24,7 +24,7 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * The glossary's seven columns need 862 px at their minimum widths. A table narrower than that — the stacked card of a
+ * The glossary's seven columns need about 650 px at their minimum widths. A table narrower than that — the stacked card of a
  * 960 or 1024 px window, or each of the two side-by-side cards of a wide one — scrolls across with a visible scroll
  * bar, so the Gender column and the remove cross stay reachable; a wider table fits every column with no scroll bar.
  */
@@ -32,8 +32,8 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
 
     private static final double HEIGHT = 700;
     private static final double TOLERANCE = 0.5;
-    // One line of a value is about 17 px high, two lines are over this.
-    private static final double TWO_LINES = 24;
+    // One line of a value is about 17 px high, two lines about 32, three are over this.
+    private static final double TWO_LINES = 40;
     private static final GlossaryEntry VICTOR =
             GlossaryEntry.of("e1", "p1", "Victor", "Віктор", TermType.CHARACTER, Gender.MALE, true);
 
@@ -90,7 +90,7 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
     // IF the fitting policy kept the columns at their minimum widths with no scroll bar, THEN at 960 px the remove
     // cross and part of Gender would be cut off with no way to reach them.
     @ParameterizedTest
-    @CsvSource({"944, en", "944, uk", "1008, en", "1008, uk", "1700, en", "1700, uk"})
+    @CsvSource({"760, en", "760, uk", "840, en", "840, uk"})
     void narrowTable_scrolledToTheEnd_showsTheRemoveCross(final double width, final String language) throws Exception {
         final TableView<?> table = showGlossaryAt(width, language);
 
@@ -123,7 +123,7 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
     // "ma…" and "character · bo…" at the window sizes people use, or wrapped to a second line.
     @ParameterizedTest
     @CsvSource({"944, en", "944, uk", "1008, en", "1008, uk", "1264, en", "1264, uk", "1700, en", "1700, uk"})
-    void values_withTheirOrigin_areWholeAndStayOnOneLine(final double width, final String language) throws Exception {
+    void values_withTheirOrigin_areWholeAndWrapAtMostOnce(final double width, final String language) throws Exception {
         final GlossaryEntry sourced =
                 VICTOR.withType(TermType.CHARACTER, Origin.BOOK).withGenderFrom(Gender.FEMALE, Origin.BOOK);
         final TableView<?> table = showGlossaryAt(width, language, List.of(sourced));
@@ -140,5 +140,20 @@ class GlossaryTableWidthTest extends TranslatingScreenTestBase {
                 .as("the Kind and Gender values' text height")
                 .isNotEmpty()
                 .allSatisfy(height -> assertThat(height).isLessThan(TWO_LINES));
+    }
+
+    // IF the glossary's minimum widths summed to more than the 1024 px window gives the table, THEN the Gender column
+    // sat half out of view behind a scroll bar at the bottom of a tall table, its header read "Ge" and its values
+    // "mal".
+    @ParameterizedTest
+    @CsvSource({"1024, en", "1024, uk"})
+    void defaultWindow_everyColumnIsWholeWithNoScrolling(final double width, final String language) throws Exception {
+        final GlossaryEntry likely =
+                VICTOR.withType(TermType.CHARACTER, Origin.BOOK).withGenderFrom(Gender.FEMALE, Origin.BOOK);
+        final TableView<?> table = showGlossaryAt(width, language, List.of(likely));
+
+        assertThat(ThemeTestSupport.onFx(() -> visibleAcrossBar(table))).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> headersOutside(table))).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> FitProbe.cutParts(table))).isEmpty();
     }
 }
