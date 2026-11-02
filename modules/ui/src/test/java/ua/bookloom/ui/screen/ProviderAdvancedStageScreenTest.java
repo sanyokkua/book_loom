@@ -139,4 +139,26 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
 
         assertThat(shown("test-request-line")).isEqualTo("POST http://127.0.0.1:1234/api/v0/chat/completions");
     }
+
+    // IF every row up to the advanced one showed "Testing..." for the whole run, THEN the finished stages would look
+    // unfinished and no row would say the model is loading; the ended stages keep their result, the running one names
+    // its step and what it waits for, the stage after it keeps its not-run words.
+    @Test
+    void advancedStage_whileTheModelLoads_onlyTheRunningStageSaysTesting() throws Exception {
+        verifier.begin(VerificationStage.CONNECTION, VerificationStage.MODELS, VerificationStage.INFERENCE);
+        verifier.endEarly(2);
+        verifier.respondWith(ProviderReports.advancedPassed(GENERIC_NOTE));
+        verifier.hold();
+        openSettings();
+        onFx(() -> viewModel().draftModel().set(MODEL));
+        onFx(() -> button("settings-test-advanced").fire());
+        verifier.awaitEntered();
+        awaitFx(() -> shown("check-result-INFERENCE").startsWith("Step 3 of 4"));
+
+        assertThat(shown("check-result-CONNECTION")).startsWith("✓");
+        assertThat(shown("check-result-MODELS")).startsWith("✓");
+        assertThat(shown("check-result-INFERENCE")).contains("waiting for the model to load");
+        assertThat(shown("check-result-ADVANCED")).isEqualTo("Advanced features (optional, uses the model)");
+        verifier.release();
+    }
 }

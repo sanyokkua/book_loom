@@ -41,6 +41,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
             VerificationStage stage, @Nullable AdvancedCheck check, VerificationExchange request) {}
 
     private final List<Announced> announcements = new CopyOnWriteArrayList<>();
+    private volatile int endedEarly;
     private final List<VerificationStage> beginnings = new CopyOnWriteArrayList<>();
     private volatile @Nullable Result<VerificationReport> answer;
     private volatile @Nullable RuntimeException failure;
@@ -162,6 +163,11 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         beginnings.addAll(List.of(begun));
     }
 
+    /** From now on tells a listening check that the first {@code count} stages of the answer have ended, before it holds. */
+    public void endEarly(final int count) {
+        endedEarly = count;
+    }
+
     /**
      * Tells the listener of every scripted stage start and request, then answers as the unheard form does, then tells it of each stage
      * of the answer, the order the real verifier keeps.
@@ -173,11 +179,15 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
             final VerificationPolicy policy,
             final VerificationListener listener) {
         beginnings.forEach(listener::stageStarted);
+        final Result<VerificationReport> scripted = answer;
+        if (scripted != null && scripted.data() != null) {
+            scripted.data().stages().stream().limit(endedEarly).forEach(listener::stageFinished);
+        }
         announcements.forEach(heard -> listener.requestSent(heard.stage(), heard.check(), heard.request()));
         final Result<VerificationReport> result = verify(draft, modelId, policy);
         final VerificationReport report = result.data();
         if (report != null) {
-            report.stages().forEach(listener::stageFinished);
+            report.stages().stream().skip(endedEarly).forEach(listener::stageFinished);
         }
         return result;
     }

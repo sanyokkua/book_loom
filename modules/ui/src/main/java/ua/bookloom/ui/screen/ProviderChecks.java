@@ -1,10 +1,12 @@
 package ua.bookloom.ui.screen;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
@@ -29,7 +31,10 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
+import ua.bookloom.ui.state.StageStart;
 import ua.bookloom.ui.state.TestDetails;
+import ua.bookloom.ui.state.TestLive;
+import ua.bookloom.ui.state.TestProgress;
 import ua.bookloom.ui.state.TestSubject;
 
 /**
@@ -80,9 +85,7 @@ final class ProviderChecks {
         addRow(1, ProviderTest.MODELS, "settings-test-models", MessageKey.SETTINGS_TEST_MODELS);
         addRow(2, ProviderTest.INFERENCE, "settings-test-inference", MessageKey.SETTINGS_TEST_INFERENCE);
         addRow(3, ProviderTest.ADVANCED, "settings-test-advanced", MessageKey.SETTINGS_TEST_ADVANCED);
-        viewModel.tests().stages().addListener(new WeakInvalidationListener(onFindings));
-        viewModel.tests().running().addListener(new WeakInvalidationListener(onFindings));
-        viewModel.testedSubject().addListener(new WeakInvalidationListener(onFindings));
+        redrawOnFindings();
         showResults();
         box.getChildren()
                 .addAll(
@@ -93,6 +96,19 @@ final class ProviderChecks {
                         refusalLine(),
                         grid,
                         progress());
+    }
+
+    private void redrawOnFindings() {
+        final TestProgress progress = viewModel.tests().progress();
+        for (final Observable source : List.<Observable>of(
+                viewModel.tests().stages(),
+                viewModel.tests().running(),
+                viewModel.testedSubject(),
+                progress.started(),
+                progress.finished(),
+                progress.sent())) {
+            source.addListener(new WeakInvalidationListener(onFindings));
+        }
     }
 
     private void addRow(final int row, final ProviderTest test, final String buttonId, final MessageKey text) {
@@ -243,23 +259,48 @@ final class ProviderChecks {
                 subject.map(tested -> !tested.model().isBlank()).orElse(false));
     }
 
+    // While a test runs each stage shows its own state: an ended one its result, the first unended one the live step
+    // line (what it waits for, the model's load included), the rest what they were before.
     private void showResults() {
         final ProviderTest running = viewModel.tests().running().get();
+        final TestProgress progress = viewModel.tests().progress();
+        final VerificationStage current = running == null ? null : currentStage(running, progress);
         for (final Map.Entry<VerificationStage, Label> entry : results.entrySet()) {
             final VerificationStage stage = entry.getKey();
-            final Label result = entry.getValue();
             final VBox cell = Objects.requireNonNull(cells.get(stage));
-            final Optional<StageChip> found = viewModel.tests().stages().stream()
-                    .filter(chip -> chip.stage() == stage)
-                    .findFirst();
-            if (running != null && stage.compareTo(running.lastStage()) <= 0) {
-                chipRows.plain(result, messages.get(MessageKey.SETTINGS_TEST_VERDICT_RUNNING), cell);
-            } else if (found.isPresent()) {
-                chipRows.fill(result, found.get(), tested(), cell);
+            final boolean inRun = running != null && stage.compareTo(running.lastStage()) <= 0;
+            final Optional<StageChip> found = (inRun
+                            ? progress.finished()
+                            : viewModel.tests().stages())
+                    .stream().filter(chip -> chip.stage() == stage).findFirst();
+            if (found.isPresent()) {
+                chipRows.fill(entry.getValue(), found.get(), tested(), cell);
+            } else if (inRun && stage == current) {
+                chipRows.plain(entry.getValue(), liveLine(stage, running, progress), cell);
             } else {
-                chipRows.plain(result, messages.get(notRunOf(stage)), cell);
+                chipRows.plain(entry.getValue(), messages.get(notRunOf(stage)), cell);
             }
         }
         log.debug("check results redrawn, running {}", running);
+    }
+
+    // The stage that has begun and not ended; before any begins, the last one the test covers, which is the one the
+    // test is named for.
+    private static VerificationStage currentStage(final ProviderTest running, final TestProgress progress) {
+        return progress.started().stream()
+                .map(StageStart::stage)
+                .filter(stage -> progress.finished().stream().noneMatch(chip -> chip.stage() == stage))
+                .reduce((first, second) -> second)
+                .orElse(running.lastStage());
+    }
+
+    private String liveLine(final VerificationStage stage, final ProviderTest running, final TestProgress progress) {
+        final TestLive live = new TestLive(
+                progress.sent(),
+                progress.started(),
+                progress.finished(),
+                TestDetails.stepOf(running.lastStage()),
+                progress.now());
+        return TestDetails.of(messages, stage, List.of(), true, tested(), live).verdict();
     }
 }
