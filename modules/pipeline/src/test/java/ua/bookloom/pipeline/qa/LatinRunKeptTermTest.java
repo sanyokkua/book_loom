@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
@@ -132,5 +133,30 @@ class LatinRunKeptTermTest {
                 policy);
 
         assertThat(latinRunBlocks(locked)).isTrue();
+    }
+
+    // IF the unit's role never reached the gate, THEN a copyright page would still be blocked for its Latin line.
+    @Test
+    void evaluate_sameLatinRunInFrontMatter_doesNotBlockAndInTheBodyStillDoes() {
+        final SoftCheckInput body =
+                input(NELL_SOURCE, NELL_TARGET, List.of(), List.of(), List.of(), NamePolicy.TRANSLITERATE);
+        final SoftCheckInput front = new SoftCheckInput(
+                body.sourceDisplayText(),
+                body.targetDisplayText(),
+                body.targetWithRenderings(),
+                "en",
+                "uk",
+                ForeignPassagePolicy.TRANSLATE,
+                NamePolicy.TRANSLITERATE,
+                null,
+                List.of(),
+                List.of(),
+                Narrator.unspecified(),
+                List.of(),
+                List.of(),
+                UnitRole.FRONT_MATTER);
+
+        assertThat(latinRunBlocks(body)).isTrue();
+        assertThat(latinRunBlocks(front)).isFalse();
     }
 }

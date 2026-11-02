@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.qa;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
@@ -30,6 +31,7 @@ import ua.bookloom.api.project.Narrator;
  *     check holds the target to
  * @param characters the chunk's character sheet, one {@code name — gender} line each, which the target language's
  *     character-agreement check reads with the glossary pairs
+ * @param unitRole the role of the unit the segment belongs to; the Latin-run check reads running prose only
  */
 public record SoftCheckInput(
         String sourceDisplayText,
@@ -44,7 +46,40 @@ public record SoftCheckInput(
         List<LockedRendering> lockedRenderings,
         Narrator narrator,
         List<String> glossaryPairs,
-        List<String> characters) {
+        List<String> characters,
+        UnitRole unitRole) {
+
+    /** An input for a segment of a body unit. */
+    public SoftCheckInput(
+            final String sourceDisplayText,
+            final String targetDisplayText,
+            final String targetWithRenderings,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final ForeignPassagePolicy foreignPassagePolicy,
+            final NamePolicy namePolicy,
+            @Nullable final String declaredLanguage,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final Narrator narrator,
+            final List<String> glossaryPairs,
+            final List<String> characters) {
+        this(
+                sourceDisplayText,
+                targetDisplayText,
+                targetWithRenderings,
+                sourceLanguage,
+                targetLanguage,
+                foreignPassagePolicy,
+                namePolicy,
+                declaredLanguage,
+                glossaryTerms,
+                lockedRenderings,
+                narrator,
+                glossaryPairs,
+                characters,
+                UnitRole.BODY);
+    }
 
     /** An input that names no character sheet, so no character-agreement check applies. */
     public SoftCheckInput(
@@ -91,6 +126,7 @@ public record SoftCheckInput(
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
+        Objects.requireNonNull(unitRole, "unitRole");
         characters = List.copyOf(characters);
         glossaryPairs = List.copyOf(glossaryPairs);
         glossaryTerms = List.copyOf(glossaryTerms);

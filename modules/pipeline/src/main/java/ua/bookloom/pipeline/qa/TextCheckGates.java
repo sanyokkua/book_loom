@@ -46,7 +46,8 @@ final class TextCheckGates {
                         input.sourceLanguage(),
                         input.targetLanguage(),
                         input.glossaryPairs(),
-                        keptAsWritten(input))
+                        keptAsWritten(input),
+                        input.unitRole())
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());

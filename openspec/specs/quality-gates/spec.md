@@ -1787,7 +1787,8 @@ The deterministic text checks SHALL raise a blocking `latin-run` finding for two
 source also holds, left in a target written in Cyrillic or Greek that has more letters of its own script than the run
 has characters, except a locked term whose rendering is its own spelling and a glossary rendering the target holds,
 which are kept originals and not a run (15i.T4), and SHALL raise none in a target the `language-identity` check has
-already reported.
+already reported, nor for a segment of a front-matter or back-matter unit or of the auxiliary unit (a copyright page, a
+title), where Latin is legitimate.
 
 **Source**: task 15h.A5. In plain words: the Oct 9 runs left an English phrase in a Ukrainian sentence; this stops it. A mostly Latin target is the echo, script and language-identity checks' case, and a paragraph already reported as source language is not reported twice.
 
@@ -1801,6 +1802,11 @@ already reported.
 - **WHEN** a Ukrainian draft keeps "KESSEL OPTIK", a brand the glossary locks as its own spelling, between translated words,
   and the source holds the same two words
 - **THEN** the draft has no `latin-run` finding, while "Daily Courier" beside it still blocks
+
+#### Scenario: Front matter holds Latin
+
+- **WHEN** a Ukrainian copyright line of a FRONT_MATTER unit keeps the publisher "Harbor Lane Press"
+- **THEN** no `latin-run` finding is raised, while the same line in a BODY unit has one
 
 #### Scenario: A mostly Latin target is not a latin-run
 

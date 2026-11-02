@@ -59,7 +59,8 @@ public final class QaEvaluation {
                 subject.lockedRenderings(),
                 frame.narrator(),
                 context.glossaryPairs(),
-                context.characters());
+                context.characters(),
+                context.unitRole());
         return QaEvaluator.evaluate(givenHardGates, input, frame.wordValidator());
     }
 }

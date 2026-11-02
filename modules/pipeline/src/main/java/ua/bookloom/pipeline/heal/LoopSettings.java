@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.heal;
 
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -23,6 +24,7 @@ import ua.bookloom.pipeline.reviewer.ReviewerSheets;
  *     read
  * @param reviewerSheets what each reviewer call is shown of the glossary, the lexicon and the characters, cut to its own
  *     pairs; for settings built from ready lines, those lines for every call
+ * @param unitRole the role of the chunk's unit, which the Latin-run check reads
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -32,7 +34,36 @@ public record LoopSettings(
         List<String> glossaryTerms,
         List<String> glossaryPairs,
         List<String> characters,
-        ReviewerSheets reviewerSheets) {
+        ReviewerSheets reviewerSheets,
+        UnitRole unitRole) {
+
+    /** Settings for a chunk of a body unit. */
+    public LoopSettings(
+            final ReviewMode reviewMode,
+            final DialParameters dial,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewerSheets reviewerSheets) {
+        this(
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                reviewerSheets,
+                UnitRole.BODY);
+    }
+
+    /** These settings for a chunk of a unit with another role. */
+    public LoopSettings withUnitRole(final UnitRole role) {
+        return new LoopSettings(
+                reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, characters, reviewerSheets, role);
+    }
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
     public LoopSettings {
@@ -44,6 +75,7 @@ public record LoopSettings(
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(reviewerSheets, "reviewerSheets");
+        Objects.requireNonNull(unitRole, "unitRole");
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
         characters = List.copyOf(characters);
@@ -51,7 +83,7 @@ public record LoopSettings(
 
     /** What the soft checks read of these settings. */
     public SoftContext softContext() {
-        return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters);
+        return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters, unitRole);
     }
 
     /** Settings whose reviewer is shown the glossary pairs and the character lines as they stand, in every call. */

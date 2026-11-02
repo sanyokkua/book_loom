@@ -30,7 +30,8 @@ record Current(
                 new ChunkBatches(),
                 requests.context(),
                 requests,
-                requests.loopSettings(),
+                requests.loopSettings()
+                        .withUnitRole(work.roleOfSection(items.getFirst().section())),
                 requests.translator(),
                 budget);
     }

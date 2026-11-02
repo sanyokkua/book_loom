@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.heal;
 
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.prompt.CallFrame;
 
@@ -14,13 +15,25 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param glossaryTerms every glossary term, read by the name removal of the script and echo checks
  * @param glossaryPairs the unlocked glossary renderings of the chunk as {@code term → target} lines
  * @param characters the chunk's character gender sheet, one line each
+ * @param unitRole the role of the chunk's unit
  */
 public record SoftContext(
         CallFrame frame,
         NamePolicy namePolicy,
         List<String> glossaryTerms,
         List<String> glossaryPairs,
-        List<String> characters) {
+        List<String> characters,
+        UnitRole unitRole) {
+
+    /** A context for a segment of a body unit. */
+    public SoftContext(
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs,
+            final List<String> characters) {
+        this(frame, namePolicy, glossaryTerms, glossaryPairs, characters, UnitRole.BODY);
+    }
 
     /** Rejects a missing part. */
     public SoftContext {
@@ -29,5 +42,6 @@ public record SoftContext(
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
+        Objects.requireNonNull(unitRole, "unitRole");
     }
 }

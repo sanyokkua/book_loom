@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.lang.Languages;
 
@@ -43,6 +44,32 @@ public final class TextChecks {
             final String targetLanguage,
             final List<String> glossaryPairs,
             final List<String> keptTerms) {
+        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, UnitRole.BODY);
+    }
+
+    /**
+     * Runs every deterministic text check on one segment of a unit with the given role. The Latin-run check is for
+     * running prose: a copyright page, a title or front matter legitimately holds Latin words (a publisher's line), so
+     * it is skipped outside {@link UnitRole#BODY}.
+     *
+     * @param source the source's display text
+     * @param target the candidate's display text, with kept names and protected tokens already out
+     * @param sourceLanguage the source language tag, or {@code null} when none is declared
+     * @param targetLanguage the target language tag
+     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds; never null
+     * @param keptTerms the terms Keep original keeps as written; never null
+     * @param role the role of the unit the segment belongs to; never null
+     * @return the findings, as {@link #run(String, String, String, String, List, List)}
+     */
+    public static List<CheckFinding> run(
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs,
+            final List<String> keptTerms,
+            final UnitRole role) {
+        Objects.requireNonNull(role, "role");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
@@ -52,7 +79,7 @@ public final class TextChecks {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
         }
-        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms);
+        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role);
     }
 
     // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
@@ -62,7 +89,8 @@ public final class TextChecks {
             @Nullable final String sourceLanguage,
             final String targetLanguage,
             final List<String> glossaryPairs,
-            final List<String> keptTerms) {
+            final List<String> keptTerms,
+            final UnitRole role) {
         final String source = Identifiers.masked(original);
         final String target = Identifiers.masked(originalTarget);
         final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
@@ -70,7 +98,9 @@ public final class TextChecks {
         findings.addAll(ScriptPurityCheck.find(target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
-        if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
+        if (role != UnitRole.BODY) {
+            log.debug("Latin run check skipped: the unit is {}", role);
+        } else if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
             findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), keptTerms));
         }
         findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));

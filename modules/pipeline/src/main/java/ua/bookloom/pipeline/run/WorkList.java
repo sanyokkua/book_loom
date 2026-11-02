@@ -15,6 +15,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
@@ -60,6 +61,11 @@ public final class WorkList {
         this.bodyUnits = body.size();
         this.story = StoryUnits.of(body);
         this.segments = body.stream().mapToInt(unit -> unit.segments().size()).sum();
+    }
+
+    /** {@return the role of the unit at a {@link WorkItem#section()}; the auxiliary unit's titles count as front matter} */
+    UnitRole roleOfSection(final int section) {
+        return section < bodyUnits ? units.get(section).role() : UnitRole.FRONT_MATTER;
     }
 
     /**
@@ -364,20 +370,12 @@ public final class WorkList {
         return complete;
     }
 
-    /**
-     * Returns the number of body units, the auxiliary unit never counted.
-     *
-     * @return the section count
-     */
+    /** {@return the number of body units, the auxiliary unit never counted} */
     public int sectionCount() {
         return bodyUnits;
     }
 
-    /**
-     * Returns the number of segments in the body units.
-     *
-     * @return the segment count, the auxiliary unit left out
-     */
+    /** {@return the number of segments in the body units, the auxiliary unit left out} */
     public int segmentCount() {
         return segments;
     }
