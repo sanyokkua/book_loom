@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * Turns one filled prompt part into the shape its slot has: bullets for the style sheet, a Term | Rendering | Note
@@ -28,7 +29,6 @@ final class PromptParts {
     private static final Pattern ITEM = Pattern.compile("<s id=\"([^\"]*)\">(.*?)</s>", Pattern.DOTALL);
     private static final Pattern PAIR =
             Pattern.compile("Source: (.*?)\nTranslation: (.*?)(?=\n\nSource: |\\z)", Pattern.DOTALL);
-    private static final String LINE_BREAKS = "\n\r\u0085\u2028\u2029";
     private static final String NONE = "—";
     private static final double SPACING = 4;
     private static final double[] TERM_WIDTHS = {30, 40, 30};
@@ -93,7 +93,7 @@ final class PromptParts {
     // " (" when the line ends with a closing bracket. A line with no arrow, or a line break, is shown whole.
     static List<String> termRow(final String line) {
         final int arrow = line.indexOf(ARROW, 1);
-        if (arrow < 0 || line.chars().anyMatch(c -> LINE_BREAKS.indexOf(c) >= 0)) {
+        if (arrow < 0 || line.chars().anyMatch(c -> LineBreaks.isTerminator((char) c))) {
             return List.of(line, "", "");
         }
         final String rest = line.substring(arrow + ARROW.length());

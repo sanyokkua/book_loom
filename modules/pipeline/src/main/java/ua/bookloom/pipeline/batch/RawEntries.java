@@ -6,6 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * Finds the complete {@code {"id": …, ["notes": "…",] "target": "…"}} objects in a reply that is not valid JSON as a
@@ -22,7 +23,6 @@ final class RawEntries {
     private static final Pattern TARGET_KEY = Pattern.compile("\"target\"\\s*:\\s*\"");
     private static final Pattern COMMA = Pattern.compile("\\s*,\\s*");
     private static final Pattern CLOSE = Pattern.compile("\"\\s*[,}]");
-    private static final String LINE_BREAKS = "\n\r\u0085  ";
 
     /**
      * One object found.
@@ -81,7 +81,7 @@ final class RawEntries {
                 return i;
             }
             if (c == '\\') {
-                if (i + 1 >= text.length() || LINE_BREAKS.indexOf(text.charAt(i + 1)) >= 0) {
+                if (i + 1 >= text.length() || LineBreaks.isTerminator(text.charAt(i + 1))) {
                     return -1;
                 }
                 i++;

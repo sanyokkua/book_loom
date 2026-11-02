@@ -29,7 +29,7 @@ class DashClauseTest {
 
     @Test
     void find_nonBreakingBlanksAndEnDash_areClauses() {
-        assertThat(DashClause.find("x – y", 0)).isEqualTo(1);
+        assertThat(DashClause.find("x" + (char) 0xA0 + "– y", 0)).isEqualTo(1);
     }
 
     @Test

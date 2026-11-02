@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class DashClause {
 
+    private static final char NO_BREAK_SPACE = 0xA0;
     private static final String DASHES = "—–";
 
     /**
@@ -45,6 +46,6 @@ final class DashClause {
     }
 
     private static boolean isBlank(final char c) {
-        return c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r' || c == ' ';
+        return c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r' || c == NO_BREAK_SPACE;
     }
 }

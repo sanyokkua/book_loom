@@ -2,6 +2,7 @@ package ua.bookloom.llm.response;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * Unwraps a JSON string whose text is {@code \boxed{…}}, written in the string as {@code "\\boxed{…}"}. Scanning
@@ -15,7 +16,6 @@ final class BoxedStrings {
 
     private static final String OPENING = "\"\\\\boxed{";
     private static final String CLOSING = "}\"";
-    private static final String LINE_BREAKS = "\n\r\u0085  ";
 
     /**
      * The text after unwrapping.
@@ -73,7 +73,7 @@ final class BoxedStrings {
             if (c == '}' && at + 1 < text.length() && text.charAt(at + 1) == '"') {
                 return at;
             }
-            if (c == '"' || (c == '\\' && (at + 1 >= text.length() || LINE_BREAKS.indexOf(text.charAt(at + 1)) >= 0))) {
+            if (c == '"' || (c == '\\' && (at + 1 >= text.length() || LineBreaks.isTerminator(text.charAt(at + 1))))) {
                 return -1;
             }
             at += c == '\\' ? 2 : 1;

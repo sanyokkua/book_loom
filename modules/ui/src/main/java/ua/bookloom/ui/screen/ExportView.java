@@ -73,8 +73,8 @@ final class ExportView {
             final FilePicker files,
             final TranslatingViewModel translating,
             final HiddenWork hidden) {
-        final Messages messages = Objects.requireNonNull(context, "context").messages();
-        final Navigator navigator = context.navigator();
+        final Messages words = Objects.requireNonNull(context, "context").messages();
+        final Navigator nav = context.navigator();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.titleModel = Objects.requireNonNull(titleModel, "titleModel");
         this.onTitleEdited = (observed, was, now) -> {
@@ -83,15 +83,15 @@ final class ExportView {
         };
         this.weakTitleEdited = new WeakChangeListener<>(onTitleEdited);
         this.project = context.project();
-        this.messages = messages;
-        this.navigator = navigator;
-        this.titles = new ExportTitleCard(titleModel, messages);
+        this.messages = words;
+        this.navigator = nav;
+        this.titles = new ExportTitleCard(titleModel, words);
         this.destination = new ExportDestinationCard(
-                viewModel, messages, Objects.requireNonNull(files, "files").chooser());
-        this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
-        this.result = new ExportResult(messages, files.revealer(), navigator);
+                viewModel, words, Objects.requireNonNull(files, "files").chooser());
+        this.sideFiles = new ExportSideFilesColumn(viewModel, words);
+        this.result = new ExportResult(words, files.revealer(), nav);
         this.hidden = Objects.requireNonNull(hidden, "hidden");
-        this.banners = new ExportBanners(viewModel, translating, hidden, messages);
+        this.banners = new ExportBanners(viewModel, translating, hidden, words);
         viewModel.figures().addListener(new WeakChangeListener<>(onFigures));
         viewModel.blockReason().addListener(new WeakChangeListener<>(onReason));
         viewModel.runNote().addListener(new WeakChangeListener<>(onReason));

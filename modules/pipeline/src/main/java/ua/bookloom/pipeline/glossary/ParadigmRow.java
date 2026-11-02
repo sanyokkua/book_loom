@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
 import java.util.Optional;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * A line of a name paradigm, {@code ending|gender: endings} or {@code ending|gender>voc: endings}. Parsing by hand
@@ -15,8 +16,7 @@ import java.util.Optional;
 record ParadigmRow(String ending, String gender, boolean vocative, String endings) {
 
     private static final String[] GENDERS = {"m", "f", "any"};
-    private static final String VOCATIVE = ">voc";
-    private static final String LINE_BREAKS = "\n\r\u0085  ";
+    private static final String VOCATIVE_MARK = ">voc";
 
     /**
      * Reads a row.
@@ -25,7 +25,7 @@ record ParadigmRow(String ending, String gender, boolean vocative, String ending
      * @return the row, or empty when the line has another shape
      */
     static Optional<ParadigmRow> parse(final String line) {
-        if (line.chars().anyMatch(c -> LINE_BREAKS.indexOf(c) >= 0)) {
+        if (line.chars().anyMatch(c -> LineBreaks.isTerminator((char) c))) {
             return Optional.empty();
         }
         int tokenEnd = 0;
@@ -47,8 +47,8 @@ record ParadigmRow(String ending, String gender, boolean vocative, String ending
                 continue;
             }
             int at = bar + 1 + gender.length();
-            final boolean vocative = line.startsWith(VOCATIVE, at);
-            at += vocative ? VOCATIVE.length() : 0;
+            final boolean vocative = line.startsWith(VOCATIVE_MARK, at);
+            at += vocative ? VOCATIVE_MARK.length() : 0;
             if (at < line.length() && line.charAt(at) == ':') {
                 final String endings = line.substring(at + 1).stripLeading();
                 return endings.isEmpty()

@@ -1,6 +1,7 @@
 package ua.bookloom.llm.profile;
 
 import java.util.Optional;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * A model file as a download cache names it, {@code owner_repo-GGUF_file}: the owner, the repository that ends in
@@ -13,7 +14,6 @@ import java.util.Optional;
 record CacheFileName(String repo, String file) {
 
     private static final String REPO_END = "-GGUF";
-    private static final String LINE_BREAKS = "\n\r\u0085  ";
 
     /**
      * Reads a name.
@@ -57,7 +57,7 @@ record CacheFileName(String repo, String file) {
 
     private static int lastLineBreak(final String name) {
         int at = name.length() - 1;
-        while (at >= 0 && LINE_BREAKS.indexOf(name.charAt(at)) < 0) {
+        while (at >= 0 && !LineBreaks.isTerminator(name.charAt(at))) {
             at--;
         }
         return at;

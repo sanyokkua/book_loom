@@ -60,7 +60,8 @@ public final class TranslatingController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel what the run actions press and the ready card reads
+     * @param run what the run actions press and the ready card reads, and the run-state row the run actions and the
+     *     live line follow
      * @param mirror the run's state, figures and log the screen shows
      * @param context the open book, whose languages head the live panel's panes, the catalogue the built parts are
      *     worded from, and where Back and Continue to Export lead
@@ -69,7 +70,6 @@ public final class TranslatingController {
      *     from Review (n) and the strip
      * @param tools the session's memory of which sections the person left open, the question asked before a start
      *     when the book is told in the first person, and the question asked before the run is stopped
-     * @param runs the run-state row the run actions and the live line follow
      * @param parts what the strip, the help line and the live card read and open: the start estimate, the scene
      *     summary, the sleep help, the technical-details switch, the modal host and the activities' clock
      */
@@ -77,15 +77,14 @@ public final class TranslatingController {
     @SuppressWarnings("NullAway.Init")
     @Inject
     public TranslatingController(
-            final TranslatingViewModel viewModel,
+            final RunView run,
             final StateMirror mirror,
             final ScreenContext context,
             final LanguageNames names,
             final ReviewAccess reviewAccess,
             final TranslatingTools tools,
-            final RunStateSource runs,
             final Parts parts) {
-        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.viewModel = Objects.requireNonNull(run, "run").translating();
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(context, "context").messages();
         this.navigator = context.navigator();
@@ -100,7 +99,7 @@ public final class TranslatingController {
                 parts.activities());
         this.desk = reviewAccess.desk();
         this.sections = tools.sections();
-        this.runs = Objects.requireNonNull(runs, "runs");
+        this.runs = run.runs();
         this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
     }
 

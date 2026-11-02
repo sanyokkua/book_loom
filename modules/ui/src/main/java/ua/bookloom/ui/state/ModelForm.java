@@ -69,15 +69,14 @@ public final class ModelForm extends ModelFormProperties {
             @IoExecutor final ExecutorService io) {
         this.store = Objects.requireNonNull(sources, "sources").store();
         this.capabilities = sources.capabilities();
-        final StructuredAnswers structured = sources.structured();
-        this.structured = structured;
+        this.structured = sources.structured();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.background = Objects.requireNonNull(background, "background");
         this.io = Objects.requireNonNull(io, "io");
         Objects.requireNonNull(roster, "roster").entries().addListener((ListChangeListener<ModelEntry>)
                 change -> followOffer(roster.entries()));
-        structured.revision().addListener(observed -> followStructured());
+        this.structured.revision().addListener(observed -> followStructured());
     }
 
     /**

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.util.text.LineBreaks;
 
 /**
  * Cuts a paragraph at a stop mark that is followed by blanks, and at every line break. Scanning stands in for the
@@ -16,7 +17,6 @@ final class SentenceBreaks {
 
     private static final String MARKS = ".!?…";
     private static final String ASCII_BLANKS = " \t\n\u000B\f\r";
-    private static final String LINE_BREAKS = "\n\u000B\f\r\u0085  ";
 
     /**
      * The pieces between the breaks.
@@ -51,8 +51,8 @@ final class SentenceBreaks {
     // The end of the break that starts at i, or i when none starts there.
     private static int breakEnd(final String text, final int i) {
         final char c = text.charAt(i);
-        if (LINE_BREAKS.indexOf(c) >= 0) {
-            return skip(text, i, LINE_BREAKS);
+        if (LineBreaks.isBreak(c)) {
+            return skipBreaks(text, i);
         }
         if (MARKS.indexOf(c) < 0 || (i > 0 && MARKS.indexOf(text.charAt(i - 1)) >= 0)) {
             return i;
@@ -60,6 +60,14 @@ final class SentenceBreaks {
         final int marksEnd = skip(text, i, MARKS);
         final int blanksEnd = skip(text, marksEnd, ASCII_BLANKS);
         return blanksEnd > marksEnd ? blanksEnd : i;
+    }
+
+    private static int skipBreaks(final String text, final int from) {
+        int end = from;
+        while (end < text.length() && LineBreaks.isBreak(text.charAt(end))) {
+            end++;
+        }
+        return end;
     }
 
     private static int skip(final String text, final int from, final String members) {

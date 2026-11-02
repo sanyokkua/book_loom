@@ -59,14 +59,14 @@ final class AppearanceLanguageRow {
             final SystemLanguage system,
             final Controls controls,
             final ObservableBooleanValue themeSaveFailed) {
-        final ComboBox<LanguageChoice> chooser = controls.chooser();
+        final ComboBox<LanguageChoice> box = controls.chooser();
         final Button restart = controls.restart();
         final Label saveError = controls.saveError();
         this.language = Objects.requireNonNull(language, "language");
         this.exitGuard = Objects.requireNonNull(exitGuard, "exitGuard");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.system = Objects.requireNonNull(system, "system");
-        this.chooser = Objects.requireNonNull(chooser, "chooser");
+        this.chooser = Objects.requireNonNull(box, "chooser");
         this.restartError = Objects.requireNonNull(controls.restartError(), "restartError");
         buildChooser();
         chooser.getProperties().put(OWNER_KEY, this);
