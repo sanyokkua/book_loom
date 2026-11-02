@@ -87,6 +87,6 @@ public final class ProjectFileLabel {
                 out.append('-');
             }
         }
-        return out.toString().replaceAll("-{2,}", "-").replaceAll("^-|-$", "");
+        return out.toString().replaceAll("-{2,}", "-").replaceAll("(?:^-)|(?:-$)", "");
     }
 }

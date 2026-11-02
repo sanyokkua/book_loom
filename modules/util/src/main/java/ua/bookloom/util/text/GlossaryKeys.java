@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class GlossaryKeys {
 
-    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$");
+    private static final Pattern EDGE_PUNCTUATION = Pattern.compile("(?:^[^\\p{L}\\p{N}]+)|(?:[^\\p{L}\\p{N}]+$)");
     private static final Pattern POSSESSIVE = Pattern.compile("['’ʼ][sS]$");
     private static final Pattern SPACES = Pattern.compile("[\\p{Z}\\s]+");
 
