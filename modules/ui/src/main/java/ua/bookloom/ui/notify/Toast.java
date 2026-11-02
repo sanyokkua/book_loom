@@ -54,7 +54,7 @@ final class Toast {
         this.severity = severity;
         this.key = key;
         this.args = List.of(args);
-        this.timer = new PauseTransition(Duration.millis((double) lifetime.toMillis()));
+        this.timer = new PauseTransition(Duration.millis(Math.toIntExact(lifetime.toMillis())));
         final String text = messages.get(key, args);
         node.getChildren().addAll(icon(severity), words(text), counter());
         node.getStyleClass().addAll("toast", severity.styleClass(), "elevation");

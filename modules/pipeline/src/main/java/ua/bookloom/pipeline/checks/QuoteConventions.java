@@ -44,9 +44,7 @@ public final class QuoteConventions {
         final String language = languageTag == null
                 ? FALLBACK_KEY
                 : Locale.forLanguageTag(languageTag).getLanguage();
-        final List<QuotePair> pairs =
-                Objects.requireNonNull(TABLE.containsKey(language) ? TABLE.get(language) : TABLE.get(FALLBACK_KEY));
-        return pairs;
+        return Objects.requireNonNull(TABLE.containsKey(language) ? TABLE.get(language) : TABLE.get(FALLBACK_KEY));
     }
 
     /**

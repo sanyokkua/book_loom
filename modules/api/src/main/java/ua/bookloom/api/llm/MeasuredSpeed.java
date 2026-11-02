@@ -15,7 +15,7 @@ public record MeasuredSpeed(double seconds, MeasuredFrom from) {
     /** Rejects a non-positive figure or a missing source. */
     public MeasuredSpeed {
         Objects.requireNonNull(from, "from");
-        if (!(seconds > 0.0)) {
+        if (Double.isNaN(seconds) || seconds <= 0.0) {
             throw new IllegalArgumentException("measured speed must be positive: " + seconds);
         }
     }

@@ -29,7 +29,7 @@ import ua.bookloom.pipeline.eval.ExportedBooks;
  * export keeps them. It is tagged {@code corpus}, so the gate never runs it, and does nothing without the variables.
  */
 @Tag("corpus")
-class ExportedBookAuditTool {
+class ExportedBookAuditToolTest {
 
     private static final String SOURCE = "BOOKLOOM_AUDIT_SOURCE";
     private static final String EXPORT = "BOOKLOOM_AUDIT_EXPORT";

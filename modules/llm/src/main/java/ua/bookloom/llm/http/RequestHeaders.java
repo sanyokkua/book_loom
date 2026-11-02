@@ -38,7 +38,7 @@ public final class RequestHeaders {
 
     private static final int DELETE = 0x7f;
     private static final String AUTHORIZATION = "Authorization";
-    private static final Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:([A-Za-z_][A-Za-z0-9_]*)}");
+    private static final Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:([A-Za-z_]\\w*)}");
     private static final Set<String> RESTRICTED =
             Set.of("host", "content-length", "connection", "expect", "upgrade", "transfer-encoding");
 

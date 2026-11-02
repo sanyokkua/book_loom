@@ -21,13 +21,13 @@ final class EvalBriefLabel {
                 final String shown = "BRIEF".equals(key) || "GOLD".equals(key)
                         ? Path.of(value).getFileName().toString()
                         : value;
-                out.append(out.length() == 0 ? "" : " ")
+                out.append(out.isEmpty() ? "" : " ")
                         .append(key.toLowerCase(java.util.Locale.ROOT))
                         .append('=')
                         .append(shown);
             }
         }
-        return out.length() == 0 ? "defaults" : out.toString();
+        return out.isEmpty() ? "defaults" : out.toString();
     }
 
     static String joinLabel(final String first, final String second) {

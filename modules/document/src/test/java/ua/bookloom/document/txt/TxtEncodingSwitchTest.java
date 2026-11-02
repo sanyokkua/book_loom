@@ -83,8 +83,7 @@ class TxtEncodingSwitchTest {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        final Document document = new TxtReader(registry).read(file);
-        return document;
+        return new TxtReader(registry).read(file);
     }
 
     private static byte[] bytesOf(Path file) {

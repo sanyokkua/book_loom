@@ -178,7 +178,7 @@ public final class SettingWriter {
         // Each task waits for the one before it, whether that one worked or not, so a quick second choice is never
         // overwritten by the first.
         lastWrite = lastWrite
-                .handle((done, failure) -> (Void) null)
+                .handle((done, failure) -> null)
                 .thenRunAsync(
                         () -> {
                             final T answer = work.get();

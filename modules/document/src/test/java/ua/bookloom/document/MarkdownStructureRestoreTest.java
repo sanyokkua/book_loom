@@ -313,7 +313,7 @@ class MarkdownStructureRestoreTest {
     private static String independentEmphases(int count) {
         final StringBuilder builder = new StringBuilder();
         for (int index = 0; index < count; index++) {
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append(' ');
             }
             builder.append('*').append((char) ('a' + index)).append('*');

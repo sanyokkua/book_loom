@@ -20,13 +20,13 @@ import ua.bookloom.api.ErrorCode;
 public interface ProviderConfigRules {
 
     /** The shape a credential-like header value must have: a reference to an environment variable, never a secret. */
-    Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:[A-Za-z_][A-Za-z0-9_]*}");
+    Pattern ENV_REFERENCE = Pattern.compile("\\$\\{env:[A-Za-z_]\\w*}");
 
     /**
      * The shape a credential reference must have: the name of an environment variable. A value such as a key pasted
      * into the field does not have it, so it is refused before it could be stored.
      */
-    Pattern ENV_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
+    Pattern ENV_NAME = Pattern.compile("[A-Za-z_]\\w*");
 
     /**
      * The characters an HTTP header name may hold (RFC 7230's {@code token}); a space, a colon or a control character
@@ -48,14 +48,13 @@ public interface ProviderConfigRules {
     List<Pattern> SECRET_SHAPES = List.of(
             Pattern.compile("(?:sk|pk|rk|ghp|gho|ghu|ghs|ghr|github_pat|glpat|hf|xox[abprs])[-_].*"),
             Pattern.compile("AKIA[0-9A-Z]{16}"),
-            Pattern.compile("(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9_]{24,}"));
+            Pattern.compile("(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)\\w{24,}"));
 
     /**
      * A variable written the way a shell or a header value refers to it ({@code $NAME}, {@code ${NAME}},
      * {@code ${env:NAME}}, {@code %NAME%}) where only its name belongs; group 1 or 2 is the bare name.
      */
-    Pattern VARIABLE_REFERENCE =
-            Pattern.compile("\\$(?:\\{(?:env:)?)?([A-Za-z_][A-Za-z0-9_]*)}?|%([A-Za-z_][A-Za-z0-9_]*)%");
+    Pattern VARIABLE_REFERENCE = Pattern.compile("\\$(?:\\{(?:env:)?)?([A-Za-z_]\\w*)}?|%([A-Za-z_]\\w*)%");
 
     /** The refusal of a header name; it never names the name, which may be a key pasted into the wrong field. */
     String BAD_HEADER_NAME =
