@@ -87,7 +87,7 @@ final class BookSamples {
                     case BALANCED -> BALANCED_WINDOW_TOKENS;
                     case MAX -> MAX_WINDOW_TOKENS;
                 };
-        final int tokens = Math.max(MIN_WINDOW_TOKENS, Math.min(wanted, room));
+        final int tokens = Math.clamp(Math.min(wanted, room), MIN_WINDOW_TOKENS, Integer.MAX_VALUE);
         log.debug(
                 "Brief window budget: dial={} model window={} fixed={} room={} -> {} tokens",
                 dial,
@@ -118,7 +118,7 @@ final class BookSamples {
             return List.of();
         }
         final int storyTokens = TokenEstimator.estimate(passage(lines, new Window(0, lines.size())), languageTag);
-        final int count = Math.max(1, Math.min(windows, storyTokens / windowTokens));
+        final int count = Math.clamp(storyTokens / windowTokens, 1, Math.max(1, windows));
         log.debug(
                 "Book samples of {}: {} story sentences, {} tokens, {} of {} wanted windows of {} tokens",
                 document.id(),

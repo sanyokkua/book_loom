@@ -290,9 +290,7 @@ final class JobControl {
             if (cancelRequested) {
                 return BoundaryDecision.cancel();
             }
-            final PauseReason reason = pauseRequested
-                    ? consumeRequestedPause()
-                    : pausePoints.contains(PausePoint.ON_ERROR) ? PauseReason.ON_ERROR : null;
+            final PauseReason reason = pauseRequested ? consumeRequestedPause() : errorPauseOrNull();
             return reason == null ? BoundaryDecision.continueRunning() : pause(reason);
         });
         log.debug("Checked failure boundary errorCode={} decision={}", error.code(), decision);
@@ -361,6 +359,10 @@ final class JobControl {
     private PauseReason consumeRequestedPause() {
         pauseRequested = false;
         return PauseReason.REQUESTED;
+    }
+
+    private @Nullable PauseReason errorPauseOrNull() {
+        return pausePoints.contains(PausePoint.ON_ERROR) ? PauseReason.ON_ERROR : null;
     }
 
     private BoundaryDecision pause(final PauseReason reason) {

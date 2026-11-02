@@ -58,12 +58,9 @@ public final class ReuseCheck {
                 evaluated(new Candidate(segment, maskedSource, lockedRenderings, remaskedTarget), restored, settings);
             case GateResult.GateFailed failed ->
                 refused(segment.id(), failed.finding().raisedBy(), List.of(failed.finding()));
-            case GateResult.StepError stepError -> {
-                log.debug(
-                        "Memory reuse not checked segmentId={}: the gate failed code={}",
-                        segment.id(),
-                        stepError.error().code());
-                yield Result.err(stepError.error());
+            case GateResult.StepError(var error) -> {
+                log.debug("Memory reuse not checked segmentId={}: the gate failed code={}", segment.id(), error.code());
+                yield Result.err(error);
             }
         };
     }

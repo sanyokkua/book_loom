@@ -168,7 +168,7 @@ public final class PromptRequests {
 
     /** How many earlier pairs of the unit a batch shows. */
     public int batchPairCount() {
-        return Math.min(MAX_PAIRS, Math.max(MIN_PAIRS, settings.dial().precedingTargets()));
+        return Math.clamp(settings.dial().precedingTargets(), MIN_PAIRS, MAX_PAIRS);
     }
 
     /**

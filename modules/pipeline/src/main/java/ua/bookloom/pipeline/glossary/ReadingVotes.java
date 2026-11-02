@@ -75,7 +75,7 @@ final class ReadingVotes {
                 female,
                 tally.female(),
                 tally.male());
-        final Gender majority = male == female ? Gender.UNKNOWN : male > female ? Gender.MALE : Gender.FEMALE;
+        final Gender majority = male == female ? Gender.UNKNOWN : leader(male, female);
         final boolean enough = isEnough(Math.max(male, female), male + female, facts.analysisLanguage() == null);
         return breakingTies(majority, enough, tally, male, female);
     }
@@ -131,5 +131,9 @@ final class ReadingVotes {
             return Gender.MALE;
         }
         return female >= MIN_ONE_SIDED && male == 0 ? Gender.FEMALE : Gender.UNKNOWN;
+    }
+
+    private static Gender leader(final int male, final int female) {
+        return male > female ? Gender.MALE : Gender.FEMALE;
     }
 }

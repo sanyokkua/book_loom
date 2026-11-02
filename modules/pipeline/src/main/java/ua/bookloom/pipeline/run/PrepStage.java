@@ -109,7 +109,7 @@ public final class PrepStage {
                 logPrepared(projectId, Objects.requireNonNull(prepared.data(), "prepared"));
             }
             return prepared;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.error("Unexpected failure while preparing a run project={}", projectId, cause);
             return Result.err(AppError.of(
                     ErrorCode.internal,

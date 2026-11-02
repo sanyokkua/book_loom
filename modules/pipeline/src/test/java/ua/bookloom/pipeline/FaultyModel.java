@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -229,7 +231,7 @@ final class FaultyModel implements ChatModel {
     private Result<ChatResponse> hang() {
         stall.run();
         try {
-            Thread.sleep(Duration.ofSeconds(10));
+            new CountDownLatch(1).await(10, TimeUnit.SECONDS);
             throw new AssertionError("the stall watchdog never ended the hanging call");
         } catch (InterruptedException interrupted) {
             return Result.err(AppError.of(ErrorCode.cancelled, "Provider request cancelled", "Interrupted."));

@@ -109,7 +109,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
             return Result.ok(jobFor(request, model));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "This translation job could not be prepared",

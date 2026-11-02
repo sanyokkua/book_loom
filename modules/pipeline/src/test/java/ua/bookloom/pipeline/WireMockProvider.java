@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -248,11 +249,10 @@ final class WireMockProvider implements AutoCloseable {
             if (System.nanoTime() > deadline) {
                 throw new AssertionError("provider received " + chatRequests() + " of " + expected + " requests");
             }
-            try {
-                Thread.sleep(POLL_MILLIS);
-            } catch (InterruptedException cause) {
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(POLL_MILLIS));
+            if (Thread.interrupted()) {
                 Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted waiting for provider requests", cause);
+                throw new AssertionError("interrupted waiting for provider requests");
             }
         }
     }

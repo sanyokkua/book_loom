@@ -20,9 +20,9 @@ sealed interface RevisionAnswer {
      */
     default Optional<GateResult.Restored> revised() {
         return switch (this) {
-            case Revised revised -> Optional.of(revised.restored());
+            case Revised(var restored) -> Optional.of(restored);
             case Unchanged unchanged -> Optional.empty();
-            case Refused refused -> Optional.empty();
+            case Refused(var ignored) -> Optional.empty();
         };
     }
 

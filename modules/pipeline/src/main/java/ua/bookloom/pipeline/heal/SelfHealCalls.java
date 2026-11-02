@@ -126,24 +126,16 @@ public final class SelfHealCalls {
             return;
         }
         switch (Objects.requireNonNull(outcome.data())) {
-            case RepairReply.Rewritten rewritten ->
+            case RepairReply.Rewritten(var maskedTarget) ->
                 log.debug(
                         "{} reply segmentId={} outcome=Rewritten targetLength={}",
                         label,
                         segmentId,
-                        rewritten.maskedTarget().length());
-            case RepairReply.Malformed malformed ->
-                log.debug(
-                        "{} reply segmentId={} outcome=Malformed diagnostic={}",
-                        label,
-                        segmentId,
-                        malformed.diagnostic());
-            case RepairReply.FlagNow flagNow ->
-                log.debug(
-                        "{} reply segmentId={} outcome=FlagNow code={}",
-                        label,
-                        segmentId,
-                        flagNow.error().code());
+                        maskedTarget.length());
+            case RepairReply.Malformed(var diagnostic) ->
+                log.debug("{} reply segmentId={} outcome=Malformed diagnostic={}", label, segmentId, diagnostic);
+            case RepairReply.FlagNow(var error) ->
+                log.debug("{} reply segmentId={} outcome=FlagNow code={}", label, segmentId, error.code());
         }
     }
 }

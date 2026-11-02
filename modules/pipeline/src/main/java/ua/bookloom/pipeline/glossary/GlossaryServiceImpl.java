@@ -389,7 +389,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         log.debug("Glossary {} project={}", action, projectId);
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Glossary failed", "The glossary could not be updated.", null, cause);
             log.error(

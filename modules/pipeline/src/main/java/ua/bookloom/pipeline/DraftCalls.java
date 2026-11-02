@@ -39,7 +39,7 @@ final class DraftCalls {
                     through.callAbout(step.callKind(), List.of(segment.id()), request, descriptor), "model result");
             log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
             return result;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Translation failed",

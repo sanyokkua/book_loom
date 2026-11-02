@@ -95,7 +95,7 @@ final class LengthCheck {
                 compact && isBeyondBaseSize(sourceChars, count(WORD, input.sourceDisplayText())));
         return omission.isPresent()
                 ? CheckResult.fail(LENGTH, omission.get())
-                : CheckResult.pass(LENGTH, ratio < band.lower() ? 1.0 : marginWithinBand(ratio, band));
+                : CheckResult.pass(LENGTH, marginOf(ratio, band));
     }
 
     /**
@@ -189,5 +189,9 @@ final class LengthCheck {
 
     private static int codePointCount(final String text) {
         return text.codePointCount(0, text.length());
+    }
+
+    private static double marginOf(final double ratio, final LengthBand band) {
+        return ratio < band.lower() ? 1.0 : marginWithinBand(ratio, band);
     }
 }

@@ -36,7 +36,7 @@ final class SegmentVerification {
     private static final Pattern MARKDOWN_ALT = Pattern.compile("!\\[.*?]\\(", Pattern.DOTALL);
     private static final String EMPTY_MARKDOWN_ALT = "![](";
     private static final int SHORT_MARKUP = 3;
-    private static final Pattern TAG = Pattern.compile("<(/?)([A-Za-z][\\w:.-]*)[^>]*>(?s:.*)");
+    private static final Pattern TAG = Pattern.compile("<(/?)([A-Za-z][\\w:.-]*)[^>]*+>");
 
     /**
      * Checks a re-opened book against the one written, naming every segment whose markup came back different.
@@ -168,7 +168,7 @@ final class SegmentVerification {
             return "?";
         }
         final Matcher tag = TAG.matcher(fragment);
-        if (tag.matches()) {
+        if (tag.lookingAt()) {
             return "<" + tag.group(1) + tag.group(2) + ">";
         }
         return fragment.length() <= SHORT_MARKUP ? fragment : "#" + fragment.length();

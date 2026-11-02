@@ -179,7 +179,7 @@ final class SideFiles {
             Files.writeString(temporary, content.text(), StandardCharsets.UTF_8);
             Publication.move(moves, temporary, content.path(), overwrite);
             return Result.ok(content.path());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             if (temporary != null) {
                 deleteTemporary(temporary);
             }
@@ -201,7 +201,7 @@ final class SideFiles {
     private static void deleteTemporary(final Path temporary) {
         try {
             log.debug("Side file temporary {} deleted: {}", temporary, Files.deleteIfExists(temporary));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.warn("Could not delete side file temporary {}", temporary, cause);
         }
     }

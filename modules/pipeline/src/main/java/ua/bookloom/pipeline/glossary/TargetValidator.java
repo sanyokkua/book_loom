@@ -36,7 +36,7 @@ import ua.bookloom.util.text.StressMarks;
 @Slf4j
 final class TargetValidator implements SuggestionReplies.Judge {
 
-    private static final Pattern LAST_WORD = Pattern.compile("[^\\s-]+$");
+    private static final Pattern LAST_WORD = Pattern.compile("(?<![^\\s-])[^\\s-]+$");
     private static final Pattern WORD_PARTS = Pattern.compile("[\\s\\-\u2010\u2011\u2013]+");
 
     /** Why a target is refused. */

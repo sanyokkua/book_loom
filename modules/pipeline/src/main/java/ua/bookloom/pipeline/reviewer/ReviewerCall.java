@@ -147,7 +147,7 @@ public final class ReviewerCall {
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
                     : read(Objects.requireNonNull(reply.data()), pairs, frame, sheets, pass, calls);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return internalFailure(cause);
         }
     }

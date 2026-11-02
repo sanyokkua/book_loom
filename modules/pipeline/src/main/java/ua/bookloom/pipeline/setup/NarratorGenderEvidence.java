@@ -20,6 +20,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.prompt.AddressTerms;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Decides whether a quote the model gave for the narrator's gender shows that gender in words the code can check. Two
@@ -186,7 +187,7 @@ final class NarratorGenderEvidence {
     private static List<String> words(final String text) {
         final String marks = WHITESPACE.matcher(text.replace('’', '\'')).replaceAll(" ");
         return Arrays.stream(NOT_A_WORD.split(marks.toLowerCase(Locale.ROOT)))
-                .map(word -> word.replaceAll("^'+|'+$", ""))
+                .map(word -> Edges.strip(word, "'"))
                 .filter(word -> !word.isEmpty())
                 .toList();
     }

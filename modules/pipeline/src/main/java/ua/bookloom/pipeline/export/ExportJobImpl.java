@@ -82,7 +82,7 @@ final class ExportJobImpl implements ExportJob {
                     isCancelledBefore("start") ? Result.err(BookExporter.cancelledBeforeWriting()) : write();
             logOutcome(result);
             return result;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError("run the export", cause));
         } finally {
             PrepSummary.log("export", request.projectId(), CallKindTotals.of(ledger.since(mark)));

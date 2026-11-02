@@ -92,7 +92,7 @@ public final class BookExporter {
                 plan.overwrite());
         try {
             return beginExport(plan, decided, cancellationRequested);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(unexpectedError("start export", cause));
         }
     }
@@ -140,7 +140,7 @@ public final class BookExporter {
         Result<Exported> run() {
             try {
                 return reopenAndWrite();
-            } catch (Throwable cause) {
+            } catch (Exception cause) {
                 return fail(unexpectedError("export the translated book", cause));
             }
         }
@@ -280,7 +280,7 @@ public final class BookExporter {
                 final Result<Boolean> closed = documents.close(document);
                 log.debug("Close result for export document {} is {}", document.id(), outcomeOf(closed));
                 return closed;
-            } catch (Throwable cause) {
+            } catch (Exception cause) {
                 return Result.err(unexpectedError("close export document " + document.id(), cause));
             }
         }
@@ -289,7 +289,7 @@ public final class BookExporter {
             try {
                 final boolean deleted = Files.deleteIfExists(temporary);
                 log.debug("Temporary export {} deleted: {}", temporary, deleted);
-            } catch (Throwable cause) {
+            } catch (Exception cause) {
                 log.debug(
                         "Temporary export {} deletion failed while preserving primary error {}",
                         temporary,

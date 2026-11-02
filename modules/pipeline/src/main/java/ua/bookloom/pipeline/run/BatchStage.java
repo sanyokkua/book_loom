@@ -214,8 +214,9 @@ final class BatchStage {
         };
     }
 
-    // An answer the draft step would flag its one segment for (an empty completion, a context-window error) says
-    // nothing about the others: the batch is unavailable and every segment takes its own draft, which flags itself.
+    // An answer the draft step would flag its one segment for, such as an empty completion or a context-window
+    // error, says nothing about the others: the batch is unavailable and every segment takes its own draft, which flags
+    // itself.
     private Result<BatchAttempt> attempt(final BatchContext context, final List<BatchItem> items, final Shown shown) {
         final Result<BatchReply> answered =
                 drafter.draft(context, items, shown.segmentIds(), shown.sources(), shown.position());

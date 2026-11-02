@@ -200,8 +200,8 @@ class TranslationMemoryTest {
     void lookup_segmentAbsentFromItsUnit_isRejected() {
         final List<Segment> unit = middle("ch02.xhtml:9", "Yes.");
 
-        assertThatThrownBy(() -> memory.lookup(segment("ch09.xhtml:0", "Yes."), unit))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = segment("ch09.xhtml:0", "Yes.");
+        assertThatThrownBy(() -> memory.lookup(arg1, unit)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest

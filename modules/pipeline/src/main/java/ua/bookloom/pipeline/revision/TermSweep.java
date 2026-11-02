@@ -187,7 +187,7 @@ final class TermSweep {
                         failed.finding().raisedBy());
                 yield Result.ok(false);
             }
-            case GateResult.StepError stepError -> Result.err(stepError.error());
+            case GateResult.StepError(var error) -> Result.err(error);
         };
     }
 

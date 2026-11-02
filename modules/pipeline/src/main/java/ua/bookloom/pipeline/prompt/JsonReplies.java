@@ -51,18 +51,24 @@ public final class JsonReplies {
         Objects.requireNonNull(text, "text");
         int depth = 0;
         boolean inString = false;
-        for (int i = text.indexOf('{'); i >= 0 && i < text.length(); i++) {
+        int i = text.indexOf('{');
+        while (i >= 0 && i < text.length()) {
             final char c = text.charAt(i);
             if (inString) {
                 inString = c != '"';
-                i += c == '\\' ? 1 : 0;
+                i += c == '\\' ? 2 : 1;
                 continue;
             }
             inString = c == '"';
-            depth += c == '{' ? 1 : c == '}' ? -1 : 0;
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+            }
             if (depth == 0 && c == '}') {
                 return OptionalInt.of(i + 1);
             }
+            i++;
         }
         return OptionalInt.empty();
     }

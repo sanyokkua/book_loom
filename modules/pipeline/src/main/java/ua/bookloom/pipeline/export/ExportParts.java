@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.export;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -49,7 +50,7 @@ record ExportParts(
     /** The project's last run, which the report names; null when it never ran or the history cannot be read. */
     @Nullable
     RunRecord lastRun(final String projectId) {
-        final Optional<RunRecord> latest = runs.latest(projectId).data();
-        return latest == null ? null : latest.orElse(null);
+        final Result<Optional<RunRecord>> latest = runs.latest(projectId);
+        return latest.isErr() ? null : Objects.requireNonNull(latest.data()).orElse(null);
     }
 }

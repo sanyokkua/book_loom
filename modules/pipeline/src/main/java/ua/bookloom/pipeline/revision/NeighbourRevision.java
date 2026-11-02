@@ -73,18 +73,18 @@ final class NeighbourRevision {
         final Map<String, SegmentRecord> byId = new HashMap<>();
         Objects.requireNonNull(read.data(), "records").forEach(record -> byId.put(record.segmentId(), record));
         final List<String> order = inputs.order();
-        final List<Integer> checked = IntStream.range(0, order.size())
+        final List<Integer> inScope = IntStream.range(0, order.size())
                 .filter(at -> isInScope(inputs, byId.get(order.get(at)), scope))
                 .boxed()
                 .sorted(Comparator.comparing(at -> !hasBlocking(byId.get(order.get(at)))))
                 .toList();
-        logStarted(inputs, byId, scope, checked.size());
-        calls.planned(ModelCalls.Stage.NEIGHBOUR_CHECK, checked.size());
-        final Result<Boolean> ran = checkAll(inputs, checked, byId, calls, tally);
+        logStarted(inputs, byId, scope, inScope.size());
+        calls.planned(ModelCalls.Stage.NEIGHBOUR_CHECK, inScope.size());
+        final Result<Boolean> ran = checkAll(inputs, inScope, byId, calls, tally);
         log.info(
                 "Neighbour check ended project={} checked={} skippedAsRemembered={} notReread={}",
                 inputs.projectId(),
-                checked.size(),
+                inScope.size(),
                 tally.rememberedCount(),
                 tally.notRereadCount());
         return ran;
@@ -228,8 +228,8 @@ final class NeighbourRevision {
                 switch (answer) {
                     case RevisionAnswer.Unchanged unchanged -> true;
                     case RevisionAnswer.Refused refused -> !refused.isUnreadable();
-                    case RevisionAnswer.Revised revised ->
-                        revised.restored().maskedForm().equals(masked);
+                    case RevisionAnswer.Revised(var restored) ->
+                        restored.maskedForm().equals(masked);
                 };
         if (settled) {
             checked.remember(projectId, id, fingerprint);
@@ -308,10 +308,10 @@ final class NeighbourRevision {
                 tally.neighbourUnchanged();
                 yield unchanged(calls, record, "unchanged", item.around());
             }
-            case RevisionAnswer.Refused refused -> {
-                log.debug("Neighbour check segmentId={} refused rule={}", id, refused.reason());
-                tally.refused(refused.reason());
-                yield unchanged(calls, record, "refused:" + refused.reason(), item.around());
+            case RevisionAnswer.Refused(var reason) -> {
+                log.debug("Neighbour check segmentId={} refused rule={}", id, reason);
+                tally.refused(reason);
+                yield unchanged(calls, record, "refused:" + reason, item.around());
             }
             case RevisionAnswer.Revised revised
             when revised.restored().maskedForm().equals(item.masked()) -> {
@@ -325,7 +325,7 @@ final class NeighbourRevision {
                 tally.refused(RevisionGuards.REWRITE_CAP_RULE);
                 yield unchanged(calls, record, "refused:" + RevisionGuards.REWRITE_CAP_RULE, item.around());
             }
-            case RevisionAnswer.Revised revised -> storeFix(inputs, item, revised.restored(), tally, calls);
+            case RevisionAnswer.Revised(var restored) -> storeFix(inputs, item, restored, tally, calls);
         };
     }
 

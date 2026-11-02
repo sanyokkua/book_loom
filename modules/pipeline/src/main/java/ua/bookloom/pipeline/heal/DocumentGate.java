@@ -102,11 +102,8 @@ final class DocumentGate implements GateFunction {
                         "Document gate segment={} outcome=GateFailed raisedBy={}",
                         segmentId,
                         failed.finding().raisedBy());
-            case GateResult.StepError stepError ->
-                log.debug(
-                        "Document gate segment={} outcome=StepError code={}",
-                        segmentId,
-                        stepError.error().code());
+            case GateResult.StepError(var error) ->
+                log.debug("Document gate segment={} outcome=StepError code={}", segmentId, error.code());
         }
     }
 }

@@ -67,7 +67,7 @@ final class PassChecks {
         final RevisionGuards.Mode guardMode = isMended(mode, old, fresh) ? RevisionGuards.Mode.MENDED : mode;
         final Optional<String> refusal = AcceptanceRule.accepts(fresh, 0)
                 ? guards(segment, before, after, guardMode, untranslated)
-                        .or(() -> RoundProgress.isWorse(fresh, old) ? Optional.of(WORSE) : Optional.empty())
+                        .or(() -> worseThan(fresh, old))
                         .or(() -> newDoubt(inputs, segment, before, after))
                 : Optional.of(CHECKS);
         log.debug(
@@ -180,5 +180,9 @@ final class PassChecks {
 
     private static List<String> pairs(final List<GlossaryEntry> glossary) {
         return GlossaryNames.pairs(glossary);
+    }
+
+    private static Optional<String> worseThan(final QaResult fresh, final QaResult old) {
+        return RoundProgress.isWorse(fresh, old) ? Optional.of(WORSE) : Optional.empty();
     }
 }

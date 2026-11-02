@@ -247,9 +247,9 @@ public final class TermMappingVerifier {
     }
 
     private static int stemLength(final int length) {
-        final int cut =
-                length >= LONG_WORD ? LONG_CUT : length >= MEDIUM_WORD ? MEDIUM_CUT : length >= SHORT_WORD ? 1 : 0;
-        return Math.max(Math.min(STEM_FLOOR, length), length - cut);
+        final int cut = cutFor(length);
+        final int floor = Math.min(STEM_FLOOR, length);
+        return Math.max(floor, length - cut);
     }
 
     // A hyphenated target word counts whole and by each part (З-Зерубін holds Зерубін); a rendering stays whole.
@@ -272,5 +272,15 @@ public final class TermMappingVerifier {
 
     private static Stream<String> withParts(final String word) {
         return word.indexOf('-') < 0 ? Stream.of(word) : Stream.concat(Stream.of(word), Stream.of(word.split("-")));
+    }
+
+    private static int cutFor(final int length) {
+        if (length >= LONG_WORD) {
+            return LONG_CUT;
+        }
+        if (length >= MEDIUM_WORD) {
+            return MEDIUM_CUT;
+        }
+        return length >= SHORT_WORD ? 1 : 0;
     }
 }

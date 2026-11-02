@@ -313,7 +313,7 @@ public final class PromptTemplates {
                 .replaceAll(block -> Matcher.quoteReplacement(
                         values.getOrDefault(block.group(1), "").isEmpty()
                                 ? ""
-                                : block.group(2) + (block.group(3) == null ? "" : block.group(3))));
+                                : block.group(2) + Objects.toString(block.group(3), "")));
         return fill(withBlocks, values);
     }
 

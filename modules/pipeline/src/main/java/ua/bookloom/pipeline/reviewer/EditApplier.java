@@ -85,8 +85,8 @@ public final class EditApplier {
                 continue;
             }
             switch (verifier.verify(text, edit, checker, baseline, renderings, negationAndMoodWords, guess)) {
-                case Verification.Verified verified -> {
-                    text = verified.edited();
+                case Verification.Verified(var edited) -> {
+                    text = edited;
                     applied.add(edit);
                 }
                 case Verification.Failed refused -> failed.add(refusal(edit, refused));

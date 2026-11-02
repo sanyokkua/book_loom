@@ -65,7 +65,7 @@ public final class RunStart {
             return project.isEmpty()
                     ? Result.err(refusal("project", projectId, "This project is not known", "Import the book again."))
                     : checkProject(stores, project.get());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.error("Unexpected failure while checking a run project={}", projectId, cause);
             return Result.err(AppError.of(
                     ErrorCode.internal,

@@ -116,7 +116,7 @@ public final class TermReview {
         try {
             return glossary.all(projectId)
                     .flatMap(held -> run(projectId, held, new Inputs(story, frame, policy, dial, calls)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Glossary review failed",
@@ -269,9 +269,9 @@ public final class TermReview {
         return readings.read(
                         new NameReadings.Inputs(rest, held, evidence, in.story(), in.frame(), in.dial(), in.calls()))
                 .flatMap(outcome -> batched.ask(outcome.unread(), evidence, in.frame(), in.calls())
-                        .map(batched -> {
+                        .map(asked -> {
                             all.addAll(outcome.verdicts());
-                            all.addAll(batched);
+                            all.addAll(asked);
                             return new Decided(all, outcome.readings(), verifiedNames(byCode, outcome));
                         }));
     }

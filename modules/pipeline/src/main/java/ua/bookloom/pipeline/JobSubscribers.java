@@ -33,7 +33,7 @@ final class JobSubscribers {
     private void deliverOne(final JobEvent event, final Registration registration) {
         try {
             registration.listener().onEvent(event);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             registrations.remove(registration);
             log.warn(
                     "Removing subscriber that threw while handling {}",
@@ -47,16 +47,16 @@ final class JobSubscribers {
         log.debug("Removed job subscriber removed={} count={}", removed, registrations.size());
     }
 
-    private static final class Registration {
-
-        private final JobListener listener;
-
-        Registration(final JobListener listener) {
-            this.listener = listener;
+    // Identity is what makes two subscriptions of one listener independent: each handle removes only its own.
+    private record Registration(JobListener listener) {
+        @Override
+        public boolean equals(final Object other) {
+            return this == other;
         }
 
-        JobListener listener() {
-            return listener;
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(this);
         }
     }
 }

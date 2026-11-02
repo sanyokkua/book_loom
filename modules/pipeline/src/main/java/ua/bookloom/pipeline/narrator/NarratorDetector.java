@@ -50,7 +50,7 @@ public final class NarratorDetector {
 
     private static final int MIN_WORDS = 2;
     private static final Pattern TOKEN = Pattern.compile("⟦[^⟧]*⟧");
-    private static final Pattern SENTENCE_END = Pattern.compile("[.!?…]+\\s+|\\R+");
+    private static final Pattern SENTENCE_END = Pattern.compile("(?<![.!?…])[.!?…]++\\s++|\\R++");
     private static final Pattern WORD = Pattern.compile("\\p{L}+");
     private static final char STRAIGHT_QUOTE = '"';
     private static final char SINGLE_OPEN = '‘';
@@ -189,9 +189,7 @@ public final class NarratorDetector {
             log.debug("Narrator detection: no chapter has {} narration sentences", MIN_SENTENCES);
             return Optional.empty();
         }
-        final NarratorHint.Person person = first.isEmpty()
-                ? NarratorHint.Person.THIRD
-                : first.size() == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
+        final NarratorHint.Person person = personOf(first.size(), judged);
         final int sentences = tallies.stream().mapToInt(Tally::sentences).sum();
         final int firstPerson = tallies.stream().mapToInt(Tally::firstPerson).sum();
         return Optional.of(new NarratorHint(person, (double) firstPerson / sentences, first, judged));
@@ -367,5 +365,12 @@ public final class NarratorDetector {
         if (!paragraphs.isEmpty()) {
             chapters.add(paragraphs);
         }
+    }
+
+    private static NarratorHint.Person personOf(final int firstCount, final int judged) {
+        if (firstCount == 0) {
+            return NarratorHint.Person.THIRD;
+        }
+        return firstCount == judged ? NarratorHint.Person.FIRST : NarratorHint.Person.MIXED;
     }
 }

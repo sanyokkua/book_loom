@@ -128,8 +128,8 @@ final class RevisionCall {
             final String maskedTarget,
             final RevisionGuards.Mode mode) {
         return switch (read) {
-            case RepairReply.Rewritten rewritten ->
-                gated(inputs, segment, maskedTarget, rewritten.maskedTarget(), mode);
+            case RepairReply.Rewritten(var rewrittenTarget) ->
+                gated(inputs, segment, maskedTarget, rewrittenTarget, mode);
             case RepairReply.Malformed malformed -> {
                 log.debug(
                         "Revision refused segmentId={}: the reply was unreadable diagnostic={}",
@@ -164,7 +164,7 @@ final class RevisionCall {
                         failed.finding().raisedBy());
                 yield Result.ok(new RevisionAnswer.Refused(GATE));
             }
-            case GateResult.StepError stepError -> Result.err(stepError.error());
+            case GateResult.StepError(var error) -> Result.err(error);
         };
     }
 }

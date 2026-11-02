@@ -38,7 +38,7 @@ public final class RunAudit {
             audit(stores, words, projectId);
         } catch (VirtualMachineError fatal) {
             throw fatal;
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             // Only the type is logged: a check's message may quote the book.
             log.warn(
                     "Final audit failed project={} type={}; the run stays completed",

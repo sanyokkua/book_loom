@@ -98,7 +98,7 @@ public final class DestinationChecks {
                 return rejected("normalized-path", sameFileError());
             }
             return checkExistingIdentity(source, destination);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(identityError("path-identity", cause));
         }
     }

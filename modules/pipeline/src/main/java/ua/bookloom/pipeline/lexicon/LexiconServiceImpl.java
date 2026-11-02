@@ -384,7 +384,7 @@ public final class LexiconServiceImpl implements LexiconService {
         log.debug("Lexicon {} project={}", action, projectId);
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Recurring terms failed",

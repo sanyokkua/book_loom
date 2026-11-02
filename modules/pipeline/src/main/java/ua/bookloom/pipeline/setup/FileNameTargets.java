@@ -1,10 +1,12 @@
 package ua.bookloom.pipeline.setup;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.SegmentRecord;
@@ -64,9 +66,13 @@ record FileNameTargets(@Nullable String title, @Nullable String author) {
 
     private static @Nullable String translated(
             final SegmentRepository segments, final String projectId, final String segmentId) {
-        final Optional<SegmentRecord> found =
-                segments.find(projectId, segmentId).data();
-        return found == null ? null : found.flatMap(FileNameTargets::targetOf).orElse(null);
+        final Result<Optional<SegmentRecord>> found = segments.find(projectId, segmentId);
+        if (found.isErr()) {
+            return null;
+        }
+        return Objects.requireNonNull(found.data())
+                .flatMap(FileNameTargets::targetOf)
+                .orElse(null);
     }
 
     private static Optional<String> targetOf(final SegmentRecord record) {

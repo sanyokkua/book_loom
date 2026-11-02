@@ -381,7 +381,7 @@ public final class NamesPassImpl implements NamesPass {
         log.debug("Names pass {} project={}", action, projectId);
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Names pass failed", "The names could not be prepared.", null, cause);
             log.error(

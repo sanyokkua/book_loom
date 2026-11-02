@@ -157,7 +157,7 @@ final class TranslationJobImpl implements TranslationJob {
         try {
             stopWatchdog = watchdog.start(ticks);
             return runClaimed();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             control.finish(JobState.FAILED);
             return Result.err(unexpectedError(cause));
         } finally {
@@ -239,7 +239,7 @@ final class TranslationJobImpl implements TranslationJob {
             final WorkList work = dataOf(read);
             JobLifecycleLogger.started(request, run, work, control.pausePoints());
             return translate(run, work);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return finish(JobState.FAILED, run, unexpectedError(cause));
         }
     }

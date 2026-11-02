@@ -37,10 +37,16 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 class SetupAssistantRecheckNarratorTest {
 
     private static final String QUOTE = "Hold on tight, Brindle";
-    private static final String ADDRESSED = "\"" + QUOTE + ",\" Danny said, and I laughed at him for a while.\n\n"
-            + "The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.\n";
-    private static final String SPOKEN_BY_NARRATOR = "\"Mind the step, Brindle,\" I said, and she stepped carefully"
-            + " over the loose board.\n\nThe rain had not stopped for three days.\n";
+    private static final String ADDRESSED = """
+            "%s," Danny said, and I laughed at him for a while.
+
+            The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.
+            """.formatted(QUOTE);
+    private static final String SPOKEN_BY_NARRATOR = """
+            "Mind the step, Brindle," I said, and she stepped carefully over the loose board.
+
+            The rain had not stopped for three days.
+            """;
     private static final Narrator PENDING =
             new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN, Narrator.GenderOrigin.NONE, List.of(QUOTE));
 

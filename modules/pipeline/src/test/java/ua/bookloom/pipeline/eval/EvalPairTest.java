@@ -25,7 +25,8 @@ class EvalPairTest {
 
     @Test
     void fromEnvironment_unknownPair_isRefused() {
-        assertThatThrownBy(() -> EvalPair.fromEnvironment(Map.of(EvalPair.ENV, "fr-uk")))
+        final var arg = Map.of(EvalPair.ENV, "fr-uk");
+        assertThatThrownBy(() -> EvalPair.fromEnvironment(arg))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("fr-uk");
     }

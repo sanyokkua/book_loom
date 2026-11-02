@@ -82,9 +82,7 @@ final class SoftFix {
         RepairSteps.end(
                 calls,
                 stepKey,
-                result instanceof RoundOutcome.StepError stepError
-                        ? new RoundOutcome.FlagNow(stepError.error())
-                        : result);
+                result instanceof RoundOutcome.StepError(var error) ? new RoundOutcome.FlagNow(error) : result);
         return result;
     }
 

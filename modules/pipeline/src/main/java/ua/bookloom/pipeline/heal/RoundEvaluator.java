@@ -28,9 +28,9 @@ final class RoundEvaluator {
             return new RoundOutcome.StepError(Objects.requireNonNull(reply.error()));
         }
         return switch (Objects.requireNonNull(reply.data())) {
-            case RepairReply.FlagNow flagNow -> new RoundOutcome.FlagNow(flagNow.error());
+            case RepairReply.FlagNow(var error) -> new RoundOutcome.FlagNow(error);
             case RepairReply.Malformed malformed -> handleMalformed(outcome, malformed);
-            case RepairReply.Rewritten rewritten -> evaluateRewrite(outcome, rewritten.maskedTarget());
+            case RepairReply.Rewritten(var maskedTarget) -> evaluateRewrite(outcome, maskedTarget);
         };
     }
 
@@ -61,12 +61,9 @@ final class RoundEvaluator {
                         failed.finding().raisedBy());
                 yield new RoundOutcome.Failed(failed.finding());
             }
-            case GateResult.StepError stepError -> {
-                log.debug(
-                        "Self-heal round gate outcome segment={} outcome=StepError code={}",
-                        segmentId,
-                        stepError.error().code());
-                yield new RoundOutcome.StepError(stepError.error());
+            case GateResult.StepError(var error) -> {
+                log.debug("Self-heal round gate outcome segment={} outcome=StepError code={}", segmentId, error.code());
+                yield new RoundOutcome.StepError(error);
             }
         };
     }

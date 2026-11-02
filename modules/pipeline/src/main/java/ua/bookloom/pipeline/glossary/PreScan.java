@@ -90,7 +90,7 @@ public final class PreScan {
         Objects.requireNonNull(calls, "calls");
         try {
             return run(projectId, story, frame, policy, calls).map(EntryChanges::ofAdded);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Name scan failed", "The model name scan could not be completed.", null, cause);
             log.error("Unexpected pre-scan failure project={} code={}", projectId, error.code(), cause);

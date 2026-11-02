@@ -313,7 +313,7 @@ public final class RollingSummaryKeeper {
             final String what, final Supplier<Result<Optional<RollingSummary>>> body) {
         try {
             return body.get();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Summary failed", "The rolling summary could not be refreshed.", null, cause);
             log.error("Unexpected rolling-summary failure at {} code={}", what, error.code(), cause);

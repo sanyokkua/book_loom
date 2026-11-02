@@ -86,7 +86,8 @@ final class WordChange {
         while (common < shorter && first.charAt(common) == second.charAt(common)) {
             common++;
         }
-        return common >= Math.min(shorter, Math.max(MIN_CONTENT_STEM, Math.ceil(MIN_STEM_SHARE * shorter)));
+        final double wantedStem = Math.max(MIN_CONTENT_STEM, Math.ceil(MIN_STEM_SHARE * shorter));
+        return common >= Math.min(shorter, wantedStem);
     }
 
     private static List<String> function(final String text, final Set<String> negationAndMoodWords) {

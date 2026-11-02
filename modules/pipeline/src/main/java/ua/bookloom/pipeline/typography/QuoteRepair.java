@@ -31,7 +31,7 @@ import ua.bookloom.pipeline.checks.QuotePair;
 public final class QuoteRepair {
 
     private static final Pattern MID_WORD_TOKEN = Pattern.compile("\\p{L}⟦g\\d+⟧\\p{L}");
-    private static final Pattern DASH_CLAUSE = Pattern.compile("(,)?[\\s\\u00A0]+[—–][\\s\\u00A0]");
+    private static final Pattern DASH_CLAUSE = Pattern.compile("(,)?+(?<![\\s\\u00A0])[\\s\\u00A0]++[—–][\\s\\u00A0]");
     private static final String SOURCE_OPENERS = "\"«„“‹";
     private static final String ANY_MARK = "\"«»„“”‹›";
     private static final char STRAIGHT = '"';

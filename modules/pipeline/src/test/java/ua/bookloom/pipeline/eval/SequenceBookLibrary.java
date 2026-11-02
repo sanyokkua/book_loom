@@ -243,13 +243,20 @@ final class SequenceBookLibrary {
             "A cold draught crossed the floor.",
             "“Wait.”");
 
-    static final List<String> VERSE = List.of(
-            "The circle holds, the candle burns,  \nthe spirit waits, the master learns;  \n"
-                    + "what binds the dark will bind the hand,  \nand none who calls can quite command.",
-            "Three times the bell, three times the key,  \nthree names to bind what none can see;  \n"
-                    + "the chalk will crack, the flame will bend,  \nand every summons has an end.",
-            "Rain on the roofs of Westbridge falls,  \nand echoes down the empty halls;  \n"
-                    + "who walks tonight beneath the moon  \nwill wish he had not come so soon.");
+    // Each line but the last ends in two spaces (a Markdown hard break), written as \s so the text block keeps them.
+    static final List<String> VERSE = List.of("""
+            The circle holds, the candle burns,\s\s
+            the spirit waits, the master learns;\s\s
+            what binds the dark will bind the hand,\s\s
+            and none who calls can quite command.""", """
+            Three times the bell, three times the key,\s\s
+            three names to bind what none can see;\s\s
+            the chalk will crack, the flame will bend,\s\s
+            and every summons has an end.""", """
+            Rain on the roofs of Westbridge falls,\s\s
+            and echoes down the empty halls;\s\s
+            who walks tonight beneath the moon\s\s
+            will wish he had not come so soon.""");
 
     static final List<String> FOOTNOTE = List.of(
             "See the Pellbury ledger, vol. 2, p. 114.",

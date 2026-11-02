@@ -175,9 +175,9 @@ public final class SegmentActions {
                 log.debug("saveEdit: gate outcome=GateFailed segment={}", record.segmentId());
                 yield refuseWith(SAVE_EDIT, record.segmentId(), failed.error());
             }
-            case GateResult.StepError step -> {
+            case GateResult.StepError(var error) -> {
                 log.debug("saveEdit: gate outcome=StepError segment={}", record.segmentId());
-                yield refuseWith(SAVE_EDIT, record.segmentId(), step.error());
+                yield refuseWith(SAVE_EDIT, record.segmentId(), error);
             }
         };
     }

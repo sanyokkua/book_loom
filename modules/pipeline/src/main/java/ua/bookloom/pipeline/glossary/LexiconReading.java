@@ -255,9 +255,7 @@ public final class LexiconReading {
             final Map<String, Decision> decisions = new LinkedHashMap<>();
             for (final String term : terms) {
                 final String key = LexiconEntry.keyOf(term);
-                final Verdict verdict = choice.kept().contains(key)
-                        ? Verdict.KEEP
-                        : choice.dropped().contains(key) ? Verdict.DROP : Verdict.UNDECIDED;
+                final Verdict verdict = choice.verdictOf(key);
                 decisions.put(key, new Decision(verdict, null));
             }
             return decisions;

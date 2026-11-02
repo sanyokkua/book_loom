@@ -41,7 +41,7 @@ public final class ReviewReplyParser {
         Objects.requireNonNull(pairs, "pairs");
         final JsonNode root =
                 JsonReplies.tolerant(mapper, fromFirstBracket(replyText)).orElse(null);
-        final JsonNode results = root == null ? null : root.isArray() ? root : root.path("results");
+        final JsonNode results = resultsOf(root);
         if (results == null || !results.isArray()) {
             log.debug("Reviewer reply holds no results list readable={}", false);
             return ReviewVerdict.unreadable();
@@ -93,13 +93,15 @@ public final class ReviewReplyParser {
         if (token != JsonToken.START_OBJECT) {
             return false;
         }
-        while ((token = reader.nextToken()) == JsonToken.FIELD_NAME) {
+        token = reader.nextToken();
+        while (token == JsonToken.FIELD_NAME) {
             final boolean results = "results".equals(reader.currentName());
-            token = reader.nextToken();
-            if (results && token == JsonToken.START_ARRAY) {
+            final JsonToken value = reader.nextToken();
+            if (results && value == JsonToken.START_ARRAY) {
                 return true;
             }
             reader.skipChildren();
+            token = reader.nextToken();
         }
         return false;
     }
@@ -121,7 +123,7 @@ public final class ReviewReplyParser {
     private static String fromFirstBracket(final String text) {
         final int object = text.indexOf('{');
         final int array = text.indexOf('[');
-        final int start = object < 0 ? array : array < 0 ? object : Math.min(object, array);
+        final int start = object < 0 || array < 0 ? Math.max(object, array) : Math.min(object, array);
         return start < 0 ? text : text.substring(start);
     }
 
@@ -183,5 +185,12 @@ public final class ReviewReplyParser {
             labels.put(ReviewerLabels.of(index), pairs.get(index).segmentId());
         }
         return labels;
+    }
+
+    private static @Nullable JsonNode resultsOf(final @Nullable JsonNode root) {
+        if (root == null) {
+            return null;
+        }
+        return root.isArray() ? root : root.path("results");
     }
 }

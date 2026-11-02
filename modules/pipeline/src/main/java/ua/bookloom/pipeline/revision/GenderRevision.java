@@ -107,9 +107,10 @@ final class GenderRevision {
     }
 
     private static boolean isStale(final Result<Optional<RevisionWriter.Stored>> attempt) {
-        final Optional<RevisionWriter.Stored> stored = attempt.data();
-        return stored != null
-                && stored.filter(how -> how == RevisionWriter.Stored.STALE).isPresent();
+        return attempt.isOk()
+                && Objects.requireNonNull(attempt.data())
+                        .filter(how -> how == RevisionWriter.Stored.STALE)
+                        .isPresent();
     }
 
     private static boolean leftOpenIfStale(final String segmentId, final Optional<RevisionWriter.Stored> stored) {

@@ -46,6 +46,7 @@ import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.JobModelCalls;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Asks the chosen model for the two things a person would otherwise type: the translated book's file name and the
@@ -58,6 +59,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 public final class SetupAssistantImpl implements SetupAssistant {
 
     private static final int NAME_TOKENS = 96;
+    private static final String DOTS_AND_BLANKS = ". \t\n\u000B\f\r";
     // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
     private static final int MAX_NAME_BYTES = 200;
     private static final Pattern RESERVED = Pattern.compile("(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?");
@@ -101,7 +103,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         log.debug("File name suggestion requested project={}", projectId);
         try {
             return opened(projectId).flatMap(book -> askName(book, calls(model, progress, book)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return failed("file name suggestion", cause);
         }
     }
@@ -127,7 +129,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
             return opened(projectId)
                     .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
                             .suggest(book, window, calls(model, progress, book, window)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return failed("brief suggestion", cause);
         } finally {
             PrepSummary.log("brief", projectId, CallKindTotals.of(ledger.since(mark)));
@@ -140,7 +142,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         log.debug("Narrator re-check requested project={}", projectId);
         try {
             return opened(projectId).flatMap(book -> glossary.all(projectId).map(people -> rechecked(book, people)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return failed("narrator re-check", cause);
         }
     }
@@ -151,7 +153,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         log.debug("Narrator detection requested project={}", projectId);
         try {
             return opened(projectId).map(SetupAssistantImpl::detected);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return failed("narrator detection", cause);
         }
     }
@@ -287,7 +289,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     static String cleanFileName(final String raw) {
         String name = ILLEGAL.matcher(raw).replaceAll(" ");
         name = SPACES.matcher(name).replaceAll(" ").strip();
-        name = name.replaceAll("^[.\\s]+|[.\\s]+$", "").strip();
+        name = Edges.strip(name, DOTS_AND_BLANKS).strip();
         final StringBuilder kept = new StringBuilder();
         int bytes = 0;
         for (final int point : name.codePoints().toArray()) {

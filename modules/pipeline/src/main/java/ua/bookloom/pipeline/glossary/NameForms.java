@@ -47,7 +47,7 @@ public final class NameForms {
     /** The fewest letters left of a form once an ending is taken off. */
     static final int MIN_STEM_LETTERS = 2;
 
-    private static final Pattern ROW = Pattern.compile("(\\S+)\\|(m|f|any)(>voc)?:\\s*(\\S+(?:\\s+\\S+)*)");
+    private static final Pattern ROW = Pattern.compile("(\\S+)\\|(m|f|any)(>voc)?:\\s*(.+)");
     static final Pattern SPACES = Pattern.compile("\\s+");
     /** The most forms a target of several words is given, all words' forms combined. */
     static final int MAX_FORMS = 64;

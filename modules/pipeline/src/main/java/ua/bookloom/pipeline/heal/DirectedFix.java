@@ -84,7 +84,7 @@ public final class DirectedFix {
                 PromptName.DIRECTED_FIX.temperature(false));
         try {
             return callAndRead(segment.id(), frame, maskedSource, block, findings, includeExpectedTokens, calls);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Directed fix failed", "The model could not repair this segment.", null, cause);
             log.error("Unexpected directed fix failure segment={} code={}", segment.id(), error.code(), cause);

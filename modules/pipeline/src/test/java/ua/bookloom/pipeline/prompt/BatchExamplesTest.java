@@ -11,11 +11,17 @@ class BatchExamplesTest {
 
     @Test
     void render_json_numbersItemsAndWritesOneObjectPerExample() {
-        assertThat(BatchExamples.render(RAW))
-                .isEqualTo("<Items>\n<s id=\"1\">Hi.</s>\n<s id=\"2\">1881</s>\n</Items>\n"
-                        + "Reply: {\"items\":[{\"id\":\"1\",\"target\":\"Привіт.\"},{\"id\":\"2\",\"target\":\"1881\"}]}"
-                        + "\n\n<Items>\n<s id=\"1\">No.</s>\n</Items>\n"
-                        + "Reply: {\"items\":[{\"id\":\"1\",\"target\":\"Ні.\"}]}");
+        assertThat(BatchExamples.render(RAW)).isEqualTo("""
+                        <Items>
+                        <s id="1">Hi.</s>
+                        <s id="2">1881</s>
+                        </Items>
+                        Reply: {"items":[{"id":"1","target":"Привіт."},{"id":"2","target":"1881"}]}
+
+                        <Items>
+                        <s id="1">No.</s>
+                        </Items>
+                        Reply: {"items":[{"id":"1","target":"Ні."}]}""");
     }
 
     @Test

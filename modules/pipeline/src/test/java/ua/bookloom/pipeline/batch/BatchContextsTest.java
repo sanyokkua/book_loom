@@ -44,8 +44,11 @@ class BatchContextsTest {
 
     @Test
     void of_contextsNotMatchingTheIds_isRejected() {
-        assertThatThrownBy(
-                        () -> BatchContexts.of(List.of("1", "2"), List.of(context(null)), List.of(), null, List.of()))
+        final var arg1 = List.of("1", "2");
+        final var arg2 = List.of(context(null));
+        final List<BatchContext.Pair> noPairs = List.of();
+        final List<String> noCharacters = List.of();
+        assertThatThrownBy(() -> BatchContexts.of(arg1, arg2, noPairs, null, noCharacters))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

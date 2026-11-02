@@ -49,7 +49,7 @@ class NamesPassStepsTest extends NamesPassTestBase {
     @Test
     void stageCount_isTheNumberOfPassStages() {
         assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(10);
-        assertThat(NamesPassSteps.STAGE_COUNT).isEqualTo(ua.bookloom.api.pipeline.NamesPassStage.values().length);
+        assertThat(ua.bookloom.api.pipeline.NamesPassStage.values()).hasSize(NamesPassSteps.STAGE_COUNT);
     }
 
     // IF a stage were left out of the announcements, THEN the dialog would list fewer than the ten steps the pass

@@ -133,6 +133,9 @@ final class BatchEntries {
     private static int firstOf(final String text, final char first, final char second) {
         final int a = text.indexOf(first);
         final int b = text.indexOf(second);
-        return a < 0 ? b : b < 0 ? a : Math.min(a, b);
+        if (a < 0 || b < 0) {
+            return Math.max(a, b);
+        }
+        return Math.min(a, b);
     }
 }

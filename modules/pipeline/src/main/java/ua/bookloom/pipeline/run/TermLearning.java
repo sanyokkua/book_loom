@@ -268,7 +268,7 @@ final class TermLearning {
     // whose model keeps using a second word is not left with a hint that comes and goes.
     private Optional<CooccurrenceLearner.Learned> retained(final LexiconEntry entry, final Set<String> excluded) {
         return Optional.ofNullable(entry.learned())
-                .flatMap(held -> learner.retained(entry.term(), held.text(), excluded));
+                .flatMap(learned -> learner.retained(entry.term(), learned.text(), excluded));
     }
 
     private void keepIfUnclaimed(

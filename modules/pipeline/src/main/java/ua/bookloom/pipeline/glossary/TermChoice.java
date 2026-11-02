@@ -69,6 +69,14 @@ public final class TermChoice {
         public Choice(final Set<String> kept, final Set<String> dropped) {
             this(kept, dropped, Set.of());
         }
+
+        /** What the model decided for one term: kept, dropped, or neither when it did not say. */
+        LexiconReading.Verdict verdictOf(final String key) {
+            if (kept.contains(key)) {
+                return LexiconReading.Verdict.KEEP;
+            }
+            return dropped.contains(key) ? LexiconReading.Verdict.DROP : LexiconReading.Verdict.UNDECIDED;
+        }
     }
 
     static final int BATCH_SIZE = 10;
@@ -222,7 +230,7 @@ public final class TermChoice {
         final Map<String, @Nullable String> shown = new LinkedHashMap<>();
         for (final String term : batch) {
             final String key = LexiconEntry.keyOf(term);
-            shown.put(term, read.kept().contains(key) ? KEEP : read.dropped().contains(key) ? DROP : null);
+            shown.put(term, shownChoice(read, key));
         }
         calls.answered(shown);
     }
@@ -281,5 +289,12 @@ public final class TermChoice {
 
     private static String cut(final String example) {
         return example.length() > MAX_EXAMPLE_CHARS ? example.substring(0, MAX_EXAMPLE_CHARS) + "…" : example;
+    }
+
+    private static @Nullable String shownChoice(final Choice read, final String key) {
+        if (read.kept().contains(key)) {
+            return KEEP;
+        }
+        return read.dropped().contains(key) ? DROP : null;
     }
 }

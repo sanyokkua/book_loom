@@ -80,7 +80,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.ok(new ImportedBook(null, inspection, null, null));
             }
             return openAndStore(source, inspection);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("import the book", cause));
         }
     }
@@ -89,7 +89,7 @@ public final class ProjectServiceImpl implements ProjectService {
     public Result<List<ProjectSummary>> list() {
         try {
             return new ProjectSummaries(documents, projects, segments, runs).list();
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("list the projects", cause));
         }
     }
@@ -110,7 +110,7 @@ public final class ProjectServiceImpl implements ProjectService {
                                             project.brief(),
                                             document,
                                             count)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("open the project", cause));
         }
     }
@@ -131,7 +131,7 @@ public final class ProjectServiceImpl implements ProjectService {
                     brief.sourceLanguage(),
                     brief.targetLanguage());
             return findProject(projectId).flatMap(project -> new ProjectRenames(projects).updateBrief(project, brief));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("update the brief", cause));
         }
     }
@@ -142,7 +142,7 @@ public final class ProjectServiceImpl implements ProjectService {
         try {
             log.debug("rename project={} automatic={}", projectId, name == null);
             return findProject(projectId).flatMap(project -> new ProjectRenames(projects).rename(project, name));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("rename the project", cause));
         }
     }
@@ -156,7 +156,7 @@ public final class ProjectServiceImpl implements ProjectService {
         try {
             log.debug("makeSecondTranslation project={}", projectId);
             return findProject(projectId).flatMap(project -> new ProjectRenames(projects).named(project, brief, name));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("make a second translation", cause));
         }
     }
@@ -174,7 +174,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 log.info("project removed project={}", projectId);
                 return projects.delete(projectId);
             });
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("remove the project", cause));
         }
     }
@@ -191,7 +191,7 @@ public final class ProjectServiceImpl implements ProjectService {
                         ProjectNames.translatedCopy(source, ids.newId(), target, name, clock.instant());
                 return new ProjectTranslations(projects, copies).copyUnlessClash(source, candidate);
             });
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("translate the book into another language", cause));
         }
     }
@@ -203,7 +203,7 @@ public final class ProjectServiceImpl implements ProjectService {
         try {
             log.debug("relocate project={}", projectId);
             return findProject(projectId).flatMap(project -> opener().relocate(project, chosen));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("find the book file", cause));
         }
     }
@@ -217,7 +217,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.err(ProjectErrors.unknownProject(projectId));
             }
             return findProject(projectId).map(project -> UnitChunks.plan(projectId, document, project.brief()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("plan the book", cause));
         }
     }
@@ -241,7 +241,7 @@ public final class ProjectServiceImpl implements ProjectService {
             }
             return findProject(projectId)
                     .map(project -> UnitChunks.previews(unit, project.brief(), SegmentLocators.of(document)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("list the segments", cause));
         }
     }
@@ -252,7 +252,7 @@ public final class ProjectServiceImpl implements ProjectService {
         try {
             return findProject(projectId)
                     .flatMap(project -> new RoundTripCheck(inspector, documents).run(projectId, project.source()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("run the round-trip check", cause));
         }
     }
@@ -267,7 +267,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.err(ProjectErrors.unknownProject(projectId));
             }
             return documents.close(document);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("close the project", cause));
         }
     }

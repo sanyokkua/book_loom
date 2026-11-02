@@ -179,8 +179,8 @@ final class ReviewResolver {
             return Result.ok(unresolved(edited, findings, evidence, 0, refused.size()));
         }
         final RoundOutcome result = directedFixOf(outcome, edited, evidence);
-        if (result instanceof RoundOutcome.StepError stepError) {
-            return Result.err(stepError.error());
+        if (result instanceof RoundOutcome.StepError(var error)) {
+            return Result.err(error);
         }
         if (result instanceof RoundOutcome.Evaluated fixed && isTakeable(fixed, edited, baseline, outcome)) {
             final List<EditOutcome.FailedEdit> remaining = stillQuoted(fixed, refused);
@@ -288,8 +288,8 @@ final class ReviewResolver {
             final MachineTarget draft,
             final String rewrite) {
         final RoundOutcome result = evaluator.evaluateRewrite(outcome, rewrite);
-        if (result instanceof RoundOutcome.StepError stepError) {
-            return Result.err(stepError.error());
+        if (result instanceof RoundOutcome.StepError(var error)) {
+            return Result.err(error);
         }
         if (result instanceof RoundOutcome.Evaluated evaluated && AcceptanceRule.accepts(evaluated.qa(), 0)) {
             log.debug("Rewrite accepted segment={}", outcome.segment().id());

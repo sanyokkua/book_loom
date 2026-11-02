@@ -109,7 +109,7 @@ public final class ConsistencyPass {
                 options.everySegment());
         try {
             return inputs(projectId).flatMap(inputs -> runWith(inputs, calls, options));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Backward revision failed",
@@ -136,7 +136,7 @@ public final class ConsistencyPass {
                 return glossary.all(projectId)
                         .map(entries -> new PassTally().report(byReason(open), GenderWaits.of(open, entries)));
             });
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
                     "Open deferrals unreadable",

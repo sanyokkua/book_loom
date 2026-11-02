@@ -173,7 +173,7 @@ public final class ReviewDeskImpl implements ReviewDesk {
             final String method, @Nullable final String segmentId, final Supplier<Result<T>> call) {
         try {
             return Objects.requireNonNull(call.get(), "part result");
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.error("Review desk {} failed segment={} code={}", method, segmentId, ErrorCode.internal, cause);
             return Result.err(AppError.of(
                     ErrorCode.internal,

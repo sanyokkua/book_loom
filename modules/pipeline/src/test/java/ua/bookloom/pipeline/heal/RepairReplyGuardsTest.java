@@ -64,22 +64,11 @@ class RepairReplyGuardsTest {
                 "{\"target\":\"Він відчинив старі двері.\\u001d\"}",
                 "{\"target\":\"\\u001f Він відчинив старі двері.\"}",
                 "{\"target\":\"\\u0001Він відчинив старі двері.\"}",
-                "{\"target\":\"Він відчинив старі двері.\\u0007\"}"
-            })
-    void fix_replyWithAStrayControlCodeAtAnEndOfAQuoteFreeText_returnsTheTextWithoutIt(final String reply) {
-        final Result<RepairReply> result = fix(reply);
-
-        assertThat(result.data()).isEqualTo(new RepairReply.Rewritten(PLAIN_SOURCE));
-    }
-
-    // Codes at BOTH ends of a text whose source has no quote mark are read too (they already are today).
-    @ParameterizedTest(name = "[{index}] {0}")
-    @ValueSource(
-            strings = {
+                "{\"target\":\"Він відчинив старі двері.\\u0007\"}",
                 "{\"target\":\"\\u001eВін відчинив старі двері.\\u001d\"}",
                 "{\"target\":\"\\u0001Він відчинив старі двері.\\u0007\"}"
             })
-    void fix_codesAtBothEndsOfAQuoteFreeText_returnsTheTextWithoutThem(final String reply) {
+    void fix_controlCodeAtAnEndOrBothEndsOfAQuoteFreeText_returnsTheTextWithoutIt(final String reply) {
         final Result<RepairReply> result = fix(reply);
 
         assertThat(result.data()).isEqualTo(new RepairReply.Rewritten(PLAIN_SOURCE));

@@ -175,15 +175,15 @@ final class SegmentHealer {
         final int budget = settings.dial().repairRounds();
         for (int round = start.round(); round <= budget; round++) {
             switch (attemptRound(outcome, segmentId, round, state)) {
-                case RoundStep.Terminal terminal -> {
-                    return terminal.result();
+                case RoundStep.Terminal(var result) -> {
+                    return result;
                 }
-                case RoundStep.Interrupted interrupted -> {
+                case RoundStep.Interrupted(var error) -> {
                     resumptions.put(segmentId, new Resumption(round, state));
                     log.debug("Kept round={} of segment={} for the next decision", round, segmentId);
-                    return Result.err(interrupted.error());
+                    return Result.err(error);
                 }
-                case RoundStep.Continue continuing -> state = continuing.state();
+                case RoundStep.Continue(var next) -> state = next;
             }
         }
         return Result.ok(SegmentOutcomes.flagged(segmentId, state.machine(), state.qa(), List.of(), budget, null));
@@ -204,10 +204,10 @@ final class SegmentHealer {
         final RoundOutcome ran = rounds.run(outcome, best.rewriteBase(), findings, round);
         RepairSteps.end(calls, stepKey, ran);
         return switch (ran) {
-            case RoundOutcome.StepError stepError -> new RoundStep.Interrupted(stepError.error());
-            case RoundOutcome.FlagNow flagNow ->
-                RoundStep.terminal(Result.ok(SegmentOutcomes.flagged(
-                        segmentId, best.machine(), best.qa(), List.of(), round, flagNow.error())));
+            case RoundOutcome.StepError(var error) -> new RoundStep.Interrupted(error);
+            case RoundOutcome.FlagNow(var error) ->
+                RoundStep.terminal(Result.ok(
+                        SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round, error)));
             case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(best, failed));
             case RoundOutcome.Evaluated evaluated -> decideEvaluated(outcome, round, best, evaluated);
         };

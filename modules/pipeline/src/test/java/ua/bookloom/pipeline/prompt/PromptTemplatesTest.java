@@ -115,14 +115,18 @@ class PromptTemplatesTest {
 
     @Test
     void renderUser_undeclaredValue_isRejected() {
-        assertThatThrownBy(() -> new PromptTemplates().renderUser(PromptName.STRUCTURAL_REPAIR, Map.of("nope", "x")))
+        final var templates = new PromptTemplates();
+        final var values = Map.of("nope", "x");
+        assertThatThrownBy(() -> templates.renderUser(PromptName.STRUCTURAL_REPAIR, values))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("nope");
     }
 
     @Test
     void renderSystem_callWithoutSystemTemplate_isRejected() {
-        assertThatThrownBy(() -> new PromptTemplates().renderSystem(PromptName.STRUCTURAL_REPAIR, Map.of()))
+        final var templates = new PromptTemplates();
+        final Map<String, String> values = Map.of();
+        assertThatThrownBy(() -> templates.renderSystem(PromptName.STRUCTURAL_REPAIR, values))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -138,10 +142,17 @@ class PromptTemplatesTest {
                                 "text",
                                 "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері."));
 
-        assertThat(user)
-                .isEqualTo("<Source>\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n<Translation>\n"
-                        + "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</Translation>\n\nReturn one JSON object: "
-                        + "{\"target\":\"<the revised translation, or the same text if nothing changes>\"}\n");
+        assertThat(user).isEqualTo("""
+                        <Source>
+                        Sam opened the ⟦g0⟧old⟦g1⟧ door.
+                        </Source>
+
+                        <Translation>
+                        Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.
+                        </Translation>
+
+                        Return one JSON object: {"target":"<the revised translation, or the same text if nothing changes>"}
+                        """);
     }
 
     // A source with tokens lists them for the rewrite, as the draft does.

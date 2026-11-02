@@ -24,10 +24,13 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 /** The brief suggestion of a book whose source language is Auto: the model is told to infer it, whatever the book says. */
 class SetupAssistantAutoSourceTest {
 
-    private static final String BODY = "The rain had not stopped for three days, and I was beginning to think the city "
-            + "had forgotten the sun.\n\n"
-            + "I lit a cigarette and waited for the phone to ring, but it never did that night or the next one.\n\n"
-            + "Nobody came to the door, and the street stayed empty until the lamps went out at dawn.\n";
+    private static final String BODY = """
+            The rain had not stopped for three days, and I was beginning to think the city had forgotten the sun.
+
+            I lit a cigarette and waited for the phone to ring, but it never did that night or the next one.
+
+            Nobody came to the door, and the street stayed empty until the lamps went out at dawn.
+            """;
     private static final String REPLY = "{" + field("genre", "noir") + "," + field("register", "casual") + ","
             + field("voice", "terse") + "," + field("audience", "") + "," + field("narrator", "first") + ","
             + field("narratorGender", "unknown") + "}";

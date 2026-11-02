@@ -190,7 +190,7 @@ public final class SegmentTranslator {
         }
         final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
         return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
-            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces());
+            case OversizedSplit.Pieces(var pieces) -> translatePieces(whole, pieces);
             case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
         };
     }
@@ -309,12 +309,9 @@ public final class SegmentTranslator {
         return switch (gate.restore(segment, restoredWhitespace)) {
             case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
             case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed, placeholderRepairUsed);
-            case GateResult.StepError stepError -> {
-                log.debug(
-                        "Gate completed segmentId={} result=StepError code={}",
-                        segment.id(),
-                        stepError.error().code());
-                yield DraftOutcomes.routed(segment, stepError.error(), "unmask");
+            case GateResult.StepError(var error) -> {
+                log.debug("Gate completed segmentId={} result=StepError code={}", segment.id(), error.code());
+                yield DraftOutcomes.routed(segment, error, "unmask");
             }
         };
     }

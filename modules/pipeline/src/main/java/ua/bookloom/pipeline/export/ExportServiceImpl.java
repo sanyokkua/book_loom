@@ -106,7 +106,7 @@ public final class ExportServiceImpl implements ExportService {
                 return Result.err(ExportJobImpl.unknownProject(request.projectId()));
             }
             return prepare(request, project.get(), model, moves, progress);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(ExportJobImpl.internalError("prepare the export", cause));
         }
     }
@@ -143,8 +143,8 @@ public final class ExportServiceImpl implements ExportService {
                     return model;
                 },
                 event -> {
-                    if (event instanceof CallSnapshotUpdated updated) {
-                        progress.onCall(updated.snapshot());
+                    if (event instanceof CallSnapshotUpdated(var snapshot)) {
+                        progress.onCall(snapshot);
                     }
                 },
                 clock,

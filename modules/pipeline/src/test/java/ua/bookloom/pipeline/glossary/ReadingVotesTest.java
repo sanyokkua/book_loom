@@ -39,44 +39,28 @@ class ReadingVotesTest {
     // it (15j.J2: twenty "she" and no "he" stayed suggested); a weaker tally with no vote is a suggestion (15i.N gate:
     // the tally's nearest-name attribution alone wrote a demon's "it" as a verified "he", four times).
     @ParameterizedTest(name = "{0} male, {1} female votes, tally she {2} he {3} -> {4} {5}")
-    @CsvSource({
-        "3,0,4,0,FEMALE,LIKELY",
-        "0,0,3,2,FEMALE,LIKELY",
-        "0,0,0,4,MALE,LIKELY",
-        "0,0,0,5,MALE,BOOK",
-        "0,0,6,0,FEMALE,BOOK",
-        "0,0,20,0,FEMALE,BOOK",
-        "0,1,0,6,MALE,LIKELY",
-        "1,0,6,0,FEMALE,LIKELY",
-        "0,0,5,1,FEMALE,LIKELY",
-        "3,0,0,3,MALE,BOOK",
-        "1,0,0,3,MALE,BOOK",
-        "0,1,3,0,FEMALE,BOOK",
-        "1,1,0,4,MALE,LIKELY",
-        "2,1,0,4,MALE,LIKELY",
-        "0,0,0,6,MALE,BOOK"
-    })
-    void decide_tieBreakingAndAClearTally_isTheTallysGenderVerifiedOnlyWhenTheVotesAgree(
-            final int male, final int female, final int she, final int he, final Gender gender, final Origin origin) {
-        final Decision decision = breakingTies(
-                answers(
-                        times(male, voting(Gender.MALE)),
-                        times(female, voting(Gender.FEMALE)),
-                        times(2, name(TermReading.Kind.PERSON))),
-                tally(she, he));
-
-        assertThat(decision.gender()).isEqualTo(gender);
-        assertThat(decision.origin()).isEqualTo(origin);
-    }
-
-    // With no clear tally the votes break the tie, but only as a suggestion: at the thresholds suggested, never
-    // verified. Below them, two or more pieces of evidence, votes and pronouns together, all pointing one way still
-    // suggest that gender (15i.N gate: minor characters with "he" twice and nothing against were left unknown); a
-    // single
-    // piece, or evidence both ways, gives nothing.
-    @ParameterizedTest(name = "{0} male, {1} female, tally she {2} he {3} -> {4}")
     @CsvSource(
             value = {
+                "3,0,4,0,FEMALE,LIKELY",
+                "0,0,3,2,FEMALE,LIKELY",
+                "0,0,0,4,MALE,LIKELY",
+                "0,0,0,5,MALE,BOOK",
+                "0,0,6,0,FEMALE,BOOK",
+                "0,0,20,0,FEMALE,BOOK",
+                "0,1,0,6,MALE,LIKELY",
+                "1,0,6,0,FEMALE,LIKELY",
+                "0,0,5,1,FEMALE,LIKELY",
+                "3,0,0,3,MALE,BOOK",
+                "1,0,0,3,MALE,BOOK",
+                "0,1,3,0,FEMALE,BOOK",
+                "1,1,0,4,MALE,LIKELY",
+                "2,1,0,4,MALE,LIKELY",
+                "0,0,0,6,MALE,BOOK",
+                // With no clear tally the votes break the tie, but only as a suggestion: at the thresholds suggested,
+                // never
+                // verified. Below them, two or more pieces of evidence all pointing one way still suggest that gender,
+                // and a
+                // single piece, or evidence both ways, gives nothing.
                 "3,0,0,0,MALE,LIKELY",
                 "2,0,1,1,MALE,LIKELY",
                 "2,1,0,0,UNKNOWN,NONE",
@@ -88,7 +72,7 @@ class ReadingVotesTest {
                 "0,0,1,1,UNKNOWN,NONE"
             },
             nullValues = "NONE")
-    void decide_tieBreakingWithNoClearTally_votesAtTheThresholdsAreOnlySuggested(
+    void decide_tieBreaking_isTheTallysGenderVerifiedOnlyWhenTheVotesAgreeElseSuggested(
             final int male,
             final int female,
             final int she,
