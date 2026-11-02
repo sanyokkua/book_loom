@@ -3,16 +3,22 @@ package ua.bookloom.pipeline.run;
 import static ua.bookloom.util.contract.ArgNames.ERROR;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.memory.TranslationMemory;
+import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
  * Drafts one segment of a chunk: a shortcut or a context-matched memory target stands in for the call when it can, a
@@ -55,7 +61,42 @@ final class ChunkDrafting {
             SegmentEvents events,
             DraftShortcuts shortcuts,
             BatchStage batches,
-            ChunkSteps announced) {}
+            ChunkSteps announced) {
+
+        /** Builds the collaborators of one run, each from the stores and sinks it is given. */
+        static Collaborators wire(
+                final RunSteps steps,
+                final RunSettings settings,
+                final RunStores stores,
+                final RunSinks sinks,
+                final BookIndex index,
+                final Document document) {
+            final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
+            final PrecedingTargets preceding =
+                    new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
+            final MemoryReuse memory =
+                    new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
+            final RoutedCalls calls = new RoutedCalls(sinks.boundaries());
+            final ChunkSteps announced = new ChunkSteps(steps.calls().steps(), settings.dial());
+            final DecisionFollowUp followUp = new DecisionFollowUp(
+                    new DecisionFollowUp.BookFacts(
+                            settings.projectId(), settings.frame().analysisLanguage(), index),
+                    steps.summary(),
+                    stores,
+                    sinks,
+                    calls,
+                    announced);
+            return new Collaborators(
+                    preceding,
+                    memory,
+                    calls,
+                    followUp,
+                    new SegmentEvents(sinks.emit(), locators, steps.calls()),
+                    DraftShortcuts.forFrame(settings.frame()),
+                    new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls()),
+                    announced);
+        }
+    }
 
     /**
      * Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk —

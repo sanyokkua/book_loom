@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.run;
 import static ua.bookloom.util.contract.ArgNames.ERROR;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +11,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.memory.TranslationMemory;
-import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
  * Takes each unit's pending segments through chunks, in document order (design D4a). With the reviewer on, a chunk's
@@ -75,31 +71,16 @@ public final class ChunkRunner {
         this.planner = new ChunkPlanner(settings, window);
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
-        final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
-        final String analysis = settings.frame().analysisLanguage();
-        final PrecedingTargets preceding =
-                new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
-        final MemoryReuse memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
-        this.calls = new RoutedCalls(sinks.boundaries());
-        this.announced = new ChunkSteps(steps.calls().steps(), settings.dial());
-        this.followUp = new DecisionFollowUp(
-                new DecisionFollowUp.BookFacts(settings.projectId(), analysis, index),
-                steps.summary(),
-                stores,
-                sinks,
-                calls,
-                announced);
+        final ChunkDrafting.Collaborators shared =
+                ChunkDrafting.Collaborators.wire(steps, settings, stores, sinks, index, document);
+        this.calls = shared.calls();
+        this.announced = shared.announced();
+        this.followUp = shared.followUp();
         this.learning = new TermLearning(
-                stores, settings.projectId(), analysis, settings.frame().targetLanguage());
-        final ChunkDrafting.Collaborators shared = new ChunkDrafting.Collaborators(
-                preceding,
-                memory,
-                calls,
-                followUp,
-                new SegmentEvents(sinks.emit(), locators, steps.calls()),
-                DraftShortcuts.forFrame(settings.frame()),
-                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls()),
-                announced);
+                stores,
+                settings.projectId(),
+                settings.frame().analysisLanguage(),
+                settings.frame().targetLanguage());
         this.drafting = new ChunkDrafting(steps, settings, shared);
         this.deciding = new ChunkDeciding(sinks, learning, shared);
     }
