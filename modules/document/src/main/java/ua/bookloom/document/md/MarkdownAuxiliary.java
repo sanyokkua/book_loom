@@ -2,9 +2,11 @@ package ua.bookloom.document.md;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,8 +46,32 @@ final class MarkdownAuxiliary {
      * @param bodyByteOffset the byte offset the body starts at
      * @param bodyByteOffsets the character-to-byte map over the body
      */
-    @SuppressWarnings("ArrayRecordComponent") // deliberate: an internal, read-only offset map that is never compared.
-    record Layout(Frontmatter.Split split, Charset charset, int bomLength, int bodyByteOffset, int[] bodyByteOffsets) {}
+    @SuppressWarnings(
+            "ArrayRecordComponent") // copied on entry and exit; equality reads the content, toString the length.
+    record Layout(Frontmatter.Split split, Charset charset, int bomLength, int bodyByteOffset, int[] bodyByteOffsets) {
+        @Override
+        public boolean equals(final Object other) {
+            return other
+                            instanceof
+                            Layout(var oSplit, var oCharset, var oBomLength, var oBodyByteOffset, var oBodyByteOffsets)
+                    && Objects.equals(split, oSplit)
+                    && Objects.equals(charset, oCharset)
+                    && bomLength == oBomLength
+                    && bodyByteOffset == oBodyByteOffset
+                    && Arrays.equals(bodyByteOffsets, oBodyByteOffsets);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(split, charset, bomLength, bodyByteOffset, Arrays.hashCode(bodyByteOffsets));
+        }
+
+        @Override
+        public String toString() {
+            return "Layout[split=" + split + ", charset=" + charset + ", bomLength=" + bomLength + ", bodyByteOffset="
+                    + bodyByteOffset + ", bodyByteOffsets=" + bodyByteOffsets.length + "]";
+        }
+    }
 
     /**
      * What the reader gets back.
@@ -155,35 +181,41 @@ final class MarkdownAuxiliary {
     /** The index of the {@code ]} closing the description that starts at {@code from}, or {@code -1}. */
     private static int altEnd(String body, int from, int limit) {
         int depth = 1;
-        for (int i = from; i < limit; i++) {
+        int i = from;
+        while (i < limit) {
             final char c = body.charAt(i);
             if (c == '\\') {
-                i++;
-            } else if (c == '[') {
+                i += 2;
+                continue;
+            }
+            if (c == '[') {
                 depth++;
             } else if (c == ']' && --depth == 0) {
                 return i;
             }
+            i++;
         }
         return -1;
     }
 
     private static String decodeEscapes(String raw) {
         final StringBuilder out = new StringBuilder(raw.length());
-        for (int i = 0; i < raw.length(); i++) {
+        int i = 0;
+        while (i < raw.length()) {
             final char c = raw.charAt(i);
             final boolean isEscape =
                     c == '\\' && i + 1 < raw.length() && AsciiPunctuation.isPunctuation(raw.charAt(i + 1));
-            out.append(isEscape ? raw.charAt(++i) : c);
+            out.append(isEscape ? raw.charAt(i + 1) : c);
+            i += isEscape ? 2 : 1;
         }
         return out.toString();
     }
 
     private static @Nullable String enclosing(List<Segment> bodySegments, ByteSpanAnchor alt) {
         for (final Segment segment : bodySegments) {
-            if (segment.anchor() instanceof ByteSpanAnchor span
-                    && span.startInclusive() <= alt.startInclusive()
-                    && alt.endExclusive() <= span.endExclusive()) {
+            if (segment.anchor() instanceof ByteSpanAnchor(int start, int end)
+                    && start <= alt.startInclusive()
+                    && alt.endExclusive() <= end) {
                 return segment.id();
             }
         }

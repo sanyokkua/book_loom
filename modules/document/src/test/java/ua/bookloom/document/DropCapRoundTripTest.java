@@ -24,10 +24,10 @@ import ua.bookloom.document.fixture.BodyContentEpub;
  */
 class DropCapRoundTripTest {
 
-    private static final String BODY =
-            "<p class=\"tx\"><span class=\"calibre8\">“A</span>ll rules bend,” said his tutor,"
-                    + " “there is one rule.”</p>\n"
-                    + "<p class=\"tx1\">“Remember <i class=\"calibre3\">this,”</i> he said in a soft voice.</p>\n";
+    private static final String BODY = """
+            <p class="tx"><span class="calibre8">“A</span>ll rules bend,” said his tutor, “there is one rule.”</p>
+            <p class="tx1">“Remember <i class="calibre3">this,”</i> he said in a soft voice.</p>
+            """;
 
     private static final String WRAPPED_WHOLE =
             "⟦g0⟧«Усі правила гнуться», — сказав його наставник, — «є одне правило».⟦g1⟧";

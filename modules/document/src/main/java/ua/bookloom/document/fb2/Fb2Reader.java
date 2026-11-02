@@ -246,11 +246,30 @@ public final class Fb2Reader {
     }
 
     /** The FB2 bytes plus where they came from — identical for a bare file and for a zipped member. */
-    @SuppressWarnings("ArrayRecordComponent") // deliberate: raw file content, never compared as a value.
+    @SuppressWarnings(
+            "ArrayRecordComponent") // copied on entry and exit; equality reads the content, toString the length.
     private record Source(
             byte[] bytes,
             String name,
-            @org.jspecify.annotations.Nullable String zipMemberName) {}
+            @org.jspecify.annotations.Nullable String zipMemberName) {
+        @Override
+        public boolean equals(final Object other) {
+            return other instanceof Source(var oBytes, var oName, var oZipMemberName)
+                    && Arrays.equals(bytes, oBytes)
+                    && Objects.equals(name, oName)
+                    && Objects.equals(zipMemberName, oZipMemberName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(Arrays.hashCode(bytes), name, zipMemberName);
+        }
+
+        @Override
+        public String toString() {
+            return "Source[bytes=" + bytes.length + ", name=" + name + ", zipMemberName=" + zipMemberName + "]";
+        }
+    }
 
     private record UnitsResult(
             List<Unit> units,

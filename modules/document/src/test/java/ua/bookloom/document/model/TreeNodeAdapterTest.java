@@ -102,7 +102,8 @@ class TreeNodeAdapterTest {
         final var paragraph = Objects.requireNonNull(body.selectFirst("p"));
         final var textNode = paragraph.childNode(0);
 
-        assertThatThrownBy(() -> JsoupTreeNode.of(textNode).openMarkup()).isInstanceOf(IllegalStateException.class);
+        final var node = JsoupTreeNode.of(textNode);
+        assertThatThrownBy(() -> node.openMarkup()).isInstanceOf(IllegalStateException.class);
     }
 
     // WHEN an element inside a segment's content encloses content, the system
@@ -114,7 +115,8 @@ class TreeNodeAdapterTest {
         final var paragraph = Objects.requireNonNull(body.selectFirst("p"));
         final var commentNode = paragraph.childNode(1);
 
-        assertThatThrownBy(() -> JsoupTreeNode.of(commentNode).closeMarkup()).isInstanceOf(IllegalStateException.class);
+        final var node = JsoupTreeNode.of(commentNode);
+        assertThatThrownBy(() -> node.closeMarkup()).isInstanceOf(IllegalStateException.class);
     }
 
     // WHEN an element inside a segment's content encloses content, the system

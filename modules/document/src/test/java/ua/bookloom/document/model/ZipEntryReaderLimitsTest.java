@@ -102,8 +102,8 @@ class ZipEntryReaderLimitsTest {
 
     @Test
     void readAll_notAZipAtAll_isRefused() {
-        assertThatThrownBy(() -> ZipEntryReader.readAll("plain text, not a container".getBytes(StandardCharsets.UTF_8)))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg = "plain text, not a container".getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> ZipEntryReader.readAll(arg)).isInstanceOf(CorruptContainerException.class);
     }
 
     @SuppressWarnings("ArrayRecordComponent") // deliberate: a test-only carrier for raw entry bytes; nothing

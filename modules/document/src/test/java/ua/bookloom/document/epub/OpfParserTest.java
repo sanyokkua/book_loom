@@ -221,16 +221,16 @@ class OpfParserTest {
                 </package>
                 """;
 
-        assertThatThrownBy(() -> OpfParser.parse(xml.getBytes(StandardCharsets.UTF_8), OPF_PATH))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg1 = xml.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> OpfParser.parse(arg1, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
     void parse_manifestItemMissingHref_isACorruptContainerFailure() {
         final String opf = opf("<item id=\"c01\"/>", "<itemref idref=\"c01\"/>");
 
-        assertThatThrownBy(() -> OpfParser.parse(opf.getBytes(StandardCharsets.UTF_8), OPF_PATH))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg1 = opf.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> OpfParser.parse(arg1, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
@@ -242,16 +242,16 @@ class OpfParserTest {
                 </package>
                 """;
 
-        assertThatThrownBy(() -> OpfParser.parse(xml.getBytes(StandardCharsets.UTF_8), OPF_PATH))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg1 = xml.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> OpfParser.parse(arg1, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
     void parse_emptySpine_isACorruptContainerFailure() {
         final String opf = opf("<item id=\"c01\" href=\"c01.xhtml\" media-type=\"application/xhtml+xml\"/>", "");
 
-        assertThatThrownBy(() -> OpfParser.parse(opf.getBytes(StandardCharsets.UTF_8), OPF_PATH))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg1 = opf.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> OpfParser.parse(arg1, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test
@@ -260,8 +260,8 @@ class OpfParserTest {
                 "<item id=\"c01\" href=\"c01.xhtml\" media-type=\"application/xhtml+xml\"/>",
                 "<itemref idref=\"missing\"/>");
 
-        assertThatThrownBy(() -> OpfParser.parse(opf.getBytes(StandardCharsets.UTF_8), OPF_PATH))
-                .isInstanceOf(CorruptContainerException.class);
+        final var arg1 = opf.getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> OpfParser.parse(arg1, OPF_PATH)).isInstanceOf(CorruptContainerException.class);
     }
 
     @Test

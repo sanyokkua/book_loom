@@ -2,6 +2,7 @@ package ua.bookloom.document.model;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -75,9 +76,25 @@ public final class BufferReassembler {
      * @param target the encoded target text; the caller encodes it, because only the caller knows the document's
      *     charset and whether every character is representable in it
      */
-    @SuppressWarnings("ArrayRecordComponent") // deliberate: raw encoded content, defensively copied both ways;
-    // equals()/hashCode() are never used for this internal, non-record-shaped comparison.
+    @SuppressWarnings(
+            "ArrayRecordComponent") // copied on entry and exit; equality reads the content, toString the length.
     public record Replacement(ByteSpanAnchor span, byte[] target) {
+        @Override
+        public boolean equals(final Object other) {
+            return other instanceof Replacement(var oSpan, var oTarget)
+                    && Objects.equals(span, oSpan)
+                    && Arrays.equals(target, oTarget);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(span, Arrays.hashCode(target));
+        }
+
+        @Override
+        public String toString() {
+            return "Replacement[span=" + span + ", target=" + target.length + "]";
+        }
 
         /** Defensively copies {@code target} so neither this record nor a caller can mutate the other's array. */
         public Replacement {

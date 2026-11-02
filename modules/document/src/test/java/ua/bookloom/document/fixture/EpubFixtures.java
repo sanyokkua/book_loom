@@ -265,12 +265,12 @@ public final class EpubFixtures {
      * only one leading break would pass whether or not the restore exists — both sides of any comparison
      * discard a single leading break alike — so the second break is what actually proves the fix.
      */
-    // Deliberately not a text block: Java's incidental-whitespace stripping would collapse the two blank lines
-    // this fixture's whole point is to preserve exactly. A single literal keeps every byte exact and reviewable.
-    @SuppressWarnings("StringConcatToTextBlock")
+    // The two line feeds and the eight spaces are escapes in a text block, so no editor can trim them.
     public static Path preTwoLeadingLineFeeds(Path destination) {
-        final String bodyContent = "<pre class=\"poem\">\n\n        \u201cSpeak roughly to your little boy,</pre>\n"
-                + "<p>Prose after the poem.</p>\n";
+        final String bodyContent = """
+                <pre class="poem">\n\n        \u201cSpeak roughly to your little boy,</pre>
+                <p>Prose after the poem.</p>
+                """;
         return book(destination, bodyContent);
     }
 

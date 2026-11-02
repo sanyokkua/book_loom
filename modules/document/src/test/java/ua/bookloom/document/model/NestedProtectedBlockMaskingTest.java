@@ -23,18 +23,19 @@ class NestedProtectedBlockMaskingTest {
     /**
      * An FB2 document whose text-owning block nests a listing beginning with two line feeds.
      *
-     * <p>Deliberately not a text block: Java's incidental-whitespace stripping would collapse the two blank lines
-     * this fixture's whole point is to preserve exactly (mirrors {@code EpubFixtures#preTwoLeadingLineFeeds}).
+     * <p>The two line feeds inside the {@code <pre>} are written as escapes so no editor can trim them (mirrors
+     * {@code EpubFixtures#preTwoLeadingLineFeeds}).
      */
-    @SuppressWarnings("StringConcatToTextBlock")
-    private static final String NESTED_PRE_BOOK = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            + "<FictionBook xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n"
-            + "  <body>\n"
-            + "    <section>\n"
-            + "      <p>Note: <pre>\n\ncode();</pre> ends it.</p>\n"
-            + "    </section>\n"
-            + "  </body>\n"
-            + "</FictionBook>\n";
+    private static final String NESTED_PRE_BOOK = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+              <body>
+                <section>
+                  <p>Note: <pre>\n\ncode();</pre> ends it.</p>
+                </section>
+              </body>
+            </FictionBook>
+            """;
 
     private static final Namespace FB2_NAMESPACE = Namespace.getNamespace("http://www.gribuser.ru/xml/fictionbook/2.0");
 

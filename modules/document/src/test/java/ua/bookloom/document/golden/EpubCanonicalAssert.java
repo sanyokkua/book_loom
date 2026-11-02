@@ -151,7 +151,25 @@ public final class EpubCanonicalAssert {
 
     /** The source's text past any XML declaration, comments and DOCTYPE, so only the root element is inspected. */
     private static String prologFree(byte[] content) {
-        return new String(content, StandardCharsets.UTF_8).replaceAll("(?s)<\\?.*?\\?>|<!--.*?-->|<!DOCTYPE[^>]*>", "");
+        final String text = new String(content, StandardCharsets.UTF_8);
+        return removeSpans(removeSpans(removeSpans(text, "<?", "?>"), "<!--", "-->"), "<!DOCTYPE", ">");
+    }
+
+    // indexOf scans instead of a lazy regular expression, which rescans to the end for every unclosed opener.
+    private static String removeSpans(String text, String opener, String closer) {
+        final StringBuilder kept = new StringBuilder(text.length());
+        int from = 0;
+        int open = text.indexOf(opener);
+        while (open >= 0) {
+            final int close = text.indexOf(closer, open + opener.length());
+            if (close < 0) {
+                break;
+            }
+            kept.append(text, from, open);
+            from = close + closer.length();
+            open = text.indexOf(opener, from);
+        }
+        return kept.append(text, from, text.length()).toString();
     }
 
     private static final Pattern XML_HTML_ROOT =

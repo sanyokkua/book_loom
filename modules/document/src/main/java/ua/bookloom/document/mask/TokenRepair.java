@@ -230,9 +230,9 @@ public final class TokenRepair {
         final int targetLength = plainLength(working);
         final int guess = (int) Math.round(source.offset() * (double) targetLength / Math.max(1, sourceLength));
         final boolean opens = pairs.stream().anyMatch(pair -> pair.open().equals(token));
+        final Insertion insertion = new Insertion(token, guess, opens);
         for (final Predicate<Slot> tier : tiers(source, opens)) {
-            final @Nullable String placed =
-                    firstValid(expectedMasked, working, token, pairs, slots, tier, guess, opens);
+            final @Nullable String placed = firstValid(expectedMasked, working, pairs, slots, tier, insertion);
             if (placed != null) {
                 return placed;
             }
@@ -261,17 +261,21 @@ public final class TokenRepair {
         return side == Side.WORD || side == Side.PUNCT;
     }
 
+    /** What is being put back: the token, the offset the source suggests for it, and whether it opens a pair. */
+    private record Insertion(String token, int guess, boolean opens) {}
+
     // A closing token prefers the earlier of two equally near positions — nearer its own opening token — and an
     // opening token the later one.
     private static @Nullable String firstValid(
             String expectedMasked,
             String working,
-            String token,
             List<PlaceholderPair> pairs,
             List<Slot> slots,
             Predicate<Slot> tier,
-            int guess,
-            boolean opens) {
+            Insertion insertion) {
+        final String token = insertion.token();
+        final int guess = insertion.guess();
+        final boolean opens = insertion.opens();
         final Comparator<Slot> nearest = Comparator.comparingInt(slot -> Math.abs(slot.offset() - guess));
         final Comparator<Slot> order = nearest.thenComparingInt(slot -> opens ? -slot.index() : slot.index());
         final List<Slot> ordered =

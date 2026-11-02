@@ -53,10 +53,12 @@ enum YamlQuote {
 
     private static String unescapeDouble(String raw) {
         final StringBuilder out = new StringBuilder(raw.length());
-        for (int i = 0; i < raw.length(); i++) {
+        int i = 0;
+        while (i < raw.length()) {
             final char c = raw.charAt(i);
             final boolean isEscape = c == '\\' && i + 1 < raw.length() && "\"\\".indexOf(raw.charAt(i + 1)) >= 0;
-            out.append(isEscape ? raw.charAt(++i) : c);
+            out.append(isEscape ? raw.charAt(i + 1) : c);
+            i += isEscape ? 2 : 1;
         }
         return out.toString();
     }

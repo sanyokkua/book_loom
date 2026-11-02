@@ -87,23 +87,6 @@ public final class MarkdownEscaper {
     private static final int MAX_ESCAPE_ROUNDS = 20;
 
     /**
-     * One actionable construct: either the delimiter position(s) {@link #applyGroup} would insert a backslash
-     * before ({@code deletion == false}), or the character position(s) it would delete instead ({@code deletion ==
-     * true} — the one neutralisation a hard line break needs, since no backslash spelling removes one). The
-     * construct's simple class name — the same name {@link MarkdownStructureCheck#constructMultiset} counts — is
-     * carried alongside so a group can be checked against the source's own count of that construct type before it
-     * is acted on.
-     *
-     * @param constructName the node's simple class name (e.g. {@code "Emphasis"}, {@code "ListItem"}); never null
-     * @param positions the position(s) within the candidate text this group would act on; never null
-     * @param deletion {@code true} if {@code positions} are deleted, {@code false} if a backslash is inserted
-     *     before each
-     */
-    @SuppressWarnings("ArrayRecordComponent") // deliberate: positions are only ever read via the accessor below,
-    // never compared for equality — no different from every other int[] this class already passes around.
-    private record DelimiterGroup(String constructName, int[] positions, boolean deletion) {}
-
-    /**
      * Escapes every model-introduced construct in {@code candidate}, leaving untouched both a construct formed
      * entirely by a restored placeholder fragment and a construct type the source itself already contains as many
      * of.

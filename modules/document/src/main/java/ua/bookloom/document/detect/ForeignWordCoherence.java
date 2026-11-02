@@ -157,9 +157,7 @@ final class ForeignWordCoherence {
     private static boolean isCoherentRun(byte[] fileBytes, int[] run, Charset charset) {
         final String decoded = new String(fileBytes, run[0], run[1] - run[0], charset);
         Character.UnicodeScript runScript = null;
-        for (int i = 0; i < decoded.length(); ) {
-            final int codePoint = decoded.codePointAt(i);
-            i += Character.charCount(codePoint);
+        for (final int codePoint : decoded.codePoints().toArray()) {
             if (!Character.isLetter(codePoint)) {
                 return false;
             }

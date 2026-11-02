@@ -96,7 +96,7 @@ public final class DocumentService implements DocumentPort {
             final AppError error = refusalError(e);
             logOpenFailure(source, resolvedFormat, error);
             return Result.err(error);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             logOpenFailure(source, resolvedFormat, error);
             return Result.err(error);
@@ -149,7 +149,7 @@ public final class DocumentService implements DocumentPort {
             final AppError error = malformedFragmentError(e);
             log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = writeFailure(t, destination);
             log.debug(WRITE_OUTCOME, document.id(), document.format(), error.code());
             return Result.err(error);
@@ -183,7 +183,7 @@ public final class DocumentService implements DocumentPort {
             final boolean wasOpen = closeAs(document);
             log.debug("Closed document id={} format={} wasOpen={}", document.id(), document.format(), wasOpen);
             return Result.ok(wasOpen);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Closed document id={} format={} outcome={}", document.id(), document.format(), error.code());
             return Result.err(error);
@@ -227,7 +227,7 @@ public final class DocumentService implements DocumentPort {
             final Result<String> result = restore(format, segment, spaced);
             logUnmaskOutcome(format, segment.id(), result);
             return result;
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug(UNMASK_OUTCOME, format, segment.id(), error.code());
             return Result.err(error);
@@ -246,7 +246,7 @@ public final class DocumentService implements DocumentPort {
             log.debug(
                     "Repaired placeholders segmentId={} mode={} repaired={}", segment.id(), mode, repaired.isPresent());
             return repaired.map(Result::ok).orElseGet(() -> Result.err(GateErrors.unrepairable()));
-        } catch (Throwable t) {
+        } catch (Exception t) {
             final AppError error = internalError(t);
             log.debug("Repaired placeholders segmentId={} mode={} outcome={}", segment.id(), mode, error.code());
             return Result.err(error);
