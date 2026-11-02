@@ -813,12 +813,17 @@
     -fx-spacing: 2px;
 }
 
-/* The padding at the end is room for a font that sets the bold heading a little wider than it was measured. */
+/* macOS draws a text run clipped to the box it measured, and a bold 15px glyph at the end of the run (the m of
+   "BookLoom") reaches past it, so the last letter lost its edge. Padding on the label lies outside the text node and
+   does not help; an effect that paints nothing makes the node draw into a larger area, and moves nothing. */
 .dialog-title {
-    -fx-label-padding: 0 4px 0 0;
     -fx-text-fill: -color-text-strong;
     -fx-font-size: 15px;
     -fx-font-weight: bold;
+}
+
+.dialog-title .text {
+    -fx-effect: dropshadow(three-pass-box, transparent, 2, 0, 0, 0);
 }
 
 .dialog-sub {

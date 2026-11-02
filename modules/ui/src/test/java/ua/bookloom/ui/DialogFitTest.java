@@ -251,24 +251,24 @@ class DialogFitTest extends ShellTestBase {
         assertThat(halfHidden).as("buttons a scroll edge cuts in half").isEmpty();
     }
 
-    // IF a heading had only its text's own width, THEN a font that sets a letter a little wider than it was measured
-    // ("Genders to confirm" on macOS) cut the last letter in half: every card heading has room beyond its text.
+    // IF a heading's text node had no effect, THEN macOS drew its last bold letter clipped to the measured box
+    // ("Genders
+    // to confirm" lost the edge of its m; a snapshot cannot show it, only the screen does). The paint-nothing effect
+    // that cures it must stay on every card heading's text node.
     @ParameterizedTest
     @MethodSource("headingLanguages")
-    void heading_ofTheGendersCard_hasRoomBeyondItsText(final String language) {
+    void heading_ofTheGendersCard_textNodeCarriesTheUnclipEffect(final String language) {
         useLocale(Locale.forLanguageTag(language));
         resizeScene(1024, 700);
         onFx(() -> askGenders(this));
 
-        final double spare = ThemeTestSupport.onFx(() -> {
+        final javafx.scene.effect.Effect effect = ThemeTestSupport.onFx(() -> {
             final javafx.scene.control.Label heading =
                     (javafx.scene.control.Label) scene.getRoot().lookup(".dialog-title");
-            final javafx.scene.text.Text drawn = (javafx.scene.text.Text) heading.lookup(".text");
-            return heading.localToScene(heading.getLayoutBounds()).getMaxX()
-                    - drawn.localToScene(drawn.getLayoutBounds()).getMaxX();
+            return ((javafx.scene.text.Text) heading.lookup(".text")).getEffect();
         });
 
-        assertThat(spare).as("room right of the heading's text").isGreaterThanOrEqualTo(2);
+        assertThat(effect).as("effect on the heading's text node").isInstanceOf(javafx.scene.effect.DropShadow.class);
     }
 
     static Stream<String> headingLanguages() {
