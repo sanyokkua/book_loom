@@ -43,12 +43,15 @@ final class ProgressStepDetail extends VBox {
     private final Label say = new Label();
     private final TextBody input = new TextBody();
     private final TextBody output = new TextBody();
+    private final Label inputHeading;
+    private final Label outputHeading;
     private final Label call = new Label();
     private final FigureLabel clock = new FigureLabel();
     private final Label tokens = new Label();
     private final Label notKept = new Label();
     private final PromptView prompt;
     private final ReplyView reply;
+    private final WireView wire;
     private final RereadGrid grid;
     private final ProgressRequestList requests;
     private @Nullable Instant lastTick;
@@ -57,6 +60,8 @@ final class ProgressStepDetail extends VBox {
         super(SPACING);
         this.model = Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
+        inputHeading = heading(MessageKey.PROGRESS_INPUT);
+        outputHeading = heading(MessageKey.PROGRESS_OUTPUT);
         getStyleClass().add("progress-detail");
         setId("progress-detail");
         simple = toggle("progress-mode-simple", MessageKey.PROGRESS_VIEW_SIMPLE, MessageKey.PROGRESS_VIEW_SIMPLE_TIP);
@@ -65,6 +70,7 @@ final class ProgressStepDetail extends VBox {
         final SegmentedButton mode = modes();
         prompt = new PromptView("progress-prompt", messages);
         reply = new ReplyView("progress-reply", messages);
+        wire = new WireView("progress-wire", messages);
         grid = new RereadGrid(messages);
         requests = new ProgressRequestList(model, messages);
         name();
@@ -82,16 +88,17 @@ final class ProgressStepDetail extends VBox {
                         say,
                         requests,
                         grid,
-                        heading(MessageKey.PROGRESS_INPUT),
+                        inputHeading,
                         input,
-                        heading(MessageKey.PROGRESS_OUTPUT),
+                        outputHeading,
                         output,
                         call,
                         clock,
                         tokens,
                         notKept,
                         prompt,
-                        reply);
+                        reply,
+                        wire);
     }
 
     private SegmentedButton modes() {
@@ -106,6 +113,8 @@ final class ProgressStepDetail extends VBox {
         say.setWrapText(true);
         input.setId("progress-input");
         output.setId("progress-output");
+        inputHeading.setId("progress-input-heading");
+        outputHeading.setId("progress-output-heading");
         call.setId("progress-call");
         clock.setId("progress-clock");
         tokens.setId("progress-tokens");
@@ -155,6 +164,9 @@ final class ProgressStepDetail extends VBox {
         final StepEntry step = model.selected().get();
         final CallSnapshot made = step == null ? null : model.callOf(step);
         say.setText(step == null ? "" : StepWords.sentence(messages, step));
+        final CallHeadings headings = CallHeadings.of(made == null ? null : made.kind());
+        inputHeading.setText(messages.get(headings.input()));
+        outputHeading.setText(messages.get(headings.output()));
         Visibility.show(grid, step != null && grid.show(step.text(), step.isRunning()));
         input.setText(orNothing(step == null ? null : inputOf(step, made)));
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
@@ -170,6 +182,8 @@ final class ProgressStepDetail extends VBox {
         }
         Visibility.show(prompt, technical && made != null);
         Visibility.show(reply, technical && made != null && made.reply() != null);
+        final CallSnapshot wired = technical ? made : null;
+        wire.show(wired == null ? null : wired.requestBody(), wired == null ? null : wired.rawReply(), messages);
     }
 
     private void showCall(final boolean technical, final @Nullable CallSnapshot made) {

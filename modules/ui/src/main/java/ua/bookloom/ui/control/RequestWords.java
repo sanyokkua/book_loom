@@ -31,8 +31,27 @@ final class RequestWords {
      * @return the line
      */
     String line(final int number, final StepEntry request, final @Nullable CallSnapshot call, final Instant now) {
+        return line(number, NONE, request, call, now);
+    }
+
+    /**
+     * Words one request of a stage whose request count is known.
+     *
+     * @param number the request's place in its stage, from one
+     * @param total how many requests the stage sent in all, or {@link #NONE} while the stage still runs
+     * @param request the request's step row
+     * @param call the call it made as last seen, or {@code null} when none was seen
+     * @param now the moment a waiting call's clock reads
+     * @return the line
+     */
+    String line(
+            final int number,
+            final String total,
+            final StepEntry request,
+            final @Nullable CallSnapshot call,
+            final Instant now) {
         if (call == null) {
-            return messages.get(endedWith(request.result()), number);
+            return messages.get(endedWith(request.result()), number, NONE, NONE, total);
         }
         final String attempt = call.maxAttempts() > 1 ? call.attempt() + "/" + call.maxAttempts() : NONE;
         return switch (call.state()) {
@@ -41,11 +60,18 @@ final class RequestWords {
                         MessageKey.PROGRESS_REQUEST_WAITING,
                         number,
                         clock(Duration.between(call.startedAt(), now)),
-                        attempt);
+                        attempt,
+                        total);
             case ANSWERED ->
-                messages.get(MessageKey.PROGRESS_REQUEST_ANSWERED, number, clock(call.elapsed()), speed(call.usage()));
-            case FAILED -> messages.get(MessageKey.PROGRESS_REQUEST_FAILED, number, clock(call.elapsed()), attempt);
-            case CANCELLED -> messages.get(MessageKey.PROGRESS_REQUEST_STOPPED, number);
+                messages.get(
+                        MessageKey.PROGRESS_REQUEST_ANSWERED,
+                        number,
+                        clock(call.elapsed()),
+                        speed(call.usage()),
+                        total);
+            case FAILED ->
+                messages.get(MessageKey.PROGRESS_REQUEST_FAILED, number, clock(call.elapsed()), attempt, total);
+            case CANCELLED -> messages.get(MessageKey.PROGRESS_REQUEST_STOPPED, number, NONE, NONE, total);
         };
     }
 

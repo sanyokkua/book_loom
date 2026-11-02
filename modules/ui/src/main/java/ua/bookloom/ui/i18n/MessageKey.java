@@ -244,6 +244,38 @@ public enum MessageKey {
     PROGRESS_REQUEST_DONE("progress.request.done"),
     /** Progress dialog, an older request row whose call is no longer kept, ended badly; argument: 0 its number. */
     PROGRESS_REQUEST_LOST("progress.request.lost"),
+    /** Progress dialog: heading of what a names call asked about. */
+    PROGRESS_INPUT_NAMES("progress.input.names"),
+    /** Progress dialog: heading of the model's reading of the names asked about. */
+    PROGRESS_OUTPUT_NAMES("progress.output.names"),
+    /** Progress dialog: heading of what a recurring-terms or glossary-review call asked about. */
+    PROGRESS_INPUT_TERMS("progress.input.terms"),
+    /** Progress dialog: heading of the model's answer about the terms asked about. */
+    PROGRESS_OUTPUT_TERMS("progress.output.terms"),
+    /** Progress dialog: heading of the names a suggest-targets call asked to render. */
+    PROGRESS_INPUT_TARGETS("progress.input.targets"),
+    /** Progress dialog: heading of the renderings the model suggested. */
+    PROGRESS_OUTPUT_TARGETS("progress.output.targets"),
+    /** Progress dialog: heading of the passages a brief call read. */
+    PROGRESS_INPUT_BRIEF("progress.input.brief"),
+    /** Progress dialog: heading of the model's suggestion for the brief. */
+    PROGRESS_OUTPUT_BRIEF("progress.output.brief"),
+    /** Progress dialog: heading of the paragraphs a consistency-pass call checked. */
+    PROGRESS_INPUT_REVISION("progress.input.revision"),
+    /** Progress dialog: heading of the model's verdict on the paragraphs checked. */
+    PROGRESS_OUTPUT_REVISION("progress.output.revision"),
+    /** Progress dialog: heading of the text a summary call read. */
+    PROGRESS_INPUT_SUMMARY("progress.input.summary"),
+    /** Progress dialog: heading of the summary the model wrote. */
+    PROGRESS_OUTPUT_SUMMARY("progress.output.summary"),
+    /** Progress dialog: heading of what a file-name call was given. */
+    PROGRESS_INPUT_FILE_NAME("progress.input.fileName"),
+    /** Progress dialog: heading of the file name the model suggested. */
+    PROGRESS_OUTPUT_FILE_NAME("progress.output.fileName"),
+    /** Progress dialog, Detailed: title of the block holding the request body as it went on the wire. */
+    PROGRESS_WIRE_REQUEST("progress.wire.request"),
+    /** Progress dialog, Detailed: title of the block holding the reply body as it came back. */
+    PROGRESS_WIRE_REPLY("progress.wire.reply"),
     /** Progress dialog: one line asked beside the answer read for it; arguments: 0 what was asked, 1 the answer. */
     PROGRESS_ITEM_LINE("progress.item.line"),
     /** Progress dialog: the answer shown for a line the reply gave nothing for. */

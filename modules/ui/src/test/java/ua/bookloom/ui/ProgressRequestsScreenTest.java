@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -19,6 +20,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.StepChanged;
 import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.pipeline.StepState;
 import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.ui.state.ActivityKind;
@@ -33,6 +35,8 @@ class ProgressRequestsScreenTest extends ProgressWorkTestBase {
 
     private static final Instant SENT = Instant.parse("2026-03-01T09:00:00Z");
     private static final String STAGE = "names-knowledge";
+    private static final String WIRE = "{\"model\":\"m\",\"messages\":[]}";
+    private static final String RAW = "{\"done\":true}";
     private static final List<String> NAMES = List.of("Faquarl", "Ramuthra");
 
     private static CallSnapshot waiting() {
@@ -120,6 +124,73 @@ class ProgressRequestsScreenTest extends ProgressWorkTestBase {
 
         assertThat(((Labeled) required("progress-call")).getText()).doesNotContain("no model call");
         assertThat(required("progress-requests").isVisible()).isTrue();
+    }
+
+    // IF a names call kept the generic "What it reads", THEN the person could not tell names from segments.
+    @Test
+    void simple_namesRequest_headingsNameWhatWasAskedAndWhatTheModelRead() throws TimeoutException {
+        sentRequest();
+
+        await(() -> text("progress-input").contains("Faquarl"));
+
+        assertThat(((Labeled) required("progress-input-heading")).getText()).isEqualTo("Names asked about");
+        assertThat(((Labeled) required("progress-output-heading")).getText()).isEqualTo("Model's reading");
+    }
+
+    // IF the wire JSON showed in Simple, THEN the plain view would stop being plain.
+    @Test
+    void simple_requestWithWireBody_showsNoWireBlock() throws TimeoutException {
+        final ActivityTracker.Handle pass = sentRequest();
+
+        onFx(() -> pass.calls(panel(answered().withRequestBody(WIRE))));
+        await(() -> text("progress-output").contains("Faquarl"));
+
+        assertThat(required("progress-wire").isVisible()).isFalse();
+    }
+
+    // IF Detailed hid the request until the model answered, THEN a stalled call would show nothing of what was sent.
+    @Test
+    void detailed_requestWaiting_showsTheRequestAsSentBeforeAnyReply() throws TimeoutException {
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.ProgressDialogDefaults.class)
+                .initialMode()
+                .set(ua.bookloom.ui.state.ProgressDialogModel.Mode.DETAILED));
+        final ActivityTracker.Handle pass = sentRequest();
+
+        onFx(() -> pass.calls(panel(waiting().withRequestBody(WIRE))));
+        await(() -> required("progress-wire-request").isVisible());
+        onFx(() -> ((TitledPane) required("progress-wire-request")).setExpanded(true));
+
+        await(() -> text("progress-wire-request-body").contains("\"model\": \"m\""));
+        assertThat(required("progress-wire-reply").isVisible()).isFalse();
+    }
+
+    @Test
+    void detailed_requestAnswered_showsTheReplyBodyAsReceivedNextToTheRequest() throws TimeoutException {
+        onFx(() -> injector.getInstance(ua.bookloom.ui.state.ProgressDialogDefaults.class)
+                .initialMode()
+                .set(ua.bookloom.ui.state.ProgressDialogModel.Mode.DETAILED));
+        final ActivityTracker.Handle pass = sentRequest();
+
+        onFx(() ->
+                pass.calls(panel(answered().withRequestBody(WIRE).answered("ok", null, Duration.ofSeconds(4), RAW))));
+        await(() -> required("progress-wire-reply").isVisible());
+        onFx(() -> ((TitledPane) required("progress-wire-reply")).setExpanded(true));
+
+        await(() -> text("progress-wire-reply-body").contains("\"done\": true"));
+        assertThat(required("progress-wire-request").isVisible()).isTrue();
+    }
+
+    // IF a finished stage kept saying "Request 1", THEN the person could not tell how many were still to come.
+    @Test
+    void requestList_stageEnded_namesTheStagesRequestCount() throws TimeoutException {
+        final ActivityTracker.Handle pass = sentRequest();
+        feed(
+                pass,
+                List.of(
+                        new StepChanged(StepKind.REQUEST, STAGE, 0, StepState.ENDED, null, StepResult.DONE),
+                        new StepChanged(StepKind.STAGE, STAGE, 2, StepState.ENDED, null, StepResult.DONE)));
+
+        await(() -> requestLines().stream().anyMatch(line -> line.startsWith("Request 1 of 1")));
     }
 
     // IF a request line or the heading above it were cut at a standard size in either language, THEN the person could

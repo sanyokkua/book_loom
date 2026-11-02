@@ -103,6 +103,14 @@ final class ProgressRequestList extends VBox {
         list.refresh();
     }
 
+    // The stage's count is told only once it has ended: before that the work cannot say how many requests it will send.
+    private String totalOfStage() {
+        final StepEntry stage = model.selected().get();
+        return stage == null || stage.isRunning() || stage.state() == null
+                ? RequestWords.NONE
+                : Integer.toString(stage.requests());
+    }
+
     private final class RequestCell extends ListCell<StepEntry> {
 
         @Override
@@ -113,7 +121,7 @@ final class ProgressRequestList extends VBox {
                 return;
             }
             final CallSnapshot call = model.callOf(request);
-            setText(words.line(getIndex() + 1, request, call, now));
+            setText(words.line(getIndex() + 1, totalOfStage(), request, call, now));
         }
     }
 }
