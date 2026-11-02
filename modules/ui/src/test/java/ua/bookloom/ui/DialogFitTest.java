@@ -22,8 +22,11 @@ import ua.bookloom.ui.control.ProgressDialog;
 import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.dialog.ConfirmPrompt.Question;
 import ua.bookloom.ui.dialog.ContinueDialog;
+import ua.bookloom.ui.dialog.FormCard;
+import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.dialog.ModelPickDialog;
 import ua.bookloom.ui.dialog.RenameDialog;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ChangeKind;
 import ua.bookloom.ui.state.ChangeOperation;
@@ -115,6 +118,7 @@ class DialogFitTest extends ShellTestBase {
                                         () -> {})),
                 opener("rename", DialogFitTest::askRename),
                 opener("results with names to give a target", DialogFitTest::showResults),
+                opener("genders to confirm", DialogFitTest::askGenders),
                 opener("about", test -> ((javafx.scene.control.Button) test.required("shell-about")).fire()));
     }
 
@@ -156,6 +160,20 @@ class DialogFitTest extends ShellTestBase {
                 ChangeOrigin.MODEL,
                 ChangeSection.NAMES,
                 new EditableTarget("e" + id, target, rest));
+    }
+
+    // The card the character-genders question raises when every character has a suggested gender; only its heading and
+    // its first paragraph matter to the fit, so no character rows are listed.
+    private static void askGenders(final DialogFitTest test) {
+        final Messages messages = test.injector.getInstance(Messages.class);
+        final FormCard card = new FormCard(
+                test.injector.getInstance(ModalHost.class),
+                messages,
+                "genders-fit-card",
+                ModalCard.Size.WIDE,
+                messages.get(MessageKey.DIALOG_GENDERS_SUGGESTED_TITLE));
+        card.text(messages.get(MessageKey.DIALOG_GENDERS_SUGGESTED_TEXT, 4));
+        card.show();
     }
 
     private static void askRename(final DialogFitTest test) {
@@ -231,5 +249,29 @@ class DialogFitTest extends ShellTestBase {
                 .isNotEmpty();
         FitMatrix.assertFits(scene, size);
         assertThat(halfHidden).as("buttons a scroll edge cuts in half").isEmpty();
+    }
+
+    // IF a heading had only its text's own width, THEN a font that sets a letter a little wider than it was measured
+    // ("Genders to confirm" on macOS) cut the last letter in half: every card heading has room beyond its text.
+    @ParameterizedTest
+    @MethodSource("headingLanguages")
+    void heading_ofTheGendersCard_hasRoomBeyondItsText(final String language) {
+        useLocale(Locale.forLanguageTag(language));
+        resizeScene(1024, 700);
+        onFx(() -> askGenders(this));
+
+        final double spare = ThemeTestSupport.onFx(() -> {
+            final javafx.scene.control.Label heading =
+                    (javafx.scene.control.Label) scene.getRoot().lookup(".dialog-title");
+            final javafx.scene.text.Text drawn = (javafx.scene.text.Text) heading.lookup(".text");
+            return heading.localToScene(heading.getLayoutBounds()).getMaxX()
+                    - drawn.localToScene(drawn.getLayoutBounds()).getMaxX();
+        });
+
+        assertThat(spare).as("room right of the heading's text").isGreaterThanOrEqualTo(2);
+    }
+
+    static Stream<String> headingLanguages() {
+        return Stream.of("en", "uk");
     }
 }

@@ -813,7 +813,9 @@
     -fx-spacing: 2px;
 }
 
+/* The padding at the end is room for a font that sets the bold heading a little wider than it was measured. */
 .dialog-title {
+    -fx-label-padding: 0 4px 0 0;
     -fx-text-fill: -color-text-strong;
     -fx-font-size: 15px;
     -fx-font-weight: bold;
