@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OllamaChatResponse;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.http.RawBodies;
 import ua.bookloom.llm.response.ReasoningBudget;
 import ua.bookloom.llm.response.ReasoningScrubber;
 
@@ -150,7 +151,8 @@ final class OllamaReplyReader {
                 reply.body().length(),
                 finishReason,
                 usage);
-        return Result.ok(new ChatResponse(ReasoningScrubber.scrub(content), finishReason, usage));
+        return Result.ok(
+                new ChatResponse(ReasoningScrubber.scrub(content), finishReason, usage, RawBodies.kept(reply.body())));
     }
 
     private Result<ChatResponse> stoppedWithError(String modelId, List<OllamaChatResponse> parts) {

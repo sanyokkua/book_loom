@@ -34,6 +34,9 @@ import ua.bookloom.api.llm.TokenUsage;
  * @param usage the reply's token usage, reported or estimated, or null until it is answered
  * @param outcomes what became of the call's segments, in the order it was noted
  * @param items what the reply held for each expected id of a batch call, once parsed; empty for any other call
+ * @param requestBody the JSON the current attempt put on the wire, or null when the client cannot show one; holds book
+ *     text, so it is shown to the person and logged at TRACE only
+ * @param rawReply the reply body as the provider sent it, or null until answered or when the client keeps none
  */
 public record CallSnapshot(
         long callId,
@@ -52,7 +55,9 @@ public record CallSnapshot(
         @Nullable Duration timeout,
         @Nullable TokenUsage usage,
         List<SegmentOutcomeNote> outcomes,
-        List<CallItem> items) {
+        List<CallItem> items,
+        @Nullable String requestBody,
+        @Nullable String rawReply) {
 
     /** Rejects a missing part or an impossible attempt, and copies the lists. */
     public CallSnapshot {
@@ -117,7 +122,9 @@ public record CallSnapshot(
                 timeout,
                 null,
                 List.of(),
-                List.of());
+                List.of(),
+                null,
+                null);
     }
 
     /**
@@ -144,7 +151,51 @@ public record CallSnapshot(
                 timeout,
                 usage,
                 outcomes,
-                items);
+                items,
+                requestBody,
+                rawReply);
+    }
+
+    /**
+     * The same call with the JSON its current attempt puts on the wire.
+     *
+     * @param body the wire body, or null when the client cannot show one
+     * @return the call that holds it
+     */
+    public CallSnapshot withRequestBody(@Nullable final String body) {
+        return new CallSnapshot(
+                callId,
+                kind,
+                label,
+                position,
+                segments,
+                sections,
+                sent,
+                reply,
+                state,
+                startedAt,
+                elapsed,
+                attempt,
+                maxAttempts,
+                timeout,
+                usage,
+                outcomes,
+                items,
+                body,
+                rawReply);
+    }
+
+    /**
+     * The same call waiting again on a later attempt that carries no wire body.
+     *
+     * @param at the non-null moment the attempt went out
+     * @param number the attempt, counted from one
+     * @param max the most attempts the call may make, at least {@code number}
+     * @param bound the attempt's bound, or null when it has none
+     * @return the call waiting, with no reply and no elapsed time
+     */
+    public CallSnapshot retrying(final Instant at, final int number, final int max, @Nullable final Duration bound) {
+        return retrying(at, number, max, bound, null);
     }
 
     /**
@@ -154,9 +205,15 @@ public record CallSnapshot(
      * @param number the attempt, counted from one
      * @param max the most attempts the call may make, at least {@code number}
      * @param bound the attempt's bound, or null when it has none
+     * @param body the JSON the attempt sends, or null when the client cannot show one
      * @return the call waiting, with no reply and no elapsed time
      */
-    public CallSnapshot retrying(final Instant at, final int number, final int max, @Nullable final Duration bound) {
+    public CallSnapshot retrying(
+            final Instant at,
+            final int number,
+            final int max,
+            @Nullable final Duration bound,
+            @Nullable final String body) {
         return new CallSnapshot(
                 callId,
                 kind,
@@ -174,7 +231,21 @@ public record CallSnapshot(
                 bound,
                 null,
                 outcomes,
-                items);
+                items,
+                body,
+                null);
+    }
+
+    /**
+     * The same call answered, with no raw body kept.
+     *
+     * @param text the non-null reply as received
+     * @param tokens the reply's usage, or null when none is known
+     * @param took the non-null time the answered attempt took
+     * @return the call answered
+     */
+    public CallSnapshot answered(final String text, @Nullable final TokenUsage tokens, final Duration took) {
+        return answered(text, tokens, took, null);
     }
 
     /**
@@ -183,9 +254,11 @@ public record CallSnapshot(
      * @param text the non-null reply as received
      * @param tokens the reply's usage, or null when none is known
      * @param took the non-null time the answered attempt took
+     * @param raw the reply body as the provider sent it, or null when none is kept
      * @return the call answered
      */
-    public CallSnapshot answered(final String text, @Nullable final TokenUsage tokens, final Duration took) {
+    public CallSnapshot answered(
+            final String text, @Nullable final TokenUsage tokens, final Duration took, @Nullable final String raw) {
         Objects.requireNonNull(text, "text");
         return new CallSnapshot(
                 callId,
@@ -204,7 +277,9 @@ public record CallSnapshot(
                 timeout,
                 tokens,
                 outcomes,
-                items);
+                items,
+                requestBody,
+                raw);
     }
 
     /**
@@ -236,7 +311,9 @@ public record CallSnapshot(
                 timeout,
                 null,
                 outcomes,
-                items);
+                items,
+                requestBody,
+                rawReply);
     }
 
     /**
@@ -265,7 +342,9 @@ public record CallSnapshot(
                 timeout,
                 usage,
                 more,
-                items);
+                items,
+                requestBody,
+                rawReply);
     }
 
     /**
@@ -292,6 +371,8 @@ public record CallSnapshot(
                 timeout,
                 usage,
                 outcomes,
-                parsed);
+                parsed,
+                requestBody,
+                rawReply);
     }
 }

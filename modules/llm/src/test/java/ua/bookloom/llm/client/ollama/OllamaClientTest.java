@@ -150,7 +150,10 @@ class OllamaClientTest {
         stubChat("""
                 {"model":"gemma4:e4b-mlx","message":{"content":"<think>private reasoning</think>"},"done_reason":"stop"}
                 """);
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()))
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("", FinishReason.STOP));
     }
 
     @Test

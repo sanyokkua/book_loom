@@ -243,7 +243,13 @@ public final class GatedChatModel implements ChatModel {
     private CallAttempt reported(ChatRequest request, Tries tries) {
         final int stallBound = tries.attempt() + RetryPolicy.MAX_TIMEOUT_ATTEMPTS - 1 - tries.timedOut();
         final int maxAttempts = Math.clamp(stallBound, tries.attempt(), RetryPolicy.MAX_ATTEMPTS);
-        return new CallAttempt(tries.attempt(), maxAttempts, client.chatTimeout(request), request.maxOutputTokens());
+        final String body = client.requestBody(modelId, request);
+        return new CallAttempt(
+                tries.attempt(),
+                maxAttempts,
+                client.chatTimeout(request),
+                request.maxOutputTokens(),
+                body.isEmpty() ? null : body);
     }
 
     private void logStarted(ChatRequest request, CallAttempt reported) {

@@ -310,7 +310,9 @@ public final class ProgressDialogModel {
                 call.timeout(),
                 call.usage(),
                 call.outcomes(),
-                call.items());
+                call.items(),
+                null,
+                null);
     }
 
     /**

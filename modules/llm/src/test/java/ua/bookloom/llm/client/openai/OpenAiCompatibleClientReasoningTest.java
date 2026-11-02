@@ -71,7 +71,10 @@ class OpenAiCompatibleClientReasoningTest {
 
         final ChatResponse response = sendChat(cappedRequest(128, 8192));
 
-        assertThat(response).isEqualTo(new ChatResponse("{\"target\":\"Вага\"}", FinishReason.STOP));
+        assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("{\"target\":\"Вага\"}", FinishReason.STOP));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(128)));
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
     }
@@ -85,7 +88,10 @@ class OpenAiCompatibleClientReasoningTest {
 
         final ChatResponse response = sendChat(cappedRequest(ReasoningLevel.LOW, 128, 8192));
 
-        assertThat(response).isEqualTo(new ChatResponse("ok", FinishReason.STOP));
+        assertThat(response)
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("ok", FinishReason.STOP));
         server.verify(1, postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(maxTokens(512)));
         server.verify(
                 2,

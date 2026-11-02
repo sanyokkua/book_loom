@@ -339,7 +339,7 @@ public final class JobModelCalls implements ModelCalls {
             announce.accept(done);
             resends.ended(StepResult.DONE);
             if (shown != null) {
-                shown.answered(reply.content(), done.usage(), done.elapsed());
+                shown.answered(reply.content(), done.usage(), done.elapsed(), reply.rawBody());
             }
         }
 

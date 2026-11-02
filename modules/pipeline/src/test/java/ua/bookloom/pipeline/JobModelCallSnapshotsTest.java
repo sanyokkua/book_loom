@@ -18,7 +18,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -88,6 +91,35 @@ class JobModelCallSnapshotsTest {
                 .extracting(CallSnapshot::callId, CallSnapshot::state, CallSnapshot::reply)
                 .containsExactly(tuple(1L, CallState.WAITING, null), tuple(1L, CallState.ANSWERED, "{\"items\":[]}"));
         assertThat(snapshots().getLast().usage()).isNotNull();
+    }
+
+    @Test
+    void callAbout_clientReportsTheWireBodyAndRawReply_snapshotsHoldThemAfterTheRequestWentOut() {
+        final ChatModel wired = new ChatModel() {
+            @Override
+            public Result<ChatResponse> chat(final ChatRequest request) {
+                return Result.ok(new ChatResponse("ok", FinishReason.STOP, null, "{\"raw\":true}"));
+            }
+
+            @Override
+            public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
+                attempts.started(new CallAttempt(1, 1, null, null, "{\"wire\":1}"));
+                return chat(request);
+            }
+        };
+
+        new JobModelCalls(
+                        onSent -> new CancellableChatModel(wired, control, onSent),
+                        events::add,
+                        new FixedClock(),
+                        "uk",
+                        ModelWindow.DEFAULT_WINDOW,
+                        LOCATORS)
+                .callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
+
+        assertThat(snapshots())
+                .extracting(CallSnapshot::requestBody, CallSnapshot::rawReply)
+                .containsExactly(tuple("{\"wire\":1}", null), tuple("{\"wire\":1}", "{\"raw\":true}"));
     }
 
     @Test

@@ -192,7 +192,9 @@ final class CallSnapshots {
                                     attempt.timeout())
                             .withSent(sent)
                             .withItems(askedItems())
-                    : before.retrying(at, attempt.number(), attempt.maxAttempts(), attempt.timeout());
+                            .withRequestBody(attempt.requestBody())
+                    : before.retrying(
+                            at, attempt.number(), attempt.maxAttempts(), attempt.timeout(), attempt.requestBody());
             publish(current);
         }
 
@@ -227,12 +229,16 @@ final class CallSnapshots {
             end(endOf(code), elapsed);
         }
 
-        void answered(final String reply, @Nullable final TokenUsage usage, final Duration elapsed) {
+        void answered(
+                final String reply,
+                @Nullable final TokenUsage usage,
+                final Duration elapsed,
+                @Nullable final String raw) {
             final CallSnapshot before = current;
             if (before == null) {
                 return;
             }
-            current = before.answered(reply, usage, elapsed);
+            current = before.answered(reply, usage, elapsed, raw);
             if (DRAFTS.contains(kind)) {
                 segmentIds.forEach(id -> draftedBy.put(id, before.callId()));
             }

@@ -188,7 +188,7 @@ final class BoundSettings {
                 escaped,
                 response.content().length(),
                 text.length());
-        return new ChatResponse(text, response.finishReason(), response.usage());
+        return new ChatResponse(text, response.finishReason(), response.usage(), response.rawBody());
     }
 
     /**

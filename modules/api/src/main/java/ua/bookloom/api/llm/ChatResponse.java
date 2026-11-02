@@ -9,9 +9,25 @@ import org.jspecify.annotations.Nullable;
  * @param content the response text
  * @param finishReason how the model stopped producing text
  * @param usage the token counts and generation time the provider reported, or null when not reported
+ * @param rawBody the reply body as the provider sent it, cut when very long, for the Detailed view of a call; null
+ *     when the client keeps none. Book text lives in it, so it is shown to the person and logged at TRACE only.
  */
 public record ChatResponse(
-        String content, FinishReason finishReason, @Nullable TokenUsage usage) {
+        String content,
+        FinishReason finishReason,
+        @Nullable TokenUsage usage,
+        @Nullable String rawBody) {
+
+    /**
+     * Preserves the construction form for callers with no raw body.
+     *
+     * @param content the response text
+     * @param finishReason how the model stopped producing text
+     * @param usage the reported usage, or null
+     */
+    public ChatResponse(String content, FinishReason finishReason, @Nullable TokenUsage usage) {
+        this(content, finishReason, usage, null);
+    }
 
     /**
      * Preserves the original construction form for callers with no reported usage figures.

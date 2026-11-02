@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.http.RawBodies;
 import ua.bookloom.llm.http.UnreadableReply;
 import ua.bookloom.llm.response.ReasoningBudget;
 import ua.bookloom.llm.response.ReasoningScrubber;
@@ -98,6 +99,16 @@ final class OpenAiReplyReader {
             return Result.err(wrongModel);
         }
         final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
+        logOutcome(requestedModel, reply, finishReason, usage);
+        return Result.ok(new ChatResponse(
+                ReasoningScrubber.scrub(message.content()), finishReason, usage, RawBodies.kept(reply.body())));
+    }
+
+    private void logOutcome(
+            final String requestedModel,
+            final HttpReply reply,
+            final FinishReason finishReason,
+            final @Nullable TokenUsage usage) {
         log.debug(
                 "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
                 config.baseUrl().getHost(),
@@ -106,7 +117,6 @@ final class OpenAiReplyReader {
                 reply.body().length(),
                 finishReason,
                 usage);
-        return Result.ok(new ChatResponse(ReasoningScrubber.scrub(message.content()), finishReason, usage));
     }
 
     // Where any id is served, a reply another model wrote is refused; elsewhere the mismatch is only named.

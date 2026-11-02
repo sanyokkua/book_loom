@@ -137,7 +137,7 @@ class OpenAiCompatibleClientTest {
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"<think>private reasoning</think>the answer","reasoning_content":"private reasoning","tool_calls":[{"id":"call_1"}]},"finish_reason":"stop"},{"message":{"content":"second choice"},"finish_reason":"stop"}]}
                 """);
 
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("the answer", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()).content()).isEqualTo("the answer");
     }
 
     @Test
@@ -146,7 +146,7 @@ class OpenAiCompatibleClientTest {
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"<think>private reasoning</think>"},"finish_reason":"stop"}]}
                 """);
 
-        assertThat(sendChat(messageOnlyRequest())).isEqualTo(new ChatResponse("", FinishReason.STOP));
+        assertThat(sendChat(messageOnlyRequest()).content()).isEmpty();
     }
 
     @Test

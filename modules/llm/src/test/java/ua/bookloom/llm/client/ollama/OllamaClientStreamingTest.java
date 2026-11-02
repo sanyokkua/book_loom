@@ -84,6 +84,8 @@ class OllamaClientStreamingTest {
                 client(Duration.ofSeconds(2)).chat(MODEL_ID, draft()).result();
 
         assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
                 .isEqualTo(new ChatResponse("Hello", FinishReason.STOP, new TokenUsage(12, 2, Duration.ofMillis(1))));
         server.verify(
                 postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(matchingJsonPath("$.stream", equalTo("true"))));

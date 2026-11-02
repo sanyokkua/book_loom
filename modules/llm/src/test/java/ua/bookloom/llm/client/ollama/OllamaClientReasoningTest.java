@@ -95,7 +95,10 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.LOW)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
     }
 
     @Test
@@ -117,7 +120,10 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
         assertThat(OLD_LIMIT).isLessThan(300);
     }
 
@@ -129,7 +135,10 @@ class OllamaClientReasoningTest {
         final Result<ChatResponse> result =
                 client().chat(MODEL_ID, request(CAP, ReasoningLevel.ON)).result();
 
-        assertThat(result.data()).isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
+        assertThat(result.data())
+                .usingRecursiveComparison()
+                .ignoringFields("rawBody")
+                .isEqualTo(new ChatResponse("Hi", FinishReason.STOP));
     }
 
     // A reply that never stops is still a runaway with thinking on, cut and read as length.
