@@ -6,12 +6,14 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,7 +151,7 @@ class RunSummaryLoggerTest {
 
         assertThat(summaries())
                 .containsExactly("run summary final accepted=5 flagged=1 verbatim=2 pending=10 calls=0 avgCallMs=0"
-                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=-");
+                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=- cost=-");
     }
 
     // The final line says per kind what the calls cost, so a shared log shows where the time went; the ledger, which
@@ -186,6 +188,29 @@ class RunSummaryLoggerTest {
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
         assertThat(summaries()).singleElement().asString().endsWith(" secondsPerCall[REVIEW=6.0]");
+    }
+
+    // The cost is the sum of what the calls reported; a run whose calls reported none prints a dash, never 0.
+    @Test
+    void summary_withCosts_totalsThemAndWithoutPrintsDash() {
+        final RunSummaryLogger paid = new RunSummaryLogger(clock, ledger);
+        ledger.record(costed(new BigDecimal("0.00042")));
+        ledger.record(costed(new BigDecimal("0.00008")));
+        ledger.record(costed(null));
+        paid.onEvent(new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 3, 3, 0, List.of(), null)));
+        final String withCost = summaries().getFirst();
+        appender.list.clear();
+        final CallLedgerImpl otherLedger = new CallLedgerImpl();
+        final RunSummaryLogger unpaid = new RunSummaryLogger(clock, otherLedger);
+        otherLedger.record(costed(null));
+        unpaid.onEvent(new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 3, 3, 0, List.of(), null)));
+
+        assertThat(withCost).contains(" cost=0.00050 ");
+        assertThat(summaries().getFirst()).contains(" cost=- ");
+    }
+
+    private static CallRecord costed(final @Nullable BigDecimal cost) {
+        return new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(1), null, null, cost);
     }
 
     // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.

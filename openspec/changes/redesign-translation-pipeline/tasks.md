@@ -862,7 +862,7 @@ so group 7 merges first and group 8 rebases onto it before its gate.
   - **Notes (as built):** the OpenAI client never streams, so there is no stream-chunk path to classify; `408/504/524` are `timeout` through `StatusMappings.of(status, engine)` (OpenRouter only), not catalogue rows, because a row must carry a reason and a retry rule; `402` has no retry rule, so no `Retry-After` wait is built for credits (the person acts).
   - **Done when:** tests green; the acceptance method is green.
 
-- [ ] 8.4 Put the served provider and model slugs and the call's cost on the call line and total the cost in the run summary. The person pays per call on OpenRouter, so the cost must be visible, but only as numbers and slugs. → :api, :llm, :pipeline
+- [x] 8.4 Put the served provider and model slugs and the call's cost on the call line and total the cost in the run summary. The person pays per call on OpenRouter, so the cost must be visible, but only as numbers and slugs. → :api, :llm, :pipeline
   - **Satisfies:** "Log OpenRouter's served provider, model and cost" (llm-provider)
   - **Depends on:** 8.2
   - **Read:** design.md D18, D21; api: `llm/CallLedger` and `llm/CallRecord` (group 3); llm: `CallLedgerImpl`, `client/openai/OpenAiUsage`, `GatedChatModel`; pipeline: `RunSummaryLogger`, `CallKindTotals`

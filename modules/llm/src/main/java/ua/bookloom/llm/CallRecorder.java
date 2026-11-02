@@ -13,6 +13,7 @@ import ua.bookloom.api.llm.CallRecord;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServedCall;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -96,8 +97,10 @@ final class CallRecorder {
         final FailureReason reason =
                 error == null ? null : FailureReason.in(error.details()).orElse(FailureReason.UNCLASSIFIED);
         final TokenUsage usage = response == null ? null : response.usage();
-        ledger.record(new CallRecord(callKind, usage, timed.wall(), null, reason));
-        logCall(request, attempt, timed.wall(), usage, reason);
+        final ServedCall served = response == null ? null : response.served();
+        ledger.record(
+                new CallRecord(callKind, usage, timed.wall(), null, reason, served == null ? null : served.cost()));
+        logCall(request, attempt, timed.wall(), usage, reason, served);
     }
 
     // An answer after a retry is worth an INFO line: it says the retry rules saved the call.
@@ -122,10 +125,11 @@ final class CallRecorder {
             final int attempt,
             final Duration wall,
             final @Nullable TokenUsage usage,
-            final @Nullable FailureReason reason) {
+            final @Nullable FailureReason reason,
+            final @Nullable ServedCall served) {
         log.debug(
                 "Provider chat call model={} kind={} attempt={} wallMs={} outcome={} prompt={} completion={} cached={}"
-                        + " sourceChars={}",
+                        + " sourceChars={}{}",
                 modelId,
                 request.callKind(),
                 attempt,
@@ -136,7 +140,19 @@ final class CallRecorder {
                 figure(usage == null ? null : usage.cachedPrompt()),
                 request.messages().stream()
                         .mapToInt(message -> message.content().length())
-                        .sum());
+                        .sum(),
+                servedFields(served));
+    }
+
+    // Only a reply that names its host or its price (OpenRouter) adds the fields: slugs and a number, never text.
+    private static String servedFields(final @Nullable ServedCall served) {
+        if (served == null || (served.provider() == null && served.cost() == null)) {
+            return "";
+        }
+        return " servedProvider=" + Objects.requireNonNullElse(served.provider(), NOT_REPORTED)
+                + " servedModel=" + Objects.requireNonNullElse(served.model(), NOT_REPORTED)
+                + " cost="
+                + (served.cost() == null ? NOT_REPORTED : served.cost().toPlainString());
     }
 
     // A figure the provider did not report is a dash in the log, never a 0.

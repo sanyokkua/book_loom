@@ -2,6 +2,7 @@ package ua.bookloom.llm.client.openai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Objects;
@@ -18,6 +19,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelVariant;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServedCall;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.engine.EngineTraits;
@@ -136,8 +138,27 @@ final class OpenAiReplyReader {
         }
         final TokenUsage usage = OpenAiUsage.of(decoded.usage(), decoded.stats(), elapsed);
         logOutcome(requestedModel, reply, finishReason, usage);
-        return Result.ok(new ChatResponse(
-                ReasoningScrubber.scrub(message.content()), finishReason, usage, RawBodies.kept(reply.body())));
+        return Result.ok(chatResponse(message.content(), finishReason, usage, reply, decoded));
+    }
+
+    private static ChatResponse chatResponse(
+            final String content,
+            final FinishReason finishReason,
+            final @Nullable TokenUsage usage,
+            final HttpReply reply,
+            final OpenAiChatResponse decoded) {
+        return new ChatResponse(
+                ReasoningScrubber.scrub(content), finishReason, usage, RawBodies.kept(reply.body()), served(decoded));
+    }
+
+    // Slugs and a price only; a reply that names no host and no price (every non-aggregating server) has nothing to
+    // add, and a cost of 0 stays 0.
+    private static @Nullable ServedCall served(final OpenAiChatResponse decoded) {
+        final BigDecimal cost = decoded.usage() == null ? null : decoded.usage().cost();
+        if (decoded.provider() == null && cost == null) {
+            return null;
+        }
+        return new ServedCall(decoded.provider(), decoded.model(), cost);
     }
 
     private void logOutcome(

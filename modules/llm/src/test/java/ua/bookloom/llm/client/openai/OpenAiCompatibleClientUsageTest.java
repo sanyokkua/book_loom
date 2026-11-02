@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
@@ -30,6 +31,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.ServedCall;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
@@ -105,6 +107,29 @@ class OpenAiCompatibleClientUsageTest {
                 """);
 
         assertThat(sendChat(client(() -> 0L), messageOnlyRequest()).usage()).isNull();
+    }
+
+    // Free models report cost 0 or omit it: a present 0 is 0, an absent figure or slug stays missing.
+    @Test
+    void read_costAndSlugs_arePresentOnlyWhenReported() {
+        stubChat("""
+                {"id":"gen-1","model":"example/model-a","provider":"ExampleHost","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"cost":0.00042}}
+                """);
+        final ServedCall reported =
+                sendChat(client(() -> 0L), messageOnlyRequest()).served();
+        stubChat("""
+                {"model":"example/model-a","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5,"cost":0}}
+                """);
+        final ServedCall free = sendChat(client(() -> 0L), messageOnlyRequest()).served();
+        stubChat("""
+                {"choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":5}}
+                """);
+        final ServedCall absent =
+                sendChat(client(() -> 0L), messageOnlyRequest()).served();
+
+        assertThat(reported).isEqualTo(new ServedCall("ExampleHost", "example/model-a", new BigDecimal("0.00042")));
+        assertThat(free).isEqualTo(new ServedCall(null, "example/model-a", BigDecimal.ZERO));
+        assertThat(absent).isNull();
     }
 
     // A configured 1 s timeout is replaced by the 200 s a 400-token expectation scales to.

@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -198,14 +199,27 @@ final class RunSummaryLogger {
                 timeouts,
                 ignoredEdits,
                 locator,
-                "final".equals(kind) ? byKind() : "");
+                "final".equals(kind) ? finalTail() : "");
     }
 
     // Counted from what each call reported, so every stage of the run is in it and a missing figure stays missing.
-    private String byKind() {
+    private String finalTail() {
         final List<CallRecord> records = ledger.since(mark);
-        final String line = PrepSummary.byKind(CallKindTotals.of(records).totals());
-        return (line.isEmpty() ? "" : " byKind[" + line + "]") + PrepSummary.secondsPerCall(records);
+        final CallKindTotals totals = CallKindTotals.of(records);
+        final String line = PrepSummary.byKind(totals.totals());
+        return " cost=" + totalCost(totals)
+                + (line.isEmpty() ? "" : " byKind[" + line + "]")
+                + PrepSummary.secondsPerCall(records);
+    }
+
+    // A dash when no call reported a price; a free model's reported 0 is a 0.
+    private static String totalCost(final CallKindTotals totals) {
+        final List<BigDecimal> priced = totals.totals().values().stream()
+                .flatMap(kindTotals -> kindTotals.costTotal().stream())
+                .toList();
+        return priced.isEmpty()
+                ? NONE
+                : priced.stream().reduce(BigDecimal.ZERO, BigDecimal::add).toPlainString();
     }
 
     /** How many call times are held for the percentile; never more than {@link #PERCENTILE_WINDOW}. */

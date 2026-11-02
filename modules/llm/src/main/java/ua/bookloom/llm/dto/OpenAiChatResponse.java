@@ -2,6 +2,7 @@ package ua.bookloom.llm.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.math.BigDecimal;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
@@ -9,6 +10,7 @@ import org.jspecify.annotations.Nullable;
  * The response fields consumed from an OpenAI-compatible chat completion.
  *
  * @param model nullable because provider replies may omit metadata
+ * @param provider nullable; the hosting company an aggregating provider (OpenRouter) says answered
  * @param choices nullable because malformed or partial replies may omit the collection
  * @param usage nullable because providers may omit reported token counts
  * @param stats nullable; LM Studio's own timing of the call, which other providers do not send
@@ -18,7 +20,8 @@ public record OpenAiChatResponse(
         @JsonProperty("model") @Nullable String model,
         @JsonProperty("choices") @Nullable List<Choice> choices,
         @JsonProperty("usage") @Nullable Usage usage,
-        @JsonProperty("stats") @Nullable Stats stats) {
+        @JsonProperty("stats") @Nullable Stats stats,
+        @JsonProperty("provider") @Nullable String provider) {
 
     /** Copies a present choices list to preserve its order and prevent mutation. */
     public OpenAiChatResponse {
@@ -72,6 +75,7 @@ public record OpenAiChatResponse(
      * @param completionTokens nullable because a provider may omit the completion token count
      * @param promptTokensDetails nullable; the split of the prompt tokens, which only some providers send
      * @param completionTokensDetails nullable; the split of the completion tokens, which only some providers send
+     * @param cost nullable; the call's price, which OpenRouter sends and a free model may report as 0 or omit
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Usage(
@@ -80,7 +84,9 @@ public record OpenAiChatResponse(
             @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails,
 
             @JsonProperty("completion_tokens_details") @Nullable
-            CompletionTokensDetails completionTokensDetails) {}
+            CompletionTokensDetails completionTokensDetails,
+
+            @JsonProperty("cost") @Nullable BigDecimal cost) {}
 
     /**
      * The part of the completion a provider reports on.

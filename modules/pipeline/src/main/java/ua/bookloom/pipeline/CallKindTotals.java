@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.List;
@@ -59,6 +60,8 @@ public final class CallKindTotals {
      * @param firstTokenCalls how many calls had a time before the first token
      * @param firstTokenCallElapsed the wall-clock time of just those calls, so the prefill share is not diluted by
      *     calls that reported nothing
+     * @param cost the price of the calls that reported one
+     * @param costReported how many calls reported a price
      */
     public record Totals(
             int attempts,
@@ -75,7 +78,18 @@ public final class CallKindTotals {
             int generationReported,
             Duration promptEval,
             int firstTokenCalls,
-            Duration firstTokenCallElapsed) {
+            Duration firstTokenCallElapsed,
+            BigDecimal cost,
+            int costReported) {
+
+        /**
+         * The price reported.
+         *
+         * @return the sum, or empty if no call reported one
+         */
+        public Optional<BigDecimal> costTotal() {
+            return costReported == 0 ? Optional.empty() : Optional.of(cost);
+        }
 
         /**
          * The prompt tokens reported.
@@ -175,6 +189,10 @@ public final class CallKindTotals {
         if (usage != null) {
             totals.add(usage);
         }
+        if (record.cost() != null) {
+            totals.cost = totals.cost.add(record.cost());
+            totals.costReported++;
+        }
     }
 
     // The time the call measured itself wins; the provider's prompt-evaluation time stands in for it otherwise.
@@ -215,6 +233,8 @@ public final class CallKindTotals {
         Duration promptEval = Duration.ZERO;
         int firstTokenCalls;
         Duration firstTokenCallElapsed = Duration.ZERO;
+        BigDecimal cost = BigDecimal.ZERO;
+        int costReported;
 
         void add(final TokenUsage usage) {
             final Integer prompt = usage.prompt();
@@ -264,7 +284,9 @@ public final class CallKindTotals {
                     generationReported,
                     promptEval,
                     firstTokenCalls,
-                    firstTokenCallElapsed);
+                    firstTokenCallElapsed,
+                    cost,
+                    costReported);
         }
     }
 }

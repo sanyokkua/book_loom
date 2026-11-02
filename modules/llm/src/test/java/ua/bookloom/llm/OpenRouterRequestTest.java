@@ -7,6 +7,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -40,6 +45,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ServerEngine;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.llm.testing.FakeProviderConfigs;
 import ua.bookloom.llm.testing.LlmTestStorageModule;
 
@@ -63,6 +69,10 @@ class OpenRouterRequestTest {
     private static final int ENDPOINT_MAX_COMPLETION = 4096;
     private static final int ENDPOINT_WINDOW = 32768;
     private static final int SEED = 7;
+    private static final String COSTED_REPLY = "{\"id\":\"gen-1\",\"model\":\"example/model-a\","
+            + "\"provider\":\"ExampleHost\",\"choices\":[{\"message\":{\"role\":\"assistant\","
+            + "\"content\":\"REPLY-TEXT-MARK\"},\"finish_reason\":\"stop\"}],"
+            + "\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"cost\":0.00042}}";
     private static final String REPLY =
             "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}";
 
@@ -159,6 +169,37 @@ class OpenRouterRequestTest {
         assertThat(window).isEqualTo(ENDPOINT_WINDOW);
     }
 
+    // The call line names who answered and what it cost, as slugs and numbers; the prompt and the reply text stay out.
+    @Test
+    void chat_debugLine_carriesSlugsAndCostButNoText() throws IOException {
+        server.stubFor(post(urlEqualTo(CHAT_PATH)).willReturn(okJson(COSTED_REPLY)));
+        final Logger bookloom = (Logger) LoggerFactory.getLogger("ua.bookloom");
+        final Level before = bookloom.getLevel();
+        final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        bookloom.setLevel(Level.DEBUG);
+        logged.start();
+        bookloom.addAppender(logged);
+        try {
+            chat(PLAIN, draftRequest());
+        } finally {
+            bookloom.detachAppender(logged);
+            bookloom.setLevel(before);
+        }
+
+        final List<String> lines = logged.list.stream()
+                .filter(event -> event.getLevel() == Level.DEBUG)
+                .map(ILoggingEvent::getFormattedMessage)
+                .filter(message -> message.startsWith("Provider chat call "))
+                .toList();
+        assertThat(lines)
+                .singleElement()
+                .asString()
+                .contains("servedProvider=ExampleHost")
+                .contains("servedModel=example/model-a")
+                .contains("cost=0.00042")
+                .doesNotContain("REPLY-TEXT-MARK");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"data_collection", "quantizations", "order", "allow_fallbacks", "session_id"})
     void chat_openRouter_neverSendsRoutingOrDataPolicyFields(final String field) throws IOException {
@@ -214,6 +255,19 @@ class OpenRouterRequestTest {
                 cap,
                 null,
                 null);
+    }
+
+    private static ChatRequest draftRequest() {
+        return new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "Translate: a red door.")),
+                0.2,
+                null,
+                ReasoningLevel.OFF,
+                null,
+                null,
+                SMALL_CAP,
+                null,
+                CallKind.DRAFT);
     }
 
     private static String fixture(final String name) {

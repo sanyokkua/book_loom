@@ -1,5 +1,6 @@
 package ua.bookloom.api.llm;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -18,13 +19,33 @@ import ua.bookloom.api.pipeline.CallKind;
  * @param timeToFirstToken the measured time before the first token, or null when the call did not measure it
  * @param failureReason why the attempt failed, {@link FailureReason#UNCLASSIFIED} when no catalogue row explains it,
  *     or null when it was answered
+ * @param cost the price the provider reported for the attempt, or null when it reported none (never 0 for missing)
  */
 public record CallRecord(
         CallKind callKind,
         @Nullable TokenUsage usage,
         Duration wallTime,
         @Nullable Duration timeToFirstToken,
-        @Nullable FailureReason failureReason) {
+        @Nullable FailureReason failureReason,
+        @Nullable BigDecimal cost) {
+
+    /**
+     * Preserves the construction form for a call that reported no cost.
+     *
+     * @param callKind what the call was for
+     * @param usage the reported figures, or null
+     * @param wallTime how long the attempt took
+     * @param timeToFirstToken the measured time before the first token, or null
+     * @param failureReason why it failed, or null when answered
+     */
+    public CallRecord(
+            CallKind callKind,
+            @Nullable TokenUsage usage,
+            Duration wallTime,
+            @Nullable Duration timeToFirstToken,
+            @Nullable FailureReason failureReason) {
+        this(callKind, usage, wallTime, timeToFirstToken, failureReason, null);
+    }
 
     /** Rejects a record with no kind or no time, which no sum could place. */
     public CallRecord {
