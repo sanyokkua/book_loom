@@ -27,7 +27,7 @@ public final class RevisionGuards {
     private static final String QUOTE_MARKS = "«»„“”\"";
     private static final String DASHES = "—–";
     private static final int WORD_LOSS_DIVISOR = 5;
-    private static final Pattern LATIN_RUN = Pattern.compile("\\b[a-z]{2,}(?:\\s+[a-z]{2,})+\\b");
+    private static final Pattern LATIN_RUN = Pattern.compile("\\b[a-z]{2,}(?:\\s+[a-z]{2,}){1,200}\\b");
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ-]*");
     private static final Pattern CYRILLIC = Pattern.compile("\\p{IsCyrillic}");
     static final String QUOTES = "quotes";

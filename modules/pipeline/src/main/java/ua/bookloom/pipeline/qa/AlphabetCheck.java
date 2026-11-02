@@ -30,7 +30,7 @@ final class AlphabetCheck {
     private static final String ARROW = " → ";
     private static final int MIN_STEM = 3;
     private static final int MAX_ENDING = 3;
-    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ-][\\p{L}\\p{M}]+)*");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ-][\\p{L}\\p{M}]+){0,32}");
 
     static List<CheckFinding> find(
             final String source, final String target, final String targetLanguage, final List<String> glossaryPairs) {

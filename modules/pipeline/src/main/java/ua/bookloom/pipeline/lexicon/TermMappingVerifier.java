@@ -46,7 +46,7 @@ public final class TermMappingVerifier {
         }
     }
 
-    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}\\p{N}]+(?:['’ʼ-][\\p{L}\\p{M}\\p{N}]+)*");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}\\p{N}]+(?:['’ʼ-][\\p{L}\\p{M}\\p{N}]+){0,32}");
     private static final Pattern DOUBLED = Pattern.compile("(\\p{L})\\1");
     private static final int MIN_SIGNIFICANT_LETTERS = 3;
     private static final int LONG_WORD = 8;

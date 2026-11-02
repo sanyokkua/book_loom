@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class NumberCheck {
 
-    private static final Pattern NUMBER = Pattern.compile("\\d+(?:[.,:]\\d+)*");
+    private static final Pattern NUMBER = Pattern.compile("\\d+(?:[.,:]\\d+){0,32}");
     private static final Pattern GROUP_SPACE = Pattern.compile("(?<=\\d)[\\s\u00A0\u202F](?=\\d{3}(?!\\d))");
     private static final Pattern THOUSANDS = Pattern.compile("\\d{1,3}(?:[.,]\\d{3})+");
     private static final int LONG_NUMBER_DIGITS = 3;

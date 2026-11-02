@@ -23,7 +23,7 @@ final class TargetWords {
     static final int STEM_LENGTH = 4;
 
     private static final int MIN_LETTERS = 3;
-    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ-][\\p{L}\\p{M}]+)*");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ-][\\p{L}\\p{M}]+){0,32}");
     private static final Pattern GAP_END = Pattern.compile("[\\s\"“”«»'‘’—–-]+$");
     private static final String SENTENCE_ENDS = ".!?…:";
 

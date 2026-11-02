@@ -52,7 +52,7 @@ final class MarkdownMasker {
     private static final int LINE_BREAK = 3;
 
     private static final Pattern BARE_WWW =
-            Pattern.compile("(?<![\\w./@-])www\\.[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+(?:[/?#][^\\s<>]*)?");
+            Pattern.compile("(?<![\\w./@-])www\\.[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+){1,32}(?:[/?#][^\\s<>]*)?");
 
     /** A GFM task marker and the horizontal whitespace that makes its following label a task-list label. */
     private static final Pattern TASK_LIST_MARKER = Pattern.compile("\\[[ xX]\\][\\t ]+");

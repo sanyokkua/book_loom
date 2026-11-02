@@ -26,7 +26,7 @@ import ua.bookloom.pipeline.index.BookIndex;
 @Slf4j
 public final class RunStart {
 
-    private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
+    private static final Pattern LANGUAGE_CODE = Pattern.compile("[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,8}");
 
     /**
      * What a run starts from.
