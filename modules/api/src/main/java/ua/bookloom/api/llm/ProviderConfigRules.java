@@ -45,9 +45,10 @@ public interface ProviderConfigRules {
      * A value that has a variable name's shape yet reads like a key: the prefix of a well-known key format, or a long run
      * that mixes lower case, upper case and digits the way generated keys do and variable names do not.
      */
-    Pattern SECRET_SHAPE =
-            Pattern.compile("(sk|pk|rk|ghp|gho|ghu|ghs|ghr|github_pat|glpat|hf|xox[abprs])[-_].*|AKIA[0-9A-Z]{16}"
-                    + "|(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9_]{24,}");
+    List<Pattern> SECRET_SHAPES = List.of(
+            Pattern.compile("(?:sk|pk|rk|ghp|gho|ghu|ghs|ghr|github_pat|glpat|hf|xox[abprs])[-_].*"),
+            Pattern.compile("AKIA[0-9A-Z]{16}"),
+            Pattern.compile("(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9_]{24,}"));
 
     /**
      * A variable written the way a shell or a header value refers to it ({@code $NAME}, {@code ${NAME}},
@@ -284,8 +285,7 @@ public interface ProviderConfigRules {
      * @return {@code true} if it has a variable name's shape and no key's shape, {@code false} otherwise
      */
     static boolean isVariableName(final String reference) {
-        return ENV_NAME.matcher(reference).matches()
-                && !SECRET_SHAPE.matcher(reference).matches();
+        return ENV_NAME.matcher(reference).matches() && !hasSecretShape(reference);
     }
 
     /**
@@ -296,8 +296,11 @@ public interface ProviderConfigRules {
      * @return {@code true} if it may be used as a header name, {@code false} otherwise
      */
     static boolean isHeaderName(final String name) {
-        return HEADER_NAME.matcher(name).matches()
-                && !SECRET_SHAPE.matcher(name).matches();
+        return HEADER_NAME.matcher(name).matches() && !hasSecretShape(name);
+    }
+
+    private static boolean hasSecretShape(final String text) {
+        return SECRET_SHAPES.stream().anyMatch(shape -> shape.matcher(text).matches());
     }
 
     private static boolean isBlank(final @Nullable String value) {

@@ -45,12 +45,10 @@ public record CoverImage(String resourcePath, String mediaType, byte[] bytes) {
         if (this == other) {
             return true;
         }
-        if (!(other instanceof CoverImage that)) {
-            return false;
-        }
-        return resourcePath.equals(that.resourcePath)
-                && mediaType.equals(that.mediaType)
-                && Arrays.equals(bytes, that.bytes);
+        return other instanceof CoverImage(String otherPath, String otherType, byte[] otherBytes)
+                && resourcePath.equals(otherPath)
+                && mediaType.equals(otherType)
+                && Arrays.equals(bytes, otherBytes);
     }
 
     @Override

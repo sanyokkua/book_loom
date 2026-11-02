@@ -45,8 +45,8 @@ class ConsistencyChecksTest {
 
     @Test
     void constructor_zeroRefusalCount_isRejected() {
-        assertThatThrownBy(() -> new ConsistencyChecks(0, 0, 0, Map.of("quotes", 0), 0))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = Map.of("quotes", 0);
+        assertThatThrownBy(() -> new ConsistencyChecks(0, 0, 0, arg1, 0)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // IF the five-argument form invented a count, THEN every pass that never stopped early would report unread items.

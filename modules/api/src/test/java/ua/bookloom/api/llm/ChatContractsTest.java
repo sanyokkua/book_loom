@@ -25,7 +25,8 @@ class ChatContractsTest {
         messages.add(new ChatMessage(ChatRole.ASSISTANT, "HELLO"));
 
         assertThat(request.messages()).containsExactly(message);
-        assertThatThrownBy(() -> request.messages().add(message)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = request.messages();
+        assertThatThrownBy(() -> target.add(message)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

@@ -48,15 +48,18 @@ class NamesPassRecordsTest {
 
     @Test
     void report_negativeCalls_isRefused() {
-        assertThatThrownBy(() -> new NamesPassReport(EntryChanges.none(), EntryChanges.none(), -1, Duration.ZERO))
+        final EntryChanges<GlossaryEntry> arg1 = EntryChanges.none();
+        final EntryChanges<LexiconEntry> arg2 = EntryChanges.none();
+        assertThatThrownBy(() -> new NamesPassReport(arg1, arg2, -1, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void report_negativeElapsed_isRefused() {
-        assertThatThrownBy(
-                        () -> new NamesPassReport(EntryChanges.none(), EntryChanges.none(), 0, Duration.ofSeconds(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
+        final EntryChanges<GlossaryEntry> arg1 = EntryChanges.none();
+        final EntryChanges<LexiconEntry> arg2 = EntryChanges.none();
+        final var arg3 = Duration.ofSeconds(-1);
+        assertThatThrownBy(() -> new NamesPassReport(arg1, arg2, 0, arg3)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

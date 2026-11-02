@@ -146,7 +146,8 @@ class SafeDetailsTest {
     @ParameterizedTest
     @ValueSource(strings = {"lm studio", "LM_STUDIO, model=x", "", "Ollama"})
     void withEngine_notAConstantName_isRefused(final String name) {
-        assertThatThrownBy(() -> SafeDetails.empty().withEngine(name)).isInstanceOf(IllegalArgumentException.class);
+        final var target = SafeDetails.empty();
+        assertThatThrownBy(() -> target.withEngine(name)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // A value passed to the wrong field cannot be prevented by an API, but its blast radius can be bounded: a newline
@@ -303,8 +304,8 @@ class SafeDetailsTest {
 
     @Test
     void withTokenCounts_negativeCount_isRefused() {
-        assertThatThrownBy(() -> SafeDetails.empty().withTokenCounts(-1, 512))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var target = SafeDetails.empty();
+        assertThatThrownBy(() -> target.withTokenCounts(-1, 512)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // IF the folder's whole path were kept, THEN a dialog and a log line would name the person's home folder.

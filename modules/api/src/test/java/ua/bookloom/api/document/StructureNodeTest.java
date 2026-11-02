@@ -27,7 +27,8 @@ class StructureNodeTest {
     void children_returned_isUnmodifiable() {
         final StructureNode node = new StructureNode("Book", null, null, List.of());
 
-        assertThatThrownBy(() -> node.children().add(null)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = node.children();
+        assertThatThrownBy(() -> target.add(null)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

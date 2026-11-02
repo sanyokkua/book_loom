@@ -143,7 +143,10 @@ public record AppSetting<T>(
 
     private static Optional<Boolean> readBoolean(final String raw) {
         final String text = raw.strip().toLowerCase(Locale.ROOT);
-        return TRUE.equals(text) ? Optional.of(true) : FALSE.equals(text) ? Optional.of(false) : Optional.empty();
+        if (TRUE.equals(text)) {
+            return Optional.of(true);
+        }
+        return FALSE.equals(text) ? Optional.of(false) : Optional.empty();
     }
 
     private static String writeBoolean(final Boolean value) {

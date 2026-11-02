@@ -18,12 +18,14 @@ class NodeAnchorTest {
 
     @Test
     void constructor_negativeRunIndex_isRejected() {
-        assertThatThrownBy(() -> new NodeAnchor(List.of(0, 1), -1)).isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = List.of(0, 1);
+        assertThatThrownBy(() -> new NodeAnchor(arg1, -1)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_negativeNodePathEntry_isRejected() {
-        assertThatThrownBy(() -> new NodeAnchor(List.of(0, -2, 1), 0)).isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = List.of(0, -2, 1);
+        assertThatThrownBy(() -> new NodeAnchor(arg1, 0)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

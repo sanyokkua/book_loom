@@ -147,7 +147,7 @@ public record SafeDetails(
                 : new SafeDetails(
                         reason,
                         httpStatus,
-                        SafeText.flatten(port < 0 ? host : host + ":" + port),
+                        SafeText.flatten(hostWithPort(host, port)),
                         modelName,
                         timeoutMillis,
                         attempt,
@@ -453,5 +453,9 @@ public record SafeDetails(
         if (value != null) {
             parts.add(key + "=" + value);
         }
+    }
+
+    private static String hostWithPort(final String host, final int port) {
+        return port < 0 ? host : host + ":" + port;
     }
 }

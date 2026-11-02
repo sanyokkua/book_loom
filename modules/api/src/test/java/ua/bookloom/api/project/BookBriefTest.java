@@ -37,6 +37,7 @@ class BookBriefTest {
     @ParameterizedTest
     @ValueSource(ints = {-1, 101})
     void constructor_balanceOutsideRange_throws(final int balance) {
+        final var arg1 = AlsoTranslate.defaults();
         assertThatThrownBy(() -> new BookBrief(
                         "en",
                         null,
@@ -49,7 +50,7 @@ class BookBriefTest {
                         FootnotePolicy.TRANSLATE,
                         UnitPolicy.KEEP,
                         balance,
-                        AlsoTranslate.defaults(),
+                        arg1,
                         QualityDial.BALANCED))
                 .isInstanceOf(IllegalArgumentException.class);
     }

@@ -38,11 +38,13 @@ class ModelProfileTest {
     @ValueSource(ints = {0, -1})
     void new_nonPositiveBatch_throws(final int batch) {
         final ModelProfile d = ModelProfile.defaults();
+        final Set<ModelProfile.MarkupFilter> noFilters = Set.of();
+        final Set<ModelProfile.Quirk> noQuirks = Set.of();
         assertThatThrownBy(() -> new ModelProfile(
                         d.reasoning(),
-                        Set.of(),
+                        noFilters,
                         d.systemRole(),
-                        Set.of(),
+                        noQuirks,
                         d.sampling(),
                         d.thinking(),
                         d.context(),

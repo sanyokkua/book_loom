@@ -38,7 +38,8 @@ class VerificationReportTest {
         stages.add(outcome(VerificationStage.MODELS, StageStatus.FAILED));
 
         assertThat(report.stages()).containsExactly(stage);
-        assertThatThrownBy(() -> report.stages().add(stage)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = report.stages();
+        assertThatThrownBy(() -> target.add(stage)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     private static StageOutcome outcome(VerificationStage stage, StageStatus status) {

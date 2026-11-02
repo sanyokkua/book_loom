@@ -98,7 +98,8 @@ class ModelSettingsTest {
 
     @Test
     void constructor_nullProviderId_isRejected() {
-        assertThatThrownBy(() -> ModelSettings.defaults(nullString(), "m")).isInstanceOf(NullPointerException.class);
+        final String provider = nullString();
+        assertThatThrownBy(() -> ModelSettings.defaults(provider, "m")).isInstanceOf(NullPointerException.class);
     }
 
     @SuppressWarnings("NullAway")

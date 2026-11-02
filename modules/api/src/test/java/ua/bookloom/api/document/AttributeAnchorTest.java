@@ -14,15 +14,15 @@ class AttributeAnchorTest {
 
     @Test
     void constructor_negativeNodePathEntry_isRejected() {
-        assertThatThrownBy(() -> new AttributeAnchor(List.of(0, -1), "alt"))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = List.of(0, -1);
+        assertThatThrownBy(() -> new AttributeAnchor(arg1, "alt")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "\t"})
     void constructor_blankAttribute_isRejected(String attribute) {
-        assertThatThrownBy(() -> new AttributeAnchor(List.of(0), attribute))
-                .isInstanceOf(IllegalArgumentException.class);
+        final var arg1 = List.of(0);
+        assertThatThrownBy(() -> new AttributeAnchor(arg1, attribute)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

@@ -127,7 +127,8 @@ class NarratorTest {
         quotes.add("another line");
 
         assertThat(narrator.evidence()).containsExactly(QUOTE);
-        assertThatThrownBy(() -> narrator.evidence().add("x")).isInstanceOf(UnsupportedOperationException.class);
+        final var target = narrator.evidence();
+        assertThatThrownBy(() -> target.add("x")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

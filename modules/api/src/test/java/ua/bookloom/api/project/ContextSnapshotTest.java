@@ -23,7 +23,8 @@ class ContextSnapshotTest {
         glossary.add(new SnapshotTerm("Milton", "Мілтон", TermType.PLACE, Gender.NEUTER, false, false, null));
 
         assertThat(snapshot.glossary()).hasSize(1);
-        assertThatThrownBy(() -> snapshot.glossary().add(null)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = snapshot.glossary();
+        assertThatThrownBy(() -> target.add(null)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test

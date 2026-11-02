@@ -14,8 +14,8 @@ class ProviderConfigTest {
 
     @Test
     void defaultTimeouts_areTenAndOneHundredEightySeconds() {
-        assertThat(ProviderConfig.DEFAULT_CONNECT_TIMEOUT).isEqualTo(Duration.ofSeconds(10));
-        assertThat(ProviderConfig.DEFAULT_REQUEST_TIMEOUT).isEqualTo(Duration.ofMinutes(3));
+        assertThat(ProviderConfig.DEFAULT_CONNECT_TIMEOUT.toSeconds()).isEqualTo(10);
+        assertThat(ProviderConfig.DEFAULT_REQUEST_TIMEOUT.toMinutes()).isEqualTo(3);
     }
 
     @Test

@@ -19,7 +19,8 @@ class UnitTest {
         final Unit unit =
                 new Unit("OEBPS/c01.xhtml", 0, "OEBPS/c01.xhtml", "application/xhtml+xml", SKELETON, List.of());
 
-        assertThatThrownBy(() -> unit.segments().add(null)).isInstanceOf(UnsupportedOperationException.class);
+        final var target = unit.segments();
+        assertThatThrownBy(() -> target.add(null)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     @Test
