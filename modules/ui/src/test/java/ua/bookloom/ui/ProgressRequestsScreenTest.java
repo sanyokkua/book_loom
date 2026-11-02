@@ -191,6 +191,7 @@ class ProgressRequestsScreenTest extends ProgressWorkTestBase {
                         new StepChanged(StepKind.STAGE, STAGE, 2, StepState.ENDED, null, StepResult.DONE)));
 
         await(() -> requestLines().stream().anyMatch(line -> line.startsWith("Request 1 of 1")));
+        assertThat(requestLines()).anyMatch(line -> line.startsWith("Request 1 of 1 ·"));
     }
 
     // IF a request line or the heading above it were cut at a standard size in either language, THEN the person could

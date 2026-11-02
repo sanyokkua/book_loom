@@ -1,6 +1,5 @@
 package ua.bookloom.ui.control;
 
-import java.util.Objects;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.dialog.SystemTextClipboard;
@@ -29,7 +28,6 @@ final class WireView extends VBox {
 
     WireView(final String id, final Messages messages, final TextClipboard clipboard) {
         super(SPACING);
-        Objects.requireNonNull(id, "id");
         setId(id);
         request = new RawBlock(
                 id + "-request",

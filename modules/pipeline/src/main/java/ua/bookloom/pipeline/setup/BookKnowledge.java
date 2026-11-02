@@ -37,6 +37,8 @@ import ua.bookloom.pipeline.setup.Knowledge.Reason;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class BookKnowledge {
 
+    private static final String AUTHOR = "author";
+    private static final String KNOWN = "known";
     private static final int EXPECTED_TOKENS = 160;
     private static final int CAP_TOKENS = 320;
 
@@ -96,7 +98,7 @@ public final class BookKnowledge {
         final Map<String, String> user = new LinkedHashMap<>();
         user.put(TITLE, Objects.requireNonNull(facts.title(), TITLE));
         if (facts.author() != null) {
-            user.put("author", facts.author());
+            user.put(AUTHOR, facts.author());
         }
         final PromptName name = PromptName.BOOK_KNOWLEDGE;
         final ChatRequest request = ChatRequests.build(
@@ -122,9 +124,9 @@ public final class BookKnowledge {
         if (reply == null) {
             return lines;
         }
-        lines.put("known", Boolean.toString(reply.known()));
+        lines.put(KNOWN, Boolean.toString(reply.known()));
         putIfPresent(lines, "title", reply.title());
-        putIfPresent(lines, "author", reply.author());
+        putIfPresent(lines, AUTHOR, reply.author());
         putIfPresent(lines, "genre", reply.genre());
         putIfPresent(lines, "audience", reply.audience());
         putIfPresent(lines, "narration", reply.narration());
@@ -159,7 +161,7 @@ public final class BookKnowledge {
         }
         try {
             final JsonNode node = mapper.readTree(content.substring(from, to + 1));
-            return node.path("known").isBoolean() ? replyOf(node) : null;
+            return node.path(KNOWN).isBoolean() ? replyOf(node) : null;
         } catch (JsonProcessingException cause) {
             log.debug("Book knowledge reply is not JSON: {}", cause.getOriginalMessage());
             return null;
@@ -169,9 +171,9 @@ public final class BookKnowledge {
     private static BookKnowledgeReply replyOf(final JsonNode node) {
         final JsonNode year = node.path("year");
         return new BookKnowledgeReply(
-                node.path("known").asBoolean(),
+                node.path(KNOWN).asBoolean(),
                 text(node, "title"),
-                text(node, "author"),
+                text(node, AUTHOR),
                 year.isIntegralNumber() && year.asInt() > 0 ? year.asInt() : null,
                 text(node, "genre"),
                 text(node, "audience"),
