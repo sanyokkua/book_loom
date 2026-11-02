@@ -118,6 +118,11 @@ JavaFX is 26.0.2 (ADR-0019: the first release with a built-in headless platform)
 ./gradlew resolveAndLockAll --write-locks                    # regenerate after a catalog change
 ./gradlew -p modules/build-logic resolveAndLockAll --write-locks
 ./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks help   # regenerate gradle/verification-metadata.xml after a dependency change; the JavaFX jars of the other platforms (linux, linux-aarch64, win, mac) are added by hand from Maven Central, because only the host platform resolves
+# The build-script classpath resolves differently per host (plugin-portal .module/.pom files a macOS cache never fetched), so after a
+# regeneration also run it once on Linux against an EMPTY Gradle cache and keep the additions (same bytes from both repositories):
+#   docker run --rm -v "$PWD":/src:ro -v <fresh-volume>:/root/.gradle -v "$PWD/.temporary_context/vout":/out bookloom-ci-ui bash -ec \
+#     'rsync -a --exclude build --exclude .git --exclude .temporary_context /src/ /w/; cd /w; ./gradlew --no-daemon --write-verification-metadata sha256 help :ui:compileTestJava :app:compileTestJava; cp gradle/verification-metadata.xml /out/'
+# then copy the file back; `scripts/ci-linux-ui.sh` with a fresh cache proves it.
 ```
 
 `:app` and `:ui` produce **no lockfile diff** by design: `bookloom.javafx-conventions` deactivates locking on their
