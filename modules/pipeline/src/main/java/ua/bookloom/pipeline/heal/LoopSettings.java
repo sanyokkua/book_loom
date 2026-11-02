@@ -49,6 +49,11 @@ public record LoopSettings(
         characters = List.copyOf(characters);
     }
 
+    /** What the soft checks read of these settings. */
+    public SoftContext softContext() {
+        return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters);
+    }
+
     /** Settings whose reviewer is shown the glossary pairs and the character lines as they stand, in every call. */
     public LoopSettings(
             final ReviewMode reviewMode,

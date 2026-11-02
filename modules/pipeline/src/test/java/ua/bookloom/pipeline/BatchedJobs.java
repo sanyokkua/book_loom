@@ -32,22 +32,16 @@ final class BatchedJobs {
     static TranslationJobImpl batchedJob(
             final TestProject project, final ChatModel model, final RunRequest request, final int firstBatchSize) {
         return new TranslationJobImpl(
-                project.documents(),
                 request,
-                model,
-                new ObjectMapper(),
-                new PromptTemplates(),
+                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                TranslationJobTestSupport.qualityLoop(),
-                TranslationJobTestSupport.SPLITTER,
-                ConsistencyPassFixture.over(project),
-                Clock.systemUTC(),
-                new UuidIdSource(),
-                RecoveryTimer.REAL,
-                RunTicks.DAEMON,
-                firstBatchSize,
-                WordValidator.none(),
-                CallLedger.none(),
-                "unknown");
+                new RunChecks(
+                        TranslationJobTestSupport.qualityLoop(),
+                        TranslationJobTestSupport.SPLITTER,
+                        ConsistencyPassFixture.over(project),
+                        WordValidator.none()),
+                new RunPacing(
+                        Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL, RunTicks.DAEMON, firstBatchSize),
+                new RunLogFacts(CallLedger.none(), "unknown"));
     }
 }

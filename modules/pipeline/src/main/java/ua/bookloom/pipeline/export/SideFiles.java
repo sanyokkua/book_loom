@@ -120,17 +120,7 @@ final class SideFiles {
         return switch (kind) {
             case GLOSSARY_CSV -> GlossaryCsv.format(sources.glossary());
             case BILINGUAL_HTML -> BilingualHtml.of(title, sources.targets());
-            case QUALITY_REPORT ->
-                QualityReport.of(
-                        title,
-                        sources.counts(),
-                        sources.targets().document(),
-                        sources.records(),
-                        sources.keptKinds(),
-                        sources.pass(),
-                        sources.suspicious(),
-                        sources.policy(),
-                        sources.lastRun());
+            case QUALITY_REPORT -> QualityReport.of(title, sources);
         };
     }
 

@@ -75,21 +75,12 @@ final class RoundEvaluator {
                 outcome.segment().id());
         final QaResult qa = QaEvaluation.evaluate(
                 DraftEvaluation.notices(outcome.segment().id(), restored.autoRepair(), restored.normalised()),
-                outcome.segment(),
-                outcome.maskedSource(),
+                outcome.subject(),
                 maskedCandidate,
                 restored.maskedForm(),
-                settings,
-                outcome.lockedRenderings());
-        final Optional<QuoteFixUp.Fixed> fixed = QuoteFixUp.fix(
-                outcome.segment(),
-                outcome.maskedSource(),
-                outcome.lockedRenderings(),
-                maskedCandidate,
-                qa,
-                restored.normalised(),
-                gate,
-                settings);
+                settings.softContext());
+        final Optional<QuoteFixUp.Fixed> fixed =
+                QuoteFixUp.fix(outcome.subject(), maskedCandidate, qa, restored.normalised(), gate, settings);
         if (fixed.isPresent()) {
             return evaluatedOf(
                     fixed.get().maskedCandidate(),

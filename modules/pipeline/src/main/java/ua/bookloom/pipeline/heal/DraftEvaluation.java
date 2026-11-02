@@ -39,12 +39,10 @@ public final class DraftEvaluation {
         logTraceDraftTarget(outcome);
         return QaEvaluation.evaluate(
                 given,
-                outcome.segment(),
-                outcome.maskedSource(),
+                outcome.subject(),
                 outcome.maskedReply(),
                 Objects.requireNonNullElse(outcome.maskedForm(), outcome.maskedReply()),
-                settings,
-                outcome.lockedRenderings());
+                settings.softContext());
     }
 
     private static List<CheckResult> givenGates(final DraftOutcome.Drafted outcome) {

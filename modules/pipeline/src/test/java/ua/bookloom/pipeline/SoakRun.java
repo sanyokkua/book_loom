@@ -160,29 +160,31 @@ final class SoakRun {
 
     private TranslationJobImpl job(final String projectId, final FaultyModel model) {
         final TranslationJobImpl job = new TranslationJobImpl(
-                injector.getInstance(DocumentPort.class),
                 new RunRequest(projectId, ReviewMode.UNATTENDED),
-                model,
-                mapper,
-                injector.getInstance(PromptTemplates.class),
+                new JobTools(
+                        injector.getInstance(DocumentPort.class),
+                        model,
+                        mapper,
+                        injector.getInstance(PromptTemplates.class)),
                 stores(),
-                injector.getInstance(QualityLoop.class),
-                injector.getInstance(SentenceSplitter.class),
-                injector.getInstance(ConsistencyPass.class),
-                clock,
-                new UuidIdSource(),
-                delay -> {
-                    clock.advance(delay);
-                    return 0;
-                },
-                (period, ticking) -> {
-                    tick.set(ticking);
-                    return () -> tick.set(null);
-                },
-                BatchDrafter.DEFAULT_INITIAL_SIZE,
-                WordValidator.none(),
-                CallLedger.none(),
-                "unknown");
+                new RunChecks(
+                        injector.getInstance(QualityLoop.class),
+                        injector.getInstance(SentenceSplitter.class),
+                        injector.getInstance(ConsistencyPass.class),
+                        WordValidator.none()),
+                new RunPacing(
+                        clock,
+                        new UuidIdSource(),
+                        delay -> {
+                            clock.advance(delay);
+                            return 0;
+                        },
+                        (period, ticking) -> {
+                            tick.set(ticking);
+                            return () -> tick.set(null);
+                        },
+                        BatchDrafter.DEFAULT_INITIAL_SIZE),
+                new RunLogFacts(CallLedger.none(), "unknown"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

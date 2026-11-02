@@ -40,8 +40,7 @@ public enum PromptName {
             CallKind.DRAFT,
             "draft",
             DraftSchema.SCHEMA,
-            0.2,
-            0.1,
+            new Temperatures(0.2, 0.1),
             new Slots(
                     Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
                     Set.of(EXAMPLES, LANGUAGE_RULES, "tokenRules", "noTokenRules")),
@@ -72,8 +71,7 @@ public enum PromptName {
             CallKind.STRUCTURAL_REPAIR,
             "structural-repair",
             DraftSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             null,
             new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),
 
@@ -83,8 +81,7 @@ public enum PromptName {
             CallKind.PLACEHOLDER_REPAIR,
             "placeholder-repair",
             DraftSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             null,
             new Slots(Set.of("rejectedTarget", TOKENS), Set.of("gateNote"))),
 
@@ -97,8 +94,7 @@ public enum PromptName {
             CallKind.REVIEW,
             "reviewer",
             ReviewerSchema.SCHEMA,
-            0.0,
-            null,
+            new Temperatures(0.0, null),
             new Slots(
                     Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
                     Set.of(LANGUAGE_RULES)),
@@ -112,8 +108,7 @@ public enum PromptName {
             CallKind.DIRECTED_FIX,
             "directed-fix",
             DraftSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(Set.of(SOURCE, "text", "findings"), Set.of("expectedTokens"))),
 
@@ -126,8 +121,7 @@ public enum PromptName {
             CallKind.REVISION,
             "revision",
             DraftSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(Set.of(SOURCE, "text"), Set.of("resolvedFacts", TOKENS))),
 
@@ -140,8 +134,7 @@ public enum PromptName {
             CallKind.REVISION,
             "consistency",
             ConsistencySchema.SCHEMA,
-            0.1,
-            null,
+            new Temperatures(0.1, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(
                     Set.of(SOURCE, "text"),
@@ -153,8 +146,7 @@ public enum PromptName {
             CallKind.TERM_CHOICE,
             "term-choice",
             TermChoiceSchema.SCHEMA,
-            0.1,
-            null,
+            new Temperatures(0.1, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of(TERMS), Set.of())),
 
@@ -167,8 +159,7 @@ public enum PromptName {
             CallKind.NAME_KNOWLEDGE,
             "name-knowledge",
             NameKnowledgeSchema.SCHEMA,
-            0.0,
-            null,
+            new Temperatures(0.0, null),
             new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("names"), Set.of())),
 
@@ -178,8 +169,7 @@ public enum PromptName {
             CallKind.FILE_NAME,
             "file-name",
             DraftSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("fileName"), Set.of(TITLE, AUTHOR, "titleTarget", "authorTarget", "correction"))),
 
@@ -189,8 +179,7 @@ public enum PromptName {
             CallKind.BRIEF_SUGGESTION,
             "brief-suggestion",
             BriefSuggestionSchema.SCHEMA,
-            0.1,
-            null,
+            new Temperatures(0.1, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("sample", "dialogueShare"), Set.of(TITLE, AUTHOR, "askLanguage"))),
 
@@ -200,8 +189,7 @@ public enum PromptName {
             CallKind.BOOK_KNOWLEDGE,
             "book-knowledge",
             BookKnowledgeSchema.SCHEMA,
-            0.0,
-            null,
+            new Temperatures(0.0, null),
             new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of(TITLE), Set.of(AUTHOR))),
 
@@ -214,8 +202,7 @@ public enum PromptName {
             CallKind.BRIEF_SYNTHESIS,
             "brief-synthesis",
             BriefSynthesisSchema.SCHEMA,
-            0.0,
-            null,
+            new Temperatures(0.0, null),
             new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("reports"), Set.of(TITLE, AUTHOR, "year", "publisher", "description", "knowledge"))),
 
@@ -234,8 +221,7 @@ public enum PromptName {
             CallKind.PRESCAN,
             "prescan",
             PrescanSchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             PreparationSlots.PRESCAN,
             new Slots(Set.of("candidates"), Set.of("existingTerms"))),
 
@@ -248,8 +234,7 @@ public enum PromptName {
             CallKind.REVIEW_TERMS,
             "review-terms",
             ReviewTermsSchema.SCHEMA,
-            0.1,
-            null,
+            new Temperatures(0.1, null),
             PreparationSlots.READING,
             new Slots(Set.of(TERMS), Set.of())),
 
@@ -262,8 +247,7 @@ public enum PromptName {
             CallKind.SUGGEST_TARGETS,
             "suggest-targets",
             SuggestTargetsSchema.SCHEMA,
-            0.1,
-            null,
+            new Temperatures(0.1, null),
             new Slots(
                     Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, "nameRule"),
                     Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, EXAMPLES, LANGUAGE_RULES)),
@@ -275,8 +259,7 @@ public enum PromptName {
             CallKind.REVIEW,
             "suspicious-words",
             SuspiciousWordsSchema.SCHEMA,
-            0.0,
-            null,
+            new Temperatures(0.0, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("items"), Set.of())),
 
@@ -286,12 +269,19 @@ public enum PromptName {
             CallKind.SUMMARY,
             "summary",
             SummarySchema.SCHEMA,
-            0.2,
-            null,
+            new Temperatures(0.2, null),
             new Slots(
                     Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE),
                     Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, LANGUAGE_RULES)),
             new Slots(Set.of("chapterSource", "chapterTarget"), Set.of("previousSummary")));
+
+    /**
+     * The temperatures of a call.
+     *
+     * @param base the temperature the call goes out at
+     * @param lower the lower temperature a review retry may ask for; {@code null} when there is none
+     */
+    private record Temperatures(double base, @Nullable Double lower) {}
 
     private final String resourceBaseName;
     private final CallKind callKind;
@@ -309,15 +299,14 @@ public enum PromptName {
                 CallKind.TERM_READING,
                 name,
                 responseSchema,
-                0.0,
-                null,
+                new Temperatures(0.0, null),
                 system,
                 new Slots(Set.of("term", textSlot), Set.of()));
     }
 
     // A batch draft (15i.X1 has three formats): the draft call kind and temperatures, the batch system slots.
     PromptName(final String name, final String format, final String schema, final Slots user) {
-        this(name, CallKind.DRAFT, format, schema, 0.2, 0.1, BatchSlots.SYSTEM, user);
+        this(name, CallKind.DRAFT, format, schema, new Temperatures(0.2, 0.1), BatchSlots.SYSTEM, user);
     }
 
     PromptName(
@@ -325,16 +314,15 @@ public enum PromptName {
             final CallKind callKind,
             final String responseFormatName,
             final String responseSchema,
-            final double temperature,
-            @Nullable final Double lowerTemperature,
+            final Temperatures temperatures,
             @Nullable final Slots systemSlots,
             final Slots userSlots) {
         this.resourceBaseName = resourceBaseName;
         this.callKind = callKind;
         this.responseFormatName = responseFormatName;
         this.responseSchema = responseSchema;
-        this.temperature = temperature;
-        this.lowerTemperature = lowerTemperature;
+        this.temperature = temperatures.base();
+        this.lowerTemperature = temperatures.lower();
         this.systemSlots = systemSlots;
         this.userSlots = userSlots;
     }

@@ -41,11 +41,14 @@ final class JobBoundaries implements RunBoundaries {
     private final UnattendedRecovery recovery;
 
     /**
-     * Creates the boundaries of one run.
+     * What a pause is handled with.
      *
      * @param skipRequested set by the job's skip action while paused, cleared as each pause begins and taken once
      * @param recovery waits through a pause on an error the run recovers from by itself
      */
+    record PauseHandling(AtomicBoolean skipRequested, UnattendedRecovery recovery) {}
+
+    /** Creates the boundaries of one run. */
     JobBoundaries(
             final JobControl control,
             final PendingCommit pending,
@@ -53,16 +56,15 @@ final class JobBoundaries implements RunBoundaries {
             final Consumer<JobEvent> emit,
             final SegmentRepository segments,
             final String projectId,
-            final AtomicBoolean skipRequested,
-            final UnattendedRecovery recovery) {
+            final PauseHandling handling) {
         this.control = Objects.requireNonNull(control, "control");
         this.pending = Objects.requireNonNull(pending, "pending");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.emit = Objects.requireNonNull(emit, "emit");
         this.segments = Objects.requireNonNull(segments, "segments");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.skipRequested = Objects.requireNonNull(skipRequested, "skipRequested");
-        this.recovery = Objects.requireNonNull(recovery, "recovery");
+        this.skipRequested = Objects.requireNonNull(handling, "handling").skipRequested();
+        this.recovery = handling.recovery();
     }
 
     @Override

@@ -31,23 +31,16 @@ final class TimedJobs {
             final RecoveryTimer timer,
             final RunTicks ticks) {
         final TranslationJobImpl job = new TranslationJobImpl(
-                project.documents(),
                 new RunRequest(project.id(), ReviewMode.UNATTENDED),
-                model,
-                new ObjectMapper(),
-                new PromptTemplates(),
+                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                TranslationJobTestSupport.qualityLoop(),
-                TranslationJobTestSupport.SPLITTER,
-                ConsistencyPassFixture.over(project),
-                clock,
-                new UuidIdSource(),
-                timer,
-                ticks,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none(),
-                CallLedger.none(),
-                "unknown");
+                new RunChecks(
+                        TranslationJobTestSupport.qualityLoop(),
+                        TranslationJobTestSupport.SPLITTER,
+                        ConsistencyPassFixture.over(project),
+                        WordValidator.none()),
+                new RunPacing(clock, new UuidIdSource(), timer, ticks, BatchDrafter.NO_BATCHING),
+                new RunLogFacts(CallLedger.none(), "unknown"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

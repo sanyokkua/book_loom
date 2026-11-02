@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.heal;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -14,7 +13,6 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.qa.CheckName;
-import ua.bookloom.pipeline.qa.LockedRendering;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.typography.QuoteRepair;
 
@@ -52,15 +50,7 @@ final class QuoteFixUp {
         if (draft.restoredTarget() == null) {
             return Optional.empty();
         }
-        return fix(
-                        draft.segment(),
-                        draft.maskedSource(),
-                        draft.lockedRenderings(),
-                        draft.maskedReply(),
-                        qa,
-                        draft.normalised(),
-                        gate,
-                        settings)
+        return fix(draft.subject(), draft.maskedReply(), qa, draft.normalised(), gate, settings)
                 .map(fixed -> new FixedDraft(
                         new DraftOutcome.Drafted(
                                 draft.segment(),
@@ -78,9 +68,7 @@ final class QuoteFixUp {
     }
 
     static Optional<Fixed> fix(
-            final Segment segment,
-            final String maskedSource,
-            final List<LockedRendering> lockedRenderings,
+            final DraftSubject subject,
             final String candidate,
             final QaResult qa,
             @Nullable final QaFinding earlierNote,
@@ -90,23 +78,20 @@ final class QuoteFixUp {
             return Optional.empty();
         }
         final QuoteRepair.Repaired repaired = QuoteRepair.repair(
-                maskedSource,
+                subject.maskedSource(),
                 candidate,
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage());
-        return repaired.isChanged()
-                ? reevaluated(segment, maskedSource, lockedRenderings, earlierNote, repaired, gate, settings)
-                : Optional.empty();
+        return repaired.isChanged() ? reevaluated(subject, earlierNote, repaired, gate, settings) : Optional.empty();
     }
 
     private static Optional<Fixed> reevaluated(
-            final Segment segment,
-            final String maskedSource,
-            final List<LockedRendering> lockedRenderings,
+            final DraftSubject subject,
             @Nullable final QaFinding earlierNote,
             final QuoteRepair.Repaired repaired,
             final GateFunction gate,
             final LoopSettings settings) {
+        final Segment segment = subject.segment();
         if (!(gate.restoreRepairing(segment, repaired.text(), PlaceholderRepair.RESTORE_MISSING)
                 instanceof GateResult.Restored restored)) {
             log.debug("Quote fix-up segment={} discarded: the repaired text failed the gate", segment.id());
@@ -116,12 +101,10 @@ final class QuoteFixUp {
         final String repairedCandidate = noted.candidateOr(repaired.text());
         final QaResult fixed = QaEvaluation.evaluate(
                 DraftEvaluation.notices(segment.id(), noted.autoRepair(), noted.normalised()),
-                segment,
-                maskedSource,
+                subject,
                 repairedCandidate,
                 noted.maskedForm(),
-                settings,
-                lockedRenderings);
+                settings.softContext());
         log.debug("Quote fix-up segment={} marks={} blockers={}", segment.id(), repaired.marks(), Blockers.of(fixed));
         return Blockers.of(fixed).contains(CheckName.QUOTE_BALANCE.raisedBy())
                 ? Optional.empty()

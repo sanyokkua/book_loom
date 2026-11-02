@@ -96,7 +96,12 @@ public final class ChunkRunner {
         final String analysis = settings.frame().analysisLanguage();
         this.announced = new ChunkSteps(steps.calls().steps(), settings.dial());
         this.followUp = new DecisionFollowUp(
-                settings.projectId(), analysis, steps.summary(), stores, index, sinks, calls, announced);
+                new DecisionFollowUp.BookFacts(settings.projectId(), analysis, index),
+                steps.summary(),
+                stores,
+                sinks,
+                calls,
+                announced);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
         this.shortcuts = DraftShortcuts.forFrame(settings.frame());
         this.batches =

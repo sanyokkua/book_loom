@@ -13,10 +13,6 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.RunRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgressListener;
@@ -24,11 +20,11 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.context.ModelWindows;
-import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.JobModelCalls;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * Refuses a destination the stored project's source cannot be written to, then hands back the job that writes it.
@@ -41,27 +37,19 @@ public final class ExportServiceImpl implements ExportService {
 
     private static final String UNKNOWN_LANGUAGE = "und";
 
-    private final ProjectRepository projects;
-    private final SegmentRepository segments;
-    private final OpenProjects openProjects;
+    private final RunStores stores;
     private final DocumentPort documents;
     private final ConsistencyPass consistencyPass;
-    private final GlossaryRepository glossary;
-    private final RunRepository runs;
     private final Clock clock;
     private final CallLedger ledger;
 
     /** An export service whose consistency pass's calls are counted nowhere (tests). */
     public ExportServiceImpl(
-            final ProjectRepository projects,
-            final SegmentRepository segments,
-            final OpenProjects openProjects,
+            final RunStores stores,
             final DocumentPort documents,
             final ConsistencyPass consistencyPass,
-            final GlossaryRepository glossary,
-            final RunRepository runs,
             final Clock clock) {
-        this(projects, segments, openProjects, documents, consistencyPass, glossary, runs, clock, CallLedger.none());
+        this(stores, documents, consistencyPass, clock, CallLedger.none());
     }
 
     @Override
@@ -97,7 +85,7 @@ public final class ExportServiceImpl implements ExportService {
                     request.sideFiles(),
                     request.consistencyPass(),
                     model != null);
-            final Result<Optional<Project>> found = projects.find(request.projectId());
+            final Result<Optional<Project>> found = stores.projects().find(request.projectId());
             if (found.isErr()) {
                 return Result.err(Objects.requireNonNull(found.error(), "error"));
             }
@@ -123,14 +111,21 @@ public final class ExportServiceImpl implements ExportService {
         }
         // The pass's calls reach the model the person chose; without one, only the name sweep runs.
         final ModelCalls calls = model == null ? null : shownCalls(project, model, progress);
-        final ExportParts parts =
-                new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary, runs);
+        final ExportParts parts = new ExportParts(
+                stores.projects(),
+                stores.segments(),
+                stores.openProjects(),
+                documents,
+                moves,
+                consistencyPass,
+                stores.glossary(),
+                stores.runs());
         return Result.ok(new ExportJobImpl(request, parts, calls, progress, ledger));
     }
 
     // The pass's calls are timed and shown as a run's are: each described call reaches the listener as a snapshot.
     private ModelCalls shownCalls(final Project project, final ChatModel model, final ExportProgressListener progress) {
-        final Document opened = openProjects.get(project.id());
+        final Document opened = stores.openProjects().get(project.id());
         final String target = Objects.requireNonNullElse(project.brief().targetLanguage(), UNKNOWN_LANGUAGE);
         log.debug(
                 "export calls are shown project={} bookOpen={} targetLanguage={}",

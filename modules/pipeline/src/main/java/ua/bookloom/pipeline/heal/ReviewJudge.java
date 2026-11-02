@@ -48,16 +48,32 @@ public final class ReviewJudge {
     }
 
     /**
+     * What a reviewed draft is resolved with.
+     *
+     * @param gate the gate the edited text is restored through
+     * @param applier the verified edit applier
+     * @param directedFix the directed fix a refused edit is given once
+     * @param calls the seam the directed fix is sent through
+     */
+    public record Tools(GateFunction gate, EditApplier applier, DirectedFix directedFix, ModelCalls calls) {
+
+        /** Rejects a missing collaborator. */
+        public Tools {
+            Objects.requireNonNull(gate, "gate");
+            Objects.requireNonNull(applier, "applier");
+            Objects.requireNonNull(directedFix, "directedFix");
+            Objects.requireNonNull(calls, "calls");
+        }
+    }
+
+    /**
      * Resolves the reviewer's answer for one draft that passed the checks.
      *
      * @param outcome the non-null draft the reviewer read
      * @param initialQa the non-null evaluation of that draft
      * @param item the non-null reviewer's answer for the draft's segment
      * @param settings the non-null loop settings of its chunk
-     * @param gate the non-null gate the edited text is restored through
-     * @param applier the non-null verified edit applier
-     * @param directedFix the non-null directed fix a refused edit is given once
-     * @param calls the non-null seam the directed fix is sent through
+     * @param tools the non-null collaborators the edits are verified and the directed fix is sent through
      * @return the resolution, or the error a directed-fix call answered
      */
     public static Result<Judged> resolve(
@@ -65,13 +81,14 @@ public final class ReviewJudge {
             final QaResult initialQa,
             final ReviewItem item,
             final LoopSettings settings,
-            final GateFunction gate,
-            final EditApplier applier,
-            final DirectedFix directedFix,
-            final ModelCalls calls) {
+            final Tools tools) {
         Objects.requireNonNull(settings, "settings");
-        final ReviewResolver resolver =
-                new ReviewResolver(applier, directedFix, new RoundEvaluator(gate, settings), settings, calls);
+        final ReviewResolver resolver = new ReviewResolver(
+                tools.applier(),
+                tools.directedFix(),
+                new RoundEvaluator(tools.gate(), settings),
+                settings,
+                tools.calls());
         return resolver.resolve(outcome, initialQa, item).map(resolution -> {
             final boolean accepted = AcceptanceRule.accepts(resolution.qa(), resolution.verifiedBlockersLeft());
             log.debug(

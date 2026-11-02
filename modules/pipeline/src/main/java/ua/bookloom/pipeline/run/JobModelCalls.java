@@ -110,10 +110,14 @@ public final class JobModelCalls implements ModelCalls {
                 clock,
                 targetLanguage,
                 window,
-                new CallSnapshots(Objects.requireNonNull(announce, "announce"), locators),
-                StepAnnouncer.silent(),
-                false);
+                new Variation(
+                        new CallSnapshots(Objects.requireNonNull(announce, "announce"), locators),
+                        StepAnnouncer.silent(),
+                        false));
     }
+
+    /** What differs between a seam and its copies: the snapshots, the step announcer and whether it is in a run. */
+    private record Variation(CallSnapshots snapshots, StepAnnouncer steps, boolean inRun) {}
 
     private JobModelCalls(
             final Function<Runnable, ChatModel> guard,
@@ -121,17 +125,15 @@ public final class JobModelCalls implements ModelCalls {
             final Clock clock,
             final String targetLanguage,
             final IntSupplier window,
-            final CallSnapshots snapshots,
-            final StepAnnouncer steps,
-            final boolean inRun) {
+            final Variation variation) {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.announce = announce;
         this.clock = Objects.requireNonNull(clock, "clock");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
         this.window = Objects.requireNonNull(window, "window");
-        this.snapshots = snapshots;
-        this.steps = steps;
-        this.inRun = inRun;
+        this.snapshots = variation.snapshots();
+        this.steps = variation.steps();
+        this.inRun = variation.inRun();
     }
 
     /** This seam announcing the steps a timeout resend adds through {@code steps}; all else is shared. */
@@ -142,9 +144,7 @@ public final class JobModelCalls implements ModelCalls {
                 clock,
                 targetLanguage,
                 window,
-                snapshots,
-                Objects.requireNonNull(steps, "steps"),
-                inRun);
+                new Variation(snapshots, Objects.requireNonNull(steps, "steps"), inRun));
     }
 
     /**
@@ -154,7 +154,7 @@ public final class JobModelCalls implements ModelCalls {
      * @return a seam whose calls keep the model loaded; all else is shared
      */
     public JobModelCalls inRun() {
-        return new JobModelCalls(guard, announce, clock, targetLanguage, window, snapshots, steps, true);
+        return new JobModelCalls(guard, announce, clock, targetLanguage, window, new Variation(snapshots, steps, true));
     }
 
     @Override

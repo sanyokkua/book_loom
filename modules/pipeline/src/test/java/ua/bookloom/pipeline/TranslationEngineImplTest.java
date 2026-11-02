@@ -132,24 +132,14 @@ class TranslationEngineImplTest {
                 project.documents(),
                 new ObjectMapper(),
                 new PromptTemplates(),
-                project.stores().projects(),
-                project.stores().segments(),
-                project.stores().checkpoint(),
-                project.stores().openProjects(),
-                project.stores().runs(),
-                project.stores().glossary(),
-                project.stores().tm(),
-                project.stores().summaries(),
-                project.stores().lexicon(),
-                TranslationJobTestSupport.qualityLoop(),
-                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                ConsistencyPassFixture.over(project),
-                Clock.systemUTC(),
-                new UuidIdSource(),
-                RecoveryTimer.REAL,
-                WordValidator.none(),
-                CallLedger.none(),
-                providers);
+                project.stores(),
+                new RunChecks(
+                        TranslationJobTestSupport.qualityLoop(),
+                        Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                        ConsistencyPassFixture.over(project),
+                        WordValidator.none()),
+                new RunPacing(Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL),
+                new RunLogSources(CallLedger.none(), providers));
     }
 
     private static ScriptedChatModel answers(final String reply) {

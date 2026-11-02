@@ -16,8 +16,10 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
+import ua.bookloom.pipeline.heal.DraftSubject;
 import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RoundProgress;
+import ua.bookloom.pipeline.heal.SoftContext;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
@@ -167,15 +169,19 @@ final class PassChecks {
             final PassInputs inputs, final Segment segment, final String candidate, final String maskedForm) {
         return QaEvaluation.evaluate(
                 List.of(),
-                segment,
-                segment.masked(),
+                new DraftSubject(
+                        segment,
+                        segment.masked(),
+                        ProtectedSpans.mask(segment, inputs.frame(), inputs.glossary())
+                                .presentLocked()),
                 candidate,
                 maskedForm,
-                inputs.frame(),
-                inputs.namePolicy(),
-                GlossaryNames.terms(inputs.glossary()),
-                ProtectedSpans.mask(segment, inputs.frame(), inputs.glossary()).presentLocked(),
-                pairs(inputs.glossary()));
+                new SoftContext(
+                        inputs.frame(),
+                        inputs.namePolicy(),
+                        GlossaryNames.terms(inputs.glossary()),
+                        pairs(inputs.glossary()),
+                        List.of()));
     }
 
     private static List<String> pairs(final List<GlossaryEntry> glossary) {

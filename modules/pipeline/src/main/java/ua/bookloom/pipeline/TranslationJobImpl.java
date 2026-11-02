@@ -15,7 +15,6 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.Finished;
@@ -30,7 +29,6 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.IdSource;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -101,49 +99,38 @@ final class TranslationJobImpl implements TranslationJob {
     private final String providerKind;
 
     /**
-     * Creates a job with the given recovery timer, tick cadence and first batch size, for a scripted clock; its start
-     * line names {@code providerKind}, the kind of server the model runs on or {@code unknown}.
+     * Creates a job paced by {@code pacing}, for a scripted clock; its start line names the provider kind {@code
+     * logFacts} holds, the kind of server the model runs on or {@code unknown}.
      */
     TranslationJobImpl(
-            final DocumentPort documents,
             final RunRequest request,
-            final ChatModel model,
-            final ObjectMapper mapper,
-            final PromptTemplates templates,
+            final JobTools tools,
             final RunStores stores,
-            final QualityLoop qualityLoop,
-            final SentenceSplitter splitter,
-            final ConsistencyPass revision,
-            final Clock clock,
-            final IdSource idSource,
-            final RecoveryTimer timer,
-            final RunTicks ticks,
-            final int batchSize,
-            final WordValidator words,
-            final CallLedger ledger,
-            final String providerKind) {
-        this.providerKind = Objects.requireNonNull(providerKind, "providerKind");
-        this.jobId = Objects.requireNonNull(idSource, "idSource").newId();
-        this.words = Objects.requireNonNull(words, "words");
-        this.batchSize = batchSize;
-        this.documents = Objects.requireNonNull(documents, "documents");
+            final RunChecks checks,
+            final RunPacing pacing,
+            final RunLogFacts logFacts) {
+        this.providerKind = logFacts.providerKind();
+        this.jobId = pacing.idSource().newId();
+        this.words = checks.words();
+        this.batchSize = pacing.batchSize();
+        this.documents = tools.documents();
         this.request = Objects.requireNonNull(request, "request");
-        this.model = Objects.requireNonNull(model, "model");
-        this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.templates = Objects.requireNonNull(templates, "templates");
+        this.model = tools.model();
+        this.mapper = tools.mapper();
+        this.templates = tools.templates();
         this.stores = Objects.requireNonNull(stores, "stores");
-        this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
-        this.splitter = Objects.requireNonNull(splitter, "splitter");
-        this.revision = Objects.requireNonNull(revision, "revision");
-        this.clock = Objects.requireNonNull(clock, "clock");
+        this.qualityLoop = checks.qualityLoop();
+        this.splitter = checks.splitter();
+        this.revision = checks.revision();
+        this.clock = pacing.clock();
         this.control = new JobControl(request.mode().pausePoints());
-        this.runSummary = new RunSummaryLogger(clock, ledger);
+        this.runSummary = new RunSummaryLogger(clock, logFacts.ledger());
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock, request.model());
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId(), recorder);
         this.startedAt = clock.instant();
-        this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
+        this.recovery = new UnattendedRecovery(control, clock, pacing.timer(), this::emit);
         this.watchdog = new StallWatchdog(control, clock);
-        this.ticks = Objects.requireNonNull(ticks, "ticks");
+        this.ticks = pacing.ticks();
     }
 
     @Override
@@ -340,8 +327,7 @@ final class TranslationJobImpl implements TranslationJob {
                 this::emit,
                 stores.segments(),
                 request.projectId(),
-                skipRequested,
-                recovery);
+                new JobBoundaries.PauseHandling(skipRequested, recovery));
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {

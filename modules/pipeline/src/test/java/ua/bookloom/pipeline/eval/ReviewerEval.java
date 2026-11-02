@@ -127,7 +127,11 @@ final class ReviewerEval {
             final String candidate) {
         final DraftJudge.Judged first = DraftJudge.judge(drafted, project.loop(), project.gate());
         final Result<ReviewJudge.Judged> result = ReviewJudge.resolve(
-                first.outcome(), first.qa(), item, project.loop(), project.gate(), editApplier, directedFix, calls);
+                first.outcome(),
+                first.qa(),
+                item,
+                project.loop(),
+                new ReviewJudge.Tools(project.gate(), editApplier, directedFix, calls));
         if (result.isErr()) {
             return new Reviewed(true, true, 0, "unresolved", "the directed fix call failed");
         }

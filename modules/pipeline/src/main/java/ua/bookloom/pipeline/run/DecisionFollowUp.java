@@ -52,22 +52,29 @@ final class DecisionFollowUp {
     private final List<Segment> decidedInUnit = new ArrayList<>();
     private @Nullable String summary;
 
+    /**
+     * The book a run follows up.
+     *
+     * @param projectId the project's id
+     * @param analysisLanguage the language the book's names are analysed in; {@code null} when it has none
+     * @param index the book's index, whose ordinals the decided story is read by
+     */
+    record BookFacts(String projectId, @Nullable String analysisLanguage, BookIndex index) {}
+
     DecisionFollowUp(
-            final String projectId,
-            @Nullable final String analysisLanguage,
+            final BookFacts book,
             final RollingSummaryKeeper keeper,
             final RunStores stores,
-            final BookIndex index,
             final RunSinks sinks,
             final RoutedCalls calls,
             final ChunkSteps announced) {
-        this.projectId = Objects.requireNonNull(projectId, "projectId");
-        this.analysisLanguage = analysisLanguage;
+        this.projectId = Objects.requireNonNull(book.projectId(), "projectId");
+        this.analysisLanguage = book.analysisLanguage();
         this.keeper = Objects.requireNonNull(keeper, "keeper");
         this.summaries = Objects.requireNonNull(stores, "stores").summaries();
         this.segments = stores.segments();
         this.glossary = stores.glossary();
-        this.index = Objects.requireNonNull(index, "index");
+        this.index = Objects.requireNonNull(book.index(), "index");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.announced = Objects.requireNonNull(announced, "announced");
@@ -142,11 +149,14 @@ final class DecisionFollowUp {
         }
         decidedInUnit.clear();
         announced.summarizing(unitId);
-        return calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId)).fold(refreshed -> {
-            announced.summarized(unitId, refreshed);
-            announce(refreshed, "unit end");
-            return Optional.<RunEnd>empty();
-        }, Optional::of);
+        return calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId))
+                .fold(
+                        refreshed -> {
+                            announced.summarized(unitId, refreshed);
+                            announce(refreshed, "unit end");
+                            return Optional.<RunEnd>empty();
+                        },
+                        Optional::of);
     }
 
     /**

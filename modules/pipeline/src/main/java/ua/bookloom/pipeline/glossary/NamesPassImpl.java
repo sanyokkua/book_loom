@@ -22,10 +22,6 @@ import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.persistence.DeferralRepository;
-import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.persistence.LexiconRepository;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -40,9 +36,9 @@ import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans.Book;
 import ua.bookloom.pipeline.glossary.TermReview.Reviewed;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
-import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * The one autonomous names pass (15i.N8): the steps the Names &amp; style buttons run, in order, over a private copy of
@@ -58,17 +54,11 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class NamesPassImpl implements NamesPass {
 
-    private final GlossaryRepository glossary;
-    private final LexiconRepository lexicon;
-    private final SegmentRepository segments;
+    private final RunStores stores;
     private final DeferralRepository deferrals;
-    private final ProjectRepository projects;
-    private final OpenProjects openProjects;
-    private final PreScan preScan;
+    private final NameServices services;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
-    private final SuggestTargets suggestTargets;
-    private final LexiconReading lexiconReading;
     private final Clock clock;
     private final CallLedger ledger;
 
@@ -76,32 +66,13 @@ public final class NamesPassImpl implements NamesPass {
      * A names pass whose calls are counted nowhere (tests).
      */
     public NamesPassImpl(
-            final GlossaryRepository glossary,
-            final LexiconRepository lexicon,
-            final SegmentRepository segments,
+            final RunStores stores,
             final DeferralRepository deferrals,
-            final ProjectRepository projects,
-            final OpenProjects openProjects,
-            final PreScan preScan,
+            final NameServices services,
             final PromptTemplates templates,
             final ObjectMapper mapper,
-            final SuggestTargets suggestTargets,
-            final LexiconReading lexiconReading,
             final Clock clock) {
-        this(
-                glossary,
-                lexicon,
-                segments,
-                deferrals,
-                projects,
-                openProjects,
-                preScan,
-                templates,
-                mapper,
-                suggestTargets,
-                lexiconReading,
-                clock,
-                CallLedger.none());
+        this(stores, deferrals, services, templates, mapper, clock, CallLedger.none());
     }
 
     /** The copies of both tables and the services built over them, for one project. */
@@ -165,23 +136,33 @@ public final class NamesPassImpl implements NamesPass {
     }
 
     private Result<Stage> stage(final String projectId) {
-        return StagedGlossary.copyOf(glossary, projectId)
-                .flatMap(names -> StagedLexicon.copyOf(lexicon, projectId).flatMap(terms -> {
-                    final TermReview review = new TermReview(templates, mapper, names, suggestTargets);
-                    final GlossaryModelScans scans = new GlossaryModelScans(
-                            projects, openProjects, preScan, review, suggestTargets, lexiconReading, clock);
-                    return scans.book(projectId)
-                            .map(book -> new Stage(
-                                    projectId,
-                                    names,
-                                    terms,
-                                    names.entries(),
-                                    terms.entries(),
-                                    scans,
-                                    book,
-                                    new GlossaryServiceImpl(names, segments, deferrals, projects, openProjects, scans),
-                                    new LexiconServiceImpl(terms, names, projects, openProjects, scans)));
-                }));
+        return StagedGlossary.copyOf(stores.glossary(), projectId)
+                .flatMap(names -> StagedLexicon.copyOf(stores.lexicon(), projectId)
+                        .flatMap(terms -> stageOver(projectId, names, terms)));
+    }
+
+    private Result<Stage> stageOver(final String projectId, final StagedGlossary names, final StagedLexicon terms) {
+        final TermReview review = new TermReview(templates, mapper, names, services.suggestTargets());
+        final GlossaryModelScans scans = new GlossaryModelScans(
+                stores.projects(),
+                stores.openProjects(),
+                services.preScan(),
+                review,
+                services.suggestTargets(),
+                services.lexiconReading(),
+                clock);
+        return scans.book(projectId)
+                .map(book -> new Stage(
+                        projectId,
+                        names,
+                        terms,
+                        names.entries(),
+                        terms.entries(),
+                        scans,
+                        book,
+                        new GlossaryServiceImpl(
+                                names, stores.segments(), deferrals, stores.projects(), stores.openProjects(), scans),
+                        new LexiconServiceImpl(terms, names, stores.projects(), stores.openProjects(), scans)));
     }
 
     // The calls of the whole pass over the open names, so an empty glossary is estimated from what its scan would hold.
@@ -357,7 +338,8 @@ public final class NamesPassImpl implements NamesPass {
 
     private Result<Boolean> store(
             final String projectId, final EntryChanges<GlossaryEntry> names, final EntryChanges<LexiconEntry> terms) {
-        return new NamesPassStore(glossary, lexicon, segments, deferrals).store(projectId, names, terms);
+        return new NamesPassStore(stores.glossary(), stores.lexicon(), stores.segments(), deferrals)
+                .store(projectId, names, terms);
     }
 
     // Stop interrupts the calling thread: a step does not start once it has, and a call in a step is refused.

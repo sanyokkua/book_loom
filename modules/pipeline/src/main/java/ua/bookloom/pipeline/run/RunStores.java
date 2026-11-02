@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.run;
 
+import com.google.inject.Inject;
 import java.util.Objects;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -36,6 +37,7 @@ public record RunStores(
         LexiconRepository lexicon) {
 
     /** Rejects a missing store. */
+    @Inject
     public RunStores {
         Objects.requireNonNull(projects, "projects");
         Objects.requireNonNull(segments, "segments");

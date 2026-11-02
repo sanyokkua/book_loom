@@ -215,23 +215,17 @@ final class TranslationJobTestSupport {
     private static TranslationJobImpl job(
             final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
-                project.documents(),
                 new RunRequest(projectId, mode, null, MODEL_NAME, new ModelSelection("scripted-provider", MODEL_NAME)),
-                model,
-                new ObjectMapper(),
-                new PromptTemplates(),
+                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                qualityLoop(),
-                SPLITTER,
-                ConsistencyPassFixture.over(project),
-                Clock.systemUTC(),
-                new UuidIdSource(),
-                RecoveryTimer.REAL,
-                RunTicks.DAEMON,
-                BatchDrafter.NO_BATCHING,
-                WordValidator.none(),
-                CallLedger.none(),
-                "unknown");
+                new RunChecks(qualityLoop(), SPLITTER, ConsistencyPassFixture.over(project), WordValidator.none()),
+                new RunPacing(
+                        Clock.systemUTC(),
+                        new UuidIdSource(),
+                        RecoveryTimer.REAL,
+                        RunTicks.DAEMON,
+                        BatchDrafter.NO_BATCHING),
+                new RunLogFacts(CallLedger.none(), "unknown"));
     }
 
     /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */

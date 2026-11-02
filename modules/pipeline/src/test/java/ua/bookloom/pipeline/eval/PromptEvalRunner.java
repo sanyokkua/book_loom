@@ -27,8 +27,10 @@ import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.heal.DraftSubject;
 import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RepairReply;
+import ua.bookloom.pipeline.heal.SoftContext;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -154,14 +156,10 @@ final class PromptEvalRunner {
                 null);
         final var qa = QaEvaluation.evaluate(
                 List.of(),
-                drafted.segment(),
-                defect.source(),
+                new DraftSubject(drafted.segment(), defect.source(), List.of()),
                 defect.candidate(),
                 defect.candidate(),
-                frame,
-                project.settings().names(),
-                List.of(),
-                List.of());
+                new SoftContext(frame, project.settings().names(), List.of(), List.of(), List.of()));
         final boolean noted = !TextChecks.run(
                         DisplayText.of(defect.source()),
                         DisplayText.of(defect.candidate()),

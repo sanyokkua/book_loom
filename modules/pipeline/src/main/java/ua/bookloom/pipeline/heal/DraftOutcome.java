@@ -35,6 +35,11 @@ public sealed interface DraftOutcome {
     /** The locked glossary terms present in this segment; empty when none is protected. */
     List<LockedRendering> lockedRenderings();
 
+    /** The segment, its masked source and its locked terms, as a candidate for it is judged. */
+    default DraftSubject subject() {
+        return new DraftSubject(segment(), maskedSource(), lockedRenderings());
+    }
+
     /**
      * A drafted reply ready for the quality loop.
      *

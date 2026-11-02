@@ -44,12 +44,11 @@ class QaEvaluationTest {
     private static CheckResult glossaryResult(final String maskedCandidate, final String maskedForm) {
         final QaResult result = QaEvaluation.evaluate(
                 List.of(),
-                segment(),
-                SOURCE,
+                new DraftSubject(segment(), SOURCE, HALE),
                 maskedCandidate,
                 maskedForm,
-                QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.BALANCED),
-                HALE);
+                QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.BALANCED)
+                        .softContext());
         return result.soft().stream()
                 .filter(check -> check.check() == CheckName.GLOSSARY)
                 .findFirst()

@@ -45,6 +45,7 @@ import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * A real book imported through the project service over the in-memory stores, with the real export service built
@@ -99,13 +100,9 @@ final class ExportJobFixture {
 
     ExportServiceImpl serviceOver(final DocumentPort port) {
         return new ExportServiceImpl(
-                projects(),
-                segments(),
-                openProjects(),
+                injector.getInstance(RunStores.class),
                 port,
                 injector.getInstance(ConsistencyPass.class),
-                glossary(),
-                runs(),
                 Clock.systemUTC());
     }
 

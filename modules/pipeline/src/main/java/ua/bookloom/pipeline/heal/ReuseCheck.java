@@ -69,12 +69,10 @@ public final class ReuseCheck {
             final Candidate candidate, final GateResult.Restored restored, final LoopSettings settings) {
         final QaResult qa = QaEvaluation.evaluate(
                 List.of(),
-                candidate.segment(),
-                candidate.maskedSource(),
+                new DraftSubject(candidate.segment(), candidate.maskedSource(), candidate.lockedRenderings()),
                 candidate.remaskedTarget(),
                 restored.maskedForm(),
-                settings,
-                candidate.lockedRenderings());
+                settings.softContext());
         final boolean accepted = AcceptanceRule.accepts(qa, 0);
         log.debug(
                 "Memory reuse evaluated segmentId={} hardGatesPass={} failedOutright={} confidence={} accepted={}",

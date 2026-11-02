@@ -32,6 +32,7 @@ import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.LexiconReading;
+import ua.bookloom.pipeline.glossary.NameServices;
 import ua.bookloom.pipeline.glossary.NamesPassImpl;
 import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
@@ -135,14 +136,7 @@ public final class SequenceJobs {
     public static ExportService exportService(final Prepared prepared) {
         final TestProject project = prepared.project;
         return new ExportServiceImpl(
-                project.stores().projects(),
-                project.stores().segments(),
-                project.stores().openProjects(),
-                project.documents(),
-                consistencyPass(prepared),
-                project.stores().glossary(),
-                project.stores().runs(),
-                Clock.systemUTC());
+                project.stores(), project.documents(), consistencyPass(prepared), Clock.systemUTC());
     }
 
     /** The brief stored for the prepared book, as the window shows it. */
@@ -210,17 +204,14 @@ public final class SequenceJobs {
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);
         final TermReview review = new TermReview(templates, mapper, stores.glossary(), suggest);
         return new NamesPassImpl(
-                stores.glossary(),
-                stores.lexicon(),
-                stores.segments(),
+                stores,
                 prepared.project.deferrals(),
-                stores.projects(),
-                stores.openProjects(),
-                new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                new NameServices(
+                        new PreScan(templates, mapper, stores.glossary(), review, suggest),
+                        suggest,
+                        new LexiconReading(templates, mapper, new TermChoice(templates, mapper))),
                 templates,
                 mapper,
-                suggest,
-                new LexiconReading(templates, mapper, new TermChoice(templates, mapper)),
                 Clock.systemUTC());
     }
 
