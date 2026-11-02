@@ -40,7 +40,8 @@ class BaselineFilesTest {
 
         assertThat(Objects.requireNonNull(provenance).get("pipelineCommit").asText())
                 .matches("[0-9a-f]{40}");
-        assertThat(BASELINE_OF).startsWith(provenance.get("baselineOf").asText());
+        final String recorded = provenance.get("baselineOf").asText();
+        assertThat(recorded).isEqualTo(BASELINE_OF.substring(0, recorded.length()));
         assertThat(provenance.get("baselineOf").asText()).hasSizeGreaterThanOrEqualTo(SHORT_ID.length());
         assertThat(provenance.at("/dataset/ownerData").isBoolean()).isTrue();
         assertThat(provenance.at("/dataset/ownerData").asBoolean()).isFalse();

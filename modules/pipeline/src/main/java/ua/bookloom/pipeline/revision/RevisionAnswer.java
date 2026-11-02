@@ -22,7 +22,7 @@ sealed interface RevisionAnswer {
         return switch (this) {
             case Revised(var restored) -> Optional.of(restored);
             case Unchanged _ -> Optional.empty();
-            case Refused(var _) -> Optional.empty();
+            case Refused _ -> Optional.empty();
         };
     }
 

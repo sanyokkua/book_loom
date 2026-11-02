@@ -111,7 +111,7 @@ final class StylePhrases {
                         FootnotePolicy.values(),
                         UnitPolicy.values())
                 .flatMap(Arrays::stream)
-                .map(choice -> key(choice));
+                .map(StylePhrases::key);
         final Stream<String> bands =
                 Stream.iterate(1, band -> band + 1).limit(BANDS).map(band -> "balance.band" + band);
         Stream.concat(

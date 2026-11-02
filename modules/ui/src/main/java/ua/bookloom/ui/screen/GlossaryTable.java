@@ -166,7 +166,7 @@ final class GlossaryTable {
                         type -> GlossaryLabels.type(messages, type),
                         GlossaryEntry::type,
                         entry -> typeLabel(messages, entry),
-                        model::setType),
+                        model.rowChanges()::setType),
                 frozen);
         cell.control().getStyleClass().add(WRAPPING_CHOICE);
         return cell;
@@ -189,7 +189,7 @@ final class GlossaryTable {
                         state -> GlossaryLabels.state(messages, state),
                         GlossaryEntry::targetState,
                         entry -> hasTarget(entry) ? GlossaryLabels.state(messages, entry.targetState()) : "",
-                        model::setState),
+                        model.rowChanges()::setState),
                 frozen);
     }
 
@@ -203,7 +203,7 @@ final class GlossaryTable {
                         gender -> GlossaryLabels.gender(messages, gender),
                         GlossaryEntry::gender,
                         entry -> genderLabel(messages, entry),
-                        model::setGender),
+                        model.rowChanges()::setGender),
                 frozen);
         cell.control().getStyleClass().add(WRAPPING_CHOICE);
         return cell;

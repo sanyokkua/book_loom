@@ -239,7 +239,7 @@ class NamesStyleChangeResultsTest extends FxTestBase {
         run(vm::review);
         final GlossaryEntry byHand = entry("e1", "Well", TermType.CHARACTER, Gender.MALE);
         glossary.willAnswer(Result.ok(byHand));
-        run(() -> vm.setGender("e1", Gender.MALE));
+        run(() -> vm.rowChanges().setGender("e1", Gender.MALE));
 
         run(() -> results().revert(1));
 

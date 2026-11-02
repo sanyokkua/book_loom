@@ -167,7 +167,7 @@ public final class ScriptedModelCatalog implements ModelCatalog {
     }
 
     /** Blocks until {@code listModels} has been entered at least once. */
-    public void awaitEntered() throws InterruptedException {
+    public void awaitEntered() {
         awaitCalls(1);
     }
 

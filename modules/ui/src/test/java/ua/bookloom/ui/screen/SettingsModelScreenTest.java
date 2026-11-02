@@ -102,7 +102,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF the listing note showed or took room when nothing was being listed, THEN it would claim work that is not
     // happening; and IF it stayed after the answer, it would never go away.
     @Test
-    void listingLabel_whileListing_visibleAndManaged_thenHidden() throws InterruptedException, TimeoutException {
+    void listingLabel_whileListing_visibleAndManaged_thenHidden() throws TimeoutException {
         openSettings();
         awaitFx(() -> !listingLabel().isVisible());
         assertThat(listingLabel().isManaged()).isFalse();
@@ -160,8 +160,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF a list arriving replaced or blanked what a person had typed but not yet committed, THEN their entry would be
     // lost the moment the server answered.
     @Test
-    void modelControl_typedNotCommitted_thenListArrives_keepsTextAndModel()
-            throws InterruptedException, TimeoutException {
+    void modelControl_typedNotCommitted_thenListArrives_keepsTextAndModel() throws TimeoutException {
         catalog.respondWith("gemma3:12b", "qwen3:8b");
         catalog.hold();
         openSettings();
@@ -179,8 +178,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     // IF a list that does not contain a committed identifier replaced it in the entry, THEN a person who named a model
     // the server does not list would lose it as soon as the listing answered.
     @Test
-    void modelControl_committedThenListWithoutThatIdArrives_keepsTheText()
-            throws InterruptedException, TimeoutException {
+    void modelControl_committedThenListWithoutThatIdArrives_keepsTheText() throws TimeoutException {
         catalog.respondWith("gemma3:12b", "qwen3:8b");
         catalog.hold();
         openSettings();

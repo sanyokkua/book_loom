@@ -25,31 +25,18 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.lexicon.Lexicon;
-import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.StepAnnouncer;
-import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
-import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
-import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
 import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunEnd;
 import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
-import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
-import ua.bookloom.pipeline.run.RunStartLog;
 import ua.bookloom.pipeline.run.RunStores;
-import ua.bookloom.pipeline.run.RunWindow;
-import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.WorkList;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
@@ -58,9 +45,8 @@ final class TranslationJobImpl implements TranslationJob {
 
     private final RunRequest request;
     private final ChatModel model;
-    private final ChunkRunnerFactory chunkRunners;
+    private final RunWiring wiring;
     private final RunStores stores;
-    private final ConsistencyPass revision;
     private final Clock clock;
     private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
@@ -76,9 +62,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final UnattendedRecovery recovery;
     private final StallWatchdog watchdog;
     private final RunTicks ticks;
-    private final int batchSize;
     private final WordValidator words;
-    private final String providerKind;
 
     /**
      * Creates a job paced by {@code pacing}, for a scripted clock; its start line names the provider kind {@code
@@ -91,15 +75,11 @@ final class TranslationJobImpl implements TranslationJob {
             final RunChecks checks,
             final RunPacing pacing,
             final RunLogFacts logFacts) {
-        this.providerKind = logFacts.providerKind();
         this.jobId = pacing.idSource().newId();
         this.words = checks.words();
-        this.batchSize = pacing.batchSize();
         this.request = Objects.requireNonNull(request, "request");
         this.model = tools.model();
-        this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks, pacing.batchSize());
         this.stores = Objects.requireNonNull(stores, "stores");
-        this.revision = checks.revision();
         this.clock = pacing.clock();
         this.control = new JobControl(request.mode().pausePoints());
         this.runSummary = new RunSummaryLogger(clock, logFacts.ledger());
@@ -109,6 +89,8 @@ final class TranslationJobImpl implements TranslationJob {
         this.recovery = new UnattendedRecovery(control, clock, pacing.timer(), this::emit);
         this.watchdog = new StallWatchdog(control, clock);
         this.ticks = pacing.ticks();
+        this.wiring = new RunWiring(
+                request, tools, stores, checks, pacing, logFacts, new RunWiring.Live(control, watchdog, this::emit));
     }
 
     @Override
@@ -227,42 +209,19 @@ final class TranslationJobImpl implements TranslationJob {
             emit(MemoryEvents.namesAdded(proposed));
         }
         announceProfile();
-        final RunEnd end = stages(run, dataOf(prepared)).run(work);
+        final RunEnd end = wiring.stages(run, dataOf(prepared), sinks()).run(work);
         new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
-    }
-
-    private StageRunner stages(final RunStart.Started run, final PrepStage.Prepared prepared) {
-        final StyleSheet styleSheet = prepared.styleSheet();
-        final BookBrief brief = run.project().brief();
-        final RunWindow runWindow = new RunWindow(model, request.detectedContext());
-        final CallFrame frame = CallFrame.forRun(
-                brief, styleSheet, run.document(), run.index().majorityScript().orElse(null), words);
-        final ModelCalls calls = new JobModelCalls(
-                        onSent -> new CancellableChatModel(model, control, onSent, watchdog),
-                        this::emit,
-                        clock,
-                        frame.targetLanguage(),
-                        runWindow::current,
-                        SegmentLocators.of(run.document()))
-                .withSteps(StepAnnouncer.over(this::emit))
-                .inRun();
-        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
-        RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
-        final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
-        return new StageRunner(
-                chunkRunners.create(run, settings, runWindow, sinks, calls),
-                revision,
-                settings,
-                sinks,
-                calls,
-                new NarratorStage(stores, sinks, run.document(), settings));
     }
 
     // The model's first profile ask is the run's start: it writes the profile line beside the start line.
     private void announceProfile() {
         final ModelProfile profile = model.profile();
         log.debug("Run model profile batch={} tier={}", profile.batchSize(), profile.tier());
+    }
+
+    private RunSinks sinks() {
+        return new RunSinks(pending, recorder, this::emit, boundaries());
     }
 
     private JobBoundaries boundaries() {

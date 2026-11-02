@@ -23,11 +23,8 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.TargetIssue;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.TargetState;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -231,22 +228,9 @@ public final class NamesStyleViewModel {
         edits.change(entryId, "target", held -> GlossaryEdits.target(held, text), openings.whileCurrent());
     }
 
-    /** Sets a row's State, which makes its target the person's; a row with no target is refused. */
-    public void setState(final String entryId, final TargetState state) {
-        Objects.requireNonNull(state, "state");
-        edits.state(entryId, state, openings.whileCurrent());
-    }
-
-    /** Sets a row's type. */
-    public void setType(final String entryId, final TermType type) {
-        Objects.requireNonNull(type, "type");
-        edits.change(entryId, "type", held -> GlossaryEdits.type(held, type), openings.whileCurrent());
-    }
-
-    /** Sets a row's gender. */
-    public void setGender(final String entryId, final Gender gender) {
-        Objects.requireNonNull(gender, "gender");
-        edits.change(entryId, "gender", held -> GlossaryEdits.gender(held, gender), openings.whileCurrent());
+    /** {@return the edits of a row's State, type and gender, which only the opening that was current when they began may show} */
+    public RowChanges rowChanges() {
+        return new RowChanges(edits, openings);
     }
 
     /** Removes a row's term from the glossary. */

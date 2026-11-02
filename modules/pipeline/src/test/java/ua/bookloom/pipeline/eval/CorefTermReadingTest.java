@@ -131,7 +131,9 @@ class CorefTermReadingTest {
         final DisabledIfEnvironmentVariable aside =
                 PromptEvalTest.class.getAnnotation(DisabledIfEnvironmentVariable.class);
 
-        assertThat("coref").matches(Objects.requireNonNull(aside).matches());
+        final String suite = "coref";
+
+        assertThat(suite).matches(Objects.requireNonNull(aside).matches());
     }
 
     // The coref suite runs in its own promptEval class, gated on BOOKLOOM_EVAL_SUITE=coref and a model URL.

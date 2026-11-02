@@ -130,7 +130,7 @@ class NamesStyleViewModelTest extends FxTestBase {
         glossary.willAnswer(Result.ok(haleTranslated(true)));
 
         run(() -> vm.setTarget("e1", "Гейл"));
-        run(() -> vm.setState("e1", TargetState.LOCKED));
+        run(() -> vm.rowChanges().setState("e1", TargetState.LOCKED));
 
         assertThat(glossary.updated()).containsExactly(haleTranslated(false), haleTranslated(true));
         assertThat(rows()).containsExactly(haleTranslated(true));
@@ -145,7 +145,7 @@ class NamesStyleViewModelTest extends FxTestBase {
     void setState_noTarget_isRefusedWithTheMessageAndChangesNothing(final TargetState state) {
         showWith(hale());
 
-        run(() -> vm.setState("e1", state));
+        run(() -> vm.rowChanges().setState("e1", state));
 
         assertThat(noticeText()).isEqualTo(NEEDS_TARGET);
         assertThat(rows()).containsExactly(hale());
@@ -379,7 +379,7 @@ class NamesStyleViewModelTest extends FxTestBase {
         showWith(held);
         glossary.willAnswer(Result.ok(held.withGender(Gender.FEMALE)));
 
-        run(() -> vm.setGender("e1", Gender.FEMALE));
+        run(() -> vm.rowChanges().setGender("e1", Gender.FEMALE));
 
         assertThat(glossary.updated())
                 .singleElement()
