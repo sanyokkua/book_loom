@@ -61,7 +61,7 @@ final class NameVocabulary {
             Map.entry("heretic", MODIFIED),
             Map.entry("h", "hybrid"),
             Map.entry("embed", EMBEDDING),
-            Map.entry("embedding", EMBEDDING),
+            Map.entry(EMBEDDING, EMBEDDING),
             Map.entry("text", "text"),
             Map.entry("dev", "dev"));
 
