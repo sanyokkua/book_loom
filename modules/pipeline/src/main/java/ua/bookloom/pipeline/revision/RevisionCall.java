@@ -137,7 +137,7 @@ final class RevisionCall {
                         malformed.diagnostic());
                 yield Result.ok(new RevisionAnswer.Refused(malformed.reason()));
             }
-            case RepairReply.FlagNow flagNow -> Result.ok(new RevisionAnswer.Refused(RevisionAnswer.UNREADABLE));
+            case RepairReply.FlagNow _ -> Result.ok(new RevisionAnswer.Refused(RevisionAnswer.UNREADABLE));
         };
     }
 

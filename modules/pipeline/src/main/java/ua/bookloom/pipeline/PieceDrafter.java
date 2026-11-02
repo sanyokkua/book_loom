@@ -119,7 +119,7 @@ final class PieceDrafter {
                 return drafted;
             }
             switch (Objects.requireNonNull(drafted.data())) {
-                case Unusable unusable -> {
+                case Unusable _ -> {
                     return drafted;
                 }
                 case Text(final String text) -> replies.add(WhitespaceRestoration.restore(piece, text));

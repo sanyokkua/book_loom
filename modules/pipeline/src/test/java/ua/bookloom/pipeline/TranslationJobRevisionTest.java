@@ -177,7 +177,7 @@ class TranslationJobRevisionTest {
         return switch (event) {
             case SegmentDecided decided -> "decided " + decided.segmentId();
             case StageStarted started -> "stage " + started.stage();
-            case Finished finished -> "finished";
+            case Finished _ -> "finished";
             default -> event.getClass().getSimpleName();
         };
     }

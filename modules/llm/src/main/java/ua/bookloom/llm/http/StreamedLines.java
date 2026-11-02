@@ -100,7 +100,7 @@ final class StreamedLines implements Flow.Subscriber<String> {
                         return new Outcome.Cut(body.toString());
                     }
                 }
-                case Signal.Done done -> {
+                case Signal.Done _ -> {
                     log.debug("Streamed reply complete lines={} length={}", lines, body.length());
                     return new Outcome.Collected(body.toString());
                 }

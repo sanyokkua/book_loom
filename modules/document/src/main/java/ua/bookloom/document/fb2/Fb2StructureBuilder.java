@@ -175,9 +175,8 @@ final class Fb2StructureBuilder {
     private static Element resolveLeaf(Element root, SkeletonAnchor anchor) {
         return switch (anchor) {
             case NodeAnchor nodeAnchor -> resolvePath(root, nodeAnchor.nodePath());
-            case ByteSpanAnchor ignored ->
-                throw new IllegalStateException("An FB2 segment must be anchored by a node path");
-            case AttributeAnchor ignored ->
+            case ByteSpanAnchor _ -> throw new IllegalStateException("An FB2 segment must be anchored by a node path");
+            case AttributeAnchor _ ->
                 throw new IllegalStateException("An FB2 body segment must be anchored by a node path");
         };
     }

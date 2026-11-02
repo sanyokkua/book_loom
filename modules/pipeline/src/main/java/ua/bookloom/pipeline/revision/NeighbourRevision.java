@@ -226,7 +226,7 @@ final class NeighbourRevision {
             final RevisionAnswer answer) {
         final boolean settled =
                 switch (answer) {
-                    case RevisionAnswer.Unchanged unchanged -> true;
+                    case RevisionAnswer.Unchanged _ -> true;
                     case RevisionAnswer.Refused refused -> !refused.isUnreadable();
                     case RevisionAnswer.Revised(var restored) ->
                         restored.maskedForm().equals(masked);
@@ -303,7 +303,7 @@ final class NeighbourRevision {
         final SegmentRecord record = item.record();
         final String id = record.segmentId();
         return switch (answer) {
-            case RevisionAnswer.Unchanged unchanged -> {
+            case RevisionAnswer.Unchanged _ -> {
                 log.debug("Neighbour check segmentId={} answered unchanged", id);
                 tally.neighbourUnchanged();
                 yield unchanged(calls, record, "unchanged", item.around());

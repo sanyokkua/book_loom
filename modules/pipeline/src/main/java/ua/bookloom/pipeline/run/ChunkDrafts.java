@@ -58,7 +58,7 @@ final class ChunkDrafts {
             case DraftOutcome.Drafted drafted -> drafted.maskedForm();
             case DraftOutcome.Reused reused -> reused.maskedTarget();
             case DraftOutcome.Verbatim verbatim -> verbatim.maskedTarget();
-            case DraftOutcome.FlaggedAtOnce ignored -> null;
+            case DraftOutcome.FlaggedAtOnce _ -> null;
         };
     }
 

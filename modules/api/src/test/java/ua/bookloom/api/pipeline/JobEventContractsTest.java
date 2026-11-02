@@ -72,24 +72,24 @@ class JobEventContractsTest {
     /** Exhaustively switches over every {@link JobEvent} permitted type; a missing case fails compilation. */
     private static String describe(final JobEvent event) {
         return switch (event) {
-            case StageStarted started -> "StageStarted";
-            case ModelCallStarted started -> "ModelCallStarted";
-            case SegmentDecided decided -> "SegmentDecided";
-            case Paused paused -> "Paused";
-            case Resumed resumed -> "Resumed";
-            case Finished finished -> "Finished";
-            case SegmentStarted started -> "SegmentStarted";
-            case SegmentDrafted drafted -> "SegmentDrafted";
-            case ModelCallFinished finished -> "ModelCallFinished";
-            case MemoryUpdated updated -> "MemoryUpdated";
-            case ContextAssembled assembled -> "ContextAssembled";
-            case RoundStarted round -> "RoundStarted";
-            case RecoveryWaiting waiting -> "RecoveryWaiting";
-            case BatchStarted batch -> "BatchStarted";
-            case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
-            case StepsPlanned planned -> "StepsPlanned";
-            case StepChanged changed -> "StepChanged";
-            case BriefSampleRead read -> "BriefSampleRead";
+            case StageStarted _ -> "StageStarted";
+            case ModelCallStarted _ -> "ModelCallStarted";
+            case SegmentDecided _ -> "SegmentDecided";
+            case Paused _ -> "Paused";
+            case Resumed _ -> "Resumed";
+            case Finished _ -> "Finished";
+            case SegmentStarted _ -> "SegmentStarted";
+            case SegmentDrafted _ -> "SegmentDrafted";
+            case ModelCallFinished _ -> "ModelCallFinished";
+            case MemoryUpdated _ -> "MemoryUpdated";
+            case ContextAssembled _ -> "ContextAssembled";
+            case RoundStarted _ -> "RoundStarted";
+            case RecoveryWaiting _ -> "RecoveryWaiting";
+            case BatchStarted _ -> "BatchStarted";
+            case CallSnapshotUpdated _ -> "CallSnapshotUpdated";
+            case StepsPlanned _ -> "StepsPlanned";
+            case StepChanged _ -> "StepChanged";
+            case BriefSampleRead _ -> "BriefSampleRead";
         };
     }
 

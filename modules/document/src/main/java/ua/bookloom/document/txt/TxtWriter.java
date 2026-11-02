@@ -90,9 +90,9 @@ public final class TxtWriter {
     private static ByteSpanAnchor spanOf(SkeletonAnchor anchor) {
         return switch (anchor) {
             case ByteSpanAnchor span -> span;
-            case NodeAnchor ignored ->
+            case NodeAnchor _ ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by a node path");
-            case AttributeAnchor ignored ->
+            case AttributeAnchor _ ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by an attribute");
         };
     }

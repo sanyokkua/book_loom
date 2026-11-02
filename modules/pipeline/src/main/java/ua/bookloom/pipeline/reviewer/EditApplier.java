@@ -90,7 +90,7 @@ public final class EditApplier {
                     applied.add(edit);
                 }
                 case Verification.Failed refused -> failed.add(refusal(edit, refused));
-                case Verification.Ignored skipped -> ignored++;
+                case Verification.Ignored _ -> ignored++;
             }
         }
         logCounts(applied.size(), failed.size(), ignored, noOps, notes.size());

@@ -43,9 +43,9 @@ final class SoakEvents implements JobListener {
         switch (event) {
             case Paused paused -> paused(paused);
             case RecoveryWaiting waiting -> recovering(waiting);
-            case Resumed resumed -> resumes++;
+            case Resumed _ -> resumes++;
             case SegmentDecided segment -> decided(segment.progress());
-            case Finished done -> finished++;
+            case Finished _ -> finished++;
             default -> {
                 // Counted in events only.
             }

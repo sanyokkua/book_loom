@@ -191,7 +191,7 @@ public final class SegmentTranslator {
         final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
         return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
             case OversizedSplit.Pieces(var pieces) -> translatePieces(whole, pieces);
-            case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
+            case OversizedSplit.Unsplittable _ -> unsplittable(whole, mask, estimate, budgetTokens);
         };
     }
 

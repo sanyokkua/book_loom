@@ -255,7 +255,7 @@ final class RunSession implements JobListener {
                 log.trace("context of segment {} is shown with its call", assembled.segmentId());
             case RoundStarted round -> onRound(round);
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
-            case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
+            case Finished _ -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
             case CallSnapshotUpdated(var snapshot) -> locked(() -> liveCalls.snapshot(snapshot));
             case StepsPlanned planned -> locked(() -> progress.planned(planned));

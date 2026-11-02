@@ -35,16 +35,14 @@ public final class ImportVerdicts {
         Objects.requireNonNull(state, "state");
         final Optional<ImportVerdict> verdict =
                 switch (state) {
-                    case ImportState.Idle idle -> Optional.empty();
-                    case ImportState.Opening opening ->
-                        line(Kind.READING, messages.get(MessageKey.IMPORT_VERDICT_READING));
+                    case ImportState.Idle _ -> Optional.empty();
+                    case ImportState.Opening _ -> line(Kind.READING, messages.get(MessageKey.IMPORT_VERDICT_READING));
                     case ImportState.Detected detected -> detected(messages, detected);
                     case ImportState.DrmBlocked blocked -> line(Kind.DRM, drm(messages, blocked));
                     case ImportState.Unsupported unsupported ->
                         line(Kind.UNSUPPORTED, unsupported(messages, unsupported));
                     case ImportState.Refused refused -> line(Kind.DAMAGED, damaged(messages, refused.fileName()));
-                    case ImportState.NoText empty ->
-                        line(Kind.NO_TEXT, messages.get(MessageKey.IMPORT_VERDICT_NO_TEXT));
+                    case ImportState.NoText _ -> line(Kind.NO_TEXT, messages.get(MessageKey.IMPORT_VERDICT_NO_TEXT));
                     case ImportState.AlreadyInProjects already ->
                         line(
                                 Kind.ALREADY,

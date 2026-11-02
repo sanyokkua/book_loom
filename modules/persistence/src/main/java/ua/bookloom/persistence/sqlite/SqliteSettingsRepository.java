@@ -85,8 +85,8 @@ public final class SqliteSettingsRepository implements SettingsRepository {
 
     private static String typeOf(final Object value) {
         return switch (value) {
-            case Boolean ignored -> "boolean";
-            case Enum<?> ignored -> "enum";
+            case Boolean _ -> "boolean";
+            case Enum<?> _ -> "enum";
             default -> "string";
         };
     }

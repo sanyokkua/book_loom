@@ -79,9 +79,9 @@ final class StallWatchdog {
         switch (event) {
             case ModelCallStarted started ->
                 outstanding.set(new Outstanding(started.kind(), started.segmentIds(), now, ceilingOf(started)));
-            case ModelCallFinished finished -> outstanding.set(null);
-            case SegmentDecided decided -> lastProgress.set(now);
-            case Resumed resumed -> lastProgress.set(now);
+            case ModelCallFinished _ -> outstanding.set(null);
+            case SegmentDecided _ -> lastProgress.set(now);
+            case Resumed _ -> lastProgress.set(now);
             default -> {
                 // Nothing else says whether the run moves.
             }

@@ -162,10 +162,9 @@ public final class SkeletonAnchors {
     private static NodeAnchor requireNodeAnchor(SkeletonAnchor anchor) {
         return switch (anchor) {
             case NodeAnchor nodeAnchor -> nodeAnchor;
-            case ByteSpanAnchor ignored ->
+            case ByteSpanAnchor _ ->
                 throw new IllegalArgumentException("A tree skeleton cannot be addressed by a byte span");
-            case AttributeAnchor ignored ->
-                throw new IllegalArgumentException("An attribute anchor is not a run write");
+            case AttributeAnchor _ -> throw new IllegalArgumentException("An attribute anchor is not a run write");
         };
     }
 

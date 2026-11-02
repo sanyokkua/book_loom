@@ -31,10 +31,10 @@ final class RepairSteps {
     /** Ends the step as the round went: left open on a step error, FAILED when the segment is flagged now. */
     static void end(final ModelCalls calls, final String key, final RoundOutcome outcome) {
         switch (outcome) {
-            case RoundOutcome.StepError ignored -> log.debug("Repair step {} stays open for the retry", key);
-            case RoundOutcome.FlagNow ignored -> calls.steps().ended(StepKind.REPAIR, key, StepResult.FAILED);
-            case RoundOutcome.Failed ignored -> calls.steps().ended(StepKind.REPAIR, key, StepResult.DONE);
-            case RoundOutcome.Evaluated ignored -> calls.steps().ended(StepKind.REPAIR, key, StepResult.DONE);
+            case RoundOutcome.StepError _ -> log.debug("Repair step {} stays open for the retry", key);
+            case RoundOutcome.FlagNow _ -> calls.steps().ended(StepKind.REPAIR, key, StepResult.FAILED);
+            case RoundOutcome.Failed _ -> calls.steps().ended(StepKind.REPAIR, key, StepResult.DONE);
+            case RoundOutcome.Evaluated _ -> calls.steps().ended(StepKind.REPAIR, key, StepResult.DONE);
         }
     }
 }

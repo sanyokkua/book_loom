@@ -59,7 +59,7 @@ final class CorpusJson {
 
     private static String jsonOf(CorpusIdentityOutcome identity) {
         return switch (identity) {
-            case CorpusIdentityOutcome.NotAttempted ignored ->
+            case CorpusIdentityOutcome.NotAttempted _ ->
                 new JsonWriter().field("status", "notAttempted").build();
             case CorpusIdentityOutcome.OpenFailed openFailed ->
                 new JsonWriter()
@@ -83,7 +83,7 @@ final class CorpusJson {
 
     private static String jsonOf(CorpusFixedPointOutcome fixedPoint) {
         return switch (fixedPoint) {
-            case CorpusFixedPointOutcome.NotAttempted ignored ->
+            case CorpusFixedPointOutcome.NotAttempted _ ->
                 new JsonWriter().field("status", "notAttempted").build();
             case CorpusFixedPointOutcome.ReopenFailed reopenFailed ->
                 new JsonWriter()
@@ -106,7 +106,7 @@ final class CorpusJson {
 
     private static String jsonOf(CorpusMutationOutcome mutation) {
         return switch (mutation) {
-            case CorpusMutationOutcome.NotAttempted ignored ->
+            case CorpusMutationOutcome.NotAttempted _ ->
                 new JsonWriter().field("status", "notAttempted").build();
             case CorpusMutationOutcome.OpenFailed openFailed ->
                 new JsonWriter()
@@ -143,7 +143,7 @@ final class CorpusJson {
 
     private static String jsonOf(CorpusIdempotenceOutcome idempotence) {
         return switch (idempotence) {
-            case CorpusIdempotenceOutcome.NotAttempted ignored ->
+            case CorpusIdempotenceOutcome.NotAttempted _ ->
                 new JsonWriter().field("status", "notAttempted").build();
             case CorpusIdempotenceOutcome.ReopenFailed reopenFailed ->
                 new JsonWriter()
@@ -161,7 +161,7 @@ final class CorpusJson {
 
     private static String jsonOf(CorpusMaskOutcome mask) {
         return switch (mask) {
-            case CorpusMaskOutcome.NotAttempted ignored ->
+            case CorpusMaskOutcome.NotAttempted _ ->
                 new JsonWriter().field("status", "notAttempted").build();
             case CorpusMaskOutcome.Completed completed -> jsonOfMaskCompleted(completed);
         };

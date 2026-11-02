@@ -213,13 +213,13 @@ public final class QualityLoop {
                     pairs.add(new ReviewedPair(drafted.segment().id(), drafted.maskedSource(), drafted.maskedReply()));
                 }
             }
-            case DraftOutcome.FlaggedAtOnce ignored -> {
+            case DraftOutcome.FlaggedAtOnce _ -> {
                 // Flagged without a usable draft, so there is nothing to review.
             }
-            case DraftOutcome.Reused ignored -> {
+            case DraftOutcome.Reused _ -> {
                 // Already accepted once between the same neighbours; the reviewer never sees a reuse.
             }
-            case DraftOutcome.Verbatim ignored -> {
+            case DraftOutcome.Verbatim _ -> {
                 // Nothing was translated, so there is nothing to review.
             }
         }

@@ -96,7 +96,7 @@ final class DocumentGate implements GateFunction {
 
     private static void logOutcome(final String segmentId, final GateResult result) {
         switch (result) {
-            case GateResult.Restored restored -> log.debug("Document gate segment={} outcome=Restored", segmentId);
+            case GateResult.Restored _ -> log.debug("Document gate segment={} outcome=Restored", segmentId);
             case GateResult.GateFailed failed ->
                 log.debug(
                         "Document gate segment={} outcome=GateFailed raisedBy={}",
