@@ -275,10 +275,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() -> vm.add(
-                new NewTerm("justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
-                () -> {},
-                refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("justine", "Юстина", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly("justine is already in the glossary");
         assertThat(glossary.added()).isEmpty();
@@ -290,10 +291,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         showWith(GlossaryEntry.of("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() -> vm.add(
-                new NewTerm("Justine’s", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
-                () -> {},
-                refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine’s", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly("Justine’s is already in the glossary");
         assertThat(glossary.added()).isEmpty();
@@ -305,10 +307,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         showWith();
         final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-        run(() -> vm.add(
-                new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
-                () -> {},
-                refused::add));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
+                        () -> {},
+                        refused::add));
 
         assertThat(refused).containsExactly(NEEDS_TARGET);
         assertThat(glossary.added()).isEmpty();
@@ -323,10 +326,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         glossary.willAnswer(Result.ok(stored));
         final AtomicInteger added = new AtomicInteger();
 
-        run(() -> vm.add(
-                new NewTerm("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
-                added::incrementAndGet,
-                message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, TargetState.LOCKED),
+                        added::incrementAndGet,
+                        message -> {}));
 
         assertThat(glossary.added()).containsExactly(stored);
         assertThat(added).hasValue(1);
@@ -341,10 +345,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         glossary.willAnswer(Result.ok(
                 GlossaryEntry.of("new-1", PROJECT, "Justine", null, TermType.CHARACTER, Gender.FEMALE, false)));
 
-        run(() -> vm.add(
-                new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
-                () -> {},
-                message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Justine", "", TermType.CHARACTER, Gender.FEMALE, TargetState.PINNED),
+                        () -> {},
+                        message -> {}));
 
         assertThat(glossary.added())
                 .singleElement()
@@ -358,10 +363,11 @@ class NamesStyleViewModelTest extends FxTestBase {
         glossary.willAnswer(
                 Result.ok(GlossaryEntry.of("new-1", PROJECT, "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)));
 
-        run(() -> vm.add(
-                new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, TargetState.PINNED),
-                () -> {},
-                message -> {}));
+        run(() -> vm.rowChanges()
+                .add(
+                        new NewTerm("Hale", "", TermType.CHARACTER, Gender.UNKNOWN, TargetState.PINNED),
+                        () -> {},
+                        message -> {}));
 
         assertThat(glossary.added())
                 .singleElement()

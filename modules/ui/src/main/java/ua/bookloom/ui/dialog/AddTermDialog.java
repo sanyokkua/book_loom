@@ -137,7 +137,7 @@ public final class AddTermDialog {
     private void confirm() {
         final NewTerm term =
                 new NewTerm(source.getText(), target.getText(), type.getValue(), gender.getValue(), state.getValue());
-        glossary.add(term, this::added, this::refused);
+        glossary.rowChanges().add(term, this::added, this::refused);
     }
 
     private void added() {

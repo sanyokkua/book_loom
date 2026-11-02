@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -46,9 +45,9 @@ public final class NamesStyleViewModel {
     private final ObservableList<LexiconEntry> lexiconRows = FXCollections.observableArrayList();
     private final RecurringTerms recurring;
     private final GlossaryRowEdits edits;
+    private final RowChanges rowChanges;
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
-    private final GlossaryAdditions additions;
     private final Suggestions suggestions;
     private final ChangeMarks marks = new ChangeMarks();
     private final ChangeLog changeLog;
@@ -112,8 +111,11 @@ public final class NamesStyleViewModel {
                         modelRuns::scanTerms, modelRuns::reviewTerms, modelRuns::translateTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages), messages);
-        this.additions = new GlossaryAdditions(
-                glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
+        this.rowChanges = new RowChanges(
+                edits,
+                new GlossaryAdditions(
+                        glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId),
+                openings);
         this.suggestions = new Suggestions(glossary, calls, rows, notice, changeLog, () -> projectId, messages);
     }
 
@@ -219,7 +221,7 @@ public final class NamesStyleViewModel {
 
     /** {@return the edits of a row's State, type and gender, which only the opening that was current when they began may show} */
     public RowChanges rowChanges() {
-        return new RowChanges(edits, openings);
+        return rowChanges;
     }
 
     /** Removes a row's term from the glossary. */
@@ -278,17 +280,6 @@ public final class NamesStyleViewModel {
     public void exportCsv(final Path destination) {
         Objects.requireNonNull(destination, "destination");
         files.exportCsv(projectId, destination, openings.whileCurrent());
-    }
-
-    /**
-     * Adds a term, refusing a blank source, a duplicate or a lock with no target before asking the service.
-     *
-     * @param term what the Add term card collected
-     * @param onAdded run on the FX thread once the term is stored and shown
-     * @param onRefused run on the FX thread with the reason, in the display language, the term was not added
-     */
-    public void add(final NewTerm term, final Runnable onAdded, final Consumer<String> onRefused) {
-        additions.add(term, onAdded, onRefused);
     }
 
     /** Confirms a row's suggested target as the person's, so it is applied exactly and never replaced by the model. */
