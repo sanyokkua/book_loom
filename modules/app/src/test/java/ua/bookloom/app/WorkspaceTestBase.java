@@ -172,7 +172,7 @@ abstract class WorkspaceTestBase {
         }
     }
 
-    private void showWindow(final Injector built) throws Exception {
+    private void showWindow(final Injector built) {
         final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
         injector = built;
         shell = injector.getInstance(AppShellView.class);

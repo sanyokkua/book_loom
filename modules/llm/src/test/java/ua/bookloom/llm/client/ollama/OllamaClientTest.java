@@ -13,7 +13,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -242,7 +241,7 @@ class OllamaClientTest {
     }
 
     @Test
-    void listModels_closedEndpoint_preservesUnreachable() throws IOException {
+    void listModels_closedEndpoint_preservesUnreachable() {
         final Result<List<ModelInfo>> result =
                 client(closedEndpoint(), Duration.ofSeconds(2)).listModels().result();
 
@@ -286,7 +285,7 @@ class OllamaClientTest {
     }
 
     @Test
-    void chat_closedEndpoint_returnsUnreachable() throws IOException {
+    void chat_closedEndpoint_returnsUnreachable() {
         final URI closedEndpoint = closedEndpoint();
 
         final Result<ChatResponse> result = client(closedEndpoint, Duration.ofSeconds(2))

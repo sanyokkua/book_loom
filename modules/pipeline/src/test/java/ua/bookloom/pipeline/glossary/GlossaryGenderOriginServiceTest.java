@@ -205,7 +205,7 @@ class GlossaryGenderOriginServiceTest {
     }
 
     @Test
-    void importCsv_exportOfEveryOrigin_keepsEachGenderAsThePersonsAndTheUnknownOneWithoutOrigin() throws IOException {
+    void importCsv_exportOfEveryOrigin_keepsEachGenderAsThePersonsAndTheUnknownOneWithoutOrigin() {
         addOneOfEachOrigin();
         final Path file = dir.resolve("out.csv");
         service.exportCsv(PROJECT, file);

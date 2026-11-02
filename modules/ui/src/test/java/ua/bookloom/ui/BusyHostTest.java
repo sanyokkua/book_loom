@@ -83,7 +83,7 @@ class BusyHostTest extends ShellTestBase {
 
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.
     @Test
-    void card_workEndsBeforeTheDelay_neverShows() throws InterruptedException {
+    void card_workEndsBeforeTheDelay_neverShows() {
         final ActivityTracker.Handle quick = begin(ActivityKind.IMPORT, false);
         onFx(quick::end);
 
@@ -94,7 +94,7 @@ class BusyHostTest extends ShellTestBase {
 
     // IF work the window does not wait for blocked it, THEN a model listing would grey out the whole window.
     @Test
-    void card_nonBlockingWork_neverShowsAndLeavesTheNavigationEnabled() throws InterruptedException {
+    void card_nonBlockingWork_neverShowsAndLeavesTheNavigationEnabled() {
         begin(ActivityKind.MODEL_LISTING, true);
         begin(ActivityKind.TRANSLATION, false);
 

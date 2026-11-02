@@ -221,7 +221,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     }
 
     /** Blocks until {@code verify} or {@code verifyConnection} has been entered {@code expected} times in all. */
-    public void awaitCalls(final int expected) throws InterruptedException {
+    public void awaitCalls(final int expected) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (calls.get() < expected) {
             if (System.nanoTime() > deadline) {

@@ -371,7 +371,7 @@ class GatedChatModelTest {
         return model.chat(request());
     }
 
-    private void awaitRequestCount(int expected) throws InterruptedException {
+    private void awaitRequestCount(int expected) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline && chatRequests() < expected) {
             LockSupport.parkNanos(SETTLE_NANOS / 10);

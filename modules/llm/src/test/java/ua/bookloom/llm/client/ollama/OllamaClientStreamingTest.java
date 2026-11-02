@@ -209,7 +209,7 @@ class OllamaClientStreamingTest {
                 post(urlEqualTo(CHAT_PATH)).willReturn(response.withHeader("Content-Type", "application/x-ndjson")));
     }
 
-    private void awaitRequest() throws InterruptedException {
+    private void awaitRequest() {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline && server.getAllServeEvents().isEmpty()) {
             LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Injector;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -80,7 +79,7 @@ class AddTermDialogTest extends ShellTestBase {
 
     // IF a valid term were not added, THEN the dialog's one purpose would fail.
     @Test
-    void confirm_validLockedTerm_addsItAndCloses() throws TimeoutException {
+    void confirm_validLockedTerm_addsItAndCloses() {
         openDialogOver(List.of());
         glossary.willAnswer(Result.ok(justine()));
         fill("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true);

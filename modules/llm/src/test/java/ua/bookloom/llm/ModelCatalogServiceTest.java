@@ -9,7 +9,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.Guice;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -172,7 +171,7 @@ class ModelCatalogServiceTest {
 
     // IF the endpoint refuses the connection, THEN the client's own error is passed through, not a validation error.
     @Test
-    void listModels_unreachableEndpoint_passesTheClientErrorThrough() throws IOException {
+    void listModels_unreachableEndpoint_passesTheClientErrorThrough() {
         register("ollama", ProviderKind.OLLAMA, closedEndpoint());
 
         final Result<List<ModelInfo>> result = catalog.listModels("ollama");

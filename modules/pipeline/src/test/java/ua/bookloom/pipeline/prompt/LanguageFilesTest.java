@@ -335,7 +335,7 @@ class LanguageFilesTest {
     /** One example: its source line, its reply line and the pairs its {@code .pairs} key declares. */
     record Example(String source, String reply, String pairs) {}
 
-    static Stream<Example> exampleReplies() throws IOException {
+    static Stream<Example> exampleReplies() {
         return everyFile().flatMap(LanguageFilesTest::examplesOf);
     }
 

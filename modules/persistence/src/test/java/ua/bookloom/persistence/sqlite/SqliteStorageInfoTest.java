@@ -248,7 +248,7 @@ class SqliteStorageInfoTest {
 
     // IF a read-only folder half-deleted the files, THEN the person would lose work while being told nothing changed.
     @Test
-    void deleteAll_folderReadOnly_internalNothingDeletedStillUsable() throws Exception {
+    void deleteAll_folderReadOnly_internalNothingDeletedStillUsable() {
         storeProjects("a", "b");
         assertThat(dir.toFile().setWritable(false)).isTrue();
         try {

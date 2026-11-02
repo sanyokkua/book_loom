@@ -228,7 +228,7 @@ class SqliteDatabaseTest {
     }
 
     @Test
-    void open_otherSchemaVersion_renamesFileAsideAndCreatesFresh() throws IOException {
+    void open_otherSchemaVersion_renamesFileAsideAndCreatesFresh() {
         try (SqliteDatabase first = open()) {
             first.write("mark", h -> {
                 h.execute("pragma user_version = 99");

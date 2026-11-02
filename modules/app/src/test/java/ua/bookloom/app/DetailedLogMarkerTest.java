@@ -52,7 +52,7 @@ class DetailedLogMarkerTest {
         return injector;
     }
 
-    private static void waitFor(final BooleanSupplier condition) throws InterruptedException {
+    private static void waitFor(final BooleanSupplier condition) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (System.nanoTime() < deadline && !condition.getAsBoolean()) {
             LockSupport.parkNanos(POLL_NANOS);

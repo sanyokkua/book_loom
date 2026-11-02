@@ -17,7 +17,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -278,7 +277,7 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    void listModels_closedEndpointPreservesUnreachable() throws IOException {
+    void listModels_closedEndpointPreservesUnreachable() {
         final Result<List<ModelInfo>> result =
                 client(closedEndpoint(), Duration.ofSeconds(2)).listModels().result();
 

@@ -78,7 +78,7 @@ class ProfileLogTest {
     }
 
     @Test
-    void run_start_writesOneProfileLineWithNoName() throws Exception {
+    void run_start_writesOneProfileLineWithNoName() {
         final Path book = TestBooks.markdown(tempDir.resolve("Book.md"), BOOK);
         final TestProject project = project(book, brief("en", "uk"));
         final RunRequest request =

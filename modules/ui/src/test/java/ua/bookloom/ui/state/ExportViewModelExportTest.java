@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
@@ -36,7 +35,7 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     private ExecutorService worker;
 
     @BeforeEach
-    void openTheBook() throws IOException {
+    void openTheBook() {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         destination = dir.resolve("Frankenstein.uk.epub");
         exportService.writeFiles(true);
@@ -225,7 +224,7 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     // IF the file just written were said as an error, THEN a red line would sit beside the green checks of an export
     // that went well; IF it blocked Export, THEN asking before replacing would never be reached.
     @Test
-    void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() throws IOException {
+    void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() {
         refresh();
 
         export();

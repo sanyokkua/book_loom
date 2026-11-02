@@ -308,7 +308,7 @@ class GlossaryCsvTest {
     }
 
     @Test
-    void importCsv_exportedGlossary_importsBackIntoAnEmptyOneUnchanged() throws IOException {
+    void importCsv_exportedGlossary_importsBackIntoAnEmptyOneUnchanged() {
         final List<GlossaryEntry> entries = List.of(
                 GlossaryEntry.of(
                         "p1:hale, margaret",
@@ -344,8 +344,7 @@ class GlossaryCsvTest {
     // and
     // the lock and the gender travel as they were.
     @Test
-    void importCsv_exportedSuggestionAndLockedNames_keepLockAndGenderAndTheSuggestionBecomesTheirs()
-            throws IOException {
+    void importCsv_exportedSuggestionAndLockedNames_keepLockAndGenderAndTheSuggestionBecomesTheirs() {
         service.add(GlossaryEntry.of("p1:zerubin", PROJECT, "Zerubin", null, TermType.CHARACTER, Gender.MALE, false)
                 .withSuggestedTarget("Зерубін"));
         service.add(GlossaryEntry.of("p1:edwin", PROJECT, "Edwin", "Едвін", TermType.CHARACTER, Gender.MALE, true));

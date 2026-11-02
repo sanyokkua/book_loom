@@ -14,7 +14,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -157,7 +156,7 @@ class ProviderVerifierPolicyTest {
 
     // A failed connection stage under the shorter policy still stops before ever reaching discovery.
     @Test
-    void verify_connectionAndModelsPolicy_stopsAtFailedConnection() throws IOException {
+    void verify_connectionAndModelsPolicy_stopsAtFailedConnection() {
         final ProviderConfig config = new ProviderConfig(
                 "ollama", ProviderKind.OLLAMA, closedEndpoint(), Duration.ofSeconds(2), Duration.ofSeconds(2));
         assertThat(configs.save(config).isOk()).isTrue();

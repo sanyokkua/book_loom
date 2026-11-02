@@ -58,8 +58,7 @@ class AutomationReviewModeTest {
         }
     }
 
-    private static void waitUntilStored(final SettingsRepository settings, final ReviewMode wanted)
-            throws InterruptedException {
+    private static void waitUntilStored(final SettingsRepository settings, final ReviewMode wanted) {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (System.nanoTime() < deadline
                 && !Optional.of(wanted)

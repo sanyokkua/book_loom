@@ -36,7 +36,7 @@ class SettingsConnectionFoldTipTest extends SettingsScreenTestBase {
     // IF the fold's tip covered the whole open form, THEN it would stand over the fields the person is filling in and
     // stay while the pointer rests anywhere in them; inside the form it never opens.
     @Test
-    void hover_insideTheOpenForm_showsNoFoldTip() throws TimeoutException {
+    void hover_insideTheOpenForm_showsNoFoldTip() {
         openSettings();
         openFold();
 

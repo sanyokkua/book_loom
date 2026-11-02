@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -91,7 +90,7 @@ class HttpExchangeTest {
     }
 
     @Test
-    void get_closedLocalPortMapsToUnreachable() throws IOException {
+    void get_closedLocalPortMapsToUnreachable() {
         final URI endpoint = closedEndpoint();
 
         final Result<HttpReply> result = exchange().get(config(endpoint, Duration.ofSeconds(2)), "/chat");

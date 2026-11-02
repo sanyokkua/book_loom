@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -30,7 +29,7 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
     private ExecutorService worker;
 
     @BeforeEach
-    void openTheBook() throws IOException {
+    void openTheBook() {
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         exportService.writeFiles(true);
         worker = Executors.newSingleThreadExecutor();

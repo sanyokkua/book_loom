@@ -299,7 +299,7 @@ class LexiconCsvTest {
 
     // A series keeps its terms across books: what one export wrote an import reads back into an empty lexicon.
     @Test
-    void importCsv_exportedLexicon_importsBackIntoAnEmptyOneWithTheSameRenderings() throws IOException {
+    void importCsv_exportedLexicon_importsBackIntoAnEmptyOneWithTheSameRenderings() {
         lexicon.put(LexiconEntry.of(PROJECT, "master").withChosen("пан"));
         lexicon.put(LexiconEntry.of(PROJECT, "imp"));
         lexicon.put(LexiconEntry.of(PROJECT, "sea, king").withChosen("морський \"король\""));
