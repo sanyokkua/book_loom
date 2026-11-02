@@ -171,7 +171,7 @@ record LoggedCall(
     private static JsonNode json(final String text) {
         try {
             return MAPPER.readTree(text);
-        } catch (IOException e) {
+        } catch (IOException _) {
             return MAPPER.createObjectNode();
         }
     }

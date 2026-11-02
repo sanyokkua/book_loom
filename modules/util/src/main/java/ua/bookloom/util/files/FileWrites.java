@@ -89,7 +89,7 @@ public final class FileWrites {
     private static void moveOnto(final Path temporary, final Path target) throws IOException {
         try {
             Files.move(temporary, target, ATOMIC_MOVE, REPLACE_EXISTING);
-        } catch (AtomicMoveNotSupportedException unsupported) {
+        } catch (AtomicMoveNotSupportedException _) {
             Files.move(temporary, target, REPLACE_EXISTING);
         }
     }

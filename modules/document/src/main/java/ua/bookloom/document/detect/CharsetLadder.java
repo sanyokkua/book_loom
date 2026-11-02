@@ -184,7 +184,7 @@ public final class CharsetLadder {
         }
         try {
             return Charset.forName(charsetName.trim());
-        } catch (IllegalCharsetNameException | UnsupportedCharsetException unknownToThisJvm) {
+        } catch (IllegalCharsetNameException | UnsupportedCharsetException _) {
             return null;
         }
     }

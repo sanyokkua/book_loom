@@ -95,7 +95,7 @@ public record StepEntry(
         }
         try {
             return OptionalInt.of(Integer.parseInt(label.substring(SAMPLE_LABEL.length())));
-        } catch (final NumberFormatException e) {
+        } catch (final NumberFormatException _) {
             return OptionalInt.empty();
         }
     }

@@ -79,7 +79,7 @@ final class SetupCalls {
         }
         try {
             return mapper.readTree(reply.substring(from, to + 1));
-        } catch (java.io.IOException unreadable) {
+        } catch (java.io.IOException _) {
             log.debug("Setup reply is not JSON");
             return null;
         }

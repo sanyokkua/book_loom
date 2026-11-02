@@ -29,7 +29,7 @@ final class ProviderFindings {
     static long parseSeconds(final String text) {
         try {
             return Long.parseLong(text.strip());
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException _) {
             return -1;
         }
     }

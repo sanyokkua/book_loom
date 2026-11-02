@@ -206,7 +206,7 @@ abstract class WorkspaceTestBase {
         WaitForAsyncUtils.waitForFxEvents();
         try {
             WaitForAsyncUtils.checkException();
-        } catch (Throwable expected) {
+        } catch (Throwable _) {
             // The rejected refresh described above, from a run this test had already finished with.
         }
     }

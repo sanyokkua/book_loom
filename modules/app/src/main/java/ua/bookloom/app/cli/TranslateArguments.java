@@ -124,7 +124,7 @@ record TranslateArguments(
             }
             try {
                 source = Path.of(argument);
-            } catch (InvalidPathException exception) {
+            } catch (InvalidPathException _) {
                 return invalidOption("book", "book path is invalid");
             }
             sourceSpecified = true;
@@ -202,7 +202,7 @@ record TranslateArguments(
             }
             try {
                 baseUrl = URI.create(dataOf(value));
-            } catch (IllegalArgumentException exception) {
+            } catch (IllegalArgumentException _) {
                 return invalidOption(BASE_URL_OPTION, "--base-url is invalid");
             }
             baseUrlSpecified = true;
@@ -334,7 +334,7 @@ record TranslateArguments(
                 return seconds > 0
                         ? Result.ok(Duration.ofSeconds(seconds))
                         : invalid("--timeout must be a positive whole number");
-            } catch (NumberFormatException exception) {
+            } catch (NumberFormatException _) {
                 return invalid("--timeout must be a positive whole number");
             }
         }

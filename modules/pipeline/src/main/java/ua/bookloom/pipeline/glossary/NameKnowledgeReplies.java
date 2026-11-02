@@ -156,7 +156,7 @@ final class NameKnowledgeReplies {
             final JsonNode items =
                     mapper.readTree(reply.substring(from, to + 1)).path("items");
             return items.isArray() ? items : List.of();
-        } catch (IOException cut) {
+        } catch (IOException _) {
             log.warn("Name knowledge reply could not be read; every name in it counts as unanswered");
             return List.of();
         }

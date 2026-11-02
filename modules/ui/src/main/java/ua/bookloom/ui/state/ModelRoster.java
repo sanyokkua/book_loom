@@ -199,7 +199,7 @@ public final class ModelRoster {
     private static Optional<List<String>> await(final Future<Optional<List<String>>> listed) {
         try {
             return listed.get();
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return Optional.empty();
         } catch (ExecutionException failed) {

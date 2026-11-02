@@ -233,7 +233,7 @@ final class FaultyModel implements ChatModel {
         try {
             new CountDownLatch(1).await(10, TimeUnit.SECONDS);
             throw new AssertionError("the stall watchdog never ended the hanging call");
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             return Result.err(AppError.of(ErrorCode.cancelled, "Provider request cancelled", "Interrupted."));
         }
     }
@@ -258,7 +258,7 @@ final class FaultyModel implements ChatModel {
             }
             final String damaged = FaultyText.damage(fault, Cyrillic.of(target.asText()), random);
             return mapper.writeValueAsString(Map.of("target", damaged));
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return content;
         }
     }

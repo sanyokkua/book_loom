@@ -171,7 +171,7 @@ final class InferenceStage {
                     && node.isObject()
                     && node.size() == 1
                     && "ok".equals(node.path("status").asText());
-        } catch (JsonProcessingException ignored) {
+        } catch (JsonProcessingException _) {
             return false;
         }
     }

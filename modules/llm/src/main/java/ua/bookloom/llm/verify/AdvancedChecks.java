@@ -277,7 +277,7 @@ final class AdvancedChecks {
                     && node.isObject()
                     && node.size() == 1
                     && SCHEMA_VALUE.equals(node.path(SCHEMA_KEY).asText(null));
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return false;
         }
     }

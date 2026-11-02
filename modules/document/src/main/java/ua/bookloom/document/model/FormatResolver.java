@@ -82,7 +82,7 @@ public final class FormatResolver {
     public static Optional<BookFormat> probe(Path source) {
         try {
             return Optional.of(resolve(source));
-        } catch (CorruptContainerException unresolved) {
+        } catch (CorruptContainerException _) {
             return Optional.empty();
         }
     }

@@ -34,7 +34,7 @@ final class LinkReader {
         final URI uri;
         try {
             uri = URI.create(link.replace(" ", "%20"));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             log.debug("Not a link: {}", link);
             return link;
         }

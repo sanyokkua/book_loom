@@ -122,7 +122,7 @@ public final class ScriptedChatModel implements ChatModel {
                 throw new AssertionError("a blocked request was never released");
             }
             return true;
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             return false;
         }
     }

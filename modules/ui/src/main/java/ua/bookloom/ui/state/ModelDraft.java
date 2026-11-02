@@ -290,7 +290,7 @@ public record ModelDraft(
         try {
             final int value = Integer.parseInt(text.strip());
             return value > 0 ? Optional.of(value) : Optional.empty();
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             return Optional.empty();
         }
     }

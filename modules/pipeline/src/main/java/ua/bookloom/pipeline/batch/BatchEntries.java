@@ -86,7 +86,7 @@ final class BatchEntries {
             try {
                 final String text = mapper.readValue("\"" + raw.body() + "\"", String.class);
                 entries.add(new Entry(raw.id(), ControlCharacters.stripSpacing(text)));
-            } catch (JsonProcessingException ignored) {
+            } catch (JsonProcessingException _) {
                 log.debug("Skipped a batch entry whose text is not a JSON string id={}", raw.id());
             }
         }

@@ -44,7 +44,7 @@ public final class AppVersion {
     public static String current() {
         try (InputStream stream = AppVersion.class.getResourceAsStream(RESOURCE)) {
             return read(stream);
-        } catch (IOException e) {
+        } catch (IOException _) {
             // A version string is never worth failing a startup over, and this runs before there is much to log to.
             return FALLBACK;
         }
@@ -66,7 +66,7 @@ public final class AppVersion {
         final Properties properties = new Properties();
         try {
             properties.load(stream);
-        } catch (IOException e) {
+        } catch (IOException _) {
             return FALLBACK;
         }
         final String version = properties.getProperty(KEY, FALLBACK);

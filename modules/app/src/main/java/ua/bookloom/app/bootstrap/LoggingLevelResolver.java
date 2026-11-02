@@ -61,7 +61,7 @@ public final class LoggingLevelResolver {
     private static @Nullable Level parse(String value) {
         try {
             return Level.valueOf(value.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException _) {
             return null;
         }
     }

@@ -159,7 +159,7 @@ public final class ScriptedNamesPass implements NamesPass {
         if (holding) {
             try {
                 release.await(HOLD_SECONDS, TimeUnit.SECONDS);
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 cancelled.countDown();
                 return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "The names pass was cancelled."));

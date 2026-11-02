@@ -123,7 +123,7 @@ record GlossaryCsvFiles(GlossaryRepository glossary, Function<List<GlossaryCsv.R
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(bytes))
                     .toString());
-        } catch (CharacterCodingException notUtf8) {
+        } catch (CharacterCodingException _) {
             log.warn("Glossary import project={} path={} refused: the file is not UTF-8", projectId, source);
             return Result.err(fileError(
                     FailureReason.NOT_UTF8,

@@ -62,7 +62,7 @@ final class ProviderPrivacyLines {
     private static Optional<String> hostOf(final String address) {
         try {
             return Optional.ofNullable(URI.create(address.strip()).getHost());
-        } catch (IllegalArgumentException unparsable) {
+        } catch (IllegalArgumentException _) {
             log.debug("privacy line: the address does not parse yet, no host is named");
             return Optional.empty();
         }

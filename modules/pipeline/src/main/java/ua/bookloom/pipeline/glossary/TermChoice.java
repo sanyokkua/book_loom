@@ -264,7 +264,7 @@ public final class TermChoice {
                     (verdict.path("keep").asBoolean(false) ? kept : dropped).add(key);
                 }
             }
-        } catch (IOException cut) {
+        } catch (IOException _) {
             return unreadable();
         }
         log.debug("Term choice batch answered asked={} kept={} dropped={}", asked.size(), kept.size(), dropped.size());

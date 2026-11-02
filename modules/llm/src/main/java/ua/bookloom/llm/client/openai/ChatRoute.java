@@ -128,7 +128,7 @@ final class ChatRoute {
     private Optional<JsonNode> parsed(final String body) {
         try {
             return Optional.ofNullable(mapper.readTree(body));
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return Optional.empty();
         }
     }

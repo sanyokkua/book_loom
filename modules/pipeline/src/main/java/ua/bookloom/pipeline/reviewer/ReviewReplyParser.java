@@ -78,7 +78,7 @@ public final class ReviewReplyParser {
                     entries.add(mapper.readTree(reader));
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException _) {
             log.debug("The reviewer reply ends inside an entry; the entries before it are kept");
         }
         return entries;

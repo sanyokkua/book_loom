@@ -196,7 +196,7 @@ class TranslationJobObservabilityTest {
             try {
                 never.await();
                 return Result.err(error(ErrorCode.internal));
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "The call was interrupted."));
             }

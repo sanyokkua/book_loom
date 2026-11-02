@@ -366,7 +366,7 @@ public record ProviderDraft(
         }
         try {
             return new URI(text);
-        } catch (URISyntaxException ignored) {
+        } catch (URISyntaxException _) {
             return null;
         }
     }

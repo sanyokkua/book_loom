@@ -375,9 +375,9 @@ record EvalProvenance(
                 return null;
             }
             return out;
-        } catch (IOException e) {
+        } catch (IOException _) {
             return null;
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return null;
         }

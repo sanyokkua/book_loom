@@ -53,7 +53,7 @@ class AutomationReviewModeTest {
             final CountDownLatch started = new CountDownLatch(1);
             Platform.startup(started::countDown);
             started.await(WAIT_SECONDS, TimeUnit.SECONDS);
-        } catch (IllegalStateException alreadyRunning) {
+        } catch (IllegalStateException _) {
             // The toolkit is shared by the test JVM; a running one is what is wanted.
         }
     }

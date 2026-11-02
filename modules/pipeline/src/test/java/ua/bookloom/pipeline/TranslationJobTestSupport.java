@@ -373,7 +373,7 @@ final class TranslationJobTestSupport {
                 }
                 try {
                     latch.await(left, TimeUnit.NANOSECONDS);
-                } catch (InterruptedException cause) {
+                } catch (InterruptedException _) {
                     interrupted = true;
                 }
             }

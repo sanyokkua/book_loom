@@ -77,7 +77,7 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
             waiting.countDown();
             try {
                 new CountDownLatch(1).await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException stopped) {
+            } catch (InterruptedException _) {
                 interrupted.set(true);
                 return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Interrupted."));
             }

@@ -114,7 +114,7 @@ public final class RetryPolicy {
             sleeper.sleep(delay);
             log.debug("Retry wait completed delay={}", delay);
             return true;
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             log.debug("Retry wait interrupted; cancellation will be returned");
             return false;
@@ -143,7 +143,7 @@ public final class RetryPolicy {
         try {
             final long seconds = Long.parseLong(value);
             return seconds < 0 ? null : Duration.ofSeconds(seconds);
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException _) {
             // Retry-After is also permitted to contain an HTTP date.
         }
         try {
@@ -151,7 +151,7 @@ public final class RetryPolicy {
                     .toInstant();
             final Duration untilRetry = Duration.between(clock.instant(), retryAt);
             return untilRetry.isNegative() ? Duration.ZERO : untilRetry;
-        } catch (DateTimeException | ArithmeticException ignored) {
+        } catch (DateTimeException | ArithmeticException _) {
             log.debug("Retry-After value was invalid; using local backoff");
             return null;
         }

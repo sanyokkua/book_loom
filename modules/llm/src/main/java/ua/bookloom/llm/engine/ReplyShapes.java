@@ -148,7 +148,7 @@ final class ReplyShapes {
     private Optional<JsonNode> parsed(final HttpReply reply) {
         try {
             return Optional.ofNullable(mapper.readTree(reply.body()));
-        } catch (JsonProcessingException failure) {
+        } catch (JsonProcessingException _) {
             log.debug(
                     "Engine probe body is not JSON status={} length={}",
                     reply.status(),

@@ -235,7 +235,7 @@ public final class AppPathsResolver {
         try {
             final FileStore store = Files.getFileStore(dataDir);
             return NETWORK_FILESYSTEMS.contains(store.type().toLowerCase(Locale.ROOT));
-        } catch (IOException | SecurityException e) {
+        } catch (IOException | SecurityException _) {
             // An unreadable store type is not a startup problem; local is the safe assumption, and the only cost of
             // being wrong is that a warning is not printed.
             return false;

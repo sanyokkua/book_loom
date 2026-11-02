@@ -170,7 +170,7 @@ public final class TranslateLauncher {
     private static void removeHook(Thread hook) {
         try {
             Runtime.getRuntime().removeShutdownHook(hook);
-        } catch (IllegalStateException shuttingDown) {
+        } catch (IllegalStateException _) {
             // The JVM is already stopping and is running the hook itself; nothing is left to remove.
         }
     }

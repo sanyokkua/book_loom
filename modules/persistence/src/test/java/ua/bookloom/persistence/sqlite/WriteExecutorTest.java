@@ -107,7 +107,7 @@ class WriteExecutorTest {
     private static void awaitBoth(final CountDownLatch bothStarted) {
         try {
             bothStarted.await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

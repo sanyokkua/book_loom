@@ -85,7 +85,7 @@ final class WindowPlacement {
                     Double.parseDouble(parts.get(HEIGHT)),
                     Boolean.parseBoolean(parts.get(MAXIMIZED)));
             return placement.width() > 0 && placement.height() > 0 ? Optional.of(placement) : Optional.empty();
-        } catch (NumberFormatException unreadable) {
+        } catch (NumberFormatException _) {
             log.debug("window placement '{}' is not numbers; ignored", text);
             return Optional.empty();
         }

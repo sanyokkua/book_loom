@@ -115,7 +115,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
         }
         try {
             release.await(HOLD_SECONDS, TimeUnit.SECONDS);
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

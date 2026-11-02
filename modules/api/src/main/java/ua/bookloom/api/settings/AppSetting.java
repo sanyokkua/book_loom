@@ -112,7 +112,7 @@ public record AppSetting<T>(
         try {
             final Optional<T> parsed = parser.apply(raw);
             return parsed.isPresent() ? parsed.get() : defaultValue;
-        } catch (RuntimeException unreadable) {
+        } catch (RuntimeException _) {
             return defaultValue;
         }
     }

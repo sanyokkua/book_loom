@@ -38,7 +38,7 @@ class InterruptibleWorkTest {
     private static void awaitQuietly(final CountDownLatch latch) {
         try {
             assertThat(latch.await(WAIT_SECONDS, TimeUnit.SECONDS)).isTrue();
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

@@ -101,7 +101,7 @@ final class LiveCallState {
         }
         try {
             summaryVersion = Integer.parseInt(event.label().trim());
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             summaryVersion++;
             log.debug("live calls: summary label {} is no version, counted as {}", event.label(), summaryVersion);
         }

@@ -45,7 +45,7 @@ public enum DetailCounts {
         // A digit run longer than an int holds is not a count SafeDetails rendered.
         try {
             return found.find() ? OptionalInt.of(Integer.parseInt(found.group(1))) : OptionalInt.empty();
-        } catch (NumberFormatException overflow) {
+        } catch (NumberFormatException _) {
             return OptionalInt.empty();
         }
     }

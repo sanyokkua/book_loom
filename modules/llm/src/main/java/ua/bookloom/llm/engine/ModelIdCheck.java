@@ -199,7 +199,7 @@ public final class ModelIdCheck {
                     .filter(Objects::nonNull)
                     .filter(model -> model.id() != null && !model.id().isBlank())
                     .toList());
-        } catch (JsonProcessingException unreadable) {
+        } catch (JsonProcessingException _) {
             log.debug("Model list body is not a list provider={}", config.id());
             return Optional.empty();
         }

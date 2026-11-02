@@ -170,7 +170,7 @@ final class XhtmlParser {
         }
         try {
             return Charset.forName(matcher.group(1));
-        } catch (IllegalCharsetNameException | UnsupportedCharsetException e) {
+        } catch (IllegalCharsetNameException | UnsupportedCharsetException _) {
             return DEFAULT_CHARSET;
         }
     }

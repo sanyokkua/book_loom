@@ -91,7 +91,7 @@ record BaseUrlRoot(ProviderConfig root, ProviderConfig base, boolean baseIsRootV
         try {
             return Optional.of(config.withBaseUrl(
                     new URI(base.getScheme(), null, base.getHost(), base.getPort(), path, null, null)));
-        } catch (URISyntaxException failure) {
+        } catch (URISyntaxException _) {
             log.debug("Provider base URL has no usable root host={}", base.getHost());
             return Optional.empty();
         }

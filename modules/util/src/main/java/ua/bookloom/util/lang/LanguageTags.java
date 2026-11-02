@@ -74,7 +74,7 @@ public final class LanguageTags {
         final Locale locale;
         try {
             locale = new Locale.Builder().setLanguageTag(hyphenated).build();
-        } catch (IllformedLocaleException e) {
+        } catch (IllformedLocaleException _) {
             return Optional.empty();
         }
         final String code = locale.getLanguage();

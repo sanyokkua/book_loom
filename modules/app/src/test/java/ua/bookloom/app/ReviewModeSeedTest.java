@@ -57,7 +57,7 @@ class ReviewModeSeedTest {
             final CountDownLatch started = new CountDownLatch(1);
             Platform.startup(started::countDown);
             started.await(FX_WAIT_SECONDS, TimeUnit.SECONDS);
-        } catch (IllegalStateException alreadyRunning) {
+        } catch (IllegalStateException _) {
             // The toolkit is shared by the test JVM; a running one is what is wanted.
         }
         final CompletableFuture<ReviewMode> read = new CompletableFuture<>();

@@ -58,7 +58,7 @@ public final class EndpointPaths {
         try {
             return Optional.of(config.withBaseUrl(
                     new URI(base.getScheme(), null, base.getHost(), base.getPort(), "", null, null)));
-        } catch (URISyntaxException failure) {
+        } catch (URISyntaxException _) {
             log.debug("Provider base URL has no usable host root host={}", base.getHost());
             return Optional.empty();
         }

@@ -68,7 +68,7 @@ final class OpenAiReplyReader {
             final OpenAiChatResponse.@Nullable Message message = choice == null ? null : choice.message();
             return message != null
                     && ReasoningBudget.spent(request, message.content(), message.hasReasoning(), choice.finishReason());
-        } catch (JsonProcessingException unreadable) {
+        } catch (JsonProcessingException _) {
             log.debug("Reasoning budget check skipped: the reply is not JSON");
             return false;
         }

@@ -115,7 +115,7 @@ public final class QuoteCut {
                             .filter(node -> node.path(TARGET).isTextual())
                             .filter(node -> !node.path(TARGET).asText().isBlank())
                             .toList();
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             log.debug("Quote cut check skipped: the reply is not JSON");
             return List.of();
         }

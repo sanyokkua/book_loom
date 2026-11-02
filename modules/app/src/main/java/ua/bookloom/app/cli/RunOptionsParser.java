@@ -127,7 +127,7 @@ final class RunOptionsParser {
     private Result<Boolean> setStopAfter(String value) {
         try {
             stopAfter = Integer.parseInt(value);
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             stopAfter = 0;
         }
         return stopAfter > 0 ? Result.ok(Boolean.TRUE) : invalid("--stop-after must be a positive number of segments");
@@ -137,7 +137,7 @@ final class RunOptionsParser {
         try {
             report = Path.of(value);
             return Result.ok(Boolean.TRUE);
-        } catch (InvalidPathException invalidPath) {
+        } catch (InvalidPathException _) {
             return invalid("--report path is invalid");
         }
     }
@@ -151,7 +151,7 @@ final class RunOptionsParser {
         }
         try {
             return Duration.parse(value.toUpperCase(Locale.ROOT));
-        } catch (DateTimeParseException notIso) {
+        } catch (DateTimeParseException _) {
             return null;
         }
     }

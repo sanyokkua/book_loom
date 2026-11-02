@@ -35,7 +35,7 @@ public final class JsonReplies {
                     .with(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
                     .readTree(replyText);
             return root == null || root.isMissingNode() ? Optional.empty() : Optional.of(root);
-        } catch (JsonProcessingException ignored) {
+        } catch (JsonProcessingException _) {
             return Optional.empty();
         }
     }

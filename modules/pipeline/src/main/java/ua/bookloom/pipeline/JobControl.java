@@ -196,7 +196,7 @@ final class JobControl {
             while (state == JobState.PAUSED && !cancelRequested && recovering && left > 0) {
                 try {
                     left = changed.awaitNanos(left);
-                } catch (InterruptedException cause) {
+                } catch (InterruptedException _) {
                     cancelRequested = true;
                     transition(JobState.CANCELLED);
                     interrupted = true;
@@ -305,7 +305,7 @@ final class JobControl {
             while (state == JobState.PAUSED && !cancelRequested) {
                 try {
                     changed.await();
-                } catch (InterruptedException cause) {
+                } catch (InterruptedException _) {
                     cancelRequested = true;
                     transition(JobState.CANCELLED);
                     interrupted = true;

@@ -220,7 +220,7 @@ public final class BookInspectorService implements BookInspector {
                 }
             }
             return false;
-        } catch (IOException | CorruptContainerException unreadableZip) {
+        } catch (IOException | CorruptContainerException _) {
             return false;
         }
     }

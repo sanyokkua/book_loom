@@ -89,7 +89,7 @@ public final class ShutdownCancellation implements Runnable {
             return finished.await(wait.toMillis(), TimeUnit.MILLISECONDS)
                     || finished.await(
                             Objects.requireNonNull(extension.get(), "extension").toMillis(), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException interrupted) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return false;
         }

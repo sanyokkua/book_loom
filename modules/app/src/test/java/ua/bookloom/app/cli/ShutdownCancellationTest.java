@@ -86,7 +86,7 @@ class ShutdownCancellationTest {
             started.countDown();
             try {
                 cancelled.await();
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             ended = true;

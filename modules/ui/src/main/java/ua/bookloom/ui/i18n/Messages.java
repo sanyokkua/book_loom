@@ -142,7 +142,7 @@ public final class Messages {
     private String patternFor(final Resolved now, final MessageKey key) {
         try {
             return now.active().getString(key.key());
-        } catch (MissingResourceException missingInActive) {
+        } catch (MissingResourceException _) {
             log.debug("{} is missing for {}, resolving it for the English catalogue", key.key(), now.locale());
             return englishPatternFor(now, key);
         }
@@ -151,7 +151,7 @@ public final class Messages {
     private String englishPatternFor(final Resolved now, final MessageKey key) {
         try {
             return now.english().getString(key.key());
-        } catch (MissingResourceException missingEverywhere) {
+        } catch (MissingResourceException _) {
             log.warn("{} is in no catalogue, displaying the raw key", key.key());
             return key.key();
         }

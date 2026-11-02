@@ -102,7 +102,7 @@ final class ReplayScoring {
         try {
             final JsonNode node = MAPPER.readTree(reply);
             return node != null && node.isObject();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return false;
         }
     }

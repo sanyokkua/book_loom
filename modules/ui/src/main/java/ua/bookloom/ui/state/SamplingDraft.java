@@ -148,7 +148,7 @@ public record SamplingDraft(boolean custom, String temperatureText, String topKT
     private static Optional<Double> number(final String text) {
         try {
             return text.isBlank() ? Optional.empty() : Optional.of(Double.parseDouble(text.strip()));
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             return Optional.empty();
         }
     }
@@ -156,7 +156,7 @@ public record SamplingDraft(boolean custom, String temperatureText, String topKT
     private static Optional<Integer> whole(final String text) {
         try {
             return text.isBlank() ? Optional.empty() : Optional.of(Integer.parseInt(text.strip()));
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             return Optional.empty();
         }
     }

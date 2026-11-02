@@ -95,7 +95,7 @@ public final class DraftReplyParser {
                     validTarget(root)
                             ? read(root.path(TARGET).textValue(), source, targetLanguage, dropEdgeCodes)
                             : invalid(INVALID_OBJECT));
-        } catch (JsonProcessingException ignored) {
+        } catch (JsonProcessingException _) {
             return withoutTrailingClosers(replyText)
                     .map(object -> parse(object, source, targetLanguage, dropEdgeCodes))
                     .orElseGet(() -> logged(invalid("was not valid JSON")));

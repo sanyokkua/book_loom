@@ -41,7 +41,7 @@ final class PrettyJson {
             final boolean container = node != null && node.isContainerNode();
             log.trace("test body read as json container={} chars={}", container, text.length());
             return container ? writer.writeValueAsString(node) : text;
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             log.trace("test body is not json, shown as it came chars={}", text.length());
             return text;
         }

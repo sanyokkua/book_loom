@@ -35,7 +35,7 @@ final class ReasoningSign {
                     .asInt(0);
             log.debug("Reply reasoning read field={} thinkBlock={} reasoningTokens={}", field, block, tokens);
             return field || block || tokens > 0 ? Reasoning.SHOWN : Reasoning.NONE;
-        } catch (JsonProcessingException unreadable) {
+        } catch (JsonProcessingException _) {
             log.debug("Reply reasoning not read: the body is not JSON");
             return Reasoning.UNKNOWN;
         }

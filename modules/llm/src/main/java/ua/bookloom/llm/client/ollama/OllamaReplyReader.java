@@ -88,7 +88,7 @@ final class OllamaReplyReader {
                     message == null ? null : message.content(),
                     thinking != null && !thinking.isBlank(),
                     merged.doneReason());
-        } catch (IOException | RuntimeException readFailure) {
+        } catch (IOException | RuntimeException _) {
             log.debug("Reasoning budget check skipped: the reply could not be read");
             return false;
         }

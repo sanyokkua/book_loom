@@ -135,7 +135,7 @@ class TranslatingScreenSoakTest extends TranslatingScreenTestBase {
     private static void awaitQuietly(final CountDownLatch latch) {
         try {
             latch.await(5, TimeUnit.SECONDS);
-        } catch (InterruptedException stopped) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
     }

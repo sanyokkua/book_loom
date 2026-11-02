@@ -81,7 +81,7 @@ public final class ModelSpeedRecorder {
         log.debug("recording {} s for {} from {} for {}/{}", seconds, kind, from, providerId, modelId);
         try {
             executor.execute(() -> write(providerId, modelId, kind, seconds, from));
-        } catch (RejectedExecutionException closing) {
+        } catch (RejectedExecutionException _) {
             log.warn("the speed of {}/{} was not kept: the window is closing", providerId, modelId);
         }
     }
@@ -112,7 +112,7 @@ public final class ModelSpeedRecorder {
         log.debug("recording seconds per call {} from {} for {}/{}", copy, from, providerId, modelId);
         try {
             executor.execute(() -> writeAll(providerId, modelId, copy, from));
-        } catch (RejectedExecutionException closing) {
+        } catch (RejectedExecutionException _) {
             log.warn("the seconds per call of {}/{} were not kept: the window is closing", providerId, modelId);
         }
     }

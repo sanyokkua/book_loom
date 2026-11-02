@@ -348,7 +348,7 @@ class PromptShapeTest {
     private static JsonNode tree(final String candidate) {
         try {
             return MAPPER.readTree(candidate);
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return MAPPER.missingNode();
         }
     }
@@ -370,7 +370,7 @@ class PromptShapeTest {
         try {
             final JsonNode node = MAPPER.readTree(candidate);
             return node.isObject() && node.has(key);
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return false;
         }
     }

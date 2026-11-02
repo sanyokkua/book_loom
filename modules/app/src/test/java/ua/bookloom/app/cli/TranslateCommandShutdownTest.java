@@ -153,7 +153,7 @@ class TranslateCommandShutdownTest {
         private static Result<ChatResponse> awaitCancel() {
             try {
                 new CountDownLatch(1).await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "The call was stopped."));
@@ -198,7 +198,7 @@ class TranslateCommandShutdownTest {
                 });
                 try {
                     assertThat(cancelled.await(10, TimeUnit.SECONDS)).isTrue();
-                } catch (InterruptedException interrupted) {
+                } catch (InterruptedException _) {
                     Thread.currentThread().interrupt();
                 }
                 return delegate.run();

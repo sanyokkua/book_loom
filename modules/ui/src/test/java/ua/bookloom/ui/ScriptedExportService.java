@@ -183,7 +183,7 @@ public final class ScriptedExportService implements ExportService {
         private boolean awaits(final CountDownLatch gate) {
             try {
                 return gate.await(HOLD_SECONDS, TimeUnit.SECONDS) && !isCancelled;
-            } catch (InterruptedException interrupted) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 return false;
             }

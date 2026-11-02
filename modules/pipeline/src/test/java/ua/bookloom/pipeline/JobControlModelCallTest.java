@@ -147,7 +147,7 @@ class JobControlModelCallTest {
         inCall.countDown();
         try {
             return new CountDownLatch(1).await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException expected) {
+        } catch (InterruptedException _) {
             return true;
         } finally {
             control.exitModelCall();

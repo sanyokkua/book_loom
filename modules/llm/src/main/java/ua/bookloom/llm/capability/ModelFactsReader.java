@@ -242,7 +242,7 @@ public final class ModelFactsReader {
         }
         try {
             return Optional.ofNullable(mapper.readTree(data.body())).filter(JsonNode::isObject);
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             log.debug("Model facts reply is not JSON");
             return Optional.empty();
         }

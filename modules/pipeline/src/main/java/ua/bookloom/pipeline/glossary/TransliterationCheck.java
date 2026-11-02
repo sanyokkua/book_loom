@@ -122,13 +122,13 @@ public final class TransliterationCheck {
             final List<String> unmatched,
             final List<String> target,
             final boolean judgesOpening) {
-        for (String _ : unjudged) {
+        for (var _ : unjudged) {
             if (target.isEmpty()) {
                 return Optional.of(Problem.LOST_WORD);
             }
             target.remove(0);
         }
-        for (String _ : unmatched) {
+        for (var _ : unmatched) {
             if (target.isEmpty()) {
                 return Optional.of(Problem.LOST_WORD);
             }

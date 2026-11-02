@@ -80,7 +80,7 @@ final class SuspiciousWordsReply {
         try {
             final int number = Integer.parseInt(id.strip());
             return number >= 1 && number <= count ? number - 1 : -1;
-        } catch (NumberFormatException notANumber) {
+        } catch (NumberFormatException _) {
             return -1;
         }
     }
