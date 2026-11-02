@@ -33,7 +33,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
             final Optional<ModelSettings> found = Optional.ofNullable(byModel.get(key(providerId, modelId)));
             log.debug("Model settings read provider={} model={} present={}", providerId, modelId, found.isPresent());
             return Result.ok(found);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -49,7 +49,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
                     settings.modelId(),
                     settings.refused().size());
             return Result.ok(settings);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -67,7 +67,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
                             change.apply(stored == null ? ModelSettings.defaults(providerId, modelId) : stored));
             log.debug("Model settings updated provider={} model={}", providerId, modelId);
             return Result.ok(kept);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -80,7 +80,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
             final boolean removed = byModel.remove(key(providerId, modelId)) != null;
             log.debug("Model settings deleted provider={} model={} existed={}", providerId, modelId, removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -90,7 +90,7 @@ public final class InMemoryModelSettingsRepository implements ModelSettingsRepos
         try {
             log.debug("Model settings listed count={}", byModel.size());
             return Result.ok(List.copyOf(byModel.values()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

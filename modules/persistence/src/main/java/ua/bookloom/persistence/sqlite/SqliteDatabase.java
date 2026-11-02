@@ -317,8 +317,11 @@ public final class SqliteDatabase implements AutoCloseable {
         return source;
     }
 
-    // False when the file is no database of this build (corrupt, not a database, another schema or record shapes);
-    // a failure that says nothing about its content (busy, locked, read-only, permission, I/O) is thrown instead.
+    /**
+     * Answers false when the file is no database of this build (corrupt, not a database, another schema or record
+     * shapes); a failure that says nothing about its content (busy, locked, read-only, permission, I/O) is thrown
+     * instead.
+     */
     private static boolean isUsable(final Path file) throws IOException, SQLException {
         if (!Files.exists(file) || Files.size(file) == 0) {
             log.debug("Database file absent or empty, creating fresh");

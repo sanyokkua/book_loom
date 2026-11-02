@@ -77,8 +77,15 @@ class JsonCodecTest {
 
     private final JsonCodec codec = new JsonCodec();
 
+    private static ExportRecord exportWithSideFiles() {
+        final List<Path> sideFiles = List.of(Path.of("/tmp/out/glossary.csv"), Path.of("/tmp/out/log.txt"));
+        return new ExportRecord(T0, Path.of("/tmp/out/книга.epub"), 10, 1, 2, 3, 4, 5, 6, sideFiles);
+    }
+
     static Stream<Object> storedRecords() {
         return Stream.of(
+                new GlossaryDocument(List.of(glossary()), List.of("milton")),
+                new LexiconDocument(List.of(lexicon()), List.of("master")),
                 segment(true),
                 segment(false),
                 glossary(),
@@ -93,32 +100,8 @@ class JsonCodecTest {
                 brief(),
                 provider(),
                 modelSettings(),
-                new ExportRecord(
-                        T0,
-                        Path.of("/tmp/out/книга.epub"),
-                        10,
-                        1,
-                        2,
-                        3,
-                        4,
-                        5,
-                        6,
-                        List.of(Path.of("/tmp/out/glossary.csv"), Path.of("/tmp/out/log.txt"))),
+                exportWithSideFiles(),
                 new ExportRecord(T0, Path.of("out/книга.epub"), 1, 0, 0, 0, 0, 0, 1, List.of(Path.of("side.csv"))));
-    }
-
-    static Stream<Object> storedDocuments() {
-        return Stream.of(
-                new GlossaryDocument(List.of(glossary()), List.of("milton")),
-                new LexiconDocument(List.of(lexicon()), List.of("master")));
-    }
-
-    @ParameterizedTest
-    @MethodSource("storedDocuments")
-    void roundTrip_storedDocument_readsBackEqual(final Object stored) {
-        final String json = codec.write(stored);
-
-        assertThat(codec.read(json, stored.getClass())).isEqualTo(stored);
     }
 
     @Test

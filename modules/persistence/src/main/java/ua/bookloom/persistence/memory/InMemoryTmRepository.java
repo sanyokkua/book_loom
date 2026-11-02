@@ -36,7 +36,7 @@ public final class InMemoryTmRepository implements TmRepository {
                     entry.sourceHash(),
                     entry.contextKey());
             return Result.ok(entry);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -49,7 +49,7 @@ public final class InMemoryTmRepository implements TmRepository {
             return Result.ok(store.tm(projectId).values().stream()
                     .filter(entry -> entry.sourceHash().equals(sourceHash))
                     .toList());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -61,7 +61,7 @@ public final class InMemoryTmRepository implements TmRepository {
         Objects.requireNonNull(contextKey, "contextKey");
         try {
             return Result.ok(Optional.ofNullable(store.tm(projectId).get(InMemoryStore.tmKey(sourceHash, contextKey))));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -77,7 +77,7 @@ public final class InMemoryTmRepository implements TmRepository {
                         return length >= minChars && length <= maxChars;
                     })
                     .toList());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

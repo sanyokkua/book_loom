@@ -38,7 +38,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
                     .toList();
             log.trace("Lexicon all projectId={} entries={}", projectId, entries.size());
             return Result.ok(entries);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -56,7 +56,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
                     entry.term(),
                     entry.established().orElse(null));
             return Result.ok(entry);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -72,7 +72,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
                     .computeIfPresent(LexiconEntry.keyOf(term), (key, held) -> change.apply(held));
             log.debug("Lexicon update projectId={} present={}", projectId, stored != null);
             return Result.ok(Optional.ofNullable(stored));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -91,7 +91,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
             log.debug("Lexicon record projectId={} distinct={}", projectId, stored.distinctRenderings());
             log.trace("Lexicon record term={} rendering={}", term, rendering);
             return Result.ok(stored);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -108,7 +108,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
             }
             log.debug("Lexicon remove projectId={} removed={}", projectId, removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -119,7 +119,7 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.lexiconRemoved(projectId).contains(LexiconEntry.keyOf(term)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

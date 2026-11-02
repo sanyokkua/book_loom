@@ -52,7 +52,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
                     entry.id(),
                     entry.term().length());
             return Result.ok(entry);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -69,7 +69,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
             glossary.put(entry);
             log.debug("Glossary term replaced projectId={} entryId={}", entry.projectId(), entry.id());
             return Result.ok(entry);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -84,7 +84,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
             final Optional<GlossaryEntry> stored = store.glossary(projectId).update(GlossaryKeys.of(term), change);
             log.debug("Glossary atomic update projectId={} present={}", projectId, stored.isPresent());
             return Result.ok(stored);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -99,7 +99,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
             removed.ifPresent(entry -> glossary.removedKeys().addAll(GlossaryIndex.keysOf(entry)));
             log.debug("Glossary remove projectId={} entryId={} removed={}", projectId, entryId, removed.isPresent());
             return Result.ok(removed.isPresent());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -119,7 +119,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
             glossary.put(kept);
             log.debug("Glossary fold projectId={} foldedId={} keptId={}", projectId, foldedId, kept.id());
             return Result.ok(kept);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -129,7 +129,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(store.glossary(projectId).allInInsertionOrder());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -140,7 +140,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.glossary(projectId).findByKey(GlossaryKeys.of(term)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -151,7 +151,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(term, "term");
         try {
             return Result.ok(store.glossary(projectId).removedKeys().contains(GlossaryKeys.of(term)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

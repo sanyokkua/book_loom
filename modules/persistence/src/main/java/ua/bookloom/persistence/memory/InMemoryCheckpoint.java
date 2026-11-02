@@ -46,7 +46,7 @@ public final class InMemoryCheckpoint implements CheckpointPort {
             applyAll(commit, byId);
             final int glossaryApplied = applyGlossaryAdditions(commit);
             return Result.ok(logAndCount(commit, glossaryApplied));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();

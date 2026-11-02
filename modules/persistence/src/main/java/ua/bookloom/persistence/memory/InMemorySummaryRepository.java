@@ -28,7 +28,7 @@ public final class InMemorySummaryRepository implements SummaryRepository {
             store.summaries().put(summary.projectId(), summary);
             log.debug("Summary saved projectId={} version={}", summary.projectId(), summary.version());
             return Result.ok(summary);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -38,7 +38,7 @@ public final class InMemorySummaryRepository implements SummaryRepository {
         Objects.requireNonNull(projectId, "projectId");
         try {
             return Result.ok(Optional.ofNullable(store.summaries().get(projectId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

@@ -30,7 +30,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
             final Optional<T> value = Optional.ofNullable(setting.parse(raw));
             log.debug("Setting read key={} stored={} present={}", setting.key(), raw != null, value.isPresent());
             return Result.ok(value);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -43,7 +43,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
             values.put(setting.key(), setting.format(value));
             log.debug("Setting stored key={}", setting.key());
             return Result.ok(value);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -55,7 +55,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
             final boolean removed = values.remove(setting.key()) != null;
             log.debug("Setting removed key={} existed={}", setting.key(), removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -65,7 +65,7 @@ public final class InMemorySettingsRepository implements SettingsRepository {
         try {
             log.debug("Settings listed count={}", values.size());
             return Result.ok(Map.copyOf(values));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

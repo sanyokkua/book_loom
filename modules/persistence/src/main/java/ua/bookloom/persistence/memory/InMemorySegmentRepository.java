@@ -46,7 +46,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
             store.segments(projectId).replaceAll(segments);
             log.debug("Segments saved projectId={} count={}", projectId, segments.size());
             return Result.ok(segments.size());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
@@ -60,7 +60,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
         try {
             return Result.ok(
                     Optional.ofNullable(store.segments(projectId).byId().get(segmentId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -79,7 +79,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(Optional.empty());
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -111,7 +111,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(new SegmentCounts(pending, accepted, revised, flagged, sourceKept));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -132,7 +132,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(List.copyOf(result));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -153,7 +153,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
                 }
             }
             return Result.ok(List.copyOf(result));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -167,7 +167,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
         readLock.lock();
         try {
             return Result.ok(List.copyOf(orderedRecords(projectId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             readLock.unlock();
@@ -198,7 +198,7 @@ public final class InMemorySegmentRepository implements SegmentRepository {
             }
             log.debug("Segment updated projectId={} segmentId={} status={}", projectId, segmentId, updated.status());
             return Result.ok(updated);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

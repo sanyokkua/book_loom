@@ -50,7 +50,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                     project.contentHash(),
                     !bookPath.equals(project.source()));
             return Result.ok(project);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
@@ -81,7 +81,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
         Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             return Result.ok(Optional.ofNullable(store.projects().get(projectId)));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -96,7 +96,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
             store.forget(projectId);
             log.debug("Project delete projectId={} removed={}", projectId, removed);
             return Result.ok(removed);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         } finally {
             writeLock.unlock();
@@ -107,7 +107,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
     public Result<List<Project>> all() {
         try {
             return Result.ok(List.copyOf(store.projects().values()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -129,7 +129,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                     targetLanguage,
                     found.isPresent());
             return Result.ok(found);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -145,7 +145,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                     .findFirst();
             log.debug("Project findByNameKey hash={} nameKey={} found={}", contentHash, nameKey, found.isPresent());
             return Result.ok(found);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -162,7 +162,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
             moved.forEach(p -> store.projects().put(p.id(), p));
             log.debug("Book relocated hash={} projects={} path={}", contentHash, moved.size(), newPath);
             return Result.ok(moved);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -175,7 +175,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
             store.exports().put(projectId, record);
             log.debug("Export recorded projectId={} written={}", projectId, record.written());
             return Result.ok(record);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -188,7 +188,7 @@ public final class InMemoryProjectRepository implements ProjectRepository {
                     Optional.ofNullable(store.exports().get(projectId));
             log.debug("Last export projectId={} found={}", projectId, found.isPresent());
             return Result.ok(found);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

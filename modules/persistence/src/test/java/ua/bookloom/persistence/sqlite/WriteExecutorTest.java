@@ -33,9 +33,10 @@ class WriteExecutorTest {
     void write_twoConcurrentWrites_runOneAfterTheOther() throws InterruptedException {
         final List<String> events = Collections.synchronizedList(new ArrayList<>());
         final CountDownLatch done = new CountDownLatch(2);
+        final CountDownLatch bothStarted = new CountDownLatch(2);
         try (SqliteDatabase db = open()) {
-            startSlowWrite(db, "a", events, done);
-            startSlowWrite(db, "b", events, done);
+            startSlowWrite(db, "a", events, bothStarted, done);
+            startSlowWrite(db, "b", events, bothStarted, done);
             assertThat(done.await(10, TimeUnit.SECONDS)).isTrue();
         }
         assertThat(events.get(0).charAt(0)).isEqualTo(events.get(1).charAt(0));
@@ -43,11 +44,16 @@ class WriteExecutorTest {
     }
 
     private static void startSlowWrite(
-            final SqliteDatabase db, final String name, final List<String> events, final CountDownLatch done) {
+            final SqliteDatabase db,
+            final String name,
+            final List<String> events,
+            final CountDownLatch bothStarted,
+            final CountDownLatch done) {
         Thread.ofVirtual().start(() -> {
+            bothStarted.countDown();
             db.write("w", h -> {
                 events.add(name + "-start");
-                sleep();
+                awaitBoth(bothStarted);
                 events.add(name + "-end");
                 return Boolean.TRUE;
             });
@@ -98,9 +104,9 @@ class WriteExecutorTest {
                 .data());
     }
 
-    private static void sleep() {
+    private static void awaitBoth(final CountDownLatch bothStarted) {
         try {
-            Thread.sleep(50);
+            bothStarted.await(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

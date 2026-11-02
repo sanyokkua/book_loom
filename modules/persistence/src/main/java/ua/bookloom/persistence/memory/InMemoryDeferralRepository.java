@@ -37,7 +37,7 @@ public final class InMemoryDeferralRepository implements DeferralRepository {
                     deferral.reason(),
                     existing == null);
             return Result.ok(result);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -47,7 +47,7 @@ public final class InMemoryDeferralRepository implements DeferralRepository {
         Objects.requireNonNull(projectId, "projectId");
         try {
             return Result.ok(List.copyOf(store.deferrals(projectId).values()));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
@@ -66,7 +66,7 @@ public final class InMemoryDeferralRepository implements DeferralRepository {
             final boolean resolved = matchingKey != null && table.remove(matchingKey) != null;
             log.debug("Deferral resolve projectId={} deferralId={} resolved={}", projectId, deferralId, resolved);
             return Result.ok(resolved);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }
