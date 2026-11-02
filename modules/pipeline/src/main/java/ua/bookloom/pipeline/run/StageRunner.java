@@ -36,6 +36,8 @@ import ua.bookloom.pipeline.revision.ConsistencyReport;
 @Slf4j
 public final class StageRunner {
 
+    private static final String REVISION_STEP = "revision";
+
     private final ChunkRunner chunks;
     private final ConsistencyPass revision;
     private final RunSettings settings;
@@ -117,14 +119,14 @@ public final class StageRunner {
         log.debug("Translation job stage change stage={} project={}", JobStage.REVISE, settings.projectId());
         sinks.emit().accept(new StageStarted(JobStage.REVISE, work.revisionProgress()));
         final RoutedRevisionCalls routed = new RoutedRevisionCalls(new RoutedCalls(sinks.boundaries()), work);
-        calls.steps().started(StepKind.REVISION, "revision", "revision", null);
+        calls.steps().started(StepKind.REVISION, REVISION_STEP, REVISION_STEP, null);
         final Result<ConsistencyReport> revised = revision.run(settings.projectId(), routed);
         final RunEnd stopped = routed.stopped();
         if (stopped != null) {
             log.debug("Backward revision ended by the run's boundary end={}", stopped.state());
             return stopped;
         }
-        calls.steps().ended(StepKind.REVISION, "revision", revised.isErr() ? StepResult.FAILED : StepResult.DONE);
+        calls.steps().ended(StepKind.REVISION, REVISION_STEP, revised.isErr() ? StepResult.FAILED : StepResult.DONE);
         if (revised.isErr()) {
             return RoutedCalls.failedBy(Objects.requireNonNull(revised.error(), "error"));
         }
