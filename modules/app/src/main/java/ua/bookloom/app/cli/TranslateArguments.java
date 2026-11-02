@@ -47,7 +47,7 @@ record TranslateArguments(
     private static final String OLLAMA_PROVIDER = "ollama";
     private static final String LM_STUDIO_PROVIDER = "lmstudio";
     private static final String OPENAI_COMPATIBLE_PROVIDER = "openai-compatible";
-    private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
+    private static final Pattern LANGUAGE_CODE = Pattern.compile("[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*+");
 
     /** Refuses a request for Auto that also names a language, since Auto means no language is chosen. */
     TranslateArguments {

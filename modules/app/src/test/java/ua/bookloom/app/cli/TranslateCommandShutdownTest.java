@@ -13,7 +13,6 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
@@ -153,7 +152,7 @@ class TranslateCommandShutdownTest {
         // The stop interrupts the call in flight, as it interrupts a real provider call.
         private static Result<ChatResponse> awaitCancel() {
             try {
-                Thread.sleep(Duration.ofSeconds(10));
+                new CountDownLatch(1).await(10, TimeUnit.SECONDS);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
             }

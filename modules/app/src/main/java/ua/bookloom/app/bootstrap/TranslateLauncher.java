@@ -2,7 +2,10 @@ package ua.bookloom.app.bootstrap;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,7 +39,8 @@ public final class TranslateLauncher {
 
     /** Starts the command-line process and delegates its status to the operating system. */
     public static void main(String[] args) {
-        System.exit(run(args, System::getenv, System::getProperty, System.out));
+        final PrintStream out = new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8);
+        System.exit(run(args, System::getenv, System::getProperty, out));
     }
 
     /** Runs the command with an argument list and injectable environment, properties and output. */
@@ -51,7 +55,7 @@ public final class TranslateLauncher {
         Objects.requireNonNull(out, "out");
         try {
             return runBeforeLogging(args, getEnv, getProperty, out);
-        } catch (Throwable cause) {
+        } catch (Exception | LinkageError cause) {
             return printError(startupFailure(cause), out);
         }
     }
@@ -114,7 +118,7 @@ public final class TranslateLauncher {
             final int exit = runWithShutdownHook(injector, args, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
-        } catch (Throwable cause) {
+        } catch (Exception | LinkageError cause) {
             final AppError error = startupFailure(cause);
             log.error("Unexpected translate launcher failure code={}", error.code(), cause);
             final int exit = printError(error, out);
@@ -146,9 +150,8 @@ public final class TranslateLauncher {
         if (rejected != null) {
             log.info("review mode ignored by the command line value={}", rejected);
         } else if (reviewMode.source() != ResolvedReviewMode.Source.DEFAULT) {
-            log.info(
-                    "review mode ignored by the command line value={}",
-                    reviewMode.mode().name().toLowerCase(Locale.ROOT));
+            final String ignored = reviewMode.mode().name().toLowerCase(Locale.ROOT);
+            log.info("review mode ignored by the command line value={}", ignored);
         }
         return reviewMode;
     }

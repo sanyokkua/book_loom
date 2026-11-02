@@ -98,6 +98,7 @@ val resolvedAppVersion = rootProject.version.toString()
 
 val generateVersionResource =
     tasks.register("generateVersionResource") {
+        group = "build"
         description = "Writes ua/bookloom/app/version.properties from the appVersion Gradle property."
 
         val outputDir = layout.buildDirectory.dir("generated/version")

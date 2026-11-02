@@ -152,9 +152,10 @@ public final class Launcher {
      */
     static void logStartup(AppPaths paths, AppEnvironment environment) {
         final Logger log = LoggerFactory.getLogger(Launcher.class);
+        final String version = AppVersion.current();
         log.info(
                 "app started version={} environment={} dataDir={} logDir={}",
-                AppVersion.current(),
+                version,
                 environment,
                 paths.dataDir(),
                 paths.logDir());

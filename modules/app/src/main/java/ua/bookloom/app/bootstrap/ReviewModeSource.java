@@ -66,7 +66,7 @@ public final class ReviewModeSource implements ReviewModeChoice {
         final Logger log = LoggerFactory.getLogger(ReviewModeSource.class);
         final ResolvedReviewMode flag = startup.reviewMode();
         if (flag.source() != ResolvedReviewMode.Source.DEFAULT) {
-            log.debug("review mode {} from {}", flag.mode(), flagOrigin(flag));
+            log.debug("review mode {} from {}", flag.mode(), flag.source());
             return flag.mode();
         }
         if (Platform.isFxApplicationThread()) {
@@ -87,13 +87,5 @@ public final class ReviewModeSource implements ReviewModeChoice {
                 value.orElse(ReviewMode.UNATTENDED),
                 value.isPresent() ? "stored" : "default");
         return value.orElse(ReviewMode.UNATTENDED);
-    }
-
-    private static String flagOrigin(final ResolvedReviewMode flag) {
-        return switch (flag.source()) {
-            case ENVIRONMENT -> "environment";
-            case PROPERTY -> "property";
-            case DEFAULT -> "default";
-        };
     }
 }

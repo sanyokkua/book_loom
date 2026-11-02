@@ -152,7 +152,7 @@ the catalogue). For example: `gave up provider chat code=validation reason=gramm
 
 ## boundary-discipline {#boundary-discipline}
 
-- Every public port method has a **boundary `try/catch`**: any escaping `Throwable` is caught and wrapped as
+- Every public port method has a **boundary `try/catch`**: any escaping `Exception` is caught (an `Error` is never swallowed; only `LinkageError` where class loading can fail) and wrapped as
   `Result.err(AppError(internal, …, cause))`. Unhandled exceptions never cross a module edge.
 - Known failures are converted to their specific `ErrorCode` at the point they are recognized (HTTP mapping in `:llm`,
   SQL errors in `:persistence`, parse errors in `:document`, QA hard-gate in `:pipeline` → `validation`).

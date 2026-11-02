@@ -83,7 +83,7 @@ public final class TranslateCommand {
         try {
             final Result<TranslateArguments> parsed = TranslateArguments.parse(args);
             exit = parsed.isErr() ? usageFailure(errorOf(parsed), out) : execute(dataOf(parsed), out);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             exit = unexpectedFailure(out, cause);
         } finally {
             shutdown.finished();

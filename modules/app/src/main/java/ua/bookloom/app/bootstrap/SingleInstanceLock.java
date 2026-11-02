@@ -59,8 +59,8 @@ public final class SingleInstanceLock implements AutoCloseable {
             }
             return Result.ok(new SingleInstanceLock(channel, lock));
         } catch (OverlappingFileLockException e) {
-            // Another lock is held on this file by THIS JVM. Reachable when a test acquires twice in one process;
-            // in production it means the same thing to the user as a second process would.
+            // This JVM already holds a lock on the file. Only a test that acquires twice in one process gets here;
+            // for the user it means the same as a second process would.
             closeQuietly(channel);
             return alreadyRunning();
         } catch (IOException | SecurityException e) {

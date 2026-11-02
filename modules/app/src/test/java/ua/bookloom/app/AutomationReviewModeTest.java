@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
@@ -30,6 +31,7 @@ import ua.bookloom.util.paths.AppPaths;
 class AutomationReviewModeTest {
 
     private static final long WAIT_SECONDS = 10;
+    private static final long POLL_NANOS = TimeUnit.MILLISECONDS.toNanos(20);
 
     @TempDir
     private Path dataDir;
@@ -62,7 +64,7 @@ class AutomationReviewModeTest {
         while (System.nanoTime() < deadline
                 && !Optional.of(wanted)
                         .equals(settings.get(AppSetting.REVIEW_MODE).data())) {
-            Thread.sleep(20);
+            LockSupport.parkNanos(POLL_NANOS);
         }
     }
 
@@ -72,7 +74,7 @@ class AutomationReviewModeTest {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         ReviewMode read = readOnFxThread(source);
         while (read != wanted && System.nanoTime() < deadline) {
-            Thread.sleep(20);
+            LockSupport.parkNanos(POLL_NANOS);
             read = readOnFxThread(source);
         }
         return read;
