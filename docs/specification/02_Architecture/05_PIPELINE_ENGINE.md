@@ -102,8 +102,9 @@ fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per 
    edit (the quote occurs exactly once after normalisation, the replacement keeps the `⟦gN⟧` tokens in order, the
    deterministic checks pass on the edited text, the set of blocking checks does not grow) and applies the verified
    ones; an edit whose quote was found but that was refused gets one directed fix naming the quote; a rewrite is taken
-   only when every check passes. A reply that cannot be read, or a call that times out twice, flags its segments
-   `reviewer-unavailable` instead of pausing the run.
+   only when every check passes. A malformed reply is salvaged entry by entry and its unread pairs are asked
+   once more (another seed), those still unread being taken as `ok`; an empty reply, a refused prompt, or a call that
+   times out twice, flags its segments `reviewer-unavailable` instead of pausing the run.
 5. **Accept**, per segment — `accept = hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft`; a failed
    untranslated-echo check on a source under 20 code points of display text does not count as a failed soft check
    (`#qa-thresholds`). There is no score and no threshold: confidence only orders segments for review, and the review

@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.heal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.segment;
 
 import java.util.ArrayList;
@@ -65,7 +64,8 @@ class QualityLoopCheckStepsTest {
     @Test
     void start_maxUnreadableFirstVerdict_endsSecondCheckNoCall() {
         final List<JobEvent> events = new ArrayList<>();
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable("Looks good to me!"));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(Result.err(AppError.of(ErrorCode.emptyCompletion, "Empty", "no reply")));
 
         loop.start(
                 List.of(cleanDraft()),

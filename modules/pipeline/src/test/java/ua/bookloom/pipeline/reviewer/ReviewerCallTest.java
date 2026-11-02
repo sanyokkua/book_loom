@@ -190,16 +190,16 @@ class ReviewerCallTest {
     }
 
     @Test
-    void review_unparsableReply_isUnreadableButNotUnavailable() {
+    void review_unparsableReplyTwice_readsAsOkNotUnreadableNorUnavailable() {
         final ReviewVerdict verdict = Objects.requireNonNull(CALL.review(
                         THREE_PAIRS,
                         FRAME,
                         List.of(),
                         ReviewPass.FIRST,
-                        calls(new ScriptedChatModel().answer(readable("Looks good to me!"))))
+                        calls(new ScriptedChatModel().answerTimes(2, readable("Looks good to me!"))))
                 .data());
 
-        assertThat(verdict.readable()).isFalse();
+        assertThat(verdict.readable()).isTrue();
         assertThat(verdict.isUnavailable()).isFalse();
     }
 

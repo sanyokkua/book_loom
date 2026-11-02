@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -27,6 +28,9 @@ import ua.bookloom.pipeline.prompt.JsonReplies;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ReviewReplyParser {
 
+    private static final Pattern MISSING_KEY_QUOTE =
+            Pattern.compile("([,{]\\s*)(id|status|edits|quote|replacement|criterion|rewrite)\"(?=\\s*:)");
+
     private final ObjectMapper mapper;
 
     /**
@@ -39,8 +43,10 @@ public final class ReviewReplyParser {
     public ReviewVerdict parse(final String replyText, final List<ReviewedPair> pairs) {
         Objects.requireNonNull(replyText, "replyText");
         Objects.requireNonNull(pairs, "pairs");
-        final JsonNode root =
-                JsonReplies.tolerant(mapper, fromFirstBracket(replyText)).orElse(null);
+        final String text = fromFirstBracket(replyText);
+        final JsonNode root = JsonReplies.tolerant(mapper, text)
+                .or(() -> JsonReplies.tolerant(mapper, withKeyQuotesRepaired(text)))
+                .orElse(null);
         final JsonNode results = resultsOf(root);
         if (results == null || !results.isArray()) {
             log.debug("Reviewer reply holds no results list readable={}", false);
@@ -61,13 +67,25 @@ public final class ReviewReplyParser {
     public ReviewVerdict parseSalvaging(final String replyText, final List<ReviewedPair> pairs) {
         Objects.requireNonNull(replyText, "replyText");
         Objects.requireNonNull(pairs, "pairs");
-        final List<JsonNode> entries = completeEntries(fromFirstBracket(replyText));
+        final String text = fromFirstBracket(replyText);
+        List<JsonNode> entries = completeEntries(text);
+        final String repaired = withKeyQuotesRepaired(text);
+        if (!repaired.equals(text)) {
+            final List<JsonNode> again = completeEntries(repaired);
+            entries = again.size() > entries.size() ? again : entries;
+        }
         final ReviewVerdict verdict = verdictOf(entries, pairs);
         log.debug(
                 "Salvaged a cut reviewer reply answers={} of={}",
                 verdict.items().size(),
                 pairs.size());
         return verdict;
+    }
+
+    // A model sometimes drops the opening quote of a key that follows a comma (quote":"…",replacement":"…"); the keys
+    // are a closed list, so restoring the quote cannot change a value that merely contains such text.
+    private static String withKeyQuotesRepaired(final String text) {
+        return MISSING_KEY_QUOTE.matcher(text).replaceAll("$1\"$2\"");
     }
 
     private List<JsonNode> completeEntries(final String text) {

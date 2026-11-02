@@ -95,7 +95,7 @@ class RepairReplayTest {
 
         final SegmentOutcome decided = decide(
                 defect,
-                new ScriptedChatModel().answerTimes(3, Result.ok(new ChatResponse(WORSE_FIX, FinishReason.STOP))));
+                new ScriptedChatModel().answerTimes(6, Result.ok(new ChatResponse(WORSE_FIX, FinishReason.STOP))));
 
         assertThat(decided.findings()).extracting(QaFinding::raisedBy).contains("normalised");
         assertThat(decided.findings()).extracting(QaFinding::raisedBy).doesNotContain("quote-balance");

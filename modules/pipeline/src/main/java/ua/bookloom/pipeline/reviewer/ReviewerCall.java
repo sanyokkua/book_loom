@@ -143,7 +143,7 @@ public final class ReviewerCall {
                 pairs.stream().map(ReviewedPair::segmentId).toList();
         log.debug("Reviewing batch pairCount={} pass={} segmentIds={}", pairs.size(), pass, segmentIds);
         try {
-            final Result<ChatResponse> reply = ask(pairs, frame, sheets, pass, calls);
+            final Result<ChatResponse> reply = ask(pairs, frame, sheets, pass, calls, REVIEWER_SEED);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
                     : read(Objects.requireNonNull(reply.data()), pairs, frame, sheets, pass, calls);
@@ -166,10 +166,14 @@ public final class ReviewerCall {
             final ReviewerSheets sheets,
             final ReviewPass pass,
             final ModelCalls calls) {
-        return response.finishReason() == FinishReason.LENGTH
-                ? readCut(pairs, response, frame, sheets, pass, calls)
-                : Result.ok(
-                        readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response));
+        if (response.finishReason() == FinishReason.LENGTH) {
+            return readCut(pairs, response, frame, sheets, pass, calls, "cut by the output cap");
+        }
+        final ReviewVerdict verdict =
+                readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response);
+        return verdict.readable()
+                ? Result.ok(verdict)
+                : readCut(pairs, response, frame, sheets, pass, calls, "malformed");
     }
 
     private Result<ChatResponse> ask(
@@ -177,11 +181,12 @@ public final class ReviewerCall {
             final CallFrame frame,
             final ReviewerSheets sheets,
             final ReviewPass pass,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final int seed) {
         final ReviewerSheets.Sheet sheet = sheets.forPairs(pairs);
         logSheet(sheet);
         final Map<String, String> userValues = userValues(pairs, sheet, pass);
-        final ChatRequest request = request(pairs, frame, userValues);
+        final ChatRequest request = request(pairs, frame, userValues, seed);
         logTraceMessages(request);
         final CallDescriptor descriptor = new CallDescriptor(
                 PromptName.REVIEWER.resourceBaseName(),
@@ -194,10 +199,20 @@ public final class ReviewerCall {
         return send(pairs.stream().map(ReviewedPair::segmentId).toList(), request, descriptor, calls);
     }
 
+    private Result<ChatResponse> askAgain(
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final ReviewerSheets sheets,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        return ask(pairs, frame, sheets, pass, calls, REVIEWER_SEED + 1);
+    }
+
     /**
-     * A reply the output cap cut is never a reason to flag: the complete entries are kept, the pairs left unread are
+     * A reply the output cap cut, or one that ended normally but is not valid JSON, is never a reason to flag: the complete entries are kept, the pairs left unread are
      * asked about once more in a smaller batch, and any pair still unread is taken as {@code ok} — the deterministic
-     * checks already passed it, and a flag would hand the person a segment nothing is known to be wrong with.
+     * checks already passed it, and a flag would hand the person a segment nothing is known to be wrong with. The
+     * re-ask uses another seed, because the first seed would repeat a malformed reply.
      */
     private Result<ReviewVerdict> readCut(
             final List<ReviewedPair> pairs,
@@ -205,18 +220,16 @@ public final class ReviewerCall {
             final CallFrame frame,
             final ReviewerSheets sheets,
             final ReviewPass pass,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final String problem) {
         logTraceReply(response.content());
         final ReviewVerdict first = parser.parseSalvaging(response.content(), pairs);
         final List<ReviewedPair> unread = unreadOf(pairs, first);
-        log.warn(
-                "Review reply cut by the output cap read={} unread={}",
-                first.items().size(),
-                unread.size());
+        log.warn("Review reply {} read={} unread={}", problem, first.items().size(), unread.size());
         if (unread.isEmpty()) {
             return Result.ok(first);
         }
-        final Result<ChatResponse> again = ask(unread, frame, sheets, pass, calls);
+        final Result<ChatResponse> again = askAgain(unread, frame, sheets, pass, calls);
         if (again.isErr()) {
             return reAskFailed(first, unread, Objects.requireNonNull(again.error()));
         }
@@ -327,7 +340,10 @@ public final class ReviewerCall {
     }
 
     private ChatRequest request(
-            final List<ReviewedPair> pairs, final CallFrame frame, final Map<String, String> userValues) {
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final Map<String, String> userValues,
+            final int seed) {
         final String system = templates.renderSystem(PromptName.REVIEWER, frame).strip();
         final String user =
                 templates.renderUser(PromptName.REVIEWER, userValues).strip();
@@ -335,7 +351,7 @@ public final class ReviewerCall {
                 List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
         final OutputLimit limit = OutputLimit.forReview(
                 pairs.stream().map(ReviewedPair::maskedCandidate).toList(), frame.targetLanguage());
-        return ChatRequests.build(PromptName.REVIEWER, messages, limit, false).withSeed(REVIEWER_SEED);
+        return ChatRequests.build(PromptName.REVIEWER, messages, limit, false).withSeed(seed);
     }
 
     private static String renderPairs(final List<ReviewedPair> pairs) {

@@ -566,8 +566,11 @@ in 5 s); a structured call that ends `timeout` is sent once more with no respons
 draft only when the whole text passes the placeholder gates and every deterministic check, else the draft stays and the
 segment is flagged with a `rewrite` finding. A segment is accepted when its hard gates pass, no check blocks and no
 verified blocker is left (`quality-gates` "Accept a segment only by the acceptance rule"); there is no score and no
-threshold, and `fluency` and `style` edits are recorded as low notes and never applied. An **unreadable** reply, or a
-call that times out twice, flags the chunk's segments with `reviewer-unavailable` instead of pausing the run.
+threshold, and `fluency` and `style` edits are recorded as low notes and never applied. A reply that ended normally but is
+malformed JSON is read as far as it goes (a key missing its opening quote is repaired), the pairs it left unread are
+asked once more with another seed, and any still unread are taken as `ok`, as for a reply the output cap cut. An
+**empty** reply or a refused prompt, or a call that times out twice, flags the chunk's segments with
+`reviewer-unavailable` instead of pausing the run.
 
 **Expected output**
 

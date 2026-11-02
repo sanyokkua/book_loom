@@ -110,7 +110,8 @@ class RealRunRunnerTest {
     void text_shortLine_passesTheLengthCheckAndReachesTheReviewer() {
         final List<Sent> sent = new ArrayList<>();
 
-        final List<RealRunRow> rows = runner(sent, kind -> stop("{\"target\":\"А за мить — вибух.\"}"))
+        final List<RealRunRow> rows = runner(
+                        sent, kind -> stop(kind == CallKind.DRAFT ? "{\"target\":\"А за мить — вибух.\"}" : REVIEW_OK))
                 .text(text("short-split-second"));
 
         assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT, CallKind.REVIEW);

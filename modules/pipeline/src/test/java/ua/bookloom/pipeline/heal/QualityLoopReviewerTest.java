@@ -257,12 +257,25 @@ class QualityLoopReviewerTest {
 
     @Test
     void nextDecision_unreadableReply_flagsWithReviewerUnavailableAndNoReason() {
-        final SegmentOutcome decided =
-                decide(CLEAN_DRAFT, new ScriptedChatModel().answer(readable("Looks good to me!")));
+        final SegmentOutcome decided = decide(
+                CLEAN_DRAFT,
+                new ScriptedChatModel()
+                        .answer(Result.err(AppError.of(ErrorCode.emptyCompletion, "Empty", "no reply"))));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.flagReason()).isNull();
         assertThat(decided.findings()).extracting(QaFinding::kind).contains("reviewer-unavailable");
+    }
+
+    // A complete reply that is not JSON is re-asked once and then read as ok: it is no reason to hand the person a
+    // segment.
+    @Test
+    void nextDecision_malformedReplyTwice_acceptsLikeACutReply() {
+        final SegmentOutcome decided =
+                decide(CLEAN_DRAFT, new ScriptedChatModel().answerTimes(2, readable("Looks good to me!")));
+
+        assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decided.findings()).extracting(QaFinding::kind).doesNotContain("reviewer-unavailable");
     }
 
     @Test
@@ -311,7 +324,7 @@ class QualityLoopReviewerTest {
     void nextDecision_maxDialSecondPassUnreadable_keepsTheFirstPassEdits() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable(edits("invented-word", "дверзі", "двері")))
-                .answer(readable("not json"));
+                .answerTimes(2, readable("not json"));
 
         final SegmentOutcome decided = Objects.requireNonNull(
                 start(DRAFT, model, QualityDial.MAX).nextDecision().data());
