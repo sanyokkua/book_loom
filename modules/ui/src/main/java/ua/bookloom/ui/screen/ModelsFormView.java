@@ -57,6 +57,8 @@ final class ModelsFormView {
         root.getChildren().addAll(found, temperature.node(), thinking.node(), sampling.node(), refused.node());
         root.getChildren().addAll(limits.node(), advanced.node(), errors);
         root.disableProperty().bind(form.reading());
+        // The listeners below are weak, so the node (which the scene keeps) holds this view for as long as it is shown.
+        root.getProperties().put(ModelsFormView.class, this);
         form.draft().addListener(new WeakChangeListener<>(onChange));
         form.facts().addListener(new WeakChangeListener<>(onChange));
         form.selected().addListener(new WeakChangeListener<>(onChange));
