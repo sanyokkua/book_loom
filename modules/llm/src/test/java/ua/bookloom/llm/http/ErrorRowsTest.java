@@ -126,6 +126,41 @@ class ErrorRowsTest {
                 .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("lmstudio-context-exceeded"));
     }
 
+    // IF the OpenRouter rows applied elsewhere, THEN another server's 402 or 403 would read as credits or a refusal.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "402|{\"error\":{\"metadata\":{\"limit_source\":\"credits\"}}}|openrouter-credits",
+                "403|{\"error\":{\"message\":\"content_policy_violation\"}}|openrouter-blocked",
+                "200|{\"error\":{\"metadata\":{\"error_type\":\"provider_unavailable\"}}}|"
+                        + "openrouter-provider-unavailable"
+            })
+    void match_openRouterRows_applyToOpenRouterOnly(int status, String body, String expectedId) {
+        assertThat(ErrorRows.match(status, body, ServerEngine.OPENROUTER))
+                .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo(expectedId));
+        assertThat(ErrorRows.match(status, body, ServerEngine.GENERIC)).isEmpty();
+    }
+
+    // IF the broad context words won, THEN an outage whose sentence mentions an exceeded context would be flagged as an
+    // overflow and never sent again.
+    @Test
+    void match_openRouterOutageWithContextWords_comesBeforeTheContextWords() {
+        final String body = "{\"error\":{\"message\":\"upstream context exceeded\","
+                + "\"metadata\":{\"error_type\":\"provider_unavailable\"}}}";
+
+        assertThat(ErrorRows.match(502, body, ServerEngine.OPENROUTER))
+                .hasValueSatisfying(row -> assertThat(row.id()).isEqualTo("openrouter-provider-unavailable"));
+    }
+
+    // "No endpoints found matching your data policy" is no parameter refusal; BookLoom sends no data policy.
+    @Test
+    void match_noEndpointsWithoutParameters_isNotTheParametersRow() {
+        assertThat(ErrorRows.match(
+                        404, "{\"error\":\"No endpoints found matching your data policy\"}", ServerEngine.OPENROUTER))
+                .isEmpty();
+    }
+
     // IF the schema row won, THEN an oversized grammar would read as a bad schema.
     @Test
     void match_grammarAndSchemaWords_grammarWins() {

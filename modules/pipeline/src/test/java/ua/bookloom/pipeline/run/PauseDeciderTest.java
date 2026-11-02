@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
@@ -106,6 +107,41 @@ class PauseDeciderTest {
             value = {"REPEAT_LIMIT,FLAG_AT_ONCE", "TERMINATED,PAUSE_OR_FAIL", "-,PAUSE_OR_FAIL"})
     void route_upstreamRepeatLimit_flagsAtOnce(@Nullable final FailureReason reason, final Route expected) {
         assertThat(PauseDecider.route(ErrorCode.upstream, reason)).isEqualTo(expected);
+    }
+
+    // No credits stops everything until the person tops up or raises the key's limit; waiting cannot help.
+    @Test
+    void recovery_credits_isPerson() {
+        final Recovery recovery = PauseDecider.recovery(ErrorCode.auth, FailureReason.CREDITS);
+
+        assertThat(recovery).isEqualTo(Recovery.PERSON);
+        assertThat(recovery.isAutomatic()).isFalse();
+    }
+
+    // A passage the provider refused concerns that passage only: it is flagged and the book goes on. Any other
+    // validation failure still pauses for the person.
+    @ParameterizedTest
+    @CsvSource(
+            nullValues = "-",
+            value = {"BLOCKED,FLAG_AT_ONCE", "NO_ENDPOINT_FOR_PARAMETERS,PAUSE_OR_FAIL", "-,PAUSE_OR_FAIL"})
+    void route_blocked_flagsAndContinues(@Nullable final FailureReason reason, final Route expected) {
+        assertThat(PauseDecider.route(ErrorCode.validation, reason)).isEqualTo(expected);
+    }
+
+    // No hosting company honours every parameter sent: only the person can choose another model or setting.
+    @Test
+    void recovery_noEndpointForParameters_pausesForThePerson() {
+        assertThat(PauseDecider.route(ErrorCode.validation, FailureReason.NO_ENDPOINT_FOR_PARAMETERS))
+                .isEqualTo(Route.PAUSE_OR_FAIL);
+        assertThat(PauseDecider.recovery(ErrorCode.validation, FailureReason.NO_ENDPOINT_FOR_PARAMETERS))
+                .isEqualTo(Recovery.PERSON);
+    }
+
+    // An outage OpenRouter reports for one of its hosting companies is waited through like any outage.
+    @Test
+    void recovery_providerUnavailable_isOutage() {
+        assertThat(PauseDecider.recovery(ErrorCode.upstream, FailureReason.PROVIDER_UNAVAILABLE))
+                .isEqualTo(Recovery.OUTAGE);
     }
 
     // The forms that take the error read its reason from the details, so a caller never parses them itself.

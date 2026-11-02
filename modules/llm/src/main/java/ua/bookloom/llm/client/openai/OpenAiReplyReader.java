@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.engine.EngineTraits;
+import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.http.RawBodies;
 import ua.bookloom.llm.http.UnreadableReply;
@@ -34,6 +35,9 @@ import ua.bookloom.llm.response.ReasoningScrubber;
  */
 @Slf4j
 final class OpenAiReplyReader {
+
+    // OpenRouter ends a choice this way when the hosting company failed; the reply's error object says why.
+    private static final String FINISHED_WITH_ERROR = "error";
 
     private final ProviderConfig config;
     private final ObjectMapper mapper;
@@ -113,6 +117,9 @@ final class OpenAiReplyReader {
                 || decoded.choices().isEmpty()
                 || decoded.choices().getFirst() == null) {
             return unreadable(requestedModel, null);
+        }
+        if (FINISHED_WITH_ERROR.equals(decoded.choices().getFirst().finishReason())) {
+            return Result.err(HttpErrorMapper.mapFailedChoice(reply, config, requestedModel));
         }
         final OpenAiChatResponse.Message message = decoded.choices().getFirst().message();
         if (message == null || message.content() == null) {

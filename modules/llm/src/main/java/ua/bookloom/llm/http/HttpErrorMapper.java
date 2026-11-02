@@ -140,6 +140,36 @@ public final class HttpErrorMapper {
     }
 
     /**
+     * Classifies a successful reply whose choice finished with an error (OpenRouter's {@code finish_reason} of
+     * {@code error}), through the same rows as a failed status, before any choice is read as an answer.
+     *
+     * @param reply the reply that carried the failed choice; its body is read for its meaning, kept only at TRACE
+     * @param config the endpoint that answered
+     * @param modelName the model the request named, if known
+     * @return the failure: the matching row's, or {@code upstream} with {@code unclassified} when no row explains it
+     */
+    public static AppError mapFailedChoice(HttpReply reply, ProviderConfig config, @Nullable String modelName) {
+        Objects.requireNonNull(reply, "reply");
+        Objects.requireNonNull(config, CONFIG);
+        traceBody(reply);
+        final Mapping mapping = ErrorRows.match(reply.status(), reply.body(), config.effectiveEngine())
+                .map(row -> Mapping.of(row, reply.body(), modelName))
+                .orElseGet(() -> Mapping.plain(
+                        ErrorCode.upstream,
+                        "choice-error",
+                        "Provider reported an error",
+                        "The AI program reported an error while answering."));
+        final AppError error = statusError(mapping, reply.status(), reply.body(), config, modelName);
+        log.warn(
+                "Provider answered a choice that finished with an error host={} status={} code={} reason={}",
+                config.baseUrl().getHost(),
+                reply.status(),
+                error.code(),
+                mapping.reason().token());
+        return error;
+    }
+
+    /**
      * What trying again can do for a failure with this reason.
      *
      * @param reason the failure's reason token
@@ -276,7 +306,7 @@ public final class HttpErrorMapper {
             log.debug("HTTP error mapping legacy guard=model-not-found purpose={} status={}", purpose, status);
             return StatusMappings.modelNotFound();
         }
-        return StatusMappings.of(status);
+        return StatusMappings.of(status, config.effectiveEngine());
     }
 
     private static boolean isAuthStatus(int status) {

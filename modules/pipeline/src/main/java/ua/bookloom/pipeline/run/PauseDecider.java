@@ -145,9 +145,11 @@ public final class PauseDecider {
      */
     public static Route route(final ErrorCode code, @Nullable final FailureReason reason) {
         Objects.requireNonNull(code, "code");
-        // The provider already sent a looping request once more with a new seed; a pause would loop the same way.
-        final Route route =
-                code == ErrorCode.upstream && reason == FailureReason.REPEAT_LIMIT ? Route.FLAG_AT_ONCE : byCode(code);
+        // The provider already sent a looping request once more with a new seed; a pause would loop the same way. A
+        // passage the provider's content policy refused would be refused again: it concerns that passage only.
+        final boolean passagesOwn = (code == ErrorCode.upstream && reason == FailureReason.REPEAT_LIMIT)
+                || (code == ErrorCode.validation && reason == FailureReason.BLOCKED);
+        final Route route = passagesOwn ? Route.FLAG_AT_ONCE : byCode(code);
         log.debug("Routed model-call error code={} reason={} route={}", code, tokenOf(reason), route);
         return route;
     }

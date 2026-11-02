@@ -20,7 +20,12 @@ import ua.bookloom.api.llm.ServerEngine;
 final class ErrorRows {
 
     static final List<ErrorRow> ORDERED = Stream.of(
-                    UnslothRows.ROWS, OllamaRows.ROWS, LmStudioRows.ROWS, LlamaServerRows.ROWS, ContextRows.ROWS)
+                    UnslothRows.ROWS,
+                    OpenRouterRows.ROWS,
+                    OllamaRows.ROWS,
+                    LmStudioRows.ROWS,
+                    LlamaServerRows.ROWS,
+                    ContextRows.ROWS)
             .flatMap(List::stream)
             .toList();
 

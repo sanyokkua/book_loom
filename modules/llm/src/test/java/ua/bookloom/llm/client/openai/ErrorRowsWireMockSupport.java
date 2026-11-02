@@ -7,6 +7,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +16,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,13 +25,17 @@ import org.junit.jupiter.api.BeforeEach;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ProviderAuth;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ReasoningLevel;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.provider.ProviderCallResult;
 
 /**
  * Shared seam for the engine error-row tests: a fixture file named {@code <name>.<status>.json|sse} is served as the
@@ -60,13 +66,31 @@ abstract class ErrorRowsWireMockSupport {
     /** The fixture folder under {@code errors/}, for example {@code lmstudio}. */
     abstract String folder();
 
+    /** The engine the provider under test is saved with; the rows tied to it apply. */
+    ServerEngine engine() {
+        return ServerEngine.GENERIC;
+    }
+
+    /** The classpath path of a fixture; by default under {@code /errors/<folder>/}. */
+    String resourcePath(final String fixture) {
+        return "/errors/" + folder() + "/" + fixture;
+    }
+
     /** Serves the fixture with the status its name carries and returns the error the client reports. */
     final AppError chatError(final String fixture) {
+        return Objects.requireNonNull(chatCall(fixture, aResponse()).result().error(), "error");
+    }
+
+    /**
+     * Serves the fixture with the status its name carries, on top of the given reply (its headers), and returns the
+     * whole failed call.
+     */
+    final ProviderCallResult<ChatResponse> chatCall(final String fixture, final ResponseDefinitionBuilder reply) {
         server.stubFor(post(urlEqualTo(CHAT_PATH))
-                .willReturn(aResponse().withStatus(statusOf(fixture)).withBody(body(fixture))));
-        final var result = client().chat(MODEL_ID, request()).result();
-        assertThat(result.isErr()).as("fixture %s must fail", fixture).isTrue();
-        return Objects.requireNonNull(result.error(), "error");
+                .willReturn(reply.withStatus(statusOf(fixture)).withBody(body(fixture))));
+        final ProviderCallResult<ChatResponse> call = client().chat(MODEL_ID, request());
+        assertThat(call.result().isErr()).as("fixture %s must fail", fixture).isTrue();
+        return call;
     }
 
     final void verifyOneRequest() {
@@ -74,7 +98,7 @@ abstract class ErrorRowsWireMockSupport {
     }
 
     final String body(final String fixture) {
-        final String path = "/errors/" + folder() + "/" + fixture;
+        final String path = resourcePath(fixture);
         try (InputStream in = ErrorRowsWireMockSupport.class.getResourceAsStream(path)) {
             return new String(Objects.requireNonNull(in, path).readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
@@ -108,7 +132,19 @@ abstract class ErrorRowsWireMockSupport {
                 ProviderKind.OPENAI_COMPATIBLE,
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                Duration.ofSeconds(2),
+                null,
+                ProviderAuth.NONE,
+                null,
+                null,
+                null,
+                null,
+                Map.of(),
+                List.of(),
+                ServerEngine.GENERIC,
+                engine(),
+                null,
+                false);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }

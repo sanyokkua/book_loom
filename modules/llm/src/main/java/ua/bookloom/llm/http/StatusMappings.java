@@ -1,9 +1,11 @@
 package ua.bookloom.llm.http;
 
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.ServerEngine;
 
 /** What a failed reply means when no catalogue row explains its words: the status alone decides. */
 // Checkstyle reads source before Lombok generates the private constructor (ADR-0024).
@@ -19,9 +21,19 @@ final class StatusMappings {
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVER_ERROR_MIN = 500;
     private static final int HTTP_SERVER_ERROR_MAX = 599;
+    // OpenRouter's own timeouts: the request's (408), the gateway's (504) and the hosting company's behind Cloudflare
+    // (524). Elsewhere a 504 is a proxy's fault and stays upstream.
+    private static final Set<Integer> OPENROUTER_TIMEOUTS = Set.of(408, 504, 524);
 
-    static Mapping of(final int status) {
-        log.debug("HTTP error mapping by status alone status={}", status);
+    static Mapping of(final int status, final ServerEngine engine) {
+        log.debug("HTTP error mapping by status alone status={} engine={}", status, engine);
+        if (engine == ServerEngine.OPENROUTER && OPENROUTER_TIMEOUTS.contains(status)) {
+            return Mapping.plain(
+                    ErrorCode.timeout,
+                    "openrouter-timeout",
+                    "Provider request timed out",
+                    "The provider did not answer in time (HTTP " + status + ").");
+        }
         if (status == HTTP_UNAUTHORIZED || status == HTTP_FORBIDDEN) {
             return authenticationFailure(status);
         }

@@ -1,0 +1,1 @@
+{"error":{"message":"Provider returned error","code":429,"metadata":{"raw":"vendor/some-model is temporarily rate-limited upstream. Please retry shortly.","provider_name":"Example Host","limit_source":"upstream_provider_shared_pool","retry_after_seconds":1,"headers":{"Retry-After":"1"}}}}

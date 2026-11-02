@@ -174,6 +174,24 @@ public enum FailureReason {
      */
     ENGINE_MISMATCH("engine-mismatch"),
 
+    /**
+     * OpenRouter could not reach the hosting company behind the model, and said so with its own error type, sometimes
+     * inside an HTTP 200; waiting and sending again can succeed.
+     */
+    PROVIDER_UNAVAILABLE("provider-unavailable"),
+
+    /** OpenRouter refused the call for want of credits or because the key's spending limit is reached. */
+    CREDITS("credits"),
+
+    /** The provider's content policy refused this passage; only the passage is flagged, the book goes on. */
+    BLOCKED("blocked"),
+
+    /**
+     * No hosting company of the model honours every parameter the request required (the answer schema, the reasoning
+     * switch), so the person chooses another model or setting.
+     */
+    NO_ENDPOINT_FOR_PARAMETERS("no-endpoint-for-parameters"),
+
     /** A provider's failure that no catalogue row explains; the error's code alone decides what happens next. */
     UNCLASSIFIED("unclassified");
 
