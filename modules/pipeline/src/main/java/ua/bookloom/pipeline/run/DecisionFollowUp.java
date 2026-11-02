@@ -142,14 +142,11 @@ final class DecisionFollowUp {
         }
         decidedInUnit.clear();
         announced.summarizing(unitId);
-        return switch (calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId))) {
-            case Step.Stopped<Optional<RollingSummary>>(final RunEnd end) -> Optional.of(end);
-            case Step.Done<Optional<RollingSummary>>(final Optional<RollingSummary> refreshed) -> {
-                announced.summarized(unitId, refreshed);
-                announce(refreshed, "unit end");
-                yield Optional.empty();
-            }
-        };
+        return calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId)).fold(refreshed -> {
+            announced.summarized(unitId, refreshed);
+            announce(refreshed, "unit end");
+            return Optional.<RunEnd>empty();
+        }, Optional::of);
     }
 
     /**

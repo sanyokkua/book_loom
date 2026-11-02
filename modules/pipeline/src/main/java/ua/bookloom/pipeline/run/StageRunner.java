@@ -176,16 +176,13 @@ public final class StageRunner {
                 @Nullable final String segmentId, final Supplier<Result<ChatResponse>> call) {
             final Step<Result<ChatResponse>> step =
                     routed.untilAnswered(work::revisionProgress, segmentId, () -> keepUnreadable(call.get()));
-            return switch (step) {
-                case Step.Done<Result<ChatResponse>>(final Result<ChatResponse> answer) -> answer;
-                case Step.Stopped<Result<ChatResponse>>(final RunEnd end) -> {
-                    stopped = end;
-                    yield Result.err(AppError.of(
-                            ErrorCode.cancelled,
-                            "Backward revision stopped",
-                            "The run ended while a revision call waited."));
-                }
-            };
+            return step.<Result<ChatResponse>>fold(answer -> answer, end -> {
+                stopped = end;
+                return Result.err(AppError.of(
+                        ErrorCode.cancelled,
+                        "Backward revision stopped",
+                        "The run ended while a revision call waited."));
+            });
         }
 
         @Nullable
