@@ -65,6 +65,27 @@ class SuggestTargetsRulesTest {
         assertThat(model.requests()).isEmpty();
     }
 
+    // The window's Auto source on a book with no declared language has no analysis language; the titles are still
+    // rendered by the data, and the model is not asked about them.
+    @Test
+    void suggest_titlesUnderAnAutoSource_areRenderedByDataWithoutAskingTheModel() {
+        final CallFrame auto =
+                new CallFrame(null, "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
+        final ScriptedChatModel model = new ScriptedChatModel();
+        final List<GlossaryEntry> titles = List.of(
+                entry("Ms", TermType.TERM, Gender.UNKNOWN, null),
+                entry("Mrs.", TermType.TERM, Gender.UNKNOWN, null),
+                entry("Mr.", TermType.TERM, Gender.UNKNOWN, null));
+
+        final Result<List<Suggestion>> suggested =
+                suggest.suggest(titles, BOOK, auto, NamePolicy.TRANSLATE, calls(model));
+
+        assertThat(suggested.data())
+                .extracting(suggestion -> suggestion.entry().term(), Suggestion::target)
+                .containsExactly(tuple("Ms", "Пані"), tuple("Mrs.", "Пані"), tuple("Mr.", "Пан"));
+        assertThat(model.requests()).isEmpty();
+    }
+
     @Test
     void suggestOnto_titleOfThePairsMap_isLockedWithRuleOriginSoNoModelOverridesIt() {
         final ScriptedChatModel model = new ScriptedChatModel();
