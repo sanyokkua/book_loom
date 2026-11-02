@@ -96,7 +96,8 @@ final class ScrollFilter {
             return null;
         }
         final double pixels = wheel ? scroller.pixelsOf(event) : ScrollGlide.panePixels(event.getDeltaY());
-        return scroller.hasRoom(pixels, wheel ? 0 : pendingOf(scroller)) ? new Move(scroller, pixels) : null;
+        final double pending = wheel ? 0 : pendingOf(scroller);
+        return scroller.hasRoom(pixels, pending) ? new Move(scroller, pixels) : null;
     }
 
     private static double pendingOf(final Scroller scroller) {
