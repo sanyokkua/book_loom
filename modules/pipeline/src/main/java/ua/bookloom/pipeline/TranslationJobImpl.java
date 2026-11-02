@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,8 +12,6 @@ import org.slf4j.MDC;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.Finished;
@@ -29,24 +26,14 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.pipeline.batch.BatchDrafter;
-import ua.bookloom.pipeline.batch.BatchPromptBuilder;
-import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.lexicon.Lexicon;
-import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
-import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
 import ua.bookloom.pipeline.run.NarratorStage;
@@ -60,7 +47,6 @@ import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.RunStartLog;
-import ua.bookloom.pipeline.run.RunSteps;
 import ua.bookloom.pipeline.run.RunStores;
 import ua.bookloom.pipeline.run.RunWindow;
 import ua.bookloom.pipeline.run.StageRunner;
@@ -70,14 +56,10 @@ import ua.bookloom.pipeline.run.WorkList;
 @Slf4j
 final class TranslationJobImpl implements TranslationJob {
 
-    private final DocumentPort documents;
     private final RunRequest request;
     private final ChatModel model;
-    private final ObjectMapper mapper;
-    private final PromptTemplates templates;
+    private final ChunkRunnerFactory chunkRunners;
     private final RunStores stores;
-    private final QualityLoop qualityLoop;
-    private final SentenceSplitter splitter;
     private final ConsistencyPass revision;
     private final Clock clock;
     private final JobControl control;
@@ -113,14 +95,10 @@ final class TranslationJobImpl implements TranslationJob {
         this.jobId = pacing.idSource().newId();
         this.words = checks.words();
         this.batchSize = pacing.batchSize();
-        this.documents = tools.documents();
         this.request = Objects.requireNonNull(request, "request");
         this.model = tools.model();
-        this.mapper = tools.mapper();
-        this.templates = tools.templates();
+        this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks, pacing.batchSize());
         this.stores = Objects.requireNonNull(stores, "stores");
-        this.qualityLoop = checks.qualityLoop();
-        this.splitter = checks.splitter();
         this.revision = checks.revision();
         this.clock = pacing.clock();
         this.control = new JobControl(request.mode().pausePoints());
@@ -273,7 +251,7 @@ final class TranslationJobImpl implements TranslationJob {
         RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(
-                chunkRunner(run, settings, runWindow, sinks, calls),
+                chunkRunners.create(run, settings, runWindow, sinks, calls),
                 revision,
                 settings,
                 sinks,
@@ -285,38 +263,6 @@ final class TranslationJobImpl implements TranslationJob {
     private void announceProfile() {
         final ModelProfile profile = model.profile();
         log.debug("Run model profile batch={} tier={}", profile.batchSize(), profile.tier());
-    }
-
-    private ChunkRunner chunkRunner(
-            final RunStart.Started run,
-            final RunSettings settings,
-            final RunWindow runWindow,
-            final RunSinks sinks,
-            final ModelCalls calls) {
-        final GateFunction gate = GateFunction.of(documents, run.document().format());
-        final SegmentTranslator translator = new SegmentTranslator(
-                gate,
-                calls,
-                run.document().format(),
-                new DraftPromptBuilder(templates, settings.frame()),
-                new DraftReplyParser(mapper));
-        final RollingSummaryKeeper summary = new RollingSummaryKeeper(
-                stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
-        final BatchDrafter batch = new BatchDrafter(
-                new BatchPromptBuilder(templates, settings.frame()),
-                new BatchReplyParser(mapper),
-                calls,
-                settings.frame().sourceLanguage(),
-                settings.frame().targetLanguage(),
-                batchSize);
-        return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
-                settings,
-                runWindow,
-                stores,
-                sinks,
-                run.index(),
-                run.document());
     }
 
     private JobBoundaries boundaries() {

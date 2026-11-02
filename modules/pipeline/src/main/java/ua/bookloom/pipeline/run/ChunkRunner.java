@@ -8,26 +8,15 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.PromptSection;
-import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentLocator;
-import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
-import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
 import ua.bookloom.pipeline.project.SegmentLocators;
 
@@ -55,15 +44,12 @@ public final class ChunkRunner {
     private final ChunkPlanner planner;
     private final RunStores stores;
     private final RunSinks sinks;
-    private final PrecedingTargets preceding;
-    private final MemoryReuse memory;
     private final RoutedCalls calls;
     private final DecisionFollowUp followUp;
-    private final SegmentEvents events;
-    private final DraftShortcuts shortcuts;
-    private final BatchStage batches;
     private final TermLearning learning;
     private final ChunkSteps announced;
+    private final ChunkDrafting drafting;
+    private final ChunkDeciding deciding;
 
     /**
      * Creates the runner of one run.
@@ -89,11 +75,12 @@ public final class ChunkRunner {
         this.planner = new ChunkPlanner(settings, window);
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
-        this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
         final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
-        this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
-        this.calls = new RoutedCalls(sinks.boundaries());
         final String analysis = settings.frame().analysisLanguage();
+        final PrecedingTargets preceding =
+                new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
+        final MemoryReuse memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
+        this.calls = new RoutedCalls(sinks.boundaries());
         this.announced = new ChunkSteps(steps.calls().steps(), settings.dial());
         this.followUp = new DecisionFollowUp(
                 new DecisionFollowUp.BookFacts(settings.projectId(), analysis, index),
@@ -102,12 +89,19 @@ public final class ChunkRunner {
                 sinks,
                 calls,
                 announced);
-        this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
-        this.shortcuts = DraftShortcuts.forFrame(settings.frame());
-        this.batches =
-                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
         this.learning = new TermLearning(
                 stores, settings.projectId(), analysis, settings.frame().targetLanguage());
+        final ChunkDrafting.Collaborators shared = new ChunkDrafting.Collaborators(
+                preceding,
+                memory,
+                calls,
+                followUp,
+                new SegmentEvents(sinks.emit(), locators, steps.calls()),
+                DraftShortcuts.forFrame(settings.frame()),
+                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls()),
+                announced);
+        this.drafting = new ChunkDrafting(steps, settings, shared);
+        this.deciding = new ChunkDeciding(sinks, learning, shared);
     }
 
     /**
@@ -192,7 +186,7 @@ public final class ChunkRunner {
     private Optional<RunEnd> reviewedChunk(final Current current, final List<WorkItem> items) {
         for (final WorkItem item : items) {
             final Step<DraftOutcome> drafted =
-                    SegmentLogContext.within(item.segment().id(), () -> draft(current, item));
+                    SegmentLogContext.within(item.segment().id(), () -> drafting.draft(current, item));
             if (drafted instanceof Step.Stopped<DraftOutcome>(final RunEnd end)) {
                 return Optional.of(end);
             }
@@ -214,7 +208,7 @@ public final class ChunkRunner {
     }
 
     private Optional<RunEnd> draftAndDecide(final Current current, final WorkItem item) {
-        return switch (draft(current, item)) {
+        return switch (drafting.draft(current, item)) {
             case Step.Stopped<DraftOutcome>(final RunEnd stopped) -> Optional.of(stopped);
             case Step.Done<DraftOutcome>(final DraftOutcome outcome) ->
                 decideWith(current, item.segment().id(), List.of(item), List.of(outcome));
@@ -241,147 +235,8 @@ public final class ChunkRunner {
                                 outcomes, current.loop(), current.context().gate(), steps.calls(), error));
         return switch (decider) {
             case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
-            case Step.Done<ChunkDecider>(final ChunkDecider started) -> decideEach(current, items, started);
+            case Step.Done<ChunkDecider>(final ChunkDecider started) -> deciding.decideEach(current, items, started);
         };
-    }
-
-    /**
-     * Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk —
-     * unless a shortcut decides it without a call (nothing to translate, or an identical auxiliary text), or a
-     * context-matched memory target passes its checks, which stands in for the draft.
-     */
-    private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
-        final Segment segment = item.segment();
-        begun(current, item);
-        final ProtectedMask mask = current.context().mask(segment);
-        final DraftOutcome shortcut =
-                shortcuts.take(segment, mask, current.context().gate(), current.loop(), current.drafts());
-        if (shortcut != null) {
-            events.drafted(shortcut, current.loop());
-            announced.drafted(segment.id());
-            return new Step.Done<>(shortcut);
-        }
-        final List<Segment> unitSegments = current.work().unitSegments(item);
-        final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
-                unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
-        if (earlierMaskedTargets.isErr()) {
-            return new Step.Stopped<>(
-                    RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), ERROR)));
-        }
-        final MemoryReuse.Offer offer =
-                memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
-        final ContextPackage context =
-                contextOf(current, segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"), offer);
-        final DraftOutcome.Reused reused = offer.reused();
-        if (reused != null) {
-            current.drafts().drafted(reused, context.snapshot());
-            announced.drafted(segment.id());
-            return new Step.Done<>(reused);
-        }
-        return drafted(current, new Ready(item, mask, offer), context);
-    }
-
-    private void begun(final Current current, final WorkItem item) {
-        events.started(item.segment(), current.work().position(item));
-        announced.drafting(item.segment().id());
-    }
-
-    /** A segment that needs a call, with the mask it is shown and what the memory offered it. */
-    private record Ready(WorkItem item, ProtectedMask mask, MemoryReuse.Offer offer) {}
-
-    private Step<DraftOutcome> drafted(final Current current, final Ready ready, final ContextPackage context) {
-        final Segment segment = ready.item().segment();
-        final ProtectedMask mask = ready.mask();
-        final Optional<RunEnd> batchEnd = batches.ensure(current, ready.item(), mask, ready.offer());
-        if (batchEnd.isPresent()) {
-            return new Step.Stopped<>(batchEnd.get());
-        }
-        final List<PromptSection> sections = current.batches().takeSent(segment.id());
-        final ContextSnapshot snapshot = context.snapshot().withSent(sections);
-        events.contextAssembled(segment.id(), snapshot);
-        final DraftOutcome batched = current.batches().take(segment.id());
-        final Step<DraftOutcome> drafted = batched != null
-                ? new Step.Done<>(batched)
-                : calls.untilAnsweredOrFlagged(
-                        current.work(),
-                        segment.id(),
-                        new RoutedCalls.StepName("draft", segment.id()),
-                        () -> current.translator()
-                                .translateSplit(
-                                        segment, context.draftContext(), mask, steps.splitter(), current.budget()),
-                        error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
-        if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
-            current.drafts().drafted(outcome, snapshot);
-            events.drafted(outcome, current.loop());
-            announced.drafted(segment.id(), outcome);
-        }
-        return drafted;
-    }
-
-    private ContextPackage contextOf(
-            final Current current, final Segment segment, final List<String> targets, final MemoryReuse.Offer offer) {
-        final ContextPackage context =
-                current.requests().contextFor(segment, targets, offer.lookup(), followUp.summary());
-        if (log.isTraceEnabled()) {
-            log.trace(
-                    "Preceding targets segmentId={} targets={}",
-                    segment.id(),
-                    context.draftContext().precedingTargets());
-        }
-        return context;
-    }
-
-    private Optional<RunEnd> decideEach(final Current current, final List<WorkItem> items, final ChunkDecider decider) {
-        for (final WorkItem item : items) {
-            final Optional<RunEnd> end =
-                    SegmentLogContext.within(item.segment().id(), () -> decideOne(current, item, decider));
-            if (end.isPresent()) {
-                return end;
-            }
-        }
-        return Optional.empty();
-    }
-
-    private Optional<RunEnd> decideOne(final Current current, final WorkItem item, final ChunkDecider decider) {
-        final String segmentId = item.segment().id();
-        return switch (calls.untilAnsweredOrFlagged(
-                current.work(),
-                segmentId,
-                new RoutedCalls.StepName("decide", segmentId),
-                decider::nextDecision,
-                decider::flagCurrent)) {
-            case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-            case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome);
-        };
-    }
-
-    private Optional<RunEnd> record(final Current current, final WorkItem item, final SegmentOutcome outcome) {
-        final SegmentRecord record = OutcomeRecords.decided(
-                item.record(), outcome, current.drafts().snapshot(item.segment().id()));
-        sinks.pending()
-                .decided(
-                        record,
-                        memory.entryFor(record, item.segment(), current.work().unitSegments(item)));
-        current.drafts().decided(record.segmentId());
-        learning.decided(item.segment(), record);
-        shortcuts.decided(item.segment(), record);
-        sinks.recorder().decided(record.status());
-        final JobProgress progress = current.work().apply(item, record.status(), record.path());
-        final ErrorCode reason = record.status() == SegmentStatus.FLAGGED ? OutcomeRecords.reportCode(record) : null;
-        log.debug(
-                "Decided segmentId={} status={} reason={} path={} rounds={}",
-                record.segmentId(),
-                record.status(),
-                reason,
-                record.path(),
-                record.repairRounds());
-        events.decided(record, reason, progress);
-        if (record.path() == SegmentPath.TM_REUSE) {
-            sinks.emit().accept(memory.announced(record.segmentId()));
-        }
-        return followUp.decided(current.work(), item, record, current.context().glossary())
-                .or(() -> sinks.boundaries()
-                        .afterDecision(RunBoundaries.Decision.of(current.work(), item, record), progress));
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {
