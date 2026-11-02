@@ -73,9 +73,6 @@ final class NameVocabulary {
     /** Words that carry no model fact: calibration and importance-matrix markers. */
     static final Set<String> IGNORED = Set.of("dwq", "i1", "imatrix", "kquant", "split");
 
-    static final Pattern QUANT = Pattern.compile("(?:^|(?<=[-_.:@]))"
-            + "((?:ud-)?(?:iq\\d(?:_[a-z]+)?|tq\\d_0|q\\d(?:_k)?(?:_[sml]|_xl|_[01]|_nl)?(?:_\\d_\\d)?|bf16|fp16|f16"
-            + "|fp32|f32|fp8|nvfp4|mxfp4(?:_moe)?|mxfp8|int[48]|[2-8]bit|w4a16(?:-ct)?|w8a8))(?=$|[-_.:@])");
     static final Pattern SHARD = Pattern.compile("-?(\\d{5})-of-(\\d{5})");
     static final Pattern SIZE = Pattern.compile("(\\d+(?:\\.\\d+)?)b");
     static final Pattern EFFECTIVE = Pattern.compile("e(\\d+(?:\\.\\d+)?)b");

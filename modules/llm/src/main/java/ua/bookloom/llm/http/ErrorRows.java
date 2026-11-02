@@ -63,7 +63,8 @@ final class ErrorRows {
         final Optional<ErrorRow> found = ORDERED.stream()
                 .filter(row -> row.appliesTo(engine)
                         && row.statuses().isEmpty()
-                        && row.body().matcher(text).find())
+                        && row.body().matcher(text).find()
+                        && row.condition().test(text))
                 .findFirst();
         found.ifPresentOrElse(
                 row -> log.debug(

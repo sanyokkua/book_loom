@@ -2,6 +2,7 @@ package ua.bookloom.llm.http;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
@@ -14,6 +15,8 @@ import ua.bookloom.api.llm.ServerEngine;
  * @param engines the server engines the row applies to; empty means every engine
  * @param statuses the HTTP statuses the row applies to; empty means any status
  * @param body the words that identify the meaning, searched anywhere in the body
+ * @param condition what else the body must satisfy once {@code body} is found; for a meaning whose words must all be
+ *     present in any order, or must not be accompanied by others
  * @param code the typed classification returned to callers
  * @param reason the token the failure carries in its details
  * @param retry what trying again can do for this failure
@@ -25,11 +28,26 @@ record ErrorRow(
         Set<ServerEngine> engines,
         Set<Integer> statuses,
         Pattern body,
+        Predicate<String> condition,
         ErrorCode code,
         FailureReason reason,
         RetryRule retry,
         String title,
         String message) {
+
+    /** A row whose words alone identify the meaning. */
+    ErrorRow(
+            String id,
+            Set<ServerEngine> engines,
+            Set<Integer> statuses,
+            Pattern body,
+            ErrorCode code,
+            FailureReason reason,
+            RetryRule retry,
+            String title,
+            String message) {
+        this(id, engines, statuses, body, text -> true, code, reason, retry, title, message);
+    }
 
     /** A row that applies to every engine. */
     ErrorRow(
@@ -49,6 +67,7 @@ record ErrorRow(
         engines = Set.copyOf(Objects.requireNonNull(engines, "engines"));
         statuses = Set.copyOf(Objects.requireNonNull(statuses, "statuses"));
         Objects.requireNonNull(body, "body");
+        Objects.requireNonNull(condition, "condition");
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(reason, "reason");
         Objects.requireNonNull(retry, "retry");
@@ -68,7 +87,8 @@ record ErrorRow(
     boolean matches(final int status, final String text, final ServerEngine engine) {
         return appliesTo(engine)
                 && (statuses.isEmpty() || statuses.contains(status))
-                && body.matcher(text).find();
+                && body.matcher(text).find()
+                && condition.test(text);
     }
 
     boolean appliesTo(final ServerEngine engine) {

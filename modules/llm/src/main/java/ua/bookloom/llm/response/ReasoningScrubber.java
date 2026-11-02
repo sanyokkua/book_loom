@@ -63,7 +63,6 @@ public final class ReasoningScrubber {
 
     // Magistral's whole answer, or a whole JSON string, wrapped in one \boxed{…}.
     private static final Pattern BOXED_WHOLE = Pattern.compile("\\A\\s*\\\\boxed\\{(.*)}\\s*\\z", Pattern.DOTALL);
-    private static final Pattern BOXED_STRING = Pattern.compile("\"\\\\\\\\boxed\\{((?:[^\"\\\\]|\\\\.)*?)}\"");
     private static final Pattern BARE_JSON_LABEL = Pattern.compile("(?is)^json\\s*(?=\\{)");
     private static final String FENCE = "```";
 
@@ -143,7 +142,11 @@ public final class ReasoningScrubber {
 
     private static String unboxed(final String text, final Counts counts) {
         final String whole = counted("boxed", BOXED_WHOLE, text, "$1", counts);
-        return counted("boxed-string", BOXED_STRING, whole, "\"$1\"", counts);
+        final BoxedStrings.Unboxed strings = BoxedStrings.unwrap(whole);
+        if (strings.count() > 0) {
+            counts.add("boxed-string", strings.count());
+        }
+        return strings.text();
     }
 
     private static String counted(

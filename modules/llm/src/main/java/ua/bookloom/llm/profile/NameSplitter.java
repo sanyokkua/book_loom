@@ -2,6 +2,7 @@ package ua.bookloom.llm.profile;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +22,6 @@ final class NameSplitter {
     private static final String SAFETENSORS = "safetensors";
     private static final List<String> HUB_PREFIXES = List.of("hf.co/", "huggingface.co/");
     private static final List<String> OLLAMA_PREFIXES = List.of("registry.ollama.ai/library/", "ollama.com/library/");
-    private static final Pattern CACHE_FILE =
-            Pattern.compile("([A-Za-z0-9.-]++)_([A-Za-z0-9._-]*?-GGUF)_(.++)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SHARD_IN_NAME = Pattern.compile("(\\d{5})-of-(\\d{5})");
     private static final Pattern MMPROJ_WORD = Pattern.compile("(?:^|[-_.])mmproj(?:$|[-_.])");
     private static final Pattern IMATRIX_WORD = Pattern.compile("(?:^|[-_.])imatrix(?:$|[-_.])");
@@ -186,10 +185,11 @@ final class NameSplitter {
         }
         work.gguf = true;
         work.text = work.text.substring(0, work.text.length() - GGUF_EXTENSION.length());
-        final Matcher cached = CACHE_FILE.matcher(work.text);
-        if (!work.text.contains("/") && cached.matches()) {
-            ctx.repo = cached.group(1) + "/" + cached.group(2);
-            work.text = ctx.repo + "/" + cached.group(3);
+        final Optional<CacheFileName> cached =
+                work.text.contains("/") ? Optional.empty() : CacheFileName.parse(work.text);
+        if (cached.isPresent()) {
+            ctx.repo = cached.get().repo();
+            work.text = ctx.repo + "/" + cached.get().file();
         }
         if (!work.text.contains("/")) {
             return;
@@ -211,11 +211,8 @@ final class NameSplitter {
         }
         work.file = dirs.getLast() + GGUF_EXTENSION;
         final String parent = dirs.size() >= 2 ? dirs.get(dirs.size() - 2) : null;
-        final boolean folder = parent != null
-                && (ctx.repo != null
-                        || NameVocabulary.QUANT
-                                .matcher(parent.toLowerCase(Locale.ROOT))
-                                .matches());
+        final boolean folder =
+                parent != null && (ctx.repo != null || QuantTokens.isToken(parent.toLowerCase(Locale.ROOT)));
         work.subfolder = folder ? parent : null;
         work.text = dirs.getLast();
     }
