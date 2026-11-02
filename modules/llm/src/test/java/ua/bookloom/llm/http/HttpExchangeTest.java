@@ -143,8 +143,8 @@ class HttpExchangeTest {
         final var values = Objects.requireNonNull(reply.headers().get("X-Reply"), "header");
         assertThatThrownBy(() -> values.add("mutation")).isInstanceOf(UnsupportedOperationException.class);
         final var target = reply.headers();
-        assertThatThrownBy(() -> target.put("X-Added", List.of("mutation")))
-                .isInstanceOf(UnsupportedOperationException.class);
+        final List<String> mutation = List.of("mutation");
+        assertThatThrownBy(() -> target.put("X-Added", mutation)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     private HttpExchange exchange() {

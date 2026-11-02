@@ -76,7 +76,8 @@ public final class TypographyGate implements GateFunction {
         if (!cleaned.closersCut() && !normalised.isChanged()) {
             return withCandidate;
         }
-        final String closers = cleaned.closersCut() ? CLOSERS_NOTE + (normalised.isChanged() ? " " : "") : "";
+        final String separator = normalised.isChanged() ? " " : "";
+        final String closers = cleaned.closersCut() ? CLOSERS_NOTE + separator : "";
         final String note = closers + normalised.note();
         log.trace("Typography note segment={} {}", segment.id(), note);
         return withCandidate.withNormalised(

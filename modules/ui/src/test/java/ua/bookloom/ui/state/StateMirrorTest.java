@@ -199,7 +199,8 @@ class StateMirrorTest extends FxTestBase {
         final StateMirror mirror = new StateMirror();
 
         final var target = mirror.activityLog();
-        assertThatThrownBy(() -> target.add(accepted(0))).isInstanceOf(UnsupportedOperationException.class);
+        final var entry = accepted(0);
+        assertThatThrownBy(() -> target.add(entry)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     // IF the mirror carried the snapshot's raw fields, THEN remaining and total (which the engine does not send)

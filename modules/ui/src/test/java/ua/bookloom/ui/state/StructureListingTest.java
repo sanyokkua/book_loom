@@ -78,7 +78,8 @@ class StructureListingTest {
 
         assertThat(listing.roots()).containsExactly(node("a", 3));
         final var target = listing.roots();
-        assertThatThrownBy(() -> target.add(node("c", 1))).isInstanceOf(UnsupportedOperationException.class);
+        final var extra = node("c", 1);
+        assertThatThrownBy(() -> target.add(extra)).isInstanceOf(UnsupportedOperationException.class);
     }
 
     // IF a grouping node listed nothing, THEN picking a part would show an empty list although its chapters have text.

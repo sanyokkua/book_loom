@@ -78,7 +78,8 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
             throw new InternalError("the pool broke");
         });
 
-        assertThatThrownBy(() -> flakyRunner.start(job, runContext())).isInstanceOf(InternalError.class);
+        final var context = runContext();
+        assertThatThrownBy(() -> flakyRunner.start(job, context)).isInstanceOf(InternalError.class);
         awaitState(RunState.FAILED);
 
         assertThat(ticks.stops()).isEqualTo(1);

@@ -3,8 +3,12 @@ package ua.bookloom.pipeline.project;
 import static ua.bookloom.util.contract.ArgNames.ERROR;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -32,6 +36,8 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 final class RoundTripCheck {
 
     private static final String UNDETERMINED_LANGUAGE = "und";
+    private static final String TEMP_PREFIX = "bookloom-roundtrip-";
+    private static final Set<PosixFilePermission> OWNER_ONLY = PosixFilePermissions.fromString("rwx------");
 
     private final BookInspector inspector;
     private final DocumentPort documents;
@@ -142,11 +148,15 @@ final class RoundTripCheck {
                 .sum();
     }
 
-    // Files.createTempDirectory makes the folder private to this account (POSIX 700), so a source in a read-only folder
-    // still round-trips and no other account can swap or read the copy while it is written.
+    // The folder is owner-only (rwx------) where the file system knows POSIX permissions, and elsewhere the system
+    // temporary folder's own access rules apply. It is not beside the source, which may sit in a read-only folder.
     private static Path createDirectory() {
+        final FileAttribute<?>[] ownerOnly =
+                FileSystems.getDefault().supportedFileAttributeViews().contains("posix")
+                        ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
+                        : new FileAttribute<?>[0];
         try {
-            return Files.createTempDirectory("bookloom-roundtrip-");
+            return Files.createTempDirectory(TEMP_PREFIX, ownerOnly);
         } catch (IOException cause) {
             throw new IllegalStateException("cannot create the round-trip directory", cause);
         }

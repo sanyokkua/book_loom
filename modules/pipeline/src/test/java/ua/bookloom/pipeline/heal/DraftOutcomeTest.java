@@ -28,30 +28,34 @@ class DraftOutcomeTest {
     @Test
     void constructor_bothRestoredTargetAndGateFindingPresent_throws() {
         final List<LockedRendering> arg1 = List.of();
-        assertThatThrownBy(() ->
-                        new DraftOutcome.Drafted(segment(), SOURCE, arg1, SOURCE, SOURCE, SOURCE, placeholderFinding()))
+        final var drafted = segment();
+        final var finding = placeholderFinding();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, SOURCE, SOURCE, finding))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_neitherRestoredTargetNorGateFindingPresent_throws() {
         final List<LockedRendering> arg1 = List.of();
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, arg1, SOURCE, null, null, null))
+        final var drafted = segment();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_restoredTargetWithoutMaskedForm_throws() {
         final List<LockedRendering> arg1 = List.of();
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, arg1, SOURCE, null, SOURCE, null))
+        final var drafted = segment();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, null, SOURCE, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_maskedFormWithoutRestoredTarget_throws() {
         final List<LockedRendering> arg1 = List.of();
-        assertThatThrownBy(() ->
-                        new DraftOutcome.Drafted(segment(), SOURCE, arg1, SOURCE, SOURCE, null, placeholderFinding()))
+        final var drafted = segment();
+        final var finding = placeholderFinding();
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(drafted, SOURCE, arg1, SOURCE, SOURCE, null, finding))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

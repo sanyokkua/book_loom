@@ -1,6 +1,7 @@
 package ua.bookloom.util.text;
 
 import java.util.Objects;
+import java.util.function.IntPredicate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +13,41 @@ import lombok.NoArgsConstructor;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Edges {
+
+    /**
+     * Tells whether a code point is neither a letter nor a number, the kind of character a term is trimmed of.
+     *
+     * @param codePoint any code point
+     * @return {@code true} if it is not a letter and not a decimal, letter or other number, {@code false} otherwise
+     */
+    public static boolean isNeitherLetterNorNumber(final int codePoint) {
+        final int type = Character.getType(codePoint);
+        return !Character.isLetter(codePoint)
+                && type != Character.DECIMAL_DIGIT_NUMBER
+                && type != Character.LETTER_NUMBER
+                && type != Character.OTHER_NUMBER;
+    }
+
+    /**
+     * Removes every leading and trailing code point that {@code removable} accepts.
+     *
+     * @param text the text to strip
+     * @param removable tells whether a code point is dropped at the ends
+     * @return the text between its first and last code point that is kept; empty when none is
+     */
+    public static String strip(final String text, final IntPredicate removable) {
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(removable, "removable");
+        int start = 0;
+        int end = text.length();
+        while (start < end && removable.test(text.codePointAt(start))) {
+            start += Character.charCount(text.codePointAt(start));
+        }
+        while (end > start && removable.test(text.codePointBefore(end))) {
+            end -= Character.charCount(text.codePointBefore(end));
+        }
+        return text.substring(start, end);
+    }
 
     /**
      * Removes every leading and trailing character found in {@code characters}.

@@ -55,4 +55,9 @@ public record CoverImage(String resourcePath, String mediaType, byte[] bytes) {
     public int hashCode() {
         return Objects.hash(resourcePath, mediaType, Arrays.hashCode(bytes));
     }
+
+    @Override
+    public String toString() {
+        return "CoverImage[resourcePath=" + resourcePath + ", mediaType=" + mediaType + ", bytes=" + bytes.length + "]";
+    }
 }

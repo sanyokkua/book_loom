@@ -167,7 +167,8 @@ class DrmAdjudicatorTest {
                 </encryption>
                 """.getBytes(StandardCharsets.UTF_8));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opfWith())).isInstanceOf(DrmRefusedException.class);
+        final var opf = opfWith();
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opf)).isInstanceOf(DrmRefusedException.class);
     }
 
     /**
@@ -179,6 +180,7 @@ class DrmAdjudicatorTest {
         final RawEntry entry =
                 new RawEntry("META-INF/encryption.xml", 0, 0, "not xml <<<".getBytes(StandardCharsets.UTF_8));
 
-        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opfWith())).isInstanceOf(DrmRefusedException.class);
+        final var opf = opfWith();
+        assertThatThrownBy(() -> DrmAdjudicator.adjudicate(entry, opf)).isInstanceOf(DrmRefusedException.class);
     }
 }

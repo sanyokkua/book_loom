@@ -40,17 +40,14 @@ class ModelProfileTest {
         final ModelProfile d = ModelProfile.defaults();
         final Set<ModelProfile.MarkupFilter> noFilters = Set.of();
         final Set<ModelProfile.Quirk> noQuirks = Set.of();
+        final var reasoning = d.reasoning();
+        final var systemRole = d.systemRole();
+        final var sampling = d.sampling();
+        final var thinking = d.thinking();
+        final var context = d.context();
+        final var tier = d.tier();
         assertThatThrownBy(() -> new ModelProfile(
-                        d.reasoning(),
-                        noFilters,
-                        d.systemRole(),
-                        noQuirks,
-                        d.sampling(),
-                        d.thinking(),
-                        d.context(),
-                        0,
-                        batch,
-                        d.tier()))
+                        reasoning, noFilters, systemRole, noQuirks, sampling, thinking, context, 0, batch, tier))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

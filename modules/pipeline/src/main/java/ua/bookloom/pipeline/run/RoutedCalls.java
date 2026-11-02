@@ -300,9 +300,7 @@ final class RoutedCalls {
     private static <T> Result<T> guarded(@Nullable final String segmentId, final Supplier<Result<T>> call) {
         try {
             return Objects.requireNonNull(call.get(), "call result");
-        } catch (VirtualMachineError fatal) {
-            throw fatal;
-        } catch (RuntimeException | Error thrown) {
+        } catch (RuntimeException thrown) {
             log.error(
                     "A run step threw instead of answering segmentId={}; it is retried as an internal error",
                     segmentId,

@@ -70,7 +70,7 @@ class BufferReassemblerTest {
 
         BufferReassembler.splice(SOURCE, List.of(at(0, 6, "A much longer replacement indeed.")));
 
-        assertThat(SOURCE).containsExactly(original);
+        assertThat(original).containsExactly(SOURCE);
     }
 
     @Test
