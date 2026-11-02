@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +22,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
+import ua.bookloom.util.text.Edges;
 import ua.bookloom.util.text.StressMarks;
 
 /**
@@ -36,7 +36,6 @@ import ua.bookloom.util.text.StressMarks;
 @Slf4j
 final class TargetValidator implements SuggestionReplies.Judge {
 
-    private static final Pattern LAST_WORD = Pattern.compile("(?<![^\\s-])[^\\s-]+$");
     private static final Pattern WORD_PARTS = Pattern.compile("[\\s\\-\u2010\u2011\u2013]+");
 
     /** Why a target is refused. */
@@ -384,8 +383,7 @@ final class TargetValidator implements SuggestionReplies.Judge {
     }
 
     private static String lastWord(final String name) {
-        final Matcher last = LAST_WORD.matcher(name.strip());
-        return last.find() ? last.group() : "";
+        return Edges.trailingRun(name.strip(), c -> !Character.isWhitespace(c) && c != '-');
     }
 
     private Standing copyStanding(final String term, final String rendering) {

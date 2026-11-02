@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -25,10 +24,6 @@ import ua.bookloom.pipeline.revision.RevisionGuards;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class EditGuards {
-
-    /** A sentence start: the text start or a terminal mark, then opening marks, then the first letter. */
-    private static final Pattern SENTENCE_START =
-            Pattern.compile("(?:^|[.!?…][»”\"’)]*\\s+)[«„“\"'(\\[—–\\-\\s]*(\\p{L})");
 
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ-]*");
     private static final int MIN_SWAP_WORD = 4;
@@ -119,22 +114,13 @@ final class EditGuards {
     }
 
     private static long lowerStarts(final String text) {
-        final Matcher matcher = SENTENCE_START.matcher(text);
-        long count = 0;
-        while (matcher.find()) {
-            if (Character.isLowerCase(text.codePointAt(matcher.start(1)))) {
-                count++;
-            }
-        }
-        return count;
+        return SentenceStarts.of(text).stream()
+                .filter(start -> Character.isLowerCase(text.codePointAt(start)))
+                .count();
     }
 
     private static long midCapitals(final String text) {
-        final Matcher starts = SENTENCE_START.matcher(text);
-        final Set<Integer> sentenceStarts = new HashSet<>();
-        while (starts.find()) {
-            sentenceStarts.add(starts.start(1));
-        }
+        final Set<Integer> sentenceStarts = new HashSet<>(SentenceStarts.of(text));
         return WORD.matcher(text)
                 .results()
                 .filter(word -> !sentenceStarts.contains(word.start()))

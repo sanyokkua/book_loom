@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -29,10 +28,6 @@ public final class Occurrences {
     private static final Set<String> HONORIFICS = Set.of("Mr", "Mrs", "Ms", "Dr", "St", "Prof");
 
     private static final int MAX_RUN_WORDS = 3;
-    private static final String LETTERS = "[\\p{L}\\p{M}\\p{N}]+";
-    private static final String NOT_A_LETTER = "(?![\\p{L}\\p{M}\\p{N}])";
-    private static final Pattern WORD = Pattern.compile("(" + LETTERS + "(?:['’ʼ](?![sS]" + NOT_A_LETTER + ")" + LETTERS
-            + "|[-‐‑]" + LETTERS + ")*)(?:['’ʼ][sS]" + NOT_A_LETTER + ")?");
     private static final Pattern APOSTROPHES = Pattern.compile("[’ʼ]");
     private static final Pattern SPACES = Pattern.compile("\\p{Zs}+");
     private static final Pattern SENTENCE_GAP =
@@ -265,25 +260,24 @@ public final class Occurrences {
 
     private static List<Word> words(final String text, final List<Integer> sentenceStarts) {
         final List<Word> words = new ArrayList<>();
-        final Matcher matcher = WORD.matcher(text);
         int previousEnd = -1;
         boolean previousHonorific = false;
-        while (matcher.find()) {
-            final boolean initial = startsSentence(text, previousEnd, matcher.start(), previousHonorific);
+        for (WordScan scan = WordScan.next(text, 0); scan != null; scan = WordScan.next(text, scan.end())) {
+            final boolean initial = startsSentence(text, previousEnd, scan.start(), previousHonorific);
             if (initial) {
-                sentenceStarts.add(matcher.start());
+                sentenceStarts.add(scan.start());
             }
-            final boolean honorific = isHonorific(text, matcher.start(), matcher.end(1));
-            final boolean capitalised = !honorific && Character.isUpperCase(text.codePointAt(matcher.start()));
+            final boolean honorific = isHonorific(text, scan.start(), scan.wordEnd());
+            final boolean capitalised = !honorific && Character.isUpperCase(text.codePointAt(scan.start()));
             words.add(new Word(
-                    matcher.group(1),
-                    matcher.start(),
-                    matcher.end(),
-                    matcher.end() > matcher.end(1),
+                    text.substring(scan.start(), scan.wordEnd()),
+                    scan.start(),
+                    scan.end(),
+                    scan.end() > scan.wordEnd(),
                     capitalised,
                     initial,
                     sentenceStarts.size() - 1));
-            previousEnd = matcher.end();
+            previousEnd = scan.end();
             previousHonorific = honorific;
         }
         return words;

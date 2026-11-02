@@ -39,8 +39,6 @@ final class PronounReader {
     private static final int LOOK_BACK = 40;
     // The word right before a use, joined to it by blanks only: a capitalised one makes a longer name.
     private static final Pattern WORD_BEFORE = Pattern.compile("(\\p{L}[\\p{L}\\p{M}'’ʼ]*\\.?)\\p{Zs}+$");
-    // What opens a sentence: the text's start or a closing mark, with any quotation mark or bracket after it.
-    private static final Pattern SENTENCE_OPENING = Pattern.compile("(?:^|[.!?…][\"'”’»)\\]]*)[\\s\"'“‘«(]*$");
 
     private final Pattern name;
     private final String probe;
@@ -221,9 +219,7 @@ final class PronounReader {
             if (titled != null) {
                 return new Mention(start, null, null, new Pronoun(bare(word), titled, end));
             }
-            final boolean opensSentence = SENTENCE_OPENING
-                    .matcher(text.substring(0, from + before.start(1)))
-                    .find();
+            final boolean opensSentence = SentenceOpening.endsAtOpening(text.substring(0, from + before.start(1)));
             if (isNameWord(word) && (!opensSentence || namedElsewhere.test(word))) {
                 return null;
             }

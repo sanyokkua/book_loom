@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.util.text.Edges;
 
 /**
  * Splits a display text into sentences for the checks that compare a source with its translation. Language-agnostic by
@@ -23,7 +24,6 @@ public final class Sentences {
     public static final int SIGNIFICANT_WORDS = 3;
 
     private static final Pattern END = Pattern.compile("[.!?…。！？]+[»”\"’)]*(?=\\s|$)");
-    private static final Pattern LAST_WORD = Pattern.compile("(?<!\\p{L})(\\p{L}+)$");
     // Titles and common abbreviations of the spaced alphabets: English, then Russian and Ukrainian.
     private static final Set<String> TITLES = Set.of(
             "mr", "mrs", "ms", "dr", "st", "jr", "sr", "vs", "prof", "gen", "col", "capt", "lt", "sgt", "mt", "etc",
@@ -103,9 +103,8 @@ public final class Sentences {
         if (!marks.startsWith(".") || (marks.length() > 1 && marks.charAt(1) == '.')) {
             return false;
         }
-        final Matcher word = LAST_WORD.matcher(text.substring(0, end.start()));
-        if (word.find()) {
-            final String last = word.group(1);
+        final String last = Edges.trailingRun(text.substring(0, end.start()), Character::isLetter);
+        if (!last.isEmpty()) {
             final boolean initial = last.length() == 1 && Character.isUpperCase(last.charAt(0));
             if (initial || TITLES.contains(last.toLowerCase(Locale.ROOT))) {
                 return true;

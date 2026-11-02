@@ -7,8 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -28,7 +26,9 @@ record JudgeRubric(String common, String pointwise, String pairwise, String hash
     static final String VERSION = "bl-judge-1";
     private static final String RESOURCE = "/eval/judge/" + VERSION + ".prompt";
     private static final int HASH_DIGITS = 12;
-    private static final Pattern SECTIONS = Pattern.compile("(?s)@@common\\n(.*?)@@pointwise\\n(.*?)@@pairwise\\n(.*)");
+    private static final String COMMON = "@@common\n";
+    private static final String POINTWISE = "@@pointwise\n";
+    private static final String PAIRWISE = "@@pairwise\n";
 
     /** What the judge is asked to do; each mode carries its name in the cache key and the report. */
     enum Mode {
@@ -88,14 +88,15 @@ record JudgeRubric(String common, String pointwise, String pairwise, String hash
     }
 
     private static JudgeRubric of(final String text, final String hash) {
-        final Matcher sections = SECTIONS.matcher(text);
-        if (!sections.matches()) {
+        final int pointwise = text.indexOf(POINTWISE);
+        final int pairwise = pointwise < 0 ? -1 : text.indexOf(PAIRWISE, pointwise + POINTWISE.length());
+        if (!text.startsWith(COMMON) || pairwise < 0) {
             throw new IllegalStateException(RESOURCE + " lacks its @@common, @@pointwise and @@pairwise sections");
         }
         return new JudgeRubric(
-                sections.group(1).strip(),
-                sections.group(2).strip(),
-                sections.group(3).strip(),
+                text.substring(COMMON.length(), pointwise).strip(),
+                text.substring(pointwise + POINTWISE.length(), pairwise).strip(),
+                text.substring(pairwise + PAIRWISE.length()).strip(),
                 hash);
     }
 

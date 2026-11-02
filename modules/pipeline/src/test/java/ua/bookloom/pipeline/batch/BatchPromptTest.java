@@ -3,8 +3,8 @@ package ua.bookloom.pipeline.batch;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ChatMessage;
@@ -24,8 +24,8 @@ class BatchPromptTest {
 
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final int SYSTEM_BUDGET_TOKENS = 875;
-    private static final Pattern EXAMPLE = Pattern.compile(
-            "<Items>\\n((?:<s id=\"\\d+\">.*</s>\\n)+)</Items>\\nReply:(.*?)(?:\\n\\n|\\z)", Pattern.DOTALL);
+    private static final String ITEMS_OPEN = "<Items>\n";
+    private static final String REPLY_OPEN = "</Items>\nReply:";
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
     private static final List<BatchItem> ITEMS = List.of(
             new BatchItem("1", "She opened the door."),
@@ -174,22 +174,38 @@ class BatchPromptTest {
                 .getFirst()
                 .content();
 
-        final List<Matcher> examples = EXAMPLE.matcher(system)
-                .results()
-                .map(r -> EXAMPLE.matcher(r.group()))
-                .toList();
+        final List<Example> examples = examplesIn(system);
 
         assertThat(examples).hasSize(1);
         examples.forEach(example -> {
-            assertThat(example.matches()).isTrue();
-            final List<BatchItem> items = ITEM.matcher(example.group(1))
+            final List<BatchItem> items = ITEM.matcher(example.items())
                     .results()
                     .map(item -> new BatchItem(item.group(1), item.group(2)))
                     .toList();
-            assertThat(parser.parse(example.group(2).strip(), items, "en", "uk").isClean())
-                    .as(example.group())
+            assertThat(parser.parse(example.reply().strip(), items, "en", "uk").isClean())
+                    .as(example.reply())
                     .isTrue();
         });
+    }
+
+    private record Example(String items, String reply) {}
+
+    // Each "<Items>…</Items>\nReply:…" block of the prompt: the item lines, and the reply up to a blank line.
+    private static List<Example> examplesIn(final String system) {
+        final List<Example> found = new ArrayList<>();
+        for (int open = system.indexOf(ITEMS_OPEN); open >= 0; open = system.indexOf(ITEMS_OPEN, open + 1)) {
+            final int itemsStart = open + ITEMS_OPEN.length();
+            final int itemsEnd = system.indexOf(REPLY_OPEN, itemsStart);
+            if (itemsEnd < 0) {
+                break;
+            }
+            final int replyStart = itemsEnd + REPLY_OPEN.length();
+            final int blank = system.indexOf("\n\n", replyStart);
+            found.add(new Example(
+                    system.substring(itemsStart, itemsEnd),
+                    system.substring(replyStart, blank < 0 ? system.length() : blank)));
+        }
+        return found;
     }
 
     @Test

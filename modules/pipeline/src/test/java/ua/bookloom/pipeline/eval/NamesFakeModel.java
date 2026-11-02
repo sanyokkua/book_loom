@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
@@ -35,7 +36,6 @@ final class NamesFakeModel implements ChatModel {
     private static final String ALL_WINDOWS = "[1,2,3,4,5,6]";
     private static final Pattern REVIEW_LINE = Pattern.compile("^- (.+?) — ");
     private static final Pattern WINDOW_LINE = Pattern.compile("^\\s+\\[\\d+] (.*)$");
-    private static final Pattern CHOICE_LINE = Pattern.compile("^- (.+?)(?: · \\d+ uses)?(?: — .*)?$");
     private static final Pattern CANDIDATE_LINE = Pattern.compile("^(.+?) — ");
     private static final Pattern MARKED = Pattern.compile("\\[\\[(.+?)]]");
     private static final Pattern WINDOW_NUMBER = Pattern.compile("(?m)^\\[(\\d+)] ");
@@ -295,14 +295,28 @@ final class NamesFakeModel implements ChatModel {
         wanted.putAll(book.model().terms());
         final List<String> chosen = new ArrayList<>();
         for (final String line : (Iterable<String>) user.lines()::iterator) {
-            final Matcher entry = CHOICE_LINE.matcher(line);
-            if (entry.matches()) {
-                final String term = entry.group(1);
+            final String term = choiceTerm(line);
+            if (term != null) {
                 chosen.add("{\"term\":\"%s\",\"keep\":%s}"
                         .formatted(term, wanted.getOrDefault(term.toLowerCase(Locale.ROOT), false)));
             }
         }
         return chosen;
+    }
+
+    // "- term", "- term · 3 uses" or either followed by " — note": the term, or null for any other line.
+    private static @Nullable String choiceTerm(final String line) {
+        if (!line.startsWith("- ")) {
+            return null;
+        }
+        final int note = line.indexOf(" — ", 3);
+        final String head = note < 0 ? line.substring(2) : line.substring(2, note);
+        final int uses = head.lastIndexOf(" · ");
+        final boolean counted = uses > 0
+                && head.endsWith(" uses")
+                && head.substring(uses + 3, head.length() - " uses".length()).matches("\\d+");
+        final String term = counted ? head.substring(0, uses) : head;
+        return term.isEmpty() ? null : term;
     }
 
     private boolean isJunk(final String term) {

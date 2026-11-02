@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.ControlCharacters;
@@ -36,13 +34,6 @@ final class BatchEntries {
             this(id, text, Map.of());
         }
     }
-
-    // A notes field before the target is matched but not captured, so a cut reply with notes is still salvaged.
-    // The string body is written unrolled with possessive runs ([^"\\]*+ then \\. and another run) rather than as a
-    // loop over an alternation: Java matches a looped alternation by recursion, one frame per character, so a long
-    // target (a capped model's 10,000 characters of one repeated phrase) overflowed the stack and failed the whole run.
-    private static final Pattern JSON_ENTRY = Pattern.compile(
-            "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*(?:\"notes\"\\s*:\\s*\"[^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+\"\\s*,\\s*)?\"target\"\\s*:\\s*\"([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)\"\\s*[,}]");
 
     private final ObjectMapper mapper;
 
@@ -91,13 +82,12 @@ final class BatchEntries {
         final List<Entry> entries = new ArrayList<>();
         // Whatever follows the closing brace is not the reply (a runaway tail of markup): no entry is read from it.
         final OptionalInt end = JsonReplies.firstObjectEnd(reply);
-        final Matcher matcher = JSON_ENTRY.matcher(end.isPresent() ? reply.substring(0, end.getAsInt()) : reply);
-        while (matcher.find()) {
+        for (final RawEntries.Raw raw : RawEntries.find(end.isPresent() ? reply.substring(0, end.getAsInt()) : reply)) {
             try {
-                final String text = mapper.readValue("\"" + matcher.group(3) + "\"", String.class);
-                entries.add(new Entry(matcher.group(2), ControlCharacters.stripSpacing(text)));
+                final String text = mapper.readValue("\"" + raw.body() + "\"", String.class);
+                entries.add(new Entry(raw.id(), ControlCharacters.stripSpacing(text)));
             } catch (JsonProcessingException ignored) {
-                log.debug("Skipped a batch entry whose text is not a JSON string id={}", matcher.group(2));
+                log.debug("Skipped a batch entry whose text is not a JSON string id={}", raw.id());
             }
         }
         return entries;

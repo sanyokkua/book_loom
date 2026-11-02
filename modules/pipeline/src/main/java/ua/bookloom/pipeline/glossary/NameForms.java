@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -47,7 +48,6 @@ public final class NameForms {
     /** The fewest letters left of a form once an ending is taken off. */
     static final int MIN_STEM_LETTERS = 2;
 
-    private static final Pattern ROW = Pattern.compile("(\\S+)\\|(m|f|any)(>voc)?:\\s*(.+)");
     static final Pattern SPACES = Pattern.compile("\\s+");
     /** The most forms a target of several words is given, all words' forms combined. */
     static final int MAX_FORMS = 64;
@@ -296,13 +296,15 @@ public final class NameForms {
         final List<Row> vocatives = new ArrayList<>();
         final List<String> written = NameParadigms.of(language);
         for (int order = 0; order < written.size(); order++) {
-            final Matcher row = ROW.matcher(written.get(order).strip());
-            if (!row.matches()) {
+            final Optional<ParadigmRow> row =
+                    ParadigmRow.parse(written.get(order).strip());
+            if (row.isEmpty()) {
                 log.warn("Name paradigm row of {} is not 'ending|gender: endings' and is ignored", language);
                 continue;
             }
-            final Row read = rowOf(row.group(1), row.group(2), row.group(4), order);
-            (row.group(3) == null ? rows : vocatives).add(read);
+            final ParadigmRow parsed = row.get();
+            final Row read = rowOf(parsed.ending(), parsed.gender(), parsed.endings(), order);
+            (parsed.vocative() ? vocatives : rows).add(read);
         }
         final Table table = new Table(
                 List.copyOf(rows), List.copyOf(vocatives), alternationsOf(language), nonConsonants(language, rows));

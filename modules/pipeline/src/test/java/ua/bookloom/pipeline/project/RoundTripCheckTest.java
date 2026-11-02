@@ -197,7 +197,16 @@ class RoundTripCheckTest {
     }
 
     private static void dropImage(final Path epub) {
-        rewrite(epub, name -> !name.equals(IMAGE), text -> text.replaceAll("<item [^>]*id=\"img1\"[^>]*/>", ""));
+        rewrite(epub, name -> !name.equals(IMAGE), RoundTripCheckTest::withoutImageItem);
+    }
+
+    // The manifest item whose id is img1: from its "<item " up to the first ">" after the id, which must end "/>".
+    private static String withoutImageItem(final String text) {
+        final int id = text.indexOf("id=\"img1\"");
+        final int start = id < 0 ? -1 : text.lastIndexOf("<item ", id);
+        final int end = id < 0 ? -1 : text.indexOf('>', id);
+        final boolean whole = start >= 0 && end > 0 && text.charAt(end - 1) == '/' && text.indexOf('>', start) == end;
+        return whole ? text.substring(0, start) + text.substring(end + 1) : text;
     }
 
     private static void dropSecondParagraph(final Path epub) {

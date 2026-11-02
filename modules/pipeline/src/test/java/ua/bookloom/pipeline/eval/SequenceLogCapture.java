@@ -24,8 +24,8 @@ final class SequenceLogCapture implements AutoCloseable {
 
     private static final Pattern FALLBACK =
             Pattern.compile("Batch item falls back to its own draft segmentId=(\\S+) status=(\\S+) problems=(.*)");
-    private static final Pattern FIRST_EVALUATION =
-            Pattern.compile("Evaluated segment=(\\S+) round=0 .*hardGatesPass=false.*");
+    private static final Pattern FIRST_EVALUATION = Pattern.compile("Evaluated segment=(\\S+) round=0 ");
+    private static final String GATES_FAILED = "hardGatesPass=false";
     private static final Pattern FIRST_REPAIR =
             Pattern.compile("Round choice segment=(\\S+) round=1 kind=directed-fix findingKinds=\\[(.*)]");
     private static final Pattern COMMA = Pattern.compile(",\\s*");
@@ -58,8 +58,9 @@ final class SequenceLogCapture implements AutoCloseable {
     Set<String> hardGateFailuresRound0(final Set<String> segmentIds) {
         final Set<String> failed = new LinkedHashSet<>();
         for (final ILoggingEvent event : snapshot()) {
-            final Matcher match = FIRST_EVALUATION.matcher(event.getFormattedMessage());
-            if (match.matches() && segmentIds.contains(match.group(1))) {
+            final String message = event.getFormattedMessage();
+            final Matcher match = FIRST_EVALUATION.matcher(message);
+            if (match.lookingAt() && message.contains(GATES_FAILED) && segmentIds.contains(match.group(1))) {
                 failed.add(match.group(1));
             }
         }

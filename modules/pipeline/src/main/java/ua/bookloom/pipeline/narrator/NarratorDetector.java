@@ -50,7 +50,6 @@ public final class NarratorDetector {
 
     private static final int MIN_WORDS = 2;
     private static final Pattern TOKEN = Pattern.compile("⟦[^⟧]*⟧");
-    private static final Pattern SENTENCE_END = Pattern.compile("(?<![.!?…])[.!?…]++\\s++|\\R++");
     private static final Pattern WORD = Pattern.compile("\\p{L}+");
     private static final char STRAIGHT_QUOTE = '"';
     private static final char SINGLE_OPEN = '‘';
@@ -208,9 +207,7 @@ public final class NarratorDetector {
         int sentences = 0;
         int firstPerson = 0;
         for (final String paragraph : paragraphs) {
-            for (final String sentence : SENTENCE_END
-                    .splitAsStream(narration(paragraph, languageTag))
-                    .toList()) {
+            for (final String sentence : SentenceBreaks.split(narration(paragraph, languageTag))) {
                 final List<String> words = words(sentence);
                 if (words.size() >= MIN_WORDS) {
                     sentences++;

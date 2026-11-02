@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.checks;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -65,5 +67,29 @@ class ResidueCheckTest {
         assertThat(TextChecks.run("He left.", "Він пішов.}]}", "en", "uk", List.of(), List.of()))
                 .extracting(CheckFinding::kind)
                 .contains(FindingKind.PROTOCOL_LEAK);
+    }
+
+    @Test
+    void find_labelBeforeAQuotedBraceOrBeforeAFinalLineEnd_isBlocking() {
+        assertThat(ResidueCheck.find("He left {", "Він пішов. Target:  \"{", "uk"))
+                .isPresent();
+        assertThat(ResidueCheck.find("He left.", "Він пішов. Target:\u2028", "uk"))
+                .isPresent();
+        assertThat(ResidueCheck.find("He left.", "Він пішов. Target: далі", "uk"))
+                .isEmpty();
+    }
+
+    @Test
+    void find_sourceWithTheSameLabel_isNotASurplus() {
+        assertThat(ResidueCheck.find("Output: x", "Вивід. Output:", "uk")).isEmpty();
+    }
+
+    @Test
+    void find_longBlankRunsAfterLabels_isLinear() {
+        final String target = "x " + ("Target:" + " ".repeat(2_000) + "x ").repeat(200);
+
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(5),
+                () -> assertThat(ResidueCheck.find("a", target, "uk")).isEmpty());
     }
 }

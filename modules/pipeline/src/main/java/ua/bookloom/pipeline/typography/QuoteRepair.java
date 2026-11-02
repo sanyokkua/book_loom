@@ -31,7 +31,6 @@ import ua.bookloom.pipeline.checks.QuotePair;
 public final class QuoteRepair {
 
     private static final Pattern MID_WORD_TOKEN = Pattern.compile("\\p{L}⟦g\\d+⟧\\p{L}");
-    private static final Pattern DASH_CLAUSE = Pattern.compile("(,)?+(?<![\\s\\u00A0])[\\s\\u00A0]++[—–][\\s\\u00A0]");
     private static final String SOURCE_OPENERS = "\"«„“‹";
     private static final String ANY_MARK = "\"«»„“”‹›";
     private static final char STRAIGHT = '"';
@@ -130,11 +129,11 @@ public final class QuoteRepair {
         if (opener < 0) {
             return false;
         }
-        final Matcher dash = DASH_CLAUSE.matcher(source);
-        if (!dash.find(opener)) {
+        final int dash = DashClause.find(source, opener);
+        if (dash < 0) {
             return false;
         }
-        return source.substring(opener + 1, dash.start()).chars().noneMatch(c -> ANY_MARK.indexOf(c) >= 0);
+        return source.substring(opener + 1, dash).chars().noneMatch(c -> ANY_MARK.indexOf(c) >= 0);
     }
 
     private static String collapseDoubled(final String text, final List<QuotePair> pairs) {
@@ -282,9 +281,9 @@ public final class QuoteRepair {
 
         private int closingPoint(final int openedAt) {
             final String rest = out.substring(openedAt + 1);
-            final Matcher dash = DASH_CLAUSE.matcher(rest);
-            if (!dashInsideSpeech && dash.find() && noMarkIn(rest.substring(0, dash.start()))) {
-                return openedAt + 1 + dash.start();
+            final int dash = DashClause.find(rest, 0);
+            if (!dashInsideSpeech && dash >= 0 && noMarkIn(rest.substring(0, dash))) {
+                return openedAt + 1 + dash;
             }
             int end = out.length();
             while (end > 0 && endsWithSpaceOrToken(end)) {
