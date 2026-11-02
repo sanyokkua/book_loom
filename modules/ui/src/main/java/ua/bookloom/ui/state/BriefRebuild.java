@@ -20,28 +20,58 @@ import ua.bookloom.api.project.UnitPolicy;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class BriefRebuild {
 
-    static BookBrief of(
-            final BookBrief brief,
-            final @Nullable Register register,
-            final @Nullable NamePolicy names,
-            final @Nullable ForeignPassagePolicy foreign,
-            final @Nullable FootnotePolicy footnotes,
-            final @Nullable UnitPolicy units,
-            final @Nullable Integer balance,
-            final @Nullable AlsoTranslate alsoTranslate) {
+    /** The choices a rebuild replaces; a {@code null} one is kept as the brief holds it. */
+    private record Choices(
+            @Nullable Register register,
+            @Nullable NamePolicy names,
+            @Nullable ForeignPassagePolicy foreign,
+            @Nullable FootnotePolicy footnotes,
+            @Nullable UnitPolicy units,
+            @Nullable Integer balance,
+            @Nullable AlsoTranslate alsoTranslate) {}
+
+    static BookBrief of(final BookBrief brief, final Register register) {
+        return rebuilt(brief, new Choices(register, null, null, null, null, null, null));
+    }
+
+    static BookBrief of(final BookBrief brief, final NamePolicy names) {
+        return rebuilt(brief, new Choices(null, names, null, null, null, null, null));
+    }
+
+    static BookBrief of(final BookBrief brief, final ForeignPassagePolicy foreign) {
+        return rebuilt(brief, new Choices(null, null, foreign, null, null, null, null));
+    }
+
+    static BookBrief of(final BookBrief brief, final FootnotePolicy footnotes) {
+        return rebuilt(brief, new Choices(null, null, null, footnotes, null, null, null));
+    }
+
+    static BookBrief of(final BookBrief brief, final UnitPolicy units) {
+        return rebuilt(brief, new Choices(null, null, null, null, units, null, null));
+    }
+
+    static BookBrief of(final BookBrief brief, final AlsoTranslate alsoTranslate) {
+        return rebuilt(brief, new Choices(null, null, null, null, null, null, alsoTranslate));
+    }
+
+    static BookBrief ofBalance(final BookBrief brief, final int balance) {
+        return rebuilt(brief, new Choices(null, null, null, null, null, balance, null));
+    }
+
+    private static BookBrief rebuilt(final BookBrief brief, final Choices choices) {
         return new BookBrief(
                         brief.sourceLanguage(),
                         brief.targetLanguage(),
                         brief.genre(),
-                        register == null ? brief.register() : register,
+                        choices.register() == null ? brief.register() : choices.register(),
                         brief.voiceEra(),
                         brief.audience(),
-                        names == null ? brief.names() : names,
-                        foreign == null ? brief.foreignPassages() : foreign,
-                        footnotes == null ? brief.footnotes() : footnotes,
-                        units == null ? brief.units() : units,
-                        balance == null ? brief.balance() : balance,
-                        alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
+                        choices.names() == null ? brief.names() : choices.names(),
+                        choices.foreign() == null ? brief.foreignPassages() : choices.foreign(),
+                        choices.footnotes() == null ? brief.footnotes() : choices.footnotes(),
+                        choices.units() == null ? brief.units() : choices.units(),
+                        choices.balance() == null ? brief.balance() : choices.balance(),
+                        choices.alsoTranslate() == null ? brief.alsoTranslate() : choices.alsoTranslate(),
                         brief.dial(),
                         brief.narrator())
                 .withKeysOf(brief);

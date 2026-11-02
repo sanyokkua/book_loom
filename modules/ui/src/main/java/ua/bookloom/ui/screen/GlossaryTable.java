@@ -109,9 +109,8 @@ final class GlossaryTable {
                 column(messages, GENDER, () -> genderCell(messages, model, frozen)),
                 TermTableCard.column(
                         messages,
-                        MessageKey.NAMES_STYLE_COLUMN_REMOVE,
-                        false,
-                        MessageKey.NAMES_STYLE_COLUMN_REMOVE_TIP,
+                        new TermTableCard.Head(
+                                MessageKey.NAMES_STYLE_COLUMN_REMOVE, false, MessageKey.NAMES_STYLE_COLUMN_REMOVE_TIP),
                         REMOVE_WIDTH,
                         REMOVE_MIN,
                         null,
@@ -125,9 +124,7 @@ final class GlossaryTable {
             final Supplier<TableCell<GlossaryEntry, GlossaryEntry>> cell) {
         return TermTableCard.column(
                 messages,
-                heading.header(),
-                true,
-                heading.tip(),
+                new TermTableCard.Head(heading.header(), true, heading.tip()),
                 Math.rint(heading.minWidth() * START_SHARE),
                 heading.minWidth(),
                 heading.order(),
@@ -165,10 +162,11 @@ final class GlossaryTable {
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
                 TermType.values(),
-                type -> GlossaryLabels.type(messages, type),
-                GlossaryEntry::type,
-                entry -> typeLabel(messages, entry),
-                model::setType,
+                new GlossaryChoiceCell.Choice<>(
+                        type -> GlossaryLabels.type(messages, type),
+                        GlossaryEntry::type,
+                        entry -> typeLabel(messages, entry),
+                        model::setType),
                 frozen);
         cell.control().getStyleClass().add(WRAPPING_CHOICE);
         return cell;
@@ -187,10 +185,11 @@ final class GlossaryTable {
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_STATE_TIP,
                 CHOSEN_STATES,
-                state -> GlossaryLabels.state(messages, state),
-                GlossaryEntry::targetState,
-                entry -> hasTarget(entry) ? GlossaryLabels.state(messages, entry.targetState()) : "",
-                model::setState,
+                new GlossaryChoiceCell.Choice<>(
+                        state -> GlossaryLabels.state(messages, state),
+                        GlossaryEntry::targetState,
+                        entry -> hasTarget(entry) ? GlossaryLabels.state(messages, entry.targetState()) : "",
+                        model::setState),
                 frozen);
     }
 
@@ -200,10 +199,11 @@ final class GlossaryTable {
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
                 Gender.values(),
-                gender -> GlossaryLabels.gender(messages, gender),
-                GlossaryEntry::gender,
-                entry -> genderLabel(messages, entry),
-                model::setGender,
+                new GlossaryChoiceCell.Choice<>(
+                        gender -> GlossaryLabels.gender(messages, gender),
+                        GlossaryEntry::gender,
+                        entry -> genderLabel(messages, entry),
+                        model::setGender),
                 frozen);
         cell.control().getStyleClass().add(WRAPPING_CHOICE);
         return cell;

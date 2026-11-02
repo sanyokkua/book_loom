@@ -61,11 +61,8 @@ class NamesStyleConfirmGendersTest extends FxTestBase {
     private void useViewModelIn(final Locale locale) {
         final Injector injector = UiTestInjector.create(locale);
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                injector.getInstance(SettingsViewModel.class),
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), injector.getInstance(SettingsViewModel.class)),
                 new DirectExecutor(),
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),

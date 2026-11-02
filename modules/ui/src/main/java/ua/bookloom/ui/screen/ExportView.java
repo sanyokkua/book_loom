@@ -26,8 +26,6 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
-import ua.bookloom.ui.state.FileChooserPort;
-import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.Tone;
@@ -71,13 +69,12 @@ final class ExportView {
     ExportView(
             final ExportViewModel viewModel,
             final BookTitleViewModel titleModel,
-            final CurrentProject project,
-            final Messages messages,
-            final Navigator navigator,
-            final FileChooserPort chooser,
-            final FileRevealer revealer,
+            final ScreenContext context,
+            final FilePicker files,
             final TranslatingViewModel translating,
             final HiddenWork hidden) {
+        final Messages messages = Objects.requireNonNull(context, "context").messages();
+        final Navigator navigator = context.navigator();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.titleModel = Objects.requireNonNull(titleModel, "titleModel");
         this.onTitleEdited = (observed, was, now) -> {
@@ -85,13 +82,14 @@ final class ExportView {
             viewModel.nameSuggestion.afterTitleEdit();
         };
         this.weakTitleEdited = new WeakChangeListener<>(onTitleEdited);
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.project = context.project();
+        this.messages = messages;
+        this.navigator = navigator;
         this.titles = new ExportTitleCard(titleModel, messages);
-        this.destination = new ExportDestinationCard(viewModel, messages, chooser);
+        this.destination = new ExportDestinationCard(
+                viewModel, messages, Objects.requireNonNull(files, "files").chooser());
         this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
-        this.result = new ExportResult(messages, revealer, navigator);
+        this.result = new ExportResult(messages, files.revealer(), navigator);
         this.hidden = Objects.requireNonNull(hidden, "hidden");
         this.banners = new ExportBanners(viewModel, translating, hidden, messages);
         viewModel.figures().addListener(new WeakChangeListener<>(onFigures));

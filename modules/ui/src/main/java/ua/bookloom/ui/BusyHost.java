@@ -91,9 +91,8 @@ public final class BusyHost {
      * @param activities where the blocking work is read, hidden, stopped and timed
      * @param messages the catalogue every word of the dialogs comes from
      * @param modalHost the dialog layer above this one, whose card takes the keyboard while it is shown
-     * @param defaults the view a new dialog opens in
-     * @param figures how each dialog gets its own reader of its figures
-     * @param work where this layer says whether a dialog is showing
+     * @param kit the view a new dialog opens in, how each dialog gets its own reader of its figures, and where this
+     *     layer says whether a dialog is showing
      * @param confirm the question asked before the export is cancelled, shown on the layer above
      * @param feedback told which dialog is shown, so a message raised meanwhile becomes its footer line
      * @param writeEarly the export's "Write the file now", which asks first; got only when pressed, so the export's
@@ -104,17 +103,15 @@ public final class BusyHost {
             final ActivityTracker activities,
             final Messages messages,
             final ModalHost modalHost,
-            final ProgressDialogDefaults defaults,
-            final ProgressFigures.Factory figures,
-            final WorkVisibility work,
+            final ProgressKit kit,
             final ConfirmPrompt confirm,
             final DialogFeedback feedback,
             final Provider<ExportWriteNow> writeEarly) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.defaults = Objects.requireNonNull(defaults, "defaults");
-        this.figures = Objects.requireNonNull(figures, "figures");
-        this.work = Objects.requireNonNull(work, "work");
+        this.defaults = Objects.requireNonNull(kit, "kit").defaults();
+        this.figures = kit.figures();
+        this.work = kit.work();
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.feedback = Objects.requireNonNull(feedback, "feedback");
         this.writeEarly = Objects.requireNonNull(writeEarly, "writeEarly");

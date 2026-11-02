@@ -42,22 +42,32 @@ final class AppearanceLanguageRow {
     private final ChangeListener<LanguageChoice> onStored = (observed, was, now) -> show(now);
     private final ChangeListener<LanguageChoice> onPicked = (observed, was, now) -> picked(now);
 
+    /**
+     * The controls the row drives.
+     *
+     * @param chooser the language box
+     * @param restart the Restart now button
+     * @param restartError where a failed restart is said
+     * @param saveError where a failed save is said
+     */
+    record Controls(ComboBox<LanguageChoice> chooser, Button restart, Label restartError, Label saveError) {}
+
     AppearanceLanguageRow(
             final AppLanguage language,
             final ExitGuard exitGuard,
             final Messages messages,
             final SystemLanguage system,
-            final ComboBox<LanguageChoice> chooser,
-            final Button restart,
-            final Label restartError,
-            final Label saveError,
+            final Controls controls,
             final ObservableBooleanValue themeSaveFailed) {
+        final ComboBox<LanguageChoice> chooser = controls.chooser();
+        final Button restart = controls.restart();
+        final Label saveError = controls.saveError();
         this.language = Objects.requireNonNull(language, "language");
         this.exitGuard = Objects.requireNonNull(exitGuard, "exitGuard");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.system = Objects.requireNonNull(system, "system");
         this.chooser = Objects.requireNonNull(chooser, "chooser");
-        this.restartError = Objects.requireNonNull(restartError, "restartError");
+        this.restartError = Objects.requireNonNull(controls.restartError(), "restartError");
         buildChooser();
         chooser.getProperties().put(OWNER_KEY, this);
         Visibility.bind(restart, language.restartNeededProperty());

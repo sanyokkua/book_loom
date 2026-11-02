@@ -105,7 +105,7 @@ public final class ChangeResults {
             final List<Item> items,
             final LiveCalls calls,
             final List<ChangeRow> untargeted) {
-        this(operation, stopped, items, calls, untargeted, StepLog.EMPTY, Duration.ZERO, false);
+        this(operation, stopped, items, calls, untargeted, RunEnd.NONE);
     }
 
     /**
@@ -116,9 +116,7 @@ public final class ChangeResults {
      * @param items the rows with their reversals, in the order the dialog lists them
      * @param calls the model calls the operation made
      * @param untargeted the names still without a target, as rows to give one in; never null
-     * @param steps the steps the operation announced, for the Steps tab
-     * @param elapsed how long it ran by the activity tracker's clock, pauses included
-     * @param endedHidden whether its dialog was in the background when it ended, so its results open only on request
+     * @param ending what the activity had shown when it ended: its steps, its time and where its dialog was
      */
     public ChangeResults(
             final ChangeOperation operation,
@@ -126,12 +124,10 @@ public final class ChangeResults {
             final List<Item> items,
             final LiveCalls calls,
             final List<ChangeRow> untargeted,
-            final StepLog steps,
-            final Duration elapsed,
-            final boolean endedHidden) {
-        this.steps = Objects.requireNonNull(steps, "steps");
-        this.elapsed = Objects.requireNonNull(elapsed, "elapsed");
-        this.endedHidden = endedHidden;
+            final RunEnd ending) {
+        this.steps = Objects.requireNonNull(ending, "ending").steps();
+        this.elapsed = ending.elapsed();
+        this.endedHidden = ending.hidden();
         this.untargeted = List.copyOf(Objects.requireNonNull(untargeted, "untargeted"));
         this.operation = Objects.requireNonNull(operation, "operation");
         this.stopped = stopped;

@@ -69,11 +69,8 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
 
     private NamesStyleViewModel viewModel(final ActivityTracker activities) {
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, namesPass),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 messages,
                 activities,

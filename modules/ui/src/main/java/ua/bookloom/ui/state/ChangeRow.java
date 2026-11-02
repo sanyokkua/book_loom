@@ -40,6 +40,11 @@ public record ChangeRow(
         this(id, kind, term, before, after, reason, origin, section, null);
     }
 
+    /** This row with a target to type over. */
+    public ChangeRow withEditable(final EditableTarget target) {
+        return new ChangeRow(id, kind, term, before, after, reason, origin, section, target);
+    }
+
     /** Rejects missing parts. */
     public ChangeRow {
         Objects.requireNonNull(kind, "kind");

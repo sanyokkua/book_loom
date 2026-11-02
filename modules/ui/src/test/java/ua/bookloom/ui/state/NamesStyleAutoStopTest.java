@@ -65,11 +65,8 @@ class NamesStyleAutoStopTest extends FxTestBase {
 
     private NamesStyleViewModel viewModel(final java.util.concurrent.ExecutorService executor) {
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, namesPass),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 executor,
                 messages,
                 tracker,
@@ -151,11 +148,8 @@ class NamesStyleAutoStopTest extends FxTestBase {
 
     private NamesStyleViewModel viewModelWithHeldBackground() {
         final NamesStyleViewModel model = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, namesPass),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new HeldExecutor(),
                 messages,
                 tracker,

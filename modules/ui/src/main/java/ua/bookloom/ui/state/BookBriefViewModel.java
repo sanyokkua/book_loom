@@ -244,41 +244,31 @@ public final class BookBriefViewModel {
      */
     public void setRegister(final Register register) {
         Objects.requireNonNull(register, "register");
-        change(
-                "register",
-                register.name(),
-                BriefField.REGISTER,
-                brief -> BriefRebuild.of(brief, register, null, null, null, null, null, null));
+        change("register", register.name(), BriefField.REGISTER, brief -> BriefRebuild.of(brief, register));
     }
 
     /** Sets how character and place names are rendered. */
     public void setNames(final NamePolicy names) {
         Objects.requireNonNull(names, "names");
-        change("name policy", names.name(), brief -> BriefRebuild.of(brief, null, names, null, null, null, null, null));
+        change("name policy", names.name(), brief -> BriefRebuild.of(brief, names));
     }
 
     /** Sets how foreign-language passages are handled. */
     public void setForeignPassages(final ForeignPassagePolicy foreign) {
         Objects.requireNonNull(foreign, "foreign");
-        change(
-                "foreign-passage policy",
-                foreign.name(),
-                brief -> BriefRebuild.of(brief, null, null, foreign, null, null, null, null));
+        change("foreign-passage policy", foreign.name(), brief -> BriefRebuild.of(brief, foreign));
     }
 
     /** Sets how footnotes are handled. */
     public void setFootnotes(final FootnotePolicy footnotes) {
         Objects.requireNonNull(footnotes, "footnotes");
-        change(
-                "footnote policy",
-                footnotes.name(),
-                brief -> BriefRebuild.of(brief, null, null, null, footnotes, null, null, null));
+        change("footnote policy", footnotes.name(), brief -> BriefRebuild.of(brief, footnotes));
     }
 
     /** Sets how units of measurement are handled. */
     public void setUnits(final UnitPolicy units) {
         Objects.requireNonNull(units, "units");
-        change("unit policy", units.name(), brief -> BriefRebuild.of(brief, null, null, null, null, units, null, null));
+        change("unit policy", units.name(), brief -> BriefRebuild.of(brief, units));
     }
 
     /**
@@ -288,10 +278,7 @@ public final class BookBriefViewModel {
      */
     public void setBalance(final int balance) {
         final int clamped = Math.clamp(balance, MIN_BALANCE, MAX_BALANCE);
-        change(
-                "balance",
-                Integer.toString(clamped),
-                brief -> BriefRebuild.of(brief, null, null, null, null, null, clamped, null));
+        change("balance", Integer.toString(clamped), brief -> BriefRebuild.ofBalance(brief, clamped));
     }
 
     /**
@@ -301,10 +288,7 @@ public final class BookBriefViewModel {
      */
     public void setAlsoTranslate(final AlsoTranslate alsoTranslate) {
         Objects.requireNonNull(alsoTranslate, "alsoTranslate");
-        change(
-                "also translate",
-                alsoTranslate.toString(),
-                brief -> BriefRebuild.of(brief, null, null, null, null, null, null, alsoTranslate));
+        change("also translate", alsoTranslate.toString(), brief -> BriefRebuild.of(brief, alsoTranslate));
     }
 
     /**

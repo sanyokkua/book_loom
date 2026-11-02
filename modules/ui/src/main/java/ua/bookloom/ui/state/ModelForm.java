@@ -51,9 +51,8 @@ public final class ModelForm extends ModelFormProperties {
     /**
      * Creates the form and follows the roster: the first time models are listed, one is chosen.
      *
-     * @param store where the per-model settings are kept
-     * @param capabilities what the providers say about a model
-     * @param structured whether a model answered in the structured form this session
+     * @param sources the per-model settings, what the providers say about a model, and whether it answered in the
+     *     structured form this session
      * @param roster the models on offer
      * @param viewModel names the current model, which is chosen first
      * @param messages the catalogue the unsaved question's model name is worded from
@@ -62,17 +61,16 @@ public final class ModelForm extends ModelFormProperties {
      */
     @Inject
     public ModelForm(
-            final ModelSettingsRepository store,
-            final ModelCapabilities capabilities,
-            final StructuredAnswers structured,
+            final ModelSources sources,
             final ModelRoster roster,
             final SettingsViewModel viewModel,
             final Messages messages,
             @BackgroundExecutor final ExecutorService background,
             @IoExecutor final ExecutorService io) {
-        this.store = Objects.requireNonNull(store, "store");
-        this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
-        this.structured = Objects.requireNonNull(structured, "structured");
+        this.store = Objects.requireNonNull(sources, "sources").store();
+        this.capabilities = sources.capabilities();
+        final StructuredAnswers structured = sources.structured();
+        this.structured = structured;
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.background = Objects.requireNonNull(background, "background");

@@ -125,43 +125,35 @@ public final class SettingsController {
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the state this screen shows
-     * @param form what the open provider's form holds, saves and deletes
-     * @param engine the engine found at the open provider's address, and the person's corrections of it
+     * @param parts what the open provider's form holds, saves and deletes, the engine found at its address, and the
+     *     card that shows what a test sent and got back
      * @param messages the catalogue the built rows are worded from
      * @param confirm the question asked before a provider is deleted
-     * @param testDialog the card that shows what a test sent and got back
-     * @param providerSwitch what Use this one does
      * @param activities the model work under way, which keeps the provider in use from being deleted
-     * @param guard asks before a move would drop typing
-     * @param tabEntries what entering a tab reads again
-     * @param inUse whether the open provider is the one the translation run uses
+     * @param guards what Use this one does, what asks before a move would drop typing, what entering a tab reads
+     *     again, and whether the open provider is the one the translation run uses
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public SettingsController(
             final SettingsViewModel viewModel,
-            final ProviderForm form,
-            final ProviderEngine engine,
+            final ProviderParts parts,
             final Messages messages,
             final ConfirmPrompt confirm,
-            final ProviderTestDialog testDialog,
-            final ProviderSwitch providerSwitch,
             final ActivityTracker activities,
-            final SettingsTabGuard guard,
-            final SettingsTabEntries tabEntries,
-            final ProviderInUse inUse) {
+            final ProviderGuards guards) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.form = Objects.requireNonNull(form, "form");
-        this.engine = Objects.requireNonNull(engine, "engine");
+        this.form = Objects.requireNonNull(parts, "parts").form();
+        this.engine = parts.engine();
         this.messages = Objects.requireNonNull(messages, "messages");
         this.confirm = Objects.requireNonNull(confirm, "confirm");
-        this.testDialog = Objects.requireNonNull(testDialog, "testDialog");
-        this.providerSwitch = Objects.requireNonNull(providerSwitch, "providerSwitch");
+        this.testDialog = parts.testDialog();
+        this.providerSwitch = Objects.requireNonNull(guards, "guards").providerSwitch();
         this.activities = Objects.requireNonNull(activities, "activities");
-        this.guard = Objects.requireNonNull(guard, "guard");
-        this.tabEntries = Objects.requireNonNull(tabEntries, "tabEntries");
-        this.inUse = Objects.requireNonNull(inUse, "inUse");
+        this.guard = guards.guard();
+        this.tabEntries = guards.tabEntries();
+        this.inUse = guards.inUse();
     }
 
     @FXML

@@ -23,6 +23,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.notify.Reporting;
 
 /**
  * The About dialog's diagnostic actions: the log folder opened in the file manager, its path copied, and a bundle
@@ -56,14 +57,11 @@ class DiagnosticActionsTest extends FxTestBase {
         actions = new DiagnosticActions(
                 DiagnosticLogs.of(logs, true),
                 session,
-                revealer,
-                chooser,
-                toasts,
-                errors,
+                new FileTools(revealer, chooser, clipboard::add),
+                new Reporting(toasts, errors),
                 "1.2.3",
                 new DirectExecutor(),
-                clock,
-                clipboard::add);
+                clock);
     }
 
     @Test

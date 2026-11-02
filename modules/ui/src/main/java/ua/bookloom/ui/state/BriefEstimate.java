@@ -51,9 +51,7 @@ public final class BriefEstimate {
      * @param current the open project, whose brief holds the dial
      * @param settings the chosen provider and model
      * @param project the open project's segment count
-     * @param stored where the measured speed of a model is kept
-     * @param speeds told when a speed was stored, so the estimate is worked out again
-     * @param profiles what each quality does, which gives the chunks and the review passes the plan makes
+     * @param sources the stored speed of a model, what tells the estimate a speed was stored, and what each quality does
      * @param background where the stored speed is read, never the FX thread
      */
     @Inject
@@ -61,11 +59,9 @@ public final class BriefEstimate {
             final CurrentProject current,
             final SettingsViewModel settings,
             final BriefProject project,
-            final ModelSettingsRepository stored,
-            final ModelSpeeds speeds,
-            final DialProfiles profiles,
+            final EstimateSources sources,
             final @BackgroundExecutor ExecutorService background) {
-        this(current, settings, project, stored, speeds, profiles, background, Platform::runLater);
+        this(current, settings, project, sources, background, Platform::runLater);
     }
 
     /**
@@ -74,9 +70,7 @@ public final class BriefEstimate {
      * @param current the open project, whose brief holds the dial
      * @param settings the chosen provider and model
      * @param project the open project's segment count
-     * @param stored where the measured speed of a model is kept
-     * @param speeds told when a speed was stored, so the estimate is worked out again
-     * @param profiles what each quality does
+     * @param sources the stored speed of a model, what tells the estimate a speed was stored, and what each quality does
      * @param background where the stored speed is read
      * @param fx runs a task on the FX Application Thread
      */
@@ -84,19 +78,17 @@ public final class BriefEstimate {
             final CurrentProject current,
             final SettingsViewModel settings,
             final BriefProject project,
-            final ModelSettingsRepository stored,
-            final ModelSpeeds speeds,
-            final DialProfiles profiles,
+            final EstimateSources sources,
             final Executor background,
             final Executor fx) {
-        Objects.requireNonNull(speeds, "speeds");
-        this.profiles = Objects.requireNonNull(profiles, "profiles");
+        final ModelSpeeds speeds = Objects.requireNonNull(sources, "sources").speeds();
+        this.profiles = sources.profiles();
         this.background = Objects.requireNonNull(background, "background");
         this.fx = Objects.requireNonNull(fx, "fx");
         this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.project = Objects.requireNonNull(project, "project");
-        this.stored = Objects.requireNonNull(stored, "stored");
+        this.stored = sources.stored();
         current.brief().addListener((observed, was, now) -> recompute());
         settings.model().addListener((observed, was, now) -> recompute());
         settings.selectedProviderId().addListener((observed, was, now) -> recompute());

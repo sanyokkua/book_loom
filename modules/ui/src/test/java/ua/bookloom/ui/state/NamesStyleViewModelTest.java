@@ -60,11 +60,8 @@ class NamesStyleViewModelTest extends FxTestBase {
         final Messages messages = injector.getInstance(Messages.class);
         final AtomicInteger next = new AtomicInteger();
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                models,
-                settings,
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(models, settings),
                 new DirectExecutor(),
                 messages,
                 injector.getInstance(ActivityTracker.class),

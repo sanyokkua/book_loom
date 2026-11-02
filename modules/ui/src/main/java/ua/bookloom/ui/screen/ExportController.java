@@ -10,15 +10,12 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
-import ua.bookloom.ui.state.FileChooserPort;
-import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -53,11 +50,9 @@ public final class ExportController {
      *
      * @param viewModel the destination, choices and export this screen presents
      * @param titles the translated title and author the Title and author card edits
-     * @param project the holder of the open book
-     * @param messages the catalogue the built parts are worded from
-     * @param navigator where Back and the route from the no-book state lead
-     * @param chooser the save dialog behind Browse
-     * @param revealer what Open folder and Open book ask of the system
+     * @param context the holder of the open book, the catalogue the built parts are worded from, and where Back and
+     *     the route from the no-book state lead
+     * @param files the save dialog behind Browse, and what Open folder and Open book ask of the system
      * @param translating the run, which the banner's Pause pauses
      * @param hidden the work in the background, which makes the screen read-only
      */
@@ -67,18 +62,14 @@ public final class ExportController {
     public ExportController(
             final ExportViewModel viewModel,
             final BookTitleViewModel titles,
-            final CurrentProject project,
-            final Messages messages,
-            final Navigator navigator,
-            final FileChooserPort chooser,
-            final FileRevealer revealer,
+            final ScreenContext context,
+            final FilePicker files,
             final TranslatingViewModel translating,
             final HiddenWork hidden) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.view =
-                new ExportView(viewModel, titles, project, messages, navigator, chooser, revealer, translating, hidden);
+        this.project = Objects.requireNonNull(context, "context").project();
+        this.messages = context.messages();
+        this.view = new ExportView(viewModel, titles, context, files, translating, hidden);
     }
 
     @FXML

@@ -68,26 +68,22 @@ final class NamesStyleView {
     private final FileChooserPort csvFiles;
 
     NamesStyleView(
-            final Messages messages,
-            final Navigator navigator,
-            final TranslatingViewModel translating,
-            final RunStateSource runs,
+            final ScreenContext context,
+            final RunView run,
             final NamesStyleViewModel glossary,
             final BookBriefViewModel brief,
-            final ModalHost modalHost,
-            final NoTargetDialog noTargetDialog,
-            final NarratorDialog narratorDialog,
+            final NamesDialogs dialogs,
             final HiddenWork hiddenWork,
             final FileChooserPort csvFiles) {
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.translating = Objects.requireNonNull(translating, "translating");
-        this.runs = Objects.requireNonNull(runs, "runs");
+        this.messages = Objects.requireNonNull(context, "context").messages();
+        this.navigator = context.navigator();
+        this.translating = Objects.requireNonNull(run, "run").translating();
+        this.runs = run.runs();
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.brief = Objects.requireNonNull(brief, "brief");
-        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
-        this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
-        this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
+        this.modalHost = Objects.requireNonNull(dialogs, "dialogs").modalHost();
+        this.noTargetDialog = dialogs.noTargetDialog();
+        this.narratorDialog = dialogs.narratorDialog();
         this.hiddenWork = Objects.requireNonNull(hiddenWork, "hiddenWork");
         this.csvFiles = Objects.requireNonNull(csvFiles, "csvFiles");
     }

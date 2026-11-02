@@ -34,6 +34,8 @@ import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.dialog.RecordingContinuePrompt;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.notify.Reporting;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the translating view model tests share, on top of the runner fixtures: a real {@link TranslationRunner}
@@ -111,22 +113,22 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     private static SettingsViewModel newSettings(
             final ActivityTracker activities, final ScriptedProviderVerifier verifier) {
         return new SettingsViewModel(
-                new FakeProviderConfigs(),
-                verifier,
-                new ModelListing(
-                        ScriptedModelCatalog.idle(),
-                        new RecordingToasts(),
-                        new RecordingErrorPresenter(),
-                        new DirectExecutor(),
-                        activities,
-                        EnglishMessages.create()),
-                new RecordingErrorPresenter(),
+                new ProviderStore(new FakeProviderConfigs(), new MemorySettings()),
+                new ProviderChecks(
+                        verifier,
+                        new ModelListing(
+                                ScriptedModelCatalog.idle(),
+                                new RecordingToasts(),
+                                new RecordingErrorPresenter(),
+                                new DirectExecutor(),
+                                activities,
+                                EnglishMessages.create())),
+                new Voice(EnglishMessages.create(), new RecordingErrorPresenter()),
                 new DirectExecutor(),
                 activities,
-                new MemorySettings(),
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers(),
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
                 java.time.Clock.systemUTC());
     }
 
@@ -149,27 +151,20 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected void buildViewModel() {
         final RunStarter starter = new RunStarter(
                 current,
-                models,
-                engine,
+                new RunPorts(models, engine, ScriptedProviderVerifier.idle(), capabilities()),
                 () -> reviewMode,
                 runner,
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor,
-                ScriptedProviderVerifier.idle(),
-                capabilities(),
                 activities);
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror,
-                runner,
-                current,
-                settings,
-                starter,
-                toasts,
-                errors,
+                new RunAccess(mirror, runner),
+                new RunSubject(current, settings),
+                new RunLaunch(starter, graph.getInstance(ContinueGuard.class)),
+                new Reporting(toasts, errors),
                 desk,
                 new DirectExecutor(),
-                activities,
-                graph.getInstance(ContinueGuard.class)));
+                activities));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

@@ -87,10 +87,17 @@ public final class StorageSettings {
                 revealer,
                 chooser,
                 errors,
-                background,
-                Platform::runLater,
+                new Threads(background, Platform::runLater),
                 Clock.system(ZoneId.systemDefault()));
     }
+
+    /**
+     * Where the work runs.
+     *
+     * @param background where the file and the projects are read, never the FX thread
+     * @param fx runs a task on the FX Application Thread
+     */
+    record Threads(Executor background, Executor fx) {}
 
     StorageSettings(
             final StorageInfo storage,
@@ -98,16 +105,15 @@ public final class StorageSettings {
             final FileRevealer revealer,
             final FileChooserPort chooser,
             final ErrorPresenter errors,
-            final Executor background,
-            final Executor fx,
+            final Threads threads,
             final Clock clock) {
         this.storage = Objects.requireNonNull(storage, "storage");
         this.projects = Objects.requireNonNull(projects, "projects");
         this.revealer = Objects.requireNonNull(revealer, "revealer");
         this.chooser = Objects.requireNonNull(chooser, "chooser");
         this.errors = Objects.requireNonNull(errors, "errors");
-        this.background = Objects.requireNonNull(background, "background");
-        this.fx = Objects.requireNonNull(fx, "fx");
+        this.background = Objects.requireNonNull(threads, "threads").background();
+        this.fx = threads.fx();
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 

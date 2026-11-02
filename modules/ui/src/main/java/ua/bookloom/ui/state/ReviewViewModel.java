@@ -26,9 +26,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.notify.Toasts;
-import ua.bookloom.util.contract.ArgNames;
+import ua.bookloom.ui.notify.Reporting;
 
 /**
  * What the review desk does: list the segments of a filter through the review desk port, hold the selected segment's
@@ -65,29 +63,27 @@ public final class ReviewViewModel {
     private final ListChangeListener<FlaggedRow> onMirrorQueue = change -> refreshCount();
 
     /**
-     * @param desk the review desk every read and action goes through
+     * @param services the review desk every read and action goes through, and the model, the desk call and the hold on
+     *     the run for a retry
      * @param mirror the run's state, whose run state gates the actions and whose flagged queue prompts a recount
      * @param current the open book, whose project the desk is asked about
      * @param reviewMode the mode a run keeps or the next would use; All segments no longer depends on it, so it is
      *     only checked present, keeping one constructor for the injector and the tests
-     * @param toasts where an accept, a save and the busy refusal are announced
-     * @param errors where a failure that is neither busy nor validation is shown
-     * @param retry the model, the desk call and the hold on the run for a retry
+     * @param reporting where an accept, a save and the busy refusal are announced, and where a failure that is neither
+     *     busy nor validation is shown
      * @param executor the daemon executor desk calls run on, never the FX thread
      * @param messages the catalogue a refusal shown in place is worded from
      */
     @Inject
     public ReviewViewModel(
-            final ReviewDesk desk,
+            final ReviewServices services,
             final StateMirror mirror,
             final CurrentProject current,
             final Provider<ReviewMode> reviewMode,
-            final Toasts toasts,
-            final ErrorPresenter errors,
-            final ReviewRetry retry,
+            final Reporting reporting,
             @BackgroundExecutor final ExecutorService executor,
             final Messages messages) {
-        this.desk = Objects.requireNonNull(desk, "desk");
+        this.desk = Objects.requireNonNull(services, "services").desk();
         Objects.requireNonNull(reviewMode, "reviewMode");
         this.queries = new ReviewQueries(desk);
         this.reads = new ReviewReads(queries, executor);
@@ -95,8 +91,9 @@ public final class ReviewViewModel {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, this::refreshAvailability);
-        this.refusals = new ReviewRefusals(toasts, errors, refused::show, messages);
-        this.retry = Objects.requireNonNull(retry, ArgNames.RETRY);
+        this.refusals = new ReviewRefusals(
+                Objects.requireNonNull(reporting, "reporting").toasts(), reporting.errors(), refused::show, messages);
+        this.retry = services.retry();
         this.acts = new ReviewActs(queries, mirror, refusals, executor);
         mirror.runState().addListener((observed, was, now) -> {
             refreshAvailability();

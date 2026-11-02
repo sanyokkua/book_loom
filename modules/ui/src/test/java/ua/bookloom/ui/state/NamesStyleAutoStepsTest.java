@@ -56,11 +56,8 @@ class NamesStyleAutoStepsTest extends FxTestBase {
         final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
         tracker = onFx(() -> new ActivityTracker(new StateMirror(), new KeepAwake.Off(), new KeepAwakeGate(), clock));
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                namesPass,
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, namesPass),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 injector.getInstance(ua.bookloom.ui.i18n.Messages.class),
                 tracker,

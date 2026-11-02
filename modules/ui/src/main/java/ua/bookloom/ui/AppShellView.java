@@ -98,9 +98,8 @@ public final class AppShellView {
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
      * @param activities the running work, whose blocking state disables the navigation and the toolbar actions
      * @param navColumn the navigation column, its footer and its step marks
-     * @param overlays the busy scrim, the toasts and the dialog host stacked over the frame
-     * @param runParts the title bar's chip and run status, and the banners over the content
-     * @param about the About dialog the title bar opens
+     * @param parts the busy scrim, the toasts and the dialog host stacked over the frame, the title bar's chip and run
+     *     status, the banners over the content, and the About dialog the title bar opens
      */
     @Inject
     AppShellView(
@@ -109,17 +108,15 @@ public final class AppShellView {
             final ThemeController themeController,
             final ActivityTracker activities,
             final NavColumn navColumn,
-            final ShellOverlays overlays,
-            final ShellRunParts runParts,
-            final AboutDialog about) {
+            final ShellParts parts) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
         this.activities = Objects.requireNonNull(activities, "activities");
         this.navColumn = Objects.requireNonNull(navColumn, "navColumn");
-        this.overlays = Objects.requireNonNull(overlays, "overlays");
-        this.runParts = Objects.requireNonNull(runParts, "runParts");
-        this.about = Objects.requireNonNull(about, "about");
+        this.overlays = Objects.requireNonNull(parts, "parts").overlays();
+        this.runParts = parts.runParts();
+        this.about = parts.about();
     }
 
     /**

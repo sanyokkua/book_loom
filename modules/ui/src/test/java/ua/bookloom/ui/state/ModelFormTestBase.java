@@ -51,7 +51,12 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
         viewModel = viewModel();
         roster = onFx(() -> new ModelRoster(configs, catalog, modelSettings, viewModel, pool, io));
         form = onFx(() -> new ModelForm(
-                modelSettings, capabilities, structured, roster, viewModel, EnglishMessages.create(), pool, io));
+                new ModelSources(modelSettings, capabilities, structured),
+                roster,
+                viewModel,
+                EnglishMessages.create(),
+                pool,
+                io));
     }
 
     final void await(final BooleanSupplier condition) throws Exception {

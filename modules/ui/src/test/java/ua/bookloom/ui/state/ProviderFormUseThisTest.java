@@ -17,6 +17,7 @@ import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.notify.Voice;
 
 /** Use this one: the open provider and its typed model become the current ones, and nothing else is saved. */
 class ProviderFormUseThisTest extends ProviderFormTestBase {
@@ -117,16 +118,12 @@ class ProviderFormUseThisTest extends ProviderFormTestBase {
     void useThis_storeRefuses_changesNothingAndSaysSo() {
         final RefusingSettings refusing = new RefusingSettings();
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
-                configs,
-                ScriptedProviderVerifier.idle(),
-                newModelListing(),
-                errors,
+                new ProviderStore(configs, refusing),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing()),
+                new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,
-                refusing,
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(modelSettings, speeds, executor),
-                new StructuredAnswers(),
+                new InferenceMemory(new ModelSpeedRecorder(modelSettings, speeds, executor), new StructuredAnswers()),
                 java.time.Clock.systemUTC()));
         WaitForAsyncUtils.waitForFxEvents();
         final ProviderForm form = onFx(() ->

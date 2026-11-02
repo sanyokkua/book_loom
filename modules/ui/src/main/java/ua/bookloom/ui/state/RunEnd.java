@@ -13,12 +13,13 @@ import org.jspecify.annotations.Nullable;
  * @param elapsed how long it ran by the tracker's clock
  * @param hidden whether its dialog was in the background when it ended
  */
-record RunEnd(StepLog steps, Duration elapsed, boolean hidden) {
+public record RunEnd(StepLog steps, Duration elapsed, boolean hidden) {
 
     /** An activity that left nothing to keep. */
-    static final RunEnd NONE = new RunEnd(StepLog.EMPTY, Duration.ZERO, false);
+    public static final RunEnd NONE = new RunEnd(StepLog.EMPTY, Duration.ZERO, false);
 
-    RunEnd {
+    /** Rejects a missing part. */
+    public RunEnd {
         Objects.requireNonNull(steps, "steps");
         Objects.requireNonNull(elapsed, "elapsed");
     }

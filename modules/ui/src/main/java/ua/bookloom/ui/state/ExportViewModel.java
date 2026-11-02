@@ -22,17 +22,10 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.pipeline.ExportRequest;
-import ua.bookloom.api.pipeline.ExportService;
-import ua.bookloom.api.pipeline.ProjectService;
-import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.dialog.ConfirmPrompt;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.util.paths.DestinationPath;
 
@@ -76,47 +69,35 @@ public final class ExportViewModel {
 
     /**
      * Follows the open book and its brief and proposes a destination for a book already open. Reads and the export run
-     * on {@code executor}; {@code setup} is null for a window with no model proposals; {@code stored} is only read and
-     * {@code store} keeps the last written export; {@code announcer} says when a book was written.
+     * on {@code executor}; {@code setup} is null for a window with no model proposals; {@code storage} keeps the last
+     * written export; {@code dialogs} say when a book was written and ask before a file is replaced.
      */
     @Inject
     public ExportViewModel(
-            final CurrentProject project,
-            final ReviewDesk desk,
-            final ProjectService projects,
-            final Messages messages,
-            final ExportService exports,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
-            final WorkflowProgress progress,
+            final ExportBook book,
+            final ExportEngine engine,
+            final ExportWork work,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities,
             final @Nullable SetupHelper setup,
-            final SettingsRepository stored,
-            final ProjectRepository store,
-            final ConfirmPrompt confirm,
-            final ExportAnnouncer announcer,
-            final Clock clock) {
-        this.project = Objects.requireNonNull(project, "project");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.clock = Objects.requireNonNull(clock, "clock");
-        this.announcer = Objects.requireNonNull(announcer, "announcer");
-        this.proposals = new ExportProposals(projects, executor, project.book()::get);
+            final ExportStorage storage,
+            final ExportDialogs dialogs) {
+        this.project = Objects.requireNonNull(book, "book").project();
+        this.messages = Objects.requireNonNull(dialogs, "dialogs").messages();
+        this.clock = Objects.requireNonNull(storage, "storage").clock();
+        this.announcer = dialogs.announcer();
+        this.proposals = new ExportProposals(book.projects(), executor, project.book()::get);
         this.nameSuggestion = new NameSuggestion(project, messages, setup, this);
-        this.statement = new ExportStatement(desk, store, messages, executor);
+        this.statement = new ExportStatement(book.desk(), storage.store(), messages, executor);
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
         this.run = new ExportRun(
-                exports,
-                models,
-                settings,
-                progress,
+                engine,
+                work,
                 executor,
-                activities,
                 messages,
-                new ExportRecorder(store, clock::instant),
-                new ReplaceCheck(confirm));
-        this.lastCheck = new LastCheckChoice(stored, executor);
-        this.blocker = activities.blocker(ActivityKind.EXPORT);
+                new ExportRecorder(storage.store(), clock::instant),
+                new ReplaceCheck(dialogs.confirm()));
+        this.lastCheck = new LastCheckChoice(storage.stored(), executor);
+        this.blocker = work.activities().blocker(ActivityKind.EXPORT);
         wire();
         lastCheck.followBrief(project.brief().get());
         lastCheck.reload();

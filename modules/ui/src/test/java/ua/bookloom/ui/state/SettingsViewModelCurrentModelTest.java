@@ -13,22 +13,21 @@ import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
+import ua.bookloom.ui.notify.Voice;
 
 /** The model chosen last time is read when Settings loads, and the first-launch look can adopt another one. */
 class SettingsViewModelCurrentModelTest extends SettingsViewModelTestBase {
 
     private SettingsViewModel build() {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
-                configs,
-                ScriptedProviderVerifier.idle(),
-                newModelListing(),
-                errors,
+                new ProviderStore(configs, settings),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing()),
+                new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,
-                settings,
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers(),
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
                 java.time.Clock.systemUTC()));
         WaitForAsyncUtils.waitForFxEvents();
         return built;

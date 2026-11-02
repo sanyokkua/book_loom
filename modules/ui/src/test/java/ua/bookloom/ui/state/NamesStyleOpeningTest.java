@@ -59,11 +59,8 @@ class NamesStyleOpeningTest extends FxTestBase {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         final AtomicInteger next = new AtomicInteger();
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                injector.getInstance(SettingsViewModel.class),
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), injector.getInstance(SettingsViewModel.class)),
                 executor,
                 injector.getInstance(ua.bookloom.ui.i18n.Messages.class),
                 injector.getInstance(ActivityTracker.class),

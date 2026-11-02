@@ -22,6 +22,7 @@ import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.dialog.RecordingModelPickPrompt;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * The fixtures of the first-launch look tests. The catalogue, the stores, the question and the view model are
@@ -65,22 +66,22 @@ abstract class LocalModelProbeTestBase extends FxTestBase {
     LocalModelProbe probe(final SettingsRepository store) {
         final ActivityTracker activities = new ActivityTracker(new StateMirror());
         viewModel = onFx(() -> new SettingsViewModel(
-                configs,
-                ScriptedProviderVerifier.idle(),
-                new ModelListing(
-                        ScriptedModelCatalog.idle(),
-                        new RecordingToasts(),
-                        new RecordingErrorPresenter(),
-                        new DirectExecutor(),
-                        activities,
-                        EnglishMessages.create()),
-                new RecordingErrorPresenter(),
+                new ProviderStore(configs, store),
+                new ProviderChecks(
+                        ScriptedProviderVerifier.idle(),
+                        new ModelListing(
+                                ScriptedModelCatalog.idle(),
+                                new RecordingToasts(),
+                                new RecordingErrorPresenter(),
+                                new DirectExecutor(),
+                                activities,
+                                EnglishMessages.create())),
+                new Voice(EnglishMessages.create(), new RecordingErrorPresenter()),
                 new DirectExecutor(),
                 activities,
-                store,
-                EnglishMessages.create(),
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers(),
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
                 java.time.Clock.systemUTC()));
         return onFx(() -> new LocalModelProbe(catalog, configs, store, executor, viewModel, pick));
     }

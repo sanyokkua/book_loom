@@ -59,11 +59,8 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         settings = injector.getInstance(SettingsViewModel.class);
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 new DirectExecutor(),
                 injector.getInstance(Messages.class),
                 injector.getInstance(ActivityTracker.class),

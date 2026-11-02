@@ -185,23 +185,32 @@ final class TermTableCard<R> extends VBox {
     }
 
     /**
-     * A column of either table.
+     * A column's header.
      *
      * @param header the catalogue entry of the header text, which a blank-headed column keeps as its accessible name
      * @param shown {@code false} for a column whose header carries no text (the remove cross, "→ Glossary") and
      *     explains itself on hover only
+     * @param tip the catalogue entry of the hover explanation
+     */
+    record Head(MessageKey header, boolean shown, MessageKey tip) {}
+
+    /**
+     * A column of either table.
+     *
+     * @param head the header's words and tip
      * @param width the width the column starts at
      * @param minWidth the width the column cannot be dragged below
      */
     static <R> TableColumn<R, R> column(
             final Messages messages,
-            final MessageKey header,
-            final boolean shown,
-            final MessageKey tip,
+            final Head head,
             final double width,
             final double minWidth,
             final @Nullable Comparator<R> order,
             final Supplier<TableCell<R, R>> cell) {
+        final MessageKey header = head.header();
+        final boolean shown = head.shown();
+        final MessageKey tip = head.tip();
         final TableColumn<R, R> column = new TableColumn<>(shown ? messages.get(header) : "");
         Tips.installOnHeader(messages, column, tip);
         if (!shown && column.getGraphic() instanceof Label blank) {

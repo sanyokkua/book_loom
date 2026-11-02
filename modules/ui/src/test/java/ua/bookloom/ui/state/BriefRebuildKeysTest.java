@@ -15,8 +15,7 @@ class BriefRebuildKeysTest {
     // IF a rebuild dropped the keys, THEN changing a name policy would silently reset the declared quote marks.
     @Test
     void of_anyChange_keepsApostropheQuoteStyleAddressConventionsAndLikely() {
-        final BookBrief rebuilt =
-                BriefRebuild.of(held, Register.CASUAL, NamePolicy.KEEP_ORIGINAL, null, null, null, null, null);
+        final BookBrief rebuilt = BriefRebuild.of(BriefRebuild.of(held, Register.CASUAL), NamePolicy.KEEP_ORIGINAL);
 
         assertThat(rebuilt.register()).isEqualTo(Register.CASUAL);
         assertThat(rebuilt.apostrophe()).isEqualTo("’");

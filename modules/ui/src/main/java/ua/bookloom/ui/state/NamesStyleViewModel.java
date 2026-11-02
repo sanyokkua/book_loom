@@ -5,11 +5,9 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -23,13 +21,9 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelCapabilities;
-import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesEstimate;
-import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -82,23 +76,15 @@ public final class NamesStyleViewModel {
      */
     @Inject
     public NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final ModelCapabilities capabilities,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final @BackgroundExecutor ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
             final MeasuredCalls measured) {
         this(
-                glossary,
-                lexicon,
-                namesPass,
-                capabilities::detectedTokens,
-                models,
-                settings,
+                services,
+                access,
                 executor,
                 messages,
                 activities,
@@ -108,42 +94,25 @@ public final class NamesStyleViewModel {
 
     // The id source is a seam so that a test states the ids it expects, and no provider is asked for a context length.
     NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
             final Supplier<String> ids) {
-        this(
-                glossary,
-                lexicon,
-                namesPass,
-                _ -> Optional.empty(),
-                models,
-                settings,
-                executor,
-                messages,
-                activities,
-                ids,
-                MeasuredCalls.none());
+        this(services, access, executor, messages, activities, ids, MeasuredCalls.none());
     }
 
     private NamesStyleViewModel(
-            final GlossaryService glossary,
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final Function<ModelSelection, Optional<Integer>> detection,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final ExecutorService executor,
             final Messages messages,
             final ActivityTracker activities,
             final Supplier<String> ids,
             final MeasuredCalls measured) {
-        this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.glossary = Objects.requireNonNull(services, "services").glossary();
+        final LexiconService lexicon = services.lexicon();
         this.calls = new GlossaryCalls(executor);
         this.changeLog = new ChangeLog(
                 new ChangeReverts(
@@ -151,8 +120,8 @@ public final class NamesStyleViewModel {
                 marks,
                 messages,
                 Objects.requireNonNull(activities, "activities"));
-        this.autoEstimate = new AutoEstimate(namesPass, calls, settings, measured);
-        this.modelRuns = newModelRuns(lexicon, namesPass, detection, models, settings, messages, activities, measured);
+        this.autoEstimate = new AutoEstimate(services.namesPass(), calls, access.settings(), measured);
+        this.modelRuns = newModelRuns(services, access, messages, activities, measured);
         this.recurring = new RecurringTerms(
                 new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice, new ImportSummary(messages)),
                 () -> projectId,
@@ -172,22 +141,19 @@ public final class NamesStyleViewModel {
     }
 
     private GlossaryModelRuns newModelRuns(
-            final LexiconService lexicon,
-            final NamesPass namesPass,
-            final Function<ModelSelection, Optional<Integer>> detection,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
+            final NamesServices services,
+            final ModelAccess access,
             final Messages messages,
             final ActivityTracker activities,
             final MeasuredCalls measured) {
         return new GlossaryModelRuns(
                 new GlossaryModelRuns.Screen(
                         glossary,
-                        Objects.requireNonNull(lexicon, "lexicon"),
-                        namesPass,
-                        detection,
-                        models,
-                        settings,
+                        services.lexicon(),
+                        services.namesPass(),
+                        access.detection(),
+                        access.models(),
+                        access.settings(),
                         messages,
                         rows,
                         lexiconRows,

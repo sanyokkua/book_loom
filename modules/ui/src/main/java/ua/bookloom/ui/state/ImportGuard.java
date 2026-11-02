@@ -47,8 +47,7 @@ public final class ImportGuard {
     /**
      * Wires the guard to the run it protects and the import it gates.
      *
-     * @param mirror where the run's state is read and cleared
-     * @param runner what stops a run that is still going
+     * @param run where the run's state is read and cleared, and what stops a run that is still going
      * @param imports where the file is finally opened
      * @param current the open book, which the question names
      * @param prompt the question put to the person
@@ -58,16 +57,15 @@ public final class ImportGuard {
      */
     @Inject
     public ImportGuard(
-            final StateMirror mirror,
-            final TranslationRunner runner,
+            final RunAccess run,
             final ImportViewModel imports,
             final CurrentProject current,
             final OpenAnotherBookPrompt prompt,
             final ProjectService projects,
             @BackgroundExecutor final ExecutorService executor,
             final Toasts toasts) {
-        this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.runner = Objects.requireNonNull(runner, "runner");
+        this.mirror = Objects.requireNonNull(run, "run").mirror();
+        this.runner = run.runner();
         this.imports = Objects.requireNonNull(imports, "imports");
         this.current = Objects.requireNonNull(current, "current");
         this.prompt = Objects.requireNonNull(prompt, "prompt");

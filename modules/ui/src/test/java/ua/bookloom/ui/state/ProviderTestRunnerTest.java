@@ -29,6 +29,7 @@ import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Voice;
 
 /** The three provider tests: what each asks, when each is available, and the findings each report becomes. */
 class ProviderTestRunnerTest extends SettingsViewModelTestBase {
@@ -46,13 +47,11 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
         return onFx(() -> new ProviderTestRunner(
                 verifier,
-                errors,
+                new Voice(new Messages(() -> Locale.ENGLISH), errors),
                 executor,
                 subject,
                 activities,
-                new ModelSpeedRecorder(modelSettings, speeds, executor),
-                new StructuredAnswers(),
-                new Messages(() -> Locale.ENGLISH),
+                new InferenceMemory(new ModelSpeedRecorder(modelSettings, speeds, executor), new StructuredAnswers()),
                 java.time.Clock.systemUTC()));
     }
 

@@ -9,8 +9,6 @@ import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
-import ua.bookloom.ui.dialog.ConfirmPrompt;
-import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
@@ -64,15 +62,13 @@ public final class TranslatingController {
      *
      * @param viewModel what the run actions press and the ready card reads
      * @param mirror the run's state, figures and log the screen shows
-     * @param messages the catalogue the built parts are worded from
-     * @param navigator where Back and Continue to Export lead
-     * @param current the open book, whose languages head the live panel's panes
+     * @param context the open book, whose languages head the live panel's panes, the catalogue the built parts are
+     *     worded from, and where Back and Continue to Export lead
      * @param names the names of those languages
-     * @param review the review desk's view model, which counts the segments to review
-     * @param desk what opens the review desk from Review (n) and the strip
-     * @param sections the session's memory of which sections the person left open
-     * @param narratorDialog the question asked before a start when the book is told in the first person
-     * @param confirm the question asked before the run is stopped
+     * @param reviewAccess the review desk's view model, which counts the segments to review, and what opens the desk
+     *     from Review (n) and the strip
+     * @param tools the session's memory of which sections the person left open, the question asked before a start
+     *     when the book is told in the first person, and the question asked before the run is stopped
      * @param runs the run-state row the run actions and the live line follow
      * @param parts what the strip, the help line and the live card read and open: the start estimate, the scene
      *     summary, the sleep help, the technical-details switch, the modal host and the activities' clock
@@ -83,32 +79,27 @@ public final class TranslatingController {
     public TranslatingController(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
-            final Messages messages,
-            final Navigator navigator,
-            final CurrentProject current,
+            final ScreenContext context,
             final LanguageNames names,
-            final ReviewViewModel review,
-            final ReviewDeskLauncher desk,
-            final SectionMemory sections,
-            final NarratorDialog narratorDialog,
-            final ConfirmPrompt confirm,
+            final ReviewAccess reviewAccess,
+            final TranslatingTools tools,
             final RunStateSource runs,
             final Parts parts) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.navigator = Objects.requireNonNull(navigator, "navigator");
-        this.current = Objects.requireNonNull(current, "current");
+        this.messages = Objects.requireNonNull(context, "context").messages();
+        this.navigator = context.navigator();
+        this.current = context.project();
         this.names = Objects.requireNonNull(names, "names");
-        this.review = Objects.requireNonNull(review, "review");
+        this.review = Objects.requireNonNull(reviewAccess, "reviewAccess").review();
         this.dialogs = new TranslatingDialogs(
-                Objects.requireNonNull(narratorDialog, "narratorDialog"),
-                Objects.requireNonNull(confirm, "confirm"),
+                Objects.requireNonNull(tools, "tools").narratorDialog(),
+                tools.confirm(),
                 parts.modals(),
                 messages,
                 parts.activities());
-        this.desk = Objects.requireNonNull(desk, "desk");
-        this.sections = Objects.requireNonNull(sections, "sections");
+        this.desk = reviewAccess.desk();
+        this.sections = tools.sections();
         this.runs = Objects.requireNonNull(runs, "runs");
         this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
     }

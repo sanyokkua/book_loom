@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Reporting;
 import ua.bookloom.ui.notify.ToastOccasion;
 import ua.bookloom.ui.notify.Toasts;
 
@@ -79,39 +80,34 @@ public final class TranslatingViewModel {
     /**
      * Registers the completion listener on the mirror and derives the first set of controls.
      *
-     * @param mirror the state every run publishes into and this view model observes
-     * @param runner the runner that owns the one active run
-     * @param current the open book a run is started on
-     * @param settings where the provider and model come from
-     * @param starter what builds a run on the open book and starts it
-     * @param toasts where a finished run is announced
-     * @param errors where a failure whose code is assigned the blocking dialog is shown
+     * @param run the state every run publishes into and this view model observes, and the runner that owns the one
+     *     active run
+     * @param subject the open book a run is started on, and where the provider and model come from
+     * @param launch what builds a run on the open book and starts it, and what a continued run asks about the model
+     *     before anything is prepared
+     * @param reporting where a finished run is announced, and where a failure whose code is assigned the blocking
+     *     dialog is shown
      * @param desk where the count of undecided segments is read
      * @param executor the daemon executor that read runs on, never the FX thread
      * @param activities the model work under way, which holds start and resume while it runs
-     * @param guard what a continued run asks about the model before anything is prepared
      */
     @Inject
     public TranslatingViewModel(
-            final StateMirror mirror,
-            final TranslationRunner runner,
-            final CurrentProject current,
-            final SettingsViewModel settings,
-            final RunStarter starter,
-            final Toasts toasts,
-            final ErrorPresenter errors,
+            final RunAccess run,
+            final RunSubject subject,
+            final RunLaunch launch,
+            final Reporting reporting,
             final ReviewDesk desk,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities,
-            final ContinueGuard guard) {
-        this.guard = Objects.requireNonNull(guard, "guard");
-        this.mirror = Objects.requireNonNull(mirror, "mirror");
-        this.runner = Objects.requireNonNull(runner, "runner");
-        this.current = Objects.requireNonNull(current, "current");
-        this.settings = Objects.requireNonNull(settings, "settings");
-        this.starter = Objects.requireNonNull(starter, "starter");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.errors = Objects.requireNonNull(errors, "errors");
+            final ActivityTracker activities) {
+        this.guard = Objects.requireNonNull(launch, "launch").guard();
+        this.mirror = Objects.requireNonNull(run, "run").mirror();
+        this.runner = run.runner();
+        this.current = Objects.requireNonNull(subject, "subject").current();
+        this.settings = subject.settings();
+        this.starter = launch.starter();
+        this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
+        this.errors = reporting.errors();
         this.pending = new PendingCount(desk, executor);
         this.missingInputs = new MissingInputNotice(notice, current, settings);
         // The run's own registration is not other work: while it translates, start and resume are not offered anyway.

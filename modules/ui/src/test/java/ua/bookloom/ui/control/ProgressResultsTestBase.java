@@ -27,6 +27,7 @@ import ua.bookloom.ui.state.ChangeSection;
 import ua.bookloom.ui.state.EditableTarget;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.ResultsView;
+import ua.bookloom.ui.state.RunEnd;
 import ua.bookloom.ui.state.StepLog;
 
 /**
@@ -70,9 +71,7 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
                 items(rows),
                 LiveCalls.EMPTY,
                 List.of(),
-                requestsLog(steps),
-                Duration.ofSeconds(seconds),
-                false);
+                new RunEnd(requestsLog(steps), Duration.ofSeconds(seconds), false));
     }
 
     /** A pass's results with the stage log of a finished pass, for the Steps tab. */
@@ -83,9 +82,7 @@ abstract class ProgressResultsTestBase extends ShellTestBase {
                 items(rows),
                 LiveCalls.EMPTY,
                 List.of(),
-                PassEvents.logUpTo(requests, PassEvents.CODES.size(), 49),
-                Duration.ofSeconds(108),
-                false);
+                new RunEnd(PassEvents.logUpTo(requests, PassEvents.CODES.size(), 49), Duration.ofSeconds(108), false));
     }
 
     static StepLog requestsLog(final int count) {

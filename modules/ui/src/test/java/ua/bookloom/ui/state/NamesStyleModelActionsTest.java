@@ -59,11 +59,8 @@ class NamesStyleModelActionsTest extends FxTestBase {
 
     private NamesStyleViewModel viewModel(final ExecutorService executor) {
         final NamesStyleViewModel vm = onFx(() -> new NamesStyleViewModel(
-                glossary,
-                new ScriptedLexiconService(),
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, new ScriptedLexiconService(), new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 executor,
                 messages,
                 activities,

@@ -34,6 +34,7 @@ import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.ErrorWords;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * Runs the provider tests against what the Providers form holds — the description as typed, saved or not — and
@@ -82,34 +83,31 @@ public final class ProviderTestRunner {
      * Starts idle, and drops whatever is in flight or on show when the provider or the model changes.
      *
      * @param verifier the port a test is run through
-     * @param errors where a refusal of the whole test is shown
+     * @param voice the catalogue a refusal shown in place is worded from, and where a refusal of the whole test is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param subject what a test is run against: the description in the form, saved or not, and the model typed
      *     for it; empty while the form holds something the rules refuse. Observed for changes
      * @param activities the work under way, which decides whether the inference test may start
-     * @param speeds where a speed measured by a passing inference test of a saved provider is kept
-     * @param structured where whether the model answered in the structured form is kept for the session
-     * @param messages the catalogue a refusal shown in place is worded from
+     * @param memory where a speed measured by a passing inference test, and whether the model answered in the
+     *     structured form, are kept
      * @param clock where the test card reads when a request was sent and how long it has been open
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
-            final ErrorPresenter errors,
+            final Voice voice,
             final ExecutorService executor,
             final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
             final ActivityTracker activities,
-            final ModelSpeedRecorder speeds,
-            final StructuredAnswers structured,
-            final Messages messages,
+            final InferenceMemory memory,
             final Clock clock) {
         this.progress = new TestProgress(clock);
-        this.messages = Objects.requireNonNull(messages, "messages");
+        this.messages = Objects.requireNonNull(voice, "voice").messages();
         this.verifier = Objects.requireNonNull(verifier, "verifier");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.errors = voice.errors();
         this.executor = Objects.requireNonNull(executor, "executor");
         this.subject = Objects.requireNonNull(subject, "subject");
         this.activities = Objects.requireNonNull(activities, "activities");
-        this.keeper = new InferenceFindings(speeds, structured);
+        this.keeper = new InferenceFindings(memory.speeds(), memory.structured());
         this.inferenceBlocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
         for (final ProviderTest test : ProviderTest.values()) {
             availability.put(

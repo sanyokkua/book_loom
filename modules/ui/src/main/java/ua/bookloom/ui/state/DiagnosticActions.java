@@ -29,6 +29,7 @@ import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.dialog.TextClipboard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Reporting;
 import ua.bookloom.ui.notify.Severity;
 import ua.bookloom.ui.notify.Toasts;
 
@@ -63,59 +64,40 @@ public final class DiagnosticActions {
      *
      * @param diagnosticLog where the logs are and whether the detailed log is on
      * @param session the facts {@code session.json} names
-     * @param revealer opens the log folder in the file manager
-     * @param chooser asks where the bundle goes
-     * @param toasts says that a bundle was saved or a path copied
-     * @param errors shows why a bundle could not be saved
+     * @param files opens the log folder in the file manager, asks where the bundle goes, and takes the copied path
+     * @param reporting says that a bundle was saved or a path copied, and why a bundle could not be saved
      * @param version the build version {@code session.json} names
      * @param executor the daemon pool the bundle is written on
-     * @param clipboard where Copy path puts the log folder's path
      */
     @Inject
     public DiagnosticActions(
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
-            final FileRevealer revealer,
-            final FileChooserPort chooser,
-            final Toasts toasts,
-            final ErrorPresenter errors,
+            final FileTools files,
+            final Reporting reporting,
             @BuildVersion final String version,
-            @BackgroundExecutor final ExecutorService executor,
-            final TextClipboard clipboard) {
-        this(
-                diagnosticLog,
-                session,
-                revealer,
-                chooser,
-                toasts,
-                errors,
-                version,
-                executor,
-                Clock.system(ZoneId.systemDefault()),
-                clipboard);
+            @BackgroundExecutor final ExecutorService executor) {
+        this(diagnosticLog, session, files, reporting, version, executor, Clock.system(ZoneId.systemDefault()));
     }
 
     DiagnosticActions(
             final DiagnosticLog diagnosticLog,
             final SessionInfo session,
-            final FileRevealer revealer,
-            final FileChooserPort chooser,
-            final Toasts toasts,
-            final ErrorPresenter errors,
+            final FileTools files,
+            final Reporting reporting,
             final String version,
             final ExecutorService executor,
-            final Clock clock,
-            final TextClipboard clipboard) {
+            final Clock clock) {
         this.diagnosticLog = Objects.requireNonNull(diagnosticLog, "diagnosticLog");
         this.session = Objects.requireNonNull(session, "session");
-        this.revealer = Objects.requireNonNull(revealer, "revealer");
-        this.chooser = Objects.requireNonNull(chooser, "chooser");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.errors = Objects.requireNonNull(errors, "errors");
+        this.revealer = Objects.requireNonNull(files, "files").revealer();
+        this.chooser = files.chooser();
+        this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
+        this.errors = reporting.errors();
         this.version = Objects.requireNonNull(version, "version");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.clock = Objects.requireNonNull(clock, "clock");
-        this.clipboard = Objects.requireNonNull(clipboard, "clipboard");
+        this.clipboard = files.clipboard();
     }
 
     /**

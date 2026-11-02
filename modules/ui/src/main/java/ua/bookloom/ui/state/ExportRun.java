@@ -63,21 +63,18 @@ final class ExportRun {
     private final ReadOnlyStringWrapper failure = new ReadOnlyStringWrapper("");
 
     ExportRun(
-            final ExportService service,
-            final ChatModelFactory models,
-            final SettingsViewModel settings,
-            final WorkflowProgress progress,
+            final ExportEngine engine,
+            final ExportWork work,
             final ExecutorService executor,
-            final ActivityTracker activities,
             final Messages messages,
             final ExportRecorder recorder,
             final ReplaceCheck replace) {
-        this.service = Objects.requireNonNull(service, "service");
-        this.models = Objects.requireNonNull(models, "models");
-        this.settings = Objects.requireNonNull(settings, "settings");
-        this.progress = Objects.requireNonNull(progress, "progress");
+        this.service = Objects.requireNonNull(engine, "engine").exports();
+        this.models = engine.models();
+        this.settings = engine.settings();
+        this.progress = Objects.requireNonNull(work, "work").progress();
         this.executor = Objects.requireNonNull(executor, "executor");
-        this.activities = Objects.requireNonNull(activities, "activities");
+        this.activities = work.activities();
         this.messages = Objects.requireNonNull(messages, "messages");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.replace = Objects.requireNonNull(replace, "replace");

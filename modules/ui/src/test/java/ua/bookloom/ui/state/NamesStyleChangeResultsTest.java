@@ -164,11 +164,8 @@ class NamesStyleChangeResultsTest extends FxTestBase {
 
     private NamesStyleViewModel newViewModel(final ExecutorService executor) {
         return onFx(() -> new NamesStyleViewModel(
-                glossary,
-                lexicon,
-                new ScriptedNamesPass(),
-                ScriptedChatModelFactory.ok(),
-                settings,
+                new NamesServices(glossary, lexicon, new ScriptedNamesPass()),
+                new ModelAccess(ScriptedChatModelFactory.ok(), settings),
                 executor,
                 messages,
                 tracker,

@@ -177,14 +177,7 @@ final class ChangeLog {
         log.info("{} changed {} rows, left {} names without a target", operation, items.size(), untargeted.size());
         final LiveCalls last = activities.lastCalls().get();
         final ChangeResults published = new ChangeResults(
-                operation,
-                false,
-                items,
-                last.equals(callsBefore) ? LiveCalls.EMPTY : last,
-                untargeted,
-                end.steps(),
-                end.elapsed(),
-                end.hidden());
+                operation, false, items, last.equals(callsBefore) ? LiveCalls.EMPTY : last, untargeted, end);
         followUndo(published);
         results.set(published);
     }

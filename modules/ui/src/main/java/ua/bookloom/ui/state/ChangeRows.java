@@ -28,28 +28,21 @@ final class ChangeRows {
     }
 
     ChangeRow added(final GlossaryEntry entry) {
-        return row(
-                ChangeSection.NAMES,
-                ChangeKind.ADDED,
-                entry.term(),
-                DASH,
-                describe(entry),
-                null,
-                ChangeOrigin.MODEL,
-                editable(entry));
+        return row(ChangeSection.NAMES, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, ChangeOrigin.MODEL)
+                .withEditable(editable(entry));
     }
 
     // A name the pass found and could not give a target: the person types one in the results.
     ChangeRow untargeted(final GlossaryEntry entry) {
         return row(
-                ChangeSection.NAMES,
-                ChangeKind.UNTARGETED,
-                entry.term(),
-                describe(entry),
-                DASH,
-                null,
-                ChangeOrigin.MODEL,
-                editable(entry));
+                        ChangeSection.NAMES,
+                        ChangeKind.UNTARGETED,
+                        entry.term(),
+                        describe(entry),
+                        DASH,
+                        null,
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(entry));
     }
 
     ChangeRow removed(final EntryChanges.Removal<GlossaryEntry> removal) {
@@ -66,14 +59,14 @@ final class ChangeRows {
 
     ChangeRow changed(final EntryChanges.Change<GlossaryEntry> change) {
         return row(
-                ChangeSection.NAMES,
-                ChangeKind.CHANGED,
-                change.after().term(),
-                describe(change.before()),
-                describe(change.after()),
-                change.reason(),
-                ChangeOrigin.MODEL,
-                editable(change.after()));
+                        ChangeSection.NAMES,
+                        ChangeKind.CHANGED,
+                        change.after().term(),
+                        describe(change.before()),
+                        describe(change.after()),
+                        change.reason(),
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(change.after()));
     }
 
     // Accept all changes only a target's state, so its rows show the target with its state.
@@ -107,15 +100,8 @@ final class ChangeRows {
     }
 
     ChangeRow addedTerm(final LexiconEntry entry, final ChangeOrigin origin) {
-        return row(
-                ChangeSection.TERMS,
-                ChangeKind.ADDED,
-                entry.term(),
-                DASH,
-                describe(entry),
-                null,
-                origin,
-                editable(entry));
+        return row(ChangeSection.TERMS, ChangeKind.ADDED, entry.term(), DASH, describe(entry), null, origin)
+                .withEditable(editable(entry));
     }
 
     ChangeRow removedTerm(final EntryChanges.Removal<LexiconEntry> removal) {
@@ -132,14 +118,14 @@ final class ChangeRows {
 
     ChangeRow changedTerm(final EntryChanges.Change<LexiconEntry> change) {
         return row(
-                ChangeSection.TERMS,
-                ChangeKind.CHANGED,
-                change.after().term(),
-                describe(change.before()),
-                describe(change.after()),
-                change.reason(),
-                ChangeOrigin.MODEL,
-                editable(change.after()));
+                        ChangeSection.TERMS,
+                        ChangeKind.CHANGED,
+                        change.after().term(),
+                        describe(change.before()),
+                        describe(change.after()),
+                        change.reason(),
+                        ChangeOrigin.MODEL)
+                .withEditable(editable(change.after()));
     }
 
     private ChangeRow row(
@@ -150,19 +136,7 @@ final class ChangeRows {
             final String after,
             final @Nullable String reason,
             final ChangeOrigin origin) {
-        return row(section, kind, term, before, after, reason, origin, null);
-    }
-
-    private ChangeRow row(
-            final ChangeSection section,
-            final ChangeKind kind,
-            final String term,
-            final String before,
-            final String after,
-            final @Nullable String reason,
-            final ChangeOrigin origin,
-            final @Nullable EditableTarget editable) {
-        return new ChangeRow(next++, kind, term, before, after, reason, origin, section, editable);
+        return new ChangeRow(next++, kind, term, before, after, reason, origin, section);
     }
 
     private EditableTarget editable(final GlossaryEntry entry) {

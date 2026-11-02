@@ -58,37 +58,32 @@ public final class RunStarter {
      * Creates the starter.
      *
      * @param current the open book a run is started on
-     * @param models the port a model is created through
-     * @param engine the port a job is created through
+     * @param ports the ports a model and a job are created through, a paused run's provider is probed through, and
+     *     the model's context length is read through
      * @param reviewMode how the run's pauses for review are chosen, asked again at each start
      * @param runner the runner that owns the one active run
      * @param reporter what tells the detailed log which provider, model and brief the run uses
      * @param executor the daemon executor a run is prepared on, never the FX thread
-     * @param verifier the port a run paused on a provider error probes the provider with before resuming by itself
-     * @param capabilities the port the model's context length is read through when a run is prepared
      * @param activities where the preparation is registered, so the window waits for it
      */
     @Inject
     public RunStarter(
             final CurrentProject current,
-            final ChatModelFactory models,
-            final TranslationEngine engine,
+            final RunPorts ports,
             final Provider<ReviewMode> reviewMode,
             final TranslationRunner runner,
             final SessionReporter reporter,
             @BackgroundExecutor final ExecutorService executor,
-            final ProviderVerifier verifier,
-            final ModelCapabilities capabilities,
             final ActivityTracker activities) {
         this.current = Objects.requireNonNull(current, "current");
-        this.models = Objects.requireNonNull(models, "models");
-        this.engine = Objects.requireNonNull(engine, "engine");
+        this.models = Objects.requireNonNull(ports, "ports").models();
+        this.engine = ports.engine();
         this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.executor = Objects.requireNonNull(executor, "executor");
-        this.verifier = Objects.requireNonNull(verifier, "verifier");
-        this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
+        this.verifier = ports.verifier();
+        this.capabilities = ports.capabilities();
         this.activities = Objects.requireNonNull(activities, "activities");
     }
 

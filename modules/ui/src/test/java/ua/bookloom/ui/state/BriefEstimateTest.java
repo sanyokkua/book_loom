@@ -52,7 +52,24 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
             OpenedBookFixture.open(current, "p1", "en", "uk");
             return null;
         });
-        final Project stored = ProjectFixtures.project(
+        projects.willList(List.of(new ProjectSummary(storedProject(), 0, segments, null, null)));
+        final BriefProject project = onFx(() ->
+                new BriefProject(current, projects, new RecordingProjectActions(), new RecordingToasts(), executor));
+        WaitForAsyncUtils.waitForFxEvents();
+        final FixedDialProfiles dial = new FixedDialProfiles();
+        final BriefEstimate estimate = onFx(() -> new BriefEstimate(
+                current,
+                viewModel,
+                project,
+                new EstimateSources(modelSettings, speeds, dial),
+                background,
+                Platform::runLater));
+        WaitForAsyncUtils.waitForFxEvents();
+        return estimate;
+    }
+
+    private static Project storedProject() {
+        return ProjectFixtures.project(
                 "p1",
                 "Frankenstein.epub",
                 ProjectFixtures.BOOK_HASH,
@@ -61,15 +78,6 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                 NameOrigin.AUTO,
                 "Frankenstein",
                 Instant.parse("2026-10-02T10:00:00Z"));
-        projects.willList(List.of(new ProjectSummary(stored, 0, segments, null, null)));
-        final BriefProject project = onFx(() ->
-                new BriefProject(current, projects, new RecordingProjectActions(), new RecordingToasts(), executor));
-        WaitForAsyncUtils.waitForFxEvents();
-        final FixedDialProfiles dial = new FixedDialProfiles();
-        final BriefEstimate estimate = onFx(() -> new BriefEstimate(
-                current, viewModel, project, modelSettings, speeds, dial, background, Platform::runLater));
-        WaitForAsyncUtils.waitForFxEvents();
-        return estimate;
     }
 
     private static StartEstimate shown(final BriefEstimate estimate) {

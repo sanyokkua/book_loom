@@ -32,6 +32,7 @@ import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.dialog.RecordingConfirmPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the export view model tests share: a real {@link ImportViewModel} over the scripted project service and a
@@ -92,22 +93,22 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     private SettingsViewModel newSettings() {
         return new SettingsViewModel(
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                new ModelListing(
-                        ScriptedModelCatalog.idle(),
-                        new RecordingToasts(),
-                        new RecordingErrorPresenter(),
-                        new DirectExecutor(),
-                        activities,
-                        messages),
-                new RecordingErrorPresenter(),
+                new ProviderStore(new FakeProviderConfigs(), new MemorySettings()),
+                new ProviderChecks(
+                        ScriptedProviderVerifier.idle(),
+                        new ModelListing(
+                                ScriptedModelCatalog.idle(),
+                                new RecordingToasts(),
+                                new RecordingErrorPresenter(),
+                                new DirectExecutor(),
+                                activities,
+                                messages)),
+                new Voice(messages, new RecordingErrorPresenter()),
                 new DirectExecutor(),
                 activities,
-                new MemorySettings(),
-                messages,
-                new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
-                new StructuredAnswers(),
+                new InferenceMemory(
+                        new ModelSpeedRecorder(new ScriptedModelSettings(), new ModelSpeeds(), new DirectExecutor()),
+                        new StructuredAnswers()),
                 java.time.Clock.systemUTC());
     }
 
@@ -119,22 +120,13 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     /** Builds an export view model with a setup helper, or none. FX thread only. */
     ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
-                current,
-                desk,
-                projects,
-                messages,
-                exportService,
-                models,
-                settings,
-                progress,
+                new ExportBook(current, desk, projects),
+                new ExportEngine(exportService, models, settings),
+                new ExportWork(progress, activities),
                 executor,
-                activities,
                 setup,
-                storedSettings,
-                store,
-                new RecordingConfirmPrompt(),
-                (ExportOutcome outcome) -> {},
-                Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC));
+                new ExportStorage(storedSettings, store, Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC)),
+                new ExportDialogs(messages, new RecordingConfirmPrompt(), (ExportOutcome outcome) -> {}));
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */

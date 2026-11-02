@@ -25,12 +25,11 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
-import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.notify.Voice;
 
 /**
  * What the settings screen shows and does about providers: which one is selected, which model is chosen for it, and
@@ -69,46 +68,39 @@ public final class SettingsViewModel {
      * Starts reading the registry on the background executor; the list stays empty, and nothing is selected, until the
      * read is published. The first provider in {@link ua.bookloom.api.llm.ProviderKind} order is then selected.
      *
-     * @param configs the registry the rows are read from; the order it lists in is not relied on
-     * @param verifier the port a check is run through
-     * @param modelListing the models the selected provider offers; this view model discards and re-asks it when the
-     *     provider changes
-     * @param errors where a refusal of the whole check is shown
+     * @param store the registry the rows are read from (the order it lists in is not relied on), and where the model
+     *     chosen last time is read from, on the background executor
+     * @param checks the port a check is run through, and the models the selected provider offers; this view model
+     *     discards and re-asks the listing when the provider changes
+     * @param voice the catalogue a provider without a name of its own is named from, and where a refusal of the whole
+     *     check is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param activities the work under way, which a provider test registers with and the inference test must not
      *     overlap
-     * @param settingsStore where the model chosen last time is read from, on the background executor
-     * @param messages the catalogue a provider without a name of its own is named from
-     * @param speedRecorder where the seconds per segment a passing inference test measured are kept
-     * @param structuredAnswers where whether the model answered in the structured form is kept for the session
+     * @param memory where the seconds per segment a passing inference test measured are kept, and whether the model
+     *     answered in the structured form for the session
      * @param clock where the test card reads when a request was sent and how long it has been open
      */
     @Inject
     public SettingsViewModel(
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelListing modelListing,
-            final ErrorPresenter errors,
+            final ProviderStore store,
+            final ProviderChecks checks,
+            final Voice voice,
             @BackgroundExecutor final ExecutorService executor,
             final ActivityTracker activities,
-            final SettingsRepository settingsStore,
-            final Messages messages,
-            final ModelSpeedRecorder speedRecorder,
-            final StructuredAnswers structuredAnswers,
+            final InferenceMemory memory,
             final Clock clock) {
-        this.messages = Objects.requireNonNull(messages, "messages");
-        this.configs = Objects.requireNonNull(configs, "configs");
-        this.settingsStore = Objects.requireNonNull(settingsStore, "settingsStore");
-        this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
+        this.messages = Objects.requireNonNull(voice, "voice").messages();
+        this.configs = Objects.requireNonNull(store, "store").configs();
+        this.settingsStore = store.settingsStore();
+        this.modelListing = Objects.requireNonNull(checks, "checks").modelListing();
         this.tests = new ProviderTestRunner(
-                Objects.requireNonNull(verifier, "verifier"),
-                Objects.requireNonNull(errors, "errors"),
+                checks.verifier(),
+                voice,
                 Objects.requireNonNull(executor, "executor"),
                 testTarget.subject(),
                 Objects.requireNonNull(activities, "activities"),
-                Objects.requireNonNull(speedRecorder, "speedRecorder"),
-                Objects.requireNonNull(structuredAnswers, "structuredAnswers"),
-                Objects.requireNonNull(messages, "messages"),
+                Objects.requireNonNull(memory, "memory"),
                 Objects.requireNonNull(clock, "clock"));
         this.modelNotes = new ModelNotesFollower(editedProviderId, draftModel, providers);
         this.executor = executor;
