@@ -84,7 +84,7 @@ class NestedProtectedBlockMaskingTest {
         final Segment segment = onlyEpubSegment("<div>Note: <pre>\n\ncode();</pre> ends it.</div>");
 
         assertThat(segment.masked()).isEqualTo("Note: ⟦g0⟧ ends it.");
-        assertThat(segment.placeholders().get("g0")).isEqualTo("<pre>\n\ncode();</pre>");
+        assertThat(segment.placeholders()).containsEntry("g0", "<pre>\n\ncode();</pre>");
     }
 
     // WHEN a non-translatable block occurs inside a translatable run, the system
@@ -108,8 +108,8 @@ class NestedProtectedBlockMaskingTest {
         // The exact fragment, not a shape plus a line-feed count: before the adapter pinned LineSeparator.NL the
         // count was already right — JDOM2 emitted \r\n for each of the two — so only comparing the fragment itself
         // distinguishes "kept the source's line feeds" from "kept the source's number of line breaks".
-        assertThat(segments.get(0).placeholders().get("g0"))
-                .isEqualTo("<pre xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n\ncode();</pre>");
+        assertThat(segments.get(0).placeholders())
+                .containsEntry("g0", "<pre xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\">\n\ncode();</pre>");
     }
 
     private static Element fb2Body(String book) {

@@ -100,7 +100,7 @@ class TranslateLauncherTest {
                 arguments, environment(dataDir, "TRACE"), emptyProperties(), printStream(console));
         final List<String> logLines = readLog(dataDir.resolve("logs/bookloom.log"));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(consoleText(console).lines()).hasSize(1);
         assertLauncherInfo(logLines, source, dataDir);
         assertParserSuccess(logLines, source);
@@ -206,7 +206,7 @@ class TranslateLauncherTest {
                 List.of(source.toString()), environment(dataDir, "INFO"), emptyProperties(), printStream(console));
         final List<String> logLines = readLog(dataDir.resolve("logs/bookloom.log"));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job started"));
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job ended state=COMPLETED"));
@@ -230,7 +230,7 @@ class TranslateLauncherTest {
                 printStream(console));
         final List<String> logLines = readLog(dataDir.resolve("logs/bookloom.log"));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(consoleText(console).lines()).hasSize(1);
         assertThat(logLines)
                 .filteredOn(line -> line.contains("review mode ignored by the command line"))
@@ -248,7 +248,7 @@ class TranslateLauncherTest {
         final int exit = TranslateLauncher.run(
                 List.of(source.toString()), environment(dataDir), emptyProperties(), printStream(console));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(readLog(dataDir.resolve("logs/bookloom.log"))).noneMatch(line -> line.contains("review mode"));
     }
 

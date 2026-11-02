@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.Locale;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -148,7 +147,7 @@ class CheckSentencesTest {
     void of_passedWithNoMeasurement_hasNoSentenceOfItsOwn() {
         final StageChip bare = new StageChip(VerificationStage.CONNECTION, StageStatus.PASSED, null, null);
 
-        assertThat(CheckSentences.of(EN, bare, "Ollama", true)).isEqualTo(Optional.empty());
+        assertThat(CheckSentences.of(EN, bare, "Ollama", true)).isEmpty();
     }
 
     @Test

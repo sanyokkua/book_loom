@@ -28,7 +28,7 @@ class SegmentLocatorsTest {
         final Map<String, SegmentLocator> locators =
                 SegmentLocators.of(open(TestBooks.epub(tempDir.resolve("Book.epub"), fiveChapters(), "en")));
 
-        assertThat(locators.get("OEBPS/ch4.xhtml:11")).isEqualTo(new SegmentLocator("ch5 · p12"));
+        assertThat(locators).containsEntry("OEBPS/ch4.xhtml:11", new SegmentLocator("ch5 · p12"));
     }
 
     @Test
@@ -36,7 +36,7 @@ class SegmentLocatorsTest {
         final Map<String, SegmentLocator> locators =
                 SegmentLocators.of(open(TestBooks.epub(tempDir.resolve("Book.epub"), fiveChapters(), "en")));
 
-        assertThat(locators.get("OEBPS/ch0.xhtml:2")).isEqualTo(new SegmentLocator("ch1 · p03"));
+        assertThat(locators).containsEntry("OEBPS/ch0.xhtml:2", new SegmentLocator("ch1 · p03"));
     }
 
     @Test

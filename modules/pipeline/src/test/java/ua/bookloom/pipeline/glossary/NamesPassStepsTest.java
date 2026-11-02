@@ -104,7 +104,7 @@ class NamesPassStepsTest extends NamesPassTestBase {
         final List<String> begun = labels(StepKind.STAGE, StepState.STARTED);
         assertThat(begun).isNotEmpty().isSubsetOf(STAGES).doesNotContain("write");
         assertThat(begun).isEqualTo(STAGES.subList(0, begun.size()));
-        assertThat(begun.size()).isLessThan(STAGES.size());
+        assertThat(begun).hasSizeLessThan(STAGES.size());
         assertThat(changes(StepKind.STAGE, StepState.ENDED))
                 .extracting(StepChanged::result)
                 .doesNotContain(StepResult.FAILED);

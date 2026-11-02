@@ -64,7 +64,7 @@ class ModalHostKeyQueueTest extends ShellTestBase {
         final int afterPlainEnter = confirmed.get();
         press(note, KeyCode.ENTER, true);
 
-        assertThat(afterPlainEnter).isEqualTo(0);
+        assertThat(afterPlainEnter).isZero();
         assertThat(confirmed.get()).isEqualTo(1);
     }
 

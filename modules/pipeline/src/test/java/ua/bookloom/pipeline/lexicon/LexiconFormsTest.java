@@ -36,7 +36,7 @@ class LexiconFormsTest {
         lexicon.put(LexiconEntry.of("p1", "стража"));
         final NameCandidate group = new NameCandidate("фонарь", 9, "Он зажёг фонарь.", List.of("фонаря"));
 
-        assertThat(LexiconForms.merge(lexicon, "p1", List.of(group)).data()).isEqualTo(0);
+        assertThat(LexiconForms.merge(lexicon, "p1", List.of(group)).data()).isZero();
         assertThat(lexicon.all("p1").data())
                 .singleElement()
                 .satisfies(entry -> assertThat(entry.forms()).isEmpty());

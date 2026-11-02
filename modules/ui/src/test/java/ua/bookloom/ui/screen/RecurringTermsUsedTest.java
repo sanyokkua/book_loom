@@ -154,7 +154,7 @@ class RecurringTermsUsedTest extends TranslatingScreenTestBase {
         onFx(() -> button("recurring-add-confirm").fire());
 
         awaitFx(() -> usedTexts().contains("2 times"));
-        assertThat(lexicon.usageOnFx().size()).isGreaterThan(before);
+        assertThat(lexicon.usageOnFx()).hasSizeGreaterThan(before);
         assertThat(lexicon.usageOnFx()).allMatch(onFx -> !onFx);
     }
 }

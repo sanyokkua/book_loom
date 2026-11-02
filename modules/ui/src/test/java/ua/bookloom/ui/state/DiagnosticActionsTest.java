@@ -88,8 +88,8 @@ class DiagnosticActionsTest extends FxTestBase {
 
         assertThat(chooser.initials())
                 .singleElement()
-                .satisfies(initial -> assertThat(initial.getFileName().toString())
-                        .isEqualTo("bookloom-diagnostics-20260101-090507.zip"));
+                .satisfies(initial ->
+                        assertThat(initial.getFileName()).hasToString("bookloom-diagnostics-20260101-090507.zip"));
         assertThat(toasts.raised()).isEmpty();
         assertThat(toasts.feedback()).isEmpty();
     }

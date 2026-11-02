@@ -160,7 +160,7 @@ class SettingsProviderFormScreenTest extends SettingsScreenTestBase {
 
         final ProviderConfig stored = configs.find("office-lm").orElseThrow();
         assertThat(stored.displayName()).isEqualTo("Office LM");
-        assertThat(stored.baseUrl().toString()).isEqualTo("http://10.0.0.5:1234/v1");
+        assertThat(stored.baseUrl()).hasToString("http://10.0.0.5:1234/v1");
         assertThat(configs.saves()).isEqualTo(1);
         assertThat(required("provider-row-office-lm").lookup(".provider-endpoint"))
                 .isInstanceOfSatisfying(

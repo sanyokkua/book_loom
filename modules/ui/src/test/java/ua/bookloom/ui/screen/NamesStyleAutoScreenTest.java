@@ -94,7 +94,7 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
         onFx(() -> injector.getInstance(BookBriefViewModel.class).setDial(QualityDial.MAX));
 
         awaitFx(() -> "About 30–60 min, estimate. You can undo it all afterwards.".equals(labelText(SUBTITLE)));
-        assertThat(namesPass.estimateCalls().size()).isGreaterThan(askedBefore);
+        assertThat(namesPass.estimateCalls()).hasSizeGreaterThan(askedBefore);
     }
 
     // IF the old minutes stayed beside the new dial while the save was slow, THEN the line would show minutes computed

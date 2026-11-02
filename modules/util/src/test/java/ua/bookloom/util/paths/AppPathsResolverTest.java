@@ -171,7 +171,7 @@ class AppPathsResolverTest {
         final Path prodDir = Path.of(prod.dataDir());
         assertThat(devDir.startsWith(prodDir)).isFalse();
         assertThat(prodDir.startsWith(devDir)).isFalse();
-        assertThat(devDir.getParent()).isEqualTo(prodDir.getParent());
+        assertThat(devDir).hasParentRaw(prodDir.getParent());
     }
 
     // ===== EC-ENV-1 — blank or relative XDG values ===============================================================

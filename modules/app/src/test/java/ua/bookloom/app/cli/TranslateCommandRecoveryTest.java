@@ -55,7 +55,7 @@ class TranslateCommandRecoveryTest {
 
         final int exit = command(models, new ScriptedProbe(1)).run(arguments(), print(console));
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(lines(console))
                 .anyMatch(line -> line.startsWith("Provider unreachable — waiting and retrying by itself"))
                 .anyMatch(line -> line.startsWith("Completed: "));
@@ -119,7 +119,7 @@ class TranslateCommandRecoveryTest {
         assertThat(json.path("recovery").path("outages").get(0).path("ended").asText())
                 .isEqualTo("RESUMED");
         assertThat(json.path("export").path("partial").asBoolean()).isFalse();
-        assertThat(json.path("exitCode").asInt()).isEqualTo(0);
+        assertThat(json.path("exitCode").asInt()).isZero();
         // The scripted models report no usage, so the calls are counted and no token figure is written, never a 0.
         assertThat(json.path("modelCallsByKind").path("DRAFT").path("attempts").asInt())
                 .isPositive();

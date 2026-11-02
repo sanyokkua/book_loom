@@ -280,8 +280,8 @@ class DiagnosticsTranslationJobTest {
                         "sections=1");
         assertThat(end.getFormattedMessage()).contains("state=COMPLETED", "segments=1", "accepted=1", "flagged=0");
         assertThat(start.getMDCPropertyMap().get("job")).isNotBlank();
-        assertThat(end.getMDCPropertyMap().get("job"))
-                .isEqualTo(start.getMDCPropertyMap().get("job"));
+        assertThat(end.getMDCPropertyMap())
+                .containsEntry("job", start.getMDCPropertyMap().get("job"));
     }
 
     private void assertOnlyErrorCarries(final Throwable cause) {

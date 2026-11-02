@@ -96,7 +96,7 @@ class ContextScopeTest {
 
         final ContextPackage assembled = assemble(chunk, 0, List.of(name(term, "x")));
 
-        assertThat(assembled.snapshot().glossary().size()).isEqualTo(expected ? 1 : 0);
+        assertThat(assembled.snapshot().glossary()).hasSize(expected ? 1 : 0);
     }
 
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
@@ -118,7 +118,7 @@ class ContextScopeTest {
                 List.of(),
                 LexiconFilter.of("en", "uk"));
 
-        assertThat(selected.size()).isEqualTo(shown ? 1 : 0);
+        assertThat(selected).hasSize(shown ? 1 : 0);
     }
 
     @Test

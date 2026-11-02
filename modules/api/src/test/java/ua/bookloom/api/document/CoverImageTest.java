@@ -37,6 +37,6 @@ class CoverImageTest {
                 new CoverImage("OEBPS/cover.jpg", "image/jpeg", Arrays.copyOf(new byte[] {1, 2, 3}, 3));
 
         assertThat(first).isEqualTo(second);
-        assertThat(first.hashCode()).isEqualTo(second.hashCode());
+        assertThat(first).hasSameHashCodeAs(second);
     }
 }

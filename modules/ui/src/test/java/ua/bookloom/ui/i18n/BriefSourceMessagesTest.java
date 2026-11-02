@@ -23,7 +23,7 @@ class BriefSourceMessagesTest {
             })
     void sourceKeys_autoEntryAndProposal_areWordedInBothLanguages(
             final String language, final String key, final String expected) {
-        assertThat(Catalogues.load(language).get(key)).isEqualTo(expected);
+        assertThat(Catalogues.load(language)).containsEntry(key, expected);
     }
 
     // IF the hover of "Use it" were missing, THEN the one button that changes the source would explain nothing.

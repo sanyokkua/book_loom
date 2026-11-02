@@ -108,7 +108,7 @@ class TranslateCommandWireMockTest {
                         "qwen3"),
                 console);
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(server.findAll(anyRequestedFor(anyUrl())))
                 .isNotEmpty()
                 .extracting(LoggedRequest::getUrl)
@@ -149,7 +149,7 @@ class TranslateCommandWireMockTest {
                         "qwen3"),
                 console);
 
-        assertThat(exit).isEqualTo(0);
+        assertThat(exit).isZero();
         assertThat(server.findAll(postRequestedFor(urlEqualTo("/v1/chat/completions"))))
                 .extracting(LoggedRequest::getBodyAsString)
                 .anySatisfy(body -> assertThat(body).contains(expectedInPrompt));

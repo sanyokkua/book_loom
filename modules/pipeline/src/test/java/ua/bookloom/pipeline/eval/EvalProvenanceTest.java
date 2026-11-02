@@ -95,7 +95,7 @@ class EvalProvenanceTest {
         final JsonNode judge =
                 new ObjectMapper().readTree(provenance(Map.of()).json()).get("judge");
 
-        assertThat(judge.toString()).isEqualTo("{\"mode\":\"none\"}");
+        assertThat(judge).hasToString("{\"mode\":\"none\"}");
     }
 
     @Test
@@ -204,7 +204,7 @@ class EvalProvenanceTest {
         assertThat(provenance.at("/dataset/id").asText()).isEqualTo("mini-en");
         assertThat(provenance.at("/model/id").asText()).isEqualTo("gemma4:e4b-mlx");
         assertThat(provenance.at("/model/quantisation").asText()).isEqualTo("q4_K_M");
-        assertThat(provenance.at("/model/seeds").toString()).isEqualTo("[1000,1001,1002]");
+        assertThat(provenance.at("/model/seeds")).hasToString("[1000,1001,1002]");
         assertThat(provenance.at("/repeats/k").asInt()).isEqualTo(3);
         assertThat(provenance.get("noiseBand").asDouble()).isCloseTo(0.04, within(1e-9));
         assertThat(provenance.get("baselineOf").isNull()).isTrue();
@@ -220,7 +220,7 @@ class EvalProvenanceTest {
         assertThat(provenance.at("/dataset/id").asText()).isEqualTo("mini-ru");
         assertThat(provenance.at("/dataset/pair").asText()).isEqualTo("ru-uk");
         assertThat(provenance.at("/dataset/ownerData").asBoolean()).isFalse();
-        assertThat(provenance.get("aggregates").toString()).isEqualTo("[0.5,0.6,0.55]");
+        assertThat(provenance.get("aggregates")).hasToString("[0.5,0.6,0.55]");
     }
 
     @Test

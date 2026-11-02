@@ -318,7 +318,7 @@ class NamesScoreTest {
         assertThat(cases.recurringDropped()).containsExactly("guild");
         assertThat(cases.recurringJunkKept()).containsExactly("mark");
         assertThat(cases.spellings().get("dax")).containsExactly("Dax Orlo → Dax Orlo → Дакс Орло", "Dax → Dax → Декс");
-        assertThat(cases.json().get("wrongVerified").toString()).isEqualTo("[\"Dax\"]");
+        assertThat(cases.json().get("wrongVerified")).hasToString("[\"Dax\"]");
     }
 
     @Test

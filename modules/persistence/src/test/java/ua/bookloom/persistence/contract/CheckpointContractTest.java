@@ -129,7 +129,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
         final Result<Integer> result = checkpointPort().commit(commit);
 
-        assertThat(result.data()).isEqualTo(0);
+        assertThat(result.data()).isZero();
         assertThat(glossary.all("p1").data()).hasSize(1);
         assertThat(glossary.findByTerm("p1", "hale").data())
                 .isPresent()
@@ -151,7 +151,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
         final Result<Integer> result = checkpointPort().commit(commit);
 
-        assertThat(result.data()).isEqualTo(0);
+        assertThat(result.data()).isZero();
         assertThat(glossary.all("p1").data()).isEmpty();
     }
 

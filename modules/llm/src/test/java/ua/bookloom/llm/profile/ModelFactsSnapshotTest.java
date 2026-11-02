@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -84,6 +83,6 @@ class ModelFactsSnapshotTest {
         final JsonNode tag = snapshot.path("pipelineTags").path("lmstudio-community/gpt-oss-20b-GGUF");
 
         assertThat(tag.isNull()).isTrue();
-        assertThat(PipelineTags.kind(tag.asText(null))).isEqualTo(Optional.empty());
+        assertThat(PipelineTags.kind(tag.asText(null))).isEmpty();
     }
 }

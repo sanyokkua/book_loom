@@ -327,7 +327,7 @@ class NamesStyleAutoPrepareTest extends FxTestBase {
 
         assertThat(onFx(() -> vm.autoEstimate().get())).isEqualTo(ScriptedNamesPass.range(40, 30, 60));
         assertThat(namesPass.estimateCalls()).contains(PROJECT);
-        assertThat(namesPass.estimateCalls().size()).isGreaterThanOrEqualTo(2);
+        assertThat(namesPass.estimateCalls()).hasSizeGreaterThanOrEqualTo(2);
     }
 
     // IF a refused estimate left the last one up, THEN the button would promise minutes nobody computed.

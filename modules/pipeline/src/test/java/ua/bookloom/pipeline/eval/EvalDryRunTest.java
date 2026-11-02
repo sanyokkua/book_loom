@@ -37,7 +37,7 @@ class EvalDryRunTest {
         assertThat(provenance.at("/dataset/rootHash").asText()).isEqualTo(manifestRootHash());
         assertThat(provenance.at("/judge/mode").asText()).isEqualTo("none");
         assertThat(provenance.at("/repeats/k").asInt()).isEqualTo(1);
-        assertThat(provenance.at("/repeats/seeds").toString()).isEqualTo("[1000]");
+        assertThat(provenance.at("/repeats/seeds")).hasToString("[1000]");
         assertThat(provenance.has("model")).isTrue();
         assertThat(provenance.get("noiseBand").isNull()).isTrue();
         assertThat(provenance.get("comparison").isNull()).isTrue();

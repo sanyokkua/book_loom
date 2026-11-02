@@ -109,7 +109,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
             return null;
         });
 
-        assertThat(projects.imports().size()).isEqualTo(1);
+        assertThat(projects.imports()).hasSize(1);
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Opening("first.epub"));
         projects.release();
         awaitAnswered(viewModel);

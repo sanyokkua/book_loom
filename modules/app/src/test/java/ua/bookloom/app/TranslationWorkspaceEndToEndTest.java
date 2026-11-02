@@ -160,8 +160,8 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
     private void assertMirror(final boolean reviewed) {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(SEGMENT_COUNT);
-        assertThat(onFx(() -> mirror.figures().get().remaining())).isEqualTo(0);
-        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(0);
+        assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
         assertThat(onFx(() -> mirror.figures().get().flagged())).isEqualTo(reviewed ? 0 : SEGMENT_COUNT);
     }
 }

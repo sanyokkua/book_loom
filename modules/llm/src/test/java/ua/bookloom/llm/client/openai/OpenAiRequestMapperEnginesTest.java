@@ -257,7 +257,7 @@ class OpenAiRequestMapperEnginesTest {
         final JsonNode body = sentBody(client(ServerEngine.LLAMA_CPP), MODEL_ID, request(null, null, null));
 
         assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
-        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("top_k").asInt(-1)).isZero();
         assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
         assertThat(body.path("repeat_penalty").asDouble(-1)).isEqualTo(1.0);
         assertThat(body.has("repetition_penalty")).isFalse();
@@ -268,7 +268,7 @@ class OpenAiRequestMapperEnginesTest {
         final JsonNode body = sentBody(client(ServerEngine.LM_STUDIO), MODEL_ID, request(null, null, null));
 
         assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
-        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("top_k").asInt(-1)).isZero();
         assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
         assertThat(body.path("repeat_penalty").asDouble(-1)).isEqualTo(1.0);
     }
@@ -281,7 +281,7 @@ class OpenAiRequestMapperEnginesTest {
         assertThat(body.path("enable_tools").asBoolean(true)).isFalse();
         assertThat(body.path("repetition_penalty").asDouble(-1)).isEqualTo(1.0);
         assertThat(body.path("top_p").asDouble(-1)).isEqualTo(1.0);
-        assertThat(body.path("top_k").asInt(-1)).isEqualTo(0);
+        assertThat(body.path("top_k").asInt(-1)).isZero();
         assertThat(body.path("min_p").asDouble(-1)).isEqualTo(0.0);
         assertThat(body.has("repeat_penalty")).isFalse();
     }

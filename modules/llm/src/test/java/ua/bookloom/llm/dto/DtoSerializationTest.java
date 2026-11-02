@@ -53,7 +53,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo("{\"temperature\":0.2}");
+        assertThat(body.path("options")).hasToString("{\"temperature\":0.2}");
     }
 
     // A supplied context size serializes as num_ctx and omits a null temperature.
@@ -67,7 +67,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo("{\"num_ctx\":8192}");
+        assertThat(body.path("options")).hasToString("{\"num_ctx\":8192}");
     }
 
     // The output cap serializes as num_predict beside num_ctx, and alone it still keeps the options object.
@@ -83,7 +83,7 @@ class DtoSerializationTest {
                 null,
                 null));
 
-        assertThat(body.path("options").toString()).isEqualTo(expectedOptions);
+        assertThat(body.path("options")).hasToString(expectedOptions);
     }
 
     // The OpenAI-compatible body carries max_tokens only when a cap is set.

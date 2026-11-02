@@ -143,7 +143,7 @@ class TranslationMemoryTest {
 
         final TmLookup lookup = memory.lookup(unit.get(1), unit);
 
-        assertThat(stored.length()).isEqualTo(36);
+        assertThat(stored).hasSize(36);
         assertThat(lookup.suggestions()).hasSize(1);
     }
 

@@ -125,8 +125,7 @@ class StorageSettingsTest {
         settings.backup();
 
         assertThat(chooser.initials()).hasSize(1);
-        assertThat(chooser.initials().getFirst().getFileName().toString())
-                .isEqualTo("bookloom-backup-20261023-080509.db");
+        assertThat(chooser.initials().getFirst().getFileName()).hasToString("bookloom-backup-20261023-080509.db");
     }
 
     // IF a second click started a second copy, THEN two writers would race for one file name.

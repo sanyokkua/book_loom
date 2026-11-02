@@ -217,7 +217,7 @@ class JobEventContractsTest {
         given.clear();
 
         assertThat(read.answers()).containsOnlyKeys(BriefField.GENRE);
-        assertThat(read.answers().get(BriefField.GENRE)).isEqualTo(new SampleAnswer("crime", "He left."));
+        assertThat(read.answers()).containsEntry(BriefField.GENRE, new SampleAnswer("crime", "He left."));
         assertThat(read.sample()).isEqualTo(2);
     }
 

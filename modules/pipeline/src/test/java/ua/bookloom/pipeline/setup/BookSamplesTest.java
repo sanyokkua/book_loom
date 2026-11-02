@@ -247,7 +247,7 @@ class BookSamplesTest {
     void of_storyReadInSeveralWindows_noWindowIsTheWholeStory() {
         final List<BookSample> samples = BookSamples.of(book(chapters(3)), "en", 4, 800);
 
-        assertThat(samples.size()).isGreaterThan(1);
+        assertThat(samples).hasSizeGreaterThan(1);
         assertThat(samples).noneMatch(BookSample::wholeStory);
     }
 
