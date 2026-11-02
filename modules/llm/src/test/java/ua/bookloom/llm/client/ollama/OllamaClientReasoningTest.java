@@ -158,7 +158,7 @@ class OllamaClientReasoningTest {
     @ParameterizedTest
     @CsvSource({"OFF", "LOW", "ON"})
     void maxLines_anyLevel_isTwiceTheCapPlusTheMargin(final ReasoningLevel level) {
-        assertThat(ThinkingLines.maxLines(MODEL_ID, request(100, level))).isEqualTo(264L);
+        assertThat(ThinkingLines.maxLines(request(100, level))).isEqualTo(264L);
     }
 
     // With no cap the bound is the context window, which already holds the thinking: no room is added.
@@ -175,7 +175,7 @@ class OllamaClientReasoningTest {
                 null,
                 CallKind.DRAFT);
 
-        assertThat(ThinkingLines.maxLines(MODEL_ID, uncapped)).isEqualTo(8256L);
+        assertThat(ThinkingLines.maxLines(uncapped)).isEqualTo(8256L);
     }
 
     private static String thinkingLines(final int count) {

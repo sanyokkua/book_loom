@@ -40,7 +40,7 @@ public final class ModelProfiles {
     private static final String BOOLEAN_OFF = "false";
     private static final Set<String> OFF_WORDS = Set.of(BOOLEAN_OFF, "off", "none");
     private static final Set<String> BOOLEAN_WORDS = Set.of("true", BOOLEAN_OFF, "on", "off");
-    private static final Pattern BILLIONS = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*[Bb]\\b");
+    private static final Pattern BILLIONS = Pattern.compile("(?<![\\d.])(\\d{1,9}(?:\\.\\d{1,9})?)\\s{0,3}[Bb]\\b");
     private static final ModelReport.Match DEFAULT_MATCH = ModelReport.Match.DEFAULT;
 
     // The default profile's request half as a row, so a model with no row goes through the same layering.
@@ -197,7 +197,7 @@ public final class ModelProfiles {
             final ServerEngine engine, final ProbeVerdicts verdicts, final ReasoningControl reasoning) {
         final boolean switchable =
                 reasoning.kind() == ReasoningControl.Kind.BOOLEAN || reasoning.kind() == ReasoningControl.Kind.LEVELS;
-        if (!switchable || EngineTraits.of(engine, null).offSwitch() != EngineTraits.OffSwitch.PROBED) {
+        if (!switchable || EngineTraits.of(engine).offSwitch() != EngineTraits.OffSwitch.PROBED) {
             return reasoning;
         }
         final ProbeVerdicts.ThinkingVerdict checked = verdicts.thinkingSwitch();

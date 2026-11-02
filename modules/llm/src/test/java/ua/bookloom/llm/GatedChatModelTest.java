@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ import ua.bookloom.llm.retry.RetryPolicy;
 
 /** Exercises retries and gate placement against the real OpenAI-compatible HTTP boundary. */
 class GatedChatModelTest {
+
+    private static final long SETTLE_NANOS = TimeUnit.MILLISECONDS.toNanos(100);
 
     // LM Studio's own route, where its chat goes first.
     private static final String CHAT_PATH = "/api/v0/chat/completions";
@@ -271,7 +274,7 @@ class GatedChatModelTest {
             assertThat(ready.await(2, TimeUnit.SECONDS)).isTrue();
             start.countDown();
             awaitRequestCount(1);
-            Thread.sleep(100);
+            LockSupport.parkNanos(SETTLE_NANOS);
             // The model-id check's one GET of the server's list is not a chat call.
             assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH)))).hasSize(1);
             assertThat(first.get(3, TimeUnit.SECONDS).isOk()).isTrue();
@@ -371,7 +374,7 @@ class GatedChatModelTest {
     private void awaitRequestCount(int expected) throws InterruptedException {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline && chatRequests() < expected) {
-            Thread.sleep(10);
+            LockSupport.parkNanos(SETTLE_NANOS / 10);
         }
         assertThat(chatRequests()).isEqualTo(expected);
     }

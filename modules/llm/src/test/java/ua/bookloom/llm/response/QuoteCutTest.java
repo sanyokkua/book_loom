@@ -20,8 +20,10 @@ import ua.bookloom.api.pipeline.CallKind;
 class QuoteCutTest {
 
     // What a folded request's user message starts with: the system text and the schema line, full of straight quotes.
-    private static final String FOLDED_SYSTEM = "You translate prose.\n\n"
-            + "Return exactly one JSON object matching this schema: {\"items\":[{\"id\":\"<id>\",\"target\":\"<t>\"}]}";
+    private static final String FOLDED_SYSTEM = """
+            You translate prose.
+
+            Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<t>"}]}""";
     private static final String QUOTED = "Він сказав \"так\" і пішов.";
 
     @Test

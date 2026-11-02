@@ -93,7 +93,7 @@ public final class OllamaClient implements ProviderClient {
             final Result<HttpReply> result = call.result();
             logOutcome("probe", null, result.error());
             return new ProviderCallResult<>(result.map(ignored -> true), call.retryAfter());
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("probe", null, failure)));
         }
     }
@@ -114,7 +114,7 @@ public final class OllamaClient implements ProviderClient {
             }
             return new ProviderCallResult<>(
                     readModels(Objects.requireNonNull(result.data(), REPLY).body()), call.retryAfter());
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(discoveryFailure(failure)));
         }
     }
@@ -136,7 +136,7 @@ public final class OllamaClient implements ProviderClient {
                 request.keepLoaded());
         try {
             return chatWithParsedFormat(modelId, request);
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
         }
     }
@@ -293,7 +293,7 @@ public final class OllamaClient implements ProviderClient {
                 CHAT_PATH,
                 body,
                 RequestTimeouts.streamIdle(config),
-                ThinkingLines.maxLines(modelId, request),
+                ThinkingLines.maxLines(request),
                 ThinkingLines.counted(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);

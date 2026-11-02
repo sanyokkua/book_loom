@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.provider.EndpointPaths;
+import ua.bookloom.util.text.Slashes;
 
 /**
  * Where one provider's chat is posted. LM Studio's own route, {@code /api/v0/chat/completions} at the server's root,
@@ -83,9 +84,9 @@ final class ChatRoute {
         final ProviderConfig target = native0.orElse(config);
         final String path = native0.isPresent() ? LM_STUDIO_CHAT_PATH : openAiPath();
         final URI base = target.baseUrl();
-        final String basePath = base.getPath() == null ? "" : base.getPath().replaceFirst("/+$", "");
+        final String basePath = base.getPath() == null ? "" : Slashes.trimTrailing(base.getPath());
         return URI.create(base.getScheme() + "://" + base.getHost() + (base.getPort() < 0 ? "" : ":" + base.getPort())
-                + basePath + "/" + path.replaceFirst("^/+", ""));
+                + basePath + "/" + Slashes.trimLeading(path));
     }
 
     private String openAiPath() {

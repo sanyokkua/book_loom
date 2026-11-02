@@ -149,7 +149,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             }
             return checker.sendCheck(
                     Objects.requireNonNull(checked.data(), "checked").sentId(), request);
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(OpenAiFailures.unexpected(config, "check", modelId, failure)));
         }
@@ -203,7 +203,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             final Result<HttpReply> result = call.result();
             logOutcome("probe", null, result.error());
             return new ProviderCallResult<>(result.map(ignored -> true), call.retryAfter());
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(OpenAiFailures.unexpected(config, "probe", null, failure)));
         }
@@ -228,7 +228,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             }
             return new ProviderCallResult<>(
                     models.read(Objects.requireNonNull(result.data(), REPLY).body()), call.retryAfter());
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(models.failure(failure)));
         }
     }
@@ -254,7 +254,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             final String sentId =
                     Objects.requireNonNull(checked.data(), "checked").sentId();
             return chatWithParsedFormat(sentId, shaping.proved(sentId, request));
-        } catch (Throwable failure) {
+        } catch (Exception failure) {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(OpenAiFailures.unexpected(config, "chat", modelId, failure)));
         }

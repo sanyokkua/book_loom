@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ServerEngine;
 
 /**
@@ -47,10 +46,9 @@ public record EngineTraits(
      * The traits of an engine.
      *
      * @param engine the provider's effective engine; non-null
-     * @param version the engine's reported version, or null when unknown; no row depends on it yet
      * @return the engine's row; never null
      */
-    public static EngineTraits of(final ServerEngine engine, final @Nullable String version) {
+    public static EngineTraits of(final ServerEngine engine) {
         Objects.requireNonNull(engine, "engine");
         return switch (engine) {
             // Ollama's OpenAI path ignores max_completion_tokens, so a call capped that way would run uncapped.

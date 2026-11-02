@@ -9,6 +9,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.util.text.Slashes;
 
 /**
  * The provider's server root and its OpenAI path, both as short-timeout copies of the description the probes are sent
@@ -82,7 +83,7 @@ record BaseUrlRoot(ProviderConfig root, ProviderConfig base, boolean baseIsRootV
     }
 
     private static String trimmed(final String path) {
-        return path == null ? "" : path.replaceFirst("/+$", "");
+        return path == null ? "" : Slashes.trimTrailing(path);
     }
 
     private static Optional<ProviderConfig> atPath(final ProviderConfig config, final String path) {

@@ -61,7 +61,7 @@ final class EngineShaping {
         this.verdicts = Objects.requireNonNull(verdicts, "verdicts");
         this.checking = checking;
         this.forced = forced;
-        this.traits = EngineTraits.of(config.effectiveEngine(), config.engineVersion());
+        this.traits = EngineTraits.of(config.effectiveEngine());
     }
 
     EngineShaping forChecks() {

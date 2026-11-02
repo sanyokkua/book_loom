@@ -94,7 +94,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
                     found == null ? null : found.loaded(),
                     loads);
             return loads;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.warn(
                     "Model load question degraded to no providerId={} model={}",
                     selection.providerId(),
@@ -123,7 +123,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
                     clients.create(config.get()).facts(modelId).contextLength());
             log.debug("Detected context length providerId={} model={} tokens={}", providerId, modelId, length.tokens());
             return Result.ok(length);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             log.debug(
                     "Context length detection degraded to unknown providerId={} model={}", providerId, modelId, cause);
             return Result.ok(ContextLength.unknown());

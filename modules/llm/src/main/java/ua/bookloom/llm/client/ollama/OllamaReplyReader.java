@@ -88,7 +88,7 @@ final class OllamaReplyReader {
                     message == null ? null : message.content(),
                     thinking != null && !thinking.isBlank(),
                     merged.doneReason());
-        } catch (IOException | RuntimeException unreadable) {
+        } catch (IOException | RuntimeException readFailure) {
             log.debug("Reasoning budget check skipped: the reply could not be read");
             return false;
         }
@@ -119,9 +119,7 @@ final class OllamaReplyReader {
         final OllamaChatResponse last = parts.getLast();
         return new OllamaChatResponse(
                 last.model(),
-                anyContent || !thinking.isEmpty()
-                        ? new OllamaChatResponse.Message(anyContent ? content.toString() : null, thinking.toString())
-                        : null,
+                mergedMessage(anyContent ? content.toString() : null, thinking.toString()),
                 cut ? CUT_REASON : last.doneReason(),
                 last.promptEvalCount(),
                 last.evalCount(),
@@ -239,5 +237,10 @@ final class OllamaReplyReader {
             case CUT_REASON -> FinishReason.LENGTH;
             default -> FinishReason.OTHER;
         };
+    }
+
+    private static OllamaChatResponse.@Nullable Message mergedMessage(
+            final @Nullable String content, final String thinking) {
+        return content != null || !thinking.isEmpty() ? new OllamaChatResponse.Message(content, thinking) : null;
     }
 }

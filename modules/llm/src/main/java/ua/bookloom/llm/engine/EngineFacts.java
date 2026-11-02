@@ -87,9 +87,8 @@ public final class EngineFacts {
         Objects.requireNonNull(config, CONFIG);
         Objects.requireNonNull(modelId, MODEL_ID);
         Objects.requireNonNull(facts, "facts");
-        final boolean templateEngine = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
-                        .offSwitch()
-                == EngineTraits.OffSwitch.TEMPLATE_KWARG;
+        final boolean templateEngine =
+                EngineTraits.of(config.effectiveEngine()).offSwitch() == EngineTraits.OffSwitch.TEMPLATE_KWARG;
         if (!templateEngine || !facts.thinkingOptions().isEmpty()) {
             log.debug(
                     "Template switch not added provider={} model={} templateEngine={}",

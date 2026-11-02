@@ -106,7 +106,7 @@ public final class ModelIdCheck {
      */
     public boolean applies() {
         final ServerEngine engine = config.effectiveEngine();
-        final boolean applies = EngineTraits.of(engine, config.engineVersion()).servesUnknownModel()
+        final boolean applies = EngineTraits.of(engine).servesUnknownModel()
                 || (engine == ServerEngine.LLAMA_CPP && facts.isRouter(config));
         log.debug("Model id check applies provider={} engine={} applies={}", config.id(), engine, applies);
         return applies;

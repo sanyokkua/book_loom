@@ -37,7 +37,7 @@ final class ThinkingLines {
      * stop — a reflect call once streamed 9,664 lines until the three-minute timeout. Cut there, it is read as a
      * reply that finished for length.
      */
-    static long maxLines(String modelId, ChatRequest request) {
+    static long maxLines(ChatRequest request) {
         final @Nullable Integer cap = request.maxOutputTokens();
         final @Nullable Integer bound = cap != null ? cap : request.contextWindow();
         final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;

@@ -35,8 +35,14 @@ class PseudoChatModelTest {
     // A directed fix reads the rejected target from its one <Translation> block, ignoring the <Source> beside it.
     @Test
     void chat_directedFixFormat_repliesWithUppercasedRejectedTarget() {
-        final String message = "<Source>\nHe opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n"
-                + "<Translation>\nhe opened the ⟦g0⟧old⟦g1⟧ door.\n</Translation>";
+        final String message = """
+                <Source>
+                He opened the ⟦g0⟧old⟦g1⟧ door.
+                </Source>
+
+                <Translation>
+                he opened the ⟦g0⟧old⟦g1⟧ door.
+                </Translation>""";
 
         final ChatResponse response = send(message, "directed-fix");
 
@@ -46,8 +52,15 @@ class PseudoChatModelTest {
     // A batch draft answers every numbered item under its own id, tokens kept, and ignores the context blocks.
     @Test
     void chat_batchDraftFormat_repliesWithAnUppercasedEntryPerItemId() {
-        final String message = "[Previous pairs]\nSource: Hi.\nTranslation: Привіт.\n\n<Items>\n"
-                + "<s id=\"1\">He opened the ⟦g0⟧old⟦g1⟧ door.</s>\n<s id=\"2\">1881</s>\n</Items>";
+        final String message = """
+                [Previous pairs]
+                Source: Hi.
+                Translation: Привіт.
+
+                <Items>
+                <s id="1">He opened the ⟦g0⟧old⟦g1⟧ door.</s>
+                <s id="2">1881</s>
+                </Items>""";
 
         final ChatResponse response = send(message, "draft-batch-json");
 

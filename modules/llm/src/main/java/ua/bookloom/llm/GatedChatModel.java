@@ -254,7 +254,7 @@ public final class GatedChatModel implements ChatModel {
     // needs to know; a transient failure of another kind may still earn one more within the total budget.
     private CallAttempt reported(ChatRequest request, Tries tries) {
         final int stallBound = tries.attempt() + RetryPolicy.MAX_TIMEOUT_ATTEMPTS - 1 - tries.timedOut();
-        final int maxAttempts = Math.max(tries.attempt(), Math.min(RetryPolicy.MAX_ATTEMPTS, stallBound));
+        final int maxAttempts = Math.clamp(stallBound, tries.attempt(), RetryPolicy.MAX_ATTEMPTS);
         return new CallAttempt(tries.attempt(), maxAttempts, client.chatTimeout(request), request.maxOutputTokens());
     }
 

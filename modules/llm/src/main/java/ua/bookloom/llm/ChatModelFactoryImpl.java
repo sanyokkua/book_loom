@@ -54,7 +54,7 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
         Result<ChatModel> result;
         try {
             result = createModel(selection);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             result = Result.err(internalError(cause));
         }
         log.debug(

@@ -207,8 +207,12 @@ public final class ModelFactsReader {
         final Integer most = positiveOrNull(row.path("max_context_length"));
         final Integer served = positiveOrNull(row.path("max_model_len"));
         final boolean loaded = row.path("loaded").asBoolean(false);
-        draft.loadedContext = slot != null ? slot : (loaded ? window : null);
+        draft.loadedContext = slot != null ? slot : loadedWindow(loaded, window);
         draft.contextLength = draft.loadedContext != null ? draft.loadedContext : firstOf(most, served, window);
+    }
+
+    private static @Nullable Integer loadedWindow(final boolean loaded, final @Nullable Integer window) {
+        return loaded ? window : null;
     }
 
     private static @Nullable Integer firstOf(final @Nullable Integer... values) {

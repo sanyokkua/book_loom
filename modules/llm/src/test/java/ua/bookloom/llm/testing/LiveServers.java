@@ -27,6 +27,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.util.text.Slashes;
 
 /** Builds the real {@code :llm} services for the env-gated live tests, which skip when their variable is unset. */
 // Checkstyle reads source before Lombok generates the private constructor (ADR-0024).
@@ -42,7 +43,7 @@ public final class LiveServers {
     public static String requireUrl(final String variable) {
         final String value = System.getenv(variable);
         Assumptions.assumeTrue(value != null && !value.isBlank(), variable + " is not set");
-        return Objects.requireNonNull(value).replaceAll("/+$", "");
+        return Slashes.trimTrailing(Objects.requireNonNull(value));
     }
 
     /** A provider with the given kind and address, the credential reference and no engine choice. */

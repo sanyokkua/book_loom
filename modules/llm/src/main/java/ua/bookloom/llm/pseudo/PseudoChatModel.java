@@ -36,7 +36,7 @@ public final class PseudoChatModel implements ChatModel {
     private static final String UNKNOWN = "unknown";
 
     private static final Pattern PROTECTED_REFERENCE =
-            Pattern.compile("⟦g\\d+⟧|&(?:#(?:x|X)[0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
+            Pattern.compile("⟦g\\d+⟧|&(?:#[xX][0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
 
     private static final String FORMAT_REVIEWER = "reviewer";
@@ -88,7 +88,7 @@ public final class PseudoChatModel implements ChatModel {
             final String reply = structuredReply(request, source, translation);
             logTrace(userMessage, reply);
             return Result.ok(new ChatResponse(reply, FinishReason.STOP));
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(cause));
         }
     }

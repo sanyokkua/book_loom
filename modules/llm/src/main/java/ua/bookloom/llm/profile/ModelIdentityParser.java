@@ -180,13 +180,20 @@ public final class ModelIdentityParser {
         return reasons;
     }
 
+    private static @Nullable String formatOf(final NameShape shape, final TokenReading reading) {
+        if (shape.ggufFile()) {
+            return "gguf";
+        }
+        return shape.format() != null ? shape.format() : reading.format;
+    }
+
     private static NameFacts facts(
             final NameShape shape,
             final QuantScan quant,
             final TokenReading reading,
             final NameWords words,
             final FamilyWords family) {
-        final String format = shape.ggufFile() ? "gguf" : shape.format() != null ? shape.format() : reading.format;
+        final String format = formatOf(shape, reading);
         final boolean implied = MLX_COMMUNITY.equals(shape.quantizer()) && reading.format == null && !shape.ggufFile();
         return new NameFacts(
                 shape.namespace(),

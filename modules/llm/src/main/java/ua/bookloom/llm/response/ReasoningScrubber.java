@@ -45,7 +45,7 @@ public final class ReasoningScrubber {
                     "<\\|channel\\|>\\s*(?:analysis|commentary)\\s*<\\|message\\|>.*?(?:<\\|end\\|>|\\z)"),
             new Rule("closer-only", "\\A.*</(?:think|thinking|reasoning)>"),
             new Rule("bracket-closer-only", "\\A.*\\[/THINK\\]"),
-            new Rule("unclosed-opener", "(?:" + ANYWHERE_OPENERS + ").*\\z"),
+            new Rule("unclosed-opener", ANYWHERE_OPENERS + ".*\\z"),
             new Rule("unclosed-leading-opener", LEADING_OPENERS + ".*\\z"),
             new Rule("bare-thought", "\\A\\s*thought\\s*<channel\\|>"),
             new Rule(
@@ -54,7 +54,7 @@ public final class ReasoningScrubber {
                             + "|<\\|constrain\\|>\\s*json|<channel\\|>|<turn\\|>|</?end_of_turn>"
                             + "|<start_of_turn>(?:model)?"));
 
-    private static final Pattern UNCLOSED = Pattern.compile("(?:" + ANYWHERE_OPENERS + ")|" + LEADING_OPENERS, FLAGS);
+    private static final Pattern UNCLOSED = Pattern.compile(ANYWHERE_OPENERS + "|" + LEADING_OPENERS, FLAGS);
 
     // muse-glimmer's hidden note to itself, up to the header of the answer, and that header.
     private static final List<Rule> TO_SELF = List.of(

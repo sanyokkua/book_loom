@@ -33,6 +33,6 @@ public final class ReasoningReserve {
         }
         final long proportional =
                 (long) TOKENS_PER_SOURCE_TOKEN * source.tokens() + (long) TOKENS_PER_ITEM * source.items();
-        return (int) Math.min(Integer.MAX_VALUE, Math.max(MIN_TOKENS, proportional));
+        return Math.clamp(proportional, MIN_TOKENS, Integer.MAX_VALUE);
     }
 }

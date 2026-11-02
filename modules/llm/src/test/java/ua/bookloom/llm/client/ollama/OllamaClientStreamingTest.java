@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -181,12 +182,12 @@ class OllamaClientStreamingTest {
 
     @Test
     void maxLines_cappedRequest_isTwiceTheCapPlusTheMargin() {
-        assertThat(ThinkingLines.maxLines(MODEL_ID, capped(RUNAWAY_CAP))).isEqualTo(104L);
+        assertThat(ThinkingLines.maxLines(capped(RUNAWAY_CAP))).isEqualTo(104L);
     }
 
     @Test
     void maxLines_noCapNoContext_isUnbounded() {
-        assertThat(ThinkingLines.maxLines(MODEL_ID, new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
+        assertThat(ThinkingLines.maxLines(new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
                 .isEqualTo(Long.MAX_VALUE);
     }
 
@@ -211,9 +212,9 @@ class OllamaClientStreamingTest {
     private void awaitRequest() throws InterruptedException {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
         while (System.nanoTime() < deadline && server.getAllServeEvents().isEmpty()) {
-            Thread.sleep(10);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(10));
         }
-        Thread.sleep(200);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(200));
     }
 
     // A draft expecting 400 tokens may take 200 s in all, while the provider's configured timeout is the idle gap.

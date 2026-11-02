@@ -88,7 +88,7 @@ final class NameVocabulary {
     static final Pattern DATE_EIGHT = Pattern.compile("20[2-3]\\d(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])");
     static final Pattern MONTH_DAY = Pattern.compile("(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])");
     static final Pattern DATE = Pattern.compile("2[4-7](?:0[1-9]|1[0-2])");
-    static final Pattern RELEASE = Pattern.compile("v(\\d+(?:\\.\\d+)*)");
+    static final Pattern RELEASE = Pattern.compile("v(\\d{1,9}(?:\\.\\d{1,9}){0,6})");
     static final Pattern VERSION_GLUED = Pattern.compile("([a-z]+?)(\\d+(?:\\.\\d+)?n?)");
     static final Pattern VERSION_ONLY = Pattern.compile("\\d+(?:\\.\\d+)?n?");
     static final Pattern INSTANCE = Pattern.compile("([^:]+):(\\d{1,2})");

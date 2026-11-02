@@ -85,8 +85,8 @@ final class CallRecorder {
      * it is not kept.
      */
     void record(final ChatRequest request, final int attempt, final TimedCall timed) {
-        final CallKind kind = request.callKind();
-        if (kind == null) {
+        final CallKind callKind = request.callKind();
+        if (callKind == null) {
             log.debug("Provider chat call not recorded: no call kind model={} attempt={}", modelId, attempt);
             return;
         }
@@ -96,7 +96,7 @@ final class CallRecorder {
         final FailureReason reason =
                 error == null ? null : FailureReason.in(error.details()).orElse(FailureReason.UNCLASSIFIED);
         final TokenUsage usage = response == null ? null : response.usage();
-        ledger.record(new CallRecord(kind, usage, timed.wall(), null, reason));
+        ledger.record(new CallRecord(callKind, usage, timed.wall(), null, reason));
         logCall(request, attempt, timed.wall(), usage, reason);
     }
 

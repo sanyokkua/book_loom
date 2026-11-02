@@ -29,6 +29,7 @@ import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.testing.LiveServers;
+import ua.bookloom.util.text.Slashes;
 
 /** Proves the native client against a configured, real local Ollama service. */
 @Tag("liveLocal")
@@ -161,7 +162,7 @@ class OllamaLiveTest {
     @CsvSource({"OLLAMA, ''", "OPENAI_COMPATIBLE, /v1"})
     void detectEngine_nativeAndV1Paths_bothReadOllama(final ProviderKind kind, final String suffix) {
         final String origin = Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_OLLAMA_URL"));
-        final String address = origin.replaceAll("/+$", "") + suffix;
+        final String address = Slashes.trimTrailing(origin) + suffix;
         final ProviderConfig config = LiveServers.provider("ollama-live", kind, address, null);
 
         final Result<EngineDetection> result = LiveServers.verifier(config).detectEngine(config);

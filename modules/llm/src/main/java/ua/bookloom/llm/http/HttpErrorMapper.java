@@ -165,9 +165,7 @@ public final class HttpErrorMapper {
         Objects.requireNonNull(method, "method");
         Objects.requireNonNull(path, "path");
         final Mapping mapping = classify(failure);
-        final Duration timeout = failure instanceof HttpConnectTimeoutException
-                ? config.connectTimeout()
-                : mapping.code() == ErrorCode.timeout ? config.requestTimeout() : null;
+        final Duration timeout = timeoutOf(failure, mapping, config);
         final SafeDetails details = transportDetails(config, modelName, timeout);
         final AppError error =
                 AppError.of(mapping.code(), mapping.title(), mapping.message(), details.render(), failure);
@@ -356,5 +354,13 @@ public final class HttpErrorMapper {
         SafeDetails details = SafeDetails.empty().withEndpoint(config.baseUrl());
         details = modelName == null ? details : details.withModelName(modelName);
         return timeout == null ? details : details.withTimeout(timeout);
+    }
+
+    private static @Nullable Duration timeoutOf(
+            final Throwable failure, final Mapping mapping, final ProviderConfig config) {
+        if (failure instanceof HttpConnectTimeoutException) {
+            return config.connectTimeout();
+        }
+        return mapping.code() == ErrorCode.timeout ? config.requestTimeout() : null;
     }
 }

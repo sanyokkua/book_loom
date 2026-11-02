@@ -31,6 +31,7 @@ import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.testing.LiveServers;
+import ua.bookloom.util.text.Slashes;
 
 /** Proves the OpenAI-compatible client against a configured, real LM Studio service. */
 @Tag("liveLocal")
@@ -164,7 +165,7 @@ class LmStudioLiveTest {
         final ProviderConfig config = LiveServers.provider(
                 "lmstudio-live",
                 ProviderKind.OPENAI_COMPATIBLE,
-                System.getenv("BOOKLOOM_LIVE_LMSTUDIO_URL").replaceAll("/+$", "") + "/v1",
+                Slashes.trimTrailing(System.getenv("BOOKLOOM_LIVE_LMSTUDIO_URL")) + "/v1",
                 null);
         final Injector injector = LiveServers.injector(config, Map.of());
         final ProviderVerifier verifier = injector.getInstance(ProviderVerifier.class);

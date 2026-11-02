@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.http.RequestHeaders;
 import ua.bookloom.llm.provider.EndpointPaths;
+import ua.bookloom.util.text.Slashes;
 
 /**
  * Describes what a verification stage sent and got back, for the Settings test dialog. Headers come from the
@@ -241,10 +242,7 @@ final class VerificationExchanges {
                         EndpointPaths.chatPath(config, ollama ? "/api/chat" : "/chat/completions");
                 };
         // A user name or password in a stored address never reaches the dialog or the curl line copied from it.
-        final String base = USER_INFO
-                .matcher(config.baseUrl().toString())
-                .replaceFirst("$1")
-                .replaceFirst("/+$", "");
-        return base + "/" + path.replaceFirst("^/+", "");
+        final String base = USER_INFO.matcher(config.baseUrl().toString()).replaceFirst("$1");
+        return Slashes.trimTrailing(base) + "/" + Slashes.trimLeading(path);
     }
 }

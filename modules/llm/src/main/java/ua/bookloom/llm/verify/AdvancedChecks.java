@@ -197,8 +197,7 @@ final class AdvancedChecks {
     // The engine's own switch first, then each switch a server of unknown make may read.
     private List<OffSwitch> switches() {
         final List<OffSwitch> order = new ArrayList<>();
-        final OffSwitch own = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
-                .offSwitch();
+        final OffSwitch own = EngineTraits.of(config.effectiveEngine()).offSwitch();
         if (own != OffSwitch.PROBED) {
             order.add(own);
         }

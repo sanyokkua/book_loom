@@ -22,11 +22,11 @@ final class NameSplitter {
     private static final List<String> HUB_PREFIXES = List.of("hf.co/", "huggingface.co/");
     private static final List<String> OLLAMA_PREFIXES = List.of("registry.ollama.ai/library/", "ollama.com/library/");
     private static final Pattern CACHE_FILE =
-            Pattern.compile("([A-Za-z0-9.-]+)_([A-Za-z0-9._-]*?-GGUF)_(.+)", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("([A-Za-z0-9.-]++)_([A-Za-z0-9._-]*?-GGUF)_(.++)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SHARD_IN_NAME = Pattern.compile("(\\d{5})-of-(\\d{5})");
-    private static final Pattern MMPROJ_WORD = Pattern.compile(".*(?:^|[-_.])mmproj(?:$|[-_.]).*");
-    private static final Pattern IMATRIX_WORD = Pattern.compile(".*(?:^|[-_.])imatrix(?:$|[-_.]).*");
-    private static final Pattern IMATRIX_DOT = Pattern.compile(".*\\.imatrix-.*");
+    private static final Pattern MMPROJ_WORD = Pattern.compile("(?:^|[-_.])mmproj(?:$|[-_.])");
+    private static final Pattern IMATRIX_WORD = Pattern.compile("(?:^|[-_.])imatrix(?:$|[-_.])");
+    private static final Pattern IMATRIX_DOT = Pattern.compile("\\.imatrix-");
     private static final Pattern LEAD_SPLIT = Pattern.compile("[-_.]");
     private static final int GGUF_REPO_DEPTH = 3;
 
@@ -278,9 +278,9 @@ final class NameSplitter {
         if (NameVocabulary.SIDECAR_LEAD.contains(lead)) {
             return lead;
         }
-        if (MMPROJ_WORD.matcher(low).matches()) {
+        if (MMPROJ_WORD.matcher(low).find()) {
             return "mmproj";
         }
-        return IMATRIX_WORD.matcher(low).matches() && !IMATRIX_DOT.matcher(low).matches() ? IMATRIX : null;
+        return IMATRIX_WORD.matcher(low).find() && !IMATRIX_DOT.matcher(low).find() ? IMATRIX : null;
     }
 }

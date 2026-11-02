@@ -35,7 +35,7 @@ public final class ModelCatalogService implements ModelCatalog {
         final Result<List<ModelInfo>> result;
         try {
             result = discover(providerId);
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(providerId, cause));
         }
         logOutcome(providerId, result);
@@ -57,7 +57,7 @@ public final class ModelCatalogService implements ModelCatalog {
                     clients.createUncached(draft).listModels().result();
             logOutcome(draft.id(), result);
             return result;
-        } catch (Throwable cause) {
+        } catch (Exception cause) {
             return Result.err(internalError(draft.id(), cause));
         }
     }

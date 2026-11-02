@@ -101,10 +101,9 @@ public final class QuoteCut {
                 lastBlock = block.group(2);
             }
         }
-        final @Nullable String single = lastBlock != null
-                ? lastBlock
-                : byId.size() == 1 ? byId.values().iterator().next() : null;
-        return new Sources(byId, single);
+        final @Nullable String onlyItem =
+                byId.size() == 1 ? byId.values().iterator().next() : null;
+        return new Sources(byId, lastBlock != null ? lastBlock : onlyItem);
     }
 
     private static List<JsonNode> answers(final String reply) {

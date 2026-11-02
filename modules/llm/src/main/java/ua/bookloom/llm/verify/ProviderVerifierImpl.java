@@ -231,16 +231,16 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         final ProviderConfig detected = detectedConfig(config, connection.engine());
         final ProviderClient asDetected = detected.equals(config) ? client : clients.createUncached(detected);
         VerificationReports.started(VerificationStage.MODELS, run.listener());
-        final StageOutcome models = modelsStage(asDetected, detected, selection.modelId());
-        VerificationReports.finished(stages, models, run.listener());
-        if (models.status() == StageStatus.FAILED
+        final StageOutcome modelsOutcome = modelsStage(asDetected, detected, selection.modelId());
+        VerificationReports.finished(stages, modelsOutcome, run.listener());
+        if (modelsOutcome.status() == StageStatus.FAILED
                 || policy == VerificationPolicy.CONNECTION_AND_MODELS
                 || policy == VerificationPolicy.HEALTH_AND_MODELS) {
             return VerificationReports.completed(selection, policy, stages, connection.engine());
         }
-        final StageOutcome inference = inferenceStep(asDetected, detected, selection.modelId(), run.listener());
-        VerificationReports.finished(stages, inference, run.listener());
-        if (policy == VerificationPolicy.ADVANCED && inference.status() != StageStatus.FAILED) {
+        final StageOutcome inferenceOutcome = inferenceStep(asDetected, detected, selection.modelId(), run.listener());
+        VerificationReports.finished(stages, inferenceOutcome, run.listener());
+        if (policy == VerificationPolicy.ADVANCED && inferenceOutcome.status() != StageStatus.FAILED) {
             advancedStep(stages, detected, selection.modelId(), run.listener());
         }
         return VerificationReports.completed(selection, policy, stages, connection.engine());

@@ -140,10 +140,10 @@ class HttpExchangeTest {
         input.put("X-Added", List.of("later"));
 
         assertThat(reply.headers()).containsEntry("X-Reply", List.of("first")).doesNotContainKey("X-Added");
-        assertThatThrownBy(() -> Objects.requireNonNull(reply.headers().get("X-Reply"), "header")
-                        .add("mutation"))
-                .isInstanceOf(UnsupportedOperationException.class);
-        assertThatThrownBy(() -> reply.headers().put("X-Added", List.of("mutation")))
+        final var values = Objects.requireNonNull(reply.headers().get("X-Reply"), "header");
+        assertThatThrownBy(() -> values.add("mutation")).isInstanceOf(UnsupportedOperationException.class);
+        final var target = reply.headers();
+        assertThatThrownBy(() -> target.put("X-Added", List.of("mutation")))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 

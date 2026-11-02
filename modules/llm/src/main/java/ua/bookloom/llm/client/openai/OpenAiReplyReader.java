@@ -40,8 +40,7 @@ final class OpenAiReplyReader {
     OpenAiReplyReader(final ProviderConfig config, final ObjectMapper mapper) {
         this.config = Objects.requireNonNull(config, "config");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.servesUnknownModel = EngineTraits.of(config.effectiveEngine(), config.engineVersion())
-                .servesUnknownModel();
+        this.servesUnknownModel = EngineTraits.of(config.effectiveEngine()).servesUnknownModel();
     }
 
     Result<ChatResponse> read(final String requestedModel, final HttpReply reply, final Duration elapsed) {

@@ -19,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
+import ua.bookloom.util.text.Slashes;
 
 /** Sends one JSON request per call; the provider client owns response decoding and HTTP-purpose decisions. */
 @Slf4j
@@ -138,18 +139,18 @@ public final class HttpExchange {
             CompletableFuture<HttpResponse<Void>> exchange,
             AtomicReference<HttpResponse.@Nullable ResponseInfo> head) {
         return switch (outcome) {
-            case StreamedLines.Outcome.Collected collected ->
-                Result.ok(received(head, endpoint, collected.body(), false));
-            case StreamedLines.Outcome.Cut cut -> {
+            case StreamedLines.Outcome.Collected(String collected) ->
+                Result.ok(received(head, endpoint, collected, false));
+            case StreamedLines.Outcome.Cut(String cut) -> {
                 lines.cancel();
                 exchange.cancel(true);
-                yield Result.ok(received(head, endpoint, cut.body(), true));
+                yield Result.ok(received(head, endpoint, cut, true));
             }
-            case StreamedLines.Outcome.Failed failed -> {
+            case StreamedLines.Outcome.Failed(Throwable failure, Duration timeout) -> {
                 lines.cancel();
                 exchange.cancel(true);
-                final ProviderConfig broken = config.withRequestTimeout(failed.timeout());
-                yield Result.err(HttpErrorMapper.map(failed.failure(), broken, null, "POST", endpoint.getPath()));
+                final ProviderConfig broken = config.withRequestTimeout(timeout);
+                yield Result.err(HttpErrorMapper.map(failure, broken, null, "POST", endpoint.getPath()));
             }
         };
     }
@@ -195,6 +196,7 @@ public final class HttpExchange {
             logResponse(method, host, endpoint, reply);
             return Result.ok(reply);
         } catch (InterruptedException failure) {
+            Thread.currentThread().interrupt();
             return Result.err(HttpErrorMapper.map(failure, config, null, method, endpoint.getPath()));
         } catch (IOException | RuntimeException failure) {
             final AppError error = HttpErrorMapper.map(failure, config, null, method, endpoint.getPath());
@@ -245,9 +247,8 @@ public final class HttpExchange {
 
     private static URI endpoint(URI baseUrl, String path) {
         log.debug("Joining provider endpoint host={} routePath={}", baseUrl.getHost(), path);
-        final String basePath =
-                baseUrl.getPath() == null ? "" : baseUrl.getPath().replaceFirst("/+$", "");
-        final String route = path.replaceFirst("^/+", "");
+        final String basePath = baseUrl.getPath() == null ? "" : Slashes.trimTrailing(baseUrl.getPath());
+        final String route = Slashes.trimLeading(path);
         // A route may carry a query (llama-server's /props?model=<id>); the URI encodes each part on its own.
         final int queryStart = route.indexOf('?');
         final String routePath = queryStart < 0 ? route : route.substring(0, queryStart);
