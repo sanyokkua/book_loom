@@ -140,14 +140,13 @@ final class BatchStage {
         final List<WorkItem> items = current.items();
         for (int i = items.indexOf(first.item()) + 1; i < items.size() && batch.size() < drafter.size(); i++) {
             final Candidate next = candidateOf(current, items.get(i));
-            if (next == null) {
-                continue;
+            if (next != null) {
+                if (tokens + cost(next) > budget) {
+                    break;
+                }
+                tokens += cost(next);
+                batch.add(next);
             }
-            if (tokens + cost(next) > budget) {
-                break;
-            }
-            tokens += cost(next);
-            batch.add(next);
         }
         return batch;
     }

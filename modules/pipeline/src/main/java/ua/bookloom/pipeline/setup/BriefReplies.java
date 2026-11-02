@@ -76,26 +76,35 @@ final class BriefReplies {
             final JsonNode node = reply.get(wireName(field));
             if (node == null || node.isNull()) {
                 log.debug("Brief reply has no {}", field);
-                continue;
-            }
-            final Answer answer = new Answer(value(field, text(node.isObject() ? node.get("value") : node)), "");
-            if (answer.isNeutral()) {
-                log.debug("Brief reply {} is neutral", field);
-                answers.put(field, answer);
-                continue;
-            }
-            final Optional<Answer> supported = supported(field, answer, node, sample);
-            if (field == BriefField.NARRATOR_GENDER) {
-                answers.put(
-                        field,
-                        supported
-                                .flatMap(kept -> proven(kept, node, sample, narratorGender))
-                                .orElse(UNKNOWN));
             } else {
-                supported.ifPresent(kept -> answers.put(field, kept));
+                readField(answers, field, node, sample, narratorGender);
             }
         }
         return answers;
+    }
+
+    private static void readField(
+            final Map<BriefField, Answer> answers,
+            final BriefField field,
+            final JsonNode node,
+            final BookSample sample,
+            final NarratorGenderEvidence narratorGender) {
+        final Answer answer = new Answer(value(field, text(node.isObject() ? node.get("value") : node)), "");
+        if (answer.isNeutral()) {
+            log.debug("Brief reply {} is neutral", field);
+            answers.put(field, answer);
+            return;
+        }
+        final Optional<Answer> supported = supported(field, answer, node, sample);
+        if (field == BriefField.NARRATOR_GENDER) {
+            answers.put(
+                    field,
+                    supported
+                            .flatMap(kept -> proven(kept, node, sample, narratorGender))
+                            .orElse(UNKNOWN));
+        } else {
+            supported.ifPresent(kept -> answers.put(field, kept));
+        }
     }
 
     // The gender the quote proves replaces the model's word for it; one the quote does not prove is no evidence, and

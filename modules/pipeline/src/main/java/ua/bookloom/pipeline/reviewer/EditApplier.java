@@ -78,19 +78,17 @@ public final class EditApplier {
         for (final ReviewEdit edit : edits.stream().distinct().toList()) {
             if (edit.criterion().isNote()) {
                 notes.add(edit);
-                continue;
-            }
-            if (isNoOp(edit)) {
+            } else if (isNoOp(edit)) {
                 noOps++;
-                continue;
-            }
-            switch (verifier.verify(text, edit, checker, baseline, renderings, negationAndMoodWords, guess)) {
-                case Verification.Verified(var edited) -> {
-                    text = edited;
-                    applied.add(edit);
+            } else {
+                switch (verifier.verify(text, edit, checker, baseline, renderings, negationAndMoodWords, guess)) {
+                    case Verification.Verified(var edited) -> {
+                        text = edited;
+                        applied.add(edit);
+                    }
+                    case Verification.Failed refused -> failed.add(refusal(edit, refused));
+                    case Verification.Ignored _ -> ignored++;
                 }
-                case Verification.Failed refused -> failed.add(refusal(edit, refused));
-                case Verification.Ignored _ -> ignored++;
             }
         }
         logCounts(applied.size(), failed.size(), ignored, noOps, notes.size());

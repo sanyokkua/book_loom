@@ -117,15 +117,14 @@ final class ClusterGender {
             final GlossaryEntry chosen) {
         for (final GlossaryEntry member : clusters.membersOf(chosen)) {
             final GlossaryEntry now = current.get(member.id());
-            if (member.id().equals(chosen.id()) || now == null || now.genderOrigin() == Origin.USER) {
-                continue;
+            final GlossaryEntry changed =
+                    member.id().equals(chosen.id()) || now == null || now.genderOrigin() == Origin.USER
+                            ? null
+                            : asPerson(now, chosen.gender());
+            if (changed != null && !changed.equals(now)) {
+                current.put(changed.id(), changed);
+                receivers.put(changed.id(), changed);
             }
-            final GlossaryEntry changed = asPerson(now, chosen.gender());
-            if (changed.equals(now)) {
-                continue;
-            }
-            current.put(changed.id(), changed);
-            receivers.put(changed.id(), changed);
         }
     }
 

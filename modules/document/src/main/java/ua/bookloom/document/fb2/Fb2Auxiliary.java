@@ -68,10 +68,10 @@ final class Fb2Auxiliary {
     private static void addAuthors(
             AuxiliarySlots.Builder builder, String resource, Element root, TreeNode rootNode, Element titleInfo) {
         int index = 0;
-        for (final Element author : titleInfo.getChildren()) {
-            if (!"author".equals(author.getName())) {
-                continue;
-            }
+        final List<Element> authors = titleInfo.getChildren().stream()
+                .filter(child -> "author".equals(child.getName()))
+                .toList();
+        for (final Element author : authors) {
             final List<Part> parts = partsOf(author);
             if (parts.isEmpty()) {
                 log.debug("author {} has no name parts; not produced", index);

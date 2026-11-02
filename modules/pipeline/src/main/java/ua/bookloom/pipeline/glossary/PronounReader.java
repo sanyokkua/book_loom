@@ -248,26 +248,23 @@ final class PronounReader {
         int terminators = 0;
         boolean sentenceStart = false;
         Pronoun object = null;
-        while (token.find()) {
+        boolean ended = false;
+        while (!ended && token.find()) {
             final String word = token.group();
             if (TERMINATOR.matcher(word).matches()) {
                 terminators++;
                 sentenceStart = true;
-                if (terminators > 1) {
-                    break;
+                ended = terminators > 1;
+            } else {
+                final String lower = word.toLowerCase(Locale.ROOT);
+                final Gender subject = tables.subjectGender(lower);
+                if (subject != null) {
+                    return new Mention(start, new Pronoun(lower, subject, end + token.end()), object);
                 }
-                continue;
+                object = object == null ? objectOf(lower, end + token.end()) : object;
+                ended = isAnotherName(word, sentenceStart);
+                sentenceStart = false;
             }
-            final String lower = word.toLowerCase(Locale.ROOT);
-            final Gender subject = tables.subjectGender(lower);
-            if (subject != null) {
-                return new Mention(start, new Pronoun(lower, subject, end + token.end()), object);
-            }
-            object = object == null ? objectOf(lower, end + token.end()) : object;
-            if (isAnotherName(word, sentenceStart)) {
-                break;
-            }
-            sentenceStart = false;
         }
         return new Mention(start, null, object);
     }
