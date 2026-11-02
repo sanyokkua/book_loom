@@ -83,7 +83,9 @@ Gate green **and** the change exercised in the running app (or by the one test t
 behaviour). Paste the gate's tail as evidence — "it passed" is not a result. The cadence: while coding run
 `scripts/test-focused.sh`; run the changed module's full `check` once before a commit (`--full-module`); run the whole
 gate at the end of a feature or step group (pre-push and CI still run it on every push). A red check anywhere is fixed before the
-work is called done, never carried forward. A run materially longer than the last baseline is hung: kill it and
+work is called done, never carried forward. At the end of each change group, after the gate, also run `./gradlew sonar -PsonarLocal` (opt-in, needs the local
+SonarQube server; `docs/DEVELOPMENT.md#coverage`): the project stays at 0 open issues and the quality gate OK, so
+new findings are fixed in the same group, not left for a later sweep. A run materially longer than the last baseline is hung: kill it and
 diagnose; never run two gates at once.
 
 ## Modules

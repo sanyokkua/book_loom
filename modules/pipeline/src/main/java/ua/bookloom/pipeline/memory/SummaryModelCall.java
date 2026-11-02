@@ -31,6 +31,8 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @RequiredArgsConstructor
 final class SummaryModelCall {
 
+    private static final int ASKED_CHARS = 160;
+
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final CallFrame frame;
@@ -49,14 +51,23 @@ final class SummaryModelCall {
         final List<ChatMessage> messages = messagesFor(previousSummary, chapterSource, chapterTarget);
         final ChatRequest request = ChatRequests.build(PromptName.SUMMARY, messages, OutputLimit.forSummary(), false);
         log.trace("Summary call messages {}", messages);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.SUMMARY, List.of(), request, CallDescriptor.whole(PromptName.SUMMARY));
+        final String asked = excerpt(chapterSource);
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.SUMMARY, List.of(), request, CallDescriptor.asking(PromptName.SUMMARY, List.of(asked)));
         if (reply.isErr()) {
             return Result.err(Objects.requireNonNull(reply.error(), "error"));
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Summary call reply {}", content);
-        return Result.ok(targetOf(content));
+        final Optional<String> target = targetOf(content);
+        target.ifPresent(summary -> calls.answered(Map.of(asked, summary)));
+        return Result.ok(target);
+    }
+
+    // The chapter as one short line: the dialog names what was summarized, not the whole chapter.
+    private static String excerpt(final String chapterSource) {
+        final String line = chapterSource.replaceAll("\\s+", " ").strip();
+        return line.length() <= ASKED_CHARS ? line : line.substring(0, ASKED_CHARS) + "…";
     }
 
     private Optional<String> targetOf(final String content) {

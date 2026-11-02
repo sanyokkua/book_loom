@@ -45,9 +45,9 @@ tasks.named("sonar") {
 version = providers.gradleProperty("appVersion").orElse("dev").get()
 
 // The root project applies no `bookloom.*` convention plugin (it is not a Java project), so it opts into
-// dependency locking on its own. It declares no dependencies today, so no `gradle.lockfile` is written here —
-// the declaration exists so that anything added at root level later is locked from its first resolution rather
-// than from whenever someone remembers (01_BUILD_AND_TOOLING.md#dependency-locking).
+// dependency locking on its own. The only thing it resolves is the JaCoCo agent the Sonar coverage report needs, and
+// its `gradle.lockfile` is written the first time that runs; it is committed like every module's lockfile
+// (01_BUILD_AND_TOOLING.md#dependency-locking).
 dependencyLocking {
     lockAllConfigurations()
 }

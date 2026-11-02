@@ -2240,6 +2240,10 @@ SONAR_PROJECT_KEY=local:bookloom sonar-local report
 Keep the token out of repository files. Run the Gradle scanner rather than `sonar-local scan`, which uses the generic
 CLI scanner. Sonar analysis is opt-in: `build`, `check`, hooks, and CI do not run it or require the local server.
 
+The repository is held at 0 open Sonar issues with the quality gate OK. To keep it there, run
+`./gradlew sonar -PsonarLocal` at the end of each change group (after the whole gate is green) and fix what it reports
+before the group is called done; the scan is not part of the gate only because it needs the local server.
+
 ---
 
 ## 9. Quality gate, hooks and CI {#quality-gate}

@@ -213,7 +213,11 @@ final class BriefSuggester {
             final BriefSteps steps,
             final int number) {
         steps.sampleStarted(number, window.location());
-        final Result<String> reply = setup.send(windowRequest(book, window), PromptName.BRIEF_SUGGESTION, calls);
+        final Result<String> reply = setup.send(
+                windowRequest(book, window),
+                PromptName.BRIEF_SUGGESTION,
+                calls,
+                List.of(SetupCalls.excerpt("Passages from " + window.location())));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             steps.sampleFailed(number, error);
@@ -246,7 +250,7 @@ final class BriefSuggester {
         final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers);
         final ChatRequest request = setup.requestOf(book, PromptName.BRIEF_SYNTHESIS, user, SYNTHESIS_LIMIT);
         steps.synthesisStarted();
-        final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls);
+        final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls, SetupCalls.askedOf(user));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {

@@ -2,10 +2,13 @@ package ua.bookloom.pipeline.checks;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
@@ -30,6 +33,8 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  */
 @Slf4j
 public final class ModelWordValidator implements WordValidator {
+
+    private static final String NO_WORDS = "no suspicious words";
 
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
@@ -73,8 +78,10 @@ public final class ModelWordValidator implements WordValidator {
             return List.of();
         }
         final ChatRequest request = request(targets);
-        final Result<ChatResponse> reply =
-                calls.callAbout(CallKind.REVIEW, List.of(), request, CallDescriptor.whole(PromptName.SUSPICIOUS_WORDS));
+        final List<String> asked =
+                targets.stream().map(ModelWordValidator::oneLine).toList();
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.REVIEW, List.of(), request, CallDescriptor.asking(PromptName.SUSPICIOUS_WORDS, asked));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn(
@@ -85,7 +92,27 @@ public final class ModelWordValidator implements WordValidator {
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Garbled-word reply {}", content);
-        return SuspiciousWordsReply.read(mapper, content, targets);
+        final List<List<CheckFinding>> found = SuspiciousWordsReply.read(mapper, content, targets);
+        calls.answered(shown(asked, found));
+        return found;
+    }
+
+    // Each text asked beside the words the model doubted in it, or "no suspicious words".
+    private static Map<String, @Nullable String> shown(final List<String> asked, final List<List<CheckFinding>> found) {
+        final Map<String, @Nullable String> lines = new LinkedHashMap<>();
+        for (int at = 0; at < asked.size() && at < found.size(); at++) {
+            final List<CheckFinding> findings = found.get(at);
+            lines.put(
+                    asked.get(at),
+                    findings.isEmpty()
+                            ? NO_WORDS
+                            : findings.stream().map(CheckFinding::note).collect(Collectors.joining("; ")));
+        }
+        return lines;
+    }
+
+    private static String oneLine(final String text) {
+        return text.replaceAll("\\s+", " ").strip();
     }
 
     private ChatRequest request(final List<String> targets) {

@@ -267,7 +267,11 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final int tokens,
             final ModelCalls calls) {
         final SetupCalls setup = setup();
-        return setup.send(setup.requestOf(book, name, user, new OutputLimit(tokens / 2, tokens)), name, calls);
+        return setup.send(
+                setup.requestOf(book, name, user, new OutputLimit(tokens / 2, tokens)),
+                name,
+                calls,
+                SetupCalls.askedOf(user));
     }
 
     private SetupCalls setup() {
