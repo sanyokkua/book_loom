@@ -63,9 +63,11 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
 
         runAdvanced(ProviderReports.advancedPassed(GENERIC_NOTE));
 
-        assertThat(shown("check-result-ADVANCED"))
-                .isEqualTo("✓ Structured answers: honoured\nTurning reasoning off: works with reasoning_effort\n"
-                        + "top_k/min_p: ignored\nAnswer cap: max_tokens");
+        assertThat(shown("check-result-ADVANCED")).isEqualTo("""
+                        ✓ Structured answers: honoured
+                        Turning reasoning off: works with reasoning_effort
+                        top_k/min_p: ignored
+                        Answer cap: max_tokens""");
     }
 
     // The dialog names the stage and words one row per check; a recognised engine runs two checks, so two rows.

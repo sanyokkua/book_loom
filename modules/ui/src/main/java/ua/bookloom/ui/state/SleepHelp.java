@@ -10,6 +10,7 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -131,11 +132,11 @@ public final class SleepHelp {
     }
 
     private boolean valueOf(final AppSetting<Boolean> setting, final boolean fallback) {
-        final Optional<Boolean> stored = settings.get(setting).data();
-        if (stored == null) {
+        final Result<Optional<Boolean>> stored = settings.get(setting);
+        if (stored.isErr()) {
             log.warn("sleep help: the setting {} could not be read, using {}", setting.key(), fallback);
             return fallback;
         }
-        return stored.orElse(fallback);
+        return Objects.requireNonNull(stored.data()).orElse(fallback);
     }
 }

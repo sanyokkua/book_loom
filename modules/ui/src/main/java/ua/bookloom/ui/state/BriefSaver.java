@@ -88,7 +88,7 @@ final class BriefSaver {
         final @Nullable AppError error = saved == null ? null : saved.error();
         final @Nullable ProjectChange change = saved == null ? null : saved.data();
         if (saved == null) {
-            return waiting -> waiting;
+            return UnaryOperator.identity();
         }
         if (error != null) {
             log.warn("the brief was not saved: code {}", error.code());
@@ -102,7 +102,7 @@ final class BriefSaver {
                     change.getClass().getSimpleName());
             return outcomes.refused(save.projectId(), save.brief(), change);
         }
-        return waiting -> waiting;
+        return UnaryOperator.identity();
     }
 
     private void saved(final Save save, final @Nullable Result<ProjectChange> answer) {

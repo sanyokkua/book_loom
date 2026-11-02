@@ -115,7 +115,7 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
 
     @Override
     public UnaryOperator<BookBrief> refused(final String projectId, final BookBrief sent, final ProjectChange refusal) {
-        if (!isOpen(projectId) || !(refusal instanceof ProjectChange.PairInUse inUse)) {
+        if (!isOpen(projectId) || !(refusal instanceof ProjectChange.PairInUse(var existing))) {
             log.debug(
                     "a refused brief save needs no question: {}",
                     refusal.getClass().getSimpleName());
@@ -127,8 +127,8 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
             log.debug("the refused pair is the stored one; nothing to restore");
             return waiting -> waiting;
         }
-        if (!pairOf(inUse.existing().brief()).equals(asked)) {
-            return acceptedAnyway(inUse.existing(), asked);
+        if (!pairOf(existing.brief()).equals(asked)) {
+            return acceptedAnyway(existing, asked);
         }
         log.info(
                 "the pair {} -> {} is used by another translation; the brief goes back to {} -> {}",
@@ -141,7 +141,7 @@ public final class BriefPairGuard implements BriefSaveOutcomes {
         if (now != null) {
             current.replaceBrief(restore.apply(now));
         }
-        ask(projectId, inUse.existing(), asked, previous);
+        ask(projectId, existing, asked, previous);
         return restore;
     }
 

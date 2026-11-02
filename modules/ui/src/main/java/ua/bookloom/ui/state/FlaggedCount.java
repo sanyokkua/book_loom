@@ -76,12 +76,12 @@ final class FlaggedCount {
         final long mine = ticket.incrementAndGet();
         try {
             executor.execute(() -> {
-                final int flagged = queries.flagged(projectId, shown);
+                final int count = queries.flagged(projectId, shown);
                 Platform.runLater(() -> {
                     if (mine == ticket.get()) {
-                        publish.accept(flagged);
+                        publish.accept(count);
                     } else {
-                        log.debug("a count of {} read for an older request is dropped", flagged);
+                        log.debug("a count of {} read for an older request is dropped", count);
                     }
                 });
             });

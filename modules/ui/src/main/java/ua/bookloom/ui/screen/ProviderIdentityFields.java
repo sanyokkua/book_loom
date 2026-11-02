@@ -90,12 +90,13 @@ final class ProviderIdentityFields {
         kind.setConverter(new StringConverter<>() {
             @Override
             public String toString(final ProviderKind value) {
-                return value == null
-                        ? ""
-                        : messages.get(
-                                value == ProviderKind.OLLAMA
-                                        ? MessageKey.SETTINGS_KIND_OLLAMA
-                                        : MessageKey.SETTINGS_KIND_OPENAI);
+                if (value == null) {
+                    return "";
+                }
+                return messages.get(
+                        value == ProviderKind.OLLAMA
+                                ? MessageKey.SETTINGS_KIND_OLLAMA
+                                : MessageKey.SETTINGS_KIND_OPENAI);
             }
 
             @Override

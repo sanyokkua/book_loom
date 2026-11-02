@@ -228,7 +228,7 @@ public final class ScriptedProjectService implements ProjectService {
     }
 
     /** From now on {@link #list} throws {@code error}, as a JVM out of memory would. */
-    public void throwOnList(final Error error) {
+    public void throwOnList(final RuntimeException error) {
         listing.throwOnList(error);
     }
 

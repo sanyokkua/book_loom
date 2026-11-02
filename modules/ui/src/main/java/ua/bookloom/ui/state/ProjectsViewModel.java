@@ -176,7 +176,7 @@ public final class ProjectsViewModel {
         try {
             listed = projects.list();
             names = providerNames();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning a result while listing", thrown);
             listed = Result.err(
                     AppErrors.unexpected("The projects could not be listed because of an unexpected error.", thrown));
@@ -256,7 +256,7 @@ public final class ProjectsViewModel {
                     row.summary().project().id());
             Platform.runLater(() -> actions.findBook(
                     row, new ProjectOpening.BookFileMissing(row.summary().project())));
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.warn("the book file could not be shown", thrown);
         }
     }

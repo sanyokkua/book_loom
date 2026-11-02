@@ -57,7 +57,7 @@ public final class ThemeTestSupport {
 
     private static final Pattern COMMA = Pattern.compile(",");
     private static final Pattern COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
-    private static final Pattern RULE = Pattern.compile("([^{}]+)\\{([^{}]*)}");
+    private static final Pattern RULE = Pattern.compile("(?<![^{}])([^{}]++)\\{([^{}]*+)}");
 
     /**
      * A scene whose root is an empty {@link StackPane} with {@code theme.css} attached at Scene level, light block

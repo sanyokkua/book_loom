@@ -79,9 +79,9 @@ final class ProgressStepList extends VBox {
             final boolean newestFirst,
             final @Nullable Predicate<StepEntry> shown,
             final boolean withFollow) {
+        Objects.requireNonNull(messages, "messages");
         super(SPACING);
         this.model = Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(messages, "messages");
         getStyleClass().add("progress-steps-pane");
         final ToggleSwitch follow = Tips.install(
                 messages, new ToggleSwitch(messages.get(MessageKey.PROGRESS_FOLLOW)), MessageKey.PROGRESS_FOLLOW_TIP);
@@ -92,8 +92,7 @@ final class ProgressStepList extends VBox {
         list.setId("progress-steps");
         list.getStyleClass().add("progress-steps");
         list.setFixedCellSize(ROW_HEIGHT);
-        list.setItems(
-                newestFirst ? reversedRows() : shown == null ? model.rows() : new FilteredList<>(model.rows(), shown));
+        list.setItems(newestFirst ? reversedRows() : filteredRows(shown));
         list.setCellFactory(view -> new StepCell(messages, "progress-step-"));
         VBox.setVgrow(list, Priority.ALWAYS);
         getChildren().addAll(follow, list);
@@ -164,5 +163,9 @@ final class ProgressStepList extends VBox {
                 list.scrollTo(selected);
             }
         }
+    }
+
+    private ObservableList<StepEntry> filteredRows(final @Nullable Predicate<StepEntry> shown) {
+        return shown == null ? model.rows() : new FilteredList<>(model.rows(), shown);
     }
 }

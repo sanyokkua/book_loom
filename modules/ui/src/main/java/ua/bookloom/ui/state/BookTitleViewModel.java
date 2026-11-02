@@ -264,7 +264,7 @@ public final class BookTitleViewModel {
         }
         final String user = view.maskedUserTarget() != null ? view.maskedUserTarget() : view.userTarget();
         final String machine = view.maskedMachineTarget();
-        final String target = MarkStatus.show(user != null ? user : machine == null ? "" : machine);
+        final String target = MarkStatus.show(user != null ? user : Objects.toString(machine, ""));
         final boolean translated = view.status() != SegmentStatus.PENDING;
         return new Row(
                 view.displaySource(),

@@ -229,16 +229,16 @@ public final class ProviderForm {
             log.debug("save of '{}' refused: {} finding(s)", id, findings.get().size());
             return;
         }
-        final boolean current =
+        final boolean isCurrent =
                 !adding && id.equals(viewModel.selectedProviderId().get());
         final ProviderConfig config = Objects.requireNonNull(built.data(), "data");
-        log.debug("saving '{}': adding {}, current {}", id, adding, current);
+        log.debug("saving '{}': adding {}, current {}", id, adding, isCurrent);
         flags.saving.set(true);
         flags.saveFailed.set(false);
         executor.execute(() -> {
             final Result<Boolean> stored =
-                    storage.persist(config, current ? typed.model().strip() : null);
-            FxThread.run(() -> saved(stored, new ProviderSaved(id, adding, current, typed), then));
+                    storage.persist(config, isCurrent ? typed.model().strip() : null);
+            FxThread.run(() -> saved(stored, new ProviderSaved(id, adding, isCurrent, typed), then));
         });
     }
 
@@ -375,9 +375,9 @@ public final class ProviderForm {
     // current provider's, and whatever else was typed stays.
     private void onSavedModelChanged(final String was, final String now) {
         final String edited = viewModel.editedProviderId().get();
-        final boolean current = !viewModel.adding().get()
+        final boolean isCurrent = !viewModel.adding().get()
                 && edited.equals(viewModel.selectedProviderId().get());
-        if (current && baseline.model().equals(was)) {
+        if (isCurrent && baseline.model().equals(was)) {
             final boolean untouched = draft.get().model().equals(was);
             baseline = baseline.withModel(now);
             if (untouched) {

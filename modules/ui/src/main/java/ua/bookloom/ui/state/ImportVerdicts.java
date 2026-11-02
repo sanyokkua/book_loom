@@ -64,16 +64,16 @@ public final class ImportVerdicts {
     private static Optional<ImportVerdict> detected(final Messages messages, final ImportState.Detected detected) {
         final BookCard card = detected.card();
         final LanguageWarning warning = detected.warning();
-        if (warning instanceof LanguageWarning.Mismatch mismatch) {
+        if (warning instanceof LanguageWarning.Mismatch(var declared, var content)) {
             return line(
                     Kind.TWO_MARKS,
                     messages.get(
                             MessageKey.IMPORT_VERDICT_TWO_MARKS,
-                            NAMES.nameOf(mismatch.declared(), messages.locale()),
-                            NAMES.nameOf(mismatch.content(), messages.locale())));
+                            NAMES.nameOf(declared, messages.locale()),
+                            NAMES.nameOf(content, messages.locale())));
         }
-        if (warning instanceof LanguageWarning.Unrecognized unrecognized) {
-            return line(Kind.UNRECOGNIZED, messages.get(MessageKey.IMPORT_UNRECOGNIZED_TEXT, unrecognized.rawCode()));
+        if (warning instanceof LanguageWarning.Unrecognized(var rawCode)) {
+            return line(Kind.UNRECOGNIZED, messages.get(MessageKey.IMPORT_UNRECOGNIZED_TEXT, rawCode));
         }
         return line(
                 Kind.READY,

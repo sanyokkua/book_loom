@@ -76,7 +76,8 @@ class BookBriefPolicyKeysScreenTest extends BookBriefScreenTestBase {
     void briefPolicies_ukrainianTarget_showsHardGAndApostropheRows() throws TimeoutException {
         openWithTarget("uk");
 
-        assertThat(KEY_ROWS).allSatisfy(id -> assertThat(isShown(id)).as(id).isTrue());
+        assertThat(List.copyOf(KEY_ROWS))
+                .allSatisfy(id -> assertThat(isShown(id)).as(id).isTrue());
         assertThat(segmentTexts("brief-policy-apostrophe")).containsExactly("’ U+2019", "ʼ U+02BC", "' U+0027");
         assertThat(selectedStates("brief-policy-apostrophe")).containsExactly(true, false, false);
         assertThat(segmentTexts("brief-policy-quotes")).containsExactly("«...» „...“", "„...“ ‚...‘");
@@ -99,7 +100,8 @@ class BookBriefPolicyKeysScreenTest extends BookBriefScreenTestBase {
         onFx(() -> briefModel().setTargetLanguage(target));
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(KEY_ROWS).allSatisfy(id -> assertThat(isShown(id)).as(id).isFalse());
+        assertThat(List.copyOf(KEY_ROWS))
+                .allSatisfy(id -> assertThat(isShown(id)).as(id).isFalse());
     }
 
     // IF a pick were not stored, THEN the run would follow the file's default whatever the person chose.

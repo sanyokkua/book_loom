@@ -279,9 +279,9 @@ public final class ImportController {
     }
 
     private void showDetails() {
-        if (viewModel.state().get() instanceof ImportState.Refused refused) {
-            log.debug("details of the refusal of {} requested", refused.fileName());
-            errors.present(refused.error());
+        if (viewModel.state().get() instanceof ImportState.Refused(var fileName, var error)) {
+            log.debug("details of the refusal of {} requested", fileName);
+            errors.present(error);
         }
     }
 

@@ -90,7 +90,8 @@ class UiModuleTest extends ShellTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"ProjectService", "GlossaryService", "ReviewDesk", "ExportService", "ReviewMode"})
     void uiModule_portNotBound_failsWhenTheInjectorIsBuilt(final String port) {
-        assertThatThrownBy(() -> Guice.createInjector(new UiModule()))
+        final UiModule module = new UiModule();
+        assertThatThrownBy(() -> Guice.createInjector(module))
                 .isInstanceOf(CreationException.class)
                 .hasMessageContaining(port);
     }

@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -70,7 +69,7 @@ class LogKindTest {
     @Test
     void tag_allKinds_areDistinctAndLowerCase() {
         final List<String> tags =
-                Arrays.stream(LogKind.values()).map(LogKind::tag).collect(Collectors.toList());
+                Arrays.stream(LogKind.values()).map(LogKind::tag).toList();
 
         assertThat(tags).doesNotHaveDuplicates().allMatch(tag -> tag.equals(tag.toLowerCase(Locale.ROOT)));
     }
@@ -86,7 +85,7 @@ class LogKindTest {
     @Test
     void mark_allKinds_areDistinct() {
         final List<String> marks =
-                Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
+                Arrays.stream(LogKind.values()).map(LogKind::mark).toList();
 
         assertThat(LogKind.values()).hasSize(7);
         assertThat(marks).doesNotHaveDuplicates();
@@ -112,7 +111,8 @@ class LogKindTest {
         args.add("s-2");
 
         assertThat(entry.args()).containsExactly("s-1");
-        assertThatThrownBy(() -> entry.args().add("s-3")).isInstanceOf(UnsupportedOperationException.class);
+        final var target = entry.args();
+        assertThatThrownBy(() -> target.add("s-3")).isInstanceOf(UnsupportedOperationException.class);
     }
 
     // IF a technical line looked like any other, THEN Show technical details could not hide it.

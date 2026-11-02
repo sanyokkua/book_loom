@@ -68,9 +68,7 @@ final class MissingInputNotice {
 
     // Withdraws a refusal that named the input once that input exists.
     private void clearIfSupplied(final RunNotice.Input input, final BooleanSupplier supplied) {
-        if (notice.get() instanceof RunNotice.MissingInput missing
-                && missing.which() == input
-                && supplied.getAsBoolean()) {
+        if (notice.get() instanceof RunNotice.MissingInput(var which) && which == input && supplied.getAsBoolean()) {
             log.debug("{} is now supplied: withdrawing the missing-input notice", input);
             notice.set(null);
         }

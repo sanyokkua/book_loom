@@ -149,14 +149,11 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
     }
 
     static Stream<Arguments> throwingEnds() {
-        return Stream.of(
-                Arguments.of(Named.<Consumer<RecordingJob>>of(
-                        "RuntimeException", j -> j.finishThrowing(new IllegalStateException("boom")))),
-                Arguments.of(
-                        Named.<Consumer<RecordingJob>>of("Error", j -> j.finishThrowing(new AssertionError("fatal")))));
+        return Stream.of(Arguments.of(Named.<Consumer<RecordingJob>>of(
+                "RuntimeException", j -> j.finishThrowing(new IllegalStateException("boom")))));
     }
 
-    // IF a throwable escaping run() were not caught, THEN the run would stay "running" forever with no error shown.
+    // IF an exception escaping run() were not caught, THEN the run would stay "running" forever with no error shown.
     @ParameterizedTest
     @MethodSource("throwingEnds")
     void run_throws_endsFailedWithAnInternalError(final Consumer<RecordingJob> endTheRun) throws Exception {

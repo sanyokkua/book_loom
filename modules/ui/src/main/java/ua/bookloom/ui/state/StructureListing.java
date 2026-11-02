@@ -79,7 +79,8 @@ public record StructureListing(List<StructureNode> roots) {
         }
         final Integer first = node.firstSegment();
         final Integer count = node.segmentCount();
-        return List.of(first == null ? UnitPart.whole(own) : new UnitPart(own, first, count == null ? 0 : count));
+        final int segments = count == null ? 0 : count;
+        return List.of(first == null ? UnitPart.whole(own) : new UnitPart(own, first, segments));
     }
 
     private static int sizeOf(final StructureNode node) {

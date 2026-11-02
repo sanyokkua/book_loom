@@ -53,7 +53,6 @@ final class BriefQualityCard {
         final BookBriefViewModel viewModel = parts.viewModel();
         this.messages = parts.messages();
         this.settings = parts.settings();
-        final Messages messages = this.messages;
         this.dial = new BriefChoice<>(
                 "brief-quality",
                 messages,

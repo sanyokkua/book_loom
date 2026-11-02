@@ -94,9 +94,8 @@ final class ReviewQueries {
                 return new Opened(ReviewFilter.ALL_SEGMENTS, all, segment(projectId, segmentId));
             }
         }
-        final String chosen = segmentId != null && holds(views, segmentId)
-                ? segmentId
-                : views.isEmpty() ? null : views.getFirst().segmentId();
+        final String firstListed = views.isEmpty() ? null : views.getFirst().segmentId();
+        final String chosen = segmentId != null && holds(views, segmentId) ? segmentId : firstListed;
         log.debug("the desk opens on {} of {} listed under {}", chosen, views.size(), filter);
         return new Opened(filter, views, chosen == null ? null : segment(projectId, chosen));
     }

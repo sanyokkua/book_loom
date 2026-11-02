@@ -213,7 +213,7 @@ public final class ImportViewModel {
                 disposal.removeReplaced(replacedId, createdId);
             }
             return ImportAnswers.answerOf(source, created);
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(ImportAnswers.internalError(thrown));
         }

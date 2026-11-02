@@ -76,7 +76,7 @@ public final class RenameDialog implements RenamePrompt {
 
         private final String current;
         private final ProjectNameRules rules;
-        private final FormCard card;
+        private final FormCard form;
         private final NameField name;
         private final Button confirm;
         private boolean automatic;
@@ -93,7 +93,7 @@ public final class RenameDialog implements RenamePrompt {
             this.rules = rules;
             this.current = row.summary().project().name();
             final boolean auto = row.summary().project().nameOrigin() == NameOrigin.AUTO;
-            this.card = new FormCard(
+            this.form = new FormCard(
                     modalHost,
                     messages,
                     PREFIX + "card",
@@ -101,8 +101,8 @@ public final class RenameDialog implements RenamePrompt {
                     messages.get(MessageKey.DIALOG_RENAME_TITLE));
             this.name = new NameField(messages, PREFIX, "field", () -> current, this::edited);
             this.confirm = addButtons(rename, remove, cancelled);
-            card.onEscape(cancelled);
-            card.body(
+            form.onEscape(cancelled);
+            form.body(
                     Wrapped.label(
                             messages.get(
                                     auto ? MessageKey.DIALOG_RENAME_BODY_AUTO : MessageKey.DIALOG_RENAME_BODY_NAMED),
@@ -116,21 +116,21 @@ public final class RenameDialog implements RenamePrompt {
 
         private Button addButtons(
                 final Consumer<@Nullable String> rename, final Runnable remove, final Runnable cancelled) {
-            card.button(
+            form.button(
                     PREFIX + "remove",
                     messages.get(MessageKey.DIALOG_RENAME_REMOVE),
                     MessageKey.DIALOG_RENAME_REMOVE_TIP,
                     ButtonBar.ButtonData.LEFT,
                     "btn-ghost",
                     remove);
-            card.button(
+            form.button(
                     PREFIX + "cancel",
                     messages.get(MessageKey.COMMON_CANCEL),
                     MessageKey.COMMON_CANCEL_TIP,
                     ButtonBar.ButtonData.CANCEL_CLOSE,
                     "btn-secondary",
                     cancelled);
-            return card.button(
+            return form.button(
                     PREFIX + "confirm",
                     messages.get(MessageKey.DIALOG_RENAME_CONFIRM),
                     MessageKey.DIALOG_RENAME_CONFIRM_TIP,
@@ -141,7 +141,7 @@ public final class RenameDialog implements RenamePrompt {
         }
 
         void show() {
-            card.show();
+            form.show();
             FormCard.focusWhenShown(name.field(), true);
         }
 

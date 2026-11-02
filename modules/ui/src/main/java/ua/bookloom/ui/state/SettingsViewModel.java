@@ -159,9 +159,8 @@ public final class SettingsViewModel {
         final String edited = editedProviderId.get();
         if (!adding.get() && (edited.isEmpty() || !snapshot.containsKey(edited))) {
             final String current = selectedProviderId.get();
-            final String target = !current.isEmpty()
-                    ? current
-                    : loaded.isEmpty() ? "" : loaded.getFirst().id();
+            final String firstLoaded = loaded.isEmpty() ? "" : loaded.getFirst().id();
+            final String target = !current.isEmpty() ? current : firstLoaded;
             log.debug("edited provider '{}' replaced by '{}'", edited, target);
             showEdited(target);
         }

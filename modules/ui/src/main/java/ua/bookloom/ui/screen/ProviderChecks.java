@@ -245,8 +245,9 @@ final class ProviderChecks {
 
     private void showResults() {
         final ProviderTest running = viewModel.tests().running().get();
-        for (final VerificationStage stage : results.keySet()) {
-            final Label result = Objects.requireNonNull(results.get(stage));
+        for (final Map.Entry<VerificationStage, Label> entry : results.entrySet()) {
+            final VerificationStage stage = entry.getKey();
+            final Label result = entry.getValue();
             final VBox cell = Objects.requireNonNull(cells.get(stage));
             final Optional<StageChip> found = viewModel.tests().stages().stream()
                     .filter(chip -> chip.stage() == stage)

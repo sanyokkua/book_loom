@@ -311,12 +311,11 @@ final class NavColumn {
                         : null;
         // While the look runs or its model question is open, nothing is missing yet, so the footer is not red.
         final boolean looking = probe instanceof ProbeOutcome.Looking || probe instanceof ProbeOutcome.Asking;
+        final String shownModel = chipWord == null ? choice.modelId() : chipWord;
+        final MessageKey unchosenKey = looking ? MessageKey.NAV_FOOTER_LOOKING : noModelKey(choice, probe);
         final String text = choice.chosen()
-                ? messages.get(
-                        MessageKey.NAV_FOOTER_SELECTION,
-                        choice.provider(),
-                        chipWord == null ? choice.modelId() : chipWord)
-                : messages.get(looking ? MessageKey.NAV_FOOTER_LOOKING : noModelKey(choice, probe));
+                ? messages.get(MessageKey.NAV_FOOTER_SELECTION, choice.provider(), shownModel)
+                : messages.get(unchosenKey);
         final boolean failing = choice.chosen() ? chipWord != null : !looking;
         if (!text.equals(footer.getText()) || failing != footerFailing) {
             log.debug("navigation footer now reads '{}' (failing {}, looking {})", text, failing, looking);

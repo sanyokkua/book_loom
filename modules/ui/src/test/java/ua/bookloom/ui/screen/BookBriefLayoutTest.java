@@ -66,7 +66,7 @@ class BookBriefLayoutTest extends BookBriefScreenTestBase {
         assertThat(isInside("brief-tone-card", RIGHT)).isTrue();
         assertThat(isInside("brief-suggest-style", RIGHT)).isTrue();
         assertThat(isInside("brief-tone-card", LEFT)).isFalse();
-        assertThat(LEFT_CARDS).noneMatch(id -> isInside(id, RIGHT));
+        assertThat(List.copyOf(LEFT_CARDS)).noneMatch(id -> isInside(id, RIGHT));
     }
 
     // IF the left column's cards came in another order, THEN the languages would not come first and the quality dial
@@ -131,7 +131,8 @@ class BookBriefLayoutTest extends BookBriefScreenTestBase {
 
         showAtSceneSize(width, height);
 
-        assertThat(LEFT_CARDS).allSatisfy(id -> assertThat(isShown(id)).as(id).isTrue());
+        assertThat(List.copyOf(LEFT_CARDS))
+                .allSatisfy(id -> assertThat(isShown(id)).as(id).isTrue());
         assertThat(isShown("brief-tone-card")).isTrue();
     }
 

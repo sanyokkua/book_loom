@@ -64,8 +64,8 @@ public final class StepFooter extends HBox {
     private @Nullable Pane host;
 
     private StepFooter(final @Nullable Action backAction, final Action forward, final boolean forwardAvailable) {
-        super(SPACING);
         Objects.requireNonNull(forward, "forward");
+        super(SPACING);
         setAlignment(Pos.CENTER_LEFT);
         getStyleClass().add("step-footer");
         this.backAction = backAction;

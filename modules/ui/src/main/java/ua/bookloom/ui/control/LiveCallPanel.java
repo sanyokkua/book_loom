@@ -112,11 +112,11 @@ public final class LiveCallPanel extends VBox {
             final SectionMemory memory,
             final Consumer<List<CallSnapshot>> allCalls,
             final Messages messages) {
+        Objects.requireNonNull(allCalls, "allCalls");
         super(SPACING);
         this.sources = Objects.requireNonNull(sources, "sources");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.memory = Objects.requireNonNull(memory, "memory");
-        Objects.requireNonNull(allCalls, "allCalls");
         list = new LiveRowList(messages);
         detail = new LiveRowDetail(names.get(0), names.get(1), memory, messages);
         detailed.set(
@@ -202,23 +202,24 @@ public final class LiveCallPanel extends VBox {
 
     private SegmentedButton modes() {
         final ToggleButton simple = modeButton("translating-live-mode-simple", MessageKey.PROGRESS_VIEW_SIMPLE);
-        final ToggleButton detail = modeButton("translating-live-mode-detailed", MessageKey.PROGRESS_VIEW_DETAILED);
-        final SegmentedButton mode = new SegmentedButton(simple, detail);
+        final ToggleButton detailButton =
+                modeButton("translating-live-mode-detailed", MessageKey.PROGRESS_VIEW_DETAILED);
+        final SegmentedButton mode = new SegmentedButton(simple, detailButton);
         mode.setMinWidth(Region.USE_PREF_SIZE);
         mode.setToggleGroup(new ToggleGroup());
-        mode.getToggleGroup().selectToggle(detailed.get() ? detail : simple);
+        mode.getToggleGroup().selectToggle(detailed.get() ? detailButton : simple);
         // The segmented button puts its buttons in the group only when its skin is made, which drops a choice made
         // before; it is made again then.
         mode.skinProperty()
-                .addListener(
-                        (observed, was, now) -> mode.getToggleGroup().selectToggle(detailed.get() ? detail : simple));
+                .addListener((observed, was, now) ->
+                        mode.getToggleGroup().selectToggle(detailed.get() ? detailButton : simple));
         mode.getToggleGroup().selectedToggleProperty().addListener((observed, was, now) -> {
             if (now == null) {
                 // A segmented control lets its chosen button be pressed off; the view always has one of the two.
                 mode.getToggleGroup().selectToggle(was);
                 return;
             }
-            final boolean choseDetailed = detail.isSelected();
+            final boolean choseDetailed = detailButton.isSelected();
             log.debug("live card: {} view chosen", choseDetailed ? "Detailed" : "Simple");
             memory.remember(MODE_CHOSEN, true);
             memory.remember(DETAILED_KEY, choseDetailed);

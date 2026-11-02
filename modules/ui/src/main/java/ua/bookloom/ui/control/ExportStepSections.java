@@ -28,9 +28,9 @@ final class ExportStepSections extends VBox {
     private final Label rereadHeading = new Label();
 
     ExportStepSections(final ProgressDialogModel model, final Messages messages) {
+        Objects.requireNonNull(messages, "messages");
         super(SPACING);
         this.model = Objects.requireNonNull(model, "model");
-        Objects.requireNonNull(messages, "messages");
         setId("export-step-sections");
         final ProgressStepList stages = new ProgressStepList(
                 model, messages, row -> row.kind() == StepKind.STAGE && row.index() < REREAD, true);

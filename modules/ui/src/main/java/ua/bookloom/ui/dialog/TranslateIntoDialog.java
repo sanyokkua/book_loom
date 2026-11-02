@@ -83,7 +83,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         private final BookGroup group;
         private final ProjectNameRules rules;
         private final @Nullable String source;
-        private final FormCard card;
+        private final FormCard form;
         private final SearchableCombo<String> into;
         private final NameField name;
         private final Label hint = Wrapped.label("", DIALOG_SUB);
@@ -98,7 +98,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
             this.rules = rules;
             this.source = group.rows().getFirst().summary().project().brief().sourceLanguage();
             this.into = languageBox();
-            this.card = new FormCard(
+            this.form = new FormCard(
                     modalHost,
                     messages,
                     PREFIX + "card",
@@ -106,9 +106,9 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
                     messages.get(MessageKey.DIALOG_TRANSLATE_INTO_TITLE));
             this.name = new NameField(messages, PREFIX, "name", this::automaticName, this::refresh);
             this.create = addButtons(onCreate, cancelled);
-            card.onEscape(cancelled);
+            form.onEscape(cancelled);
             configureList();
-            card.body(
+            form.body(
                     Wrapped.label(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_BODY, group.title()), DIALOG_TEXT),
                     languagePair(),
                     name.view(messages.get(MessageKey.DIALOG_TRANSLATE_INTO_NAME)),
@@ -119,14 +119,14 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         }
 
         private Button addButtons(final BiConsumer<String, @Nullable String> onCreate, final Runnable cancelled) {
-            card.button(
+            form.button(
                     PREFIX + "cancel",
                     messages.get(MessageKey.COMMON_CANCEL),
                     MessageKey.COMMON_CANCEL_TIP,
                     ButtonBar.ButtonData.CANCEL_CLOSE,
                     BTN_SECONDARY,
                     cancelled);
-            return card.button(
+            return form.button(
                     PREFIX + "create",
                     messages.get(MessageKey.DIALOG_TRANSLATE_INTO_CREATE),
                     MessageKey.DIALOG_TRANSLATE_INTO_CREATE_TIP,
@@ -140,7 +140,7 @@ public final class TranslateIntoDialog implements TranslateIntoPrompt {
         }
 
         void show() {
-            card.show();
+            form.show();
         }
 
         // Typing narrows the list by the shown name, the English name and the tag, so "Pol" then Return is Polish.

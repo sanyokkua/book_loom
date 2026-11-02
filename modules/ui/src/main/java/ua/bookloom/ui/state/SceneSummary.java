@@ -115,11 +115,11 @@ public final class SceneSummary {
     }
 
     private static @Nullable String textOf(final Result<Optional<RollingSummary>> read, final String projectId) {
-        final Optional<RollingSummary> stored = read.data();
-        if (stored == null) {
+        if (read.isErr()) {
             log.warn("scene summary: the summary of project {} could not be read", projectId);
             return null;
         }
+        final Optional<RollingSummary> stored = Objects.requireNonNull(read.data());
         if (stored.isEmpty()) {
             log.debug("scene summary: project {} has no summary yet", projectId);
             return null;

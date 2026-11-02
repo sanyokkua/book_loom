@@ -78,7 +78,7 @@ final class PromptParts {
             final Matcher match = TERM.matcher(line.strip());
             rows.add(
                     match.matches()
-                            ? List.of(match.group(1), match.group(2), match.group(3) == null ? "" : match.group(3))
+                            ? List.of(match.group(1), match.group(2), Objects.toString(match.group(3), ""))
                             : List.of(line.strip(), "", ""));
         }
         return grid(

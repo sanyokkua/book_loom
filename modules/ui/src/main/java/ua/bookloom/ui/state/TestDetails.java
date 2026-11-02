@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.llm.ProbeCall;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationStage;
@@ -182,11 +183,15 @@ public final class TestDetails {
                 body,
                 reply,
                 chip.stage() == VerificationStage.ADVANCED && chip.status() != StageStatus.FAILED
-                        ? AdvancedRows.of(messages, chip.note(), exchange == null ? List.of() : exchange.calls())
+                        ? AdvancedRows.of(messages, chip.note(), callsOf(exchange))
                         : List.of());
     }
 
     // A stage of several calls lists each call's body under its heading; a stage of one shows that one.
+    private static List<ProbeCall> callsOf(final @Nullable VerificationExchange exchange) {
+        return exchange == null ? List.of() : exchange.calls();
+    }
+
     private static String shownBody(final Messages messages, final VerificationExchange exchange, final boolean sent) {
         if (exchange.calls().isEmpty()) {
             return sent ? exchange.shownRequestBody() : exchange.shownResponseBody();
@@ -336,12 +341,12 @@ public final class TestDetails {
         private String tokens() {
             final @Nullable Integer prompt = exchange == null ? null : exchange.promptTokens();
             final @Nullable Integer reply = exchange == null ? null : exchange.completionTokens();
-            return prompt == null && reply == null
-                    ? none()
-                    : messages.get(
-                            MessageKey.SETTINGS_TEST_METRIC_TOKENS_VALUE,
-                            prompt == null ? none() : prompt,
-                            reply == null ? none() : reply);
+            if (prompt == null && reply == null) {
+                return none();
+            }
+            final Object shownPrompt = prompt == null ? none() : prompt;
+            final Object shownReply = reply == null ? none() : reply;
+            return messages.get(MessageKey.SETTINGS_TEST_METRIC_TOKENS_VALUE, shownPrompt, shownReply);
         }
 
         private String status() {

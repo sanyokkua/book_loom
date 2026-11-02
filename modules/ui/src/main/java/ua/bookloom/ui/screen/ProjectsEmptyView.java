@@ -134,11 +134,10 @@ final class ProjectsEmptyView {
     }
 
     private String readyText(final ModelChoice choice, final ProbeOutcome outcome) {
-        final boolean foundAtFirstLaunch = outcome instanceof ProbeOutcome.Found found
-                && found.atFirstLaunch()
-                && found.selection().modelId().equals(choice.modelId())
-                && ProviderNames.displayName(messages, found.selection().providerId())
-                        .equals(choice.provider());
+        final boolean foundAtFirstLaunch = outcome instanceof ProbeOutcome.Found(var selection, var atFirstLaunch)
+                && atFirstLaunch
+                && selection.modelId().equals(choice.modelId())
+                && ProviderNames.displayName(messages, selection.providerId()).equals(choice.provider());
         log.debug("model line: ready, found at first launch {}", foundAtFirstLaunch);
         return messages.get(
                 foundAtFirstLaunch ? MessageKey.PROJECTS_MODEL_READY_FOUND : MessageKey.PROJECTS_MODEL_READY,
@@ -163,7 +162,7 @@ final class ProjectsEmptyView {
                         declined ? MessageKey.PROJECTS_MODEL_DECLINED_TITLE : MessageKey.NAV_FOOTER_NO_MODEL)),
                 help);
         // A press of Try again that finds nothing again would otherwise leave the card exactly as it was.
-        if (probe.outcome().get() instanceof ProbeOutcome.NotFound notFound && notFound.afterTryAgain()) {
+        if (probe.outcome().get() instanceof ProbeOutcome.NotFound(var afterTryAgain) && afterTryAgain) {
             log.debug("model line: try again found nothing again");
             final Label still = new Label(messages.get(MessageKey.PROJECTS_MODEL_STILL_NOTHING));
             still.setId("projects-empty-still-nothing");

@@ -86,11 +86,12 @@ public final class CheckSentences {
         if (chip.status() == StageStatus.SOFT_PASS) {
             return Optional.of(messages.get(MessageKey.SETTINGS_CHECK_MODELS_SOFT));
         }
-        return chip.status() == StageStatus.PASSED && count != null
-                ? Optional.of(messages.get(
-                        modelChosen ? MessageKey.SETTINGS_CHECK_MODELS_OK : MessageKey.SETTINGS_CHECK_MODELS_LISTED,
-                        count))
-                : Optional.empty();
+        if (chip.status() != StageStatus.PASSED || count == null) {
+            return Optional.empty();
+        }
+        final MessageKey key =
+                modelChosen ? MessageKey.SETTINGS_CHECK_MODELS_OK : MessageKey.SETTINGS_CHECK_MODELS_LISTED;
+        return Optional.of(messages.get(key, count));
     }
 
     private static Optional<String> inference(final Messages messages, final StageChip chip) {

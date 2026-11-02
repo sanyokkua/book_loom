@@ -257,7 +257,7 @@ final class RunSession implements JobListener {
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
-            case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
+            case CallSnapshotUpdated(var snapshot) -> locked(() -> liveCalls.snapshot(snapshot));
             case StepsPlanned planned -> locked(() -> progress.planned(planned));
             case StepChanged changed -> onStep(changed);
             case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
@@ -377,10 +377,10 @@ final class RunSession implements JobListener {
     }
 
     private void publishLiveLocked() {
-        final LiveCalls calls = liveCalls.view(clock.instant());
-        if (!calls.equals(shownCalls)) {
-            shownCalls = calls;
-            mirror.live().publishCalls(calls);
+        final LiveCalls viewed = liveCalls.view(clock.instant());
+        if (!viewed.equals(shownCalls)) {
+            shownCalls = viewed;
+            mirror.live().publishCalls(viewed);
         }
         final JobProgress seen = lastSeen.get();
         final ProgressFigures.Figures steps = progress.read(seen, clock.instant());

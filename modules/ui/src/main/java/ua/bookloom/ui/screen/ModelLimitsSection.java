@@ -83,7 +83,7 @@ final class ModelLimitsSection {
             contextOn.setSelected(draft.contextOn());
             limitOn.setSelected(draft.limitOn());
             final Integer loaded = form.facts().get().loaded();
-            replace(context, draft.contextOn() ? draft.contextText() : loaded == null ? "" : String.valueOf(loaded));
+            replace(context, draft.contextOn() ? draft.contextText() : Objects.toString(loaded, ""));
             replace(limit, draft.limitText());
             context.setDisable(!draft.contextOn());
             limit.setDisable(!draft.limitOn());

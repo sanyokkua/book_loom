@@ -101,7 +101,7 @@ public record ModelDraft(
 
     /** The same draft with another temperature, rounded to 0.01 and held within 0.0 to 2.0. */
     public ModelDraft withTemperature(final double next) {
-        final double held = Math.max(ModelSettings.MIN_TEMPERATURE, Math.min(ModelSettings.MAX_TEMPERATURE, next));
+        final double held = Math.clamp(next, ModelSettings.MIN_TEMPERATURE, ModelSettings.MAX_TEMPERATURE);
         final double rounded = Math.round(held * HUNDRED) / HUNDRED;
         return new ModelDraft(
                 choice, rounded, contextOn, contextText, limitOn, limitText, field, thinking, myValue(choice, rounded));
@@ -191,9 +191,8 @@ public record ModelDraft(
      */
     public ModelDraft withCustomSampling(final boolean on) {
         final SamplingDraft next = sampling.withCustom(on);
-        final SamplingDraft shown = on
-                ? next.withTemperatureText(choice == TemperatureChoice.VALUE ? String.valueOf(temperature) : "")
-                : next;
+        final String temperatureText = choice == TemperatureChoice.VALUE ? String.valueOf(temperature) : "";
+        final SamplingDraft shown = on ? next.withTemperatureText(temperatureText) : next;
         return keepingTyped(shown);
     }
 

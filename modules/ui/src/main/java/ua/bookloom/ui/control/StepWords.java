@@ -63,6 +63,10 @@ final class StepWords {
             return result;
         }
 
+        private static Look noCallLook(final StepEntry step) {
+            return step.kind() == StepKind.STAGE ? DONE : NO_CALL;
+        }
+
         static Look of(final StepEntry step) {
             if (step.isPending()) {
                 return PENDING;
@@ -76,7 +80,7 @@ final class StepWords {
                     : switch (ended) {
                         case DONE -> DONE;
                         // A stage that needed no request still did its work (found, checked, wrote).
-                        case NO_CALL -> step.kind() == StepKind.STAGE ? DONE : NO_CALL;
+                        case NO_CALL -> noCallLook(step);
                         case FAILED -> FAILED;
                     };
         }

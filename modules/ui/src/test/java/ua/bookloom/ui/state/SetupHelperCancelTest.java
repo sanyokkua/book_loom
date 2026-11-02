@@ -76,7 +76,7 @@ class SetupHelperCancelTest extends ExportViewModelTestBase {
         public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
             waiting.countDown();
             try {
-                TimeUnit.SECONDS.sleep(10);
+                new CountDownLatch(1).await(10, TimeUnit.SECONDS);
             } catch (InterruptedException stopped) {
                 interrupted.set(true);
                 return Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Interrupted."));

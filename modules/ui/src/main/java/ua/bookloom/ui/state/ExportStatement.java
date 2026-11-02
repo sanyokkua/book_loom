@@ -12,6 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
@@ -101,8 +102,8 @@ final class ExportStatement {
     }
 
     private @Nullable ExportRecord lastExport(final String projectId) {
-        final Optional<ExportRecord> stored = projects.lastExport(projectId).data();
-        return stored == null ? null : stored.orElse(null);
+        final Result<Optional<ExportRecord>> stored = projects.lastExport(projectId);
+        return stored.isErr() ? null : Objects.requireNonNull(stored.data()).orElse(null);
     }
 
     private void publish(final long asked, final List<String> worded, final ExportFigures read) {

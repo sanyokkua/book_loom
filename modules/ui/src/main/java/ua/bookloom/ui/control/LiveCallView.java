@@ -46,8 +46,8 @@ public final class LiveCallView extends VBox {
      * @param messages the catalogue the block is worded from
      */
     public LiveCallView(final String id, final Messages messages) {
-        super(SPACING);
         Objects.requireNonNull(id, "id");
+        super(SPACING);
         this.messages = Objects.requireNonNull(messages, "messages");
         this.input = new InputPane(id + "-input", messages);
         this.reply = new ReplyView(id + "-reply", messages);

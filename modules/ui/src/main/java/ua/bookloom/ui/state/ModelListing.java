@@ -228,7 +228,7 @@ public final class ModelListing {
     private Result<List<ModelInfo>> listGuarded(final Supplier<Result<List<ModelInfo>>> ask) {
         try {
             return ask.get();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the model catalogue threw instead of returning a result", thrown);
             return Result.err(internalError(thrown));
         }

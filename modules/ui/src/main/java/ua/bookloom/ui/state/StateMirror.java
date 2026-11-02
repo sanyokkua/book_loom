@@ -197,8 +197,8 @@ public final class StateMirror {
      */
     public void publishProgress(final JobProgress snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
-        final RunFigures figures = RunFigures.from(snapshot);
-        Platform.runLater(() -> applyFigures(figures));
+        final RunFigures read = RunFigures.from(snapshot);
+        Platform.runLater(() -> applyFigures(read));
     }
 
     /**

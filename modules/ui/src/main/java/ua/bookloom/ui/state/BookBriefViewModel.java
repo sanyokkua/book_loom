@@ -287,7 +287,7 @@ public final class BookBriefViewModel {
      * @param balance the balance; a value outside 0 to 100 is brought to the nearest end
      */
     public void setBalance(final int balance) {
-        final int clamped = Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, balance));
+        final int clamped = Math.clamp(balance, MIN_BALANCE, MAX_BALANCE);
         change(
                 "balance",
                 Integer.toString(clamped),

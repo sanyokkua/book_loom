@@ -197,7 +197,7 @@ public final class RunStateSource {
         model.set(choice);
         final OpenedBook book = current.book().get();
         final String runFile = mirror.runFileName().get();
-        projectName.set(book != null ? titleName(book) : runFile == null ? "" : runFile);
+        projectName.set(book != null ? titleName(book) : Objects.toString(runFile, ""));
         final RunStateInputs in = inputs(choice);
         decidedSegments.set(in.decided());
         totalSegments.set(in.total());

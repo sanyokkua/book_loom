@@ -42,14 +42,14 @@ public final class MeasuredCalls {
     @Inject
     public MeasuredCalls(
             final CallLedger ledger, final ModelSettingsRepository store, final ModelSpeedRecorder recorder) {
+        Objects.requireNonNull(store, "store");
+        Objects.requireNonNull(recorder, "recorder");
         this(
                 ledger,
                 model -> stored(store, model),
                 (model, seconds) ->
                         recorder.recordCalls(model.providerId(), model.modelId(), seconds, MeasuredFrom.RUN),
                 recorder.storedChanges());
-        Objects.requireNonNull(store, "store");
-        Objects.requireNonNull(recorder, "recorder");
     }
 
     MeasuredCalls(

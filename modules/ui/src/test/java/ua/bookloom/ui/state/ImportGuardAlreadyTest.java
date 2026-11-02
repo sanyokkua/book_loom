@@ -75,12 +75,12 @@ class ImportGuardAlreadyTest extends ImportGuardTestBase {
         assertThat(projects.imports()).containsExactly(DRACULA);
     }
 
-    // IF an Error from the check escaped, THEN the guard would stay busy and silently drop every later import.
+    // IF an exception from the check escaped, THEN the guard would stay busy and silently drop every later import.
     @Test
-    void requestImport_checkThrowsAnError_opensTellsThePersonAndTakesTheNextFile() throws IOException {
+    void requestImport_checkThrowsAnException_opensTellsThePersonAndTakesTheNextFile() throws IOException {
         final Path file = fileWithKnownContent("huge.epub");
         projects.on(file, Result.ok(BookFixtures.frankensteinImport()));
-        projects.throwOnList(new OutOfMemoryError("Java heap space"));
+        projects.throwOnList(new IllegalStateException("the listing broke"));
 
         requestImport(file);
         onFx(() -> {

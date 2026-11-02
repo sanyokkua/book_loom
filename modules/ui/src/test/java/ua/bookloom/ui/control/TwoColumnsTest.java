@@ -351,10 +351,12 @@ class TwoColumnsTest extends FxTestBase {
     @Test
     @SuppressWarnings("NullAway")
     void constructor_nullColumn_isRejectedByName() {
-        assertThatThrownBy(() -> new TwoColumns(null, simpleRight(), Width.REGULAR))
+        final var right = simpleRight();
+        assertThatThrownBy(() -> new TwoColumns(null, right, Width.REGULAR))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("left");
-        assertThatThrownBy(() -> new TwoColumns(simpleLeft(), null, Width.REGULAR))
+        final var left = simpleLeft();
+        assertThatThrownBy(() -> new TwoColumns(left, null, Width.REGULAR))
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("right");
     }

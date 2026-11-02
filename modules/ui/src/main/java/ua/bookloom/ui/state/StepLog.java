@@ -48,11 +48,10 @@ public record StepLog(int planned, int stages, boolean estimated, double reached
     public StepLog apply(final JobEvent event) {
         Objects.requireNonNull(event, "event");
         return switch (event) {
-            case StepsPlanned plan ->
-                plan.kind() == StepKind.STAGE
-                        ? new StepLog(planned, stages + plan.added(), estimated || plan.estimated(), reached, entries)
-                                .settled()
-                        : new StepLog(planned + plan.added(), stages, estimated || plan.estimated(), reached, entries)
+            case StepsPlanned(var kind, var added, var plannedEstimate) ->
+                kind == StepKind.STAGE
+                        ? new StepLog(planned, stages + added, estimated || plannedEstimate, reached, entries).settled()
+                        : new StepLog(planned + added, stages, estimated || plannedEstimate, reached, entries)
                                 .settled();
             case StepChanged changed -> apply(changed, null);
             default -> this;

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
@@ -147,7 +148,7 @@ class ModelRosterTest extends SettingsViewModelTestBase {
         catalog.release();
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> catalog.callCount() == 2);
         WaitForAsyncUtils.waitForFxEvents();
-        Thread.sleep(200);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(200));
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(shown(roster)).containsExactly("second · Ollama");

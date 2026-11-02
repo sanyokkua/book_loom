@@ -28,6 +28,7 @@ import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.dialog.ModelPickPrompt;
+import ua.bookloom.util.text.Slashes;
 
 /**
  * The look at the two local AI programs (ADR-0044): once on the very first launch, and again whenever the person
@@ -217,7 +218,7 @@ public final class LocalModelProbe {
     }
 
     private static String normalized(final URI address) {
-        return address.toString().replace("//localhost", "//127.0.0.1").replaceAll("/+$", "");
+        return Slashes.trimTrailing(address.toString().replace("//localhost", "//127.0.0.1"));
     }
 
     // A provider the person already set up under this id keeps its settings (name, timeouts, custom models); the look

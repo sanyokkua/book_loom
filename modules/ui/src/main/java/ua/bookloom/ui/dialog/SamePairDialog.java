@@ -86,7 +86,7 @@ public final class SamePairDialog implements SamePairPrompt {
 
         private final ProjectNameRules rules;
         private final String languageName;
-        private final FormCard card;
+        private final FormCard form;
         private final NameField name;
         private final RadioButton open = new RadioButton();
         private final RadioButton second = new RadioButton();
@@ -103,7 +103,7 @@ public final class SamePairDialog implements SamePairPrompt {
                 final Runnable cancelled) {
             this.rules = rules;
             this.languageName = languageName;
-            this.card = new FormCard(
+            this.form = new FormCard(
                     modalHost,
                     messages,
                     PREFIX + "card",
@@ -114,9 +114,9 @@ public final class SamePairDialog implements SamePairPrompt {
             this.name = new NameField(messages, PREFIX, "name", () -> base, this::refresh);
             name.field().setPromptText(messages.get(MessageKey.DIALOG_SAME_PAIR_NAME_PLACEHOLDER, base));
             this.use = addButtons(keepName, openExisting, makeSecond, cancelled);
-            card.onEscape(cancelled);
+            form.onEscape(cancelled);
             this.nameBox = nameSection();
-            card.body(content(existing));
+            form.body(content(existing));
             final ToggleGroup group = new ToggleGroup();
             open.setToggleGroup(group);
             second.setToggleGroup(group);
@@ -130,14 +130,14 @@ public final class SamePairDialog implements SamePairPrompt {
                 final Runnable openExisting,
                 final Consumer<String> makeSecond,
                 final Runnable cancelled) {
-            card.button(
+            form.button(
                     PREFIX + "cancel",
                     keepName,
                     MessageKey.DIALOG_SAME_PAIR_KEEP_TIP,
                     ButtonBar.ButtonData.CANCEL_CLOSE,
                     "btn-secondary",
                     cancelled);
-            return card.button(
+            return form.button(
                     PREFIX + "use",
                     "",
                     MessageKey.DIALOG_SAME_PAIR_USE_TIP,
@@ -175,7 +175,7 @@ public final class SamePairDialog implements SamePairPrompt {
         }
 
         void show() {
-            card.show();
+            form.show();
             FormCard.focusWhenShown(name.field(), false);
         }
 

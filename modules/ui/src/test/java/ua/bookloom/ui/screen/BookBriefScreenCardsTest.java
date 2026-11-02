@@ -47,7 +47,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void cards_bookOpened_areAllPresentAndEnabled() throws TimeoutException {
         openFrankensteinThenShowBrief();
 
-        assertThat(CARD_IDS).allSatisfy(id -> {
+        assertThat(List.copyOf(CARD_IDS)).allSatisfy(id -> {
             assertThat(isShown(id)).as(id).isTrue();
             assertThat(required(id).isDisabled()).as(id).isFalse();
         });

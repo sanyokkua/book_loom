@@ -250,8 +250,8 @@ public final class ProjectActionsImpl implements ProjectActions {
                     final ProjectChange change = dataOrPresent(result);
                     switch (change) {
                         case null -> log.debug("translation of book={} failed", group.contentHash());
-                        case ProjectChange.Saved saved -> openNew(group, saved.project());
-                        case ProjectChange.PairInUse inUse -> askSamePair(group, target, inUse.existing());
+                        case ProjectChange.Saved(var project) -> openNew(group, project);
+                        case ProjectChange.PairInUse(var existing) -> askSamePair(group, target, existing);
                         case ProjectChange.NameInUse _ -> {
                             log.warn("translation refused book={} clash=NameInUse", group.contentHash());
                             translateInto(group);

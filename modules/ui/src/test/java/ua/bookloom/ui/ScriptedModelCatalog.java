@@ -11,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
@@ -161,7 +162,7 @@ public final class ScriptedModelCatalog implements ModelCatalog {
             if (System.nanoTime() > deadline) {
                 throw new IllegalStateException("the catalogue was asked " + calls.get() + " time(s), not " + expected);
             }
-            TimeUnit.MILLISECONDS.sleep(5);
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(5));
         }
     }
 

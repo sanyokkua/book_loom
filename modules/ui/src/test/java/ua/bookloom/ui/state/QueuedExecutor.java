@@ -66,7 +66,7 @@ final class QueuedExecutor extends AbstractExecutorService {
 
     @Override
     public boolean isTerminated() {
-        return shutDown;
+        return isShutdown();
     }
 
     @Override

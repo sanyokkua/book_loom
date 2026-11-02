@@ -77,8 +77,8 @@ final class CallFeed {
             handle.steps(event);
             return;
         }
-        if (event instanceof CallSnapshotUpdated updated) {
-            callUpdated(updated.snapshot());
+        if (event instanceof CallSnapshotUpdated(var snapshot)) {
+            callUpdated(snapshot);
         }
     }
 

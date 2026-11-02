@@ -78,12 +78,11 @@ public final class TechnicalDetails {
 
     private boolean read() {
         final var read = settings.get(AppSetting.TECHNICAL_DETAILS);
-        final var stored = read.data();
-        if (stored == null) {
+        if (read.isErr()) {
             log.warn("technical details: the stored switch could not be read, starting off");
             return false;
         }
-        final boolean on = stored.orElse(false);
+        final boolean on = Objects.requireNonNull(read.data()).orElse(false);
         log.info("technical details start {}", on ? "on" : "off");
         return on;
     }

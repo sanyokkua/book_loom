@@ -120,7 +120,7 @@ public final class ImportGuard {
                         .findFirst()
                         .orElse(fileNameOf(book.source()));
             }
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.warn("the project service threw while naming the open project", thrown);
         }
         return fileNameOf(book.source());
@@ -214,7 +214,7 @@ public final class ImportGuard {
         @Nullable List<ProjectSummary> found = null;
         try {
             found = matchesOf(source);
-        } catch (Throwable failed) {
+        } catch (Exception failed) {
             log.warn("{} could not be checked against the stored projects: opening it anyway", fileNameOf(source));
             log.debug("the check failed", failed);
         } finally {

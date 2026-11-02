@@ -32,7 +32,7 @@ final class DirectExecutor extends AbstractExecutorService {
 
     @Override
     public boolean isTerminated() {
-        return shutDown;
+        return isShutdown();
     }
 
     @Override

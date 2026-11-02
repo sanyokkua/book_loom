@@ -14,6 +14,7 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SettingsRepository;
 import ua.bookloom.api.settings.AppSetting;
 
@@ -66,12 +67,12 @@ public final class SettingWriter {
      * @return the stored value, or empty when none is stored or the store could not be read
      */
     public <T> Optional<T> stored(final AppSetting<T> setting) {
-        final Optional<T> value = settings.get(setting).data();
-        if (value == null) {
+        final Result<Optional<T>> read = settings.get(setting);
+        if (read.isErr()) {
             log.warn("{} could not be read; its default applies", setting.key());
             return Optional.empty();
         }
-        return value;
+        return Objects.requireNonNull(read.data());
     }
 
     /**

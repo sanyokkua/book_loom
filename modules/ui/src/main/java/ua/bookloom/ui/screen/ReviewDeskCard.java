@@ -69,11 +69,11 @@ final class ReviewDeskCard extends ModalCard {
 
     ReviewDeskCard(
             final ReviewViewModel viewModel, final Parts parts, final Messages messages, final Runnable onClose) {
+        Objects.requireNonNull(parts, "parts");
         super(Size.XL);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.onClose = Objects.requireNonNull(onClose, "onClose");
-        Objects.requireNonNull(parts, "parts");
         inline = new ReviewInlinePanels(messages, (note, lower) -> guard(() -> viewModel.retry(note, lower)));
         setId("review-desk");
         getStyleClass().add("review-desk");
@@ -240,7 +240,7 @@ final class ReviewDeskCard extends ModalCard {
 
     // Ctrl+Alt+↓/↑ move between rows; every other key is left alone and not logged.
     private void moveKeys(final KeyEvent event) {
-        final int delta = ReviewListPane.NEXT.match(event) ? 1 : ReviewListPane.PREVIOUS.match(event) ? -1 : 0;
+        final int delta = rowStep(event);
         if (delta != 0) {
             event.consume();
             log.debug("review desk shortcut: move {}", delta);
@@ -291,5 +291,12 @@ final class ReviewDeskCard extends ModalCard {
             inline.closeQuestion();
             onClose.run();
         });
+    }
+
+    private static int rowStep(final KeyEvent event) {
+        if (ReviewListPane.NEXT.match(event)) {
+            return 1;
+        }
+        return ReviewListPane.PREVIOUS.match(event) ? -1 : 0;
     }
 }

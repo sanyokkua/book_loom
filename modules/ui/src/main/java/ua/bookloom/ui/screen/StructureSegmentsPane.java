@@ -76,9 +76,9 @@ final class StructureSegmentsPane extends VBox {
             final Messages messages,
             final StructureTextPane reading,
             final ReadOnlyBooleanProperty technical) {
+        Objects.requireNonNull(model, "model");
         super(SPACING);
         this.technical = Objects.requireNonNull(technical, "technical");
-        Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.reading = Objects.requireNonNull(reading, "reading");
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());

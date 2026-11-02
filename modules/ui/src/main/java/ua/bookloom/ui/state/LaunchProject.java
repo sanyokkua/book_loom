@@ -84,15 +84,15 @@ public final class LaunchProject {
                     .flatMap(summary -> ProjectRows.of(List.of(summary), null, Map.of()).stream()
                             .flatMap(group -> group.rows().stream())
                             .findFirst());
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.warn("launch: the last project could not be read", thrown);
             return Optional.empty();
         }
     }
 
     private <T> Optional<T> read(final AppSetting<T> setting) {
-        final Optional<T> stored = settings.get(setting).data();
-        return stored == null ? Optional.empty() : stored;
+        final Result<Optional<T>> stored = settings.get(setting);
+        return stored.isErr() ? Optional.empty() : Objects.requireNonNull(stored.data());
     }
 
     private void apply(final Optional<ProjectRow> row) {

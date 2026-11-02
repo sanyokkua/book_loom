@@ -69,7 +69,7 @@ final class GlossaryCalls {
     private static <T> Result<T> attempt(final String what, final Supplier<Result<T>> work) {
         try {
             return work.get();
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the glossary service threw instead of returning a result for the {}", what, thrown);
             return Result.err(unavailable());
         }

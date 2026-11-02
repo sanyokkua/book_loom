@@ -278,10 +278,10 @@ public final class ProviderTestRunner {
     private void invalidate(final String reason) {
         final boolean somethingShown = checking.get() || !checkRefusal.get().isEmpty() || !stages.isEmpty();
         checkEpoch++;
-        final Future<?> running = inFlight;
-        if (running != null) {
+        final Future<?> pending = inFlight;
+        if (pending != null) {
             log.debug("cancelling the provider test in flight: {}", reason);
-            running.cancel(true);
+            pending.cancel(true);
         }
         settle();
         checking.set(false);
@@ -322,7 +322,7 @@ public final class ProviderTestRunner {
             final String chosen =
                     test == ProviderTest.CONNECTION ? "" : target.model().strip();
             return verifier.verify(target.config(), chosen, test.policy(), listener);
-        } catch (Throwable thrown) {
+        } catch (Exception thrown) {
             log.error("the verifier threw instead of returning a result", thrown);
             return Result.err(internalError(thrown));
         }

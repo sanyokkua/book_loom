@@ -294,8 +294,8 @@ final class ResultRows {
             super.updateItem(item, empty);
             if (empty || item == null) {
                 setGraphic(null);
-            } else if (item instanceof Heading head) {
-                heading.setText(messages.get(head.title(), head.count()));
+            } else if (item instanceof Heading(var title, var count)) {
+                heading.setText(messages.get(title, count));
                 setGraphic(heading);
             } else if (item instanceof ChangeRow shown) {
                 fill(shown);

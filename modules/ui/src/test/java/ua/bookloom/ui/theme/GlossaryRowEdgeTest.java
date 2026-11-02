@@ -14,7 +14,7 @@ import ua.bookloom.ui.ThemeTestSupport;
  */
 class GlossaryRowEdgeTest {
 
-    private static final Pattern WIDTH = Pattern.compile("-fx-border-width:\\s*([^;]+);");
+    private static final Pattern WIDTH = Pattern.compile("-fx-border-width:\\s*+([^;]+);");
 
     private static String borderWidth(final String selector) {
         final Map<String, String> rules = ThemeTestSupport.rules(ThemeTestSupport.themeCss());

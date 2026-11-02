@@ -374,7 +374,7 @@ public final class SettingsController {
                 final double top = target.localToScene(target.getBoundsInLocal())
                                 .getMinY()
                         - content.localToScene(content.getBoundsInLocal()).getMinY();
-                formScroll.setVvalue(Math.min(1, Math.max(0, top / (height - view))));
+                formScroll.setVvalue(Math.clamp(top / (height - view), 0, 1));
             }
         });
     }

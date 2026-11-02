@@ -38,9 +38,9 @@ final class DecisionPane extends VBox {
     private boolean shownHeld;
 
     DecisionPane(final ProgressDialogModel model, final Messages messages) {
+        Objects.requireNonNull(model, "model");
         super(SPACING);
         this.messages = Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(model, "model");
         getStyleClass().add("progress-decisions-pane");
         final Label heading = heading(MessageKey.BRIEF_DECIDES_GROUP, "progress-decides-heading");
         stepsHeading = heading(MessageKey.BRIEF_STEPS_GROUP, "progress-steps-heading");

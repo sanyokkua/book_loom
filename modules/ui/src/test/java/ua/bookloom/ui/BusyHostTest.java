@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -86,7 +87,7 @@ class BusyHostTest extends ShellTestBase {
         final ActivityTracker.Handle quick = begin(ActivityKind.IMPORT, false);
         onFx(quick::end);
 
-        Thread.sleep((long) BusyHost.DELAY.toMillis() + 250);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos((long) BusyHost.DELAY.toMillis() + 250));
 
         assertThat(isCardShown()).isFalse();
     }
@@ -97,7 +98,7 @@ class BusyHostTest extends ShellTestBase {
         begin(ActivityKind.MODEL_LISTING, true);
         begin(ActivityKind.TRANSLATION, false);
 
-        Thread.sleep((long) BusyHost.DELAY.toMillis() + 250);
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos((long) BusyHost.DELAY.toMillis() + 250));
 
         assertThat(isCardShown()).isFalse();
         assertThat(required("shell-nav").isDisabled()).isFalse();

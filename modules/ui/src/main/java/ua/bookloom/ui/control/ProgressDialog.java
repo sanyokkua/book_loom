@@ -99,10 +99,10 @@ public final class ProgressDialog extends ModalCard {
             final Runnable onCancel,
             final @Nullable Runnable onHide,
             final @Nullable Runnable onWriteNow) {
+        Objects.requireNonNull(onCancel, "onCancel");
         super(Size.XL);
         this.model = Objects.requireNonNull(model, "model");
         this.messages = Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(onCancel, "onCancel");
         setId("busy-card");
         detail = new ProgressStepDetail(model, messages);
         howCounted = new HowCountedPane("progress-how", messages);

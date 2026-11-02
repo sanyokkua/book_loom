@@ -41,10 +41,10 @@ public final class ComparePanes extends HBox {
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages) {
-        super(SPACING);
         Objects.requireNonNull(sourceName, "sourceName");
         Objects.requireNonNull(targetName, "targetName");
         Objects.requireNonNull(messages, "messages");
+        super(SPACING);
         final Label mark = new Label();
         mark.setId("review-editable-mark");
         mark.getStyleClass().add("chip");

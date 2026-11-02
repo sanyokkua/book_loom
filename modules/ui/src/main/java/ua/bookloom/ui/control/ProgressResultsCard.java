@@ -106,7 +106,9 @@ final class ProgressResultsCard extends ModalCard {
         switch (results.outcome()) {
             case STOPPED -> body.getChildren().add(line(MessageKey.RESULTS_STOPPED));
             case NOTHING -> body.getChildren().add(line(MessageKey.RESULTS_NOTHING));
-            case CHANGED -> {}
+            case CHANGED -> {
+                // The rows below tell what changed; no line is added.
+            }
         }
         final boolean listed = results.outcome() != ChangeResults.Outcome.STOPPED
                 && (!results.rows().isEmpty() || !results.untargeted().isEmpty());

@@ -130,20 +130,20 @@ final class RunBanners {
         final RunAction settings = openSettings();
         return switch (in.notice()) {
             // A refusal can come after work was done (an export refused at the run's end), so it is not "cannot start".
-            case RunNotice.Refused refused ->
+            case RunNotice.Refused(var error) ->
                 banner(
                         "refused",
                         Tone.WARN,
                         "⚠",
                         Text.of(MessageKey.TRANSLATING_REFUSED_TITLE),
-                        Text.of(MessageKey.RUN_BANNER_PLAIN, refused.error()),
+                        Text.of(MessageKey.RUN_BANNER_PLAIN, error),
                         List.of());
             case RunNotice.ProviderError provider ->
                 cannotStartBanner(OTHER, Text.of(MessageKey.RUN_BANNER_PLAIN, provider.error()), List.of(settings));
-            case RunNotice.MissingInput missing -> {
-                final String token = missing.which().token();
+            case RunNotice.MissingInput(var which) -> {
+                final String token = which.token();
                 yield cannotStartBanner(
-                        token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), fixFor(missing.which(), settings));
+                        token, Text.of(MessageKey.TRANSLATING_MISSING_TEXT, token), fixFor(which, settings));
             }
             case null -> {
                 final String token = RunNotice.Input.MODEL.token();

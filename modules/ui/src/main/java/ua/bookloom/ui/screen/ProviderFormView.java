@@ -5,7 +5,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
@@ -147,13 +146,14 @@ final class ProviderFormView {
         connection.showCredential(form.credentialStatus().get());
         connection.showAdvice(form.findings().get());
         showFieldErrors();
-        final List<String> lines = form.errorsShown().get()
-                ? form.findings().get().stream()
-                        .filter(ProviderDraft.FormFinding::blocking)
-                        .map(finding ->
-                                messages.get(finding.key(), finding.args().toArray()))
-                        .collect(Collectors.toList())
-                : new ArrayList<>();
+        final List<String> lines = new ArrayList<>(
+                form.errorsShown().get()
+                        ? form.findings().get().stream()
+                                .filter(ProviderDraft.FormFinding::blocking)
+                                .map(finding -> messages.get(
+                                        finding.key(), finding.args().toArray()))
+                                .toList()
+                        : List.of());
         if (form.saveFailed().get()) {
             lines.add(messages.get(MessageKey.SETTINGS_ERROR_SAVE_FAILED));
         }

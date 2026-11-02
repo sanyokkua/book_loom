@@ -65,9 +65,8 @@ public record ReviewRow(
     }
 
     private static String readable(final SegmentView view) {
-        final String masked = view.maskedUserTarget() != null
-                ? view.maskedUserTarget()
-                : view.maskedMachineTarget() != null ? view.maskedMachineTarget() : view.maskedSource();
+        final String machine = view.maskedMachineTarget() != null ? view.maskedMachineTarget() : view.maskedSource();
+        final String masked = view.maskedUserTarget() != null ? view.maskedUserTarget() : machine;
         return TOKEN.matcher(masked).replaceAll("").replaceAll("\\s+", " ").strip();
     }
 }
