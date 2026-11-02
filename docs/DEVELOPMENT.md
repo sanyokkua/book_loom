@@ -117,6 +117,7 @@ JavaFX is 26.0.2 (ADR-0019: the first release with a built-in headless platform)
 ./gradlew -p modules/build-logic -PstrictLocks verifyLocks   # the included build
 ./gradlew resolveAndLockAll --write-locks                    # regenerate after a catalog change
 ./gradlew -p modules/build-logic resolveAndLockAll --write-locks
+./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks help   # regenerate gradle/verification-metadata.xml after a dependency change; the JavaFX jars of the other platforms (linux, linux-aarch64, win, mac) are added by hand from Maven Central, because only the host platform resolves
 ```
 
 `:app` and `:ui` produce **no lockfile diff** by design: `bookloom.javafx-conventions` deactivates locking on their
