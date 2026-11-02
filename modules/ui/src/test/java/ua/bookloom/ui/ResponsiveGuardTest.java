@@ -22,9 +22,11 @@ class ResponsiveGuardTest {
 
     private static final Path SOURCES = Path.of("src/main/java/ua/bookloom/ui");
     // Reading a width to follow it, or the window's width, or a hand-rolled threshold constant.
-    private static final Pattern WIDTH_SWITCH =
-            Pattern.compile("widthProperty\\(\\)|(scene|getScene\\(\\)|window|getWindow\\(\\))\\.getWidth\\(\\)"
-                    + "|static final double \\w*(_BELOW|BREAKPOINT\\w*|_AT|SIDE_BY_SIDE\\w*)\\s*=");
+    private static final Pattern WIDTH_READ =
+            Pattern.compile("widthProperty\\(\\)|(?:scene|getScene\\(\\)|window|getWindow\\(\\))\\.getWidth\\(\\)");
+    private static final Pattern DOUBLE_CONSTANT = Pattern.compile("static final double (\\w+)\\s*=");
+    private static final List<String> THRESHOLD_PARTS = List.of("BREAKPOINT", "SIDE_BY_SIDE");
+    private static final List<String> THRESHOLD_ENDINGS = List.of("_BELOW", "_AT");
     private static final Map<String, String> SIZING_ONLY = Map.of(
             "control/LayoutClass.java", "the one responsive mechanism",
             "control/Wrapped.java", "gives a wrapping label the height of its lines; changes no arrangement",
@@ -41,7 +43,7 @@ class ResponsiveGuardTest {
     void sources_outsideTheSharedMechanism_neverSwitchALayoutOnAWidth() {
         final List<String> offenders = javaFiles()
                 .filter(file -> !SIZING_ONLY.containsKey(relative(file)))
-                .filter(file -> WIDTH_SWITCH.matcher(read(file)).find())
+                .filter(file -> readsWidth(read(file)))
                 .map(ResponsiveGuardTest::relative)
                 .toList();
 
@@ -54,12 +56,27 @@ class ResponsiveGuardTest {
     @Test
     void allowList_eachEntry_stillReadsAWidth() {
         final List<String> stale = SIZING_ONLY.keySet().stream()
-                .filter(name ->
-                        !WIDTH_SWITCH.matcher(read(SOURCES.resolve(name))).find())
+                .filter(name -> !readsWidth(read(SOURCES.resolve(name))))
                 .sorted()
                 .toList();
 
         assertThat(stale).as("allow-list entries that no longer read a width").isEmpty();
+    }
+
+    private static boolean readsWidth(final String source) {
+        return WIDTH_READ.matcher(source).find()
+                || DOUBLE_CONSTANT
+                        .matcher(source)
+                        .results()
+                        .map(constant -> constant.group(1))
+                        .anyMatch(ResponsiveGuardTest::isThreshold);
+    }
+
+    // A hand-rolled threshold: a constant named for a breakpoint, a side-by-side switch, or the width it is below or
+    // at.
+    private static boolean isThreshold(final String name) {
+        return THRESHOLD_PARTS.stream().anyMatch(name::contains)
+                || THRESHOLD_ENDINGS.stream().anyMatch(name::endsWith);
     }
 
     private static Stream<Path> javaFiles() {

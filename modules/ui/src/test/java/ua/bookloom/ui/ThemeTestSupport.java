@@ -15,7 +15,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -57,7 +56,6 @@ public final class ThemeTestSupport {
 
     private static final Pattern COMMA = Pattern.compile(",");
     private static final Pattern COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
-    private static final Pattern RULE = Pattern.compile("(?<![^{}])([^{}]++)\\{([^{}]*+)}");
 
     /**
      * A scene whose root is an empty {@link StackPane} with {@code theme.css} attached at Scene level, light block
@@ -165,9 +163,21 @@ public final class ThemeTestSupport {
     public static Map<String, String> rules(final String css) {
         final String stripped = COMMENT.matcher(css).replaceAll("");
         final Map<String, String> rules = new LinkedHashMap<>();
-        final Matcher matcher = RULE.matcher(stripped);
-        while (matcher.find()) {
-            rules.merge(matcher.group(1).trim(), matcher.group(2), String::concat);
+        int lastBrace = -1;
+        int selectorStart = -1;
+        int selectorEnd = -1;
+        for (int i = 0; i < stripped.length(); i++) {
+            final char c = stripped.charAt(i);
+            if (c == '{') {
+                selectorStart = lastBrace + 1;
+                selectorEnd = i > selectorStart ? i : -1;
+            } else if (c == '}' && selectorEnd >= 0 && lastBrace == selectorEnd) {
+                rules.merge(
+                        stripped.substring(selectorStart, selectorEnd).trim(),
+                        stripped.substring(selectorEnd + 1, i),
+                        String::concat);
+            }
+            lastBrace = c == '{' || c == '}' ? i : lastBrace;
         }
         return rules;
     }
