@@ -17,7 +17,7 @@ class SummaryTextTest {
     void build_fewEntriesAndThirtyLongHeadings_dropsOldestHeadingsKeepingEveryEntry() {
         final List<String> entries = List.of("Hale → Гейл (character, male)", "Milton → Мілтон (place, unknown)");
         final List<String> headings = IntStream.range(0, LONG_HEADINGS)
-                .mapToObj(index -> "Heading %02d of the long story of the lighthouse keeper".formatted(index))
+                .mapToObj("Heading %02d of the long story of the lighthouse keeper"::formatted)
                 .toList();
 
         final SummaryText text = SummaryText.build(entries, headings);

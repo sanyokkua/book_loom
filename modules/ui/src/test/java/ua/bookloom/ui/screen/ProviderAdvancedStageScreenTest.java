@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ProviderReports;
+import ua.bookloom.ui.ScriptedProviderVerifier.DraftCall;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /** The optional Advanced features stage on the Providers checks and in the test dialog, and the route line. */
@@ -34,7 +35,7 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
     }
 
     private String shown(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     // Before it runs the row says what the stage is: optional, and it uses the model.
@@ -53,7 +54,7 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
         runAdvanced(ProviderReports.advancedPassed(GENERIC_NOTE));
 
         assertThat(verifier.policies()).containsExactly(VerificationPolicy.ADVANCED);
-        assertThat(verifier.drafts()).extracting(call -> call.modelId()).containsExactly(MODEL);
+        assertThat(verifier.drafts()).extracting(DraftCall::modelId).containsExactly(MODEL);
     }
 
     // A generic server runs all four checks; each is one line, in the person's words, not the verifier's.
@@ -76,9 +77,9 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
         openSettings();
         runAdvanced(ProviderReports.advancedPassed("schema=honoured; thinking=think"));
 
-        onFx(() -> ((Hyperlink) required("check-details-ADVANCED")).fire());
+        onFx(((Hyperlink) required("check-details-ADVANCED"))::fire);
 
-        assertThat(ThemeTestSupport.onFx(() -> ((Labeled) required("test-card").lookup(".dialog-title")).getText()))
+        assertThat(ThemeTestSupport.onFx(((Labeled) required("test-card").lookup(".dialog-title"))::getText))
                 .isEqualTo("Advanced features (optional, uses the model)");
         assertThat(textsUnder(required("test-check-schema")))
                 .contains("Structured answers", "The answer was exactly the fixed shape.", "honoured");
@@ -96,7 +97,7 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
         openSettings();
         runAdvanced(ProviderReports.advancedPassed("schema=refused; thinking=ignored; samplers=honoured; cap=none"));
 
-        onFx(() -> ((Hyperlink) required("check-details-ADVANCED")).fire());
+        onFx(((Hyperlink) required("check-details-ADVANCED"))::fire);
 
         assertThat(textsUnder(required("test-check-schema")))
                 .contains("The server answered with an error for this field.", "refused");
@@ -134,7 +135,7 @@ class ProviderAdvancedStageScreenTest extends SettingsScreenTestBase {
         checkWithReport(Result.ok(new VerificationReport(
                 List.of(passed.stages().get(0), passed.stages().get(1), lmStudio))));
 
-        onFx(() -> ((Hyperlink) required("check-details-INFERENCE")).fire());
+        onFx(((Hyperlink) required("check-details-INFERENCE"))::fire);
 
         assertThat(shown("test-request-line")).isEqualTo("POST http://127.0.0.1:1234/api/v0/chat/completions");
     }

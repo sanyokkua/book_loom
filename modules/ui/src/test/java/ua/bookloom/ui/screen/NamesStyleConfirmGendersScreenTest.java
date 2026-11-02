@@ -100,7 +100,7 @@ class NamesStyleConfirmGendersScreenTest extends TranslatingScreenTestBase {
         showGlossary(ANNE);
         glossary.holdModelCalls();
         onFx(() -> button("names-style-scan").fire());
-        awaitFx(() -> ((Button) required("names-style-stop")).isVisible());
+        awaitFx(((Button) required("names-style-stop"))::isVisible);
 
         assertThat(button(CONFIRM).isDisabled()).isTrue();
 

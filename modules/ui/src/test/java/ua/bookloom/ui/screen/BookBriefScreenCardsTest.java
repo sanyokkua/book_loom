@@ -157,10 +157,10 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         onFx(() -> ((TextField) required("brief-tone-audience")).setText("a".repeat(600)));
         onFx(() -> ((TextArea) required("brief-tone-voice")).setText("v".repeat(600)));
 
-        assertThat(ThemeTestSupport.onFx(() -> ((TextField) required("brief-tone-audience")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextField) required("brief-tone-audience"))::getText))
                 .hasSize(200);
         assertThat(brief().audience()).hasSize(200);
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("brief-tone-voice")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("brief-tone-voice"))::getText))
                 .hasSize(500);
         assertThat(brief().voiceEra()).hasSize(500);
     }

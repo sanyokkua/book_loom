@@ -312,16 +312,16 @@ abstract class WorkspaceTestBase {
                 .isEqualTo(written.toString());
         waitUntil(() ->
                 injector.getInstance(ExportViewModel.class).exportAvailable().get());
-        final int toastsBefore = onFx(() -> toastCount());
+        final int toastsBefore = onFx(this::toastCount);
         // A card left open (the review desk a run opened) would hold the complete card back until it is closed.
         onFx(() -> injector.getInstance(ua.bookloom.ui.ModalHost.class).hide());
-        onFx(() -> ((Button) exportNode("#export-run")).fire());
+        onFx(((Button) exportNode("#export-run"))::fire);
         waitUntil(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(exportText("#export-complete-card .dialog-text"))
                 .contains(written.getFileName().toString());
         assertThat(onFx(() -> exportNode("#export-reveal"))).isNotNull();
-        assertThat(onFx(() -> toastCount()))
+        assertThat(onFx(this::toastCount))
                 .as("no transient message announces the export")
                 .isEqualTo(toastsBefore);
     }

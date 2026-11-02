@@ -49,11 +49,11 @@ class ProjectsModelLineTest extends ProjectsScreenTestBase {
     }
 
     private String footerText() {
-        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((javafx.scene.control.Label) node("nav-footer")).getText());
+        return ua.bookloom.ui.ThemeTestSupport.onFx(((javafx.scene.control.Label) node("nav-footer"))::getText);
     }
 
     private void press(final String id) {
-        onFx(() -> ((Button) node(id)).fire());
+        onFx(((Button) node(id))::fire);
     }
 
     // IF the card said nothing while the programs were asked, THEN a slow first launch would look like a failure.

@@ -70,7 +70,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
     }
 
     private String areaText(final String id) {
-        return ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((javafx.scene.control.TextArea) required(id)).getText());
+        return ua.bookloom.ui.ThemeTestSupport.onFx(((javafx.scene.control.TextArea) required(id))::getText);
     }
 
     private String destinationPath() {
@@ -105,7 +105,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
     void suggest_useThisNamePressed_putsTheNameInSaveAsBesideTheSameFolder() throws TimeoutException {
         suggest();
 
-        onFx(() -> ((Button) required("progress-apply")).fire());
+        onFx(((Button) required("progress-apply"))::fire);
 
         awaitFx(() -> suggested.toString().equals(destinationPath()));
         assertThat(labelText("export-save-to")).endsWith("Бурштин. Mary Shelley.epub");
@@ -117,7 +117,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
         final String before = destinationPath();
         suggest();
 
-        onFx(() -> ((Button) required("progress-cancel")).fire());
+        onFx(((Button) required("progress-cancel"))::fire);
         awaitFx(() -> optional("progress-apply") == null);
 
         assertThat(destinationPath()).isEqualTo(before);
@@ -128,7 +128,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
     @Test
     void suggest_authorKeptInLatin_showsTheHintUntilAnotherNameIsChosen() throws TimeoutException {
         suggest();
-        onFx(() -> ((Button) required("progress-apply")).fire());
+        onFx(((Button) required("progress-apply"))::fire);
         awaitFx(() -> isShown("export-author-kept"));
 
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).answer(dir.resolve("mine.epub"));
@@ -142,7 +142,7 @@ class ExportScreenNameHintTest extends ExportScreenTestBase {
     @Test
     void titleEdit_afterAUsedName_asksNothingAndSaysTheTitleChanged() throws TimeoutException {
         suggest();
-        onFx(() -> ((Button) required("progress-apply")).fire());
+        onFx(((Button) required("progress-apply"))::fire);
         awaitFx(() -> suggested.toString().equals(destinationPath()));
 
         onFx(() -> {

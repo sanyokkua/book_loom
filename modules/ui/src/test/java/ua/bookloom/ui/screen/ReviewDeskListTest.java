@@ -52,7 +52,7 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         openDeskWith(List.of(ReviewFixtures.wrongLanguage()), List.of());
 
         assertThat(labelText("review-worst")).isEqualTo("part of it may be in another language");
-        assertThat(fx(() -> ((javafx.scene.control.Label) rowList().lookup(".review-row-line")).getText()))
+        assertThat(fx(((javafx.scene.control.Label) rowList().lookup(".review-row-line"))::getText))
                 .startsWith("part of it may be in another language");
     }
 

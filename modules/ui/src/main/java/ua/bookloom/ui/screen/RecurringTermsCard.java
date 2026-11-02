@@ -67,7 +67,7 @@ final class RecurringTermsCard {
                         MessageKey.RECURRING_COLUMN_TERM_TIP,
                         TERM_WIDTH,
                         TERM_MIN,
-                        () -> new RecurringTermsCells.TermCell()),
+                        RecurringTermsCells.TermCell::new),
                 targetColumn(messages, recurring, frozen),
                 usedColumn(messages, recurring.usage()),
                 actionColumn(

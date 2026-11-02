@@ -104,11 +104,9 @@ class ModalCardSizeTest extends ShellTestBase {
         final ModalCard card = show(ModalCard.Size.DIALOG, 2);
 
         onFx(() -> card.feedback("Saved", Severity.SUCCESS));
-        final String shown =
-                ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((Label) card.lookup("#modal-feedback")).getText());
+        final String shown = ua.bookloom.ui.ThemeTestSupport.onFx(((Label) card.lookup("#modal-feedback"))::getText);
         onFx(card::clearFeedback);
-        final String cleared =
-                ua.bookloom.ui.ThemeTestSupport.onFx(() -> ((Label) card.lookup("#modal-feedback")).getText());
+        final String cleared = ua.bookloom.ui.ThemeTestSupport.onFx(((Label) card.lookup("#modal-feedback"))::getText);
 
         assertThat(shown).isEqualTo("Saved");
         assertThat(cleared).isEmpty();

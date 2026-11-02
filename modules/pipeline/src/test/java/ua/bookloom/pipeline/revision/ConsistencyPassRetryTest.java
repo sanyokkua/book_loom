@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.review.ReviewFixtures;
@@ -82,7 +83,7 @@ class ConsistencyPassRetryTest {
         final ConsistencyReport report = ok(book.runExport(EXPORT));
 
         assertThat(book.stored(DANNY))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(WHOLE, SegmentStatus.REVISED);
         assertThat(report.checks().retriedImproved()).isEqualTo(1);
         assertThat(report.notes()).contains("ch2 · p03: drafted again and improved");
@@ -100,7 +101,7 @@ class ConsistencyPassRetryTest {
         final ConsistencyReport report = ok(book.runExport(EXPORT));
 
         assertThat(book.stored(OLD_MAN))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(translated, SegmentStatus.REVISED);
         assertThat(report.checks().refused()).isEmpty();
     }
@@ -115,7 +116,7 @@ class ConsistencyPassRetryTest {
         final ConsistencyReport report = ok(book.runExport(EXPORT));
 
         assertThat(book.stored(RUN_DANNY))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(QUOTED, SegmentStatus.FLAGGED);
         assertThat(report.checks().retriedImproved()).isZero();
         assertThat(report.checks().refused()).containsExactly(entry(RevisionGuards.QUOTES, 1));

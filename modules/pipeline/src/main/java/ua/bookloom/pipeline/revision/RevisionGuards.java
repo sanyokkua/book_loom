@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
@@ -252,6 +253,6 @@ public final class RevisionGuards {
     }
 
     private static List<String> runs(final String text) {
-        return LATIN_RUN.matcher(text).results().map(match -> match.group()).toList();
+        return LATIN_RUN.matcher(text).results().map(MatchResult::group).toList();
     }
 }

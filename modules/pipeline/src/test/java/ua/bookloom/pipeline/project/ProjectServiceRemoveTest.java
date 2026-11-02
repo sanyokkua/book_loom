@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TestBooks;
@@ -56,7 +57,7 @@ class ProjectServiceRemoveTest {
         final Result<Boolean> removed = world.service.remove(uk);
 
         assertThat(removed.data()).isTrue();
-        assertThat(world.storedProjects()).extracting(project -> project.id()).containsExactly(de);
+        assertThat(world.storedProjects()).extracting(Project::id).containsExactly(de);
         assertThat(world.glossary.all(de).data()).hasSize(1);
         assertThat(world.lexicon.all(de).data()).hasSize(1);
         assertThat(world.segments.all(de).data()).hasSize(2);

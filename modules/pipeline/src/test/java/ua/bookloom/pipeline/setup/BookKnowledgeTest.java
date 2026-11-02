@@ -142,11 +142,11 @@ class BookKnowledgeTest {
         ask(FACTS, STEM);
 
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallStarted)
+                .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
                 .containsExactly(CallKind.BOOK_KNOWLEDGE);
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallFinished)
+                .filteredOn(ModelCallFinished.class::isInstance)
                 .extracting(event -> ((ModelCallFinished) event).kind())
                 .containsExactly(CallKind.BOOK_KNOWLEDGE);
     }

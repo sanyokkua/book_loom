@@ -107,7 +107,7 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
 
         onFx(() -> Event.fireEvent(
                 search, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
-        assertThat(ThemeTestSupport.onFx(() -> search.getText())).isEmpty();
+        assertThat(ThemeTestSupport.<String>onFx(search::getText)).isEmpty();
         assertThat(shownTerms()).hasSize(4);
     }
 

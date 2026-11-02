@@ -26,6 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -208,7 +209,7 @@ class TranslationJobAuxiliaryTest {
     }
 
     private static String textOf(final ChatRequest request) {
-        return request.messages().stream().map(message -> message.content()).reduce("", String::concat);
+        return request.messages().stream().map(ChatMessage::content).reduce("", String::concat);
     }
 
     private static SegmentCounts countsFor(final TestProject project, final AlsoTranslate switches) {

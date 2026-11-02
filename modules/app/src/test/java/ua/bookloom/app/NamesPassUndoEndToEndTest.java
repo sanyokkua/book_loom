@@ -120,7 +120,7 @@ class NamesPassUndoEndToEndTest extends WorkspaceTestBase {
 
         @Override
         public Result<ChatModel> create(final ModelSelection selection) {
-            return real.create(selection).map(pseudo -> new TargetingPseudo(pseudo));
+            return real.create(selection).map(TargetingPseudo::new);
         }
     }
 

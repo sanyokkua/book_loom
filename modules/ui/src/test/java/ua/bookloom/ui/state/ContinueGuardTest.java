@@ -100,9 +100,7 @@ class ContinueGuardTest extends ShellTestBase {
     }
 
     private void answer(final Runnable press) {
-        onFx(() -> {
-            press.run();
-        });
+        onFx(press);
         WaitForAsyncUtils.waitForFxEvents();
     }
 

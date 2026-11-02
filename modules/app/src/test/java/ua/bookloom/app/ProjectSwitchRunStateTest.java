@@ -66,7 +66,7 @@ class ProjectSwitchRunStateTest extends WorkspaceTestBase {
         openFromProjects(other);
         waitUntil(() -> shell.root().lookup("#confirm-yes") != null);
         assertThat(runState()).as("nothing changes before the answer").isEqualTo(RunState.PAUSED);
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#confirm-yes"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#confirm-yes")))::fire);
 
         assertShowsItsOwnReadyState(other);
     }
@@ -74,14 +74,14 @@ class ProjectSwitchRunStateTest extends WorkspaceTestBase {
     @Test
     void openFromProjects_questionCancelled_keepsTheRunAndItsProject() throws Exception {
         final OpenedBook other = twoProjectsWithPausedRun();
-        final String running = onFx(() -> openProjectId());
+        final String running = onFx(this::openProjectId);
 
         openFromProjects(other);
         waitUntil(() -> shell.root().lookup("#confirm-yes") != null);
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#confirm-cancel"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#confirm-cancel")))::fire);
 
         assertThat(runState()).isEqualTo(RunState.PAUSED);
-        assertThat(onFx(() -> openProjectId())).isEqualTo(running);
+        assertThat(onFx(this::openProjectId)).isEqualTo(running);
     }
 
     // The other project is imported and briefed first, then the run's project, whose run pauses on its first segment.
@@ -136,8 +136,7 @@ class ProjectSwitchRunStateTest extends WorkspaceTestBase {
         final Node ready = onFx(() -> shell.root().lookup("#translating-ready-card"));
         assertThat(ready).as("the ready card, not the other run's live rows").isNotNull();
         assertThat(onFx(ready::isVisible)).isTrue();
-        assertThat(onFx(() ->
-                        ((javafx.scene.control.Label) shell.root().lookup("#translating-ready-pending")).getText()))
+        assertThat(onFx(((javafx.scene.control.Label) shell.root().lookup("#translating-ready-pending"))::getText))
                 .isEqualTo(String.valueOf(OTHER_SEGMENTS));
     }
 

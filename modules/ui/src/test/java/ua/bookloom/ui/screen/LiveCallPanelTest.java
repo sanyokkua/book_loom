@@ -163,12 +163,12 @@ class LiveCallPanelTest extends LiveCardTestBase {
         openActivityLog();
         assertThat(logCells()).hasSizeGreaterThan(3);
 
-        onFx(() -> ((ToggleButton) required("translating-log-problems")).fire());
+        onFx(((ToggleButton) required("translating-log-problems"))::fire);
 
         assertThat(logCells()).hasSize(3);
         assertThat(TooltipProbe.tipText(required("translating-log-problems")))
                 .isEqualTo("Shows only failed calls, retries and segments to review.");
-        onFx(() -> ((ToggleButton) required("translating-log-all")).fire());
+        onFx(((ToggleButton) required("translating-log-all"))::fire);
         assertThat(logList().getItems()).hasSize(40);
     }
 }

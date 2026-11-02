@@ -73,7 +73,7 @@ class ExportLeftScreenAnnouncementTest extends ExportScreenTestBase {
         exportService().release();
         awaitFx(() -> !toastActions().isEmpty());
 
-        onFx(() -> ((Button) toastActions().getFirst()).fire());
+        onFx(((Button) toastActions().getFirst())::fire);
 
         awaitFx(() -> optional("export-complete-card") != null);
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.EXPORT);

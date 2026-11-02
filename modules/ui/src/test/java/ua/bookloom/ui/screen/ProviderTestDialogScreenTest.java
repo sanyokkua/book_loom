@@ -58,7 +58,7 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
     }
 
     private String shown(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     // IF activating a result did not open its details, THEN the request and the reply would stay out of reach.
@@ -71,9 +71,9 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
         assertThat(shown("test-request-line")).isEqualTo("POST http://127.0.0.1:11434/api/chat");
         final Banner verdict = (Banner) required("test-verdict");
         assertThat(verdict.getStyleClass()).contains("banner-ok");
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("test-body")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("test-body"))::getText))
                 .isEqualTo("{\"model\":\"gemma3:12b\"}");
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("test-response")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("test-response"))::getText))
                 .isEqualTo("OK");
         assertThat(required("test-metrics")).isNotNull();
         assertThat(shown("test-metric-time")).isEqualTo("1.2 s");
@@ -89,7 +89,7 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
                 new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ENTER, false, false, false, false)));
 
         assertThat(shown("test-request-line")).isEqualTo("GET http://127.0.0.1:11434/api/tags");
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("test-response")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("test-response"))::getText))
                 .isEqualTo("gemma3:12b\nqwen3:8b\nllama3:8b");
     }
 
@@ -131,7 +131,7 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> required("test-body").isVisible()))
                 .isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((TextArea) required("test-body")).getText()))
+        assertThat(ThemeTestSupport.<String>onFx(((TextArea) required("test-body"))::getText))
                 .isEqualTo("(no body)");
         assertThat(ThemeTestSupport.onFx(() -> button("test-copy-body").isDisabled()))
                 .isTrue();
@@ -220,10 +220,10 @@ class ProviderTestDialogScreenTest extends SettingsScreenTestBase {
         onFx(() -> viewModel().tests().run(ua.bookloom.ui.state.ProviderTest.INFERENCE));
         verifier.awaitEntered();
 
-        onFx(() -> ((Hyperlink) required("check-details-INFERENCE")).fire());
+        onFx(((Hyperlink) required("check-details-INFERENCE"))::fire);
 
         final Banner verdict = (Banner) required("test-verdict");
-        assertThat(ThemeTestSupport.onFx(() -> verdict.getStyleClass())).contains("banner-info");
+        assertThat(ThemeTestSupport.onFx(verdict::getStyleClass)).contains("banner-info");
         assertThat(shown("test-verdict-text")).isEqualTo("Testing...");
         verifier.release();
     }

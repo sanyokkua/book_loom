@@ -108,7 +108,7 @@ class SetupAssistantSynthesisRequestTest {
         suggested();
 
         assertThat(events)
-                .filteredOn(event -> event instanceof ModelCallStarted)
+                .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
                 .containsExactly(CallKind.BRIEF_SUGGESTION, CallKind.BRIEF_SYNTHESIS);
     }

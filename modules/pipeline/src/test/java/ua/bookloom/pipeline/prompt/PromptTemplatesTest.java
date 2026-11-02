@@ -17,8 +17,7 @@ import ua.bookloom.pipeline.ReviewModeTestModule;
 /** Verifies template loading, slot checking and optional-block rendering. */
 class PromptTemplatesTest {
 
-    private static final PromptTemplates.ResourceLoader BUNDLED =
-            fileName -> PromptTemplates.class.getResourceAsStream(fileName);
+    private static final PromptTemplates.ResourceLoader BUNDLED = PromptTemplates.class::getResourceAsStream;
 
     private static PromptTemplates.ResourceLoader bundledExcept(final String file, final String replacement) {
         return fileName -> fileName.equals(file)

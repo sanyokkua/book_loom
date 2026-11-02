@@ -48,7 +48,7 @@ class AboutDialogTest extends ShellTestBase {
     }
 
     private void openAbout() {
-        onFx(() -> ((Button) required("shell-about")).fire());
+        onFx(((Button) required("shell-about"))::fire);
     }
 
     /** {@code true} when the card is in the scene and visible; it may be removed or hidden once dismissed. */
@@ -281,7 +281,7 @@ class AboutDialogTest extends ShellTestBase {
     void about_openLogFolder_asksTheFileManagerToOpenTheLogFolder() {
         openAbout();
 
-        onFx(() -> ((Button) required("about-open-log-folder")).fire());
+        onFx(((Button) required("about-open-log-folder"))::fire);
 
         assertThat(((RecordingFileRevealer) injector.getInstance(FileRevealer.class)).opened())
                 .containsExactly(UiTestInjector.TEST_LOG_DIR);
@@ -293,7 +293,7 @@ class AboutDialogTest extends ShellTestBase {
     void about_saveBundle_asksWhereToSaveADatedZip() {
         openAbout();
 
-        onFx(() -> ((Button) required("about-save-bundle")).fire());
+        onFx(((Button) required("about-save-bundle"))::fire);
 
         assertThat(((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).initials())
                 .singleElement()

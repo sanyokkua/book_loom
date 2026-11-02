@@ -108,7 +108,7 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         session.onEvent(failed(1, ErrorCode.cancelled));
         tick(session);
 
-        assertThat(shownLogEntries()).extracting(entry -> entry.kind()).containsExactly(LogKind.MILESTONE);
+        assertThat(shownLogEntries()).extracting(LogEntry::kind).containsExactly(LogKind.MILESTONE);
         assertThat(shownLogEntries().get(0).messageKey()).isEqualTo(ua.bookloom.ui.i18n.MessageKey.LOG_CALL_PAUSED);
         assertThat(shownLogEntries().get(0).technical()).isTrue();
         assertThat(connection().failuresRecently()).isZero();

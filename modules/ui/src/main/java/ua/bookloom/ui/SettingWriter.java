@@ -163,7 +163,7 @@ public final class SettingWriter {
         Objects.requireNonNull(what, "what");
         Objects.requireNonNull(write, "write");
         log.debug("queueing the write of {}", what);
-        afterWrites(() -> attempt(what, write), failed -> saveFailed.set(failed));
+        afterWrites(() -> attempt(what, write), saveFailed::set);
     }
 
     /**

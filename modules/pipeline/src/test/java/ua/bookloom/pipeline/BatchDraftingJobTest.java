@@ -35,6 +35,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobReport;
@@ -302,9 +303,7 @@ class BatchDraftingJobTest {
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED, 4096))
                 .run());
 
-        assertThat(model.requests())
-                .extracting(request -> request.contextWindow())
-                .containsOnly(4096);
+        assertThat(model.requests()).extracting(ChatRequest::contextWindow).containsOnly(4096);
     }
 
     @Test
@@ -315,9 +314,7 @@ class BatchDraftingJobTest {
 
         report(batchedJob(project, model).run());
 
-        assertThat(model.requests())
-                .extracting(request -> request.contextWindow())
-                .containsOnly(16_384);
+        assertThat(model.requests()).extracting(ChatRequest::contextWindow).containsOnly(16_384);
     }
 
     private TestProject lockedNellBook() {

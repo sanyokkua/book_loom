@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TreeCell;
@@ -56,7 +57,7 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
         return renderedCells().stream()
                 .filter(Node::isVisible)
                 .filter(cell -> cell.getItem() != null)
-                .sorted(Comparator.comparingInt(cell -> cell.getIndex()))
+                .sorted(Comparator.comparingInt(IndexedCell::getIndex))
                 .map(cell -> labelTexts(cell))
                 .toList();
     }
@@ -68,7 +69,7 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
 
     /** The text of the label with this id. */
     String labelText(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Label) required(id)).getText());
+        return ThemeTestSupport.onFx(((Label) required(id))::getText);
     }
 
     /** Waits until the background checks have answered and the card shows the round-trip row's final wording. */

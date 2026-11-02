@@ -109,9 +109,9 @@ class NamesStyleAutoResultsScreenTest extends NamesStyleAutoScreenTestBase {
 
         onFx(() -> button("results-show-changed").fire());
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("names-style-changed-filter")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("names-style-changed-filter"))::isSelected))
                 .isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("recurring-changed-filter")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("recurring-changed-filter"))::isSelected))
                 .isTrue();
         assertThat(glossaryTerms()).containsExactlyInAnyOrder("Well", "Mid");
         assertThat(recurringTerms()).containsExactly("pentacle");

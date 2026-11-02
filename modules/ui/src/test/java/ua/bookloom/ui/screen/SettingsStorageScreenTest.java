@@ -159,7 +159,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     void openFolder_clicked_revealerOpensDataFolder() throws TimeoutException {
         openStorage();
 
-        onFx(() -> ((Button) required("storage-open-folder")).fire());
+        onFx(((Button) required("storage-open-folder"))::fire);
 
         assertThat(((RecordingFileRevealer) injector.getInstance(FileRevealer.class)).opened())
                 .containsExactly(DB_FILE.getParent());
@@ -169,7 +169,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     void openLogs_clicked_revealerOpensLogFolder() throws TimeoutException {
         openStorage();
 
-        onFx(() -> ((Button) required("storage-open-logs")).fire());
+        onFx(((Button) required("storage-open-logs"))::fire);
 
         assertThat(((RecordingFileRevealer) injector.getInstance(FileRevealer.class)).opened())
                 .containsExactly(LOG_DIR);
@@ -179,7 +179,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     void bundle_clicked_chooserAsked() throws TimeoutException {
         openStorage();
 
-        onFx(() -> ((Button) required("storage-bundle")).fire());
+        onFx(((Button) required("storage-bundle"))::fire);
 
         assertThat(((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).initials())
                 .singleElement()
@@ -194,7 +194,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("my-backup.db"));
 
-        onFx(() -> ((Button) required("storage-backup")).fire());
+        onFx(((Button) required("storage-backup"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-backup-status"));
         assertThat(text("storage-backup-status")).isEqualTo("Backup saved: my-backup.db");
@@ -207,7 +207,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         openStorage();
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("my-backup.db"));
-        onFx(() -> ((Button) required("storage-backup")).fire());
+        onFx(((Button) required("storage-backup"))::fire);
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-backup-status"));
 
         onFx(() -> tabs().getSelectionModel().select(0));
@@ -224,7 +224,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         openStorage();
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class)).answer(dataDir.resolve("report.zip"));
 
-        onFx(() -> ((Button) required("storage-bundle")).fire());
+        onFx(((Button) required("storage-bundle"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("storage-bundle-status"));
         assertThat(text("storage-bundle-status")).isEqualTo("Diagnostic bundle saved: report.zip");
@@ -238,7 +238,7 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("taken.db"));
 
-        onFx(() -> ((Button) required("storage-backup")).fire());
+        onFx(((Button) required("storage-backup"))::fire);
 
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());
@@ -258,14 +258,14 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     void deleteAll_clicked_asksWhatIsDeletedAndWhatStays() throws TimeoutException {
         openStorage();
 
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
         assertThat(cardText())
                 .contains("All projects, translations, glossaries, providers and settings are deleted")
                 .contains("The book files you chose, the files you exported and the logs are not touched.")
                 .doesNotContain("is stopped first");
         assertThat(isShown("delete-data-backup")).isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((Button) required("delete-data-cancel")).isDefaultButton()))
+        assertThat(ThemeTestSupport.onFx(((Button) required("delete-data-cancel"))::isDefaultButton))
                 .isTrue();
     }
 
@@ -273,9 +273,9 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     @Test
     void deleteAll_cancelled_nothingDeletedNoRestart() throws TimeoutException {
         openStorage();
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
-        onFx(() -> ((Button) required("delete-data-cancel")).fire());
+        onFx(((Button) required("delete-data-cancel"))::fire);
 
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(storage.deletes()).isZero();
@@ -286,9 +286,9 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
     @Test
     void deleteAll_confirmed_deletesThenRestarts() throws TimeoutException {
         openStorage();
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
-        onFx(() -> ((Button) required("delete-data-yes")).fire());
+        onFx(((Button) required("delete-data-yes"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
         assertThat(storage.deletes()).isEqualTo(1);
@@ -301,9 +301,9 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         openStorage();
         ((RecordingFileChooser) injector.getInstance(FileChooserPort.class))
                 .answer(Path.of("copies").resolve("before-delete.db"));
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
-        onFx(() -> ((Button) required("delete-data-backup")).fire());
+        onFx(((Button) required("delete-data-backup"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> isShown("delete-data-card"));
         assertThat(storage.backups()).containsExactly(Path.of("copies").resolve("before-delete.db"));
@@ -318,9 +318,9 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         storage.failDeleteWith(
                 AppError.of(ErrorCode.internal, "Data not deleted", "The data folder could not be changed."));
         openStorage();
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
-        onFx(() -> ((Button) required("delete-data-yes")).fire());
+        onFx(((Button) required("delete-data-yes"))::fire);
 
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());
@@ -341,9 +341,9 @@ class SettingsStorageScreenTest extends SettingsScreenTestBase {
         restart = new RecordingAppRestart(Result.ok(false));
         useLocale(java.util.Locale.ENGLISH);
         openStorage();
-        onFx(() -> ((Button) required("storage-delete-all")).fire());
+        onFx(((Button) required("storage-delete-all"))::fire);
 
-        onFx(() -> ((Button) required("delete-data-yes")).fire());
+        onFx(((Button) required("delete-data-yes"))::fire);
 
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> !errors.presented().isEmpty());

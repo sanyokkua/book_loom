@@ -46,7 +46,7 @@ class AllCallsEndToEndTest extends WorkspaceTestBase {
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
         runToTheEnd();
 
-        onFx(() -> ((Button) exportNode("#translating-live-all-calls")).fire());
+        onFx(((Button) exportNode("#translating-live-all-calls"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
         final List<String> rows = readEveryRow();
 

@@ -217,8 +217,8 @@ class ExportCompleteDialogTest extends ShellTestBase {
         assertThat(verified.getStyleClass()).contains("status-ok").doesNotContain("chip-ok");
         assertThat(verified.getGraphic()).isInstanceOf(Label.class);
         assertThat(((Label) verified.getGraphic()).getText()).isEqualTo("✓");
-        assertThat(ThemeTestSupport.onFx(() -> verified.getTextFill()))
-                .isEqualTo(ThemeTestSupport.onFx(() -> ((Label) verified.getGraphic()).getTextFill()));
+        assertThat(ThemeTestSupport.onFx(verified::getTextFill))
+                .isEqualTo(ThemeTestSupport.onFx(((Label) verified.getGraphic())::getTextFill));
     }
 
     @Test
@@ -253,7 +253,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
     void openFolder_pressed_revealsTheFile() {
         show();
 
-        onFx(() -> ((Button) required(ExportCompleteDialog.FOLDER_ID)).fire());
+        onFx(((Button) required(ExportCompleteDialog.FOLDER_ID))::fire);
 
         assertThat(revealer().revealed()).containsExactly(BOOK);
         assertThat(revealer().opened()).isEmpty();
@@ -263,7 +263,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
     void openBook_pressed_opensTheFile() {
         show();
 
-        onFx(() -> ((Button) required(ExportCompleteDialog.OPEN_ID)).fire());
+        onFx(((Button) required(ExportCompleteDialog.OPEN_ID))::fire);
 
         assertThat(revealer().opened()).containsExactly(BOOK);
         assertThat(revealer().revealed()).isEmpty();
@@ -273,7 +273,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
     void close_pressed_hidesTheCardAndOpensNothing() {
         show();
 
-        onFx(() -> ((Button) required(ExportCompleteDialog.CLOSE_ID)).fire());
+        onFx(((Button) required(ExportCompleteDialog.CLOSE_ID))::fire);
 
         assertThat(isShowing()).isFalse();
         assertThat(revealer().revealed()).isEmpty();
@@ -356,7 +356,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
         final List<String> copied = new ArrayList<>();
         showLongPathCopyingTo(copied);
 
-        onFx(() -> ((Button) required("export-complete-copy")).fire());
+        onFx(((Button) required("export-complete-copy"))::fire);
 
         assertThat(copied).containsExactly(LONG_BOOK.toString());
         assertThat(TooltipProbe.tipText(required("export-complete-copy"))).contains("clipboard");

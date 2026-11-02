@@ -42,7 +42,7 @@ class BookBriefLayoutTest extends BookBriefScreenTestBase {
         openFrankensteinThenShowBrief();
 
         assertThat(required(COLUMNS)).isInstanceOf(TwoColumns.class);
-        assertThat(ThemeTestSupport.onFx(() -> ((TwoColumns) required(COLUMNS)).sideBySideFrom()))
+        assertThat(ThemeTestSupport.onFx(((TwoColumns) required(COLUMNS))::sideBySideFrom))
                 .isEqualTo(LayoutClass.Width.REGULAR);
     }
 

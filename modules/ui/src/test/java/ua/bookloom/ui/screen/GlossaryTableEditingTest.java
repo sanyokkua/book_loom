@@ -54,7 +54,7 @@ class GlossaryTableEditingTest extends TermTableCardTestBase {
         onFx(() -> hale.setText("Гейл"));
         onFx(this::redrawTheTable);
 
-        final String typed = ThemeTestSupport.onFx(() -> hale.getText());
+        final String typed = ThemeTestSupport.onFx(hale::getText);
         assertThat(typed).isEqualTo("Гейл");
     }
 
@@ -66,12 +66,12 @@ class GlossaryTableEditingTest extends TermTableCardTestBase {
         final TextField hale = targetField("Hale");
         final TableCell<?, ?> rosalindTerm = glossaryCell("Rosalind", TERM_COLUMN);
         onFx(hale::requestFocus);
-        final boolean had = ThemeTestSupport.onFx(() -> hale.isFocused());
+        final boolean had = ThemeTestSupport.onFx(hale::isFocused);
         assertThat(had).isTrue();
 
         onFx(() -> rosalindTerm.fireEvent(press()));
 
-        final boolean kept = ThemeTestSupport.onFx(() -> hale.isFocused());
+        final boolean kept = ThemeTestSupport.onFx(hale::isFocused);
         assertThat(kept).isFalse();
         assertThat(ThemeTestSupport.onFx(() -> table("names-style").isFocused()))
                 .isTrue();
@@ -89,7 +89,7 @@ class GlossaryTableEditingTest extends TermTableCardTestBase {
         onFx(() -> table("names-style")
                 .fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.F2, false, false, false, false)));
 
-        final boolean focused = ThemeTestSupport.onFx(() -> hale.isFocused());
+        final boolean focused = ThemeTestSupport.onFx(hale::isFocused);
         assertThat(focused).isTrue();
     }
 

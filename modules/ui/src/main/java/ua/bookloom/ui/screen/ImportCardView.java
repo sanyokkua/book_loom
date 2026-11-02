@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Stream;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -113,7 +114,7 @@ final class ImportCardView {
 
     private static @Nullable String titleAuthor(final BookCard card) {
         final String joined = Stream.of(card.title(), card.author())
-                .filter(part -> part != null)
+                .filter(Objects::nonNull)
                 .reduce((first, second) -> first + DOT + second)
                 .orElse("");
         return joined.isEmpty() ? null : joined;

@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -208,7 +209,7 @@ public final class ImportController {
         markDropzone(false);
         if (droppable) {
             // java.io.File appears only here, where the Dragboard hands it over; it becomes a Path at once.
-            openDropped(board.getFiles().stream().map(file -> file.toPath()).toList());
+            openDropped(board.getFiles().stream().map(File::toPath).toList());
         }
         event.setDropCompleted(droppable);
         event.consume();

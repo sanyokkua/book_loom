@@ -48,10 +48,10 @@ class ProjectRemoveRunningTest extends WorkspaceTestBase {
         removeFromProjects(id);
         waitUntil(() -> shell.root().lookup("#confirm-yes") != null);
         final String question =
-                onFx(() -> ((Label) Objects.requireNonNull(shell.root().lookup(".dialog-title"))).getText());
+                onFx(((Label) Objects.requireNonNull(shell.root().lookup(".dialog-title")))::getText);
         assertThat(question).startsWith("Stop the translation and remove");
         assertThat(runState()).as("nothing changes before the answer").isEqualTo(RunState.PAUSED);
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#confirm-yes"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#confirm-yes")))::fire);
 
         org.testfx.util.WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS,

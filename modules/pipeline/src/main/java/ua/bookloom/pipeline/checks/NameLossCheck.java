@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -83,7 +84,7 @@ final class NameLossCheck {
         final String folded = NameSpelling.fold(rendering, pairs);
         final Matcher words = NameSpelling.CAPITALISED.matcher(target);
         return words.results()
-                .map(found -> found.group())
+                .map(MatchResult::group)
                 .filter(word -> !word.equalsIgnoreCase(rendering))
                 .filter(word -> NameSpelling.fold(word, pairs).equals(folded))
                 .filter(word -> !NameSpelling.isCommonWord(word, targetLanguage, lowerCase))

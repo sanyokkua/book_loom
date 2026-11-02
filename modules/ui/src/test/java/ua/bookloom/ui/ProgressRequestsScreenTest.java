@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TextArea;
@@ -74,13 +75,13 @@ class ProgressRequestsScreenTest extends ProgressWorkTestBase {
     }
 
     private String text(final String id) {
-        return ThemeTestSupport.onFx(() -> ((TextArea) required(id)).getText());
+        return ThemeTestSupport.onFx(((TextArea) required(id))::getText);
     }
 
     private List<String> requestLines() {
         return ThemeTestSupport.onFx(() -> required("progress-requests").lookupAll(".list-cell").stream()
                 .map(cell -> ((Labeled) cell).getText())
-                .filter(line -> line != null)
+                .filter(Objects::nonNull)
                 .toList());
     }
 

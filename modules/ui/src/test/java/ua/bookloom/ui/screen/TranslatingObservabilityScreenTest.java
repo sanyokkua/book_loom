@@ -161,7 +161,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
                 new LogEntry(LogKind.MILESTONE, List.of("paused")));
         openActivityLog();
 
-        onFx(() -> ((ToggleButton) required("translating-log-problems")).fire());
+        onFx(((ToggleButton) required("translating-log-problems"))::fire);
 
         assertThat(logCells()).extracting(cell -> cell.getItem().kind()).containsExactly(LogKind.RETRIED);
         assertThat(TooltipProbe.tipText(required("translating-log-problems"))).isNotBlank();

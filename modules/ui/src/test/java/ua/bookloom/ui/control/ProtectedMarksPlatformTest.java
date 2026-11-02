@@ -26,7 +26,7 @@ class ProtectedMarksPlatformTest extends FxTestBase {
     }
 
     private static String text(final TextArea area) {
-        return onFx(() -> area.getText());
+        return onFx(area::getText);
     }
 
     private TextArea area(final String initial) {

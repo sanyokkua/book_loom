@@ -8,6 +8,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -82,7 +83,7 @@ class GlossaryTableLayoutTest extends TranslatingScreenTestBase {
         showGlossary(List.of(VICTOR));
 
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
-                        .map(column -> column.getMinWidth())
+                        .map(TableColumnBase::getMinWidth)
                         .toList()))
                 .satisfiesExactly(
                         term -> assertThat(term).isGreaterThanOrEqualTo(140),

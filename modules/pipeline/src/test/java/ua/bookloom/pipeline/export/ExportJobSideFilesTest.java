@@ -29,6 +29,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RunRecord;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TestBooks;
@@ -150,9 +151,8 @@ class ExportJobSideFilesTest {
         final String leftover = "The old wooden door opened slowly and the captain looked into the dark room.";
         final String id = fixture.importBook(
                 TestBooks.epub(tempDir.resolve("Door.epub"), List.of(List.of(leftover, "He left.")), "en"), "en");
-        final List<String> ids = fixture.bodyRecords(id).stream()
-                .map(record -> record.segmentId())
-                .toList();
+        final List<String> ids =
+                fixture.bodyRecords(id).stream().map(SegmentRecord::segmentId).toList();
         fixture.accept(id, ids.get(0), leftover);
         fixture.accept(id, ids.get(1), "Він пішов.");
 
@@ -222,9 +222,8 @@ class ExportJobSideFilesTest {
                         List.of(List.of("Victor &amp; I left.", "He opened the door.", "The end.")),
                         "en"),
                 "en");
-        final List<String> ids = fixture.bodyRecords(id).stream()
-                .map(record -> record.segmentId())
-                .toList();
+        final List<String> ids =
+                fixture.bodyRecords(id).stream().map(SegmentRecord::segmentId).toList();
         fixture.accept(id, ids.get(0), "Віктор & я пішли.");
         fixture.flag(id, ids.get(1), "Він відчинив двері.");
         fixture.decide(

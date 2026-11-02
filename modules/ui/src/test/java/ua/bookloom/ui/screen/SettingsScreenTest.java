@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
+import ua.bookloom.ui.ScriptedProviderVerifier.DraftCall;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.state.ProviderTest;
 
@@ -238,7 +239,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(verifier.drafts())
-                .extracting(call -> call.config().id(), call -> call.modelId(), call -> call.policy())
+                .extracting(call -> call.config().id(), DraftCall::modelId, DraftCall::policy)
                 .containsExactly(tuple("ollama", "", VerificationPolicy.CONNECTION));
         assertThat(verifier.connectionCalls()).isEmpty();
     }

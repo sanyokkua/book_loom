@@ -194,9 +194,7 @@ class StageEvalRunnerTest {
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
         assertThat(rows.stream().filter(row -> row.id().endsWith(":pass")))
                 .allSatisfy(row -> assertThat(row.calls()).isPositive());
-        assertThat(runner.probe().requests())
-                .extracting(request -> request.callKind())
-                .contains(CallKind.DRAFT);
+        assertThat(runner.probe().requests()).extracting(ChatRequest::callKind).contains(CallKind.DRAFT);
     }
 
     @Test

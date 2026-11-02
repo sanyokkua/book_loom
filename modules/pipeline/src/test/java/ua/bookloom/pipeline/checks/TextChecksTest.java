@@ -280,7 +280,7 @@ class TextChecksTest {
             final String name, final String source, final String target, final String run) {
         assertThat(uk(source, target))
                 .filteredOn(CheckFinding::blocking)
-                .extracting(finding -> finding.kind(), finding -> finding.span().text())
+                .extracting(CheckFinding::kind, finding -> finding.span().text())
                 .containsExactly(tuple(FindingKind.LATIN_RUN, run));
     }
 

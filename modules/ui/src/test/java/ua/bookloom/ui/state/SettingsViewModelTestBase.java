@@ -134,13 +134,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
         ProviderForm form = formOfOwner;
         if (formOwner != viewModel || form == null) {
             form = onFx(() -> new ProviderForm(
-                    viewModel,
-                    configs,
-                    modelSettings,
-                    settings,
-                    name -> "OFFICE_KEY".equals(name),
-                    technical,
-                    executor));
+                    viewModel, configs, modelSettings, settings, "OFFICE_KEY"::equals, technical, executor));
             formOwner = viewModel;
             formOfOwner = form;
         }

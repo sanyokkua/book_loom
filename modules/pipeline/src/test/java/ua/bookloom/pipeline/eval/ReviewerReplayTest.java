@@ -21,6 +21,7 @@ import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
@@ -162,7 +163,7 @@ class ReviewerReplayTest {
 
         assertThat(decided.status().name()).isEqualTo("ACCEPTED");
         assertThat(decided.machineTarget()).isEqualTo("Дощ ллє як із відра.");
-        assertThat(decided.findings()).extracting(finding -> finding.raisedBy()).contains("reviewer");
+        assertThat(decided.findings()).extracting(QaFinding::raisedBy).contains("reviewer");
     }
 
     // The checks alone refuse these defects, whatever any model says.

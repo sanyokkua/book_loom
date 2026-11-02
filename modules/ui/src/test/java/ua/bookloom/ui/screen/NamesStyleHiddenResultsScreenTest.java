@@ -56,7 +56,7 @@ class NamesStyleHiddenResultsScreenTest extends NamesStyleAutoScreenTestBase {
     void toastAction_pressed_opensTheResultsOnce() throws Exception {
         endTheHiddenPass();
 
-        onFx(() -> ((Button) toastActions().getFirst()).fire());
+        onFx(((Button) toastActions().getFirst())::fire);
 
         awaitFx(() -> isCardShown("results-card"));
         assertThat(resultsCards()).isEqualTo(1);
@@ -93,7 +93,7 @@ class NamesStyleHiddenResultsScreenTest extends NamesStyleAutoScreenTestBase {
 
         awaitFx(() -> !toastActions().isEmpty());
         assertThat(resultsCards()).isZero();
-        onFx(() -> ((Button) toastActions().getFirst()).fire());
+        onFx(((Button) toastActions().getFirst())::fire);
         awaitFx(() -> isCardShown("results-card"));
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
         assertThat(resultsCards()).isEqualTo(1);

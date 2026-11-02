@@ -128,7 +128,7 @@ abstract class TermTableCardTestBase extends TranslatingScreenTestBase {
     }
 
     protected String shownText(final TableCell<?, ?> cell) {
-        return ThemeTestSupport.onFx(() -> ((Label) cell.getGraphic()).getText());
+        return ThemeTestSupport.onFx(((Label) cell.getGraphic())::getText);
     }
 
     protected double minY(final String id) {

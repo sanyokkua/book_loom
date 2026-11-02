@@ -262,7 +262,7 @@ class ProjectsScreenTest extends ProjectsScreenTestBase {
 
         assertThat(textOf("projects-no-match")).contains("No project matches 'xyz'.");
         assertThat(isPresent("projects-row-" + EARTH_ID)).isFalse();
-        onFx(() -> ((Hyperlink) node("projects-clear-search")).fire());
+        onFx(((Hyperlink) node("projects-clear-search"))::fire);
         assertThat(isPresent("projects-no-match")).isFalse();
         assertThat(isPresent("projects-row-" + EARTH_ID)).isTrue();
         assertThat(isPresent("projects-row-" + TIDE_ID)).isTrue();

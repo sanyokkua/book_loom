@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.ScenarioMappingBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -218,7 +219,7 @@ class GatedChatModelRetryRulesTest {
 
     private List<String> bodies(final String chatPath) {
         return server.findAll(postRequestedFor(urlEqualTo(chatPath))).stream()
-                .map(request -> request.getBodyAsString())
+                .map(LoggedRequest::getBodyAsString)
                 .toList();
     }
 

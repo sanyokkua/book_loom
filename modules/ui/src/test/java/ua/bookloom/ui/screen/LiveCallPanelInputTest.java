@@ -39,7 +39,7 @@ class LiveCallPanelInputTest extends LiveCardTestBase {
     }
 
     private String bodyText(final String section) {
-        return ThemeTestSupport.onFx(() -> ((TextArea) required(section + "-body")).getText());
+        return ThemeTestSupport.onFx(((TextArea) required(section + "-body"))::getText);
     }
 
     // IF a waiting call left the reply's place empty, THEN the person could not tell a slow model from a lost call.

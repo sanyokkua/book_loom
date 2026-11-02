@@ -95,6 +95,6 @@ public final class ProjectsController {
                         messages.get(MessageKey.PROJECTS_NEW),
                         messages.get(MessageKey.PROJECTS_NEW_TIP),
                         "btn-primary",
-                        () -> navigator.openImportEmpty()));
+                        navigator::openImportEmpty));
     }
 }

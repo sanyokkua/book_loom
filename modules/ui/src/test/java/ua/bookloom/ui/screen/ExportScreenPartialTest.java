@@ -139,7 +139,7 @@ class ExportScreenPartialTest extends ExportScreenTestBase {
         onFx(() -> shell.activate(ua.bookloom.ui.ViewNames.EXPORT));
         publish(RunState.RUNNING);
 
-        onFx(() -> ((Button) required("export-banner-pause")).fire());
+        onFx(((Button) required("export-banner-pause"))::fire);
 
         assertThat(job.calls().stream().filter("pause"::equals)).hasSize(1);
     }

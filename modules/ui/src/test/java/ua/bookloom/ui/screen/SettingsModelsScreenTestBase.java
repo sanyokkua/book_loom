@@ -82,7 +82,7 @@ abstract class SettingsModelsScreenTestBase extends SettingsScreenTestBase {
     }
 
     String shown(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     boolean visible(final String id) {

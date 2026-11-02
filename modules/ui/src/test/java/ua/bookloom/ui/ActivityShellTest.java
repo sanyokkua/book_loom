@@ -47,7 +47,7 @@ class ActivityShellTest extends ShellTestBase {
     void chipStop_pressed_asksTheWorkToStop() {
         beginScan();
 
-        onFx(() -> ((Button) required("shell-activity-stop")).fire());
+        onFx(((Button) required("shell-activity-stop"))::fire);
 
         assertThat(stopped).containsExactly("scan");
     }
@@ -80,7 +80,7 @@ class ActivityShellTest extends ShellTestBase {
         final boolean admitted = askLeaving(left);
         final boolean asked = isVisibleInScene("leave-card");
         final String keepTip = TooltipProbe.tipText(required("leave-keep"));
-        onFx(() -> ((Button) required("leave-stop")).fire());
+        onFx(((Button) required("leave-stop"))::fire);
 
         assertThat(admitted).isFalse();
         assertThat(asked).isTrue();
@@ -96,7 +96,7 @@ class ActivityShellTest extends ShellTestBase {
         final AtomicBoolean left = new AtomicBoolean();
         askLeaving(left);
 
-        onFx(() -> ((Button) required("leave-keep")).fire());
+        onFx(((Button) required("leave-keep"))::fire);
 
         assertThat(stopped).isEmpty();
         assertThat(left).isTrue();
@@ -158,7 +158,7 @@ class ActivityShellTest extends ShellTestBase {
         beginNamesPass();
         onFx(() -> shell.activate(ViewNames.EXPORT));
 
-        onFx(() -> ((Button) required("work-stay")).fire());
+        onFx(((Button) required("work-stay"))::fire);
 
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
         assertThat(isNamesPassHidden()).isFalse();
@@ -172,7 +172,7 @@ class ActivityShellTest extends ShellTestBase {
         beginNamesPass();
         onFx(() -> shell.activate(ViewNames.EXPORT));
 
-        onFx(() -> ((Button) required("work-background")).fire());
+        onFx(((Button) required("work-background"))::fire);
 
         assertThat(navigator.currentView().get()).isEqualTo(ViewNames.EXPORT);
         assertThat(isNamesPassHidden()).isTrue();

@@ -75,11 +75,11 @@ class ProviderTestLiveCardScreenTest extends SettingsScreenTestBase {
     }
 
     private String area(final String id) {
-        return ThemeTestSupport.onFx(() -> ((TextArea) required(id)).getText());
+        return ThemeTestSupport.onFx(((TextArea) required(id))::getText);
     }
 
     private String shown(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     private boolean cardOpen() {

@@ -208,7 +208,7 @@ class TranslateIntoDialogTest extends ShellTestBase {
     void cancelButton_pressed_runsCancelledAndHidesTheCard() {
         ask("en");
 
-        onFx(() -> ((Button) required("translateinto-cancel")).fire());
+        onFx(((Button) required("translateinto-cancel"))::fire);
 
         assertThat(answers).containsExactly("cancelled");
         assertThat(isVisibleInScene("translateinto-card")).isFalse();

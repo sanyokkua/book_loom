@@ -133,13 +133,13 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case NONE -> {
                 // nothing is open over the shell
             }
-            case ABOUT -> onFx(() -> ((Button) required("shell-about")).fire());
+            case ABOUT -> onFx(((Button) required("shell-about"))::fire);
             case ERROR_DIALOG ->
                 onFx(() -> injector.getInstance(ErrorPresenter.class)
                         .present(AppError.of(
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
-            case REVIEW_DESK -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
-            case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
+            case REVIEW_DESK -> onFx(((Button) required("translating-review-flagged"))::fire);
+            case ADD_TERM -> onFx(((Button) required("names-style-add"))::fire);
             case RESULTS -> onFx(this::showSampleResults);
             case EXPORT_COMPLETE ->
                 onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));

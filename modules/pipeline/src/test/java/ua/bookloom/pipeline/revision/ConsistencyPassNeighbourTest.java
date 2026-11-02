@@ -21,6 +21,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 
@@ -76,7 +77,7 @@ class ConsistencyPassNeighbourTest {
 
         // A neighbour fix repairs unnamed defects, so the recorded finding keeps the segment FLAGGED for the person.
         assertThat(book.stored(DANNY))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(whole, SegmentStatus.FLAGGED);
         assertThat(report.neighbourFixes()).isEqualTo(1);
         assertThat(report.checks().refused()).isEmpty();
@@ -98,7 +99,7 @@ class ConsistencyPassNeighbourTest {
                 .contains("- Hale → Гейл, male")
                 .contains("<Translation>\n" + BEFORE + "\n</Translation>");
         assertThat(book.stored(SAM_MET_HALE))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(AFTER, SegmentStatus.REVISED);
         assertThat(report.neighbourFixes()).isEqualTo(1);
         assertThat(report.notes()).containsExactly("ch1 · p08: fixed against its neighbours");
@@ -114,7 +115,7 @@ class ConsistencyPassNeighbourTest {
 
         assertThat(report.neighbourFixes()).isZero();
         assertThat(book.stored(SAM_MET_HALE))
-                .extracting(record -> record.machineTarget(), record -> record.status())
+                .extracting(SegmentRecord::machineTarget, SegmentRecord::status)
                 .containsExactly(BEFORE, SegmentStatus.ACCEPTED);
     }
 

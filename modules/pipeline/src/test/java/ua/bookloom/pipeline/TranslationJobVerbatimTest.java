@@ -20,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -194,6 +195,6 @@ class TranslationJobVerbatimTest {
     }
 
     private static String textOf(final ChatRequest request) {
-        return request.messages().stream().map(message -> message.content()).reduce("", String::concat);
+        return request.messages().stream().map(ChatMessage::content).reduce("", String::concat);
     }
 }

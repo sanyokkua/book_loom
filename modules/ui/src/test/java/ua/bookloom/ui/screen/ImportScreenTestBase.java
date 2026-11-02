@@ -174,7 +174,7 @@ abstract class ImportScreenTestBase extends ShellTestBase {
 
     /** Whether the {@link TwoColumns} with this id laid its columns out stacked the last time. */
     boolean isStacked(final String id) {
-        return ThemeTestSupport.onFx(() -> ((TwoColumns) required(id)).isStacked());
+        return ThemeTestSupport.onFx(((TwoColumns) required(id))::isStacked);
     }
 
     /** Whether the node with this id is a descendant of the node with the other id. */

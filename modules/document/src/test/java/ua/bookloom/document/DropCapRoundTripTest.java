@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
@@ -57,7 +58,7 @@ class DropCapRoundTripTest {
 
         final Result<String> result = service.unmask(book.format(), firstBody(book), WRAPPED_WHOLE);
 
-        assertThat(result.error()).isNotNull().extracting(error -> error.code()).isEqualTo(ErrorCode.validation);
+        assertThat(result.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(result.data()).isNull();
     }
 

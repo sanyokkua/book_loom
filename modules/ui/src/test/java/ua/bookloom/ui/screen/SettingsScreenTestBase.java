@@ -109,7 +109,7 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
     }
 
     String text(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     /** Types into a form field the way the control's own listener sees it: the text changes on the FX thread. */

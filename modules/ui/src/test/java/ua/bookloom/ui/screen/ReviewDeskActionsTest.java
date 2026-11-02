@@ -77,7 +77,7 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
     }
 
     private String feedback() {
-        return fx(() -> ((Label) required("modal-feedback")).getText());
+        return fx(((Label) required("modal-feedback"))::getText);
     }
 
     // IF a plain Enter on a focused row accepted a segment, THEN one stray key would decide it unread.

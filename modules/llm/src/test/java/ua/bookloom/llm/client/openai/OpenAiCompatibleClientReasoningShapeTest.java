@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -103,7 +104,7 @@ class OpenAiCompatibleClientReasoningShapeTest {
         client().chat(MODEL_ID, request(300, null));
 
         assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
-                .extracting(request -> request.getBodyAsString())
+                .extracting(LoggedRequest::getBodyAsString)
                 .allSatisfy(body ->
                         assertThat(body).doesNotContain("reasoning_effort").contains("\"max_tokens\":300"));
     }
@@ -124,7 +125,7 @@ class OpenAiCompatibleClientReasoningShapeTest {
                                 null));
 
         assertThat(server.findAll(postRequestedFor(urlEqualTo(CHAT_PATH))))
-                .extracting(request -> request.getBodyAsString())
+                .extracting(LoggedRequest::getBodyAsString)
                 .allSatisfy(body -> assertThat(body)
                         .contains("\"reasoning_effort\":\"medium\"")
                         .doesNotContain("max_tokens"));

@@ -67,7 +67,7 @@ public final class PromptTemplates {
      */
     @Inject
     public PromptTemplates(final PromptVariants variants) {
-        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName), variantRules(variants));
+        this(PromptTemplates.class::getResourceAsStream, variantRules(variants));
     }
 
     private static LanguageRules variantRules(final PromptVariants variants) {

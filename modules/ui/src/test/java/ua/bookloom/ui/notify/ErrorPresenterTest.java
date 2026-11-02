@@ -57,7 +57,7 @@ class ErrorPresenterTest extends ShellTestBase {
     }
 
     private void fireToggle() {
-        onFx(() -> ((ToggleButton) required("error-details-toggle")).fire());
+        onFx(((ToggleButton) required("error-details-toggle"))::fire);
     }
 
     private boolean isPresent(final String id) {
@@ -187,7 +187,7 @@ class ErrorPresenterTest extends ShellTestBase {
         onFx(() -> presenter().present(timeoutWithDetails(), retries::incrementAndGet));
         required("error-card");
 
-        onFx(() -> ((Button) required("error-retry")).fire());
+        onFx(((Button) required("error-retry"))::fire);
 
         assertThat(retries.get()).isEqualTo(1);
         assertThat(isPresent("error-card")).isFalse();
@@ -201,7 +201,7 @@ class ErrorPresenterTest extends ShellTestBase {
         onFx(() -> presenter().present(timeoutWithDetails(), retries::incrementAndGet));
         required("error-card");
 
-        onFx(() -> ((Button) required("error-dismiss")).fire());
+        onFx(((Button) required("error-dismiss"))::fire);
 
         assertThat(retries.get()).isZero();
         assertThat(isPresent("error-card")).isFalse();
@@ -309,7 +309,7 @@ class ErrorPresenterTest extends ShellTestBase {
     void copyDetails_clicked_copiesTheSafeDetailsOnly() {
         present(AppError.of(ErrorCode.unreachable, TITLE, MESSAGE, DETAILS, new ConnectException(CAUSE_TEXT)));
 
-        onFx(() -> ((Button) required("error-details-copy")).fire());
+        onFx(((Button) required("error-details-copy"))::fire);
 
         assertThat(copied).containsExactly("attempt 3 of 3; model gemma3:12b");
         assertThat(buttonText("error-details-copy")).isEqualTo("Copy details");

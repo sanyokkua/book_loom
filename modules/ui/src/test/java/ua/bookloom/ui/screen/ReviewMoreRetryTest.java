@@ -35,10 +35,9 @@ class ReviewMoreRetryTest extends ReviewDeskTestBase {
     }
 
     private String subLine(final String id) {
-        return fx(() -> ((Label) ((VBox) ((CustomMenuItem) moreItem(id)).getContent())
-                        .getChildren()
-                        .get(1))
-                .getText());
+        return fx(((Label) ((VBox) ((CustomMenuItem) moreItem(id)).getContent())
+                .getChildren()
+                .get(1))::getText);
     }
 
     // IF Try again were offered on "your edit", THEN pressing it would only answer that the segment cannot be retried

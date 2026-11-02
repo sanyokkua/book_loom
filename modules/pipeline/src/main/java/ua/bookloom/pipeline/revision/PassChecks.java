@@ -148,7 +148,7 @@ final class PassChecks {
     private static Map<String, Long> scriptFindings(final QaResult qa) {
         return qa.findings().stream()
                 .map(QaFinding::raisedBy)
-                .filter(kind -> MENDABLE.contains(kind))
+                .filter(MENDABLE::contains)
                 .collect(Collectors.groupingBy(kind -> kind, Collectors.counting()));
     }
 

@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
@@ -72,7 +73,7 @@ class NamesScanDiagnosisTest {
         final List<NameCandidate> all =
                 FrequencyScan.candidates(prepared.index(), prepared.index().story(), 1, gold.sourceLanguage());
         final String text = String.join(
-                "\n", prepared.story().stream().map(s -> s.sourceInner()).toList());
+                "\n", prepared.story().stream().map(Segment::sourceInner).toList());
         out.append("== ")
                 .append(file.getFileName())
                 .append(" glossary after scan: ")

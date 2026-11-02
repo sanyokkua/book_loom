@@ -139,7 +139,7 @@ class LayoutFitTest extends ShellTestBase {
     void dialog_aboutAtEachSize_staysInsideTheWindow(final String language, final double width, final double height) {
         useLocale(Locale.forLanguageTag(language));
         resizeScene(width, height);
-        onFx(() -> ((Button) required("shell-about")).fire());
+        onFx(((Button) required("shell-about"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         final List<Bounds> cards = onFxBounds(() -> scene.getRoot().lookupAll(".dialog-card"));

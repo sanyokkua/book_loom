@@ -146,7 +146,7 @@ class NamesStyleResultsScreenTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> glossaryTable().getItems()))
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Well");
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("names-style-changed-filter")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("names-style-changed-filter"))::isSelected))
                 .isTrue();
     }
 

@@ -50,7 +50,7 @@ class ProtectedMarksTest extends FxTestBase {
     }
 
     private static String text(final TextArea area) {
-        return onFx(() -> area.getText());
+        return onFx(area::getText);
     }
 
     private static Arguments edit(
@@ -166,7 +166,7 @@ class ProtectedMarksTest extends FxTestBase {
             a.deletePreviousChar();
         });
 
-        assertThat(onFx(() -> area.getCaretPosition())).isEqualTo(TWO.indexOf("⟦1⟧"));
+        assertThat(onFx(area::getCaretPosition)).isEqualTo(TWO.indexOf("⟦1⟧"));
     }
 
     // IF the filter touched whole-text writes, THEN loading a segment would be refused or repaired.

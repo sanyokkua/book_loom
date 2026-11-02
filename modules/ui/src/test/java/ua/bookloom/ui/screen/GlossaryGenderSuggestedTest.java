@@ -106,7 +106,7 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
         genderLabels();
         final Label shown =
                 ThemeTestSupport.onFx(() -> required("names-style-table").lookupAll(".glossary-choice").stream()
-                        .map(label -> (Label) label)
+                        .map(Label.class::cast)
                         .filter(label -> label.getText().equals(shownText))
                         .findFirst()
                         .orElseThrow());

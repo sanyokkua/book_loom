@@ -180,7 +180,7 @@ class TranslationJobRepairGuardsTest {
                 .contains("Chisel")
                 .doesNotContain("female");
         assertThat(stored(project, "Book.txt:0").findings())
-                .extracting(finding -> finding.kind())
+                .extracting(QaFinding::kind)
                 .doesNotContain("ignored-edit");
     }
 

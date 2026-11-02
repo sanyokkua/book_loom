@@ -204,7 +204,7 @@ class AppearanceViewTest extends ShellTestBase {
     }
 
     private String textOf(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        return ThemeTestSupport.onFx(((Labeled) required(id))::getText);
     }
 
     // IF the accent row stayed, THEN a person would meet a colour "choice" that this version does not offer.
@@ -307,7 +307,7 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
         assertThat(store.stored(AppSetting.LANGUAGE)).contains("uk");
@@ -318,9 +318,9 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(restart.calls()).isEqualTo(1);
@@ -348,11 +348,11 @@ class AppearanceViewTest extends ShellTestBase {
         pickLanguage(LanguageChoice.UKRAINIAN);
         onFx(() -> injector.getInstance(StateMirror.class).publishRunState(RunState.RUNNING));
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         assertThat(scene.getRoot().lookup("#confirm-card")).isNotNull();
         assertThat(restart.calls()).isZero();
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> restart.calls() == 1);
     }
 
@@ -364,7 +364,7 @@ class AppearanceViewTest extends ShellTestBase {
         showAppearance();
         pickLanguage(LanguageChoice.UKRAINIAN);
 
-        onFx(() -> ((Button) required("appearance-restart")).fire());
+        onFx(((Button) required("appearance-restart"))::fire);
 
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(() -> shown("appearance-restart-error")));

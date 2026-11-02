@@ -125,7 +125,7 @@ class ExportLastCheckDialogTest extends ExportScreenTestBase {
 
         assertThat(optional("confirm-card")).isNull();
         assertThat(injector.getInstance(HiddenWork.class).screen().get()).isEqualTo(ViewNames.EXPORT);
-        onFx(() -> ((Hyperlink) required("shell-activity-open")).fire());
+        onFx(((Hyperlink) required("shell-activity-open"))::fire);
         awaitFx(this::isDialogShown);
         assertThat(textOf("busy-card")).contains("Reread next to the neighbours · 6 of 18");
     }
@@ -135,7 +135,7 @@ class ExportLastCheckDialogTest extends ExportScreenTestBase {
     void cancel_pressed_asksFirstThatNoFileIsWrittenAndStopsNothingYet() throws TimeoutException {
         startLastCheck(items(6, "unchanged"));
 
-        onFx(() -> ((Button) required("progress-cancel")).fire());
+        onFx(((Button) required("progress-cancel"))::fire);
 
         assertThat(textOf("confirm-card")).contains("Cancel the export?").contains("No file is written.");
         assertThat(exportService().cancels()).isZero();
@@ -144,9 +144,9 @@ class ExportLastCheckDialogTest extends ExportScreenTestBase {
     @Test
     void cancel_confirmed_cancelsTheExport() throws TimeoutException {
         startLastCheck(items(6, "unchanged"));
-        onFx(() -> ((Button) required("progress-cancel")).fire());
+        onFx(((Button) required("progress-cancel"))::fire);
 
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
 
         assertThat(exportService().cancels()).isEqualTo(1);
     }
@@ -157,10 +157,10 @@ class ExportLastCheckDialogTest extends ExportScreenTestBase {
         startLastCheck(items(6, "fixed"));
         awaitFx(() -> textOf("busy-card").contains("6 of 18"));
 
-        onFx(() -> ((Button) required("progress-write-now")).fire());
+        onFx(((Button) required("progress-write-now"))::fire);
 
         assertThat(textOf("confirm-card")).contains("6 of 18 reread, 1 fixed; the other 12 stay as they are");
-        onFx(() -> ((Button) required("confirm-cancel")).fire());
+        onFx(((Button) required("confirm-cancel"))::fire);
         assertThat(exportService().writeNows()).isZero();
     }
 
@@ -169,9 +169,9 @@ class ExportLastCheckDialogTest extends ExportScreenTestBase {
     void writeNow_confirmed_tellsTheJobAndTheExportCompleteReportsTheUnreadItems() throws TimeoutException {
         startLastCheck(items(6, "fixed"));
         awaitFx(() -> textOf("busy-card").contains("6 of 18"));
-        onFx(() -> ((Button) required("progress-write-now")).fire());
+        onFx(((Button) required("progress-write-now"))::fire);
 
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         awaitFx(() -> exportService().writeNows() == 1 && optional("export-complete-card") != null);
 
         assertThat(textOf("export-complete-card")).contains("Last check").contains("6 segments reread · 1 fixed");

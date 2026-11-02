@@ -56,7 +56,7 @@ class NavLockingTest extends ShellTestBase {
 
     @Test
     void navigation_noProject_clickingALockedEntryChangesNothing() {
-        onFx(() -> ((Button) required("nav-translating")).fire());
+        onFx(((Button) required("nav-translating"))::fire);
 
         assertThat(navigator.currentView().get()).isNull();
     }
@@ -94,7 +94,7 @@ class NavLockingTest extends ShellTestBase {
     }
 
     private void press(final String id) {
-        onFx(() -> ((Button) required(id)).fire());
+        onFx(((Button) required(id))::fire);
     }
 
     // IF a footer's Continue could step into a locked screen, THEN it would bypass the lock the navigation column

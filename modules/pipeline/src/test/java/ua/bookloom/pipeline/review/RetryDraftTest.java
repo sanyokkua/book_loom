@@ -99,7 +99,7 @@ class RetryDraftTest {
         ok(retry(desk, model));
 
         assertThat(model.requests())
-                .extracting(request -> formatOf(request), ChatRequest::temperature)
+                .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
                 .containsExactly(tuple("draft", 0.1), tuple("reviewer", 0.0));
         assertThat(userMessage(model.requests().getFirst())).contains("[Extra instruction]\n" + NOTE);
         assertThat(userMessage(model.requests().get(1)))

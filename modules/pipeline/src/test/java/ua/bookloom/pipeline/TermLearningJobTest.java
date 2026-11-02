@@ -20,6 +20,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -154,7 +155,7 @@ class TermLearningJobTest {
                         .filter(request -> userMessage(request).contains(P4))
                         .map(ChatRequest::messages)
                         .flatMap(List::stream)
-                        .map(message -> message.content())
+                        .map(ChatMessage::content)
                         .anyMatch(content -> content.contains("[Established renderings")))
                 .isTrue();
         assertThat(storedTargets(project)).noneMatch(target -> target.contains("Учитель"));

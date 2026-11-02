@@ -62,7 +62,7 @@ class ImportCancelDiscardTest extends WorkspaceTestBase {
 
     private void pressCancel() throws Exception {
         waitUntil(() -> shell.root().lookup("#import-cancel") != null);
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#import-cancel"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#import-cancel")))::fire);
         WaitForAsyncUtils.waitForFxEvents();
     }
 

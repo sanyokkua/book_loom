@@ -8,6 +8,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import org.junit.jupiter.api.Test;
@@ -201,7 +202,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
         openActivityLog();
 
-        assertThat(logCells().stream().map(cell -> cell.getAccessibleText()).toList())
+        assertThat(logCells().stream().map(Node::getAccessibleText).toList())
                 .containsExactly(
                         "ok    ✓ Segment 741 was accepted.", "err   ✕ Segment 742 failed with a recoverable error.");
     }
@@ -237,7 +238,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishLog(entries);
 
-        assertThat(logCells().stream().map(cell -> cell.getIndex()).toList()).contains(99);
+        assertThat(logCells().stream().map(IndexedCell::getIndex).toList()).contains(99);
     }
 
     // IF an empty log were a blank box, THEN a person could not tell it from a broken one.

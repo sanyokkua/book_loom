@@ -319,7 +319,7 @@ class ProviderDraftTest {
         final List<String> asked = new ArrayList<>();
         final ProviderDraft bearer = officeLm().withAuth(ProviderAuth.BEARER).withCredentialRef(typed);
 
-        final ProviderDraft.CredentialStatus status = bearer.credentialStatus(name -> asked.add(name));
+        final ProviderDraft.CredentialStatus status = bearer.credentialStatus(asked::add);
 
         assertThat(status).isEqualTo(ProviderDraft.CredentialStatus.NONE);
         assertThat(asked).isEmpty();

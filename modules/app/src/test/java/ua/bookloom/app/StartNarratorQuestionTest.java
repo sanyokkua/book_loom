@@ -62,11 +62,11 @@ class StartNarratorQuestionTest extends WorkspaceTestBase {
         seedAnnaWithoutGender();
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
 
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#translating-start"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#translating-start")))::fire);
         waitUntil(() -> shell.root().lookup("#narrator-unknown") != null);
         assertThat(runState()).as("nothing starts before the answer").isEqualTo(RunState.IDLE);
         final Node unknown = onFx(() -> shell.root().lookup("#narrator-unknown"));
-        assertThat(onFx(() -> ((Button) unknown).isDefaultButton())).isTrue();
+        assertThat(onFx(((Button) unknown)::isDefaultButton)).isTrue();
         new FxRobot().type(KeyCode.ENTER);
 
         waitUntil(() -> shell.root().lookup("#genders-card") != null);
@@ -92,7 +92,7 @@ class StartNarratorQuestionTest extends WorkspaceTestBase {
         chooseModel();
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
 
-        onFx(() -> ((Button) Objects.requireNonNull(shell.root().lookup("#translating-start"))).fire());
+        onFx(((Button) Objects.requireNonNull(shell.root().lookup("#translating-start")))::fire);
 
         waitUntil(() -> shell.root().lookup("#narrator-unknown") != null);
         assertThat(runState()).as("nothing starts before the answer").isEqualTo(RunState.IDLE);

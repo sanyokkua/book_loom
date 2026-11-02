@@ -112,7 +112,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         form.dirty = true;
         leaveSettings();
 
-        onFx(() -> ((Button) required(button)).fire());
+        onFx(((Button) required(button))::fire);
 
         assertThat(String.join(" ", form.calls)).isEqualTo("-".equals(formCall) ? "" : formCall);
         assertThat(String.join(" ", proceeded)).isEqualTo("-".equals(left) ? "" : left);
@@ -138,7 +138,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         form.dirty = true;
         leaveSettings();
 
-        onFx(() -> ((Button) required("unsaved-discard")).fire());
+        onFx(((Button) required("unsaved-discard"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(form.calls).containsExactly("discard");
@@ -153,7 +153,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         form.saveSucceeds = false;
         leaveSettings();
 
-        onFx(() -> ((Button) required("unsaved-save")).fire());
+        onFx(((Button) required("unsaved-save"))::fire);
 
         assertThat(form.calls).containsExactly("save");
         assertThat(proceeded).isEmpty();
@@ -193,7 +193,7 @@ class LeaveGuardDirtyTest extends ShellTestBase {
         });
         WaitForAsyncUtils.waitForFxEvents();
 
-        onFx(() -> ((Button) required("unsaved-discard")).fire());
+        onFx(((Button) required("unsaved-discard"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(proceeded).containsExactly("left");

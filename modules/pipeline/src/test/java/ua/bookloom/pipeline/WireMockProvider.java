@@ -18,6 +18,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.ScenarioMappingBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -238,7 +239,7 @@ final class WireMockProvider implements AutoCloseable {
 
     List<String> chatBodies() {
         return server.findAll(postRequestedFor(urlEqualTo(chatPath()))).stream()
-                .map(request -> request.getBodyAsString())
+                .map(LoggedRequest::getBodyAsString)
                 .toList();
     }
 

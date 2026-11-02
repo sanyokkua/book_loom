@@ -97,7 +97,7 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
 
         final TableCell<?, ?> promote = firstRowCells("recurring").get(3);
 
-        assertThat(ThemeTestSupport.onFx(() -> ((Button) promote.lookup(".button")).getText()))
+        assertThat(ThemeTestSupport.onFx(((Button) promote.lookup(".button"))::getText))
                 .startsWith(start);
     }
 
@@ -131,8 +131,8 @@ class TermTableCardColumnsTest extends TermTableCardTestBase {
         final TextField filled = (TextField)
                 ThemeTestSupport.onFx(() -> glossaryCell("Rosalind", 3).lookup(".text-field"));
 
-        assertThat(ThemeTestSupport.<String>onFx(() -> empty.getPromptText())).isEqualTo(placeholder);
-        assertThat(ThemeTestSupport.<String>onFx(() -> filled.getText())).isEqualTo("Розалінда");
+        assertThat(ThemeTestSupport.<String>onFx(empty::getPromptText)).isEqualTo(placeholder);
+        assertThat(ThemeTestSupport.<String>onFx(filled::getText)).isEqualTo("Розалінда");
     }
 
     // IF a place or a term showed "unknown" as its gender, THEN the person would try to settle something that has none.

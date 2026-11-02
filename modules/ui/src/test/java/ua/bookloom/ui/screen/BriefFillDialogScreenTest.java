@@ -205,9 +205,9 @@ class BriefFillDialogScreenTest extends BriefRunScreenTestBase {
 
         fillIn();
 
-        assertThat(read(() -> ((javafx.scene.control.ToggleButton) required("progress-mode-simple")).isSelected()))
+        assertThat(read(((javafx.scene.control.ToggleButton) required("progress-mode-simple"))::isSelected))
                 .isTrue();
-        assertThat(read(() -> ((javafx.scene.control.ToggleButton) required("progress-mode-detailed")).isSelected()))
+        assertThat(read(((javafx.scene.control.ToggleButton) required("progress-mode-detailed"))::isSelected))
                 .isFalse();
     }
 }

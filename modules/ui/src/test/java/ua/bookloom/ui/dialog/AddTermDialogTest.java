@@ -61,7 +61,7 @@ class AddTermDialogTest extends ShellTestBase {
     }
 
     private void confirm() {
-        onFx(() -> ((Button) required("add-term-confirm")).fire());
+        onFx(((Button) required("add-term-confirm"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -175,7 +175,7 @@ class AddTermDialogTest extends ShellTestBase {
         openDialogOver(List.of());
         fill("Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, false);
 
-        onFx(() -> ((Button) required("add-term-cancel")).fire());
+        onFx(((Button) required("add-term-cancel"))::fire);
 
         assertThat(isShowing()).isFalse();
         assertThat(glossary.added()).isEmpty();

@@ -115,8 +115,7 @@ class GlossaryCellsTest extends TranslatingScreenTestBase {
         assertThat(shown.isFocusTraversable()).isTrue();
         assertThat(graphic).isInstanceOf(ComboBox.class);
         assertThat(ThemeTestSupport.onFx(graphic::isFocused)).isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((ComboBox<?>) graphic).isShowing()))
-                .isFalse();
+        assertThat(ThemeTestSupport.onFx(((ComboBox<?>) graphic)::isShowing)).isFalse();
     }
 
     // IF each row built its tooltips up front, THEN every row the table makes would pay for popups never shown; the

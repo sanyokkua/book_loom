@@ -50,7 +50,7 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         final List<PromptSection> prompt = large ? LiveCallFixtures.largePrompt(LONG) : LiveCallFixtures.smallPrompt();
         final LiveRow row = new LiveRow("s-2-1", "ch7 · p201", TEXT, null, Stage.IN_CALL, null, List.of(), 2L);
         showLive(LiveRowFixtures.calls(LiveCallFixtures.waiting(2, 2, TEXT, prompt), List.of(row)));
-        onFx(() -> ((ToggleButton) required("translating-live-mode-detailed")).fire());
+        onFx(((ToggleButton) required("translating-live-mode-detailed"))::fire);
         WaitForAsyncUtils.waitForFxEvents();
     }
 

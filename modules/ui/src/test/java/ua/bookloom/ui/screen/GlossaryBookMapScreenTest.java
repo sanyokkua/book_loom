@@ -90,7 +90,7 @@ class GlossaryBookMapScreenTest extends TranslatingScreenTestBase {
     }
 
     private static String choiceText(final Node cell) {
-        return ThemeTestSupport.onFx(() -> ((Label) cell.lookup(".glossary-choice")).getText());
+        return ThemeTestSupport.onFx(((Label) cell.lookup(".glossary-choice"))::getText);
     }
 
     @Test
@@ -126,7 +126,7 @@ class GlossaryBookMapScreenTest extends TranslatingScreenTestBase {
                 .contains(PseudoClass.getPseudoClass("suggested"));
         assertThat(shownTexts(target, "glossary-origin")).containsExactly("likely");
         assertThat(choiceText(cell("Hale", STATE))).isEqualTo("suggested");
-        onFx(() -> ((Button) target.lookup(".glossary-accept")).fire());
+        onFx(((Button) target.lookup(".glossary-accept"))::fire);
         awaitFx(() -> !glossary.updated().isEmpty());
 
         assertThat(glossary.updated()).containsExactly(HALE.accepted());

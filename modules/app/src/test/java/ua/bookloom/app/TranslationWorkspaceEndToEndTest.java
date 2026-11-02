@@ -91,7 +91,7 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
             final SegmentView selected = onFx(() -> review.selected().get());
             assertThat(Objects.requireNonNull(selected).locator()).isEqualTo(LOCATORS.get(index));
             segmentIds.add(segmentId);
-            onFx(() -> review.accept());
+            onFx(review::accept);
         }
         return segmentIds;
     }

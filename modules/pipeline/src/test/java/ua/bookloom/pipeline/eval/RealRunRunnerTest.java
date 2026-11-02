@@ -9,6 +9,7 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -46,9 +47,7 @@ class RealRunRunnerTest {
     }
 
     private static String all(final Sent sent) {
-        return sent.request().messages().stream()
-                .map(message -> message.content())
-                .reduce("", (a, b) -> a + "\n" + b);
+        return sent.request().messages().stream().map(ChatMessage::content).reduce("", (a, b) -> a + "\n" + b);
     }
 
     private RealRunRunner runner(final List<Sent> sent, final Function<CallKind, ChatResponse> replies) {

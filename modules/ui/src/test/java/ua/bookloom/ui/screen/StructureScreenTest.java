@@ -10,6 +10,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TreeItem;
@@ -83,12 +84,12 @@ class StructureScreenTest extends StructureScreenTestBase {
 
         final List<Label> titles = ThemeTestSupport.onFx(() -> renderedCells().stream()
                 .filter(cell -> cell.getItem() != null)
-                .sorted(java.util.Comparator.comparingInt(cell -> cell.getIndex()))
+                .sorted(java.util.Comparator.comparingInt(IndexedCell::getIndex))
                 .map(cell -> (Label) cell.lookup(".structure-row-title"))
                 .toList());
         assertThat(titles).hasSize(2);
         final Label longOne = titles.get(1);
-        assertThat(ThemeTestSupport.onFx(() -> longOne.getHeight()))
+        assertThat(ThemeTestSupport.onFx(longOne::getHeight))
                 .isEqualTo(ThemeTestSupport.onFx(() -> titles.get(0).getHeight()));
         assertThat(ThemeTestSupport.onFx(() -> drawn(longOne))).endsWith("...").isNotEqualTo(LONG_TITLE);
         assertThat(ThemeTestSupport.onFx(() -> tree().getFixedCellSize())).isEqualTo(34.0);
@@ -237,7 +238,7 @@ class StructureScreenTest extends StructureScreenTestBase {
     void row_bookOpened_countIsALabelWithThePillClass() throws TimeoutException {
         openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
 
-        assertThat(scene.getRoot().lookupAll(".count-pill")).isNotEmpty().allMatch(pill -> pill instanceof Label);
+        assertThat(scene.getRoot().lookupAll(".count-pill")).isNotEmpty().allMatch(Label.class::isInstance);
     }
 
     // IF a row showed a neighbour's count, THEN the pills would not add up to the segments the book was cut into.
@@ -270,12 +271,12 @@ class StructureScreenTest extends StructureScreenTestBase {
         openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
 
         assertThat(descendantsOf("structure-card"))
-                .noneMatch(node -> node instanceof ButtonBase)
-                .noneMatch(node -> node instanceof ToggleSwitch);
+                .noneMatch(ButtonBase.class::isInstance)
+                .noneMatch(ToggleSwitch.class::isInstance);
         // The text field and the kind choice in the card filter the segment list; the tree itself offers no edit.
         assertThat(descendantsOf("structure-tree"))
-                .noneMatch(node -> node instanceof TextInputControl)
-                .noneMatch(node -> node instanceof ComboBoxBase);
+                .noneMatch(TextInputControl.class::isInstance)
+                .noneMatch(ComboBoxBase.class::isInstance);
         assertThat(tree().isEditable()).isFalse();
     }
 }

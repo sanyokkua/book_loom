@@ -166,7 +166,7 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         begin(ActivityKind.NAMES_PASS);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-background")).fire());
+        onFx(((Button) required("progress-background"))::fire);
 
         await(() -> !isDialogShown());
         assertThat(injector.getInstance(HiddenWork.class).screen().get()).isEqualTo(ViewNames.NAMES_STYLE);
@@ -180,7 +180,7 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         endSteps(names, 53);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-background")).fire());
+        onFx(((Button) required("progress-background"))::fire);
 
         await(() -> !isDialogShown());
         assertThat(((Label) required("shell-activity-text")).getText()).isEqualTo("Preparing names · 53 %");
@@ -199,10 +199,10 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         start(names, 2);
         awaitDialog();
         clickOn(required("progress-step-0"));
-        onFx(() -> ((Button) required("progress-background")).fire());
+        onFx(((Button) required("progress-background"))::fire);
         await(() -> !isDialogShown());
 
-        onFx(() -> ((Hyperlink) required("shell-activity-open")).fire());
+        onFx(((Hyperlink) required("shell-activity-open"))::fire);
 
         awaitDialog();
         assertThat(selectedIndex()).isZero();
@@ -255,12 +255,12 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         begin(ActivityKind.EXPORT);
         awaitDialog();
 
-        onFx(() -> ((Button) required("progress-cancel")).fire());
+        onFx(((Button) required("progress-cancel"))::fire);
 
         assertThat(textsUnder(required("confirm-card"))).contains("Cancel the export?", "No file is written.");
         assertThat(isDialogShown()).isTrue();
         assertThat(cancelled).isEmpty();
-        onFx(() -> ((Button) required("confirm-yes")).fire());
+        onFx(((Button) required("confirm-yes"))::fire);
         assertThat(cancelled).containsExactly("EXPORT");
     }
 

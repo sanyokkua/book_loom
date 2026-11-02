@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
 
@@ -109,7 +110,7 @@ class ExportJobWriteNowTest {
 
         assertThat(fixture.records(projectId))
                 .filteredOn(record -> record.segmentId().equals(FIRST))
-                .extracting(record -> record.machineTarget())
+                .extracting(SegmentRecord::machineTarget)
                 .containsExactly(FIXED);
     }
 

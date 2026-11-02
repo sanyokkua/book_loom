@@ -150,7 +150,7 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
         final ExportViewModel plain = onFx(() -> newExports(new DirectExecutor()));
 
         assertThat(onFx(plain.nameSuggestion::isOffered)).isFalse();
-        assertThat(onFx(() -> exports.nameSuggestion.isOffered())).isTrue();
+        assertThat(onFx(exports.nameSuggestion::isOffered)).isTrue();
     }
 
     // IF the person were not told the author stayed in Latin, THEN a Ukrainian file name would carry "Mary Shelley"

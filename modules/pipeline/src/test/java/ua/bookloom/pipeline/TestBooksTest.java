@@ -51,7 +51,7 @@ class TestBooksTest {
         assertThat(document.units()).filteredOn(unit -> !unit.isAuxiliary()).hasSize(units);
         assertThat(document.units())
                 .filteredOn(unit -> !unit.isAuxiliary())
-                .flatExtracting(unit -> unit.segments())
+                .flatExtracting(Unit::segments)
                 .hasSize(segments);
         assertThat(documents.close(document).data()).isTrue();
     }

@@ -110,7 +110,7 @@ class CharacterGendersDialogTest extends TranslatingScreenTestBase {
     @Test
     void start_offeredRadioClicked_storesThatGenderAsTheAnswer() throws Exception {
         ask(List.of(likely("e1", "Ivar", Gender.MALE, 0.55), likely("e2", "Mira Holt", Gender.FEMALE, 0.9)));
-        onFx(() -> ((RadioButton) required("genders-choice-male-0")).fire());
+        onFx(((RadioButton) required("genders-choice-male-0"))::fire);
 
         onFx(() -> button("genders-start").fire());
 
@@ -121,7 +121,7 @@ class CharacterGendersDialogTest extends TranslatingScreenTestBase {
     @Test
     void start_otherRadioClicked_storesTheChangedGenderAndLeavesUntouchedRowsOut() throws Exception {
         ask(List.of(likely("e1", "Ivar", Gender.MALE, 0.55), likely("e2", "Mira Holt", Gender.FEMALE, 0.9)));
-        onFx(() -> ((RadioButton) required("genders-choice-female-0")).fire());
+        onFx(((RadioButton) required("genders-choice-female-0"))::fire);
 
         onFx(() -> button("genders-start").fire());
 

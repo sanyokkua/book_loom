@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.eval.RealRunRow.Outcome;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
@@ -41,7 +42,7 @@ class InjectionCorpusTest {
             throw new IllegalStateException("no call");
         });
         final List<String> ids = project.batch().orElseThrow().items().stream()
-                .map(item -> item.id())
+                .map(BatchItem::id)
                 .toList();
         return template.formatted(ids.toArray());
     }

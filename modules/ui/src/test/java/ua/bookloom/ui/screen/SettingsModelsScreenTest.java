@@ -113,9 +113,9 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("models-temperature-value")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("models-temperature-value"))::isSelected))
                 .isTrue();
-        assertThat(ThemeTestSupport.onFx(() -> ((Slider) required("models-temperature-slider")).getValue()))
+        assertThat(ThemeTestSupport.onFx(((Slider) required("models-temperature-slider"))::getValue))
                 .isEqualTo(0.5);
         assertThat(shown("models-temperature-hint")).isEqualTo("Every request uses this value.");
         assertThat(shown("models-temperature-readout")).isEqualTo("0.50");
@@ -138,7 +138,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("models-context-on")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleSwitch) required("models-context-on"))::isSelected))
                 .isFalse();
         assertThat(modelsField("models-context").getText()).isEqualTo("16384");
         assertThat(modelsField("models-context").isDisabled()).isTrue();
@@ -151,7 +151,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
 
         openModels();
 
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleSwitch) required("models-context-on")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleSwitch) required("models-context-on"))::isSelected))
                 .isTrue();
         assertThat(modelsField("models-context").getText()).isEqualTo("16384");
         assertThat(modelsField("models-context").isDisabled()).isFalse();
@@ -177,7 +177,7 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
         assertThat(visible("models-field-ollama")).isFalse();
         assertThat(shown("models-field-completion")).isEqualTo("max_completion_tokens (standard)");
         assertThat(shown("models-field-tokens")).isEqualTo("max_tokens (older servers)");
-        assertThat(ThemeTestSupport.onFx(() -> ((ToggleButton) required("models-field-tokens")).isSelected()))
+        assertThat(ThemeTestSupport.onFx(((ToggleButton) required("models-field-tokens"))::isSelected))
                 .isTrue();
     }
 

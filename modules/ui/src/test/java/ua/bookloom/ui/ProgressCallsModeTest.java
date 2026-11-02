@@ -103,7 +103,7 @@ class ProgressCallsModeTest extends ProgressWorkTestBase {
     void close_pressed_runsOnClose() {
         showCalls(3);
 
-        onFx(() -> ((Button) required("calls-close")).fire());
+        onFx(((Button) required("calls-close"))::fire);
 
         assertThat(closed.get()).isEqualTo(1);
     }
