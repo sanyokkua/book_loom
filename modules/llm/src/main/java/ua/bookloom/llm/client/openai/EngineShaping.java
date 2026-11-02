@@ -115,7 +115,7 @@ final class EngineShaping {
                     case "min_p" -> sampling.minP() != null;
                     default -> sampling.repeatPenalty() != null;
                 };
-        final String wireName = field.equals("repetition_penalty") ? "repeat_penalty" : field;
+        final String wireName = field.equals("repetition_penalty") ? REPEAT_PENALTY : field;
         return stated || sampling.withheld().contains(wireName);
     }
 

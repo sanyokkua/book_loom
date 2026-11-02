@@ -38,6 +38,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderAuth;
@@ -163,7 +164,7 @@ class OpenRouterRequestTest {
     void facts_window_isTheEndpointContextLengthNotTheModels() {
         final Integer window = injector.getInstance(ModelCapabilities.class)
                 .contextLength(PROVIDER_ID, PLAIN)
-                .map(length -> length.tokens())
+                .map(ContextLength::tokens)
                 .data();
 
         assertThat(window).isEqualTo(ENDPOINT_WINDOW);
