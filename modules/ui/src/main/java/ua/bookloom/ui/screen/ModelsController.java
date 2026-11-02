@@ -49,7 +49,6 @@ public final class ModelsController {
 
     // Set while this controller moves the chooser itself, so the move is not taken for a person's choice.
     private boolean syncing;
-    private ModelsFormView formView;
 
     @FXML
     private ComboBox<ModelEntry> model;
@@ -118,8 +117,7 @@ public final class ModelsController {
     @FXML
     void initialize() {
         log.debug("building the models area");
-        formView = new ModelsFormView(form, messages, technical);
-        body.getChildren().setAll(formView.node());
+        body.getChildren().setAll(new ModelsFormView(form, messages, technical).node());
         buildChooser();
         bindVisibility();
         bindFooter();

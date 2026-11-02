@@ -180,7 +180,7 @@ public final class AppShellView {
         // Short work the window waits for leaves nothing to navigate to; its progress dialog says why, and Navigator
         // refuses too. Long work does not lock: leaving its screen asks whether to let it run on in the background.
         navColumn.view().disableProperty().bind(activities.locking());
-        frame.setCenter(main());
+        frame.setCenter(contentColumn());
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
@@ -264,7 +264,7 @@ public final class AppShellView {
         return bar;
     }
 
-    private Node main() {
+    private Node contentColumn() {
         breadcrumb.setId("shell-breadcrumb");
         breadcrumb.getStyleClass().add("shell-breadcrumb");
         final Region spacer = new Region();

@@ -204,10 +204,10 @@ final class ReviewDeskCard extends ModalCard {
                 viewModel,
                 new ReviewMoreMenu.Asks(inline::openNote, this::askUndo, this::guard),
                 messages);
-        main((Button) lookupButton(mainType), parts.acceptContinues());
+        styleMain((Button) lookupButton(mainType), parts.acceptContinues());
     }
 
-    private void main(final Button main, final ObservableValue<Boolean> continues) {
+    private void styleMain(final Button main, final ObservableValue<Boolean> continues) {
         main.setId("review-main");
         main.getStyleClass().add("btn-primary");
         Tips.install(main, messages.get(MessageKey.REVIEW_MAIN_ACCEPT_TIP, ReviewListPane.MAIN.getDisplayText()));

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -45,7 +46,7 @@ public final class RefusalMemory {
      * @param settings the model's settings; non-null
      * @return the capabilities; never null, empty when none; a stored name nobody knows is skipped
      */
-    public EnumSet<RejectedCapability> remembered(final ModelSettings settings) {
+    public Set<RejectedCapability> remembered(final ModelSettings settings) {
         return remembered(settings, null);
     }
 
@@ -56,7 +57,7 @@ public final class RefusalMemory {
      * @param scope the call's scope (the name of the answer schema it asks for), or null when it asks for none
      * @return the capabilities; never null, empty when none; a stored name nobody knows is skipped
      */
-    public EnumSet<RejectedCapability> remembered(final ModelSettings settings, final @Nullable String scope) {
+    public Set<RejectedCapability> remembered(final ModelSettings settings, final @Nullable String scope) {
         Objects.requireNonNull(settings, "settings");
         final EnumSet<RejectedCapability> found = EnumSet.noneOf(RejectedCapability.class);
         for (final RefusedSetting row : settings.refused()) {
@@ -84,7 +85,7 @@ public final class RefusalMemory {
      */
     public ChatRequest withoutRemembered(final ChatRequest request, final ModelSettings settings) {
         Objects.requireNonNull(request, "request");
-        final EnumSet<RejectedCapability> refused = remembered(settings);
+        final Set<RejectedCapability> refused = remembered(settings);
         if (!refused.isEmpty()) {
             log.debug(
                     "Remembered refusals applied providerId={} modelId={} settings={}",
