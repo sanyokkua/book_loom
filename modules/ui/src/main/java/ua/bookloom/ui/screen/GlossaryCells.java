@@ -267,7 +267,7 @@ final class GlossaryCells {
             final boolean suggested = entry.isSuggested();
             field.pseudoClassStateChanged(SUGGESTED, suggested);
             showOrigin(entry, suggested);
-            showFlags(model.reviewFlags().getOrDefault(entry.id(), List.of()));
+            showFlags(model.reviewFlagsOf(entry.id()));
             showIf(accept, suggested);
         }
 

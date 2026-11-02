@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -18,7 +17,6 @@ import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.GlossaryService;
@@ -82,14 +80,7 @@ public final class NamesStyleViewModel {
             final Messages messages,
             final ActivityTracker activities,
             final MeasuredCalls measured) {
-        this(
-                services,
-                access,
-                executor,
-                messages,
-                activities,
-                () -> UUID.randomUUID().toString(),
-                measured);
+        this(services, access, executor, messages, activities, GlossaryAdditions.randomIds(), measured);
     }
 
     // The id source is a seam so that a test states the ids it expects, and no provider is asked for a context length.
@@ -337,9 +328,9 @@ public final class NamesStyleViewModel {
         acceptances.acceptAll();
     }
 
-    /** {@return the review flags of the shown rows by entry id, computed by the service and never stored} */
-    public ObservableMap<String, List<TargetIssue>> reviewFlags() {
-        return flags.flags();
+    /** {@return the review flags of one shown row, computed by the service and never stored; empty when it has none} */
+    public List<TargetIssue> reviewFlagsOf(final String entryId) {
+        return flags.flags().getOrDefault(entryId, List.of());
     }
 
     /** {@return a read-only count of the times the review flags were read again, which only ever grows} */
