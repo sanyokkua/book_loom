@@ -887,7 +887,7 @@ The person sees, before a long run, whether a model's quant or its maker's langu
 every model picker, identity, quant, language and licence lines on Settings › Models, and lines at Start. It is advice
 only: it never blocks, changes no request and stores nothing (design D22). No stored shape changes, so no database reset.
 
-- [ ] 9.1 Write the group's acceptance test and record it red. It proves the chip and the language line end to end, at the HTTP seam and on the real screens. → :ui, :llm
+- [x] 9.1 Write the group's acceptance test and record it red. It proves the chip and the language line end to end, at the HTTP seam and on the real screens. → :ui, :llm
   - **Satisfies:** enabling work for design D22
   - **Depends on:** groups 6 and 8
   - **Read:** design.md D22, D24; `ui: screen/ModelField`, `ui: screen/ProviderFormView`, `ui: screen/TranslatingReadyCard`, `ui: screen/TranslatingDialogs`; settings "Show the quant chip beside every model in every model picker" and "Warn under the AI-model choice and at Start when the model does not declare the book's languages"
