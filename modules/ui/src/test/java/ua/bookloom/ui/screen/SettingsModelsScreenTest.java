@@ -44,6 +44,20 @@ class SettingsModelsScreenTest extends SettingsModelsScreenTestBase {
                 .isEqualTo("gemma4:e4b · Ollama");
     }
 
+    // IF typing in the chooser did not narrow the list, THEN a person with hundreds of models could not find one.
+    @Test
+    void chooser_textTyped_narrowsTheOfferedModelsToNamesContainingIt() throws TimeoutException {
+        openModels();
+
+        onFx(() -> modelsCombo().getEditor().setText("OSS"));
+        awaitFx(() -> modelsCombo().getItems().size() == 1);
+        assertThat(ThemeTestSupport.onFx(() -> modelsCombo().getItems().get(0).modelId()))
+                .isEqualTo(GPT_OSS);
+
+        onFx(() -> modelsCombo().getEditor().clear());
+        awaitFx(() -> modelsCombo().getItems().size() == 3);
+    }
+
     // IF the tip stayed on the Providers tab only, THEN a person on the Models tab would see no way to reload.
     @Test
     void refresh_pressed_readsTheProvidersAgain() throws TimeoutException {

@@ -8,6 +8,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.TextMatch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -47,8 +49,12 @@ public final class ModelsController {
     // A new offer replaces the chooser's items, which clears its pick; the pick is put back.
     private final ListChangeListener<ModelEntry> onOffer = change -> showCurrent();
 
+    private @Nullable FilteredList<ModelEntry> offered;
+
     // Set while this controller moves the chooser itself, so the move is not taken for a person's choice.
     private boolean syncing;
+
+    private static final int MAX_VISIBLE_ROWS = 10;
 
     @FXML
     private ComboBox<ModelEntry> model;
@@ -132,23 +138,61 @@ public final class ModelsController {
     }
 
     private void buildChooser() {
-        model.setItems(roster.entries());
+        final FilteredList<ModelEntry> shown = new FilteredList<>(roster.entries());
+        offered = shown;
+        model.setEditable(true);
+        model.setItems(shown);
         model.setConverter(new StringConverter<>() {
             @Override
             public String toString(final @Nullable ModelEntry entry) {
-                return entry == null
-                        ? ""
-                        : messages.get(MessageKey.SETTINGS_MODELS_ENTRY, entry.modelId(), entry.providerName());
+                return label(entry);
             }
 
             @Override
-            public ModelEntry fromString(final String text) {
-                throw new UnsupportedOperationException("the model is picked, never typed");
+            public @Nullable ModelEntry fromString(final String text) {
+                return roster.entries().stream()
+                        .filter(entry -> label(entry).equals(text))
+                        .findFirst()
+                        .orElse(null);
             }
         });
         Tips.install(messages, model, MessageKey.SETTINGS_MODELS_MODEL_TIP);
         model.valueProperty().addListener(new WeakChangeListener<>(onChosen));
+        model.getEditor().textProperty().addListener((observed, was, now) -> narrow(now));
         roster.entries().addListener(new WeakListChangeListener<>(onOffer));
+    }
+
+    private String label(final @Nullable ModelEntry entry) {
+        return entry == null
+                ? ""
+                : messages.get(MessageKey.SETTINGS_MODELS_ENTRY, entry.modelId(), entry.providerName());
+    }
+
+    // Narrows the offered models to the names containing the typed text; a pick shows its own name, which filters
+    // nothing.
+    private void narrow(final String typed) {
+        final FilteredList<ModelEntry> shown = offered;
+        if (syncing || shown == null) {
+            return;
+        }
+        final String needle = TextMatch.normalize(typed.strip());
+        final boolean all = needle.isEmpty() || typed.equals(label(model.getValue()));
+        log.debug("narrowing the model chooser, filter of {} character(s)", needle.length());
+        syncing = true;
+        try {
+            if (model.isShowing()) {
+                model.hide();
+            }
+            shown.setPredicate(entry -> all || TextMatch.normalize(label(entry)).contains(needle));
+            model.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            model.getEditor().setText(typed);
+            model.getEditor().positionCaret(typed.length());
+        } finally {
+            syncing = false;
+        }
+        if (!all && model.getEditor().isFocused() && !shown.isEmpty()) {
+            model.show();
+        }
     }
 
     private void bindVisibility() {
@@ -197,14 +241,25 @@ public final class ModelsController {
     private void moveChooser(final @Nullable ModelEntry entry) {
         syncing = true;
         try {
+            if (offered != null) {
+                offered.setPredicate(null);
+            }
             model.setValue(entry);
+            model.getEditor().setText(label(entry));
         } finally {
             syncing = false;
         }
     }
 
     private void chosen(final @Nullable ModelEntry entry) {
-        if (syncing || entry == null || entry.equals(form.selected().get())) {
+        if (syncing) {
+            return;
+        }
+        if (entry == null) {
+            moveChooser(form.selected().get());
+            return;
+        }
+        if (entry.equals(form.selected().get())) {
             return;
         }
         final ModelEntry shown = form.selected().get();
