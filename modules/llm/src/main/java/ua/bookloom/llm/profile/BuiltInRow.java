@@ -1,5 +1,6 @@
 package ua.bookloom.llm.profile;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -61,10 +62,21 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 defaults.context().hardCap(),
                 defaults.context().outputMax(),
                 0,
-                tier == ModelProfile.Tier.LARGE ? LARGE_BATCH : SMALL_BATCH,
+                defaultBatch(tier),
                 tier,
-                verdict);
+                verdict,
+                List.of());
         return new BuiltInRow(pattern, base, evidence, List.of(examples));
+    }
+
+    /**
+     * The batch a size class gets unless a row says otherwise.
+     *
+     * @param tier the size class; non-null
+     * @return 8 segments for a large model, 4 for a small one
+     */
+    static int defaultBatch(final ModelProfile.Tier tier) {
+        return tier == ModelProfile.Tier.LARGE ? LARGE_BATCH : SMALL_BATCH;
     }
 
     /** The system text is folded into the first user message. */
@@ -80,7 +92,8 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 row.templateOverhead(),
                 row.batchSize(),
                 row.tier(),
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
     }
 
     /** Adds template quirks. */
@@ -97,7 +110,8 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 row.templateOverhead(),
                 row.batchSize(),
                 row.tier(),
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
     }
 
     /** Adds reply markup filters. */
@@ -114,7 +128,8 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 row.templateOverhead(),
                 row.batchSize(),
                 row.tier(),
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
     }
 
     /** Sets the most tokens the models handle well. */
@@ -130,7 +145,8 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 row.templateOverhead(),
                 row.batchSize(),
                 row.tier(),
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
     }
 
     /** Sets the tokens the chat template adds to every request. */
@@ -146,7 +162,8 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 tokens,
                 row.batchSize(),
                 row.tier(),
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
     }
 
     /** Sets the batch and the size class, for a row whose size does not decide them. */
@@ -162,7 +179,27 @@ public record BuiltInRow(IdentityPattern pattern, ProfileRow row, String evidenc
                 row.templateOverhead(),
                 segments,
                 tier,
-                row.verdict()));
+                row.verdict(),
+                row.warnings()));
+    }
+
+    /** Adds a warning key the person sees for these models. */
+    public BuiltInRow warning(final String key) {
+        final List<String> all = new ArrayList<>(row.warnings());
+        all.add(Objects.requireNonNull(key, "key"));
+        return with(new ProfileRow(
+                row.name(),
+                row.reasoning(),
+                row.markupFilters(),
+                row.systemRole(),
+                row.quirks(),
+                row.hardCap(),
+                row.outputMax(),
+                row.templateOverhead(),
+                row.batchSize(),
+                row.tier(),
+                row.verdict(),
+                all));
     }
 
     /** Sets the batch only. */

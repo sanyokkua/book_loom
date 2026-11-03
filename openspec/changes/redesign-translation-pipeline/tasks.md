@@ -932,7 +932,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Log:** DEBUG `language state model=… tag=… state=… source=row|base|facts`.
   - **Done when:** the tests are green.
 
-- [ ] 9.5 Wire the advice into the model report and the profile resolution: the base-family match, the built-in rows 44–54 and the owner's model rows. A fine-tune must behave like its base without inheriting its verdict. → :llm, :api
+- [x] 9.5 Wire the advice into the model report and the profile resolution: the base-family match, the built-in rows 44–54 and the owner's model rows. A fine-tune must behave like its base without inheriting its verdict. → :llm, :api
   - **Satisfies:** "Let a fine-tune take its base model's behaviour but never its verdict" (llm-provider), "Never pick a model's row from a shared architecture name alone" (llm-provider; rows 44–54 under the alias guard)
   - **Depends on:** 9.3, 9.4; group 6 (`ModelProfiles`, `BuiltInRows`, the `llama` guard)
   - **Excludes:** the `llama` guard, the `deepseek2` rule, the architecture-alias normalisation (6.3's `ArchitectureAliases`), the active-size alias facts (6.3) and the EuroLLM, Ministral 3 Reasoning and Qwen 2.5 small-size behaviour rows (group 6).

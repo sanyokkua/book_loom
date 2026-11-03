@@ -17,6 +17,8 @@ import ua.bookloom.llm.engine.EngineFacts;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.knowledge.BaseKeyResolver;
+import ua.bookloom.llm.profile.BaseFamilyAliases;
 import ua.bookloom.llm.profile.BuiltInRows;
 import ua.bookloom.llm.profile.ObservedReasoning;
 import ua.bookloom.llm.profile.ProfileRows;
@@ -63,6 +65,7 @@ public final class LlmModule extends AbstractModule {
         bind(BuiltWrongLog.class).in(Singleton.class);
         bind(CapIgnoredLog.class).in(Singleton.class);
         bind(EngineFacts.class).in(Singleton.class);
+        bind(BaseKeyResolver.class).to(BaseFamilyAliases.class).in(Singleton.class);
         bind(ProfileRows.class).to(BuiltInRows.class).in(Singleton.class);
         bind(CallLedger.class).to(CallLedgerImpl.class).in(Singleton.class);
     }

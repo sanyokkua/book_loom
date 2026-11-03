@@ -25,7 +25,7 @@ final class QwenRows {
             "The maker's sampler is top-p 0.8, top-k 20; BookLoom sends its own (arm 3a of task 6.10 kept it).";
 
     static List<BuiltInRow> all() {
-        return Stream.of(qwen25Rows(), qwen3Rows(), qwen3Large())
+        return Stream.of(qwen25Rows(), qwen3Rows(), qwen3Large(), qwen3Vision())
                 .flatMap(List::stream)
                 .toList();
     }
@@ -104,6 +104,18 @@ final class QwenRows {
                         "qwen3.5:35b"),
                 qwen3("qwen3.6-35b", "3.6", 35.0, EXPERIMENTAL, "No multilingual measurement exists.", "qwen3.6:35b"),
                 qwen38());
+    }
+
+    private static List<BuiltInRow> qwen3Vision() {
+        return List.of(BuiltInRow.of(
+                "qwen3-vl-4b-instruct",
+                family("qwen").version("3").sizes(4.0).requiringAll("instruct", "vision"),
+                RowReasoning.NONE,
+                EXPERIMENTAL,
+                "The instruct build of the Qwen3 vision-language model never thinks, so no thinking control is sent."
+                        + " The plain qwen3-vl:4b is the thinking build and has no row of its own, so it gets the"
+                        + " default profile; it never takes this row.",
+                "qwen3-vl:4b-instruct"));
     }
 
     private static BuiltInRow qwen25(

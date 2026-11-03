@@ -49,13 +49,20 @@ public final class ModelProfiles {
     private static final String LOWEST_EFFORT = "low";
 
     private final ProfileRows rows;
+    private final BaseFamilyAliases aliases;
     private final ModelIdentityParser parser = new ModelIdentityParser();
     private final MetadataWins metadataWins = new MetadataWins();
 
-    /** Resolves against the given built-in rows. */
+    /** Resolves against the given built-in rows and the known fine-tunes. */
     @Inject
-    public ModelProfiles(final ProfileRows rows) {
+    public ModelProfiles(final ProfileRows rows, final BaseFamilyAliases aliases) {
         this.rows = Objects.requireNonNull(rows, "rows");
+        this.aliases = Objects.requireNonNull(aliases, "aliases");
+    }
+
+    /** Resolves against the given built-in rows and the built-in fine-tune list. */
+    public ModelProfiles(final ProfileRows rows) {
+        this(rows, new BaseFamilyAliases());
     }
 
     /**
@@ -74,7 +81,9 @@ public final class ModelProfiles {
         Objects.requireNonNull(facts, "facts");
         Objects.requireNonNull(settings, "settings");
         final ModelIdentity identity = identity(modelId, facts);
-        final Optional<ProfileRows.Picked> picked = rows.pick(identity, facts);
+        final Optional<BaseFamilyAliases.Base> base = aliases.baseOf(identity);
+        final Optional<ProfileRows.Picked> picked =
+                rows.pick(identity, facts).or(() -> fromBase(identity, facts, base));
         final ProfileRow row = picked.map(ProfileRows.Picked::row).orElse(DEFAULT_ROW);
         final ReasoningControl reasoning = foundSwitch(
                 engine,
@@ -88,10 +97,60 @@ public final class ModelProfiles {
                 identity,
                 match,
                 row.verdict(),
-                List.of(),
-                quant(identity, facts));
+                row.warnings(),
+                quant(identity, facts),
+                base.map(BaseFamilyAliases.Base::displayName).orElse(null));
         logResolved(engine, modelId, picked.isPresent() ? row.name() : "none", resolved);
         return resolved;
+    }
+
+    // A fine-tune with no row of its own is handled like its base model, and rated "unknown fine-tune": a template and
+    // a thinking switch carry over, how well the model translates does not. The base's warnings stay with the base.
+    private Optional<ProfileRows.Picked> fromBase(
+            final ModelIdentity identity, final ModelFacts facts, final Optional<BaseFamilyAliases.Base> base) {
+        if (base.isEmpty() || !base.get().inheritsBehaviour()) {
+            return Optional.empty();
+        }
+        final BaseFamilyAliases.Base found = base.get();
+        final ModelIdentity baseIdentity = new ModelIdentity(
+                found.family(),
+                found.version(),
+                null,
+                identity.sizeB(),
+                null,
+                null,
+                List.of(),
+                identity.kind(),
+                null,
+                null,
+                null,
+                List.of());
+        return rows.pick(baseIdentity, facts).map(picked -> {
+            log.debug(
+                    "profile match={} base={} verdict=unknown-fine-tune row={}",
+                    ModelReport.Match.BASE_FAMILY,
+                    found.displayName(),
+                    picked.row().name());
+            return new ProfileRows.Picked(inherited(picked.row(), identity), ModelReport.Match.BASE_FAMILY);
+        });
+    }
+
+    private static ProfileRow inherited(final ProfileRow base, final ModelIdentity fineTune) {
+        final Double size = fineTune.sizeB();
+        final ModelProfile.Tier tier = size == null ? base.tier() : IdentityPattern.tierOf(size);
+        return new ProfileRow(
+                base.name(),
+                base.reasoning(),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.hardCap(),
+                base.outputMax(),
+                base.templateOverhead(),
+                size == null ? base.batchSize() : BuiltInRow.defaultBatch(tier),
+                tier,
+                ModelReport.UNKNOWN_FINE_TUNE,
+                List.of());
     }
 
     private static void logResolved(
@@ -122,7 +181,8 @@ public final class ModelProfiles {
                 d.templateOverhead(),
                 d.batchSize(),
                 d.tier(),
-                ModelReport.UNKNOWN_MODEL);
+                ModelReport.UNKNOWN_MODEL,
+                List.of());
     }
 
     private ModelIdentity identity(final String modelId, final ModelFacts facts) {

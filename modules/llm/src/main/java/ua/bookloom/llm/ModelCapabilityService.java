@@ -17,7 +17,10 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.engine.CheckedModelId;
+import ua.bookloom.llm.knowledge.LanguageAdvisor;
+import ua.bookloom.llm.knowledge.QuantAdvisor;
 import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ResolvedProfile;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 
@@ -33,6 +36,8 @@ public final class ModelCapabilityService implements ModelCapabilities {
     private final ProviderClientFactory clients;
     private final ModelProfiles profiles;
     private final ModelSettingsCache settings;
+    private final QuantAdvisor quants;
+    private final LanguageAdvisor languages;
 
     // Served by provider and model id, so the Models tab reads it before a chat model exists. A read that throws leaves
     // the server's facts unknown; the name alone still gives the identity and the default profile.
@@ -48,9 +53,12 @@ public final class ModelCapabilityService implements ModelCapabilities {
             return Result.err(unknownProvider());
         }
         final ModelFacts facts = factsOf(config.get(), modelId);
-        final ModelReport report = profiles.resolve(
-                        config.get().effectiveEngine(), modelId, facts, settings.current(providerId, modelId))
-                .report();
+        final ResolvedProfile resolved =
+                profiles.resolve(config.get().effectiveEngine(), modelId, facts, settings.current(providerId, modelId));
+        final ModelReport report = resolved.report()
+                .withAdvice(
+                        languages.declaration(resolved.identity()).orElse(null),
+                        quants.advise(resolved.identity(), facts));
         log.debug(
                 "Model reported providerId={} model={} contextLength={} loaded={} match={} verdict={}",
                 providerId,

@@ -32,6 +32,8 @@ public final class BuiltInRows implements ProfileRows {
         all.addAll(MistralRows.all());
         all.addAll(QwenRows.all());
         all.addAll(OtherRows.all());
+        all.addAll(ForkRows.all());
+        all.addAll(LlamaRows.all());
         this.rows = List.copyOf(all);
     }
 

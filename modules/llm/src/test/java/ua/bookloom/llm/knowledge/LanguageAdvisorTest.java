@@ -157,8 +157,40 @@ class LanguageAdvisorTest {
     }
 
     @Test
+    void state_noneOwnRowWithListedBase_readsBaseRow() {
+        final LanguageAdvisor advisor = new LanguageAdvisor(
+                new KnowledgeTables(
+                        "test",
+                        Map.of(),
+                        List.of(
+                                row("tune", MatchKind.PREFIX, ListKind.NONE, Set.of(), "none"),
+                                row("base", MatchKind.PREFIX, ListKind.COMPLETE, Set.of("de"), "list"))),
+                identity -> java.util.Optional.of("base"));
+
+        final LanguageResult result = advisor.state(family("tune", null), null, "uk");
+
+        assertThat(result.state()).isEqualTo(LanguageState.NOT_DECLARED);
+        assertThat(result.source()).isEqualTo(LanguageSource.BASE);
+    }
+
+    @Test
+    void declaration_qwen25_isCompleteWithoutUkrainian() {
+        assertThat(bundled.declaration(id("qwen2.5:1.5b"))).hasValueSatisfying(d -> {
+            assertThat(d.listKind()).isEqualTo(ListKind.COMPLETE);
+            assertThat(d.codes()).contains("ru").doesNotContain("uk");
+        });
+    }
+
+    @Test
+    void declaration_modelWithNoRow_isEmpty() {
+        assertThat(bundled.declaration(id("hf.co/someuser/Velemir-Writer-12B-GGUF:Q4_K_M")))
+                .isEmpty();
+    }
+
+    @Test
     void state_tablesCouldNotLoad_isUnknownFromNone() {
-        final LanguageAdvisor broken = new LanguageAdvisor(null, BaseKeyResolver.IDENTITY_BASE_FAMILY);
+        final LanguageAdvisor broken =
+                new LanguageAdvisor((KnowledgeTables) null, BaseKeyResolver.IDENTITY_BASE_FAMILY);
 
         final LanguageResult result = broken.state(id("llama3.1:8b"), null, "uk");
 

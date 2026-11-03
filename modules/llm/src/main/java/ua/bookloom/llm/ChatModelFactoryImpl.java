@@ -133,7 +133,8 @@ public final class ChatModelFactoryImpl implements ChatModelFactory {
                         resolved.match(),
                         resolved.verdict(),
                         resolved.warnings(),
-                        resolved.quant());
+                        resolved.quant(),
+                        resolved.baseModel());
     }
 
     // The Ollama-native client sends the window on every request, so the window Ollama loaded the model with last does

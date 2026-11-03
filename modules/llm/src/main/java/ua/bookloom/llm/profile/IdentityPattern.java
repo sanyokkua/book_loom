@@ -1,6 +1,7 @@
 package ua.bookloom.llm.profile;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -8,6 +9,7 @@ import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ModelIdentity;
 import ua.bookloom.api.llm.ModelKind;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelReport;
 
 /**
@@ -78,6 +80,14 @@ public record IdentityPattern(
         return new IdentityPattern(family, version, line, sizes, effB, Set.of(INSTRUCT, variant), Set.of(variant));
     }
 
+    /** Takes exactly the names that carry all of these variants, and the instruct variant a name may also carry. */
+    public IdentityPattern requiringAll(final String... variants) {
+        final Set<String> required = Set.of(variants);
+        final Set<String> allowed = new HashSet<>(required);
+        allowed.add(INSTRUCT);
+        return new IdentityPattern(family, version, line, sizes, effB, allowed, required);
+    }
+
     /** Takes names that carry these variants beside the instruct variant. */
     public IdentityPattern allowing(final String... variants) {
         final Set<String> allowed = Arrays.stream(variants).collect(Collectors.toSet());
@@ -142,6 +152,16 @@ public record IdentityPattern(
         final double largest =
                 sizes.stream().mapToDouble(Double::doubleValue).max().orElse(effB == null ? 0.0 : effB);
         return largest >= LARGE_FROM_B;
+    }
+
+    /**
+     * The size class a model of this size belongs to.
+     *
+     * @param billions the total size in billions
+     * @return {@link ModelProfile.Tier#LARGE} from 14 billion, else small
+     */
+    static ModelProfile.Tier tierOf(final double billions) {
+        return billions >= LARGE_FROM_B ? ModelProfile.Tier.LARGE : ModelProfile.Tier.SMALL;
     }
 
     private boolean sizeAgrees(final ModelIdentity identity) {

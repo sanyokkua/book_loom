@@ -120,7 +120,7 @@ class BuiltInRowsTest {
 
     @Test
     void resolve_deepseek2ArchitectureAlone_selectsNoRow() {
-        final ResolvedProfile resolved = resolve("hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL", factsOf("deepseek2"));
+        final ResolvedProfile resolved = resolve("hf.co/someuser/Velemir-Writer-12B-GGUF:Q4_K_M", factsOf("deepseek2"));
 
         assertThat(resolved.match()).isEqualTo(ModelReport.Match.DEFAULT);
         assertThat(resolved.profile().reasoning()).isEqualTo(ReasoningControl.NONE);
@@ -202,6 +202,39 @@ class BuiltInRowsTest {
         assertThat(withoutRow)
                 .as("only Nemotron 3.5 Bolt keeps the default profile")
                 .isEqualTo(1);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+        "hf.co/bartowski/NousResearch_Hermes-4-14B-GGUF:Q4_K_M, hermes-4-14b",
+        "mimo-v2.6-distill-qwen-9b, mimo-v2.6-distill-qwen-9b",
+        "llama3.1:8b, llama3.1",
+        "llama3.1:70b, llama3.1",
+        "hf.co/bartowski/thomsonreuters_Thomson-1.0-Small-GGUF, thomson-1.0-small",
+        "deepseek-r1:7b, deepseek-r1-7b",
+        "phi4-mini, phi4-mini",
+        "bigbang-v1, bigbang-v1",
+        "llama3.2:1b, llama3.2-1b",
+        "llama3.2:3b, llama3.2-3b",
+        "glm-4.7-flash, glm-4.7-flash",
+        "qwen3-vl:4b-instruct, qwen3-vl-4b-instruct"
+    })
+    void rows_noShadowing_holdsForRows44To54(final String example, final String row) {
+        assertThat(rowsMatching(example)).containsExactly(row);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+        "qwen3-vl:4b",
+        "deepseek-r1:8b",
+        "deepseek-r1:671b",
+        "hermes-4-405b",
+        "phi4:14b",
+        "llama3.3:70b",
+        "hf.co/someuser/Velemir-Writer-12B-GGUF:Q4_K_M"
+    })
+    void rows_neighbourOfRows44To54_matchesNoRow(final String neighbour) {
+        assertThat(rowsMatching(neighbour)).isEmpty();
     }
 
     private static String inputOf(final String line) {

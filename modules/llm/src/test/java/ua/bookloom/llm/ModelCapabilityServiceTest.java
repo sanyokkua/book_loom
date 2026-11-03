@@ -17,16 +17,25 @@ import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.LanguageDeclaration;
+import ua.bookloom.api.llm.ListKind;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.QuantAdvice;
+import ua.bookloom.api.llm.QuantTier;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.knowledge.LanguageAdvisor;
+import ua.bookloom.llm.knowledge.ModelKnowledgeFiles;
+import ua.bookloom.llm.knowledge.QuantAdvisor;
 import ua.bookloom.llm.profile.ModelProfiles;
 import ua.bookloom.llm.profile.ProfileRows;
 import ua.bookloom.llm.provider.ModelSettingsCache;
@@ -53,7 +62,9 @@ class ModelCapabilityServiceTest {
                 new ProviderClientFactory(
                         new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime),
                 new ModelProfiles(ProfileRows.NONE),
-                new ModelSettingsCache(new FakeModelSettingsRepository()));
+                new ModelSettingsCache(new FakeModelSettingsRepository()),
+                new QuantAdvisor(new ModelKnowledgeFiles()),
+                new LanguageAdvisor(new ModelKnowledgeFiles()));
     }
 
     @AfterEach
@@ -210,6 +221,48 @@ class ModelCapabilityServiceTest {
                 .containsExactly(32768, null);
         server.verify(0, getRequestedFor(urlEqualTo("/api/ps")));
         server.verify(0, getRequestedFor(urlEqualTo("/v1/api/ps")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "qwen2.5:1.5b, Q4_K_M, COMPLETE, ACCEPTABLE",
+        "hf.co/bartowski/utter-project_EuroLLM-22B-Instruct-2512-GGUF:IQ4_NL, IQ4_NL, COMPLETE, GOOD",
+        "nvidia-nemotron-3.5-bolt-e4b, Q4_K_M, NONE, ACCEPTABLE"
+    })
+    void report_ownerModel_carriesLanguageAndQuantAdvice(
+            final String model, final String quant, final ListKind kind, final QuantTier tier) {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show"))
+                .willReturn(okJson("{\"details\":{\"quantization_level\":\"" + quant + "\"},\"model_info\":{}}")));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+
+        final ModelReport report =
+                capabilities.report(new ModelSelection("ollama", model)).data();
+
+        assertThat(report).isNotNull();
+        assertThat(report.languages())
+                .isNotNull()
+                .extracting(LanguageDeclaration::listKind)
+                .isEqualTo(kind);
+        assertThat(report.quantAdvice())
+                .isNotNull()
+                .extracting(QuantAdvice::tier)
+                .isEqualTo(tier);
+    }
+
+    @Test
+    void report_qwen25Small_languagesDoNotListUkrainian() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+
+        final ModelReport report = capabilities
+                .report(new ModelSelection("ollama", "qwen2.5:1.5b"))
+                .data();
+
+        assertThat(report).isNotNull();
+        assertThat(report.languages()).isNotNull();
+        assertThat(report.languages().codes()).contains("ru").doesNotContain("uk");
     }
 
     @Test

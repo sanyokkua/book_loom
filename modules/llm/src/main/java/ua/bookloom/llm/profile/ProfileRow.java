@@ -1,5 +1,6 @@
 package ua.bookloom.llm.profile;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import ua.bookloom.api.llm.ModelProfile;
@@ -20,6 +21,8 @@ import ua.bookloom.api.llm.ReasoningControl;
  * @param batchSize the most segments one draft call carries; positive
  * @param tier their size class; non-null
  * @param verdict how BookLoom rates them for translation; non-null
+ * @param warnings the warning keys the person should see for these models, such as
+ *     {@value ua.bookloom.api.llm.ModelReport#WARNING_LICENCE_NOTE}; never null, usually empty
  */
 public record ProfileRow(
         String name,
@@ -32,7 +35,8 @@ public record ProfileRow(
         int templateOverhead,
         int batchSize,
         ModelProfile.Tier tier,
-        String verdict) {
+        String verdict,
+        List<String> warnings) {
 
     public ProfileRow {
         Objects.requireNonNull(name, "name");
@@ -42,5 +46,6 @@ public record ProfileRow(
         Objects.requireNonNull(verdict, "verdict");
         markupFilters = Set.copyOf(Objects.requireNonNull(markupFilters, "markupFilters"));
         quirks = Set.copyOf(Objects.requireNonNull(quirks, "quirks"));
+        warnings = List.copyOf(Objects.requireNonNull(warnings, "warnings"));
     }
 }

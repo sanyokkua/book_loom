@@ -16,6 +16,7 @@ import ua.bookloom.api.llm.ModelReport;
  * @param verdict how BookLoom rates the model; non-null
  * @param warnings what the person should know; never null
  * @param quant the quant as the server reports it, else as the name writes it, lower-cased; null when neither says
+ * @param baseModel the display name of the base model when the model is a known fine-tune; null otherwise
  */
 public record ResolvedProfile(
         ModelProfile profile,
@@ -23,7 +24,8 @@ public record ResolvedProfile(
         ModelReport.Match match,
         String verdict,
         List<String> warnings,
-        @Nullable String quant) {
+        @Nullable String quant,
+        @Nullable String baseModel) {
 
     public ResolvedProfile {
         Objects.requireNonNull(profile, "profile");
@@ -46,6 +48,9 @@ public record ResolvedProfile(
                 match,
                 verdict,
                 warnings,
-                profile.reasoning());
+                profile.reasoning(),
+                null,
+                null,
+                baseModel);
     }
 }

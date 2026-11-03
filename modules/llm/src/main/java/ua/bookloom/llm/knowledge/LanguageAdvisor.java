@@ -12,7 +12,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.LanguageDeclaration;
 import ua.bookloom.api.llm.LanguageState;
+import ua.bookloom.api.llm.ListKind;
 import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelIdentity;
 
@@ -33,13 +35,23 @@ public final class LanguageAdvisor {
     private final BaseKeyResolver baseKeys;
 
     /**
-     * Reads the bundled table once.
+     * Reads the bundled table once, taking a fine-tune's base from the name grammar alone.
      *
      * @param files the knowledge files
      */
-    @Inject
     public LanguageAdvisor(final ModelKnowledgeFiles files) {
-        this(Objects.requireNonNull(files, "files").load().data(), BaseKeyResolver.IDENTITY_BASE_FAMILY);
+        this(files, BaseKeyResolver.IDENTITY_BASE_FAMILY);
+    }
+
+    /**
+     * Reads the bundled table once.
+     *
+     * @param files the knowledge files
+     * @param baseKeys names the model a fine-tune is built on
+     */
+    @Inject
+    public LanguageAdvisor(final ModelKnowledgeFiles files, final BaseKeyResolver baseKeys) {
+        this(Objects.requireNonNull(files, "files").load().data(), baseKeys);
     }
 
     LanguageAdvisor(final @Nullable KnowledgeTables tables, final BaseKeyResolver baseKeys) {
@@ -91,14 +103,42 @@ public final class LanguageAdvisor {
         return tested;
     }
 
-    private LanguageResult fromRows(final ModelIdentity id, final String group) {
+    /**
+     * The declaration the person reads for a model, from its own row or else its base model's.
+     *
+     * @param id the parsed model name
+     * @return the maker's list kind, codes and where it was read (the server's own list is not part of it); empty when no row speaks for the model
+     */
+    public Optional<LanguageDeclaration> declaration(final ModelIdentity id) {
+        Objects.requireNonNull(id, "id");
+        final Optional<LanguageDeclaration> found =
+                rowOf(id).map(located -> located.row().declaration());
+        log.debug(
+                "language declaration model={} kind={}",
+                id.family(),
+                found.map(d -> d.listKind().name()).orElse("none"));
+        return found;
+    }
+
+    private record Located(LanguageRow row, LanguageSource source) {}
+
+    // A row that says NONE says the maker published nothing, so a base model's list, when it has one, says more.
+    private Optional<Located> rowOf(final ModelIdentity id) {
         final Optional<LanguageRow> own = rowFor(ownKey(id));
-        if (own.isPresent()) {
-            return new LanguageResult(
-                    stateOf(own.get(), group), LanguageSource.ROW, own.get().key());
+        if (own.isPresent() && own.get().listKind() != ListKind.NONE) {
+            return own.map(row -> new Located(row, LanguageSource.ROW));
         }
         final Optional<LanguageRow> base = baseKeys.baseKeyOf(id).flatMap(this::rowFor);
-        return base.map(row -> new LanguageResult(stateOf(row, group), LanguageSource.BASE, row.key()))
+        if (own.isPresent() && base.map(row -> row.listKind() == ListKind.NONE).orElse(true)) {
+            return own.map(row -> new Located(row, LanguageSource.ROW));
+        }
+        return base.map(row -> new Located(row, LanguageSource.BASE));
+    }
+
+    private LanguageResult fromRows(final ModelIdentity id, final String group) {
+        return rowOf(id)
+                .map(found -> new LanguageResult(
+                        stateOf(found.row(), group), found.source(), found.row().key()))
                 .orElse(NOTHING);
     }
 

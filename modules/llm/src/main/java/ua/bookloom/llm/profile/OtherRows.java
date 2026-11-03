@@ -1,6 +1,7 @@
 package ua.bookloom.llm.profile;
 
 import static ua.bookloom.api.llm.ModelProfile.Quirk.ESCAPE_THINK_TOGGLES;
+import static ua.bookloom.api.llm.ModelProfile.Quirk.EXAMPLES_OFF;
 import static ua.bookloom.api.llm.ModelProfile.Quirk.HARMONY_FORMAT;
 import static ua.bookloom.api.llm.ModelProfile.Quirk.NO_REASONING_WORDS;
 import static ua.bookloom.api.llm.ModelProfile.Quirk.PROMPT_ONLY_START;
@@ -13,7 +14,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.llm.ModelProfile;
 
-/** gpt-oss, Granite 4.1, the Nemotron 3 family, muse-glimmer and EuroLLM. */
+/** gpt-oss, Granite 4.1, the Nemotron 3 family, muse-glimmer, EuroLLM, DeepSeek-R1 7B, Phi-4 mini and GLM 4.7 Flash. */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor.
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -31,7 +32,7 @@ final class OtherRows {
     private static final String EXPERIMENTAL = "experimental";
 
     static List<BuiltInRow> all() {
-        return Stream.of(gptOssAndGranite(), nemotronAndOthers())
+        return Stream.of(gptOssAndGranite(), nemotronAndOthers(), smallModels())
                 .flatMap(List::stream)
                 .toList();
     }
@@ -70,6 +71,51 @@ final class OtherRows {
                         "nemotron3:33b"),
                 museGlimmer(),
                 euroLlm());
+    }
+
+    private static List<BuiltInRow> smallModels() {
+        return List.of(deepSeekR1Seven(), phi4Mini(), glmFlash());
+    }
+
+    private static BuiltInRow deepSeekR1Seven() {
+        return BuiltInRow.of(
+                        "deepseek-r1-7b",
+                        family("deepseek-r1").sizes(7.0),
+                        RowReasoning.ALWAYS_NO_SWITCH,
+                        NOT_RECOMMENDED,
+                        "Always reasons and has no switch; the system text is folded into the user turn. The pattern"
+                                + " names only 7b: deepseek-r1:8b is a Qwen3 distill and 671b the full model, and a"
+                                + " shared architecture name never picks this row.",
+                        "deepseek-r1:7b")
+                .folded();
+    }
+
+    private static BuiltInRow phi4Mini() {
+        return BuiltInRow.of(
+                        "phi4-mini",
+                        family("phi").version("4").line("mini"),
+                        RowReasoning.NONE,
+                        EXPERIMENTAL,
+                        "A plain instruct model that never thinks; its example pairs are left out of the prompt because"
+                                + " it copies them into the answer, and a batch is two segments.",
+                        "phi4-mini")
+                .quirks(EXAMPLES_OFF)
+                .batch(2, ModelProfile.Tier.SMALL);
+    }
+
+    private static BuiltInRow glmFlash() {
+        return BuiltInRow.of(
+                        "glm-4.7-flash",
+                        family("glm").version("4.7").line("flash"),
+                        RowReasoning.BOOLEAN,
+                        EXPERIMENTAL,
+                        "A mixture of experts with 3B active (read through the name grammar's active size); boolean"
+                                + " thinking switch. Structured answers start on the prompt-only rung until the model"
+                                + " is checked.",
+                        "glm-4.7-flash",
+                        "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL")
+                .quirks(PROMPT_ONLY_START)
+                .batch(4, ModelProfile.Tier.LARGE);
     }
 
     private static BuiltInRow gptOss() {

@@ -48,7 +48,16 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
         reports.put(
                 providerId + "/" + modelId,
                 new ModelReport(
-                        null, null, null, ModelReport.Match.DEFAULT, ModelReport.UNKNOWN_MODEL, List.of(), thinking));
+                        null,
+                        null,
+                        null,
+                        ModelReport.Match.DEFAULT,
+                        ModelReport.UNKNOWN_MODEL,
+                        List.of(),
+                        thinking,
+                        null,
+                        null,
+                        null));
     }
 
     /** Makes every later report of this model wait for {@code release}, the way a slow provider would. */

@@ -35,6 +35,9 @@ import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.ModelCapabilityService;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
+import ua.bookloom.llm.knowledge.LanguageAdvisor;
+import ua.bookloom.llm.knowledge.ModelKnowledgeFiles;
+import ua.bookloom.llm.knowledge.QuantAdvisor;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 import ua.bookloom.llm.testing.FakeModelSettingsRepository;
@@ -62,7 +65,8 @@ class ModelProfilesTest {
             0,
             ROW_BATCH,
             ModelProfile.Tier.SMALL,
-            "recommended");
+            "recommended",
+            List.of());
 
     private static final ProfileRows TEST_ROWS =
             (identity, facts) -> "qwen".equals(identity.family()) && "3.5".equals(identity.version())
@@ -255,7 +259,9 @@ class ModelProfilesTest {
                 new ProviderClientFactory(
                         new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime),
                 new ModelProfiles(TEST_ROWS),
-                new ModelSettingsCache(new FakeModelSettingsRepository()));
+                new ModelSettingsCache(new FakeModelSettingsRepository()),
+                new QuantAdvisor(new ModelKnowledgeFiles()),
+                new LanguageAdvisor(new ModelKnowledgeFiles()));
     }
 
     // IF a catalog that says reasoning is mandatory left the profile switchable, THEN the first call to such a model
