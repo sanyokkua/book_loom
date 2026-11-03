@@ -194,17 +194,15 @@ final class ModelField {
     private void narrow(final String filter) {
         final String typed = combo.getEditor().getText();
         final List<String> shown = matching(filter);
-        if (shown.equals(combo.getItems())) {
-            applyValue(typed);
-            return;
-        }
         log.debug("narrowing the model list to {} name(s)", shown.size());
         if (combo.isShowing()) {
             combo.hide();
         }
         applying = true;
         try {
-            combo.getItems().setAll(shown);
+            if (!shown.equals(combo.getItems())) {
+                combo.getItems().setAll(shown);
+            }
             combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
             combo.setValue(typed.isEmpty() ? null : typed);
             combo.getEditor().setText(typed);
@@ -241,19 +239,6 @@ final class ModelField {
         applying = true;
         try {
             combo.getEditor().setText(text);
-            combo.setValue(text.isEmpty() ? null : text);
-        } finally {
-            applying = false;
-        }
-    }
-
-    /**
-     * Keeps the combo's value equal to what was typed: an editable combo whose value is not one of its items would
-     * otherwise have its skin reset the value, and with it the entry, when the items change.
-     */
-    private void applyValue(final String text) {
-        applying = true;
-        try {
             combo.setValue(text.isEmpty() ? null : text);
         } finally {
             applying = false;
