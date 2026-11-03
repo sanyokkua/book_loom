@@ -1,6 +1,7 @@
 package ua.bookloom.llm.profile;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -97,8 +98,15 @@ public record IdentityPattern(
                 && (version == null || version.equals(identity.version()))
                 && Objects.equals(line, identity.line())
                 && sizeAgrees(identity)
-                && allowedVariants.containsAll(identity.variants())
+                && allowedVariants.containsAll(modelVariants(identity))
                 && identity.variants().containsAll(requiredVariants);
+    }
+
+    // qat and imatrix describe the quant file, not the model: a row speaks for the model in either build.
+    private static List<String> modelVariants(final ModelIdentity identity) {
+        return identity.variants().stream()
+                .filter(variant -> !"qat".equals(variant) && !"imatrix".equals(variant))
+                .toList();
     }
 
     /**

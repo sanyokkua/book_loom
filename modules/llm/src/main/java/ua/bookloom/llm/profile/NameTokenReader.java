@@ -37,6 +37,7 @@ final class NameTokenReader {
             reading.spec.add(token);
         } else if ("i1".equals(token) || "imatrix".equals(token)) {
             reading.imatrix = true;
+            reading.variants.add("imatrix");
         } else if (isMarker(token, sidecar, reading)) {
             log.trace("Marker word {}", token);
         } else if ("distill".equals(token) || "distilled".equals(token)) {
@@ -50,7 +51,10 @@ final class NameTokenReader {
 
     private static boolean isMarker(final String token, final @Nullable String sidecar, final TokenReading reading) {
         switch (token) {
-            case "qat" -> reading.qat = true;
+            case "qat" -> {
+                reading.qat = true;
+                reading.variants.add("qat");
+            }
             case "unquantized" -> reading.unquantized = true;
             case "dwq" -> reading.dwq = true;
             case "ud" -> reading.dynamic = true;

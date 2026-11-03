@@ -94,7 +94,13 @@ final class NameCaseAssertions {
         put(out, "size_b", id.sizeB());
         put(out, "eff_b", id.effB());
         put(out, "active_b", id.activeB());
-        put(out, "variant", id.variants());
+        // qat and imatrix are listed as variants too (the quant advisor reads them) but the corpus keeps them as flags.
+        put(
+                out,
+                "variant",
+                id.variants().stream()
+                        .filter(v -> !"qat".equals(v) && !"imatrix".equals(v))
+                        .toList());
         put(
                 out,
                 "kind",

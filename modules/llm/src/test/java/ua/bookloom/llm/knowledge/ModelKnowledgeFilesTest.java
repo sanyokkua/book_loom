@@ -80,7 +80,7 @@ class ModelKnowledgeFilesTest {
         final Result<KnowledgeTables> lang = loadWith(bundledText("quant-tiers.csv"), badLang);
 
         assertThat(errorOf(quant).code()).isEqualTo(ErrorCode.internal);
-        assertThat(errorOf(quant).message()).contains("quant-tiers.csv").contains("row 53");
+        assertThat(errorOf(quant).message()).contains("quant-tiers.csv").contains("row 56");
         assertThat(errorOf(lang).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(lang).message()).contains("declared-languages.csv").contains("row 86");
     }

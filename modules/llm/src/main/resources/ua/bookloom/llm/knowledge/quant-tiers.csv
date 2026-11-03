@@ -3,6 +3,8 @@
 # deliberate: the Unsloth Dynamic composite row (Q4_K_XL / Q5_K_XL / Q6_K_XL / UD-*) is not a row; its rules live in code (task 9.3).
 # deliberate: MXFP4_MOE (converted from BF16) is dropped; MXFP4 takes the gpt-oss native cells (moe=GOOD).
 # deliberate: Q4_0_4_4, Q4_0_4_8 and Q4_0_8_8 are three REMOVED rows, one per type.
+# deliberate: NVFP4 takes ACCEPTABLE at SMALL and MID, GOOD at LARGE and MOE (confidence low) so a 4-bit MLX model is judged like Q4_K_M; task 9.9 may retune.
+# deliberate: Q4_0_QAT is a row added here: quantization-aware Q4_0 keeps bf16-level quality (code reads the name's QAT flag, task 9.3).
 # mapping: token=type upper-case single base type; family k+bartowski -> k, 'legacy (removed)' -> legacy; bpw = leading number of the research cell;
 # mapping: needsImatrix = first word of the research cell (yes|recommended|no|n/a); small=tier_le4b, mid=tier_7_14b, large=tier_20_35b, moe=tier_moe_small_active, upper-cased; n/a -> empty.
 token,family,bpw,needsImatrix,small,mid,large,moe,confidence,source
@@ -20,6 +22,7 @@ Q5_0,legacy,5.5,recommended,ACCEPTABLE,GOOD,GOOD,GOOD,low,research 11-quants-and
 Q4_K_M,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,GOOD,medium,research 11-quants-and-names 2026-10-28
 Q4_K_S,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
 Q4_K_L,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q4_0_QAT,legacy,4.5,n/a,GOOD,GOOD,GOOD,GOOD,medium,quantization-aware training keeps bf16-level quality (deliberate; task 9.3)
 Q4_1,legacy,5.0,recommended,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,low,research 11-quants-and-names 2026-10-28
 Q4_0,legacy,4.5,recommended,POOR,POOR,ACCEPTABLE,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
 IQ4_XS,i,4.25,no,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
@@ -46,7 +49,7 @@ TQ1_0,ternary,1.6875,n/a,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-
 Q2_0,ternary,2.25,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
 Q1_0,ternary,1.125,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
 MXFP4,mx,4.25,no,,,,GOOD,medium,research 11-quants-and-names 2026-10-28
-NVFP4,mx,4.5,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
+NVFP4,mx,4.5,n/a,ACCEPTABLE,ACCEPTABLE,GOOD,GOOD,low,research 11-quants-and-names 2026-10-28
 Q4_0_4_4,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28
 Q4_0_4_8,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28
 Q4_0_8_8,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28

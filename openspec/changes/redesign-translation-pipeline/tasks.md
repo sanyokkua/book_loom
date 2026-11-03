@@ -910,7 +910,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Log:** INFO `model knowledge loaded dataVersion=… quantRows=… languageRows=…`; ERROR once with the file name and row number on a bad row.
   - **Done when:** the tests are green and `./gradlew :llm:check :app:test` passes.
 
-- [ ] 9.3 Build `QuantAdvisor`, which turns a quant token, its flags and the model's size class into a tier. The person must see how much a quant costs in quality before a long run. → :llm
+- [x] 9.3 Build `QuantAdvisor`, which turns a quant token, its flags and the model's size class into a tier. The person must see how much a quant costs in quality before a long run. → :llm
   - **Satisfies:** "Judge a model's quant from its name and its server's facts" (llm-provider)
   - **Depends on:** 9.2; group 6 (`ModelIdentity.activeB` and its alias facts, 6.3)
   - **Read:** design.md D22; `llm: capability/ModelFactsReader` (from group 6); `api: llm/ModelIdentity` with `activeB` (from group 6, task 6.3)
