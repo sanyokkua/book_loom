@@ -118,7 +118,7 @@ abstract class SettingsViewModelTestBase extends FxTestBase {
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier, final StructuredAnswers structured) {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
                 new ProviderStore(configs, settings),
-                new ProviderChecks(verifier, newModelListing()),
+                new ProviderChecks(verifier, newModelListing(), QuantChipsFixture.idle()),
                 new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,

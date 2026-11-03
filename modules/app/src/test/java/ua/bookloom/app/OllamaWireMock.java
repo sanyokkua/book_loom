@@ -23,6 +23,9 @@ final class OllamaWireMock implements AutoCloseable {
 
     static final String GLM = "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL";
     static final String LLAMA = "llama3.1:8b";
+    /** An MLX tag whose name holds no quant token; the server reports {@code nvfp4} in its facts. */
+    static final String MLX = "gemma4:e4b-mlx";
+
     static final String PROVIDER_ID = "fake-ollama";
 
     private static final String SHOW = "/api/show";
@@ -33,9 +36,15 @@ final class OllamaWireMock implements AutoCloseable {
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     OllamaWireMock() {
+        this(false);
+    }
+
+    /** As {@link #OllamaWireMock()}; with {@code withMlx} the server also lists {@link #MLX}. */
+    OllamaWireMock(final boolean withMlx) {
         server.start();
-        server.stubFor(get(urlEqualTo("/api/tags"))
-                .willReturn(okJson("{\"models\":[{\"name\":\"" + GLM + "\"},{\"name\":\"" + LLAMA + "\"}]}")));
+        final String listed = "{\"name\":\"" + GLM + "\"},{\"name\":\"" + LLAMA + "\"}"
+                + (withMlx ? ",{\"name\":\"" + MLX + "\"}" : "");
+        server.stubFor(get(urlEqualTo("/api/tags")).willReturn(okJson("{\"models\":[" + listed + "]}")));
         server.stubFor(get(urlEqualTo("/api/version")).willReturn(okJson("{\"version\":\"0.12.0\"}")));
         server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
         server.stubFor(post(urlEqualTo("/api/chat")).willReturn(okJson(CHAT_REPLY)));
@@ -45,6 +54,9 @@ final class OllamaWireMock implements AutoCloseable {
         server.stubFor(post(urlEqualTo(SHOW))
                 .withRequestBody(matchingJsonPath("$[?(@.model == '" + LLAMA + "')]"))
                 .willReturn(okJson(show("llama", "Q4_K_M", "8.0B"))));
+        server.stubFor(post(urlEqualTo(SHOW))
+                .withRequestBody(matchingJsonPath("$[?(@.model == '" + MLX + "')]"))
+                .willReturn(okJson(show("gemma4", "nvfp4", "8.0B"))));
         server.stubFor(
                 post(urlEqualTo(SHOW)).atPriority(10).willReturn(aResponse().withStatus(404)));
     }
@@ -60,6 +72,12 @@ final class OllamaWireMock implements AutoCloseable {
 
     int showRequests() {
         return server.findAll(postRequestedFor(urlEqualTo(SHOW))).size();
+    }
+
+    int showRequestsFor(final String model) {
+        return server.findAll(postRequestedFor(urlEqualTo(SHOW))
+                        .withRequestBody(matchingJsonPath("$[?(@.model == '" + model + "')]")))
+                .size();
     }
 
     int chatRequests() {

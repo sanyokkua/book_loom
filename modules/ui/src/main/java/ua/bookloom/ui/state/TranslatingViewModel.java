@@ -15,6 +15,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -56,6 +57,7 @@ public final class TranslatingViewModel {
     private final TranslationRunner runner;
     private final CurrentProject current;
     private final SettingsViewModel settings;
+    private final ReadyQuantChip quantChip;
     private final RunStarter starter;
     private final Toasts toasts;
     private final ErrorPresenter errors;
@@ -105,6 +107,7 @@ public final class TranslatingViewModel {
         this.runner = run.runner();
         this.current = Objects.requireNonNull(subject, "subject").current();
         this.settings = subject.settings();
+        this.quantChip = new ReadyQuantChip(settings);
         this.starter = launch.starter();
         this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
         this.errors = reporting.errors();
@@ -215,6 +218,15 @@ public final class TranslatingViewModel {
      */
     public ReadOnlyStringProperty modelText() {
         return settings.model();
+    }
+
+    /**
+     * The quant chip of the model chosen for the run, for the ready card.
+     *
+     * @return a value holding the chip, or null while the chosen model's quant is not known; FX thread only
+     */
+    public ObservableValue<@Nullable QuantChipModel> quantChip() {
+        return quantChip.chip();
     }
 
     /**

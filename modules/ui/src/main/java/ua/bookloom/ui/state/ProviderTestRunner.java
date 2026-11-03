@@ -54,6 +54,7 @@ import ua.bookloom.ui.notify.Voice;
 public final class ProviderTestRunner {
 
     private final ProviderVerifier verifier;
+    private final ModelQuantChips quantChips;
     private final ErrorPresenter errors;
     private final Messages messages;
     private final ExecutorService executor;
@@ -83,6 +84,7 @@ public final class ProviderTestRunner {
      * Starts idle, and drops whatever is in flight or on show when the provider or the model changes.
      *
      * @param verifier the port a test is run through
+     * @param quantChips where the quant facts a test of a saved provider's model reads are published
      * @param voice the catalogue a refusal shown in place is worded from, and where a refusal of the whole test is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param subject what a test is run against: the description in the form, saved or not, and the model typed
@@ -94,6 +96,7 @@ public final class ProviderTestRunner {
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
+            final ModelQuantChips quantChips,
             final Voice voice,
             final ExecutorService executor,
             final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
@@ -103,6 +106,7 @@ public final class ProviderTestRunner {
         this.progress = new TestProgress(clock);
         this.messages = Objects.requireNonNull(voice, "voice").messages();
         this.verifier = Objects.requireNonNull(verifier, "verifier");
+        this.quantChips = Objects.requireNonNull(quantChips, "quantChips");
         this.errors = voice.errors();
         this.executor = Objects.requireNonNull(executor, "executor");
         this.subject = Objects.requireNonNull(subject, "subject");
@@ -310,6 +314,9 @@ public final class ProviderTestRunner {
                 Thread.currentThread().getName());
         final Result<VerificationReport> result =
                 verifyGuarded(test, target, progress.listener(epoch, () -> checkEpoch));
+        if (test.needsModel()) {
+            quantChips.readFactsNow(target);
+        }
         Platform.runLater(() -> publish(test, target, epoch, result));
     }
 

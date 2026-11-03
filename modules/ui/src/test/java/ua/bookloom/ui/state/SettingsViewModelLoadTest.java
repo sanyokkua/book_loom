@@ -31,7 +31,7 @@ class SettingsViewModelLoadTest extends SettingsViewModelTestBase {
 
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
                 new ProviderStore(configs, new MemorySettings()),
-                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing()),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing(), QuantChipsFixture.idle()),
                 new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,

@@ -112,7 +112,12 @@ final class ModelField {
         combo.getStyleClass().add("w-model");
         Tips.install(messages, combo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
         combo.getItems().setAll(form.modelChoices());
-        combo.setCellFactory(list -> new ModelChoiceCell(listing, messages));
+        combo.setCellFactory(list -> new ModelChoiceCell(
+                listing,
+                viewModel.quantChips(),
+                () -> viewModel.editedProviderId().get(),
+                messages));
+        viewModel.quantChips().fromNames(viewModel.editedProviderId().get(), form.modelChoices());
     }
 
     private HBox entryRow() {
@@ -171,6 +176,8 @@ final class ModelField {
         if (!applying) {
             log.debug("model entry committed");
             viewModel.commitModel();
+            // Settling on a model of a saved provider reads its facts for the chip; typing never does.
+            viewModel.testedSubject().get().ifPresent(viewModel.quantChips()::readFacts);
             narrow("");
         }
     }
@@ -233,6 +240,7 @@ final class ModelField {
             applying = false;
         }
         applyText(typed);
+        viewModel.quantChips().fromNames(viewModel.editedProviderId().get(), form.modelChoices());
     }
 
     private void applyText(final String text) {

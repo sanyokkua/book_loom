@@ -62,7 +62,7 @@ final class ProviderFormView {
         this.messages = Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(viewModel, "viewModel");
         connection = new ProviderConnectionSection(form, engine, messages);
-        extras = new ProviderExtrasSection(form, messages);
+        extras = new ProviderExtrasSection(viewModel, form, messages);
         model = new ModelField(viewModel, form, messages);
         privacy = new ProviderPrivacyLines(form, messages);
         buildFold(new ProviderChecks(viewModel, messages, dialog), variantLine(engine));

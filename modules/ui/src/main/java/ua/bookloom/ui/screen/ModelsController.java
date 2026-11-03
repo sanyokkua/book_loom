@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ChangeListener;
@@ -26,6 +27,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.ModelForm;
+import ua.bookloom.ui.state.ModelQuantChips;
 import ua.bookloom.ui.state.ModelRoster;
 import ua.bookloom.ui.state.TechnicalDetails;
 
@@ -44,10 +46,11 @@ public final class ModelsController {
     private final Messages messages;
     private final TechnicalDetails technical;
     private final SettingsTabGuard guard;
+    private final ModelQuantChips quantChips;
     private final ChangeListener<ModelEntry> onSelected = (observed, was, now) -> showSelected(now);
     private final ChangeListener<ModelEntry> onChosen = (observed, was, now) -> chosen(now);
     // A new offer replaces the chooser's items, which clears its pick; the pick is put back.
-    private final ListChangeListener<ModelEntry> onOffer = change -> showCurrent();
+    private final ListChangeListener<ModelEntry> onOffer = change -> offerChanged();
 
     private @Nullable FilteredList<ModelEntry> offered;
 
@@ -103,6 +106,7 @@ public final class ModelsController {
      * @param messages the catalogue the built nodes are worded from
      * @param technical whether the technical names are shown
      * @param guard asks before a change of model would drop changes
+     * @param quantChips the quant chips drawn beside the models
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -112,12 +116,14 @@ public final class ModelsController {
             final ModelForm form,
             final Messages messages,
             final TechnicalDetails technical,
-            final SettingsTabGuard guard) {
+            final SettingsTabGuard guard,
+            final ModelQuantChips quantChips) {
         this.roster = Objects.requireNonNull(roster, "roster");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.technical = Objects.requireNonNull(technical, "technical");
         this.guard = Objects.requireNonNull(guard, "guard");
+        this.quantChips = Objects.requireNonNull(quantChips, "quantChips");
     }
 
     @FXML
@@ -142,6 +148,8 @@ public final class ModelsController {
         offered = shown;
         model.setEditable(true);
         model.setItems(shown);
+        model.setCellFactory(list -> new ModelEntryCell(quantChips, this::label, messages));
+        offerChanged();
         model.setConverter(new StringConverter<>() {
             @Override
             public String toString(final @Nullable ModelEntry entry) {
@@ -228,7 +236,11 @@ public final class ModelsController {
         save.disableProperty().bind(form.dirty().not().or(form.saving()));
     }
 
-    private void showCurrent() {
+    private void offerChanged() {
+        roster.entries().stream()
+                .collect(Collectors.groupingBy(ModelEntry::providerId))
+                .forEach((provider, entries) -> quantChips.fromNames(
+                        provider, entries.stream().map(ModelEntry::modelId).toList()));
         showSelected(form.selected().get());
     }
 

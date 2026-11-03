@@ -9,13 +9,15 @@ import ua.bookloom.api.llm.ProviderVerifier;
  *
  * @param verifier the port a check is run through
  * @param modelListing the models the selected provider offers
+ * @param quantChips the quant chips beside the models, whose facts a test and a choice read
  */
-public record ProviderChecks(ProviderVerifier verifier, ModelListing modelListing) {
+public record ProviderChecks(ProviderVerifier verifier, ModelListing modelListing, ModelQuantChips quantChips) {
 
     /** Rejects a missing part. */
     @Inject
     public ProviderChecks {
         Objects.requireNonNull(verifier, "verifier");
         Objects.requireNonNull(modelListing, "modelListing");
+        Objects.requireNonNull(quantChips, "quantChips");
     }
 }

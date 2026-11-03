@@ -145,6 +145,7 @@ public final class ProviderEngine {
         unanswered.set(false);
         final long started = ++epoch;
         submit(() -> verifier.detectEngine(config), result -> detectedAgain(result, started));
+        viewModel.quantChips().readFacts(subject.get());
         return true;
     }
 

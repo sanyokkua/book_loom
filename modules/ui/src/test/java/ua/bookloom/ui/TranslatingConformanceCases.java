@@ -34,6 +34,16 @@ final class TranslatingConformanceCases {
                             STRIP_EDGE,
                             new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // The model row's quant chip: a good quant draws in the ok role, the same chip the pickers show.
+            new Screen(
+                    "TRANSLATING_QUANT_CHIP",
+                    ViewNames.TRANSLATING,
+                    Preparation.READY_QUANT_CHIP,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#quant-chip", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
+                            new Part("#quant-chip", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
+                            new Part("#quant-chip", Kind.TEXT, "ok-fg", "#4a6c54", "#b0d0b7"))),
             // Running, with no banner: the strip's bar track surface-2 and its fill the primary, the full-height live
             // card, a segment being translated in the info-toned working marker, and the scene summary line.
             new Screen(

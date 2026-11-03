@@ -88,11 +88,23 @@ abstract class ConformanceTestBase extends ShellTestBase {
         primary.sizeToScene();
     }
 
+    /** A model whose name carries a quant the scripted port judges good, for the ready card's chip. */
+    static final String QUANT_MODEL = "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL";
+
+    private final ScriptedModelCapabilities capabilities = quantCapabilities();
+
+    private static ScriptedModelCapabilities quantCapabilities() {
+        final ScriptedModelCapabilities scripted = ScriptedModelCapabilities.idle();
+        scripted.nameQuant(QUANT_MODEL, "UD-Q4_K_XL", ua.bookloom.api.llm.QuantTier.GOOD);
+        return scripted;
+    }
+
     @Override
     protected Injector createInjector(final Locale locale) {
         return UiTestInjector.builder(locale)
                 .projects(projects)
                 .glossary(glossary)
+                .capabilities(capabilities)
                 .languages(new BundledChoices())
                 .build();
     }

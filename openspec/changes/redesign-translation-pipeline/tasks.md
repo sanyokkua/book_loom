@@ -946,7 +946,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Log:** DEBUG `profile match=BASE_FAMILY base=… verdict=unknown-fine-tune`.
   - **Done when:** the tests are green; `scripts/test-focused.sh --full-module` passes for `:llm`.
 
-- [ ] 9.6 Show the quant chip in every model picker and the "Understood:" line under the Add a model id box. The person sees a model's quant risk and what a pasted name was read as, wherever a model is chosen. → :ui
+- [x] 9.6 Show the quant chip in every model picker and the "Understood:" line under the Add a model id box. The person sees a model's quant risk and what a pasted name was read as, wherever a model is chosen. → :ui
   - **Satisfies:** "Show the quant chip beside every model in every model picker" (settings), "Understand a pasted model name in the Add a model id box" (settings), "Offer the Ollama pull command as text" (llm-provider)
   - **Depends on:** 9.5; group 6 (`ModelInputNormalizer`, `ModelIdentityParser`)
   - **Read:** `ui: screen/ModelField`, `ui: screen/ModelsController`, `ui: screen/TranslatingReadyCard`, `ui: screen/ProviderExtrasSection`, `ui: state/ModelRoster`, `ui: state/ModelListing`; `api: llm/ModelCapabilities.report(selection)` (group 6)

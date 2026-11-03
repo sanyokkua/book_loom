@@ -21,7 +21,7 @@ class SettingsViewModelCurrentModelTest extends SettingsViewModelTestBase {
     private SettingsViewModel build() {
         final SettingsViewModel built = onFx(() -> new SettingsViewModel(
                 new ProviderStore(configs, settings),
-                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing()),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing(), QuantChipsFixture.idle()),
                 new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,

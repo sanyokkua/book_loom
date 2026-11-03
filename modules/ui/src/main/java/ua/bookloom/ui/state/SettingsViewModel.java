@@ -43,6 +43,7 @@ import ua.bookloom.ui.notify.Voice;
 public final class SettingsViewModel {
 
     private final ModelListing modelListing;
+    private final ModelQuantChips quantChips;
     private final ProviderTestRunner tests;
     private final ProviderConfigs configs;
     private final SettingsRepository settingsStore;
@@ -94,8 +95,10 @@ public final class SettingsViewModel {
         this.configs = Objects.requireNonNull(store, "store").configs();
         this.settingsStore = store.settingsStore();
         this.modelListing = Objects.requireNonNull(checks, "checks").modelListing();
+        this.quantChips = checks.quantChips();
         this.tests = new ProviderTestRunner(
                 checks.verifier(),
+                quantChips,
                 voice,
                 Objects.requireNonNull(executor, "executor"),
                 testTarget.subject(),
@@ -200,6 +203,7 @@ public final class SettingsViewModel {
             editedProviderId.set(chosen.providerId());
         }
         log.info("model adopted: {}/{}", chosen.providerId(), chosen.modelId());
+        quantChips.readFacts(chosen);
     }
 
     /** The three provider tests and the findings of the last one. */
@@ -265,6 +269,11 @@ public final class SettingsViewModel {
     /** The advice for the selected provider and the chosen model, which follows both. */
     public ReadOnlyObjectProperty<List<ModelAdvice.Note>> modelNotes() {
         return modelNotes.notes();
+    }
+
+    /** The quant chips of the models the pickers show. */
+    public ModelQuantChips quantChips() {
+        return quantChips;
     }
 
     /** The models the selected provider offers, asked again when another is selected; typing never depends on it. */

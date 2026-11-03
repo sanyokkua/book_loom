@@ -74,6 +74,7 @@ final class ConformanceCases {
         BRIEF_UKRAINIAN_TARGET,
         PROJECTS_LISTED,
         PROJECTS_EMPTY,
+        READY_QUANT_CHIP,
         PROVIDER_FORM_DIRTY,
         PROVIDER_FOLD_OPEN,
         PROVIDER_TESTED,

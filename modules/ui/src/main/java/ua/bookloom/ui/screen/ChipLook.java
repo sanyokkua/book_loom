@@ -1,5 +1,7 @@
 package ua.bookloom.ui.screen;
 
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.QuantTier;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -26,6 +28,27 @@ record ChipLook(String glyph, String styleClass, MessageKey status) {
             case SOFT_PASS -> new ChipLook("!", "chip-warn", MessageKey.SETTINGS_STATUS_SOFT_PASS);
             case FAILED -> new ChipLook("✕", "chip-err", MessageKey.SETTINGS_STATUS_FAILED);
             case SKIPPED -> new ChipLook("–", "chip-neutral", MessageKey.SETTINGS_STATUS_SKIPPED);
+        };
+    }
+
+    /**
+     * The look of a quant chip for a tier; the glyph is empty because the chip's own words name the tier.
+     *
+     * @param tier how the quant rates, or null while the model's size is not known
+     * @return the look, whose style class carries the role colour
+     */
+    static ChipLook of(final @Nullable QuantTier tier) {
+        if (tier == null) {
+            return new ChipLook("", "chip-neutral", MessageKey.SETTINGS_QUANT_TIER_UNMEASURED);
+        }
+        return switch (tier) {
+            case EXCELLENT -> new ChipLook("", "chip-ok", MessageKey.SETTINGS_QUANT_TIER_EXCELLENT);
+            case GOOD -> new ChipLook("", "chip-ok", MessageKey.SETTINGS_QUANT_TIER_GOOD);
+            case ACCEPTABLE -> new ChipLook("", "chip-neutral", MessageKey.SETTINGS_QUANT_TIER_ACCEPTABLE);
+            case POOR -> new ChipLook("", "chip-warn", MessageKey.SETTINGS_QUANT_TIER_POOR);
+            case UNUSABLE -> new ChipLook("", "chip-err", MessageKey.SETTINGS_QUANT_TIER_UNUSABLE);
+            case REMOVED -> new ChipLook("", "chip-err", MessageKey.SETTINGS_QUANT_TIER_REMOVED);
+            case UNMEASURED -> new ChipLook("", "chip-neutral", MessageKey.SETTINGS_QUANT_TIER_UNMEASURED);
         };
     }
 

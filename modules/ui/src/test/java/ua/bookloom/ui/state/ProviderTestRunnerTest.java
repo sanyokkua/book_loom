@@ -27,6 +27,7 @@ import ua.bookloom.api.llm.VerificationExchange;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.ui.ScriptedModelCapabilities;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Voice;
@@ -47,6 +48,7 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
         return onFx(() -> new ProviderTestRunner(
                 verifier,
+                new ModelQuantChips(ScriptedModelCapabilities.idle(), executor),
                 new Voice(new Messages(() -> Locale.ENGLISH), errors),
                 executor,
                 subject,

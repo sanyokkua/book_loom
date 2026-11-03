@@ -8,10 +8,14 @@ import java.util.concurrent.Callable;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +24,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.QuantChipModel;
 import ua.bookloom.ui.state.RunMode;
 import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.StateMirror;
@@ -39,6 +44,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 final class TranslatingReadyCard {
 
     private static final String KV_VALUE = "kv-value";
+    private static final String FOLLOW_KEY = "bookloom.quant.follow";
+    private static final double ROW_GAP = 8;
 
     static Node build(
             final TranslatingViewModel viewModel,
@@ -68,7 +75,7 @@ final class TranslatingReadyCard {
                 messages,
                 MessageKey.TRANSLATING_READY_TITLE,
                 row("book", MessageKey.TRANSLATING_READY_BOOK, book, messages),
-                row("model", MessageKey.TRANSLATING_READY_MODEL, modelLabel(viewModel, messages), messages),
+                modelRow(viewModel, messages),
                 row("review", MessageKey.TRANSLATING_READY_REVIEW, fixed("translating-ready-review", review), messages),
                 row("dial", MessageKey.TRANSLATING_READY_DIAL, dialLabel(current, messages), messages),
                 row("pending", MessageKey.TRANSLATING_READY_PENDING, pending, messages),
@@ -101,6 +108,36 @@ final class TranslatingReadyCard {
                         ? messages.get(MessageKey.SETTINGS_MODEL_NOT_CHOSEN)
                         : viewModel.modelText().get(),
                 viewModel.modelText());
+    }
+
+    // The model's quant chip follows its value; with no quant known there is no chip node at all.
+    private static Node modelRow(final TranslatingViewModel viewModel, final Messages messages) {
+        final Label value = modelLabel(viewModel, messages);
+        final Node row = row("model", MessageKey.TRANSLATING_READY_MODEL, value, messages);
+        final HBox box = (HBox) row;
+        HBox.setHgrow(value, Priority.ALWAYS);
+        value.setMaxWidth(Double.MAX_VALUE);
+        final Label chip = QuantChip.blank(messages);
+        HBox.setMargin(chip, new Insets(0, 0, 0, ROW_GAP));
+        final ChangeListener<QuantChipModel> follow = (observed, was, now) -> showChip(box, chip, now, messages);
+        // The view model outlives the card, so the listener is weak and the row, which lives as long as the card
+        // does, keeps it: the chip is not in the row while it has nothing to say, so it cannot be the keeper.
+        box.getProperties().put(FOLLOW_KEY, follow);
+        viewModel.quantChip().addListener(new WeakChangeListener<>(follow));
+        showChip(box, chip, viewModel.quantChip().getValue(), messages);
+        return row;
+    }
+
+    private static void showChip(
+            final HBox box, final Label chip, final @Nullable QuantChipModel model, final Messages messages) {
+        if (model == null) {
+            box.getChildren().remove(chip);
+            return;
+        }
+        QuantChip.show(chip, model, messages);
+        if (!box.getChildren().contains(chip)) {
+            box.getChildren().add(chip);
+        }
     }
 
     private static Label dialLabel(final CurrentProject current, final Messages messages) {

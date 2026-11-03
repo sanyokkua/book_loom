@@ -263,7 +263,9 @@ class SettingsProviderHelpScreenTest extends SettingsScreenTestBase {
         return ThemeTestSupport.onFx(() -> {
             final ListCell<String> cell = modelCombo().getCellFactory().call(null);
             ((ModelChoiceCell) cell).updateItem(id, false);
-            return cell.getGraphic() instanceof Label label ? label.getText() : "";
+            return cell.getGraphic() != null && cell.getGraphic().lookup(".model-cloud") instanceof Label label
+                    ? label.getText()
+                    : "";
         });
     }
 }

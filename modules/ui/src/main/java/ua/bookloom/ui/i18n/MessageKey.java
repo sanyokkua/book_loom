@@ -4190,6 +4190,34 @@ public enum MessageKey {
     SETTINGS_MODEL_CLOUD("settings.providers.model.cloud"),
     /** Hover explanation of the cloud label. */
     SETTINGS_MODEL_CLOUD_TIP("settings.providers.model.cloud.tip"),
+    /** The quant chip beside a model: &#123;0&#125; is the quant token, &#123;1&#125; the tier's word. */
+    SETTINGS_QUANT_CHIP("settings.quant.chip"),
+    /** The tier word of a quant that keeps the quality of the full model. */
+    SETTINGS_QUANT_TIER_EXCELLENT("settings.quant.tier.excellent"),
+    /** The tier word of a quant with a small, usually unnoticeable loss. */
+    SETTINGS_QUANT_TIER_GOOD("settings.quant.tier.good"),
+    /** The tier word of a quant with a visible loss that translation tolerates. */
+    SETTINGS_QUANT_TIER_ACCEPTABLE("settings.quant.tier.acceptable"),
+    /** The tier word of a quant whose loss shows in the text. */
+    SETTINGS_QUANT_TIER_POOR("settings.quant.tier.poor"),
+    /** The tier word of a quant that is not for translating a book. */
+    SETTINGS_QUANT_TIER_UNUSABLE("settings.quant.tier.unusable"),
+    /** The tier word of a quant type the engine no longer reads. */
+    SETTINGS_QUANT_TIER_REMOVED("settings.quant.tier.removed"),
+    /** The tier word of a quant nobody has measured yet. */
+    SETTINGS_QUANT_TIER_UNMEASURED("settings.quant.tier.unmeasured"),
+    /** Hover explanation of the quant chip. */
+    SETTINGS_QUANT_CHIP_TIP("settings.quant.chip.tip"),
+    /** What a pasted Hugging Face link or file was read as; &#123;0&#125; is the repository, &#123;1&#125; the file, &#123;2&#125; the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE("settings.form.models.understood.repoFile"),
+    /** What a pasted repository id was read as; &#123;0&#125; is the repository, &#123;1&#125; the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_REPO("settings.form.models.understood.repo"),
+    /** What any other recognised paste was read as; &#123;0&#125; is the model and its quant. */
+    SETTINGS_FORM_MODELS_UNDERSTOOD_ID("settings.form.models.understood.id"),
+    /** Added to the Understood line when the server does not list the model. */
+    SETTINGS_FORM_MODELS_NOT_LISTED("settings.form.models.notListed"),
+    /** Caption of the pull command offered as text for an Ollama provider. */
+    SETTINGS_FORM_MODELS_PULL_LABEL("settings.form.models.pull.label"),
     /** Raised at Start when LM Studio will load a model that is not loaded. */
     TOAST_MODEL_LOADS_OWN_SETTINGS("toast.modelLoadsOwnSettings"),
     /** Label of the status metric. */

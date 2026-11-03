@@ -2,6 +2,7 @@ package ua.bookloom.ui;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -14,6 +15,10 @@ import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.PastedModel;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.QuantAdvice;
+import ua.bookloom.api.llm.QuantTier;
 import ua.bookloom.api.llm.ReasoningControl;
 
 /**
@@ -25,6 +30,8 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     private static final long WAIT_SECONDS = 10;
 
     private final Map<String, ModelReport> reports = new ConcurrentHashMap<>();
+    private final Map<String, QuantAdvice> names = new ConcurrentHashMap<>();
+    private final Map<String, PastedModel> pastes = new ConcurrentHashMap<>();
     private final List<String> asked = new CopyOnWriteArrayList<>();
     private final AtomicInteger fxThreadCalls = new AtomicInteger();
     private final Map<String, CountDownLatch> holds = new ConcurrentHashMap<>();
@@ -60,6 +67,38 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
                         null));
     }
 
+    /** From now on reads the name {@code modelId} as the quant {@code token} judged {@code tier}, offline. */
+    public void nameQuant(final String modelId, final String token, final @Nullable QuantTier tier) {
+        names.put(modelId, advice(token, tier));
+    }
+
+    /** From now on the server's facts for the model report the quant {@code token} judged {@code tier}. */
+    public void factsQuant(
+            final String providerId, final String modelId, final String token, final @Nullable QuantTier tier) {
+        reports.put(
+                providerId + "/" + modelId,
+                new ModelReport(
+                        null,
+                        null,
+                        null,
+                        ModelReport.Match.DEFAULT,
+                        ModelReport.UNKNOWN_MODEL,
+                        List.of(),
+                        ReasoningControl.UNKNOWN,
+                        null,
+                        advice(token, tier),
+                        null));
+    }
+
+    /** From now on reads the pasted {@code text} as {@code reading}. */
+    public void paste(final String text, final PastedModel reading) {
+        pastes.put(text, reading);
+    }
+
+    private static QuantAdvice advice(final String token, final @Nullable QuantTier tier) {
+        return new QuantAdvice(token, null, null, false, false, false, null, null, tier, "test");
+    }
+
     /** Makes every later report of this model wait for {@code release}, the way a slow provider would. */
     public void holdUntil(final String providerId, final String modelId, final CountDownLatch release) {
         holds.put(providerId + "/" + modelId, release);
@@ -73,6 +112,16 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     /** How many asks came from the FX Application Thread, which a provider call must never be. */
     public int fxThreadCalls() {
         return fxThreadCalls.get();
+    }
+
+    @Override
+    public @Nullable QuantAdvice quantAdviceByName(final String modelId) {
+        return names.get(modelId);
+    }
+
+    @Override
+    public Optional<PastedModel> readPasted(final String text, final ProviderKind kind) {
+        return Optional.ofNullable(pastes.get(text));
     }
 
     @Override

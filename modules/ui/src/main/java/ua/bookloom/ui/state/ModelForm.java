@@ -38,6 +38,7 @@ public final class ModelForm extends ModelFormProperties {
 
     private final ModelSettingsRepository store;
     private final ModelCapabilities capabilities;
+    private final ModelQuantChips quantChips;
     private final StructuredAnswers structured;
     private final SettingsViewModel viewModel;
     private final ExecutorService background;
@@ -69,6 +70,7 @@ public final class ModelForm extends ModelFormProperties {
             @IoExecutor final ExecutorService io) {
         this.store = Objects.requireNonNull(sources, "sources").store();
         this.capabilities = sources.capabilities();
+        this.quantChips = sources.quantChips();
         this.structured = sources.structured();
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -241,6 +243,7 @@ public final class ModelForm extends ModelFormProperties {
         final Result<ModelReport> asked = capabilities.report(new ModelSelection(entry.providerId(), entry.modelId()));
         final ModelReport report =
                 asked.isOk() ? Objects.requireNonNull(asked.data()) : ModelReport.windowsOnly(null, null);
+        quantChips.publishFacts(new ModelSelection(entry.providerId(), entry.modelId()), report.quantAdvice());
         Platform.runLater(() -> reported(entry, mine, report));
     }
 

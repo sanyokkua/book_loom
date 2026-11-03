@@ -119,7 +119,7 @@ class ProviderFormUseThisTest extends ProviderFormTestBase {
         final RefusingSettings refusing = new RefusingSettings();
         final SettingsViewModel viewModel = onFx(() -> new SettingsViewModel(
                 new ProviderStore(configs, refusing),
-                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing()),
+                new ProviderChecks(ScriptedProviderVerifier.idle(), newModelListing(), QuantChipsFixture.idle()),
                 new Voice(EnglishMessages.create(), errors),
                 executor,
                 activities,

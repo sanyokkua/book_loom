@@ -17,6 +17,7 @@ import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.TechnicalDetails;
 
 /**
@@ -41,6 +42,20 @@ final class ImportPreparations {
             injector.getInstance(TechnicalDetails.class).property().set(true);
             return null;
         });
+    }
+
+    /** Chooses the model whose name carries a quant, and waits for the ready card's chip. */
+    void chooseAModelWithAGoodQuant() throws TimeoutException {
+        onFx(() -> {
+            injector.getInstance(SettingsViewModel.class).model().set(ConformanceTestBase.QUANT_MODEL);
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() ->
+                        injector.getInstance(Navigator.class).content().get().lookup("#quant-chip") != null));
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     /** Opens a book into Ukrainian, whose language file gives the brief its extra rows. */

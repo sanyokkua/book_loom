@@ -51,7 +51,7 @@ abstract class ModelFormTestBase extends SettingsViewModelTestBase {
         viewModel = viewModel();
         roster = onFx(() -> new ModelRoster(configs, catalog, modelSettings, viewModel, pool, io));
         form = onFx(() -> new ModelForm(
-                new ModelSources(modelSettings, capabilities, structured),
+                new ModelSources(modelSettings, capabilities, structured, new ModelQuantChips(capabilities, io)),
                 roster,
                 viewModel,
                 EnglishMessages.create(),

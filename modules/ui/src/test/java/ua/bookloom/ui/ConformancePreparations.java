@@ -91,6 +91,7 @@ final class ConformancePreparations {
             case BRIEF_UKRAINIAN_TARGET -> new ImportPreparations(injector, projects).openIntoUkrainian();
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
+            case READY_QUANT_CHIP -> new ImportPreparations(injector, projects).chooseAModelWithAGoodQuant();
             // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
             default -> new SettingsPreparations(injector).prepare(preparation);
         }
