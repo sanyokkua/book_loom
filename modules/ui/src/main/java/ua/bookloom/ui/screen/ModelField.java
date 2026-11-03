@@ -16,6 +16,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.control.TextMatch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.control.Wrapped;
@@ -39,6 +40,8 @@ final class ModelField {
     private final Messages messages;
     private final ComboBox<String> combo = new ComboBox<>();
     private final Label note = new Label();
+    private static final int MAX_VISIBLE_ROWS = 10;
+
     private final VBox box = new VBox(6);
     private final ListChangeListener<String> onOffered = change -> showOffered();
     private final ChangeListener<String> onEntryText = (observed, was, now) -> onEntryTyped(now);
@@ -71,7 +74,7 @@ final class ModelField {
 
     /** Lists the models again when the person added or removed names of their own. */
     void showChoices() {
-        if (!combo.getItems().equals(form.modelChoices())) {
+        if (!combo.getItems().equals(matching(combo.getEditor().getText()))) {
             showOffered();
         }
     }
@@ -161,13 +164,56 @@ final class ModelField {
         }
         log.trace("model entry now holds '{}'", text);
         viewModel.setModelText(text);
-        applyValue(text);
+        narrow(text);
     }
 
     private void onEntryCommitted() {
         if (!applying) {
             log.debug("model entry committed");
             viewModel.commitModel();
+            narrow("");
+        }
+    }
+
+    // The offered names that contain the text anywhere, ignoring case and accents; all of them for empty text.
+    private List<String> matching(final String text) {
+        final String needle = TextMatch.normalize(text);
+        final List<String> choices = form.modelChoices();
+        return needle.isEmpty()
+                ? choices
+                : choices.stream()
+                        .filter(choice -> TextMatch.normalize(choice).contains(needle))
+                        .toList();
+    }
+
+    /**
+     * Narrows the list to the names containing {@code filter} while the entry keeps what was typed. Changing the items
+     * makes the skin rewrite the entry, and the open popup keeps its first height, so the entry is put back and the
+     * popup is reopened at the new size.
+     */
+    private void narrow(final String filter) {
+        final String typed = combo.getEditor().getText();
+        final List<String> shown = matching(filter);
+        if (shown.equals(combo.getItems())) {
+            applyValue(typed);
+            return;
+        }
+        log.debug("narrowing the model list to {} name(s)", shown.size());
+        if (combo.isShowing()) {
+            combo.hide();
+        }
+        applying = true;
+        try {
+            combo.getItems().setAll(shown);
+            combo.setVisibleRowCount(Math.clamp(shown.size(), 1, MAX_VISIBLE_ROWS));
+            combo.setValue(typed.isEmpty() ? null : typed);
+            combo.getEditor().setText(typed);
+            combo.getEditor().positionCaret(typed.length());
+        } finally {
+            applying = false;
+        }
+        if (combo.getEditor().isFocused() && !filter.isEmpty() && !shown.isEmpty()) {
+            combo.show();
         }
     }
 
@@ -179,9 +225,9 @@ final class ModelField {
     }
 
     private void showOffered() {
-        final List<String> choices = form.modelChoices();
-        log.debug("showing {} model(s) to choose from", choices.size());
         final String typed = combo.getEditor().getText();
+        final List<String> choices = matching(typed);
+        log.debug("showing {} model(s) to choose from", choices.size());
         applying = true;
         try {
             combo.getItems().setAll(choices);

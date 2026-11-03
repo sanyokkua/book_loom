@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -61,6 +62,26 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("qwen3:8b");
         assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
+    }
+
+    // IF typing did not narrow the list, THEN a catalogue of hundreds of models could not be searched: "free" must
+    // leave only the names that contain it, anywhere in the name, and clearing the text must bring them all back.
+    @Test
+    void modelControl_textTyped_narrowsTheOfferedListToNamesContainingIt() throws TimeoutException {
+        catalog.respondWith("vendor/alpha:free", "vendor/beta", "free-tier/gamma", "vendor/delta");
+        openSettings();
+        awaitFx(() -> modelCombo().getItems().size() == 4);
+
+        typeIntoModelEntry("free");
+
+        assertThat(ThemeTestSupport.onFx(() -> List.copyOf(modelCombo().getItems())))
+                .containsExactly("vendor/alpha:free", "free-tier/gamma");
+        assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("free");
+
+        onFx(() -> modelCombo().getEditor().clear());
+
+        assertThat(ThemeTestSupport.onFx(() -> List.copyOf(modelCombo().getItems())))
+                .hasSize(4);
     }
 
     // IF typing did not set the model as it happens, THEN the check would stay disabled: a disabled button never
@@ -168,7 +189,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         typeIntoModelEntry("mistral-small:24b");
 
         catalog.release();
-        awaitFx(() -> modelCombo().getItems().size() == 2);
+        awaitFx(() -> viewModel().modelListing().offered().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
@@ -187,7 +208,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         commitModelEntry();
 
         catalog.release();
-        awaitFx(() -> modelCombo().getItems().size() == 2);
+        awaitFx(() -> viewModel().modelListing().offered().size() == 2);
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().draftModel().get())).isEqualTo("mistral-small:24b");
