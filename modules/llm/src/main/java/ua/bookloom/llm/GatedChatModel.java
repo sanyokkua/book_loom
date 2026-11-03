@@ -20,6 +20,7 @@ import ua.bookloom.llm.CallRecorder.TimedCall;
 import ua.bookloom.llm.RetryChoice.Resend;
 import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.RetryRule;
+import ua.bookloom.llm.profile.ObservedReasoning;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.RefusalMemory;
@@ -43,6 +44,7 @@ public final class GatedChatModel implements ChatModel {
     private final @org.jspecify.annotations.Nullable RefusalMemory refusals;
     private final CallRecorder recorder;
     private final BuiltWrongLog builtWrong;
+    private final ObservedReasoning thinking;
     private final BoundSettings bound;
     private final StructuredRungs rungs = new StructuredRungs();
 
@@ -94,6 +96,7 @@ public final class GatedChatModel implements ChatModel {
             ModelSettingsSource source,
             CallObservers observers) {
         this.builtWrong = Objects.requireNonNull(observers, "observers").builtWrong();
+        this.thinking = observers.thinking();
         this.refusals = Objects.requireNonNull(source, "source").refusals();
         this.providerId = Objects.requireNonNull(providerId, "providerId");
         this.bound = new BoundSettings(providerId, modelId, source.settings(), source.refusals(), source.profiles());
@@ -126,9 +129,20 @@ public final class GatedChatModel implements ChatModel {
         Objects.requireNonNull(attempts, "attempts");
         final EnumSet<RejectedCapability> downgraded = EnumSet.noneOf(RejectedCapability.class);
         final BoundSettings.Applied applied = bound.applied(request, downgraded);
-        return callWithTransportRetry(applied, attempts, downgraded)
-                .result()
-                .map(response -> BoundSettings.finished(applied.profile(), response));
+        final ProviderCallResult<ChatResponse> call = callWithTransportRetry(applied, attempts, downgraded);
+        notedThinking(call);
+        return call.result().map(response -> BoundSettings.finished(applied.profile(), response));
+    }
+
+    // A repeat with a raised cap, or an end with a thinking reason, says the model spent its answer thinking.
+    private void notedThinking(ProviderCallResult<ChatResponse> call) {
+        final AppError failed = call.result().error();
+        final FailureReason reason = failed == null
+                ? (call.sent() == null ? null : FailureReason.CAP_SPENT)
+                : FailureReason.in(failed.details()).orElse(null);
+        if (reason == FailureReason.CAP_SPENT || reason == FailureReason.REASONING_EXHAUSTED) {
+            thinking.note(providerId, modelId, reason);
+        }
     }
 
     private ProviderCallResult<ChatResponse> callWithTransportRetry(

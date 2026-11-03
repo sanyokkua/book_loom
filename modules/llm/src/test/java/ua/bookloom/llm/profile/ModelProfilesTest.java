@@ -257,4 +257,33 @@ class ModelProfilesTest {
                 new ModelProfiles(TEST_ROWS),
                 new ModelSettingsCache(new FakeModelSettingsRepository()));
     }
+
+    // IF a catalog that says reasoning is mandatory left the profile switchable, THEN the first call to such a model
+    // would be sent an off switch it refuses and no room to think; the server's word makes it one that always thinks.
+    @Test
+    void withFacts_mandatoryReasoning_isUnswitchable() {
+        final ModelFacts mandatory = new ModelFacts(
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of("completion", "thinking"),
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                true);
+        final ReasoningControl row = new ReasoningControl(ReasoningControl.Kind.BOOLEAN, List.of(), "false", "true");
+
+        assertThat(ModelProfiles.withFacts(row, mandatory).kind()).isEqualTo(ReasoningControl.Kind.UNSWITCHABLE);
+    }
 }

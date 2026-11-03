@@ -21,4 +21,18 @@ class ReasoningReserveTest {
     void tokens_noSourceStated_isTheFloor() {
         assertThat(ReasoningReserve.tokens(null)).isEqualTo(2048);
     }
+
+    // IF a hosted model got the local floor, THEN a model that thinks for thousands of tokens would starve its answer
+    // on a provider where the room costs nothing; it gets four times the local room.
+    @ParameterizedTest
+    @CsvSource({"300,4,8192", "800,4,13360", "1000,8,17120"})
+    void tokens_hostedModel_isFourTimesTheLocalRoom(final int sourceTokens, final int items, final int reserve) {
+        assertThat(ReasoningReserve.tokens(new SourceSize(sourceTokens, items), true))
+                .isEqualTo(reserve);
+    }
+
+    @Test
+    void tokens_hostedNoSourceStated_isFourTimesTheFloor() {
+        assertThat(ReasoningReserve.tokens(null, true)).isEqualTo(8192);
+    }
 }

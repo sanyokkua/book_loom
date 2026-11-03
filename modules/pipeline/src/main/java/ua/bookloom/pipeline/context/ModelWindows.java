@@ -55,8 +55,6 @@ public final class ModelWindows {
     public static ContextPolicy policyOf(final ChatModel model, final @Nullable Integer detected) {
         Objects.requireNonNull(model, "model");
         final ContextPolicy known = model.profile().context();
-        return known.detected() == null && detected != null
-                ? new ContextPolicy(known.hardCap(), known.outputMax(), detected, known.loaded())
-                : known;
+        return known.detected() == null && detected != null ? known.withDetected(detected) : known;
     }
 }

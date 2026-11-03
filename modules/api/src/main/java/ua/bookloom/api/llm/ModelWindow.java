@@ -25,12 +25,20 @@ public interface ModelWindow {
      *     fixes the window at load or server start
      * @param override the window the person set for the model, or null; positive when set, and it wins over everything
      * @return the override, else the smallest of the loaded and detected windows, the profile's hard cap and
-     *     {@link #DEFAULT_WINDOW}
+     *     {@link #DEFAULT_WINDOW}; for a hosted model the smaller of the loaded and detected windows, or
+     *     {@link #DEFAULT_WINDOW} when it reports none
      */
     static int of(final ContextPolicy context, final @Nullable Integer override) {
         Objects.requireNonNull(context, "context");
         if (override != null) {
             return override;
+        }
+        if (context.hosted()) {
+            return Stream.of(context.loaded(), context.detected())
+                    .filter(Objects::nonNull)
+                    .mapToInt(Integer::intValue)
+                    .min()
+                    .orElse(DEFAULT_WINDOW);
         }
         return Stream.of(context.loaded(), context.detected(), context.hardCap(), DEFAULT_WINDOW)
                 .filter(Objects::nonNull)

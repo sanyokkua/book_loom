@@ -18,6 +18,7 @@ import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.profile.BuiltInRows;
+import ua.bookloom.llm.profile.ObservedReasoning;
 import ua.bookloom.llm.profile.ProfileRows;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -58,6 +59,7 @@ public final class LlmModule extends AbstractModule {
         bind(ProviderClientFactory.class).in(Singleton.class);
         bind(ModelSettingsCache.class).in(Singleton.class);
         bind(RefusalMemory.class).in(Singleton.class);
+        bind(ObservedReasoning.class).in(Singleton.class);
         bind(BuiltWrongLog.class).in(Singleton.class);
         bind(CapIgnoredLog.class).in(Singleton.class);
         bind(EngineFacts.class).in(Singleton.class);

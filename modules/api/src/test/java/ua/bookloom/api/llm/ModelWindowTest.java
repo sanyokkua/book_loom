@@ -33,4 +33,27 @@ class ModelWindowTest {
 
         assertThat(ModelWindow.of(policy, override)).isEqualTo(expected);
     }
+
+    // IF a hosted model were held to 16,384 like a local one, THEN a 200k window the provider offers at no memory cost
+    // would be wasted and a thinking model would have no room; the model's own window stands, and what is not known
+    // still falls back to the default.
+    @ParameterizedTest
+    @CsvSource({
+        // override, detected, loaded, hard cap, expected
+        ", 200000, , 16384, 200000",
+        ", 1000000, , 16384, 1000000",
+        ", 200000, 32768, 16384, 32768",
+        ", , , 16384, 16384",
+        "65536, 200000, , 16384, 65536"
+    })
+    void of_hostedModel_isNotHeldToTheDefaultWindow(
+            final @Nullable Integer override,
+            final @Nullable Integer detected,
+            final @Nullable Integer loaded,
+            final int hardCap,
+            final int expected) {
+        final ContextPolicy policy = new ContextPolicy(hardCap, OUTPUT_MAX, detected, loaded, true);
+
+        assertThat(ModelWindow.of(policy, override)).isEqualTo(expected);
+    }
 }

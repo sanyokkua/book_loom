@@ -48,8 +48,15 @@ public final class ReasoningChoice {
      * @param level the level sent, or null when no reasoning control is sent
      * @param reserves whether the call gets room for reasoning on its cap
      * @param leftOut whether a control was left out because the model or its server declares none that can be sent
+     * @param hosted whether the model runs on the provider's hardware, which gives its reserve more room
      */
-    public record Decision(@Nullable ReasoningLevel level, boolean reserves, boolean leftOut) {}
+    public record Decision(@Nullable ReasoningLevel level, boolean reserves, boolean leftOut, boolean hosted) {
+
+        /** A decision for a model on the person's own computer. */
+        public Decision(final @Nullable ReasoningLevel level, final boolean reserves, final boolean leftOut) {
+            this(level, reserves, leftOut, false);
+        }
+    }
 
     /**
      * Decides the level a call is sent.
@@ -62,13 +69,18 @@ public final class ReasoningChoice {
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(request, "request");
         final ReasoningControl control = profile.reasoning();
-        final Decision decision =
+        final Decision chosen =
                 switch (control.kind()) {
                     case NONE, UNKNOWN -> new Decision(null, false, true);
                     case UNSWITCHABLE -> new Decision(null, true, true);
                     case ALWAYS -> lowestOf(control);
                     case BOOLEAN, LEVELS -> switched(control, profile.thinking(), request);
                 };
+        final Decision decision = new Decision(
+                chosen.level(),
+                chosen.reserves(),
+                chosen.leftOut(),
+                profile.context().hosted());
         log.debug(
                 "Reasoning decided kind={} intent={} override={} control={} offValue={} sent={} reserve={}",
                 request.callKind(),
@@ -93,7 +105,7 @@ public final class ReasoningChoice {
     public static ChatRequest applied(final Decision decision, final ChatRequest request) {
         Objects.requireNonNull(decision, "decision");
         Objects.requireNonNull(request, "request");
-        final int wanted = decision.reserves() ? ReasoningReserve.tokens(request.source()) : 0;
+        final int wanted = decision.reserves() ? ReasoningReserve.tokens(request.source(), decision.hosted()) : 0;
         final OutputRoom.@Nullable Split split = wanted > 0 ? OutputRoom.split(request, wanted) : null;
         final int reserve = split == null ? 0 : split.reserve();
         log.debug(

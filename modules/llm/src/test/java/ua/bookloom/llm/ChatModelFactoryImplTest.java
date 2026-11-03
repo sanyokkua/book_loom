@@ -46,6 +46,7 @@ import ua.bookloom.llm.gate.InferenceGate;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ObservedReasoning;
 import ua.bookloom.llm.profile.ProfileRows;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -294,7 +295,8 @@ class ChatModelFactoryImplTest {
                 new BuiltWrongLog(),
                 new CapIgnoredLog(),
                 new ModelProfiles(ProfileRows.NONE),
-                new EngineFacts(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()));
+                new EngineFacts(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()),
+                new ObservedReasoning());
     }
 
     private void register(ProviderConfig config) {

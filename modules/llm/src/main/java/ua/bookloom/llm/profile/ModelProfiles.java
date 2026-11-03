@@ -152,6 +152,10 @@ public final class ModelProfiles {
     // The server knows how its copy of the model is templated: a listed capability set without "thinking" means no
     // switch is read, and with one the server's own values replace the row's.
     static ReasoningControl withFacts(final ReasoningControl row, final ModelFacts facts) {
+        if (facts.reasoningMandatory() && facts.thinkingOptions().isEmpty()) {
+            log.debug("Reasoning is mandatory and offers no level: the model thinks on every call row={}", row.kind());
+            return new ReasoningControl(ReasoningControl.Kind.UNSWITCHABLE, List.of(), null, row.serverDefault());
+        }
         final boolean listsCapabilities = !facts.capabilities().isEmpty();
         final boolean thinks = facts.capabilities().contains(THINKING)
                 || !facts.thinkingOptions().isEmpty();
