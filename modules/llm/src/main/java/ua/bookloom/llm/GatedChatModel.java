@@ -137,9 +137,12 @@ public final class GatedChatModel implements ChatModel {
     // A repeat with a raised cap, or an end with a thinking reason, says the model spent its answer thinking.
     private void notedThinking(ProviderCallResult<ChatResponse> call) {
         final AppError failed = call.result().error();
-        final FailureReason reason = failed == null
-                ? (call.sent() == null ? null : FailureReason.CAP_SPENT)
-                : FailureReason.in(failed.details()).orElse(null);
+        FailureReason reason = null;
+        if (failed != null) {
+            reason = FailureReason.in(failed.details()).orElse(null);
+        } else if (call.sent() != null) {
+            reason = FailureReason.CAP_SPENT;
+        }
         if (reason == FailureReason.CAP_SPENT || reason == FailureReason.REASONING_EXHAUSTED) {
             thinking.note(providerId, modelId, reason);
         }
