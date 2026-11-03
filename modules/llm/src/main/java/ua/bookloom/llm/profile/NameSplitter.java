@@ -176,6 +176,7 @@ final class NameSplitter {
         } else {
             work.text = head;
             work.tag = tail;
+            ctx.repo = head.contains("/") ? head : ctx.repo;
         }
     }
 

@@ -2,6 +2,7 @@ package ua.bookloom.api.llm;
 
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 
 /**
@@ -66,5 +67,31 @@ public interface ModelCapabilities {
         final Result<ContextLength> length = contextLength(selection.providerId(), selection.modelId());
         final ContextLength data = length.data();
         return length.isOk() && data != null ? data.detected() : Optional.empty();
+    }
+
+    /**
+     * What the name alone says about a model's quant, for a chip beside a listed model. Pure and offline: no provider
+     * is asked, so the tier stays {@code null} until the model's size is known.
+     *
+     * @param modelId the model id as listed or typed; never {@code null}
+     * @return the advice, or {@code null} when this port cannot read names
+     */
+    default @Nullable QuantAdvice quantAdviceByName(final String modelId) {
+        Objects.requireNonNull(modelId, "modelId");
+        return null;
+    }
+
+    /**
+     * Reads a pasted link, command or file name into what the person pasted, without opening, running or sending it.
+     *
+     * @param text what was pasted; never {@code null}
+     * @param kind the dialect of the provider the person is adding the model to; the pull command is offered for
+     *     {@link ProviderKind#OLLAMA} only
+     * @return the reading, or empty when the text is a plain model id, blank, or this port cannot read pastes
+     */
+    default Optional<PastedModel> readPasted(final String text, final ProviderKind kind) {
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(kind, "kind");
+        return Optional.empty();
     }
 }

@@ -11,15 +11,24 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelFacts;
+import ua.bookloom.api.llm.ModelInputForm;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.PastedModel;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
+import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.llm.QuantAdvice;
 import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.llm.engine.CheckedModelId;
 import ua.bookloom.llm.knowledge.LanguageAdvisor;
 import ua.bookloom.llm.knowledge.QuantAdvisor;
+import ua.bookloom.llm.profile.ModelIdentityParser;
+import ua.bookloom.llm.profile.ModelInputNormalizer;
+import ua.bookloom.llm.profile.ModelLabels;
 import ua.bookloom.llm.profile.ModelProfiles;
+import ua.bookloom.llm.profile.ParsedName;
+import ua.bookloom.llm.profile.PullCommand;
 import ua.bookloom.llm.profile.ResolvedProfile;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -38,6 +47,8 @@ public final class ModelCapabilityService implements ModelCapabilities {
     private final ModelSettingsCache settings;
     private final QuantAdvisor quants;
     private final LanguageAdvisor languages;
+    private final ModelIdentityParser parser = new ModelIdentityParser();
+    private final ModelInputNormalizer normalizer = new ModelInputNormalizer();
 
     // Served by provider and model id, so the Models tab reads it before a chat model exists. A read that throws leaves
     // the server's facts unknown; the name alone still gives the identity and the default profile.
@@ -110,6 +121,35 @@ public final class ModelCapabilityService implements ModelCapabilities {
                     cause);
             return false;
         }
+    }
+
+    @Override
+    public QuantAdvice quantAdviceByName(final String modelId) {
+        Objects.requireNonNull(modelId, "modelId");
+        log.debug("Quant advice by name model={}", modelId);
+        return quants.advise(parser.parse(modelId).identity(), null);
+    }
+
+    // Pure text reading: the normalizer and parser never open a link or run a command (PastedTextIsNeverActedOnTest).
+    @Override
+    public Optional<PastedModel> readPasted(final String text, final ProviderKind kind) {
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(kind, "kind");
+        log.debug("Reading pasted text kind={} length={}", kind, text.length());
+        if (text.isBlank()) {
+            log.debug("Pasted text is blank, nothing to explain");
+            return Optional.empty();
+        }
+        final var input = normalizer.normalise(text);
+        if (input.form() == ModelInputForm.MODEL_ID && input.repo() == null) {
+            log.debug("Pasted text is a plain id, nothing to explain");
+            return Optional.empty();
+        }
+        final ParsedName parsed = parser.parse(text);
+        final String pull = kind == ProviderKind.OLLAMA ? PullCommand.of(parsed).orElse(null) : null;
+        log.debug("Pasted text read form={} hasPull={}", input.form(), pull != null);
+        return Optional.of(new PastedModel(
+                input, ModelLabels.of(parsed.identity()), parsed.identity().quantLabel(), pull));
     }
 
     private static AppError unknownProvider() {

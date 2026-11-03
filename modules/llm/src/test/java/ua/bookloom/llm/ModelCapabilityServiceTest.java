@@ -1,6 +1,8 @@
 package ua.bookloom.llm;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
@@ -325,5 +328,54 @@ class ModelCapabilityServiceTest {
         assertThat(capabilities.loadsWithOwnSettings(new ModelSelection("ollama", "gemma4:e4b")))
                 .isFalse();
         assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL|UD-Q4_K_XL|GOOD",
+                "gemma4:e4b-mlx|''|",
+                "llama3.1:8b|''|"
+            })
+    void quantAdviceByName_name_givesTheTokenAndTheTierTheNameAlreadyJustifies(
+            final String name, final String token, final QuantTier tier) {
+        final QuantAdvice advice = capabilities.quantAdviceByName(name);
+
+        assertThat(advice).isNotNull();
+        assertThat(advice.token()).isEqualTo(token);
+        assertThat(advice.tier()).isEqualTo(tier);
+        server.verify(0, anyRequestedFor(anyUrl()));
+    }
+
+    @Test
+    void readPasted_hubBlobLinkOnOllama_givesLabelQuantAndPullCommand() {
+        final var pasted = capabilities.readPasted(
+                "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/blob/main/Qwen3.5-4B-Q4_K_M.gguf", ProviderKind.OLLAMA);
+
+        assertThat(pasted).isPresent().hasValueSatisfying(p -> {
+            assertThat(p.input().repo()).isEqualTo("unsloth/Qwen3.5-4B-GGUF");
+            assertThat(p.modelLabel()).isEqualTo("Qwen 3.5");
+            assertThat(p.quantToken()).isEqualTo("Q4_K_M");
+            assertThat(p.pullCommand()).isEqualTo("ollama pull hf.co/unsloth/Qwen3.5-4B-GGUF:Q4_K_M");
+        });
+        server.verify(0, anyRequestedFor(anyUrl()));
+    }
+
+    @Test
+    void readPasted_hubBlobLinkOnOpenAiCompatible_givesNoPullCommand() {
+        final var pasted = capabilities.readPasted(
+                "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/blob/main/Qwen3.5-4B-Q4_K_M.gguf",
+                ProviderKind.OPENAI_COMPATIBLE);
+
+        assertThat(pasted)
+                .isPresent()
+                .hasValueSatisfying(p -> assertThat(p.pullCommand()).isNull());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"gemma4:e4b", "llama3.1:8b", "   "})
+    void readPasted_plainId_isEmpty(final String text) {
+        assertThat(capabilities.readPasted(text, ProviderKind.OLLAMA)).isEmpty();
     }
 }
