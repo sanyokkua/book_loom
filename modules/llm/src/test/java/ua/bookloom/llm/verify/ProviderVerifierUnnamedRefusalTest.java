@@ -14,7 +14,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Objects;
@@ -45,7 +44,7 @@ class ProviderVerifierUnnamedRefusalTest {
     private ProviderVerifier verifier;
 
     @BeforeEach
-    void startServer() throws IOException {
+    void startServer() {
         server.start();
         final ProviderConfigs configs = new FakeProviderConfigs();
         final ProviderConfig config = new ProviderConfig(

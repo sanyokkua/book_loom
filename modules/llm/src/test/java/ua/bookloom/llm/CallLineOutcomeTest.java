@@ -106,13 +106,12 @@ class CallLineOutcomeTest {
                                 false))
                         .isOk())
                 .isTrue();
-        final ChatModel model = Objects.requireNonNull(
+        return Objects.requireNonNull(
                 Guice.createInjector(new LlmModule(name -> null), new LlmTestStorageModule(configs))
                         .getInstance(ChatModelFactory.class)
                         .create(new ModelSelection("hosted", "vendor/chat-model"))
                         .data(),
                 "chat model");
-        return model;
     }
 
     private static ChatRequest draft() {
