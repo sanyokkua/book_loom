@@ -83,7 +83,8 @@ final class InferenceStage {
 
     private Sent chatProbe(final Probe probe, final ChatRequest request) {
         final Sent call = send(probe, request);
-        final boolean reasoningRefused = call.call().rejectedCapability() == RejectedCapability.REASONING_CONTROL;
+        final boolean reasoningRefused = call.call().rejectedCapability() == RejectedCapability.REASONING_CONTROL
+                || refusedWithoutNamingAField(call.call());
         final Sent retried = reasoningRefused ? send(probe, ProbeRequests.structured(null)) : call;
         if (retried.call().rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
             final Sent plain = plainCall(probe, null);
@@ -93,6 +94,19 @@ final class InferenceStage {
                     plain.request());
         }
         return retried;
+    }
+
+    // A hosted server may answer a refused field with a bare "Invalid request"; the reasoning control is the one field
+    // this probe adds that a plain call does not carry, so it is the one taken out for the second try.
+    private static boolean refusedWithoutNamingAField(final ProviderCallResult<ChatResponse> call) {
+        final AppError error = call.result().error();
+        final boolean unnamed =
+                error != null && error.code() == ErrorCode.validation && call.rejectedCapability() == null;
+        if (unnamed) {
+            log.debug(
+                    "Provider verification probe refused with no field named; retrying without the reasoning control");
+        }
+        return unnamed;
     }
 
     private InferenceProbe plainProbe(final Probe probe) {

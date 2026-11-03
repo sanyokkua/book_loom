@@ -100,7 +100,7 @@ final class CallRecorder {
         final ServedCall served = response == null ? null : response.served();
         ledger.record(
                 new CallRecord(callKind, usage, timed.wall(), null, reason, served == null ? null : served.cost()));
-        logCall(request, attempt, timed.wall(), usage, reason, served);
+        logCall(request, attempt, timed.wall(), usage, outcome(reason, error), served);
     }
 
     // An answer after a retry is worth an INFO line: it says the retry rules saved the call.
@@ -125,7 +125,7 @@ final class CallRecorder {
             final int attempt,
             final Duration wall,
             final @Nullable TokenUsage usage,
-            final @Nullable FailureReason reason,
+            final String outcome,
             final @Nullable ServedCall served) {
         log.debug(
                 "Provider chat call model={} kind={} attempt={} wallMs={} outcome={} prompt={} completion={} cached={}"
@@ -134,7 +134,7 @@ final class CallRecorder {
                 request.callKind(),
                 attempt,
                 wall.toMillis(),
-                reason == null ? "answered" : reason.token(),
+                outcome,
                 figure(usage == null ? null : usage.prompt()),
                 figure(usage == null ? null : usage.completion()),
                 figure(usage == null ? null : usage.cachedPrompt()),
@@ -142,6 +142,16 @@ final class CallRecorder {
                         .mapToInt(message -> message.content().length())
                         .sum(),
                 servedFields(served));
+    }
+
+    // A failure no reason row explains (a client timeout, an unreachable host) is named by its error code, not lost.
+    private static String outcome(final @Nullable FailureReason reason, final @Nullable AppError error) {
+        if (reason == null) {
+            return "answered";
+        }
+        return reason == FailureReason.UNCLASSIFIED && error != null
+                ? error.code().name()
+                : reason.token();
     }
 
     // Only a reply that names its host or its price (OpenRouter) adds the fields: slugs and a number, never text.
