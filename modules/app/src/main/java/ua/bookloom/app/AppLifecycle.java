@@ -8,6 +8,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.Result;
+import ua.bookloom.llm.knowledge.KnowledgeTables;
+import ua.bookloom.llm.knowledge.ModelKnowledgeFiles;
 import ua.bookloom.persistence.sqlite.SqliteDatabase;
 
 /**
@@ -53,11 +57,12 @@ public final class AppLifecycle {
 
     /**
      * Phase 2: open resources — the database, when the graph holds one (the window's does, the command line's does
-     * not).
+     * not), and the bundled model knowledge files, whose damage is a startup error like a database that will not open.
      *
      * @param injector the built injector
      * @throws IllegalStateException if phase 1 has not completed
      * @throws com.google.inject.ProvisionException if the database cannot be opened, which is a startup error
+     * @throws IllegalStateException if a bundled knowledge file is damaged
      */
     public void phaseTwo(Injector injector) {
         Objects.requireNonNull(injector, "injector");
@@ -68,7 +73,18 @@ public final class AppLifecycle {
         } else {
             log.debug("phase 2: no database in this graph");
         }
+        loadModelKnowledge(injector);
         completed.add(PHASE_TWO);
+    }
+
+    private static void loadModelKnowledge(Injector injector) {
+        final Result<KnowledgeTables> loaded =
+                injector.getInstance(ModelKnowledgeFiles.class).load();
+        final AppError error = loaded.error();
+        if (error != null) {
+            throw new IllegalStateException("model knowledge failed to load: " + error.message(), error.cause());
+        }
+        log.info("phase 2: model knowledge loaded");
     }
 
     /**

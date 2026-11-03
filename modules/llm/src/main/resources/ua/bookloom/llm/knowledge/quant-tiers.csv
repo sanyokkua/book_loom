@@ -1,0 +1,52 @@
+# data-version: 2026-10-28
+# deliberate: Q3_K_L, Q3_K_M and Q3_K_XL at LARGE (20-35B dense) are ACCEPTABLE with a caution: the tier rests on one source.
+# deliberate: the Unsloth Dynamic composite row (Q4_K_XL / Q5_K_XL / Q6_K_XL / UD-*) is not a row; its rules live in code (task 9.3).
+# deliberate: MXFP4_MOE (converted from BF16) is dropped; MXFP4 takes the gpt-oss native cells (moe=GOOD).
+# deliberate: Q4_0_4_4, Q4_0_4_8 and Q4_0_8_8 are three REMOVED rows, one per type.
+# mapping: token=type upper-case single base type; family k+bartowski -> k, 'legacy (removed)' -> legacy; bpw = leading number of the research cell;
+# mapping: needsImatrix = first word of the research cell (yes|recommended|no|n/a); small=tier_le4b, mid=tier_7_14b, large=tier_20_35b, moe=tier_moe_small_active, upper-cased; n/a -> empty.
+token,family,bpw,needsImatrix,small,mid,large,moe,confidence,source
+F32,float,32,no,EXCELLENT,EXCELLENT,EXCELLENT,EXCELLENT,high,research 11-quants-and-names 2026-10-28
+F16,float,16,no,EXCELLENT,EXCELLENT,EXCELLENT,EXCELLENT,high,research 11-quants-and-names 2026-10-28
+BF16,float,16,no,EXCELLENT,EXCELLENT,EXCELLENT,EXCELLENT,high,research 11-quants-and-names 2026-10-28
+Q8_0,legacy,8.5,no,EXCELLENT,EXCELLENT,EXCELLENT,EXCELLENT,high,research 11-quants-and-names 2026-10-28
+Q6_K,k,6.5625,no,GOOD,EXCELLENT,EXCELLENT,EXCELLENT,medium,research 11-quants-and-names 2026-10-28
+Q6_K_L,k,6.56,no,GOOD,EXCELLENT,EXCELLENT,EXCELLENT,medium,research 11-quants-and-names 2026-10-28
+Q5_K_M,k,5.5,no,GOOD,GOOD,EXCELLENT,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q5_K_S,k,5.5,no,GOOD,GOOD,EXCELLENT,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q5_K_L,k,5.5,no,GOOD,GOOD,EXCELLENT,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q5_1,legacy,6.0,recommended,ACCEPTABLE,GOOD,GOOD,GOOD,low,research 11-quants-and-names 2026-10-28
+Q5_0,legacy,5.5,recommended,ACCEPTABLE,GOOD,GOOD,GOOD,low,research 11-quants-and-names 2026-10-28
+Q4_K_M,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q4_K_S,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
+Q4_K_L,k,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,GOOD,medium,research 11-quants-and-names 2026-10-28
+Q4_1,legacy,5.0,recommended,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,low,research 11-quants-and-names 2026-10-28
+Q4_0,legacy,4.5,recommended,POOR,POOR,ACCEPTABLE,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
+IQ4_XS,i,4.25,no,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
+IQ4_NL,i,4.5,no,ACCEPTABLE,ACCEPTABLE,GOOD,ACCEPTABLE,medium,research 11-quants-and-names 2026-10-28
+Q3_K_L,k,3.4375,no,POOR,POOR,ACCEPTABLE,POOR,medium,research 11-quants-and-names 2026-10-28; Q3 on a large dense model is acceptable with a caution (one source)
+Q3_K_M,k,3.4375,no,POOR,POOR,ACCEPTABLE,POOR,medium,research 11-quants-and-names 2026-10-28; Q3 on a large dense model is acceptable with a caution (one source)
+Q3_K_XL,k,3.44,no,POOR,POOR,ACCEPTABLE,POOR,low,research 11-quants-and-names 2026-10-28; Q3 on a large dense model is acceptable with a caution (one source)
+Q3_K_S,k,3.4375,no,UNUSABLE,POOR,POOR,POOR,medium,research 11-quants-and-names 2026-10-28
+IQ3_M,i,3.66,recommended,POOR,POOR,ACCEPTABLE,POOR,medium,research 11-quants-and-names 2026-10-28
+IQ3_S,i,3.44,recommended,POOR,POOR,ACCEPTABLE,POOR,low,research 11-quants-and-names 2026-10-28
+IQ3_XS,i,3.3,recommended,UNUSABLE,POOR,ACCEPTABLE,POOR,low,research 11-quants-and-names 2026-10-28
+IQ3_XXS,i,3.0625,yes,UNUSABLE,POOR,POOR,POOR,medium,research 11-quants-and-names 2026-10-28
+Q2_K,k,2.625,no,UNUSABLE,UNUSABLE,POOR,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+Q2_K_S,k,2.625,yes,UNUSABLE,UNUSABLE,POOR,UNUSABLE,low,research 11-quants-and-names 2026-10-28
+Q2_K_L,k,2.6,no,UNUSABLE,UNUSABLE,POOR,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+IQ2_M,i,2.7,yes,UNUSABLE,UNUSABLE,POOR,UNUSABLE,low,research 11-quants-and-names 2026-10-28
+IQ2_S,i,2.5,yes,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,low,research 11-quants-and-names 2026-10-28
+IQ2_XS,i,2.31,yes,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,low,research 11-quants-and-names 2026-10-28
+IQ2_XXS,i,2.06,yes,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+IQ1_M,i,1.75,yes,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+IQ1_S,i,1.5625,yes,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+TQ2_0,ternary,2.0625,n/a,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+TQ1_0,ternary,1.6875,n/a,UNUSABLE,UNUSABLE,UNUSABLE,UNUSABLE,medium,research 11-quants-and-names 2026-10-28
+Q2_0,ternary,2.25,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
+Q1_0,ternary,1.125,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
+MXFP4,mx,4.25,no,,,,GOOD,medium,research 11-quants-and-names 2026-10-28
+NVFP4,mx,4.5,n/a,UNMEASURED,UNMEASURED,UNMEASURED,UNMEASURED,low,research 11-quants-and-names 2026-10-28
+Q4_0_4_4,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28
+Q4_0_4_8,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28
+Q4_0_8_8,legacy,4.5,n/a,REMOVED,REMOVED,REMOVED,REMOVED,high,research 11-quants-and-names 2026-10-28

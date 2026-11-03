@@ -897,7 +897,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Test first:** both tests, run with `scripts/test-focused.sh`; both fail today (no chip, no line).
   - **Done when:** both tests are committed and their red output is pasted in the task's commit message.
 
-- [ ] 9.2 Copy the two knowledge files into `:llm` and load them once through a new `ModelKnowledgeFiles`. Model knowledge must come only from files that ship with the app, never from the network. → :llm, :api, :app
+- [x] 9.2 Copy the two knowledge files into `:llm` and load them once through a new `ModelKnowledgeFiles`. Model knowledge must come only from files that ship with the app, never from the network. → :llm, :api, :app
   - **Satisfies:** "Take model knowledge only from the files bundled with the app" (llm-provider)
   - **Depends on:** 9.1
   - **Read:** design.md D22; research `11-quants-and-names/data/quant-types.csv` and `declared-languages.csv` (owner-local data source only); the four gaps the owner's model list showed (gpt-oss's active size, MamayLM's own ru→uk run, missing declared-language rows, English under a maker with no list), restated below

@@ -20,6 +20,7 @@ module ua.bookloom.llm {
     requires org.slf4j;
 
     exports ua.bookloom.llm;
+    exports ua.bookloom.llm.knowledge;
 
     opens ua.bookloom.llm to
             com.google.guice;
@@ -46,6 +47,8 @@ module ua.bookloom.llm {
     opens ua.bookloom.llm.pseudo to
             com.google.guice;
     opens ua.bookloom.llm.response to
+            com.google.guice;
+    opens ua.bookloom.llm.knowledge to
             com.google.guice;
     opens ua.bookloom.llm.retry to
             com.google.guice;
