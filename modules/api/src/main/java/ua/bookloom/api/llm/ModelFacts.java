@@ -31,6 +31,8 @@ import org.jspecify.annotations.Nullable;
  *     {@code supported_parameters}); never null, empty when the server did not say, and then nothing is filtered
  * @param maxCompletionTokens the longest answer a hosted endpoint gives, or null when it did not say; positive when set
  * @param reasoningMandatory whether the model reasons on every call and refuses to have it turned off
+ * @param languages the language codes the server's model file lists (Ollama's {@code general.languages}), as written;
+ *     never null, empty when the server did not say. A hint that can only add a language, never remove one
  */
 public record ModelFacts(
         @Nullable String architecture,
@@ -51,7 +53,8 @@ public record ModelFacts(
         @Nullable Integer loadedContext,
         List<String> supportedParameters,
         @Nullable Integer maxCompletionTokens,
-        boolean reasoningMandatory) {
+        boolean reasoningMandatory,
+        List<String> languages) {
 
     private static final String COMPLETION = "completion";
     private static final String EMBEDDINGS = "embeddings";
@@ -63,9 +66,54 @@ public record ModelFacts(
         capabilities = List.copyOf(capabilities);
         thinkingOptions = List.copyOf(thinkingOptions);
         supportedParameters = List.copyOf(Objects.requireNonNull(supportedParameters, "supportedParameters"));
+        languages = List.copyOf(Objects.requireNonNull(languages, "languages"));
         requirePositive(contextLength, "contextLength");
         requirePositive(loadedContext, "loadedContext");
         requirePositive(maxCompletionTokens, "maxCompletionTokens");
+    }
+
+    /** Facts without a language list; for callers that read none. */
+    public ModelFacts(
+            @Nullable String architecture,
+            @Nullable String family,
+            @Nullable String format,
+            @Nullable String quant,
+            @Nullable String parameterSize,
+            List<String> capabilities,
+            List<String> thinkingOptions,
+            @Nullable String thinkingDefault,
+            @Nullable String renderer,
+            @Nullable String parser,
+            @Nullable String runner,
+            @Nullable String type,
+            @Nullable String state,
+            @Nullable String compatibility,
+            @Nullable Integer contextLength,
+            @Nullable Integer loadedContext,
+            List<String> supportedParameters,
+            @Nullable Integer maxCompletionTokens,
+            boolean reasoningMandatory) {
+        this(
+                architecture,
+                family,
+                format,
+                quant,
+                parameterSize,
+                capabilities,
+                thinkingOptions,
+                thinkingDefault,
+                renderer,
+                parser,
+                runner,
+                type,
+                state,
+                compatibility,
+                contextLength,
+                loadedContext,
+                supportedParameters,
+                maxCompletionTokens,
+                reasoningMandatory,
+                List.of());
     }
 
     /**
@@ -76,7 +124,7 @@ public record ModelFacts(
     public static ModelFacts unknown() {
         return new ModelFacts(
                 null, null, null, null, null, List.of(), List.of(), null, null, null, null, null, null, null, null,
-                null, List.of(), null, false);
+                null, List.of(), null, false, List.of());
     }
 
     /**
@@ -105,7 +153,8 @@ public record ModelFacts(
                 null,
                 supportedParameters,
                 maxCompletionTokens,
-                reasoningMandatory);
+                reasoningMandatory,
+                languages);
     }
 
     /**
@@ -134,7 +183,38 @@ public record ModelFacts(
                 loadedContext,
                 supportedParameters,
                 maxCompletionTokens,
-                reasoningMandatory);
+                reasoningMandatory,
+                languages);
+    }
+
+    /**
+     * Copies these facts with the language codes the server's model file lists.
+     *
+     * @param codes the codes as written; never null
+     * @return a copy with {@code languages} replaced and every other fact unchanged
+     */
+    public ModelFacts withLanguages(final List<String> codes) {
+        return new ModelFacts(
+                architecture,
+                family,
+                format,
+                quant,
+                parameterSize,
+                capabilities,
+                thinkingOptions,
+                thinkingDefault,
+                renderer,
+                parser,
+                runner,
+                type,
+                state,
+                compatibility,
+                contextLength,
+                loadedContext,
+                supportedParameters,
+                maxCompletionTokens,
+                reasoningMandatory,
+                codes);
     }
 
     /**

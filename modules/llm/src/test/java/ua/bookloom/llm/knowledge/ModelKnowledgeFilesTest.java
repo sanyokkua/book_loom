@@ -82,7 +82,7 @@ class ModelKnowledgeFilesTest {
         assertThat(errorOf(quant).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(quant).message()).contains("quant-tiers.csv").contains("row 56");
         assertThat(errorOf(lang).code()).isEqualTo(ErrorCode.internal);
-        assertThat(errorOf(lang).message()).contains("declared-languages.csv").contains("row 86");
+        assertThat(errorOf(lang).message()).contains("declared-languages.csv").contains("row 88");
     }
 
     @Test

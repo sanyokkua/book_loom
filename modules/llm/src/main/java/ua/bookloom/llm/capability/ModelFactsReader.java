@@ -113,6 +113,7 @@ public final class ModelFactsReader {
         draft.runner = text(details.path("runner"));
         final JsonNode info = show.path("model_info");
         draft.architecture = text(info.path("general.architecture"));
+        draft.languages = strings(info.path("general.languages"));
         for (final Map.Entry<String, JsonNode> entry : info.properties()) {
             if (entry.getKey().endsWith(CONTEXT_SUFFIX) && positive(entry.getValue())) {
                 draft.contextLength = entry.getValue().intValue();

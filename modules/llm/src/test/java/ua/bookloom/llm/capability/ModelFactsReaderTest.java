@@ -77,6 +77,37 @@ class ModelFactsReaderTest {
     }
 
     @Test
+    void read_ollamaGeneralLanguages_carriesCodes() {
+        server.stubFor(post(urlEqualTo("/api/show"))
+                .willReturn(okJson("{\"details\":{\"family\":\"x\"},\"model_info\":{"
+                        + "\"general.languages\":[\"en\",\"uk\"],\"x.context_length\":4096}}")));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+
+        final ModelFacts facts = reader.read(ollama(), "m:9b");
+
+        assertThat(facts.languages()).containsExactly("en", "uk");
+        assertThat(facts.contextLength()).isEqualTo(4096);
+    }
+
+    @Test
+    void read_ollamaGeneralLanguagesAbsent_isEmpty() {
+        server.stubFor(
+                post(urlEqualTo("/api/show")).willReturn(okJson("{\"model_info\":{\"x.context_length\":4096}}")));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+
+        assertThat(reader.read(ollama(), "m:9b").languages()).isEmpty();
+    }
+
+    @Test
+    void read_ollamaGeneralLanguagesNotAnArray_isEmpty() {
+        server.stubFor(post(urlEqualTo("/api/show"))
+                .willReturn(okJson("{\"model_info\":{\"general.languages\":\"en\",\"x.context_length\":4096}}")));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+
+        assertThat(reader.read(ollama(), "m:9b").languages()).isEmpty();
+    }
+
+    @Test
     void read_hfGgufWithoutRenderer_hasNoRendererAndNoThinkingCapability() {
         server.stubFor(post(urlEqualTo("/api/show"))
                 .willReturn(okJson("{\"capabilities\":[\"completion\"],\"details\":{\"family\":\"qwen35\","

@@ -923,7 +923,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Log:** DEBUG `quant advice model=… token=… base=… sizeClass=… tier=… source=name|facts`; DEBUG when facts and name disagree, with both.
   - **Done when:** the table test is green; `scripts/test-focused.sh` passes.
 
-- [ ] 9.4 Build `LanguageAdvisor`, which says per open language tag whether a model's maker declares it. A warning must appear only on a real gap. → :llm
+- [x] 9.4 Build `LanguageAdvisor`, which says per open language tag whether a model's maker declares it. A warning must appear only on a real gap. → :llm
   - **Satisfies:** "Say whether a model's maker declares a language" (llm-provider), "Count a language pair as tested only by BookLoom's own runs" (llm-provider)
   - **Depends on:** 9.2
   - **Read:** design.md D22; `util` language catalogue (`LanguageTags`); settings "Warn under the AI-model choice and at Start when the model does not declare the book's languages" (what the UI will read)

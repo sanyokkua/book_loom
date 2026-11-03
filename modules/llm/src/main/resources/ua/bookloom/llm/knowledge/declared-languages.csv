@@ -6,6 +6,7 @@
 # deliberate: Lapa is POSITIVE_ONLY (uk, en) with no BookLoom run.
 # deliberate: Qwen3 (119 codes) and TranslateGemma (55 codes) stay NONE: the vendors' appendices are not in the research folder, no code is invented.
 # deliberate: Mistral Small 4 is NONE: the research found CONFLICT (24 codes in metadata, 11 in prose).
+# deliberate: Mistral Small 3.2 repeats the 24 codes of 3.1 (pl and uk in, la out) so a 3.2 name reaches a row; a prefix on 3.1 would not match it.
 # deliberate: Ministral 3 Reasoning is NONE: its card list was not read. MADLAD-400 and NLLB-200 are NONE: the list is 'see metadata'.
 # mapping: non-empty declared_list -> COMPLETE with its codes (parenthetical notes dropped); ENGLISH_ONLY -> COMPLETE en; NO_STATEMENT, CLAIMED_NO_LIST, CONFLICT or an empty list -> NONE.
 # mapping: matchKind PREFIX matches whole - or : segments, the longest pattern wins, EXACT beats PREFIX; key = pattern; source = declared_where; evidence = uk_quality_evidence.
@@ -27,6 +28,7 @@ gemma3n,PREFIX,gemma3n,NONE,,card prose 'trained with data in over 140 spoken la
 gemma4,PREFIX,gemma4,NONE,,"card prose 'Out-of-the-box support for 35+ languages, pre-trained on 140+'; no metadata","26B-A4B (reasoning): Belebele-uk 95.33, MMLU-uk 86.64, FLORES 36.68, WMT en-uk 30.03 (leaderboard, best of 13); other sizes: no uk number"
 translategemma,PREFIX,translategemma,NONE,,"tech report arXiv 2601.09012: SFT/RL over the 55 WMT24++ languages (WMT24++ configs include en-uk_UA and en-ru_RU); report names en-uk as an emphasised high-resource pair and cs-uk in human eval; full list is in an appendix not read; HF repos gated, no metadata",vendor: gains over Gemma 3 on WMT24++ 55 pairs and WMT25 human MQM (incl. cs-uk +1.0-1.6); no isolated en-uk number read
 mistral-small-3.1,PREFIX,mistral-small-3.1,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata; 3.1 card prose names Russian and Ukrainian,no vendor uk number; community UNKNOWN
+mistral-small-3.2,PREFIX,mistral-small-3.2,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata (same 24 codes as 3.1; the name parser reads 3.2 as its own version),none found
 mistral-small-3,PREFIX,mistral-small-3,COMPLETE,en;fr;de;es;it;pt;zh;ja;ru;ko,HF metadata,none found
 magistral-small,PREFIX,magistral-small,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata + card prose (24 named incl. Ukrainian),none found
 devstral-small-2507,PREFIX,devstral-small-2507,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata only (inherited from Small 3.x; a coding model),n/a (coding model)

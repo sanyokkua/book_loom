@@ -58,6 +58,8 @@ final class FactsDraft {
 
     boolean reasoningMandatory;
 
+    List<String> languages = List.of();
+
     ModelFacts toFacts() {
         return new ModelFacts(
                 architecture,
@@ -78,6 +80,7 @@ final class FactsDraft {
                 loadedContext,
                 supportedParameters,
                 maxCompletionTokens,
-                reasoningMandatory);
+                reasoningMandatory,
+                languages);
     }
 }
