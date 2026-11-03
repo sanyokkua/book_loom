@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.client.MessageShaper;
+import ua.bookloom.llm.engine.EngineTraits.OffSwitch;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.RejectedCapability;
@@ -36,7 +37,20 @@ final class InferenceStage {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
     }
 
-    private record Sent(ProviderCallResult<ChatResponse> call, ChatRequest request) {}
+    // reasoningSwitch is the stored name of the reasoning field the probe was answered under, null when none was.
+    private record Sent(
+            ProviderCallResult<ChatResponse> call,
+            ChatRequest request,
+            @Nullable String reasoningSwitch) {
+
+        Sent(final ProviderCallResult<ChatResponse> call, final ChatRequest request) {
+            this(call, request, null);
+        }
+
+        Sent under(final @Nullable String name) {
+            return new Sent(call, request, name);
+        }
+    }
 
     private record Probe(
             ProviderClient client,
@@ -63,6 +77,10 @@ final class InferenceStage {
         final Probe probe =
                 new Probe(client, providerId, modelId, shaper, Objects.requireNonNull(announcer, "announcer"));
         final Sent first = chatProbe(probe, ProbeRequests.structured(ReasoningLevel.OFF));
+        return answered(probe, first).withThinking(first.reasoningSwitch());
+    }
+
+    private InferenceProbe answered(final Probe probe, final Sent first) {
         final ProviderCallResult<ChatResponse> call = first.call();
         if (call.result().isErr()) {
             return failed(RetriedCalls.error(call.result()), first.request());
@@ -81,19 +99,34 @@ final class InferenceStage {
         return plainProbe(probe);
     }
 
+    // The reasoning control is asked for as off; a server that refuses it is asked once for the lowest effort, which
+    // many
+    // hosted models take when they refuse "none", and only when that is refused too is the control taken out. The field
+    // that was answered is kept, so later calls send it.
     private Sent chatProbe(final Probe probe, final ChatRequest request) {
         final Sent call = send(probe, request);
-        final boolean reasoningRefused = call.call().rejectedCapability() == RejectedCapability.REASONING_CONTROL
-                || refusedWithoutNamingAField(call.call());
-        final Sent retried = reasoningRefused ? send(probe, ProbeRequests.structured(null)) : call;
+        Sent retried = call.under(call.call().result().isOk() ? OffSwitch.REASONING_EFFORT.wireName() : null);
+        if (reasoningRefused(call.call())) {
+            final Sent low = send(probe, ProbeRequests.structured(ReasoningLevel.LOW));
+            final boolean lowTaken = !reasoningRefused(low.call());
+            log.debug("Provider verification probe: none refused, lowest effort taken={}", lowTaken);
+            retried = lowTaken
+                    ? low.under(OffSwitch.REASONING_EFFORT_LOW.wireName())
+                    : send(probe, ProbeRequests.structured(null));
+        }
         if (retried.call().rejectedCapability() == RejectedCapability.STRUCTURED_OUTPUT) {
             final Sent plain = plainCall(probe, null);
             return new Sent(
                     new ProviderCallResult<>(
                             plain.call().result(), plain.call().retryAfter(), RejectedCapability.STRUCTURED_OUTPUT),
-                    plain.request());
+                    plain.request(),
+                    null);
         }
         return retried;
+    }
+
+    private static boolean reasoningRefused(final ProviderCallResult<ChatResponse> call) {
+        return call.rejectedCapability() == RejectedCapability.REASONING_CONTROL || refusedWithoutNamingAField(call);
     }
 
     // A hosted server may answer a refused field with a bare "Invalid request"; the reasoning control is the one field

@@ -18,6 +18,8 @@ final class StatusMappings {
     private static final int HTTP_FORBIDDEN = 403;
     private static final int HTTP_BAD_REQUEST = 400;
     private static final int HTTP_UNPROCESSABLE = 422;
+    // A hosted model taken out of service answers 410; it is gone for good, so it reads as a model the provider lacks.
+    private static final int HTTP_GONE = 410;
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private static final int HTTP_SERVER_ERROR_MIN = 500;
     private static final int HTTP_SERVER_ERROR_MAX = 599;
@@ -51,7 +53,7 @@ final class StatusMappings {
                     "Provider server error",
                     "The AI program had an error (HTTP " + status + ").");
         }
-        return requestStatus(status);
+        return status == HTTP_GONE ? modelNotFound() : requestStatus(status);
     }
 
     static Mapping modelNotFound() {

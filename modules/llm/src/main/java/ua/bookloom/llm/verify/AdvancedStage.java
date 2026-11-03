@@ -157,6 +157,21 @@ final class AdvancedStage {
         keep(providerId, modelId, new ProbeVerdicts(verdict, null, null, null), null);
     }
 
+    /**
+     * Keeps the reasoning field the inference stage's probe was answered under as the model's thinking switch.
+     *
+     * @param switchName the stored name of the field that worked; non-null
+     */
+    void keepThinking(final String providerId, final String modelId, final String switchName) {
+        log.debug("Inference stage thinking switch provider={} model={} switch={}", providerId, modelId, switchName);
+        final Verdict verdict = new Verdict(Outcome.HONOURED, AdvancedChecks.SOURCE, clock.instant());
+        keep(
+                providerId,
+                modelId,
+                new ProbeVerdicts(null, new ProbeVerdicts.ThinkingVerdict(switchName, verdict), null, null),
+                null);
+    }
+
     private void keep(
             final String providerId,
             final String modelId,

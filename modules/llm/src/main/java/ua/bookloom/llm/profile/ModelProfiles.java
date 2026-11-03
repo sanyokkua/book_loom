@@ -46,6 +46,8 @@ public final class ModelProfiles {
     // The default profile's request half as a row, so a model with no row goes through the same layering.
     private static final ProfileRow DEFAULT_ROW = defaultRow();
 
+    private static final String LOWEST_EFFORT = "low";
+
     private final ProfileRows rows;
     private final ModelIdentityParser parser = new ModelIdentityParser();
     private final MetadataWins metadataWins = new MetadataWins();
@@ -74,8 +76,10 @@ public final class ModelProfiles {
         final ModelIdentity identity = identity(modelId, facts);
         final Optional<ProfileRows.Picked> picked = rows.pick(identity, facts);
         final ProfileRow row = picked.map(ProfileRows.Picked::row).orElse(DEFAULT_ROW);
-        final ReasoningControl reasoning =
-                engineGate(engine, settings.probeVerdicts(), withFacts(row.reasoning(), facts));
+        final ReasoningControl reasoning = foundSwitch(
+                engine,
+                settings.probeVerdicts(),
+                engineGate(engine, settings.probeVerdicts(), withFacts(row.reasoning(), facts)));
         final ModelReport.Match match = isOverridden(settings)
                 ? ModelReport.Match.OVERRIDE
                 : picked.map(ProfileRows.Picked::match).orElse(DEFAULT_MATCH);
@@ -197,6 +201,32 @@ public final class ModelProfiles {
     }
 
     // A server whose off switch is only known once a check proved it gets no control until a verdict says honoured.
+    // A thinking switch a check found on a server that declares none (a hosted generic one) is the model's control: a
+    // model the rows know nothing about gets it, and one whose server refused "none" is held at its lowest effort.
+    private static ReasoningControl foundSwitch(
+            final ServerEngine engine, final ProbeVerdicts verdicts, final ReasoningControl reasoning) {
+        final ProbeVerdicts.ThinkingVerdict checked = verdicts.thinkingSwitch();
+        if (EngineTraits.of(engine).offSwitch() != EngineTraits.OffSwitch.PROBED
+                || checked == null
+                || checked.switchName() == null
+                || checked.verdict().outcome() != ProbeVerdicts.Outcome.HONOURED
+                || reasoning.kind() == ReasoningControl.Kind.UNSWITCHABLE
+                || reasoning.kind() == ReasoningControl.Kind.ALWAYS) {
+            return reasoning;
+        }
+        final boolean undeclared =
+                reasoning.kind() == ReasoningControl.Kind.NONE || reasoning.kind() == ReasoningControl.Kind.UNKNOWN;
+        final boolean lowest =
+                EngineTraits.OffSwitch.REASONING_EFFORT_LOW.wireName().equals(checked.switchName());
+        log.debug("Found switch applied engine={} switch={} undeclared={}", engine, checked.switchName(), undeclared);
+        if (lowest) {
+            return new ReasoningControl(ReasoningControl.Kind.LEVELS, List.of(LOWEST_EFFORT), LOWEST_EFFORT, null);
+        }
+        return undeclared
+                ? new ReasoningControl(ReasoningControl.Kind.BOOLEAN, List.of(), BOOLEAN_OFF, null)
+                : reasoning;
+    }
+
     private static ReasoningControl engineGate(
             final ServerEngine engine, final ProbeVerdicts verdicts, final ReasoningControl reasoning) {
         final boolean switchable =

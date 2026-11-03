@@ -31,7 +31,6 @@ import ua.bookloom.llm.retry.RetryPolicy;
 /** Binds one model id to a provider client and retries typed failures outside the shared inference gate. */
 @Slf4j
 public final class GatedChatModel implements ChatModel {
-
     // A retry after a timeout asks for at most three quarters of the original cap.
     private static final int RETRY_CAP_NUMERATOR = 3;
     private static final int RETRY_CAP_DENOMINATOR = 4;

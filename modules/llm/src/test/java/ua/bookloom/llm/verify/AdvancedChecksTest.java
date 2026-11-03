@@ -261,7 +261,7 @@ class AdvancedChecksTest {
 
         assertThat(report.stages()).extracting(StageOutcome::stage).doesNotContain(VerificationStage.ADVANCED);
         server.verify(0, postRequestedFor(urlEqualTo(CHAT)).withRequestBody(containing("advanced_check")));
-        assertThat(verdicts()).isEqualTo(ProbeVerdicts.none());
+        assertThat(verdicts()).isEqualTo(new ProbeVerdicts(null, verdicts().thinkingSwitch(), null, null));
     }
 
     @Test

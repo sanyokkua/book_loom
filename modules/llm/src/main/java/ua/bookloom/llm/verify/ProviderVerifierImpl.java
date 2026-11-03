@@ -27,6 +27,7 @@ import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.llm.engine.EngineRegistry;
+import ua.bookloom.llm.engine.EngineTraits;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.provider.ProviderClientFactory;
@@ -306,6 +307,7 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         if (schema != null) {
             advanced.keepSchema(config.id(), modelId, schema);
         }
+        keepThinking(config, modelId, outcome, probe);
         final String body = client.requestBody(modelId, probe.sent());
         final String reply = probe.response() == null ? "" : probe.response().content();
         return StageOutcomes.withExchange(
@@ -315,6 +317,18 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
                         probe,
                         new VerificationExchanges.Bodies(body, pretty.of(body), reply, pretty.of(reply)),
                         client.chatUrl().orElse(null)));
+    }
+
+    // A server whose off switch is not known ahead is sent the field its inference probe was answered under: the check
+    // finds the value, so the person need not run the advanced checks for a model to run without long reasoning.
+    private void keepThinking(ProviderConfig config, String modelId, StageOutcome outcome, InferenceProbe probe) {
+        final String name = probe.thinkingSwitch();
+        if (name == null
+                || outcome.status() != StageStatus.PASSED
+                || EngineTraits.of(config.effectiveEngine()).offSwitch() != EngineTraits.OffSwitch.PROBED) {
+            return;
+        }
+        advanced.keepThinking(config.id(), modelId, name);
     }
 
     private Duration since(long startNanos) {

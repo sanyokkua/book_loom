@@ -167,6 +167,7 @@ final class EngineShaping {
         final boolean thinks = level.isThinking();
         return switch (field) {
             case REASONING_EFFORT -> ReasoningFields.effort(effort(level));
+            case REASONING_EFFORT_LOW -> ReasoningFields.effort(thinks ? effort(level) : REASONING_LOW);
             case TEMPLATE_KWARG -> new ReasoningFields(null, Map.of(ENABLE_THINKING, thinks), null, null);
             case ENABLE_THINKING -> new ReasoningFields(null, null, thinks, null);
             case REASONING_OBJECT -> new ReasoningFields(null, null, null, reasoningObject(modelId, level, thinks));
@@ -179,7 +180,8 @@ final class EngineShaping {
         if (forced != null || traits.offSwitch() != OffSwitch.REASONING_OBJECT) {
             return Map.of(ENABLED, thinks);
         }
-        return OpenRouterReasoning.object(facts.lastRead(config.id(), modelId).orElse(null), level);
+        return OpenRouterReasoning.object(
+                modelId, facts.lastRead(config.id(), modelId).orElse(null), level);
     }
 
     /**
@@ -253,7 +255,7 @@ final class EngineShaping {
                 checking
                         ? OffSwitch.REASONING_EFFORT
                         : provedSwitch(verdicts.apply(modelId)).orElse(null);
-            case REASONING_EFFORT, ENABLE_THINKING, REASONING_OBJECT -> traits.offSwitch();
+            case REASONING_EFFORT, REASONING_EFFORT_LOW, ENABLE_THINKING, REASONING_OBJECT -> traits.offSwitch();
         };
     }
 

@@ -232,6 +232,8 @@ class HttpErrorMapperTest {
                 chatStatus(401, PRIVATE_BODY, ErrorCode.auth),
                 chatStatus(403, PRIVATE_BODY, ErrorCode.auth),
                 chatStatus(404, PRIVATE_BODY, ErrorCode.modelNotFound),
+                // A hosted model taken out of service answers 410 Gone.
+                chatStatus(410, PRIVATE_BODY, ErrorCode.modelNotFound),
                 statusCase(
                         404,
                         PRIVATE_BODY,

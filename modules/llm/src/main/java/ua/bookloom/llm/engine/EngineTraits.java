@@ -110,6 +110,11 @@ public record EngineTraits(
     public enum OffSwitch {
         /** {@code reasoning_effort}: {@code none}, {@code low} or {@code medium}. */
         REASONING_EFFORT("reasoning_effort"),
+        /**
+         * {@code reasoning_effort} held at {@code low}: a hosted model that refuses {@code none} and accepts the lowest
+         * effort. Only a check stores it; no engine starts with it.
+         */
+        REASONING_EFFORT_LOW("reasoning_effort:low"),
         /** {@code chat_template_kwargs.enable_thinking}, honoured only when the chat template reads that variable. */
         TEMPLATE_KWARG("chat_template_kwargs.enable_thinking"),
         /** Unsloth's top-level {@code enable_thinking}. */
