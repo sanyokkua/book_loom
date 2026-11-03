@@ -62,6 +62,29 @@ class CallLineOutcomeTest {
     // from an unknown failure in the log; the line must say it was a timeout.
     @Test
     void chat_noAnswerBeforeTheTimeout_callLineSaysTimeout() {
+        final ChatModel model = hostedModel();
+        final Logger bookloom = (Logger) LoggerFactory.getLogger("ua.bookloom");
+        final Level before = bookloom.getLevel();
+        final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        bookloom.setLevel(Level.DEBUG);
+        logged.start();
+        bookloom.addAppender(logged);
+        try {
+            assertThat(Objects.requireNonNull(model.chat(draft()).error(), "call must fail")
+                            .code())
+                    .isEqualTo(ErrorCode.timeout);
+        } finally {
+            bookloom.detachAppender(logged);
+            bookloom.setLevel(before);
+        }
+
+        assertThat(logged.list.stream()
+                        .map(ILoggingEvent::getFormattedMessage)
+                        .filter(message -> message.startsWith("Provider chat call ")))
+                .allSatisfy(line -> assertThat(line).contains("outcome=timeout"));
+    }
+
+    private ChatModel hostedModel() {
         final FakeProviderConfigs configs = new FakeProviderConfigs();
         assertThat(configs.save(new ProviderConfig(
                                 "hosted",
@@ -89,25 +112,7 @@ class CallLineOutcomeTest {
                         .create(new ModelSelection("hosted", "vendor/chat-model"))
                         .data(),
                 "chat model");
-        final Logger bookloom = (Logger) LoggerFactory.getLogger("ua.bookloom");
-        final Level before = bookloom.getLevel();
-        final ListAppender<ILoggingEvent> logged = new ListAppender<>();
-        bookloom.setLevel(Level.DEBUG);
-        logged.start();
-        bookloom.addAppender(logged);
-        try {
-            assertThat(Objects.requireNonNull(model.chat(draft()).error(), "call must fail")
-                            .code())
-                    .isEqualTo(ErrorCode.timeout);
-        } finally {
-            bookloom.detachAppender(logged);
-            bookloom.setLevel(before);
-        }
-
-        assertThat(logged.list.stream()
-                        .map(ILoggingEvent::getFormattedMessage)
-                        .filter(message -> message.startsWith("Provider chat call ")))
-                .allSatisfy(line -> assertThat(line).contains("outcome=timeout"));
+        return model;
     }
 
     private static ChatRequest draft() {

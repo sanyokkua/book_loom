@@ -56,6 +56,19 @@ class ProviderVerifierUnnamedRefusalTest {
                         Duration.ofSeconds(3))
                 .withEngine(ServerEngine.GENERIC, ServerEngine.GENERIC, null);
         assertThat(configs.save(config).isOk()).isTrue();
+        stubChat();
+        verifier = Guice.createInjector(
+                        com.google.inject.util.Modules.override(new LlmModule()).with(new AbstractModule() {
+                            @Override
+                            protected void configure() {
+                                bind(ProviderConfigs.class).toInstance(configs);
+                                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
+                            }
+                        }))
+                .getInstance(ProviderVerifier.class);
+    }
+
+    private void stubChat() {
         server.stubFor(get(urlEqualTo("/v1/models"))
                 .willReturn(okJson(
                         "{\"object\":\"list\",\"data\":[{\"id\":\"vendor/chat-model\",\"object\":\"model\"}]}")));
@@ -69,15 +82,6 @@ class ProviderVerifierUnnamedRefusalTest {
                 .withRequestBody(notContaining("reasoning_effort"))
                 .willReturn(okJson("{\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":"
                         + "{\"role\":\"assistant\",\"content\":\"{\\\"status\\\":\\\"ok\\\"}\"}}]}")));
-        verifier = Guice.createInjector(
-                        com.google.inject.util.Modules.override(new LlmModule()).with(new AbstractModule() {
-                            @Override
-                            protected void configure() {
-                                bind(ProviderConfigs.class).toInstance(configs);
-                                bind(ModelSettingsRepository.class).toInstance(new FakeModelSettingsRepository());
-                            }
-                        }))
-                .getInstance(ProviderVerifier.class);
     }
 
     @AfterEach
