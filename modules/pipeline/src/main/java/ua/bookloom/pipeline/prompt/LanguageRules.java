@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.BriefChoices;
@@ -81,7 +82,8 @@ public final class LanguageRules implements LanguageSupport {
         this.loader = Objects.requireNonNull(loader, "loader");
         this.genericOnly = genericOnly;
         this.generic = LanguageFile.load(GENERIC_FILE, DIRECTORY + GENERIC_FILE + SUFFIX, loader);
-        for (final String key : GENERIC_REQUIRED) {
+        for (final String key : Stream.concat(GENERIC_REQUIRED.stream(), FrameWording.GENERIC_KEYS.stream())
+                .toList()) {
             if (generic.get(key) == null) {
                 throw new IllegalStateException(DIRECTORY + GENERIC_FILE + SUFFIX + " lacks key '" + key + "'");
             }
@@ -386,7 +388,7 @@ public final class LanguageRules implements LanguageSupport {
         return LanguageRules.class.getResourceAsStream(fileName);
     }
 
-    private static String name(final String tag) {
+    static String name(final String tag) {
         final String name = Locale.forLanguageTag(tag.strip()).getDisplayLanguage(Locale.ENGLISH);
         return name.isBlank() ? PromptLanguages.describe(tag) : name;
     }

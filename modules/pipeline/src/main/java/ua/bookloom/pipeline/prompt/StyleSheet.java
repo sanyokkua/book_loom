@@ -4,13 +4,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.Address;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 import ua.bookloom.util.hash.HashUtil;
@@ -49,7 +52,8 @@ public record StyleSheet(String text, String hash) {
         final StyleSheet sheet = ofText(text);
         log.debug(
                 "Derived style sheet register={} names={} foreign={} footnotes={} units={} balance={} band={} "
-                        + "genreSet={} voiceEraSet={} audienceSet={} allDefault={} hash={}",
+                        + "genreSet={} voiceEraSet={} audienceSet={} apostrophe={} quotes={} address={} conventions={} "
+                        + "allDefault={} hash={}",
                 brief.register(),
                 brief.names(),
                 brief.foreignPassages(),
@@ -60,6 +64,10 @@ public record StyleSheet(String text, String hash) {
                 !isBlank(brief.genre()),
                 !isBlank(brief.voiceEra()),
                 !isBlank(brief.audience()),
+                brief.apostrophe(),
+                brief.quoteStyle(),
+                brief.defaultAddress(),
+                brief.conventions(),
                 isDefault,
                 sheet.hash());
         log.trace("Style sheet text {}", sheet.text());
@@ -102,8 +110,26 @@ public record StyleSheet(String text, String hash) {
         lines.add(phrases.phrase(brief.names()));
         lines.add(phrases.phrase(brief.footnotes()));
         lines.add(phrases.phrase(brief.units()));
+        addPolicyKeys(lines, brief, phrases);
         addEntry(lines, "", phrases.narrator(brief.narrator()));
         return lines;
+    }
+
+    // The keys the person declared on the Book Brief; an undeclared one is the target file's default and says nothing.
+    private static void addPolicyKeys(final List<String> lines, final BookBrief brief, final StylePhrases phrases) {
+        final String apostrophe = brief.apostrophe();
+        final QuoteStyle quotes = brief.quoteStyle();
+        final Address address = brief.defaultAddress();
+        if (apostrophe != null) {
+            lines.add(phrases.apostrophe(apostrophe));
+        }
+        if (quotes != null) {
+            lines.add(phrases.quoteStyle(quotes));
+        }
+        if (address != null) {
+            lines.add(phrases.address(address));
+        }
+        new TreeMap<>(brief.conventions()).forEach((name, choice) -> lines.add(phrases.convention(name, choice)));
     }
 
     private static void addEntry(final List<String> lines, final String label, @Nullable final String value) {
@@ -126,6 +152,10 @@ public record StyleSheet(String text, String hash) {
                 && isBlank(brief.genre())
                 && isBlank(brief.voiceEra())
                 && isBlank(brief.audience())
-                && brief.narrator().person() == NarratorPerson.UNSPECIFIED;
+                && brief.narrator().person() == NarratorPerson.UNSPECIFIED
+                && brief.apostrophe() == null
+                && brief.quoteStyle() == null
+                && brief.defaultAddress() == null
+                && brief.conventions().isEmpty();
     }
 }

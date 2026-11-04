@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.checks.Sentences;
 import ua.bookloom.pipeline.checks.StoryMeasure;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.narrator.DialogueShare;
 import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
@@ -46,7 +46,6 @@ final class BookSamples {
     // Below this a window shows too little of the book to judge, whatever a tiny model window leaves.
     private static final int MIN_WINDOW_TOKENS = 200;
     private static final int MIN_FALLBACK_CHARS = 40;
-    private static final int PERCENT = 100;
     private static final String LOCATOR_SEPARATOR = " · ";
 
     private record Line(int paragraph, String text, String segmentId) {}
@@ -320,24 +319,6 @@ final class BookSamples {
     }
 
     private static int dialoguePercent(final String passage, @Nullable final String languageTag) {
-        long letters = 0;
-        long spoken = 0;
-        for (final String paragraph : passage.lines().toList()) {
-            final String narration = NarratorDetector.narration(paragraph, languageTag);
-            letters += paragraph.chars().filter(Character::isLetter).count();
-            spoken += narration.length() == paragraph.length() ? spokenLetters(paragraph, narration) : 0;
-        }
-        return letters == 0 ? 0 : (int) Math.round((double) spoken * PERCENT / letters);
-    }
-
-    // The letters the narration blanked: what the characters say.
-    private static long spokenLetters(final String paragraph, final String narration) {
-        long count = 0;
-        for (int index = 0; index < paragraph.length(); index++) {
-            if (Character.isLetter(paragraph.charAt(index)) && narration.charAt(index) == ' ') {
-                count++;
-            }
-        }
-        return count;
+        return DialogueShare.of(passage.lines().toList(), languageTag).percent();
     }
 }

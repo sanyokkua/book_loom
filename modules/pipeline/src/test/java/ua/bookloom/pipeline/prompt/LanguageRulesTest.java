@@ -34,6 +34,15 @@ class LanguageRulesTest {
             names.policy.KEEP_ORIGINAL=c
             names.terms=d
             names.convention=e
+            rule.marks=f
+            rule.dialogue=g
+            rule.address=h
+            rule.numbers=i
+            rule.inflect=j
+            reminder.marks=k
+            reminder.dialogue=l
+            reminder.narrator=m
+            illustration.label=n
             """;
 
     /** Opens an in-memory set of files and records every name it was asked for. */

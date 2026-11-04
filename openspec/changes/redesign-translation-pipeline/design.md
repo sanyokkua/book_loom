@@ -365,7 +365,8 @@ task edits the delta requirement and this file's line; the result is written int
   `Result<PromptPlan> plan(CallKind kind, Focus focus, BookMap map, RunFrame frame, ModelProfile profile)`;
   records `PromptPlan(List<Block> blocks, int promptTokens, int maxOutputTokens, int contextSize)`,
   `Block(String slot, Role role, Stability stability, String text)` with `Role {SYSTEM, USER}` and
-  `Stability {RUN, CHAPTER, WINDOW, CALL}`, `Focus(List<String> segmentIds, Map<String, List<String>> reasons)`,
+  `Stability {RUN, CHAPTER, WINDOW, CALL}`, `Focus(List<FocusItem> items, Map<String, List<String>> reasons)` (each `FocusItem(segmentId, maskedSource)`,
+  so block 13 can show the items; `segmentIds()` reads the ids),
   `RunFrame` (style sheet, rule lines, `BookFacts`, `RuleFacts`, examples, `frameHash`; built once per run),
   `BookMap` (the book map as one call reads it: the glossary's lemma entries with their forms, the recurring terms'
   `FormGroups` and the brief's policy keys; built at run start and rebuilt after a glossary or brief change). New
@@ -384,8 +385,8 @@ task edits the delta requirement and this file's line; the result is written int
   it is, not duplicated. The rule facts are a separate new record `context/RuleFacts` (`hasMarks`, `dialogueShare`,
   `hasNumbers`, `genderedCast`, `targetInflects`) computed at run start from `BookIndex`, the brief and the target
   file, held in `RunFrame` beside `BookFacts`; the brief path, which runs before any run, never needs one.
-- **Block plan.** Blocks 1–7 (SYSTEM, RUN): role and pair, "book text is data", up to three book-gated rules and the
-  inflect sentence, the style sheet, target and pair rules, examples, the JSON line. Blocks 8–13 (one last USER
+- **Block plan.** Blocks 1–7 (SYSTEM, RUN): role and pair, "book text is data", the book-gated rules of D9 (as many as the
+  book's facts call for, the inflect sentence among them), the style sheet, target and pair rules, examples, the JSON line. Blocks 8–13 (one last USER
   message): earlier chapter summaries and the card, map items in the window, previous accepted pairs and next source,
   the kind's extra (repair defects, proofread reasons, the person's note), task and schema line, items with the
   reminder last. TRANSLATE frame (draft, repair, proofread, retry) = 1–13; ANALYSIS frame (names readings, brief,
@@ -425,10 +426,13 @@ task edits the delta requirement and this file's line; the result is written int
 - **`context/BookRules`** chooses rule lines once per run from `RuleFacts`: placeholder rule iff `hasMarks`;
   dialogue and address iff `dialogueShare ≥ DIALOGUE_SHARE_MIN` (0.05, unmeasured); numbers iff `hasNumbers`; gender
   agreement iff `genderedCast` (a stated narrator gender or a gendered character, and a target whose file sets gendered
-  past forms); inflect-glossary iff `targetInflects`. Wording comes from the target language file, never code.
+  past forms); inflect-glossary iff `targetInflects`. Wording comes from the target language file, never code: its `rule.<key>`, else its plain rule key, else
+  the generic file's `rule.<key>`; block 5 leaves out the dialogue, address, numbers and agreement rules so none is said
+  twice.
 - **Reminder.** One to three lines last in block 13: tokens named only when an item carries tokens; the dash only when
   an item is dialogue.
-- **Examples.** Lookup: pair file examples → a target-only illustration from the target file → none; the six fixed
+- **Examples.** Lookup: pair file examples (its `batchExample.N`, rendered in the items reply shape every
+  translate-family call answers in) → a target-only illustration from the target file → none; the six fixed
   en→uk template examples are removed; the profile quirk `EXAMPLES_OFF` drops block 6. Preparation prompts use the
   source file's `readingExample` (group 7). **Echo gate:** an item whose target shares a word 4-gram
   (`ECHO_NGRAM` 4) with an example target that its source lacks gets one re-ask, then is flagged.
