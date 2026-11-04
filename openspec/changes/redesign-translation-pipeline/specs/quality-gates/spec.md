@@ -354,6 +354,11 @@ WHEN a drafted segment holds a BLOCK or REPAIR finding, the application SHALL at
 - **WHEN** Balanced and the draft carries only a NOTE-level `number` finding
 - **THEN** no repair call is made
 
+#### Scenario: A verified reviewer blocker left gets no repair
+
+- **WHEN** Balanced, the draft carries a REPAIR finding naming `что`, and the reviewer's quoted issue `дверзі` is still in the text after its directed fix
+- **THEN** no repair call is made and the segment is FLAGGED, because no repair the code can check clears the reviewer's evidence
+
 ### Requirement: Count only content-changing calls as the one repair
 
 The application SHALL NOT count as the one repair a code repair, the one format re-ask for an unreadable reply or for ids a batch reply missed, a transport retry, or the first draft of an id a batch reply missed; it SHALL count a placeholder repair and the re-draft of a batch item that came back but failed its gate as the one repair.

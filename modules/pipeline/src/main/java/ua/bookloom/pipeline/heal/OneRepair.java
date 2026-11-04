@@ -103,11 +103,12 @@ final class OneRepair {
     Result<Repaired> repair(final DraftOutcome.Drafted outcome, final Resolution standing) {
         final String segmentId = outcome.segment().id();
         final List<QaFinding> defects = SegmentFindings.defects(standing.qa());
-        final Fixing fixing = fixing(outcome, defects);
+        final Fixing fixing = standing.verifiedBlockersLeft() > 0 ? Fixing.NONE : fixing(outcome, defects);
         log.debug(
-                "Fixing decision segment={} defects={} mode={} repairs={} canRepair={} fixing={}",
+                "Fixing decision segment={} defects={} verifiedBlockersLeft={} mode={} repairs={} canRepair={} fixing={}",
                 segmentId,
                 defects.size(),
+                standing.verifiedBlockersLeft(),
                 settings.dial().repair(),
                 settings.repairs(),
                 canRepair(outcome),
@@ -141,7 +142,9 @@ final class OneRepair {
     }
 
     // Balanced and Max repair every BLOCK or REPAIR finding; Fast spends a call only on formatting marks the code
-    // restore could not put back, and a review retry spends none.
+    // restore could not put back, and a review retry spends none. A segment the reviewer left a verified blocker on
+    // spends none either (decided by the caller): no code check can clear that evidence, so the segment is flagged
+    // whatever the repair did.
     private Fixing fixing(final DraftOutcome.Drafted outcome, final List<QaFinding> defects) {
         if (defects.isEmpty() || !settings.repairs() || !canRepair(outcome)) {
             return Fixing.NONE;

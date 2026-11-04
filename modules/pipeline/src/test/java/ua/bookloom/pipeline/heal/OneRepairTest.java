@@ -99,6 +99,34 @@ class OneRepairTest {
         assertThat(decided.machineTarget()).isEqualTo("Велемир сказав, что ключ у кишені.");
     }
 
+    // IF a verified reviewer blocker still stood, THEN the repair would be sent and kept and the segment flagged
+    // anyway.
+    @Test
+    void repair_verifiedReviewerBlockerLeft_flagsWithNoRepairCall() {
+        final Segment segment = plain("Он открыл старую дверь, что вела в сад.");
+        final String draft = "Він відчинив старі дверзі, что вели в сад.";
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":[{\"criterion\":"
+                        + "\"meaning\",\"quote\":\"дверзі\",\"replacement\":\"вікна\"}]}]}"))
+                .answer(readable(targetReply(draft)))
+                .answer(readable(targetReply("Він відчинив старі двері, що вели в сад.")));
+        final LoopSettings reviewed = new LoopSettings(
+                ReviewMode.UNATTENDED,
+                new DialParameters(2, RepairMode.ONE, 1, false, false),
+                frame("ru"),
+                NamePolicy.TRANSLITERATE,
+                List.of());
+
+        final SegmentOutcome decided = decide(drafted(segment, draft), "ru", model, reviewed);
+
+        assertThat(model.requests())
+                .extracting(request ->
+                        Objects.requireNonNull(request.responseFormat()).name())
+                .containsExactly("reviewer", "directed-fix");
+        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(decided.machineTarget()).isEqualTo(draft);
+    }
+
     @Test
     void repair_repairWorse_keepsDraftWithProofreadMark() {
         final Segment segment = plain("Где ключ и письмо?");
