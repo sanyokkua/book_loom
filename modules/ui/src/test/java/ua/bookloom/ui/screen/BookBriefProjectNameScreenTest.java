@@ -116,7 +116,7 @@ class BookBriefProjectNameScreenTest extends BriefRunScreenTestBase {
         onFx(() -> button("brief-rename").fire());
         ProjectFixtures.awaitBackgroundIdle(injector);
         final var renamed = stored("uk", NameOrigin.USER, "Gothic Gravity");
-        projects.edits().onRename(Result.ok(new ProjectChange.Saved(renamed.project())));
+        projects.edits().onRename(Result.ok(new ProjectChange.Saved(renamed.project(), 0)));
         projects.willList(List.of(renamed));
 
         onFx(() -> rename.rename("Gothic Gravity"));

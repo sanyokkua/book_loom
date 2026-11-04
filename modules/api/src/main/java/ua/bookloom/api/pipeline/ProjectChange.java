@@ -18,11 +18,6 @@ public sealed interface ProjectChange {
      */
     record Saved(Project project, int rechecked) implements ProjectChange {
 
-        /** A stored change that re-checked no segment. */
-        public Saved(final Project project) {
-            this(project, 0);
-        }
-
         /** Validates the project and the count. */
         public Saved {
             Objects.requireNonNull(project, "project");

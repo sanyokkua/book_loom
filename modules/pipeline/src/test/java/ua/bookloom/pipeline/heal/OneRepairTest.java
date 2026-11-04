@@ -88,7 +88,8 @@ class OneRepairTest {
                         frame("ru"),
                         NamePolicy.TRANSLITERATE,
                         List.of("Велемир"),
-                        List.of("Велемир → Велемир"))
+                        List.of("Велемир → Велемир"),
+                        List.of())
                 .withPinnedTargets(List.of("Велемир"))
                 .withNames(List.of(velemir));
 

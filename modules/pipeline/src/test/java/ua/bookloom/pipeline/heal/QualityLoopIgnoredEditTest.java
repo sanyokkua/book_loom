@@ -69,7 +69,8 @@ class QualityLoopIgnoredEditTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of(),
-                pairs);
+                pairs,
+                List.of());
         final ChunkDecider decider = Objects.requireNonNull(
                 loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
                         .data());

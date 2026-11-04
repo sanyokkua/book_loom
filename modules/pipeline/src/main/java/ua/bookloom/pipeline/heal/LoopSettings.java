@@ -47,57 +47,6 @@ public record LoopSettings(
         List<GlossaryEntry> names,
         boolean repairs) {
 
-    /** Settings whose drafts may be repaired. */
-    public LoopSettings(
-            final ReviewMode reviewMode,
-            final DialParameters dial,
-            final CallFrame frame,
-            final NamePolicy namePolicy,
-            final List<String> glossaryTerms,
-            final List<String> glossaryPairs,
-            final List<String> characters,
-            final ReviewerSheets reviewerSheets,
-            final UnitRole unitRole,
-            final List<String> pinnedTargets) {
-        this(
-                reviewMode,
-                dial,
-                frame,
-                namePolicy,
-                glossaryTerms,
-                glossaryPairs,
-                characters,
-                reviewerSheets,
-                unitRole,
-                pinnedTargets,
-                List.of(),
-                true);
-    }
-
-    /** Settings that know no pinned entry. */
-    public LoopSettings(
-            final ReviewMode reviewMode,
-            final DialParameters dial,
-            final CallFrame frame,
-            final NamePolicy namePolicy,
-            final List<String> glossaryTerms,
-            final List<String> glossaryPairs,
-            final List<String> characters,
-            final ReviewerSheets reviewerSheets,
-            final UnitRole unitRole) {
-        this(
-                reviewMode,
-                dial,
-                frame,
-                namePolicy,
-                glossaryTerms,
-                glossaryPairs,
-                characters,
-                reviewerSheets,
-                unitRole,
-                List.of());
-    }
-
     /** Settings for a chunk of a body unit. */
     public LoopSettings(
             final ReviewMode reviewMode,
@@ -117,7 +66,10 @@ public record LoopSettings(
                 glossaryPairs,
                 characters,
                 reviewerSheets,
-                UnitRole.BODY);
+                UnitRole.BODY,
+                List.of(),
+                List.of(),
+                true);
     }
 
     /** These settings for a chunk of a unit with another role. */
@@ -230,17 +182,6 @@ public record LoopSettings(
                 glossaryPairs,
                 characters,
                 ReviewerSheets.fixed(new ReviewerCall.Terms(glossaryPairs, List.of()), characters));
-    }
-
-    /** Settings for a chunk whose reviewer is shown no character sheet. */
-    public LoopSettings(
-            final ReviewMode reviewMode,
-            final DialParameters dial,
-            final CallFrame frame,
-            final NamePolicy namePolicy,
-            final List<String> glossaryTerms,
-            final List<String> glossaryPairs) {
-        this(reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, List.of());
     }
 
     /** Settings for a chunk whose glossary has no rendering the reviewer needs to check. */

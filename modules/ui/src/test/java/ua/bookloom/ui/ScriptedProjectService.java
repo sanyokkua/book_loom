@@ -273,7 +273,7 @@ public final class ScriptedProjectService implements ProjectService {
         return scripted != null
                 ? scripted
                 : Result.ok(new ProjectChange.Saved(
-                        projectOf(projectId, imports.getLast()).withBrief(brief)));
+                        projectOf(projectId, imports.getLast()).withBrief(brief), 0));
     }
 
     @Override

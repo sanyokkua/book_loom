@@ -116,7 +116,7 @@ class BookBriefSamePairScreenTest extends BriefRunScreenTestBase {
         chooseGerman();
         projects.edits()
                 .onMakeSecondTranslation(Result.ok(new ProjectChange.Saved(
-                        stored("de", NameOrigin.USER, SECOND_NAME).project())));
+                        stored("de", NameOrigin.USER, SECOND_NAME).project(), 0)));
 
         onFx(() -> samePair.makeSecond(SECOND_NAME));
         ProjectFixtures.awaitBackgroundIdle(injector);

@@ -47,6 +47,6 @@ final class ProjectTranslations {
                 source.id(),
                 candidate.id(),
                 candidate.brief().targetLanguage());
-        return Result.ok(new ProjectChange.Saved(candidate));
+        return Result.ok(new ProjectChange.Saved(candidate, 0));
     }
 }

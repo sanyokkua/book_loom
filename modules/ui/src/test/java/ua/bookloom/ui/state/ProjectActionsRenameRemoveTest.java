@@ -47,7 +47,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
     @Test
     void rename_confirmed_callsTheServiceWithTheTypedNameAndRefreshesTheList() throws Exception {
         listStored(UK, DE);
-        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK.withName("New name", NameOrigin.USER))));
+        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK.withName("New name", NameOrigin.USER), 0)));
         renameRowOfUk();
         final int listedBefore = service.listCalls();
 
@@ -62,7 +62,7 @@ class ProjectActionsRenameRemoveTest extends ProjectActionsTestBase {
     @Test
     void rename_useAutomaticName_callsTheServiceWithNull() throws Exception {
         listStored(UK, DE);
-        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK)));
+        service.edits().onRename(Result.ok(new ProjectChange.Saved(UK, 0)));
         renameRowOfUk();
 
         onFx(() -> rename.rename(null));
