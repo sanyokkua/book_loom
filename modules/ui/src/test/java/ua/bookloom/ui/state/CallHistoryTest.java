@@ -39,17 +39,16 @@ class CallHistoryTest {
                 .isEqualTo("reply 120");
     }
 
-    // IF a row showed the pipeline's prompt name (draft-batch-json, placeholder-repair), THEN the person would read a
+    // IF a row showed the pipeline's prompt name (draft-batch-json, repair), THEN the person would read a
     // machine code where the live card says what the call did.
     @Test
     void modelOf_callsWithPromptNamesAsLabels_namesEachRowByItsKindInWords() {
         final CallSnapshot batch = ChunkFixtures.draft(1, CallKind.DRAFT, 1, 2).answered("{}", null, Duration.ZERO);
-        final CallSnapshot repair =
-                ChunkFixtures.draft(2, CallKind.PLACEHOLDER_REPAIR, 1).answered("{}", null, Duration.ZERO);
+        final CallSnapshot repair = ChunkFixtures.draft(2, CallKind.REPAIR, 1).answered("{}", null, Duration.ZERO);
 
         final ProgressDialogModel model = CallHistory.modelOf(List.of(batch, repair), NOW, MESSAGES);
 
-        assertThat(model.rows()).extracting(StepEntry::label).containsExactly("Translate", "Placeholder repair");
+        assertThat(model.rows()).extracting(StepEntry::label).containsExactly("Translate", "Repair");
     }
 
     // IF a run with no call opened a dialog with a phantom row, THEN the list would show a call that never happened.

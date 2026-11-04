@@ -19,6 +19,12 @@ import ua.bookloom.api.llm.SourceSize;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ChatRequests {
 
+    /**
+     * The sampling seed of a call that follows a refused or faulted reply: the same request at the same sampling would
+     * repeat the same answer. The value is arbitrary; it only differs from none.
+     */
+    public static final int RETRY_SEED = 8191;
+
     // Every call BookLoom makes asks for thinking off; the model's profile and the person's thinking choice on
     // Settings › Models decide what is sent (design D20).
     private static final ReasoningLevel INTENT = ReasoningLevel.OFF;

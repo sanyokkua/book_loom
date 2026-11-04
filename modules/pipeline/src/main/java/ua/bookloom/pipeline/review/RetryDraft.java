@@ -63,7 +63,7 @@ import ua.bookloom.pipeline.typography.TypographyGate;
  * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
  * draft saw, from the stored snapshot's texts alone, adds the next paragraph's target when the book holds one by then
  * (the run's batch showed the model what came next), shows the reviewer the snapshot's character sheet, and is decided
- * by the run's own draft step, checks, reviewer and acceptance rule — the quality loop with no repair round. A segment
+ * by the run's own draft step, checks, reviewer and acceptance rule — the quality loop with no fixing call. A segment
  * the run drafted in pieces is drafted in the same pieces, each carrying the note. It never queues behind a running
  * book: while the latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED
  * segment. The consistency pass reuses the draft and decision alone ({@link #candidate}) and stores by its own rule.
@@ -268,7 +268,7 @@ public final class RetryDraft {
         return budget;
     }
 
-    // The run's own quality loop with no repair round: the same evaluation, the same one-pair reviewer (labelled s1)
+    // The run's own quality loop with no fixing call: the same evaluation, the same one-pair reviewer (labelled s1)
     // when the brief's dial enables it, and the same acceptance rule. The mode is asked once per retry, so a change in
     // Settings reaches the next retry and one retry never mixes two.
     private Result<SegmentOutcome> decide(
@@ -280,14 +280,15 @@ public final class RetryDraft {
         final BookBrief brief = plan.brief();
         final LoopSettings settings = new LoopSettings(
                         current,
-                        DialParameters.of(brief.dial()).withoutRepairRounds(),
+                        DialParameters.of(brief.dial()),
                         plan.frame(),
                         brief.names(),
                         SnapshotTerms.termNames(plan.snapshot()),
                         SnapshotTerms.pairs(plan.snapshot()),
                         // Uncut lists (LoopSettings' fixed sheets): a retry reviews one pair, so nothing to cut.
                         plan.snapshot().characters())
-                .withPinnedTargets(SnapshotTerms.pinnedTargets(plan.snapshot()));
+                .withPinnedTargets(SnapshotTerms.pinnedTargets(plan.snapshot()))
+                .withoutRepair();
         log.debug(
                 "retry: deciding segment={} dial={} reviewPasses={}",
                 plan.segment().id(),

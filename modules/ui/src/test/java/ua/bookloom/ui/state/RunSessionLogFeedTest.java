@@ -38,7 +38,7 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
     @EnumSource(
             value = CallKind.class,
             mode = Mode.EXCLUDE,
-            names = {"DIRECTED_FIX", "STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"})
+            names = {"DIRECTED_FIX", "STRUCTURAL_REPAIR", "REPAIR"})
     void answeredCall_logsATechnicalInfoLineWithItsKindLocatorAttemptAndDuration(final CallKind kind) {
         final RunSession session = session();
         session.onEvent(started("ch07.xhtml:41", LOCATOR, "He opened the old door."));
@@ -50,29 +50,32 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
                 .containsExactly(technicalCall(WaitingCall.tokenOf(kind), " · " + LOCATOR, "0", "1", "0:01"));
     }
 
-    // IF a directed fix looked like a routine call, THEN the person could not see which segments the model repaired.
-    @Test
-    void answeredDirectedFix_logsAFixLine() {
+    // IF a repair or a directed fix looked like a routine call, THEN the person could not see which segments the
+    // model repaired.
+    @ParameterizedTest
+    @EnumSource(
+            value = CallKind.class,
+            names = {"DIRECTED_FIX", "REPAIR"})
+    void answeredRepair_logsARepairedLine(final CallKind kind) {
         final RunSession session = session();
         session.onEvent(started("s-1", LOCATOR, "Text."));
 
-        session.onEvent(call("s-1", CallKind.DIRECTED_FIX));
+        session.onEvent(call("s-1", kind));
         tick(session);
 
         assertThat(logEntries())
                 .containsExactly(LogEntry.of(
                         LogKind.REPAIRED,
                         MessageKey.LOG_MODEL_CALL,
-                        List.of("directed_fix", " · " + LOCATOR, "0", "1", "0:01")));
+                        List.of(WaitingCall.tokenOf(kind), " · " + LOCATOR, "0", "1", "0:01")));
     }
 
-    // IF a structure or placeholder repair did not read as a retry, THEN a model that keeps breaking tags would not
-    // show.
+    // IF a format re-ask did not read as a retry, THEN a model that keeps breaking its reply's shape would not show.
     @ParameterizedTest
     @EnumSource(
             value = CallKind.class,
-            names = {"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"})
-    void answeredRepairCall_logsARetryLine(final CallKind kind) {
+            names = {"STRUCTURAL_REPAIR"})
+    void answeredFormatReAsk_logsARetryLine(final CallKind kind) {
         final RunSession session = session();
         session.onEvent(started("s-1", LOCATOR, "Text."));
 

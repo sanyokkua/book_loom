@@ -48,7 +48,7 @@ record CallHeadings(MessageKey input, MessageKey output) {
             case REVISION -> REVISION;
             case SUMMARY -> SUMMARY;
             case FILE_NAME -> FILE_NAME;
-            case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, REVIEW, DIRECTED_FIX -> GENERIC;
+            case DRAFT, STRUCTURAL_REPAIR, REPAIR, REVIEW, DIRECTED_FIX -> GENERIC;
         };
     }
 }

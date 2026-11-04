@@ -52,7 +52,7 @@ public sealed interface DraftOutcome {
      *     as the gate answered it — what is evaluated and recorded as the masked target; {@code null} exactly when
      *     {@code restoredTarget} is
      * @param restoredTarget the reply restored through the placeholder gate, or {@code null} when the draft still
-     *     failed that gate after its own placeholder repair
+     *     failed that gate after the code repairs
      * @param gateFinding the high {@code markup} finding raised by {@code placeholder} when {@code restoredTarget}
      *     is {@code null}; {@code null} when the gate passed
      * @param pieceRedraft how to draft the segment's pieces again, or {@code null} when it was drafted whole
@@ -62,6 +62,8 @@ public sealed interface DraftOutcome {
      *     words when no target passed; {@code null} when the gate passed or no such form exists
      * @param normalised the low {@code normalised} finding saying the typography pass changed the reply, or
      *     {@code null} when it left it as it was or the reply did not restore
+     * @param repairCall how the one repair of a segment drafted whole is sent, or {@code null} when the draft came
+     *     with none — a segment drafted in pieces is repaired through {@code pieceRedraft} instead
      */
     record Drafted(
             Segment segment,
@@ -74,8 +76,37 @@ public sealed interface DraftOutcome {
             @Nullable PieceRedraft pieceRedraft,
             @Nullable QaFinding autoRepair,
             @Nullable String rejectedForm,
-            @Nullable QaFinding normalised)
+            @Nullable QaFinding normalised,
+            @Nullable RepairCall repairCall)
             implements DraftOutcome {
+
+        /** A reply with no repair call of its own. */
+        public Drafted(
+                final Segment segment,
+                final String maskedSource,
+                final List<LockedRendering> lockedRenderings,
+                final String maskedReply,
+                @Nullable final String maskedForm,
+                @Nullable final String restoredTarget,
+                @Nullable final QaFinding gateFinding,
+                @Nullable final PieceRedraft pieceRedraft,
+                @Nullable final QaFinding autoRepair,
+                @Nullable final String rejectedForm,
+                @Nullable final QaFinding normalised) {
+            this(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    autoRepair,
+                    rejectedForm,
+                    normalised,
+                    null);
+        }
 
         /** A reply whose typography was left as written. */
         public Drafted(
@@ -162,9 +193,31 @@ public sealed interface DraftOutcome {
             lockedRenderings = List.copyOf(lockedRenderings);
         }
 
-        /** Whether the segment was drafted in pieces, so a repair round drafts them again. */
+        /** Whether the segment was drafted in pieces, so its repair drafts them again. */
         public boolean inPieces() {
             return pieceRedraft != null;
+        }
+
+        /**
+         * This draft repaired, when it needs it, through {@code call}.
+         *
+         * @param call the non-null repair call built with the draft's own context and mask
+         * @return this draft carrying the call
+         */
+        public Drafted withRepair(final RepairCall call) {
+            return new Drafted(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    autoRepair,
+                    rejectedForm,
+                    normalised,
+                    Objects.requireNonNull(call, "call"));
         }
     }
 

@@ -29,43 +29,36 @@ class SegmentTranslatorFormattingRepairTest {
         documents = Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
     }
 
-    // IF a complete token sequence restores as an empty Markdown link, THEN one formatting repair can correct it.
+    // IF a complete token sequence restores as an empty Markdown link, THEN code places the pair again by position
+    // before any model call, and the draft carries the low auto-restored note.
     @Test
-    void translate_detachedLinkPair_repairsAndAcceptsCorrectedTarget() {
+    void translate_detachedLinkPair_isPlacedAgainByCodeWithNoCall() {
         final Segment segment = segmentOf("See [chapter two](ch2.md) now.");
-        final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "See translated chapter two ⟦g0⟧ ⟦g1⟧ now.", "See ⟦g0⟧translated chapter two⟦g1⟧ now.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("See translated chapter two ⟦g0⟧ ⟦g1⟧ now.");
 
         final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
-        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
         assertThat(DraftStepFixtures.drafted(result).restoredTarget())
-                .isEqualTo("See [translated chapter two](ch2.md) now.");
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("Paired placeholders must enclose nonblank translated text");
+                .isEqualTo("See [translated chapter](ch2.md) two now.");
+        assertThat(DraftStepFixtures.drafted(result).autoRepair()).isNotNull();
+        assertThat(model.requests()).hasSize(1);
     }
 
-    // The placeholder repair tells the model which rule the gate refused, not only which tokens are required.
+    // IF a reply empties a pair, THEN code places it again before any model call.
     @Test
-    void translate_emptiedPairReply_placeholderRepairNamesTheRule() {
+    void translate_emptiedPairReply_isPlacedAgainByCodeWithNoCall() {
         final Segment segment = segmentOf("The *second* marked paragraph.");
-        final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "Другий ⟦g0⟧⟦g1⟧ позначений абзац.", "Другий ⟦g0⟧позначений⟦g1⟧ абзац.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("Другий ⟦g0⟧⟦g1⟧ позначений абзац.");
 
         final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
         assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("<RejectedTarget>\nДругий ⟦g0⟧⟦g1⟧ позначений абзац.\n</RejectedTarget>")
-                .contains(
-                        "Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n[What is wrong with the rejected target]\n")
-                .contains("emptied the formatting around its words");
+        assertThat(DraftStepFixtures.drafted(result).autoRepair()).isNotNull();
+        assertThat(model.requests()).hasSize(1);
     }
 
     // IF a task marker is dropped, THEN it is put back first without a model call, keeping its checked state.

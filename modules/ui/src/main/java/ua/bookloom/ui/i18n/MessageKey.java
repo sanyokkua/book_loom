@@ -1206,8 +1206,12 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_UP_TO("settings.generation.quality.upTo"),
     /** Row of the quality table: earlier translated segments sent with a draft. */
     SETTINGS_GENERATION_QUALITY_PRECEDING("settings.generation.quality.preceding"),
-    /** Row of the quality table: directed-fix rounds. */
+    /** Row of the quality table: what a segment that fails a check is given. */
     SETTINGS_GENERATION_QUALITY_REPAIR("settings.generation.quality.repair"),
+    /** Cell of the repair row: one repair call. */
+    SETTINGS_GENERATION_QUALITY_REPAIR_ONE("settings.generation.quality.repair.one"),
+    /** Cell of the repair row: only lost formatting marks are drafted again. */
+    SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY("settings.generation.quality.repair.marks_only"),
     /** Row of the quality table: reviewer passes. */
     SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
     /** Row of the quality table: the backward revision. */

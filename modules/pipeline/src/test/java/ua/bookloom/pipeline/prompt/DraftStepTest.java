@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 class DraftStepTest {
 
     @ParameterizedTest
-    @CsvSource({"DRAFT,DRAFT", "STRUCTURAL_REPAIR,STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR,PLACEHOLDER_REPAIR"})
+    @CsvSource({"DRAFT,DRAFT", "STRUCTURAL_REPAIR,STRUCTURAL_REPAIR", "REPAIR,REPAIR"})
     void promptName_eachStep_isTheMatchingPrompt(final DraftStep step, final PromptName expected) {
         assertThat(step.promptName()).isEqualTo(expected);
     }

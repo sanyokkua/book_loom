@@ -19,7 +19,7 @@ import ua.bookloom.pipeline.DisplayText;
  * only, rewrites few enough words. The score is a code count because no judge model is available at run time; its
  * weights and the cap are unmeasured named constants, and tests assert vetoes and orderings, never their values.
  *
- * <p>It also holds the blocker comparison the repair rounds and the export pass read until their callers move here
+ * <p>It also holds the blocker comparison the export pass, and the one repair of a text that is no translation, read
  * ({@link #isWorseByBlockers}).
  */
 @Slf4j
@@ -63,7 +63,7 @@ public final class NeverWorse {
     /**
      * Whether a changed text is worse than the one it would replace by its blockers alone: more failed hard gates, or
      * as many and more blocking checks. Equal is not worse, because a fix the checks cannot see (a gender, a name)
-     * leaves them equal. This is the comparison the repair rounds and the export pass used before the gate.
+     * leaves them equal.
      *
      * @param candidate the non-null evaluated new text
      * @param before the non-null evaluated text it would replace

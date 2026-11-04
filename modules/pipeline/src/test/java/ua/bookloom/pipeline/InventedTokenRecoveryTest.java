@@ -42,28 +42,16 @@ class InventedTokenRecoveryTest {
         documents = Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
     }
 
+    // A token standing for a word cannot be dropped by code without losing the word, so the draft is left to the
+    // quality loop's one repair, with no call in the draft step.
     @Test
-    void translate_nameReplacedByAnInventedToken_isRepairedByTheModelWithANoteNotStripped() {
+    void translate_nameReplacedByAnInventedToken_isLeftForTheOneRepairWithNoCall() {
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "Слова «важкий» і «легкий» описують вагу, а не масу, і ⟦g1⟧ ніколи не дозволяла студентам їх плутати.",
-                "Слова «важкий» і «легкий» описують вагу, а не масу, і Венс ніколи не дозволяла студентам їх плутати.");
+                "Слова «важкий» і «легкий» описують вагу, а не масу, і ⟦g1⟧ ніколи не дозволяла студентам їх плутати.");
 
         final DraftOutcome.Drafted drafted = drafted(model);
 
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("⟦g1⟧ is not a placeholder of this text; write names as plain text.");
-        assertThat(drafted.restoredTarget()).contains("і Венс ніколи");
-    }
-
-    @Test
-    void translate_inventedTokenKeptByTheRepairToo_isNeverRestoredWithoutTheName() {
-        final ScriptedChatModel model = TranslationJobTestSupport.replies(
-                "Слова описують вагу, а не масу, і ⟦g1⟧ ніколи не дозволяла студентам їх плутати.",
-                "Слова описують вагу, а не масу, і ⟦g1⟧ ніколи не дозволяла студентам їх плутати.");
-
-        final DraftOutcome.Drafted drafted = drafted(model);
-
+        assertThat(model.requests()).hasSize(1);
         assertThat(drafted.restoredTarget()).isNull();
         assertThat(drafted.gateFinding()).isNotNull();
     }

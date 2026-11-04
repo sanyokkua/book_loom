@@ -417,6 +417,22 @@ The application SHALL replace a segment's draft by its repair only when the repa
 - **WHEN** the repair equals the draft
 - **THEN** the draft stays and no further call is made
 
+### Requirement: Keep the repair of a text that is no translation when it has fewer blockers
+
+WHEN the text a repair would replace stands on no machine translation — a refusal, an echo of the source, a reply in the wrong language or one whose formatting marks were lost — the application SHALL keep a repair that passes the hard gates, differs from that text and holds no more blocking checks, without the never-worse gate's text vetoes.
+
+**Source**: `design.md#d13--one-repair-the-outcome-table-and-fasts-lost-marks-retry`, `design.md#d14--the-never-worse-gate`. In plain words: the never-worse vetoes protect a translation's quotes, clauses, numbers and names; a refusal or an untranslated echo has none worth protecting, so comparing them would throw away a good repair because the refusal held a comma.
+
+#### Scenario: A refusal is replaced by its repair
+
+- **WHEN** Balanced, the draft of `He opened the old door.` is `I'm sorry, but I can't translate this text.` and the repair is `Він відчинив старі двері.`
+- **THEN** the repair becomes the target and the segment is ACCEPTED
+
+#### Scenario: A repair that echoes the source again is not kept
+
+- **WHEN** the draft is the echo `HE OPENED THE OLD DOOR.` and the repair is the same echo
+- **THEN** the draft stays and the segment is FLAGGED
+
 ### Requirement: Read a segment's outcome from the findings left after the one repair
 
 After the one repair, or on the draft at Fast, the application SHALL read the findings left on the text that stays: a BLOCK finding means FLAGGED; only REPAIR-level findings mean ACCEPTED with a proofread mark; only NOTE-level findings mean ACCEPTED with an audit mark; none means ACCEPTED with no mark.

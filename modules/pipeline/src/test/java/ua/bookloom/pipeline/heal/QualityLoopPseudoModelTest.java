@@ -24,7 +24,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * {@link QualityLoop} driven by the real, deterministic {@link PseudoChatModel} on Balanced, over the three review
- * modes: an echo the pseudo model can never fix (D8's reference fixture) is FLAGGED after its repair budget, and a
+ * modes: an echo the pseudo model can never fix (D8's reference fixture) is FLAGGED after its one repair, and a
  * short line the pseudo model translates correctly by chance ("Yes, sir." → "YES, SIR.") is ACCEPTED at confidence
  * 0.85 — the reviewer call reads only the short line, because the echo is refused by the checks, and the pseudo
  * reviewer never asks for an edit
@@ -45,8 +45,8 @@ class QualityLoopPseudoModelTest {
     void nextDecision_pseudoModelOnBalanced_flagsTheEchoAndAcceptsTheShortLine(final ReviewMode mode) {
         final Segment echoSegment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo.md"), "He opened the *old* door.");
-        final DraftOutcome.Drafted echoOutcome =
-                QualityLoopFixtures.drafted(echoSegment, documents, "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+        final DraftOutcome.Drafted echoOutcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(echoSegment, documents, "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR."));
         assertThat(echoOutcome.restoredTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");
         final Segment shortSegment = QualityLoopFixtures.markdownSegment(tempDir.resolve("short.md"), "Yes, sir.");
         final DraftOutcome.Drafted shortOutcome = QualityLoopFixtures.drafted(shortSegment, documents, "YES, SIR.");
@@ -62,10 +62,10 @@ class QualityLoopPseudoModelTest {
         final SegmentOutcome accepted =
                 Objects.requireNonNull(decider.nextDecision().data());
 
-        // One reviewer call (for the short line only) plus one directed fix for the echo; no second fix because the
-        // pseudo model's fix returns the echo unchanged.
+        // One reviewer call (for the short line only) plus the echo's one repair, which the pseudo model answers with
+        // the echo again.
         assertThat(requests).hasSize(2);
-        assertThat(responseFormatNames(requests)).containsExactly("reviewer", "directed-fix");
+        assertThat(responseFormatNames(requests)).containsExactly("reviewer", "repair");
 
         assertThat(flagged.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(flagged.machineTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");

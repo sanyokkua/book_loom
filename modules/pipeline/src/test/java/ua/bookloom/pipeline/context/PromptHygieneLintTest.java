@@ -80,8 +80,8 @@ class PromptHygieneLintTest {
             Map.entry("passFocus", "This is a second pass over text already reviewed once."),
             Map.entry("rejectedReply", "not json"),
             Map.entry("diagnostic", "the reply is not a JSON object"),
-            Map.entry("rejectedTarget", "Гейл і Моро відчинили двері."),
-            Map.entry("gateNote", "a token was dropped"),
+            Map.entry("previousAttempt", "Гейл і Моро відчинили двері."),
+            Map.entry("defects", "markup (HIGH): a token was dropped"),
             Map.entry(
                     "pairs",
                     "<Pair id=\"s1\"><Source>" + SOURCE + "</Source><Candidate>" + TARGET + "</Candidate></Pair>"),
@@ -138,7 +138,7 @@ class PromptHygieneLintTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"},
+            names = {"STRUCTURAL_REPAIR", "REPAIR"},
             mode = EnumSource.Mode.EXCLUDE)
     void staticPrefix_everyCall_isTheSameBytesForTwoCalls(final PromptName name) {
         final String first = system(name);

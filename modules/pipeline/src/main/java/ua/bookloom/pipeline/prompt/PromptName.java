@@ -75,15 +75,18 @@ public enum PromptName {
             null,
             new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),
 
-    /** The correction call after a target fails the placeholder-multiset gate. */
-    PLACEHOLDER_REPAIR(
-            "placeholder-repair",
-            CallKind.PLACEHOLDER_REPAIR,
-            "placeholder-repair",
+    /**
+     * The one repair of a draft that kept a blocking or repair-level finding: the draft's prompt with the previous
+     * attempt and its defects, at a low temperature so the second try stays close to what was right.
+     */
+    REPAIR(
+            "repair",
+            CallKind.REPAIR,
+            "repair",
             DraftSchema.SCHEMA,
-            new Temperatures(0.2, null),
+            new Temperatures(0.1, null),
             null,
-            new Slots(Set.of("rejectedTarget", TOKENS), Set.of("gateNote"))),
+            new Slots(Set.of("previousAttempt", "defects", TOKENS), Set.of())),
 
     /**
      * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a

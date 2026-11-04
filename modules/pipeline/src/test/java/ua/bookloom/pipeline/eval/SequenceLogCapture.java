@@ -24,10 +24,9 @@ final class SequenceLogCapture implements AutoCloseable {
 
     private static final Pattern FALLBACK =
             Pattern.compile("Batch item falls back to its own draft segmentId=(\\S+) status=(\\S+) problems=(.*)");
-    private static final Pattern FIRST_EVALUATION = Pattern.compile("Evaluated segment=(\\S+) round=0 ");
+    private static final Pattern FIRST_EVALUATION = Pattern.compile("Evaluated segment=(\\S+) repairs=0 ");
     private static final String GATES_FAILED = "hardGatesPass=false";
-    private static final Pattern FIRST_REPAIR =
-            Pattern.compile("Round choice segment=(\\S+) round=1 kind=directed-fix findingKinds=\\[(.*)]");
+    private static final Pattern FIRST_REPAIR = Pattern.compile("one repair segment=(\\S+) findings=\\[(.*)] keep=.*");
     private static final Pattern COMMA = Pattern.compile(",\\s*");
     private static final String REFUSED = "Edit refused";
 
@@ -67,7 +66,7 @@ final class SequenceLogCapture implements AutoCloseable {
         return failed;
     }
 
-    /** The findings that sent the given segments to their first repair round, counted per finding kind. */
+    /** The findings that sent the given segments to their one repair, counted per finding kind. */
     Map<String, Integer> firstRepairKinds(final Set<String> segmentIds) {
         final Map<String, Integer> kinds = new LinkedHashMap<>();
         for (final ILoggingEvent event : snapshot()) {

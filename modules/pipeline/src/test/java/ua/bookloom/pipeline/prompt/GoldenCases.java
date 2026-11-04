@@ -25,7 +25,7 @@ final class GoldenCases {
             "draft-unknown-source",
             "draft-zh-hant",
             "structural-repair",
-            "placeholder-repair");
+            "repair");
 
     static List<ChatMessage> render(final String name, final BiFunction<String, String, DraftPromptBuilder> builders) {
         return switch (name) {
@@ -39,10 +39,15 @@ final class GoldenCases {
                 builders.apply("en", "uk")
                         .messagesForStructuredRepair(
                                 segment(SOURCE), DraftContext.empty(), "Він відчинив", "was not a JSON object");
-            case "placeholder-repair" ->
+            case "repair" ->
                 builders.apply("en", "uk")
-                        .messagesForPlaceholderRepair(
-                                segment(SOURCE), DraftContext.empty(), "Він відчинив ⟦g0⟧старі двері.", null);
+                        .messagesForRepair(
+                                segment(SOURCE),
+                                DraftContext.empty(),
+                                SOURCE,
+                                "",
+                                "Він відчинив ⟦g0⟧старі двері.",
+                                "markup (HIGH): Missing: ⟦g1⟧.");
             default -> throw new IllegalArgumentException(name);
         };
     }

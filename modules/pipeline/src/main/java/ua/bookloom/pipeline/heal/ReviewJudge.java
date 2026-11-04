@@ -86,7 +86,7 @@ public final class ReviewJudge {
         final ReviewResolver resolver = new ReviewResolver(
                 tools.applier(),
                 tools.directedFix(),
-                new RoundEvaluator(tools.gate(), settings),
+                new ReplyEvaluator(tools.gate(), settings),
                 settings,
                 tools.calls());
         return resolver.resolve(outcome, initialQa, item).map(resolution -> {

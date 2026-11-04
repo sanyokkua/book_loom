@@ -13,12 +13,16 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.PieceRedraft;
+import ua.bookloom.pipeline.heal.RepairCall;
+import ua.bookloom.pipeline.heal.RepairReplies;
+import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -30,12 +34,16 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
- * The draft step: one draft call, with at most one structural and one placeholder repair, whose reply is read by
- * design D3's reply precedence. It decides nothing — a reply it can use goes to the quality loop, which accepts,
+ * The draft step: one draft call, with at most one structural re-ask, whose reply is read by design D3's reply
+ * precedence; marks the reply lost are put back by code. It decides nothing — a reply it can use goes to the quality loop, which accepts,
  * repairs or flags it — so the chunk runner and a review retry share one draft step.
  */
 @Slf4j
 public final class SegmentTranslator {
+
+    /** The code repairs of a refused reply, in their order: put back what it lost, then place every token again. */
+    private static final List<PlaceholderRepair> CODE_REPAIRS =
+            List.of(PlaceholderRepair.RESTORE_MISSING, PlaceholderRepair.REWRAP_ALL);
 
     private final GateFunction gate;
     private final ModelCalls calls;
@@ -114,8 +122,7 @@ public final class SegmentTranslator {
         return send(attempt, DraftStep.DRAFT, "", "");
     }
 
-    // A structural repair follows only a draft, a placeholder repair a draft or a structural repair, so the step tells
-    // which repairs are already used.
+    // A structural repair follows only a draft, so the step tells whether it is already used.
     private Result<DraftOutcome> send(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
@@ -124,11 +131,42 @@ public final class SegmentTranslator {
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(
-                attempt,
-                Objects.requireNonNull(reply.data()),
-                step != DraftStep.DRAFT,
-                step == DraftStep.PLACEHOLDER_REPAIR);
+        return decideResponse(attempt, Objects.requireNonNull(reply.data()), step != DraftStep.DRAFT);
+    }
+
+    /**
+     * How the one repair of a segment drafted whole is sent: the draft's own prompt and context, the previous attempt
+     * and its defects, at the repair's temperature with the retry seed.
+     *
+     * @param segment the non-null segment the draft is for
+     * @param context the non-null context the draft was shown
+     * @param mask the non-null spans hidden in the segment
+     * @return the segment's repair call
+     */
+    public RepairCall repairCall(final Segment segment, final DraftContext context, final ProtectedMask mask) {
+        final DraftAttempt attempt = DraftAttempt.of(
+                Objects.requireNonNull(segment, "segment"),
+                Objects.requireNonNull(context, "context"),
+                Objects.requireNonNull(mask, "mask"));
+        return (previous, defects, through) -> repair(attempt, previous, defects, through);
+    }
+
+    private Result<RepairReply> repair(
+            final DraftAttempt attempt,
+            final String previous,
+            final List<QaFinding> defects,
+            final ModelCalls through) {
+        final Segment segment = attempt.segment();
+        final String lines = DraftRequests.defectLines(defects);
+        log.debug("Sending the one repair segmentId={} defects={}", segment.id(), defects.size());
+        final ChatRequest request = requests.build(attempt, DraftStep.REPAIR, previous, lines);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                DraftStep.REPAIR,
+                segment,
+                request,
+                requests.descriptor(attempt, DraftStep.REPAIR, previous, lines),
+                through);
+        return RepairReplies.read(reply, replyParser, attempt.shownText(), promptBuilder.targetLanguage());
     }
 
     /**
@@ -233,7 +271,7 @@ public final class SegmentTranslator {
         return switch (Objects.requireNonNull(drafted.data())) {
             case PieceDrafter.Unusable(final AppError unusable) ->
                 DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
-            case PieceDrafter.Text(final String joined) -> restore(whole, joined, true);
+            case PieceDrafter.Text(final String joined) -> restore(whole, joined);
         };
     }
 
@@ -264,10 +302,7 @@ public final class SegmentTranslator {
     // Design D3 rules 2-4, in their order: blank content, then an abnormal finish, then a reply that is not the JSON
     // object — so a cut-off reply is flagged at once rather than sent to a structural repair.
     private Result<DraftOutcome> decideResponse(
-            final DraftAttempt attempt,
-            final ChatResponse response,
-            final boolean structuralRepairUsed,
-            final boolean placeholderRepairUsed) {
+            final DraftAttempt attempt, final ChatResponse response, final boolean structuralRepairUsed) {
         if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
             return DraftOutcomes.unfinished(attempt, response);
         }
@@ -281,16 +316,13 @@ public final class SegmentTranslator {
         final String trimmed = parsed.translation().strip();
         DraftOutcomes.traceReply(response.content(), trimmed);
         log.debug(
-                "Model reply segment={} kind={} finish={} empty={} replyLength={} placeholderRepair={}",
+                "Model reply segment={} kind={} finish={} empty={} replyLength={}",
                 attempt.segment().id(),
                 parsed.kind(),
                 response.finishReason(),
                 trimmed.isEmpty(),
-                trimmed.length(),
-                placeholderRepairUsed);
-        return trimmed.isEmpty()
-                ? DraftOutcomes.unfinished(attempt, response)
-                : restore(attempt, trimmed, placeholderRepairUsed);
+                trimmed.length());
+        return trimmed.isEmpty() ? DraftOutcomes.unfinished(attempt, response) : restore(attempt, trimmed);
     }
 
     private Result<DraftOutcome> repairStructured(
@@ -300,15 +332,14 @@ public final class SegmentTranslator {
         return send(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
     }
 
-    private Result<DraftOutcome> restore(
-            final DraftAttempt attempt, final String trimmed, final boolean placeholderRepairUsed) {
+    private Result<DraftOutcome> restore(final DraftAttempt attempt, final String trimmed) {
         final Segment segment = attempt.segment();
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
         final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
         return switch (gate.restore(segment, restoredWhitespace)) {
             case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
-            case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed, placeholderRepairUsed);
+            case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed);
             case GateResult.StepError(var error) -> {
                 log.debug("Gate completed segmentId={} result=StepError code={}", segment.id(), error.code());
                 yield DraftOutcomes.routed(segment, error, "unmask");
@@ -316,50 +347,22 @@ public final class SegmentTranslator {
         };
     }
 
-    // The order for a reply the placeholder gate refused: put back what it lost without a call; then one model repair
-    // told exactly which tokens are wrong; on that repair's reply, the same deterministic repair and then every token
-    // placed again by position; only then the quality loop's directed fix, and failing that the source is kept.
+    // A reply the placeholder gate refused gets the code repairs before any model call: what it lost is put back, then
+    // every token is placed again by position; a reply neither saves goes to the quality loop's one repair.
     private Result<DraftOutcome> recover(
-            final DraftAttempt attempt,
-            final String rejected,
-            final GateResult.GateFailed failed,
-            final boolean placeholderRepairUsed) {
+            final DraftAttempt attempt, final String rejected, final GateResult.GateFailed failed) {
         final Segment segment = attempt.segment();
         log.debug(
-                "Gate completed segmentId={} result=GateFailed code={} placeholderRepairUsed={}",
+                "Gate completed segmentId={} result=GateFailed code={}",
                 segment.id(),
-                failed.error().code(),
-                placeholderRepairUsed);
-        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
-                instanceof GateResult.Restored restored) {
-            return DraftOutcomes.drafted(attempt, rejected, restored);
-        }
-        if (!placeholderRepairUsed) {
-            return repairPlaceholder(attempt, rejected, failed);
-        }
-        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.REWRAP_ALL)
-                instanceof GateResult.Restored restored) {
-            return DraftOutcomes.drafted(attempt, rejected, restored);
+                failed.error().code());
+        for (final PlaceholderRepair mode : CODE_REPAIRS) {
+            if (gate.restoreRepairing(segment, rejected, mode) instanceof GateResult.Restored restored) {
+                log.debug("Lost marks put back by code segmentId={} mode={}", segment.id(), mode);
+                return DraftOutcomes.drafted(attempt, rejected, restored);
+            }
         }
         return DraftOutcomes.stillFailingTheGate(attempt, rejected, failed);
-    }
-
-    // A repair whose own reply is unusable leaves the draft's reply, which the gate refused only for its markup: its
-    // words are kept and every token is placed again by position before the segment is given up.
-    private Result<DraftOutcome> repairPlaceholder(
-            final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
-        final Segment segment = attempt.segment();
-        final String note = DraftRequests.placeholderNote(attempt, rejectedTarget, failed);
-        log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);
-        if (repaired.isOk()
-                && repaired.data() instanceof DraftOutcome.FlaggedAtOnce
-                && gate.restoreRepairing(segment, rejectedTarget, PlaceholderRepair.REWRAP_ALL)
-                        instanceof GateResult.Restored restored) {
-            log.info("Placeholder repair reply unusable; draft kept with re-placed tokens segmentId={}", segment.id());
-            return DraftOutcomes.drafted(attempt, rejectedTarget, restored);
-        }
-        return repaired;
     }
 
     private static void logTraceRestoration(final String restored) {

@@ -35,7 +35,7 @@ class PromptShapeTest {
     private static final Map<String, String> REPLY_KEYS = Map.ofEntries(
             Map.entry("draft", "target"),
             Map.entry("structural-repair", "target"),
-            Map.entry("placeholder-repair", "target"),
+            Map.entry("repair", "target"),
             Map.entry("directed-fix", "target"),
             Map.entry("improve", "target"),
             Map.entry("polish", "target"),

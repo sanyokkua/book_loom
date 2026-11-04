@@ -93,11 +93,11 @@ class PromptEvalRunnerTest {
     }
 
     @Test
-    void runAll_placeholderRepairCase_sendsAPlaceholderRepairCall() {
+    void runAll_placeholderRepairCase_sendsTheOneRepairCall() {
         final List<Sent> sent = run(named("repair-placeholder"));
 
         assertThat(sent).singleElement().satisfies(call -> {
-            assertThat(call.kind()).isEqualTo(CallKind.PLACEHOLDER_REPAIR);
+            assertThat(call.kind()).isEqualTo(CallKind.REPAIR);
             assertThat(user(call)).contains("Вона закрила важку книгу і зітхнула.");
         });
     }

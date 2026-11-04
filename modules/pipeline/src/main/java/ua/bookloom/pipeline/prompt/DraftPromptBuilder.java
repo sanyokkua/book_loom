@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.prompt;
 import static ua.bookloom.util.contract.ArgNames.SEGMENT;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -123,46 +122,27 @@ public final class DraftPromptBuilder {
     }
 
     /**
-     * Builds a correction request after a structurally valid target fails the document placeholder hard gate.
+     * Builds the one repair request: the draft's own messages followed by the previous attempt, its defects and the
+     * tokens the target must hold.
      *
-     * @param gateNote the rule the gate refused, so the model is told which rule broke as well as which tokens are
-     *     required; {@code null} to name none
+     * @param previousAttempt the non-null masked text the repair rewrites, shown as data
+     * @param defects the non-null defects, one {@code kind (severity): explanation} line each
      */
-    public List<ChatMessage> messagesForPlaceholderRepair(
-            final Segment segment,
-            final DraftContext context,
-            final String rejectedTarget,
-            @Nullable final String gateNote) {
-        Objects.requireNonNull(segment, SEGMENT);
-        return messagesForPlaceholderRepair(segment, context, segment.masked(), rejectedTarget, gateNote);
-    }
-
-    /** As {@link #messagesForPlaceholderRepair(Segment, DraftContext, String, String)}, over {@code shownText}. */
-    public List<ChatMessage> messagesForPlaceholderRepair(
-            final Segment segment,
-            final DraftContext context,
-            final String shownText,
-            final String rejectedTarget,
-            @Nullable final String gateNote) {
-        return messagesForPlaceholderRepair(segment, context, shownText, "", rejectedTarget, gateNote);
-    }
-
-    /** As the {@code shownText} overload, over a draft that carried {@code extraInstruction}. */
-    public List<ChatMessage> messagesForPlaceholderRepair(
+    public List<ChatMessage> messagesForRepair(
             final Segment segment,
             final DraftContext context,
             final String shownText,
             final String extraInstruction,
-            final String rejectedTarget,
-            @Nullable final String gateNote) {
-        Objects.requireNonNull(rejectedTarget, "rejectedTarget");
+            final String previousAttempt,
+            final String defects) {
+        Objects.requireNonNull(previousAttempt, "previousAttempt");
+        Objects.requireNonNull(defects, "defects");
         return withCorrection(
                 segment,
                 context,
                 shownText,
                 extraInstruction,
-                templates.renderUser(
-                        PromptName.PLACEHOLDER_REPAIR, placeholderValues(shownText, rejectedTarget, gateNote)));
+                templates.renderUser(PromptName.REPAIR, repairValues(shownText, previousAttempt, defects)));
     }
 
     /**
@@ -174,7 +154,7 @@ public final class DraftPromptBuilder {
      * @param shownText the non-null text the model translates
      * @param extraInstruction the non-null note under {@code [Extra instruction]}; empty for none
      * @param rejected the rejected reply or target a repair quotes; empty for a draft
-     * @param diagnostic what the reader or the gate said of it; empty for a draft or for no gate note
+     * @param diagnostic what the reader said of it, or the repair's defects; empty for a draft
      * @return never null; the filled parts
      */
     public List<PromptSection> sectionsFor(
@@ -199,10 +179,9 @@ public final class DraftPromptBuilder {
             case DRAFT -> log.debug("A draft adds no correction section");
             case STRUCTURAL_REPAIR ->
                 sections.addAll(templates.userSectionsOf(step.promptName(), structuralValues(rejected, diagnostic)));
-            case PLACEHOLDER_REPAIR ->
-                sections.addAll(templates.userSectionsOf(
-                        step.promptName(),
-                        placeholderValues(shownText, rejected, diagnostic.isEmpty() ? null : diagnostic)));
+            case REPAIR ->
+                sections.addAll(
+                        templates.userSectionsOf(step.promptName(), repairValues(shownText, rejected, diagnostic)));
         }
         return sections;
     }
@@ -211,15 +190,10 @@ public final class DraftPromptBuilder {
         return Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic);
     }
 
-    private static Map<String, String> placeholderValues(
-            final String shownText, final String rejectedTarget, @Nullable final String gateNote) {
-        final Map<String, String> values = new HashMap<>();
-        values.put("rejectedTarget", rejectedTarget);
-        values.put("tokens", expectedTokenSequence(shownText));
-        if (gateNote != null) {
-            values.put("gateNote", gateNote);
-        }
-        return values;
+    private static Map<String, String> repairValues(
+            final String shownText, final String previousAttempt, final String defects) {
+        return Map.of(
+                "previousAttempt", previousAttempt, "defects", defects, "tokens", expectedTokenSequence(shownText));
     }
 
     private List<ChatMessage> withCorrection(

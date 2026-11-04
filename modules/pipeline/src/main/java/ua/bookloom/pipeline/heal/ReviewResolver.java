@@ -40,14 +40,14 @@ final class ReviewResolver {
 
     private final EditApplier applier;
     private final DirectedFix directedFix;
-    private final RoundEvaluator evaluator;
+    private final ReplyEvaluator evaluator;
     private final LoopSettings settings;
     private final ModelCalls calls;
 
     ReviewResolver(
             final EditApplier applier,
             final DirectedFix directedFix,
-            final RoundEvaluator evaluator,
+            final ReplyEvaluator evaluator,
             final LoopSettings settings,
             final ModelCalls calls) {
         this.applier = Objects.requireNonNull(applier, "applier");
@@ -143,7 +143,7 @@ final class ReviewResolver {
         if (applied.applied().isEmpty()) {
             return new Edited(draft, initialQa, outcome.maskedReply(), false);
         }
-        if (evaluator.evaluateRewrite(outcome, applied.text()) instanceof RoundOutcome.Evaluated evaluated) {
+        if (evaluator.evaluateRewrite(outcome, applied.text()) instanceof RepairOutcome.Evaluated evaluated) {
             if (EditRegression.isWorse(initialQa, evaluated.qa())) {
                 log.debug(
                         "Edits reverted, the edited text evaluates worse segment={} edits={}",
@@ -160,8 +160,8 @@ final class ReviewResolver {
         return new Edited(draft, initialQa, outcome.maskedReply(), false);
     }
 
-    // A directed fix is spent only on an issue the reviewer evidenced with a quote the app found, only when the dial
-    // has a repair round, and its text replaces the edited one only when it is no worse and resolves at least one
+    // A directed fix is spent only on an issue the reviewer evidenced with a quote the app found, only when a fixing
+    // call is allowed, and its text replaces the edited one only when it is no worse and resolves at least one
     // refused edit.
     private Result<Resolution> fixRefused(
             final DraftOutcome.Drafted outcome,
@@ -171,18 +171,18 @@ final class ReviewResolver {
             final List<QaFinding> findings) {
         final List<QaFinding> evidence =
                 refused.stream().map(ReviewResolver::evidenceOf).toList();
-        if (settings.dial().repairRounds() < 1) {
+        if (!settings.repairs()) {
             log.debug(
-                    "No repair round in the dial; refused edits stay segment={} count={}",
+                    "No fixing call allowed; refused edits stay segment={} count={}",
                     outcome.segment().id(),
                     refused.size());
             return Result.ok(unresolved(edited, findings, evidence, 0, refused.size()));
         }
-        final RoundOutcome result = directedFixOf(outcome, edited, evidence);
-        if (result instanceof RoundOutcome.StepError(var error)) {
+        final RepairOutcome result = directedFixOf(outcome, edited, evidence);
+        if (result instanceof RepairOutcome.StepError(var error)) {
             return Result.err(error);
         }
-        if (result instanceof RoundOutcome.Evaluated fixed && isTakeable(fixed, edited, baseline, outcome)) {
+        if (result instanceof RepairOutcome.Evaluated fixed && isTakeable(fixed, edited, baseline, outcome)) {
             final List<EditOutcome.FailedEdit> remaining = stillQuoted(fixed, refused);
             if (remaining.size() < refused.size()) {
                 return Result.ok(adopted(outcome, fixed, findings, remaining));
@@ -195,11 +195,11 @@ final class ReviewResolver {
         return Result.ok(unresolved(edited, findings, evidence, 1, refused.size()));
     }
 
-    private RoundOutcome directedFixOf(
+    private RepairOutcome directedFixOf(
             final DraftOutcome.Drafted outcome, final Edited edited, final List<QaFinding> evidence) {
         announceFix(outcome, evidence);
         final String stepKey = RepairSteps.begin(calls, outcome.segment().id(), RepairSteps.FIX_SUFFIX, "directed-fix");
-        final RoundOutcome result = evaluator.classify(
+        final RepairOutcome result = evaluator.classify(
                 outcome,
                 directedFix.fix(
                         outcome.segment(), settings.frame(), outcome.maskedSource(), edited.text(), evidence, calls));
@@ -209,7 +209,7 @@ final class ReviewResolver {
 
     private static Resolution adopted(
             final DraftOutcome.Drafted outcome,
-            final RoundOutcome.Evaluated fixed,
+            final RepairOutcome.Evaluated fixed,
             final List<QaFinding> findings,
             final List<EditOutcome.FailedEdit> remaining) {
         log.debug(
@@ -238,20 +238,16 @@ final class ReviewResolver {
                 outcome.segment().id(),
                 evidence.size());
         calls.announce(new RoundStarted(
-                outcome.segment().id(),
-                1,
-                settings.dial().repairRounds(),
-                null,
-                evidence.getFirst().kind()));
+                outcome.segment().id(), 1, 1, null, evidence.getFirst().kind()));
     }
 
     // Hard gates hold and no blocker is new: a fix that trades one defect for another is never taken.
-    private static boolean notWorse(final RoundOutcome.Evaluated fixed, final Set<String> baseline) {
+    private static boolean notWorse(final RepairOutcome.Evaluated fixed, final Set<String> baseline) {
         return fixed.qa().hardGatesPass() && baseline.containsAll(Blockers.of(fixed.qa()));
     }
 
     private static boolean isTakeable(
-            final RoundOutcome.Evaluated fixed,
+            final RepairOutcome.Evaluated fixed,
             final Edited edited,
             final Set<String> baseline,
             final DraftOutcome.Drafted outcome) {
@@ -262,7 +258,7 @@ final class ReviewResolver {
     // A fix that mends the reviewer's quote by writing a letter the target language does not have would swap one
     // defect for another, so it is held to no more alphabet findings than the edited text had.
     private static boolean bringsLetters(
-            final RoundOutcome.Evaluated fixed, final QaResult edited, final String segmentId) {
+            final RepairOutcome.Evaluated fixed, final QaResult edited, final String segmentId) {
         final long before = alphabetFindings(edited);
         final long after = alphabetFindings(fixed.qa());
         log.debug("Directed fix alphabet findings segment={} before={} after={}", segmentId, before, after);
@@ -276,7 +272,7 @@ final class ReviewResolver {
     }
 
     private static List<EditOutcome.FailedEdit> stillQuoted(
-            final RoundOutcome.Evaluated fixed, final List<EditOutcome.FailedEdit> refused) {
+            final RepairOutcome.Evaluated fixed, final List<EditOutcome.FailedEdit> refused) {
         return refused.stream()
                 .filter(edit -> !EditVerifier.isResolvedIn(fixed.maskedCandidate(), edit.edit()))
                 .toList();
@@ -287,18 +283,18 @@ final class ReviewResolver {
             final QaResult initialQa,
             final MachineTarget draft,
             final String rewrite) {
-        final RoundOutcome result = evaluator.evaluateRewrite(outcome, rewrite);
-        if (result instanceof RoundOutcome.StepError(var error)) {
+        final RepairOutcome result = evaluator.evaluateRewrite(outcome, rewrite);
+        if (result instanceof RepairOutcome.StepError(var error)) {
             return Result.err(error);
         }
-        if (result instanceof RoundOutcome.Evaluated evaluated && AcceptanceRule.accepts(evaluated.qa(), 0)) {
+        if (result instanceof RepairOutcome.Evaluated evaluated && AcceptanceRule.accepts(evaluated.qa(), 0)) {
             log.debug("Rewrite accepted segment={}", outcome.segment().id());
             final QaFinding note = new QaFinding(
                     REWRITE_KIND, Severity.LOW, "The reviewer rewrote this segment.", SegmentOutcomes.REVIEWER);
             return Result.ok(new Resolution(
                     machineOf(evaluated), evaluated.qa(), List.of(note), 1, 0, null, evaluated.maskedCandidate()));
         }
-        final String why = result instanceof RoundOutcome.Evaluated evaluated
+        final String why = result instanceof RepairOutcome.Evaluated evaluated
                 ? "it fails " + String.join(", ", Blockers.of(evaluated.qa()))
                 : "it breaks a placeholder token";
         log.debug("Rewrite rejected segment={} why={}", outcome.segment().id(), why);
@@ -311,12 +307,12 @@ final class ReviewResolver {
     }
 
     private Optional<Set<String>> blockersOf(final DraftOutcome.Drafted outcome, final String text) {
-        return evaluator.evaluateRewrite(outcome, text) instanceof RoundOutcome.Evaluated evaluated
+        return evaluator.evaluateRewrite(outcome, text) instanceof RepairOutcome.Evaluated evaluated
                 ? Optional.of(Blockers.of(evaluated.qa()))
                 : Optional.empty();
     }
 
-    private static MachineTarget machineOf(final RoundOutcome.Evaluated evaluated) {
+    private static MachineTarget machineOf(final RepairOutcome.Evaluated evaluated) {
         return new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm());
     }
 

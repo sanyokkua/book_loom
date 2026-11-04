@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.EDIT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
@@ -187,7 +187,7 @@ class TranslationJobReviewPauseTest {
         assertThat(pause)
                 .extracting(Paused::reason, Paused::segmentId)
                 .containsExactly(PauseReason.ON_FLAGGED, "Book.md:6");
-        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, FIX);
+        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, REPAIR);
         assertThat(storedAtPause).containsExactlyElementsOf(sixAcceptedThenFlaggedThenPending());
         assertThat(formats(model)).hasSize(12).endsWith(DRAFT, REVIEW);
         assertThat(userMessage(model.requests().get(10))).contains(shown(S4), preceding(EDIT, T8));

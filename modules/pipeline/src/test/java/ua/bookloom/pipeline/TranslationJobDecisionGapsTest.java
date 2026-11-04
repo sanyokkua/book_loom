@@ -88,11 +88,11 @@ class TranslationJobDecisionGapsTest {
     }
 
     // A reply missing its tokens that no deterministic repair can place (one word cannot hold the pair and keep text
-    // outside it) is flagged only after the draft, its placeholder repair and the one directed fix of Fast; the
+    // outside it) is flagged only after the draft and its one repair; the
     // other replies flag the segment at once, after its one call.
     private static Stream<Arguments> flaggingReplies() {
         return Stream.of(
-                Arguments.of("missing token", reply("ВІДЧИНИВ", FinishReason.STOP), 3, ErrorCode.validation),
+                Arguments.of("missing token", reply("ВІДЧИНИВ", FinishReason.STOP), 2, ErrorCode.validation),
                 Arguments.of(
                         "whitespace with a normal finish",
                         reply("  \n", FinishReason.STOP),

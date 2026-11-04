@@ -3,7 +3,7 @@ package ua.bookloom.pipeline.prompt;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
- * The three calls of the draft step, each one prompt of the catalogue. It is narrower than {@link PromptName} so the
+ * The three calls of a segment's draft, each one prompt of the catalogue. It is narrower than {@link PromptName} so the
  * translator's exhaustive switch over it never grows when another prompt (pre-scan, summary, revision) is added.
  */
 public enum DraftStep {
@@ -14,8 +14,8 @@ public enum DraftStep {
     /** The correction after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(PromptName.STRUCTURAL_REPAIR, CallKind.STRUCTURAL_REPAIR),
 
-    /** The correction after a target fails the placeholder gate. */
-    PLACEHOLDER_REPAIR(PromptName.PLACEHOLDER_REPAIR, CallKind.PLACEHOLDER_REPAIR);
+    /** The one repair of a draft that kept a blocking or repair-level finding, its defects named. */
+    REPAIR(PromptName.REPAIR, CallKind.REPAIR);
 
     private final PromptName promptName;
     private final CallKind callKind;

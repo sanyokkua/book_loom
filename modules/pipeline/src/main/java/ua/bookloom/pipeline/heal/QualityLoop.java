@@ -42,7 +42,7 @@ public final class QualityLoop {
      *
      * @param outcomes the chunk's draft outcomes, in document order
      * @param settings the chunk's review mode, dial, call frame, name policy and glossary terms
-     * @param gate the placeholder-gate function every self-heal round's candidate goes through
+     * @param gate the placeholder-gate function every repaired or edited candidate goes through
      * @param calls the seam every model call of this loop is sent through
      * @return a decider that yields one {@link SegmentOutcome} per {@code nextDecision()} call, or the error the
      *     chunk's reviewer call answered
@@ -75,7 +75,7 @@ public final class QualityLoop {
      *
      * @param outcomes the chunk's draft outcomes, in document order
      * @param settings the chunk's review mode, dial, call frame, name policy and glossary terms
-     * @param gate the placeholder-gate function every self-heal round's candidate goes through
+     * @param gate the placeholder-gate function every repaired or edited candidate goes through
      * @param calls the seam every model call of this loop is sent through
      * @param reason the error the chunk's reviewer call last answered
      * @return a decider over the chunk, with no reviewer call made

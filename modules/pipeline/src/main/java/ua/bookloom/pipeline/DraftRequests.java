@@ -3,11 +3,13 @@ package ua.bookloom.pipeline;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.memory.ProtectedMask;
@@ -17,11 +19,10 @@ import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftStep;
-import ua.bookloom.pipeline.prompt.GateNotes;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 
 /**
- * The requests of the draft step — the first draft and its two repairs — built in one place, so the step that sends
+ * The requests of a segment's draft — the first draft, its format re-ask and its one repair — built in one place, so the step that sends
  * them and a prompt eval that only needs them cannot build different ones. A request is the one the step sends before
  * the run's seam sizes it to the window.
  */
@@ -69,26 +70,62 @@ public final class DraftRequests {
     }
 
     /**
-     * The request of the placeholder repair for a reply the gate refuses and no deterministic restore saves.
+     * The request of the one repair: the draft's prompt, the previous attempt and its defects, sent with the retry
+     * seed.
+     *
+     * @param segment the non-null segment being repaired
+     * @param context the non-null context the draft was shown
+     * @param mask the non-null spans hidden in the segment
+     * @param previousAttempt the non-null masked text the repair rewrites
+     * @param defects the non-null findings to fix, each with its explanation and the span it quotes
+     * @return the repair's request
+     */
+    public ChatRequest repair(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final String previousAttempt,
+            final List<QaFinding> defects) {
+        return build(DraftAttempt.of(segment, context, mask), DraftStep.REPAIR, previousAttempt, defectLines(defects));
+    }
+
+    /**
+     * The request of the one repair for a target whose formatting marks the code cannot put back.
      *
      * @param segment the non-null segment being drafted
      * @param context the non-null context the draft was shown
      * @param mask the non-null spans hidden in the segment
      * @param rejectedTarget the non-null target text the model gave, before its whitespace is restored
-     * @return the repair's request, or empty when the gate accepts the target or restoring what it lost is enough
+     * @return the repair's request naming the gate's finding, or empty when the gate or a code repair accepts it
      */
-    public Optional<ChatRequest> placeholderRepair(
+    public Optional<ChatRequest> repairOfLostMarks(
             final Segment segment, final DraftContext context, final ProtectedMask mask, final String rejectedTarget) {
-        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask);
         final String rejected = WhitespaceRestoration.restore(segment.masked(), rejectedTarget.strip());
         if (gate.restore(segment, rejected) instanceof GateResult.GateFailed failed
-                && !(gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
-                        instanceof GateResult.Restored)) {
-            return Optional.of(
-                    build(attempt, DraftStep.PLACEHOLDER_REPAIR, rejected, placeholderNote(attempt, rejected, failed)));
+                && !restoresByCode(segment, rejected)) {
+            return Optional.of(repair(segment, context, mask, rejected, List.of(failed.finding())));
         }
-        log.debug("No placeholder repair needed segmentId={}", segment.id());
+        log.debug("No repair of lost marks needed segmentId={}", segment.id());
         return Optional.empty();
+    }
+
+    private boolean restoresByCode(final Segment segment, final String rejected) {
+        return gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
+                        instanceof GateResult.Restored
+                || gate.restoreRepairing(segment, rejected, PlaceholderRepair.REWRAP_ALL)
+                        instanceof GateResult.Restored;
+    }
+
+    /**
+     * The defects a repair names, one {@code kind (severity): explanation} line each; the explanation quotes the span.
+     *
+     * @param defects the non-null findings
+     * @return the lines joined by newlines; empty when there is none
+     */
+    static String defectLines(final List<QaFinding> defects) {
+        return defects.stream()
+                .map(finding -> finding.kind() + " (" + finding.severity() + "): " + finding.note())
+                .collect(Collectors.joining("\n"));
     }
 
     ChatRequest build(
@@ -97,8 +134,9 @@ public final class DraftRequests {
         final OutputLimit limit = OutputLimit.forSource(
                 attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
         final boolean lower = step == DraftStep.DRAFT && attempt.lowerTemperature();
-        final ChatRequest request =
+        final ChatRequest built =
                 ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, lower);
+        final ChatRequest request = step == DraftStep.REPAIR ? built.withSeed(ChatRequests.RETRY_SEED) : built;
         log.debug(
                 "Built chat request segmentId={} maskedLength={} messageCount={} expectedTokens={} capTokens={}",
                 attempt.segment().id(),
@@ -138,20 +176,7 @@ public final class DraftRequests {
             case DRAFT -> promptBuilder.messagesFor(segment, context, shown, extra);
             case STRUCTURAL_REPAIR ->
                 promptBuilder.messagesForStructuredRepair(segment, context, shown, extra, rejected, diagnostic);
-            case PLACEHOLDER_REPAIR ->
-                promptBuilder.messagesForPlaceholderRepair(
-                        segment, context, shown, extra, rejected, diagnostic.isEmpty() ? null : diagnostic);
+            case REPAIR -> promptBuilder.messagesForRepair(segment, context, shown, extra, rejected, diagnostic);
         };
-    }
-
-    static String placeholderNote(
-            final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
-        final Segment segment = attempt.segment();
-        return GateNotes.describe(
-                attempt.shownText(),
-                rejectedTarget,
-                segment.pairs(),
-                segment.lineBreakTokens(),
-                failed.finding().note());
     }
 }

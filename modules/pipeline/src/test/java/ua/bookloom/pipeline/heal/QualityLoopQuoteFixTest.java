@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
@@ -37,7 +38,7 @@ class QualityLoopQuoteFixTest {
     void nextDecision_draftWithOnlyAnUnclosedQuote_isRepairedAndAcceptedWithNoModelCall() {
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final SegmentOutcome decided = decide(SOURCE, UNCLOSED, model, 1);
+        final SegmentOutcome decided = decide(SOURCE, UNCLOSED, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo("Він відчинив «старі двері».");
@@ -46,10 +47,10 @@ class QualityLoopQuoteFixTest {
     }
 
     @Test
-    void nextDecision_roundReplyWithOnlyAnUnclosedQuote_isRepairedAndAccepted() {
+    void nextDecision_repairReplyWithOnlyAnUnclosedQuote_isRepairedAndAccepted() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(UNCLOSED)));
 
-        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY + " «", model, 1);
+        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY + " «", model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
@@ -58,7 +59,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_quoteTheRepairCannotClear_isFlaggedWithItsDraftAsMachineTarget() {
-        final SegmentOutcome decided = decide(SOURCE, TWO_UNCLOSED, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(SOURCE, TWO_UNCLOSED, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(TWO_UNCLOSED);
@@ -68,7 +69,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_scriptPurityFailureOnly_isFlaggedWithItsDraftAsMachineTarget() {
-        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(PURITY_ONLY);
@@ -76,7 +77,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_englishLeftover_isFlaggedWithNoMachineTarget() {
-        final SegmentOutcome decided = decide(LONG_ENGLISH, LONG_ENGLISH, new ScriptedChatModel(), 0);
+        final SegmentOutcome decided = decide(LONG_ENGLISH, LONG_ENGLISH, new ScriptedChatModel(), false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.findings()).extracting(QaFinding::raisedBy).contains("language-identity");
@@ -85,18 +86,21 @@ class QualityLoopQuoteFixTest {
     }
 
     private SegmentOutcome decide(
-            final String source, final String draft, final ScriptedChatModel model, final int repairRounds) {
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), source, List.of(), draft, draft, draft, null);
+            final String source, final String draft, final ScriptedChatModel model, final boolean repairs) {
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment(), source, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(0, repairRounds, 0, false, false, 4),
+                new DialParameters(0, RepairMode.ONE, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
+        final ChunkDecider decider = Objects.requireNonNull(loop.start(
+                        List.of(outcome),
+                        repairs ? settings : settings.withoutRepair(),
+                        QualityLoopFixtures.PASSTHROUGH_GATE,
+                        calls(model))
+                .data());
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 }

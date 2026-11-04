@@ -6,7 +6,7 @@ public enum StepKind {
     DRAFT,
     /** A chunk's reviewer pass (Fast 0, Balanced 1, Max 2 per chunk). */
     CHECK,
-    /** A repair round or a directed fix started after a draft or check. */
+    /** The one repair, or the reviewer's fix of a refused edit, started after a draft or check. */
     REPAIR,
     /** A batch re-ask for ids the reply left out. */
     RE_ASK,

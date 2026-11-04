@@ -25,6 +25,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
@@ -35,12 +36,11 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * {@link QualityLoop}/{@link SegmentHealer}: a concrete finding (a failed hard gate or a soft check failed
- * outright) sends a round to a directed fix, naming the expected token sequence for a placeholder finding
- * ({@code specs/quality-gates/spec.md} "Repair a failing segment within the dial's repair budget before flagging
- * it").
+ * {@link QualityLoop}/{@link SegmentHealer}: a blocking finding (a failed hard gate or a soft check failed outright)
+ * earns the one repair, naming the expected token sequence for a placeholder finding, and nothing after it
+ * ({@code specs/quality-gates/spec.md} "Give a failing segment one repair at Balanced and Max").
  */
-class QualityLoopDirectedFixTest {
+class QualityLoopOneRepairCallTest {
 
     @TempDir
     private Path tempDir;
@@ -48,13 +48,13 @@ class QualityLoopDirectedFixTest {
     private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
-    // A placeholder finding's directed fix names the full expected token sequence in its user message — on
-    // Balanced, whose two rounds both stay directed-fix since the gate never lets the placeholder finding clear.
+    // A placeholder finding's repair names the full expected token sequence in its user message — on Balanced, whose
+    // one repair is all the segment gets even though the gate never lets the placeholder finding clear.
     @Test
-    void nextDecision_placeholderFindingOnThreeTokens_directedFixNamesTheExpectedSequence() {
+    void nextDecision_placeholderFindingOnThreeTokens_repairNamesTheExpectedSequence() {
         final Segment segment = threeTokenSegment();
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
-                segment, segment.masked(), List.of(), "ЗАЛИШАЄТЬСЯ ⟦g1⟧ ⟦g2⟧ РЕЧІ.", null, null, placeholderFinding());
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(new DraftOutcome.Drafted(
+                segment, segment.masked(), List.of(), "ЗАЛИШАЄТЬСЯ ⟦g1⟧ ⟦g2⟧ РЕЧІ.", null, null, placeholderFinding()));
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(readable("{\"target\":\"x\"}")).answer(readable("{\"target\":\"x\"}"));
 
@@ -66,25 +66,24 @@ class QualityLoopDirectedFixTest {
                 model);
         decider.nextDecision();
 
-        // The initial gate failure excludes this outcome from the chunk's reviewer call, so both calls are the
-        // directed fix's own rounds.
-        assertThat(model.requests()).hasSize(2);
+        // The initial gate failure excludes this outcome from the chunk's reviewer call, so the one call is the repair.
+        assertThat(model.requests()).hasSize(1);
         assertThat(Objects.requireNonNull(model.requests().getFirst().responseFormat())
                         .name())
-                .isEqualTo("directed-fix");
+                .isEqualTo("repair");
         final String userMessage =
                 model.requests().getFirst().messages().getLast().content();
         assertThat(userMessage).contains("⟦g0⟧ ⟦g1⟧ ⟦g2⟧");
     }
 
-    // Fast (N=1): the draft's placeholder gate failed and the one directed fix crosses the pair the same way, so
-    // the round is wasted and the segment is FLAGGED with no machine target after exactly one model call.
+    // The draft's placeholder gate failed and the one repair crosses the pair the same way, so the segment is
+    // FLAGGED with no machine target after exactly one model call.
     @Test
-    void nextDecision_fastCrossedPairPersistsThroughTheOneRound_flagsWithNoMachineTarget() {
+    void nextDecision_crossedPairPersistsThroughTheOneRepair_flagsWithNoMachineTarget() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("crossed.md"), "He opened the *old* door.");
-        final DraftOutcome.Drafted outcome =
-                QualityLoopFixtures.drafted(segment, documents, "ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ.");
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ."));
         assertThat(outcome.restoredTarget()).isNull();
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(readable("{\"target\":\"ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ.\"}"));
@@ -92,7 +91,7 @@ class QualityLoopDirectedFixTest {
         final ChunkDecider decider = start(
                 List.of(outcome),
                 ReviewMode.UNATTENDED,
-                QualityDial.FAST,
+                QualityDial.BALANCED,
                 GateFunction.of(documents, BookFormat.MARKDOWN),
                 model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
@@ -107,18 +106,20 @@ class QualityLoopDirectedFixTest {
                 .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.HIGH));
     }
 
-    // A directed fix cut off by length flags at once, keeping the earlier target that passed every hard gate.
+    // A repair cut off by length flags at once, keeping the draft's target that passed every hard gate — at Max as
+    // at Balanced.
     @Test
-    void nextDecision_directedFixCutOffByLength_flagsAtOnceKeepingTheEarlierMachineTarget() {
+    void nextDecision_maxRepairCutOffByLength_flagsAtOnceKeepingTheDraftsMachineTarget() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo.md"), "He opened the old door.");
-        final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         assertThat(outcome.restoredTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
         final ChunkDecider decider = start(
-                List.of(outcome), ReviewMode.ASSISTED, QualityDial.FAST, QualityLoopFixtures.PASSTHROUGH_GATE, model);
+                List.of(outcome), ReviewMode.ASSISTED, QualityDial.MAX, QualityLoopFixtures.PASSTHROUGH_GATE, model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(model.requests()).hasSize(1);
@@ -128,13 +129,14 @@ class QualityLoopDirectedFixTest {
         assertThat(Objects.requireNonNull(outcomeResult.flagReason()).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Balanced (N=2), reviewer on: the echo is refused by the checks, so the reviewer never reads it, and the one
-    // directed fix it takes is cut off by length — FLAGGED at once, no second fix, keeping the draft's own target.
+    // Balanced, reviewer on: the echo is refused by the checks, so the reviewer never reads it, and its one repair is
+    // cut off by length — FLAGGED at once, no second call, keeping the draft's own target.
     @Test
-    void nextDecision_balancedCutOffByLength_flagsAtOnceWithNoSecondFix() {
+    void nextDecision_balancedCutOffByLength_flagsAtOnceWithNoSecondCall() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo3.md"), "He opened the old door.");
-        final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
@@ -151,45 +153,38 @@ class QualityLoopDirectedFixTest {
                         .map(request ->
                                 Objects.requireNonNull(request.responseFormat()).name())
                         .toList())
-                .containsExactly("directed-fix");
+                .containsExactly("repair");
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
         assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(outcomeResult.machineTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
         assertThat(Objects.requireNonNull(outcomeResult.flagReason()).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // A malformed directed-fix reply wastes its round with no structural repair; the next round is tried too, and
-    // it accepts the segment.
+    // A malformed repair reply uses up the one repair with no structural re-ask: the draft stays and nothing else is
+    // tried.
     @Test
-    void nextDecision_directedFixAnsweredEmptySegmentsArray_wastesTheRoundAndTriesTheNext() {
+    void nextDecision_repairAnsweredEmptySegmentsArray_keepsTheDraftWithNoSecondCall() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo2.md"), "He opened the old door.");
-        final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"segments\":[]}"))
                 .answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
-        // Reviewer off, repair budget 2, so the round wasted by the malformed reply still leaves one more to try.
-        final LoopSettings settings = new LoopSettings(
-                ReviewMode.ASSISTED,
-                new DialParameters(1, 2, 0, false, false, 4),
-                QualityLoopFixtures.FRAME,
-                NamePolicy.TRANSLITERATE,
-                List.of());
 
-        final ChunkDecider decider = start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, model);
+        final ChunkDecider decider =
+                start(List.of(outcome), oneRepairReviewerOff(), QualityLoopFixtures.PASSTHROUGH_GATE, model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
-        assertThat(model.requests()).hasSize(2);
-        assertThat(Objects.requireNonNull(model.requests().get(1).responseFormat())
-                        .name())
-                .isEqualTo("directed-fix");
+        assertThat(model.requests()).hasSize(1);
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
-        assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(outcomeResult.repairRounds()).isEqualTo(2);
+        assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(outcomeResult.machineTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
+        assertThat(outcomeResult.repairRounds()).isEqualTo(1);
     }
 
-    // D-3, Fast (N=1), Unattended (τ=0.60): each row is drafted and directed-fixed with the same reply. Despite
-    // confidence reaching τ, the soft check named still fails outright and FLAGS the segment with a medium finding
+    // D-3, Fast, Unattended (τ=0.60): each row's draft has no repair call. Despite confidence reaching τ, the soft
+    // check named still fails outright and FLAGS the segment with a medium finding
     // of the given kind (specs/quality-gates/spec.md "Block acceptance when a soft check fails outright").
     @ParameterizedTest
     @CsvSource(delimiterString = "|", textBlock = """
@@ -218,10 +213,10 @@ class QualityLoopDirectedFixTest {
                 .contains(findingKind);
     }
 
-    // A segment drafted in pieces is too large for any one repair call, so a failing round drafts its pieces again
-    // naming the finding and sends no directed fix; a Malformed answer wastes that round like any malformed repair.
+    // A segment drafted in pieces is too large for any one repair call, so its one repair drafts its pieces again
+    // naming the finding; a Malformed answer uses that repair up like any malformed repair.
     @Test
-    void nextDecision_pieceRedraftAnsweringMalformed_wastesTheRoundAndTriesTheNext() {
+    void nextDecision_pieceRedraftAnsweringMalformed_keepsTheDraftAfterTheOneRedraft() {
         final ScriptedRedraft redraft = new ScriptedRedraft(
                 new RepairReply.Malformed("not the target object"),
                 new RepairReply.Rewritten("Він відчинив старі двері."));
@@ -229,17 +224,35 @@ class QualityLoopDirectedFixTest {
 
         final ChunkDecider decider = start(
                 List.of(inPieces("HE OPENED THE OLD DOOR.", redraft)),
-                twoRoundsReviewerOff(),
+                oneRepairReviewerOff(),
                 QualityLoopFixtures.PASSTHROUGH_GATE,
                 model);
         final SegmentOutcome decision =
                 Objects.requireNonNull(decider.nextDecision().data());
 
         assertThat(model.requests()).isEmpty();
-        assertThat(redraft.findingKinds()).hasSize(2);
-        assertThat(redraft.findingKinds().getFirst()).contains("language");
+        assertThat(redraft.findingKinds())
+                .singleElement()
+                .satisfies(kinds -> assertThat(kinds).contains("language"));
+        assertThat(decision.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(decision.repairRounds()).isEqualTo(1);
+    }
+
+    @Test
+    void nextDecision_pieceRedraftThatPasses_isAcceptedAsTheOneRepair() {
+        final ScriptedRedraft redraft = new ScriptedRedraft(new RepairReply.Rewritten("Він відчинив старі двері."));
+
+        final ChunkDecider decider = start(
+                List.of(inPieces("HE OPENED THE OLD DOOR.", redraft)),
+                oneRepairReviewerOff(),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                new ScriptedChatModel());
+        final SegmentOutcome decision =
+                Objects.requireNonNull(decider.nextDecision().data());
+
         assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decision.repairRounds()).isEqualTo(2);
+        assertThat(decision.machineTarget()).isEqualTo("Він відчинив старі двері.");
+        assertThat(decision.repairRounds()).isEqualTo(1);
     }
 
     private static DraftOutcome.Drafted inPieces(final String reply, final PieceRedraft redraft) {
@@ -247,10 +260,10 @@ class QualityLoopDirectedFixTest {
         return new DraftOutcome.Drafted(segmentFor(source), source, List.of(), reply, reply, reply, null, redraft);
     }
 
-    private static LoopSettings twoRoundsReviewerOff() {
+    private static LoopSettings oneRepairReviewerOff() {
         return new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, 2, 0, false, false, 4),
+                new DialParameters(1, RepairMode.ONE, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

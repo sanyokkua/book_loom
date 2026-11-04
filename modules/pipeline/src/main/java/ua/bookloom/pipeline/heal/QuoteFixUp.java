@@ -63,7 +63,8 @@ final class QuoteFixUp {
                                 draft.pieceRedraft(),
                                 fixed.restored().autoRepair(),
                                 null,
-                                fixed.restored().normalised()),
+                                fixed.restored().normalised(),
+                                draft.repairCall()),
                         fixed.qa()));
     }
 

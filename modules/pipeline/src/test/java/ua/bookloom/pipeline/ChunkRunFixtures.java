@@ -44,6 +44,7 @@ final class ChunkRunFixtures {
     static final String REVIEW = "reviewer";
     static final String DRAFT = "draft";
     static final String FIX = "directed-fix";
+    static final String REPAIR = "repair";
 
     static Path fourParagraphs(final Path directory) {
         return TestBooks.markdown(directory.resolve("Book.md"), String.join("\n\n", S0, S1, S2, S3));

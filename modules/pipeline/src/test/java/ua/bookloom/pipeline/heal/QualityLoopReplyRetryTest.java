@@ -14,13 +14,14 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.dial.DialParameters;
 
-/** A repair round whose reply was refused is not repeated byte for byte: the cause and another seed go with the retry. */
+/** The one repair is not a replay of the draft: it goes out with the retry seed at the repair's low temperature. */
 class QualityLoopReplyRetryTest {
 
     @TempDir
@@ -28,17 +29,17 @@ class QualityLoopReplyRetryTest {
 
     private final DocumentPort documents = TestDocuments.documents();
 
-    // IF the second request were identical to the first, THEN a model that failed once would fail the same way again.
+    // IF the repair were sent at the draft's sampling, THEN a model that failed once would tend to fail the same way.
     @Test
-    void nextDecision_unpairableControlCodes_retryNamesTheCauseAndSendsAnotherSeed() {
+    void nextDecision_echoedDraft_repairSendsTheRetrySeedAtTheRepairTemperature() {
         final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("a.md"), "He opened the old door.");
-        final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"target\":\"Він відчинив\\u001e старі двері.\"}"))
-                .answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, 2, 0, false, false, 4),
+                new DialParameters(1, RepairMode.ONE, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -54,11 +55,10 @@ class QualityLoopReplyRetryTest {
 
         assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
         final List<ChatRequest> requests = model.requests();
-        assertThat(requests).hasSize(2);
-        assertThat(requests.getFirst().seed()).isNull();
-        assertThat(requests.get(1).seed()).isNotNull();
-        assertThat(requests.get(1).messages()).isNotEqualTo(requests.getFirst().messages());
-        assertThat(requests.get(1).messages().getLast().content()).contains("held control characters");
+        assertThat(requests).singleElement().satisfies(request -> {
+            assertThat(request.seed()).isEqualTo(8191);
+            assertThat(request.temperature()).isEqualTo(0.1);
+        });
     }
 
     private static Result<ChatResponse> readable(final String content) {

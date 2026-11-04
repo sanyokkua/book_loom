@@ -41,8 +41,7 @@ final class CallSnapshots {
     // Enough for the calls of a few chunks; an older call's outcome is no longer shown.
     private static final int KEPT_CALLS = 64;
     private static final int KEPT_SEGMENTS = 512;
-    private static final Set<CallKind> DRAFTS =
-            EnumSet.of(CallKind.DRAFT, CallKind.STRUCTURAL_REPAIR, CallKind.PLACEHOLDER_REPAIR);
+    private static final Set<CallKind> DRAFTS = EnumSet.of(CallKind.DRAFT, CallKind.STRUCTURAL_REPAIR, CallKind.REPAIR);
 
     private final Consumer<JobEvent> announce;
     private final Map<String, SegmentLocator> locators;

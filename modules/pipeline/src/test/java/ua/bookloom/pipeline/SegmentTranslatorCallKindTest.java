@@ -17,6 +17,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 
 /** Each call the translator makes for a segment goes through the run's seam under its own kind. */
@@ -48,14 +49,18 @@ class SegmentTranslatorCallKindTest {
         assertThat(calls).containsExactly("DRAFT Book.md:0", "STRUCTURAL_REPAIR Book.md:0");
     }
 
-    // A swapped pair cannot be put right by restoring a missing token, so the model is asked to repair it.
+    // A swapped pair is placed again by code, by position, so the draft step makes no model call after the draft.
     @Test
-    void translate_swappedPair_callsDraftThenPlaceholderRepairForTheSegment() {
+    void translate_swappedPair_isPlacedAgainByCodeWithNoSecondCall() {
         final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g1⟧OLD⟦g0⟧ DOOR.", ACCEPTED);
 
-        translator(model).translate(segment());
+        final Result<DraftOutcome> drafted = translator(model).translate(segment());
 
-        assertThat(calls).containsExactly("DRAFT Book.md:0", "PLACEHOLDER_REPAIR Book.md:0");
+        assertThat(calls).containsExactly("DRAFT Book.md:0");
+        assertThat(drafted.data())
+                .isInstanceOfSatisfying(
+                        DraftOutcome.Drafted.class,
+                        draft -> assertThat(draft.restoredTarget()).isNotNull());
     }
 
     private SegmentTranslator translator(final ScriptedChatModel model) {

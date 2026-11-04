@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.dial.DialParameters;
 
 /**
  * The directed fix for an edit the code could not verify keeps the best text: it is sent only with the reviewer's quote
- * and only when the dial has a repair round, and its result replaces the edited text only when it is no worse and
+ * and only when a fixing call is allowed, and its result replaces the edited text only when it is no worse and
  * clears at least one quote ({@code specs/quality-gates/spec.md} "Keep the best candidate through the repair path").
  */
 class QualityLoopReviewerFixTest {
@@ -39,13 +39,12 @@ class QualityLoopReviewerFixTest {
     }
 
     @Test
-    void nextDecision_refusedEditAndNoRepairRoundInTheDial_sendsNoDirectedFix() {
+    void nextDecision_refusedEditAndNoFixingCallAllowed_sendsNoDirectedFix() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable(reply(SWAP_DOOR_EDIT)))
                 .answer(readable(targetReply("Він відчинив старі двері.")));
 
-        final SegmentOutcome decided =
-                decide(DRAFT, model, DialParameters.of(QualityDial.BALANCED).withoutRepairRounds());
+        final SegmentOutcome decided = decide(DRAFT, model, DialParameters.of(QualityDial.BALANCED), false);
 
         assertThat(model.requests()).hasSize(1);
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
@@ -121,10 +120,16 @@ class QualityLoopReviewerFixTest {
     }
 
     private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final DialParameters dial) {
+        return decide(draft, model, dial, true);
+    }
+
+    private SegmentOutcome decide(
+            final String draft, final ScriptedChatModel model, final DialParameters dial, final boolean repairs) {
         final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
                 segment(), QualityLoopTestSupport.SOURCE, List.of(), draft, draft, draft, null);
-        final LoopSettings settings = new LoopSettings(
+        final LoopSettings base = new LoopSettings(
                 ReviewMode.UNATTENDED, dial, QualityLoopFixtures.FRAME, NamePolicy.TRANSLITERATE, List.of());
+        final LoopSettings settings = repairs ? base : base.withoutRepair();
         final ChunkDecider decider = Objects.requireNonNull(
                 loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
                         .data());

@@ -154,7 +154,7 @@ class SegmentTranslatorTest {
                 .translate(segment);
 
         expectation.accept(result);
-        assertThat(model.requests()).hasSize(name.equals("one word left") ? 2 : 1);
+        assertThat(model.requests()).hasSize(1);
     }
 
     // A thrown middle outcome consumes one queue item and does not prevent a later scripted result from being used.

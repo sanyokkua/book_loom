@@ -56,12 +56,10 @@ class QualityLoopFlaggingAndOrderTest {
 
     // ch05.xhtml:11 (specs/quality-gates/spec.md "A flagged segment keeps its reasons"): a draft with length ratio
     // 0.41 (a 100-character source, a 41-character Cyrillic target) is refused by the length check, so the reviewer
-    // never reads it; Balanced's directed fix returns a target that still fails length, which is no progress, so no
-    // second
-    // round is spent. The FLAGGED record
-    // carries the last evaluation's confidence and the medium omission from the length check.
+    // never reads it; Balanced's one repair returns a target that still fails length and is not kept, and nothing
+    // follows it. The FLAGGED record carries the draft's confidence and the medium omission from the length check.
     @Test
-    void nextDecision_directedFixStillFailsLength_flagsAfterOneRoundWithTheLengthFindingAndNoReviewerCall() {
+    void nextDecision_repairStillFailsLength_flagsAfterTheOneRepairWithTheLengthFindingAndNoReviewerCall() {
         final String source =
                 "He left the small house at dawn and never once looked back at the old road far from the sleepy"
                         + " town.";
@@ -69,9 +67,9 @@ class QualityLoopFlaggingAndOrderTest {
         final Segment segment = segment("ch05.xhtml:11", source);
         final String shortTarget = "Він покинув дім на світанку і жодного раз";
         assertThat(shortTarget).hasSize(41);
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null);
-        // The fix rewrites the draft but stays as short, so it still fails length and the loop stops there.
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null));
+        // The repair rewrites the draft but stays as short, so it still fails length and nothing follows it.
         final String shortFix = "Він покинув дах на світанку і жодного раз";
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(shortFix)));
         final LoopSettings settings = new LoopSettings(

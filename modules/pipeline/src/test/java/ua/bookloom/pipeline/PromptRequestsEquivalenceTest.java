@@ -6,7 +6,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
@@ -34,13 +33,10 @@ import ua.bookloom.pipeline.eval.EvalContext;
 import ua.bookloom.pipeline.eval.EvalContext.Pair;
 import ua.bookloom.pipeline.eval.EvalProject;
 import ua.bookloom.pipeline.eval.EvalTerm;
-import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.SegmentFindings;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.reviewer.ReviewPass;
 import ua.bookloom.pipeline.reviewer.ReviewedPair;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -57,8 +53,7 @@ class PromptRequestsEquivalenceTest {
     private static final String BATCH = "draft-batch-json";
     private static final String DRAFT = "draft";
     private static final String REVIEW = "reviewer";
-    private static final String FIX = "directed-fix";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String REPAIR = "repair";
     private static final int PARAGRAPHS = 8;
     private static final String SUMMARY_TEXT = "Раніше: Едвін шукав стару мапу.";
 
@@ -225,7 +220,7 @@ class PromptRequestsEquivalenceTest {
         TARGETS.subList(0, PARAGRAPHS - 1).forEach(target -> model.answerTo(DRAFT, draftReply(target)));
         model.answerTo(DRAFT, draftReply(ECHO_OF_LAST))
                 .answerTo(REVIEW, reply("{\"results\":[]}"))
-                .answerTo(FIX, draftReply(TARGETS.getLast()));
+                .answerTo(REPAIR, draftReply(TARGETS.getLast()));
         final TestProject project = book(true);
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 1)
@@ -246,13 +241,13 @@ class PromptRequestsEquivalenceTest {
     }
 
     @Test
-    void fixRequest_echoedDraft_equalsTheRequestTheJobSends() {
+    void repairRequest_echoedDraft_equalsTheRequestTheJobSends() {
         final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
         final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, 0)), evalCalls(recording));
+        final EvalProject eval = EvalProject.of(setup(context(true, PARAGRAPHS - 1)), evalCalls(recording));
         final int last = PARAGRAPHS - 1;
         final ProtectedMask mask = eval.mask(last);
-        final List<QaFinding> findings = SegmentFindings.concrete(DraftEvaluation.evaluate(
+        final List<QaFinding> defects = SegmentFindings.defects(DraftEvaluation.evaluate(
                 new DraftOutcome.Drafted(
                         eval.segment(last),
                         mask.maskedText(),
@@ -263,10 +258,19 @@ class PromptRequestsEquivalenceTest {
                         null),
                 eval.loop()));
 
-        new DirectedFix(new PromptTemplates(), new DraftReplyParser(MAPPER))
-                .fix(eval.segment(last), eval.frame(), mask.maskedText(), ECHO_OF_LAST, findings, evalCalls(recording));
+        evalCalls(recording)
+                .call(
+                        CallKind.REPAIR,
+                        eval.segment(last).id(),
+                        eval.requests()
+                                .repairRequest(
+                                        eval.segment(last),
+                                        eval.draftContext(last).draftContext(),
+                                        mask,
+                                        ECHO_OF_LAST,
+                                        defects));
 
-        assertThat(findings).isNotEmpty();
+        assertThat(defects).isNotEmpty();
         assertThat(sent(recording, 0)).isEqualTo(sent(job, PARAGRAPHS + 1));
     }
 
@@ -287,7 +291,7 @@ class PromptRequestsEquivalenceTest {
     }
 
     @Test
-    void narratorLine_singleDraftRunWithAFirstPersonMaleNarrator_isInTheDraftAndTheDirectedFixPrompts() {
+    void narratorLine_singleDraftRunWithAFirstPersonMaleNarrator_isInTheDraftAndTheRepairPrompts() {
         final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
 
         assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);

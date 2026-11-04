@@ -11,8 +11,11 @@ public enum CallKind {
     /** A repair call fixing a structural (tag/placeholder-count) hard-gate failure. */
     STRUCTURAL_REPAIR,
 
-    /** A repair call fixing a placeholder-multiset hard-gate failure. */
-    PLACEHOLDER_REPAIR,
+    /**
+     * The one repair of a segment whose draft kept a blocking or repair-level finding: translated again with its
+     * previous attempt and its defects named.
+     */
+    REPAIR,
 
     /** A reviewer call: reads a batch of candidates and answers with find-and-replace edits. */
     REVIEW,

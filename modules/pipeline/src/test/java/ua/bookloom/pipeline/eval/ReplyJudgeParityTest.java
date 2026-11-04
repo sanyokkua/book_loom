@@ -9,6 +9,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.ChunkDecider;
@@ -47,11 +48,12 @@ class ReplyJudgeParityTest {
                 new EditApplier(new EditVerifier()),
                 new DirectedFix(templates, new DraftReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())));
         final LoopSettings settings = new LoopSettings(
-                ReviewMode.UNATTENDED,
-                new DialParameters(0, 0, 0, false, false, 4),
-                project.frame(),
-                project.settings().names(),
-                List.of());
+                        ReviewMode.UNATTENDED,
+                        new DialParameters(0, RepairMode.ONE, 0, false, false, 4),
+                        project.frame(),
+                        project.settings().names(),
+                        List.of())
+                .withoutRepair();
         final ChunkDecider decider = Objects.requireNonNull(
                 loop.start(List.of(drafted), settings, project.gate(), NO_MODEL).data());
         final SegmentOutcome decided =

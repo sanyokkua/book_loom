@@ -26,7 +26,7 @@ import ua.bookloom.api.project.SegmentPath;
  * @param findings every finding recorded against this segment, de-duplicated
  * @param path {@link SegmentPath#DRAFT} when decided with no round used — accepted, flagged at once by the draft
  *     step, or flagged by a review retry, which runs none; {@link SegmentPath#REPAIRED} when at least one self-heal round ran, whatever the final status
- * @param repairRounds how many self-heal rounds this segment used
+ * @param repairRounds 1 when the segment was given its one repair or the reviewer changed it, else 0
  * @param flagReason the error a {@code FlagNow} self-heal reply or a {@code FlaggedAtOnce} draft outcome flagged
  *     this segment with; {@code null} for every other FLAGGED or ACCEPTED segment
  * @param rejectedTarget the model's last refused reply in masked form, kept only when no target passed every hard

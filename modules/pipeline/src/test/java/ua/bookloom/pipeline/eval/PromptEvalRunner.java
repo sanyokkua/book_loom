@@ -216,11 +216,11 @@ final class PromptEvalRunner {
         final PromptRequests requests = project.requests();
         return step == RepairStep.STRUCTURAL
                 ? Optional.of(requests.structuralRepairRequest(segment, context, mask, rejected))
-                : requests.placeholderRepairRequest(segment, context, mask, rejected);
+                : requests.repairRequest(segment, context, mask, rejected);
     }
 
     static CallKind repairKind(final RepairStep step) {
-        return step == RepairStep.STRUCTURAL ? CallKind.STRUCTURAL_REPAIR : CallKind.PLACEHOLDER_REPAIR;
+        return step == RepairStep.STRUCTURAL ? CallKind.STRUCTURAL_REPAIR : CallKind.REPAIR;
     }
 
     private EvalRow read(

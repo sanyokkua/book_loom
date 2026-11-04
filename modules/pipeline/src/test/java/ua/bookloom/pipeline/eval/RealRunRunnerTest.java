@@ -255,7 +255,7 @@ class RealRunRunnerTest {
         final RealRunRow row = runner(sent, kind -> stop(answer)).repair(repairCase);
 
         assertThat(sent).singleElement().satisfies(call -> {
-            assertThat(call.kind()).isEqualTo(CallKind.PLACEHOLDER_REPAIR);
+            assertThat(call.kind()).isEqualTo(CallKind.REPAIR);
             assertThat(all(call)).contains(repairCase.rejected());
         });
         assertThat(row.outcome()).isEqualTo(Outcome.PASS);

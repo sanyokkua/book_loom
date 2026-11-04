@@ -26,7 +26,7 @@ class PromptNameTest {
     @CsvSource({
         "DRAFT,draft,DRAFT,draft,0.2",
         "STRUCTURAL_REPAIR,structural-repair,STRUCTURAL_REPAIR,structural-repair,0.2",
-        "PLACEHOLDER_REPAIR,placeholder-repair,PLACEHOLDER_REPAIR,placeholder-repair,0.2",
+        "REPAIR,repair,REPAIR,repair,0.1",
         "REVIEWER,reviewer,REVIEW,reviewer,0.0",
         "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2",
         "REVISION,revision,REVISION,revision,0.2",
@@ -71,7 +71,7 @@ class PromptNameTest {
     @ParameterizedTest
     @CsvSource({
         "STRUCTURAL_REPAIR",
-        "PLACEHOLDER_REPAIR",
+        "REPAIR",
         "REVIEWER",
         "DIRECTED_FIX",
         "REVISION",
@@ -91,7 +91,7 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"DRAFT", "STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR"})
+    @CsvSource({"DRAFT", "STRUCTURAL_REPAIR", "REPAIR"})
     void pseudoModel_everyResponseFormatName_answersTargetObject(final PromptName name) {
         final ChatRequest request = new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),

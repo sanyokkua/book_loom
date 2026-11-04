@@ -163,12 +163,24 @@ final class ChunkDrafting {
                                 .translateSplit(
                                         segment, context.draftContext(), mask, steps.splitter(), current.budget()),
                         error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
-        if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
+        if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome done)) {
+            final DraftOutcome outcome = repairable(current, done, context, mask);
             current.drafts().drafted(outcome, snapshot);
             events.drafted(outcome, current.loop());
             announced.drafted(segment.id(), outcome);
+            return new Step.Done<>(outcome);
         }
         return drafted;
+    }
+
+    // A batch-adopted draft and a single one alike carry the call that repairs them with their own context and mask.
+    private static DraftOutcome repairable(
+            final Current current, final DraftOutcome outcome, final ContextPackage context, final ProtectedMask mask) {
+        if (outcome instanceof DraftOutcome.Drafted drafted && drafted.repairCall() == null) {
+            log.trace("Repair call attached segmentId={}", drafted.segment().id());
+            return drafted.withRepair(current.translator().repairCall(drafted.segment(), context.draftContext(), mask));
+        }
+        return outcome;
     }
 
     private ContextPackage contextOf(

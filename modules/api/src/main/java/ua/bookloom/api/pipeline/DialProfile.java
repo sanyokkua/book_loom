@@ -14,11 +14,11 @@ public interface DialProfile {
     int precedingTargets();
 
     /**
-     * How many directed-fix rounds a flagged segment gets.
+     * What a segment whose draft fails a check is given.
      *
-     * @return the count, zero or more
+     * @return the dial's repair mode
      */
-    int repairRounds();
+    RepairMode repair();
 
     /**
      * How many times the reviewer reads each chunk.

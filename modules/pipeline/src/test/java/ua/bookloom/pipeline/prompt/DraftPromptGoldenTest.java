@@ -23,7 +23,7 @@ class DraftPromptGoldenTest {
                 "draft-unknown-source",
                 "draft-zh-hant",
                 "structural-repair",
-                "placeholder-repair"
+                "repair"
             })
     void messages_pinnedScenario_areByteEqualToGolden(final String name) throws IOException {
         final var messages = GoldenCases.render(

@@ -11,6 +11,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchContext;
@@ -160,10 +161,20 @@ public final class PromptRequests {
         return translator.requests().structuralRepair(segment, draft, mask, rejectedReply);
     }
 
-    /** The request of the placeholder repair for a reply the gate refuses, or empty when no model repair is needed. */
-    public Optional<ChatRequest> placeholderRepairRequest(
+    /** The one repair's request for a draft whose text {@code previous} still holds {@code defects}. */
+    public ChatRequest repairRequest(
+            final Segment segment,
+            final DraftContext draft,
+            final ProtectedMask mask,
+            final String previous,
+            final List<QaFinding> defects) {
+        return translator.requests().repair(segment, draft, mask, previous, defects);
+    }
+
+    /** The one repair's request for a reply whose marks the code cannot put back, or empty when no call is needed. */
+    public Optional<ChatRequest> repairRequest(
             final Segment segment, final DraftContext draft, final ProtectedMask mask, final String rejectedTarget) {
-        return translator.requests().placeholderRepair(segment, draft, mask, rejectedTarget);
+        return translator.requests().repairOfLostMarks(segment, draft, mask, rejectedTarget);
     }
 
     /** How many earlier pairs of the unit a batch shows. */

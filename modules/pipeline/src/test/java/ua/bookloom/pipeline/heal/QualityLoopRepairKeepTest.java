@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
@@ -19,14 +20,13 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
- * The repair path never makes text worse: it carries the best candidate (fewest failed hard gates, then fewest
- * blockers), discards a step whose blocker set is no better, stops when a step makes no progress and never spends more
- * rounds than the dial allows ({@code specs/quality-gates/spec.md} "Keep the best candidate through the repair
- * path"). The texts are chosen by the checks they trip against "He opened the old door.": a Latin letter inside a
- * Cyrillic word is {@code script-purity}, an unclosed guillemet is {@code quote-balance}, an upper-case English echo is
- * {@code script} and {@code echo}, a one-word target is {@code length}.
+ * The one repair never makes text worse: it replaces the text in place only when the never-worse gate keeps it, and a
+ * segment gets no second repair ({@code specs/quality-gates/spec.md} "Keep a repair only when it passes the hard gates
+ * and the never-worse gate keeps it"). The texts are chosen by the checks they trip against "He opened the old door.":
+ * a Latin letter inside a Cyrillic word is {@code script-purity}, an unclosed guillemet is {@code quote-balance}, an
+ * upper-case English echo is {@code script} and {@code echo}, a one-word target is {@code length}.
  */
-class QualityLoopBestCandidateTest {
+class QualityLoopRepairKeepTest {
 
     private static final String SOURCE = "He opened the old door.";
     private static final String GOOD = "Він відчинив старі двері.";
@@ -39,12 +39,12 @@ class QualityLoopBestCandidateTest {
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
-    // A repair that fixes one blocker and breaks a hard gate must not replace the draft that only failed a soft check.
+    // A repair that adds a blocking finding must not replace the draft that only failed another check.
     @Test
-    void nextDecision_stepThatBreaksAHardGate_isDiscardedAndTheBetterDraftIsKept() {
+    void nextDecision_repairThatAddsABlocker_isNotKept() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(SHORT_WITH_PURITY)));
 
-        final SegmentOutcome decided = decide(TOO_SHORT, model, 3);
+        final SegmentOutcome decided = decide(TOO_SHORT, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(TOO_SHORT);
@@ -52,56 +52,51 @@ class QualityLoopBestCandidateTest {
         assertThat(model.requests()).hasSize(1);
     }
 
-    // The "78-worse" pattern: the first repair helps, the second adds blockers; the outcome is the first repair.
+    // A repair that clears one blocker and adds none stays, even though a blocker is left: it is the best text.
     @Test
-    void nextDecision_secondRepairWorsensWhatTheFirstImproved_endsOnTheFirstRepair() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(PURITY_ONLY)))
-                .answer(readable(targetReply(ECHO_AND_QUOTE)));
+    void nextDecision_repairThatClearsOneOfTwoBlockers_isKeptAndTheSegmentFlagged() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
 
-        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 3);
+        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(raisedBy(decided)).contains("script-purity").doesNotContain("echo", "quote-balance");
-        assertThat(decided.repairRounds()).isEqualTo(2);
-    }
-
-    // A swap (one blocker traded for another) is no progress, so the loop stops with the best it has.
-    @Test
-    void nextDecision_stepThatSwapsOneBlockerForAnother_stopsAndKeepsTheBest() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(QUOTE_ONLY)))
-                .answer(readable(targetReply(PURITY_ONLY)))
-                .answer(readable(targetReply(GOOD)));
-
-        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 3);
-
-        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(decided.machineTarget()).isEqualTo(QUOTE_ONLY);
         assertThat(raisedBy(decided)).contains("quote-balance").doesNotContain("script-purity");
-        assertThat(model.requests()).hasSize(2);
+        assertThat(decided.repairRounds()).isEqualTo(1);
+    }
+
+    // A swap (one blocker traded for another) is no progress, so the text in place stays.
+    @Test
+    void nextDecision_repairThatSwapsOneBlockerForAnother_keepsTheDraft() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
+
+        final SegmentOutcome decided = decide(PURITY_ONLY, model, true);
+
+        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(decided.machineTarget()).isEqualTo(PURITY_ONLY);
+        assertThat(raisedBy(decided)).contains("script-purity").doesNotContain("quote-balance");
+        assertThat(model.requests()).hasSize(1);
     }
 
     @Test
-    void nextDecision_blockerSetThatKeepsShrinking_continuesUntilTheTextPasses() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(PURITY_ONLY)))
-                .answer(readable(targetReply(GOOD)));
+    void nextDecision_repairThatPasses_isAcceptedAsRepaired() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD)));
 
-        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 3);
+        final SegmentOutcome decided = decide(PURITY_ONLY, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(decided.machineTarget()).isEqualTo(GOOD);
-        assertThat(decided.repairRounds()).isEqualTo(2);
+        assertThat(decided.repairRounds()).isEqualTo(1);
     }
 
     @Test
-    void nextDecision_blockerSetThatShrinksButTheDialAllowsOneRound_stopsAfterThatRound() {
+    void nextDecision_repairThatLeavesABlocker_getsNoSecondRepair() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable(targetReply(QUOTE_ONLY)))
                 .answer(readable(targetReply(GOOD)));
 
-        final SegmentOutcome decided = decide(ECHO_AND_QUOTE, model, 1);
+        final SegmentOutcome decided = decide(ECHO_AND_QUOTE, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(raisedBy(decided)).contains("quote-balance").doesNotContain("echo", "script");
@@ -109,10 +104,10 @@ class QualityLoopBestCandidateTest {
     }
 
     @Test
-    void nextDecision_noRepairRoundsInTheDial_makesNoDirectedFixCall() {
+    void nextDecision_noFixingCallAllowed_makesNoRepairCall() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD)));
 
-        final SegmentOutcome decided = decide(PURITY_ONLY, model, 0);
+        final SegmentOutcome decided = decide(PURITY_ONLY, model, false);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(model.requests()).isEmpty();
@@ -120,14 +115,15 @@ class QualityLoopBestCandidateTest {
 
     // The placeholder gate restored the text fine; only a text check blocked it, so its words are the machine target.
     @Test
-    void nextDecision_draftFailingOnlyATextCheck_keepsItsRestoredTextAsTheMachineTarget() {
+    void nextDecision_repairThatChangesNothing_keepsTheDraftAsTheMachineTarget() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
 
-        final SegmentOutcome decided = decide(QUOTE_ONLY, model, 1);
+        final SegmentOutcome decided = decide(QUOTE_ONLY, model, true);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(QUOTE_ONLY);
         assertThat(decided.maskedMachineTarget()).isEqualTo(QUOTE_ONLY);
+        assertThat(model.requests()).hasSize(1);
     }
 
     // The typography pass turns a lone straight quote into an unclosed guillemet, so the checks must read that text.
@@ -137,28 +133,29 @@ class QualityLoopBestCandidateTest {
                 new ScriptedChatModel().answer(readable("{\"target\":\"Він \\\"відчинив \\\"старі двері.\"}"));
         final GateFunction gate = TypographyGate.around(QualityLoopFixtures.PASSTHROUGH_GATE, "uk");
 
-        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 1, gate);
+        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, true, gate);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(raisedBy(decided)).contains("quote-balance");
     }
 
-    private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final int repairRounds) {
-        return decide(draft, model, repairRounds, QualityLoopFixtures.PASSTHROUGH_GATE);
+    private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final boolean repairs) {
+        return decide(draft, model, repairs, QualityLoopFixtures.PASSTHROUGH_GATE);
     }
 
     private SegmentOutcome decide(
-            final String draft, final ScriptedChatModel model, final int repairRounds, final GateFunction gate) {
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), draft, draft, draft, null);
+            final String draft, final ScriptedChatModel model, final boolean repairs, final GateFunction gate) {
+        final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, repairRounds, 0, false, false, 4),
+                new DialParameters(1, RepairMode.ONE, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
         final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, gate, calls(model)).data());
+                loop.start(List.of(outcome), repairs ? settings : settings.withoutRepair(), gate, calls(model))
+                        .data());
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 

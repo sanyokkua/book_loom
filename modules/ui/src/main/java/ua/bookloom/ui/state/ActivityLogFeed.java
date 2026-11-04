@@ -143,8 +143,8 @@ final class ActivityLogFeed {
     private static LogEntry answered(final CallKind kind, final List<String> args) {
         log.trace("an answered {} call is logged", kind);
         return switch (kind) {
-            case DIRECTED_FIX -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
-            case STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
+            case DIRECTED_FIX, REPAIR -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
+            case STRUCTURAL_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
             default -> LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, args);
         };
     }

@@ -1,18 +1,13 @@
 package ua.bookloom.pipeline.heal;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.RoundStarted;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.qa.NeverWorse;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.reviewer.EditApplier;
 import ua.bookloom.pipeline.reviewer.ReviewItem;
@@ -21,22 +16,17 @@ import ua.bookloom.pipeline.reviewer.ReviewVerdict;
 /**
  * Decides one {@link DraftOutcome.Drafted} segment. A draft that passes the checks goes to the reviewer's answer for it
  * ({@link ReviewResolver}: edits verified and applied, a refused edit fixed once, a rewrite taken only when it passes);
- * a draft a check refuses goes through up to the dial's repair budget of directed-fix rounds, and a repaired target is
- * accepted by the checks alone ({@code specs/quality-gates/spec.md} "Repair a failing segment within the dial's repair
- * budget before flagging it"). A reviewer that never answered flags the segment, rounds that make no progress stop
- * early, and a round a model call interrupted is continued at that call by the next decision of the same segment.
- * Built fresh per chunk by {@link QualityLoop}; never Guice-constructed, so it keeps each interrupted segment's
- * {@link Resumption}.
+ * a reviewer that never answered flags the segment. The text that stays then gets the {@link OneRepair} when it still
+ * holds a BLOCK or REPAIR finding, and the acceptance rule reads the findings left on the text that stays
+ * ({@code specs/quality-gates/spec.md} "Read a segment's outcome from the findings left after the one repair"). A
+ * decision a model call interrupted is made again from the draft kept in memory. Built fresh per chunk by
+ * {@link QualityLoop}; never Guice-constructed.
  */
 @Slf4j
 final class SegmentHealer {
 
-    private final LoopSettings settings;
-    private final RoundRunner rounds;
     private final ReviewResolver resolver;
-    private final SoftFix softFix;
-    private final ModelCalls calls;
-    private final Map<String, Resumption> resumptions = new HashMap<>();
+    private final OneRepair oneRepair;
 
     SegmentHealer(
             final EditApplier editApplier,
@@ -44,16 +34,15 @@ final class SegmentHealer {
             final LoopSettings settings,
             final GateFunction gate,
             final ModelCalls calls) {
-        this.settings = Objects.requireNonNull(settings, "settings");
-        this.calls = Objects.requireNonNull(calls, "calls");
-        final RoundEvaluator evaluator = new RoundEvaluator(gate, settings);
-        this.rounds = new RoundRunner(directedFix, settings, evaluator, calls);
+        Objects.requireNonNull(settings, "settings");
+        Objects.requireNonNull(calls, "calls");
+        final ReplyEvaluator evaluator = new ReplyEvaluator(gate, settings);
         this.resolver = new ReviewResolver(editApplier, directedFix, evaluator, settings, calls);
-        this.softFix = new SoftFix(directedFix, evaluator, settings, calls);
+        this.oneRepair = new OneRepair(evaluator, settings, calls);
     }
 
     /**
-     * Decides one drafted segment, continuing its rounds where a failed call left them.
+     * Decides one drafted segment.
      *
      * @param outcome the drafted segment
      * @param initialQa the outcome's already-evaluated hard-gate and soft outcome
@@ -65,88 +54,27 @@ final class SegmentHealer {
             final DraftOutcome.Drafted outcome, final QaResult initialQa, @Nullable final ReviewVerdict verdict) {
         Objects.requireNonNull(outcome, "outcome");
         Objects.requireNonNull(initialQa, "initialQa");
-        return decideKept(outcome, initialQa, verdict).map(decided -> keepRejected(decided, outcome));
-    }
-
-    // A segment no target passed for keeps the model's refused reply, so review shows its words instead of the source.
-    // A draft the placeholder gate restored but a text check blocked has no refused form of its own: its restored text
-    // is the best the model wrote, and must not be lost with the failed check.
-    private static SegmentOutcome keepRejected(final SegmentOutcome decided, final DraftOutcome.Drafted outcome) {
-        final String rejected = outcome.rejectedForm() != null ? outcome.rejectedForm() : outcome.maskedForm();
-        final SegmentOutcome kept = decided.keepingRejected(rejected);
-        if (kept.rejectedTarget() != null) {
-            log.debug("Rejected reply kept for review segment={} status={}", decided.segmentId(), decided.status());
-        }
-        return kept;
-    }
-
-    private Result<SegmentOutcome> decideKept(
-            final DraftOutcome.Drafted outcome, final QaResult initialQa, @Nullable final ReviewVerdict verdict) {
         final String segmentId = outcome.segment().id();
-        final Resumption resumption = resumptions.remove(segmentId);
-        if (resumption != null) {
-            log.info("Continuing segment={} at round={}", segmentId, resumption.round());
-            return runRounds(outcome, segmentId, resumption);
-        }
         SegmentHealerLogging.logEvaluation(segmentId, 0, initialQa);
         final MachineTarget machine = MachineTarget.of(outcome, initialQa);
         if (verdict != null && AcceptanceRule.readyForReview(initialQa)) {
-            return decideReviewed(outcome, initialQa, machine, verdict);
-        }
-        final boolean accepted = AcceptanceRule.accepts(initialQa, 0);
-        SegmentHealerLogging.logAcceptanceDecision(segmentId, initialQa, 0, accepted);
-        if (accepted) {
-            return Result.ok(softFix.settle(
-                    outcome,
-                    new SoftFix.Accepted(machine, initialQa, outcome.maskedReply(), List.of(), 0, SegmentPath.DRAFT)));
-        }
-        final BestCandidate first = new BestCandidate(initialQa, machine, outcome.maskedReply(), null);
-        return runRounds(outcome, segmentId, Resumption.first(first));
-    }
-
-    // The reviewer read this pair: a reply it did not give is flagged, anything else is verified in code.
-    private Result<SegmentOutcome> decideReviewed(
-            final DraftOutcome.Drafted outcome,
-            final QaResult initialQa,
-            final MachineTarget machine,
-            final ReviewVerdict verdict) {
-        final String segmentId = outcome.segment().id();
-        if (verdict.isUnavailable() || !verdict.readable()) {
-            return Result.ok(SegmentOutcomes.reviewerUnavailable(
-                    segmentId, machine, initialQa, 0, verdict.unavailableBecause()));
-        }
-        final ReviewItem item = verdict.itemFor(segmentId).orElseGet(() -> ReviewItem.ok(segmentId));
-        return resolver.resolve(outcome, initialQa, item).map(resolution -> decidedBy(outcome, resolution));
-    }
-
-    private SegmentOutcome decidedBy(final DraftOutcome.Drafted outcome, final Resolution resolution) {
-        final String segmentId = outcome.segment().id();
-        final boolean accepted = AcceptanceRule.accepts(resolution.qa(), resolution.verifiedBlockersLeft());
-        SegmentHealerLogging.logAcceptanceDecision(
-                segmentId, resolution.qa(), resolution.verifiedBlockersLeft(), accepted);
-        final SegmentPath path = resolution.rounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT;
-        return accepted
-                ? softFix.settle(
+            if (verdict.isUnavailable() || !verdict.readable()) {
+                return Result.ok(keepRejected(
+                        SegmentOutcomes.reviewerUnavailable(
+                                segmentId, machine, initialQa, 0, verdict.unavailableBecause()),
                         outcome,
-                        new SoftFix.Accepted(
-                                resolution.machine(),
-                                resolution.qa(),
-                                resolution.maskedText(),
-                                resolution.findings(),
-                                resolution.rounds(),
-                                path))
-                : SegmentOutcomes.flagged(
-                        segmentId,
-                        resolution.machine(),
-                        resolution.qa(),
-                        resolution.findings(),
-                        resolution.rounds(),
-                        resolution.reason());
+                        null));
+            }
+            final ReviewItem item = verdict.itemFor(segmentId).orElseGet(() -> ReviewItem.ok(segmentId));
+            return resolver.resolve(outcome, initialQa, item).flatMap(resolution -> settle(outcome, resolution));
+        }
+        log.debug("Deciding segment={} without the reviewer", segmentId);
+        return settle(outcome, new Resolution(machine, initialQa, List.of(), 0, 0, null, outcome.maskedReply()));
     }
 
     /**
-     * Flags a segment the run gave up on after its calls kept failing, keeping the latest target that passed every
-     * hard gate — the draft's, or the one an interrupted round had reached.
+     * Flags a segment the run gave up on after its calls kept failing, keeping the draft's target when it passed every
+     * hard gate.
      *
      * @param outcome the drafted segment
      * @param initialQa the outcome's already-evaluated hard-gate and soft outcome
@@ -154,131 +82,46 @@ final class SegmentHealer {
      * @return the flagged decision
      */
     SegmentOutcome giveUp(final DraftOutcome.Drafted outcome, final QaResult initialQa, final AppError reason) {
-        final String segmentId = outcome.segment().id();
-        final Resumption resumption = resumptions.remove(segmentId);
-        log.debug("Giving up on segment={} midRound={} code={}", segmentId, resumption != null, reason.code());
-        if (resumption == null) {
-            return keepRejected(
-                    SegmentOutcomes.flagged(
-                            segmentId, MachineTarget.of(outcome, initialQa), initialQa, List.of(), 0, reason),
-                    outcome);
-        }
-        final BestCandidate state = resumption.state();
+        log.debug("Giving up on segment={} code={}", outcome.segment().id(), reason.code());
         return keepRejected(
                 SegmentOutcomes.flagged(
-                        segmentId, state.machine(), state.qa(), List.of(), resumption.round() - 1, reason),
-                outcome);
+                        outcome.segment().id(), MachineTarget.of(outcome, initialQa), initialQa, List.of(), 0, reason),
+                outcome,
+                null);
     }
 
-    private Result<SegmentOutcome> runRounds(
-            final DraftOutcome.Drafted outcome, final String segmentId, final Resumption start) {
-        BestCandidate state = start.state();
-        final int budget = settings.dial().repairRounds();
-        for (int round = start.round(); round <= budget; round++) {
-            switch (attemptRound(outcome, segmentId, round, state)) {
-                case RoundStep.Terminal(var result) -> {
-                    return result;
-                }
-                case RoundStep.Interrupted(var error) -> {
-                    resumptions.put(segmentId, new Resumption(round, state));
-                    log.debug("Kept round={} of segment={} for the next decision", round, segmentId);
-                    return Result.err(error);
-                }
-                case RoundStep.Continue(var next) -> state = next;
-            }
-        }
-        return Result.ok(SegmentOutcomes.flagged(segmentId, state.machine(), state.qa(), List.of(), budget, null));
+    private Result<SegmentOutcome> settle(final DraftOutcome.Drafted outcome, final Resolution standing) {
+        return oneRepair.repair(outcome, standing).map(repaired -> decided(outcome, repaired));
     }
 
-    private RoundStep attemptRound(
-            final DraftOutcome.Drafted outcome, final String segmentId, final int round, final BestCandidate best) {
-        final List<QaFinding> findings =
-                SegmentFindings.withCarried(SegmentFindings.concrete(best.qa()), best.lastGateFinding());
-        SegmentHealerLogging.logRoundChoice(segmentId, round, findings, best.qa());
-        if (findings.isEmpty()) {
-            return RoundStep.terminal(Result.ok(
-                    SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round - 1, null)));
-        }
-        announceRound(segmentId, round, findings);
-        final String stepKey =
-                RepairSteps.begin(calls, segmentId, RepairSteps.ROUND_SUFFIX + round, "repair-round-" + round);
-        final RoundOutcome ran = rounds.run(outcome, best.rewriteBase(), findings, round);
-        RepairSteps.end(calls, stepKey, ran);
-        return switch (ran) {
-            case RoundOutcome.StepError(var error) -> new RoundStep.Interrupted(error);
-            case RoundOutcome.FlagNow(var error) ->
-                RoundStep.terminal(Result.ok(
-                        SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round, error)));
-            case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(best, failed));
-            case RoundOutcome.Evaluated evaluated -> decideEvaluated(outcome, round, best, evaluated);
-        };
-    }
-
-    private void announceRound(final String segmentId, final int round, final List<QaFinding> findings) {
-        calls.announce(new RoundStarted(
-                segmentId,
-                round,
-                settings.dial().repairRounds(),
-                null,
-                findings.getFirst().kind()));
-    }
-
-    private static BestCandidate carryingFinding(final BestCandidate best, final RoundOutcome.Failed failed) {
-        return failed.gateFinding() == null ? best : best.withLastGateFinding(failed.gateFinding());
-    }
-
-    // A repaired target is decided by the checks alone (the reviewer read the draft, not the repair), and it replaces
-    // the best candidate only when it has fewer blockers: a step that does not improve is discarded and ends the path.
-    private RoundStep decideEvaluated(
-            final DraftOutcome.Drafted outcome,
-            final int round,
-            final BestCandidate best,
-            final RoundOutcome.Evaluated evaluated) {
+    private static SegmentOutcome decided(final DraftOutcome.Drafted outcome, final OneRepair.Repaired repaired) {
         final String segmentId = outcome.segment().id();
-        final QaResult qa = evaluated.qa();
-        SegmentHealerLogging.logEvaluation(segmentId, round, qa);
-        final boolean accepted = AcceptanceRule.accepts(qa, 0);
-        SegmentHealerLogging.logAcceptanceDecision(segmentId, qa, 0, accepted);
+        final Resolution end = repaired.standing();
+        final boolean accepted = AcceptanceRule.accepts(end.qa(), end.verifiedBlockersLeft());
+        SegmentHealerLogging.logAcceptanceDecision(segmentId, end.qa(), end.verifiedBlockersLeft(), accepted);
         if (accepted) {
-            return RoundStep.terminal(Result.ok(softFix.settle(
-                    outcome,
-                    new SoftFix.Accepted(
-                            machineOf(best, evaluated),
-                            qa,
-                            evaluated.maskedCandidate(),
-                            List.of(),
-                            round,
-                            SegmentPath.REPAIRED))));
+            // The path says whose text stays; the count says whether the repair call was spent.
+            final SegmentPath path = end.rounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT;
+            return SegmentOutcomes.accepted(segmentId, end.machine(), end.qa(), end.findings(), repaired.calls(), path);
         }
-        if (!improves(best, qa, segmentId, round)) {
-            return RoundStep.terminal(
-                    Result.ok(SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round, null)));
-        }
-        return RoundStep.continueWith(
-                new BestCandidate(qa, machineOf(best, evaluated), evaluated.maskedCandidate(), null));
+        log.warn("Segment flagged after its one repair segment={} reason={}", segmentId, repaired.reason());
+        return keepRejected(
+                SegmentOutcomes.flagged(
+                        segmentId, end.machine(), end.qa(), end.findings(), repaired.calls(), end.reason()),
+                outcome,
+                repaired.rejected());
     }
 
-    // A candidate beats the best one only with fewer failed hard gates, or as many and fewer blockers; a swap, a repeat
-    // and a regression make no progress, so the path stops and keeps the best. Deleted with the rounds (task 10.7).
-    private static boolean improves(
-            final BestCandidate best, final QaResult candidate, final String segmentId, final int round) {
-        final boolean improves = NeverWorse.isWorseByBlockers(best.qa(), candidate);
-        log.debug(
-                "Round blockers segment={} round={} before={} after={} improves={}",
-                segmentId,
-                round,
-                Blockers.of(best.qa()),
-                Blockers.of(candidate),
-                improves);
-        if (!improves) {
-            log.warn("Repair rounds stopped segment={} round={} reason=no-progress", segmentId, round);
+    // A segment no target passed for keeps the model's last refused reply, so review shows its words instead of the
+    // source: the repair's, else the draft's. A draft the placeholder gate restored but a text check blocked has no
+    // refused form of its own: its restored text is the best the model wrote, and must not be lost with the check.
+    private static SegmentOutcome keepRejected(
+            final SegmentOutcome decided, final DraftOutcome.Drafted outcome, @Nullable final String repairRejected) {
+        final String draftRejected = outcome.rejectedForm() != null ? outcome.rejectedForm() : outcome.maskedForm();
+        final SegmentOutcome kept = decided.keepingRejected(repairRejected != null ? repairRejected : draftRejected);
+        if (kept.rejectedTarget() != null) {
+            log.debug("Rejected reply kept for review segment={} status={}", decided.segmentId(), decided.status());
         }
-        return improves;
-    }
-
-    private static MachineTarget machineOf(final BestCandidate best, final RoundOutcome.Evaluated evaluated) {
-        final MachineTarget standing =
-                MachineTarget.standingOn(evaluated.restoredTarget(), evaluated.maskedForm(), evaluated.qa());
-        return standing.restored() != null ? standing : best.machine();
+        return kept;
     }
 }

@@ -8,14 +8,14 @@
  * {@link ua.bookloom.pipeline.heal.ChunkDecider}, which decides one segment per {@code nextDecision()} call — a
  * {@link ua.bookloom.pipeline.heal.DraftOutcome.FlaggedAtOnce} outcome at once, a
  * {@link ua.bookloom.pipeline.heal.DraftOutcome.Reused} one as accepted from memory with no call, a
- * {@link ua.bookloom.pipeline.heal.DraftOutcome.Drafted} one through the acceptance rule and, when it fails, up to
- * the dial's repair-round budget, or, when the checks pass, through the reviewer's verified edits. {@link ua.bookloom.pipeline.heal.ReuseCheck} decides,
+ * {@link ua.bookloom.pipeline.heal.DraftOutcome.Drafted} one through the reviewer's verified edits when the checks
+ * pass, then the one repair when a BLOCK or REPAIR finding is left, then the acceptance rule. {@link ua.bookloom.pipeline.heal.ReuseCheck} decides,
  * before any draft, whether a context-matched memory target may be reused — the acceptance rule with no reviewer.
  *
- * <p>A repair round's one call is a directed fix that names the evidenced findings — a failed check, or a reviewer
- * quote the app found and no edit fixed — sent through {@link ua.bookloom.pipeline.prompt.ModelCalls} and read into a
- * {@link ua.bookloom.pipeline.heal.RepairReply}. The path carries a best candidate, discards a step that does not
- * lower the blocker set and stops when a round makes no progress; there is no call without a finding to name.
+ * <p>The one repair ({@code OneRepair}) is a segment's only content-changing call: its draft prompt with the previous
+ * attempt and every defect named, sent through a {@link ua.bookloom.pipeline.heal.RepairCall} and read into a
+ * {@link ua.bookloom.pipeline.heal.RepairReply}; it stays only when the never-worse gate keeps it. The reviewer's fix of
+ * a refused edit is a directed fix of its own until the reviewer is retired.
  */
 @NullMarked
 package ua.bookloom.pipeline.heal;

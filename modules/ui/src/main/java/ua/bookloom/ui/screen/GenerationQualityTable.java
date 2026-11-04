@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.DialProfile;
 import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.ui.control.ReadOnlyGrid;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -77,7 +78,10 @@ final class GenerationQualityTable {
                 new Row(
                         "repair",
                         MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR,
-                        profile -> Integer.toString(profile.repairRounds())),
+                        profile -> messages.get(
+                                profile.repair() == RepairMode.ONE
+                                        ? MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR_ONE
+                                        : MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY)),
                 new Row(
                         "reviews",
                         MessageKey.SETTINGS_GENERATION_QUALITY_REVIEWS,

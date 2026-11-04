@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_ECHO;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
@@ -64,36 +64,34 @@ class TranslationJobQualityTest {
     private Path tempDir;
 
     @Test
-    void run_missingTokenFast_flagsAfterThreeCalls() {
-        final ScriptedChatModel model = replies(MISSING_TOKEN, MISSING_TOKEN, MISSING_TOKEN, "Вона пішла.");
+    void run_missingTokenFast_flagsAfterTwoCalls() {
+        final ScriptedChatModel model = replies(MISSING_TOKEN, MISSING_TOKEN, "Вона пішла.");
         final TestProject project = project(
                 TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.\n\nShe left."),
                 brief("en", "uk"));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, "placeholder-repair", FIX, DRAFT);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, DRAFT);
         assertThat(userMessage(model.requests().get(1))).contains(TOKENS);
-        assertThat(userMessage(model.requests().get(2))).contains(TOKENS);
-        assertThat(userMessage(model.requests().get(3))).contains(shown("She left."));
+        assertThat(userMessage(model.requests().get(2))).contains(shown("She left."));
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
         assertThat(stored(project, "Book.md:0").rejectedTarget()).isEqualTo(MISSING_TOKEN);
     }
 
     @Test
-    void run_placeholderFailureBalanced_goesToSelfHeal() {
+    void run_placeholderFailureBalanced_getsTheOneRepair() {
         // one word cannot hold the pair and keep text outside it, so no deterministic repair passes either
         final String reply = "Відчинив";
-        final ScriptedChatModel model = replies(reply, reply, reply, reply);
+        final ScriptedChatModel model = replies(reply, reply);
         final TestProject project = project(
                 TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door."),
                 brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, "placeholder-repair", FIX, FIX);
-        assertThat(userMessage(model.requests().get(2))).contains(TOKENS);
-        assertThat(userMessage(model.requests().get(3))).contains(TOKENS);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(userMessage(model.requests().get(1))).contains(TOKENS);
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
     }
 
@@ -104,7 +102,7 @@ class TranslationJobQualityTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, DOOR_TARGET);
@@ -125,14 +123,14 @@ class TranslationJobQualityTest {
     }
 
     @Test
-    void run_cutOffDirectedFix_keepsEarlierTarget() {
+    void run_cutOffRepair_keepsTheDraftsTarget() {
         final ScriptedChatModel model = replies(DOOR_ECHO)
                 .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("ВІН"), FinishReason.LENGTH)));
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         final JobReport report = report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:0", ErrorCode.validation));
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
@@ -150,8 +148,8 @@ class TranslationJobQualityTest {
 
         report(translation.run());
 
-        // The pseudo model's fix returns the echo unchanged, so the second round is not tried.
-        assertThat(model.formats()).containsExactly(DRAFT, FIX);
+        // The pseudo model's repair returns the echo unchanged, and no second repair is tried.
+        assertThat(model.formats()).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::repairRounds)
                 .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, 1);
