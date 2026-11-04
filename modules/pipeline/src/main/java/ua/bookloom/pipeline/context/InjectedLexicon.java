@@ -66,7 +66,7 @@ public final class InjectedLexicon {
                 || entry.forms().stream().anyMatch(form -> TermMatch.isNamedIn(form, text));
     }
 
-    private static Optional<SnapshotRendering> renderingOf(final LexiconEntry entry, final LexiconFilter filter) {
+    static Optional<SnapshotRendering> renderingOf(final LexiconEntry entry, final LexiconFilter filter) {
         final Optional<String> rendering = entry.established();
         if (rendering.isPresent() && !filter.admits(entry.term(), rendering.get())) {
             log.trace(
@@ -88,7 +88,7 @@ public final class InjectedLexicon {
         return rendering.term() + " → " + rendering.rendering();
     }
 
-    private static boolean heldByGlossary(final LexiconEntry entry, final List<GlossaryEntry> glossary) {
+    static boolean heldByGlossary(final LexiconEntry entry, final List<GlossaryEntry> glossary) {
         final String key = LexiconEntry.keyOf(entry.term());
         return glossary.stream()
                 .anyMatch(held -> LexiconEntry.keyOf(held.term()).equals(key));

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -107,6 +108,24 @@ public final class TermMatch {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(text, "text");
         return !term.isBlank() && strict(term).matcher(text).find();
+    }
+
+    /**
+     * Where a text first names the term, read as {@link #isNamedIn} reads it, so entries can be listed in the order a
+     * passage names them.
+     *
+     * @param term the key term; a blank term is named nowhere
+     * @param text the non-null text to search, tokens already removed
+     * @return the index of the first match, or -1 when the text does not name the term
+     */
+    public static int namedAt(final String term, final String text) {
+        Objects.requireNonNull(term, "term");
+        Objects.requireNonNull(text, "text");
+        if (term.isBlank()) {
+            return -1;
+        }
+        final Matcher matcher = strict(term).matcher(text);
+        return matcher.find() ? matcher.start() : -1;
     }
 
     /**

@@ -13,6 +13,7 @@ import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 
 /**
@@ -31,7 +32,7 @@ public final class ContextBuilder {
     /** Builds with the bundled block wording. */
     @Inject
     public ContextBuilder() {
-        // The wording is bundled; nothing is injected until the window, map and budgets (tasks 11.3, 11.4) are.
+        // The wording is bundled; nothing is injected until the budgets (task 11.4) are.
     }
 
     /** Which fixed part a kind of call sends. */
@@ -42,15 +43,14 @@ public final class ContextBuilder {
     }
 
     /**
-     * Plans one call's prompt.
+     * Plans one call's prompt with no window: the focus alone, no previous pair, no next source.
      *
      * @param kind the non-null kind of call
      * @param focus the non-null items the call works on; at least one for a translate-family call
-     * @param map the non-null book map, whose window lines task 11.3 adds
+     * @param map the non-null book map
      * @param frame the non-null run frame
      * @param profile the non-null profile of the model the call goes to
-     * @return the plan, or {@link ErrorCode#validation} for a kind the builder does not plan or a translate-family
-     *     call with no item, or {@link ErrorCode#internal} when the plan cannot be built
+     * @return as {@link #plan(CallKind, Window, BookMap, RunFrame, ModelProfile, List)}
      */
     public Result<PromptPlan> plan(
             final CallKind kind,
@@ -58,17 +58,45 @@ public final class ContextBuilder {
             final BookMap map,
             final RunFrame frame,
             final ModelProfile profile) {
-        Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(focus, "focus");
+        return plan(kind, Window.of(focus), map, frame, profile, List.of());
+    }
+
+    /**
+     * Plans one call's prompt.
+     *
+     * @param kind the non-null kind of call
+     * @param window the non-null window: the items the call works on, at least one for a translate-family call, with
+     *     the segments before them and the next source
+     * @param map the non-null book map, whose entries the window names reach block 9
+     * @param frame the non-null run frame
+     * @param profile the non-null profile of the model the call goes to
+     * @param masks the non-null masks of the focus items, whose tokens a locked entry is listed by; empty when nothing
+     *     is hidden
+     * @return the plan, or {@link ErrorCode#validation} for a kind the builder does not plan or a translate-family
+     *     call with no item, or {@link ErrorCode#internal} when the plan cannot be built
+     */
+    public Result<PromptPlan> plan(
+            final CallKind kind,
+            final Window window,
+            final BookMap map,
+            final RunFrame frame,
+            final ModelProfile profile,
+            final List<ProtectedMask> masks) {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(window, "window");
         Objects.requireNonNull(map, "map");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(profile, "profile");
+        Objects.requireNonNull(masks, "masks");
+        final Focus focus = window.focus();
         final FrameKind frameKind = frameOf(kind);
         log.debug(
-                "Planning {} ({} frame) for {} items",
+                "Planning {} ({} frame) for {} items, {} previous",
                 kind,
                 frameKind,
-                focus.items().size());
+                focus.items().size(),
+                window.previous().size());
         if (frameKind == FrameKind.NONE) {
             return invalid(kind, "This kind of call is not built by the context builder.");
         }
@@ -76,7 +104,7 @@ public final class ContextBuilder {
             return invalid(kind, "A translation call needs at least one item.");
         }
         try {
-            return Result.ok(build(kind, frameKind, focus, frame, profile));
+            return Result.ok(build(kind, frameKind, new CallWindow(window, map, masks), frame, profile));
         } catch (RuntimeException cause) {
             log.error("Planning {} for {} items failed", kind, focus.items().size(), cause);
             return Result.err(AppError.of(
@@ -84,15 +112,20 @@ public final class ContextBuilder {
         }
     }
 
+    /** What a call's user blocks read beside the run frame. */
+    private record CallWindow(Window window, BookMap map, List<ProtectedMask> masks) {}
+
     private PromptPlan build(
             final CallKind kind,
             final FrameKind frameKind,
-            final Focus focus,
+            final CallWindow call,
             final RunFrame frame,
             final ModelProfile profile) {
+        final Focus focus = call.window().focus();
         final List<Block> blocks =
                 new ArrayList<>(frameKind == FrameKind.TRANSLATE ? frame.system() : frame.analysis());
         if (frameKind == FrameKind.TRANSLATE) {
+            windowBlocks(call, frame, blocks);
             translateBlocks(kind, focus, frame, blocks);
         } else if (!focus.items().isEmpty()) {
             blocks.add(user(BlockSlots.ITEMS, items(focus, List.of())));
@@ -106,6 +139,26 @@ public final class ContextBuilder {
                 blocks, tokens, outputCap(focus, frame, profile), ModelWindow.of(profile.context(), null));
         logPlan(kind, focus, plan);
         return plan;
+    }
+
+    // Blocks 9 and 10: the map lines the window names, then the previous pairs and the next source.
+    private void windowBlocks(final CallWindow call, final RunFrame frame, final List<Block> blocks) {
+        final @Nullable String target = frame.brief().targetLanguage();
+        final MapLines lines = WindowMap.select(
+                call.window(),
+                List.of(),
+                call.map(),
+                call.masks(),
+                LexiconFilter.of(frame.brief().sourceLanguage(), target),
+                target);
+        addIfAny(blocks, BlockSlots.MAP, WindowBlocks.map(lines, words));
+        addIfAny(blocks, BlockSlots.WINDOW, WindowBlocks.window(call.window(), words));
+    }
+
+    private static void addIfAny(final List<Block> blocks, final String slot, final String text) {
+        if (!text.isEmpty()) {
+            blocks.add(user(slot, text));
+        }
     }
 
     private void translateBlocks(

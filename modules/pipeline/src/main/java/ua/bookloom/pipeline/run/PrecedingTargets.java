@@ -10,6 +10,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.context.AcceptedTargets;
 
 /**
  * Reads the masked targets of the segments before a draft in its unit. A segment decided and already committed is
@@ -50,6 +51,41 @@ final class PrecedingTargets {
     Result<List<EarlierPair>> earlierPairs(
             final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
         return earlier(unitSegments, segment, count, drafts);
+    }
+
+    /**
+     * What a window's previous pairs read (design D8): a segment's target only when it was kept — accepted, revised
+     * or the person's edit — read from the pending commit before the store; a draft of this chunk still undecided
+     * gives its source only.
+     *
+     * @param drafts the non-null drafts of the chunk being built
+     * @return the reader; never null
+     */
+    AcceptedTargets accepted(final ChunkDrafts drafts) {
+        Objects.requireNonNull(drafts, "drafts");
+        return segmentId -> acceptedTarget(segmentId, drafts);
+    }
+
+    private Result<Optional<String>> acceptedTarget(final String segmentId, final ChunkDrafts drafts) {
+        final Optional<SegmentRecord> held = pending.held(segmentId);
+        final Result<Optional<String>> target;
+        final String from;
+        if (held.isPresent()) {
+            from = "pending";
+            target = Result.ok(AcceptedTargets.of(held.get()));
+        } else if (drafts.isUndecided(segmentId)) {
+            from = "undecided";
+            target = Result.ok(Optional.empty());
+        } else {
+            from = "stored";
+            target = segments.find(projectId, segmentId).map(found -> found.flatMap(AcceptedTargets::of));
+        }
+        log.debug(
+                "Accepted target segmentId={} from={} shown={}",
+                segmentId,
+                from,
+                target.isOk() && Objects.requireNonNull(target.data(), "data").isPresent());
+        return target;
     }
 
     private Result<List<EarlierPair>> earlier(

@@ -1148,7 +1148,7 @@ snapshot changes shape, so the database is set aside.
   - **Log:** INFO once per run `run frame hash=… rules=[…] examples=pair|target|none`; DEBUG per call the block sizes.
   - **Done when:** the tests are green; the builder is not yet called by the run.
 
-- [ ] 11.3 Build the window and its map: previous accepted pairs, the focus and the next source, and only the map items whose forms occur there. A repair and a draft see the same facts, and nothing from elsewhere in the book. → :pipeline
+- [x] 11.3 Build the window and its map: previous accepted pairs, the focus and the next source, and only the map items whose forms occur there. A repair and a draft see the same facts, and nothing from elsewhere in the book. → :pipeline
   - **Satisfies:** "Fill the window with the accepted segments before the focus and the next source" (translation-pipeline), "Give a previous neighbour that was not accepted as source only" (translation-pipeline), "Inject a map item only when one of its forms occurs in the window" (translation-pipeline), "Write each injected map item as one line of its target, type and settled gender" (translation-pipeline), "Give the model only the terms that occur in the chunk" (glossary), "Keep one established rendering for each recurring term" (glossary)
   - **Depends on:** 11.2; group 7 (`NameForms.forms`, `TargetState`, `Origin`, lexicon `forms`)
   - **Excludes:** deleting `DialParameters.precedingTargets` and `DialProfile.precedingTargets()` (11.8: the old selectors and their `:ui` readers read them until then)

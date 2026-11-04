@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SnapshotTerm;
@@ -62,15 +63,22 @@ final class InjectedTerms {
     static List<String> lines(final SnapshotTerm entry, final ProtectedMask mask) {
         final String target = entry.target();
         final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
-        if (target == null || target.isBlank()) {
-            return List.of(entry.term() + " (" + facts + ")");
-        }
-        if (!entry.locked()) {
-            return List.of(entry.term() + " → " + target + " (" + facts + ")");
+        if (target == null || target.isBlank() || !entry.locked()) {
+            return List.of(line(entry.term(), target, facts));
         }
         return hiddenTokens(entry.term(), target, mask).stream()
                 .map(token -> token + " → " + target + ", " + facts)
                 .toList();
+    }
+
+    /**
+     * One map line of an entry the model sees as written: {@code term → target (facts)}, or {@code term (facts)} with
+     * no target.
+     */
+    static String line(final String term, @Nullable final String target, final String facts) {
+        return target == null || target.isBlank()
+                ? term + " (" + facts + ")"
+                : term + " → " + target + " (" + facts + ")";
     }
 
     private static List<String> hiddenTokens(final String term, final String target, final ProtectedMask mask) {
@@ -84,7 +92,7 @@ final class InjectedTerms {
                 .toList();
     }
 
-    private static SnapshotTerm snapshotOf(final GlossaryEntry entry) {
+    static SnapshotTerm snapshotOf(final GlossaryEntry entry) {
         return new SnapshotTerm(
                 entry.term(),
                 entry.target(),

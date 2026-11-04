@@ -34,6 +34,15 @@ final class BlockWords {
     static final String ITEMS_OPEN = "items.open";
     static final String ITEMS_CLOSE = "items.close";
     static final String ITEM = "item";
+    static final String MAP_GLOSSARY = "map.glossary";
+    static final String MAP_LOCKED = "map.locked";
+    static final String MAP_SUGGESTED = "map.suggested";
+    static final String MAP_SUGGESTED_NOTE = "map.suggestedNote";
+    static final String MAP_LEXICON = "map.lexicon";
+    static final String WINDOW_PREVIOUS = "window.previous";
+    static final String WINDOW_SOURCE = "window.source";
+    static final String WINDOW_TARGET = "window.target";
+    static final String WINDOW_NEXT = "window.next";
     static final String LABEL = "label.";
 
     private static final List<String> REQUIRED = List.of(
@@ -52,6 +61,15 @@ final class BlockWords {
             ITEMS_OPEN,
             ITEMS_CLOSE,
             ITEM,
+            MAP_GLOSSARY,
+            MAP_LOCKED,
+            MAP_SUGGESTED,
+            MAP_SUGGESTED_NOTE,
+            MAP_LEXICON,
+            WINDOW_PREVIOUS,
+            WINDOW_SOURCE,
+            WINDOW_TARGET,
+            WINDOW_NEXT,
             LABEL + "marks",
             LABEL + "dialogue",
             LABEL + "address",
