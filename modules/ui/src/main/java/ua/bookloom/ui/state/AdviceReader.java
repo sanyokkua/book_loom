@@ -2,9 +2,10 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -20,8 +21,11 @@ import ua.bookloom.ui.IoExecutor;
 
 /**
  * The readings behind the advice lines of the Models tab and of Start, by model and language pair. A reading is made
- * on the I/O executor, never on the FX thread, and the map changes on the FX thread only. A model's facts are read
- * when a person looks at it (the Models tab, the Book brief or the ready card shows it), never in the background.
+ * on the I/O executor, never on the FX thread, and the map changes on the FX thread only. A reading never asks the
+ * server: it comes from the name and the facts the session already holds, so a screen may ask for it when it is built
+ * (reopening the last project at launch included). The server is read only on the person's actions (selecting a model,
+ * the Models tab, Test, Detect again), and each such read is announced through {@link #factsRead}, which reads the
+ * model's held readings again.
  */
 @Slf4j
 @Singleton
@@ -46,12 +50,14 @@ public final class AdviceReader {
         }
     }
 
-    // Keys asked for already, so an unchanged model and pair is read once; FX thread only.
-    private final Set<Key> asked = new HashSet<>();
+    // The reading each key last asked for, so an unchanged model and pair is read once and a late, older reading never
+    // replaces a newer one; FX thread only. A failed reading leaves its key, so the next ask reads again.
+    private final Map<Key, Long> asked = new HashMap<>();
     private final ModelCapabilities capabilities;
     private final ExecutorService io;
     private final ObservableMap<Key, AdviceReading> readings = FXCollections.observableHashMap();
     private final ObservableMap<Key, AdviceReading> view = FXCollections.unmodifiableObservableMap(readings);
+    private long epoch;
 
     /**
      * Creates a reader with nothing read.
@@ -88,7 +94,8 @@ public final class AdviceReader {
     }
 
     /**
-     * Asks for a reading. Returns at once; the reading arrives on the FX thread.
+     * Asks for a reading from what is held, without asking the server. Returns at once; the reading arrives on the FX
+     * thread. FX thread only.
      *
      * @param selection the stored provider and the model on it
      * @param source the source language tag, or null for none
@@ -97,32 +104,67 @@ public final class AdviceReader {
     public void request(final ModelSelection selection, final @Nullable String source, final @Nullable String target) {
         Objects.requireNonNull(selection, "selection");
         final Key key = Key.of(selection, source, target);
-        if (!asked.add(key)) {
+        if (asked.containsKey(key)) {
             return;
         }
-        log.debug("reading the advice of {}/{} for {}>{}", key.providerId(), key.modelId(), source, target);
-        io.execute(() -> read(selection, key, source, target));
+        read(key);
     }
 
-    private void read(
-            final ModelSelection selection,
-            final Key key,
-            final @Nullable String source,
-            final @Nullable String target) {
-        try {
-            final Result<ModelReport> answer = capabilities.report(selection);
-            final ModelReport report = answer.data();
-            if (report == null) {
-                log.debug("no report for {}, no advice", selection.modelId());
-                return;
-            }
-            final LanguageAdvice languages = capabilities.languageAdvice(selection, source, target);
-            final AdviceReading reading =
-                    new AdviceReading(selection.modelId(), report, languages, capabilities.factsDate(), source, target);
-            runOnFx(() -> readings.put(key, reading));
-        } catch (RuntimeException failure) {
-            log.warn("the advice of {} could not be read", selection.modelId(), failure);
+    /**
+     * Reads the held readings of a model again, after a person's action read its server's facts. Safe on any thread;
+     * the readings run on the I/O executor.
+     *
+     * @param selection the provider and model whose facts were read
+     */
+    public void factsRead(final ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        runOnFx(() -> {
+            final List<Key> held = asked.keySet().stream()
+                    .filter(key -> key.providerId().equals(selection.providerId())
+                            && key.modelId().equals(selection.modelId()))
+                    .toList();
+            log.debug(
+                    "facts of {}/{} read: {} reading(s) again",
+                    selection.providerId(),
+                    selection.modelId(),
+                    held.size());
+            held.forEach(this::read);
+        });
+    }
+
+    private void read(final Key key) {
+        final long mine = ++epoch;
+        asked.put(key, mine);
+        log.debug(
+                "reading the advice of {}/{} for {}>{}",
+                key.providerId(),
+                key.modelId(),
+                key.sourceTag(),
+                key.targetTag());
+        io.execute(() -> readHeld(key, mine));
+    }
+
+    private void readHeld(final Key key, final long mine) {
+        final ModelSelection selection = new ModelSelection(key.providerId(), key.modelId());
+        final @Nullable String source = key.sourceTag().isEmpty() ? null : key.sourceTag();
+        final @Nullable String target = key.targetTag().isEmpty() ? null : key.targetTag();
+        final Result<ModelReport> answer = capabilities.heldReport(selection);
+        final ModelReport report = answer.data();
+        if (report == null) {
+            log.debug("no report for {}, no advice; asked again next time", selection.modelId());
+            runOnFx(() -> asked.remove(key, mine));
+            return;
         }
+        final LanguageAdvice languages = capabilities.languageAdvice(selection, source, target);
+        final AdviceReading reading =
+                new AdviceReading(selection.modelId(), report, languages, capabilities.factsDate(), source, target);
+        runOnFx(() -> {
+            if (Objects.equals(asked.get(key), mine)) {
+                readings.put(key, reading);
+            } else {
+                log.debug("advice reading #{} of {} dropped: a newer one is on the way", mine, key.modelId());
+            }
+        });
     }
 
     private static void runOnFx(final Runnable change) {

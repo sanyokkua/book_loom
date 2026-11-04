@@ -29,7 +29,7 @@ import ua.bookloom.ui.IoExecutor;
  *
  * <p>A chip first comes from the name alone, which is pure and offline; a reading of the server's facts (one
  * {@code /api/show}, made only when the person selects, tests or detects) replaces it and is never replaced by a name
- * again. The map changes on the FX thread only; the readings run on the I/O executor.
+ * again; the advice lines are told so they read the held facts too. The map changes on the FX thread only; the readings run on the I/O executor.
  */
 @Slf4j
 @Singleton
@@ -49,6 +49,7 @@ public final class ModelQuantChips {
     // Names already read, with or without a quant, so a name that has none is not read again; FX thread only.
     private final Set<Key> namesRead = new HashSet<>();
     private final ModelCapabilities capabilities;
+    private final AdviceReader advice;
     private final ExecutorService io;
     private final ObservableMap<Key, QuantChipModel> chips = FXCollections.observableHashMap();
     private final ObservableMap<Key, QuantChipModel> view = FXCollections.unmodifiableObservableMap(chips);
@@ -57,11 +58,14 @@ public final class ModelQuantChips {
      * Creates an empty set of chips.
      *
      * @param capabilities the port that reads a name and a model's facts
+     * @param advice the advice lines, told when a model's facts were read so they read them too
      * @param io the executor the readings run on, never the FX thread
      */
     @Inject
-    public ModelQuantChips(final ModelCapabilities capabilities, @IoExecutor final ExecutorService io) {
+    public ModelQuantChips(
+            final ModelCapabilities capabilities, final AdviceReader advice, @IoExecutor final ExecutorService io) {
         this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
+        this.advice = Objects.requireNonNull(advice, "advice");
         this.io = Objects.requireNonNull(io, "io");
     }
 
@@ -153,25 +157,25 @@ public final class ModelQuantChips {
      */
     public void readFactsNow(final ModelSelection selection) {
         Objects.requireNonNull(selection, SELECTION);
-        try {
-            final Result<ModelReport> asked = capabilities.report(selection);
-            final ModelReport report = asked.data();
-            if (report != null) {
-                publishFacts(selection, report.quantAdvice());
-            }
-        } catch (RuntimeException failure) {
-            log.warn("the quant facts of {} could not be read", selection.modelId(), failure);
+        final Result<ModelReport> asked = capabilities.report(selection);
+        final ModelReport report = asked.data();
+        if (report == null) {
+            log.debug("no facts report for {}", selection.modelId());
+            return;
         }
+        publishFacts(selection, report.quantAdvice());
     }
 
     /**
-     * Publishes a chip from a report a caller already holds.
+     * Publishes a chip from a report a caller has just read from the server, and tells the advice lines the model's
+     * facts are held now.
      *
      * @param selection the provider and model the advice is about
      * @param advice the report's quant advice, or null when it carries none
      */
     public void publishFacts(final ModelSelection selection, final @Nullable QuantAdvice advice) {
         Objects.requireNonNull(selection, SELECTION);
+        this.advice.factsRead(selection);
         if (advice == null || advice.token().isBlank()) {
             log.debug("no quant in the facts of {}", selection.modelId());
             return;
@@ -192,26 +196,18 @@ public final class ModelQuantChips {
     public Optional<PastedModel> readPasted(final String text, final ProviderKind kind) {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(kind, "kind");
-        try {
-            return capabilities.readPasted(text.strip(), kind);
-        } catch (RuntimeException failure) {
-            log.warn("a pasted model name could not be read", failure);
-            return Optional.empty();
-        }
+        return capabilities.readPasted(text.strip(), kind);
     }
 
     private void readNames(final String providerId, final List<String> ids) {
         final Map<Key, QuantChipModel> found = new HashMap<>();
-        try {
-            for (final String id : ids) {
-                final QuantAdvice advice = capabilities.quantAdviceByName(id);
-                if (advice != null && !advice.token().isBlank()) {
-                    found.put(new Key(providerId, id), new QuantChipModel(advice.token(), advice.tier(), false));
-                }
+        for (final String id : ids) {
+            final QuantAdvice named = capabilities.quantAdviceByName(id);
+            if (named != null && !named.token().isBlank()) {
+                found.put(new Key(providerId, id), new QuantChipModel(named.token(), named.tier(), false));
             }
-        } catch (RuntimeException failure) {
-            log.warn("a model name could not be read for its quant", failure);
         }
+        log.debug("{} of {} listed name(s) carry a quant", found.size(), ids.size());
         if (!found.isEmpty()) {
             runOnFx(() -> found.forEach((key, chip) -> chips.merge(key, chip, ModelQuantChips::keepFacts)));
         }

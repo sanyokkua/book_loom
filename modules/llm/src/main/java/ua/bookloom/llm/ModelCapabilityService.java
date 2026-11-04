@@ -58,34 +58,69 @@ public final class ModelCapabilityService implements ModelCapabilities {
     private final ModelInputNormalizer normalizer = new ModelInputNormalizer();
 
     // Served by provider and model id, so the Models tab reads it before a chat model exists. A read that throws leaves
-    // the server's facts unknown; the name alone still gives the identity and the default profile.
+    // the server's facts unknown; the name alone still gives the identity and the default profile. This is the one
+    // method here that asks the server, on a person's action only; what it read is held for the session.
     @Override
     public Result<ModelReport> report(ModelSelection selection) {
         Objects.requireNonNull(selection, SELECTION);
+        log.debug("Reporting model providerId={} model={}", selection.providerId(), selection.modelId());
+        return reportWith(selection, true);
+    }
+
+    @Override
+    public Result<ModelReport> heldReport(final ModelSelection selection) {
+        Objects.requireNonNull(selection, SELECTION);
+        log.debug(
+                "Reporting model from held facts providerId={} model={}", selection.providerId(), selection.modelId());
+        return reportWith(selection, false);
+    }
+
+    private Result<ModelReport> reportWith(final ModelSelection selection, final boolean askServer) {
         final String providerId = selection.providerId();
         final String modelId = selection.modelId();
-        log.debug("Reporting model providerId={} model={}", providerId, modelId);
-        final Optional<ProviderConfig> config = configs.find(providerId);
-        if (config.isEmpty()) {
-            log.debug("Model report refused branch=unknown-provider providerId={}", providerId);
-            return Result.err(unknownProvider());
+        try {
+            final Optional<ProviderConfig> config = configs.find(providerId);
+            if (config.isEmpty()) {
+                log.debug("Model report refused branch=unknown-provider providerId={}", providerId);
+                return Result.err(unknownProvider());
+            }
+            final @Nullable ModelFacts facts = askServer ? factsOf(config.get(), modelId) : held(providerId, modelId);
+            return Result.ok(describe(config.get(), modelId, facts));
+        } catch (RuntimeException cause) {
+            log.warn("Model report failed providerId={} model={}", providerId, modelId, cause);
+            return Result.err(AppError.of(
+                    ErrorCode.internal, "Model report failed", "BookLoom could not describe this model.", null, cause));
         }
-        final ModelFacts facts = factsOf(config.get(), modelId);
-        final ResolvedProfile resolved =
-                profiles.resolve(config.get().effectiveEngine(), modelId, facts, settings.current(providerId, modelId));
+    }
+
+    private ModelReport describe(final ProviderConfig config, final String modelId, final @Nullable ModelFacts facts) {
+        final ModelFacts known = facts == null ? ModelFacts.unknown() : facts;
+        final ResolvedProfile resolved = resolve(config, modelId, known);
         final QuantAdvice quant = quants.advise(resolved.identity(), facts);
         final ModelReport report = resolved.report()
                 .withAdvice(languages.declaration(resolved.identity()).orElse(null), quant)
-                .withNotes(notes(config.get(), modelId, resolved, facts, quant));
+                .withNotes(notes(config, modelId, resolved, known, quant));
         log.debug(
-                "Model reported providerId={} model={} contextLength={} loaded={} match={} verdict={}",
-                providerId,
+                "Model reported providerId={} model={} heldOrReadFacts={} contextLength={} loaded={} match={} verdict={}",
+                config.id(),
                 modelId,
+                facts != null,
                 report.contextLength(),
                 report.loadedContext(),
                 report.match(),
                 report.verdict());
-        return Result.ok(report);
+        return report;
+    }
+
+    private ResolvedProfile resolve(final ProviderConfig config, final String modelId, final ModelFacts facts) {
+        return profiles.resolve(config.effectiveEngine(), modelId, facts, settings.current(config.id(), modelId));
+    }
+
+    private @Nullable ModelFacts held(final String providerId, final String modelId) {
+        final Optional<ModelFacts> held = clients.heldFacts(providerId, modelId);
+        log.debug(
+                "Held facts providerId={} model={} branch={}", providerId, modelId, held.isPresent() ? "held" : "name");
+        return held.orElse(null);
     }
 
     private ModelNotes notes(
@@ -110,6 +145,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
                 languages.quantMeasured(identity, quant.token()));
     }
 
+    // Offline: the facts are the ones a person's action already read this session, else the name alone.
     @Override
     public LanguageAdvice languageAdvice(
             final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
@@ -120,15 +156,26 @@ public final class ModelCapabilityService implements ModelCapabilities {
                 selection.modelId(),
                 sourceTag,
                 targetTag);
-        final Optional<ProviderConfig> config = configs.find(selection.providerId());
-        if (config.isEmpty()) {
-            log.debug("Language advice skipped branch=unknown-provider providerId={}", selection.providerId());
+        try {
+            final Optional<ProviderConfig> config = configs.find(selection.providerId());
+            if (config.isEmpty()) {
+                log.debug("Language advice skipped branch=unknown-provider providerId={}", selection.providerId());
+                return LanguageAdvice.NEUTRAL;
+            }
+            return adviseHeld(config.get(), selection.modelId(), sourceTag, targetTag);
+        } catch (RuntimeException cause) {
+            log.warn("Language advice degraded to neutral model={}", selection.modelId(), cause);
             return LanguageAdvice.NEUTRAL;
         }
-        final String modelId = selection.modelId();
-        final ModelFacts facts = factsOf(config.get(), modelId);
-        final ResolvedProfile resolved = profiles.resolve(
-                config.get().effectiveEngine(), modelId, facts, settings.current(selection.providerId(), modelId));
+    }
+
+    private LanguageAdvice adviseHeld(
+            final ProviderConfig config,
+            final String modelId,
+            final @Nullable String sourceTag,
+            final @Nullable String targetTag) {
+        final @Nullable ModelFacts facts = held(config.id(), modelId);
+        final ResolvedProfile resolved = resolve(config, modelId, facts == null ? ModelFacts.unknown() : facts);
         return languages.advise(
                 resolved.identity(),
                 facts,
@@ -140,7 +187,12 @@ public final class ModelCapabilityService implements ModelCapabilities {
 
     @Override
     public String factsDate() {
-        return languages.dataVersion();
+        try {
+            return languages.dataVersion();
+        } catch (RuntimeException cause) {
+            log.warn("Model knowledge date degraded to none", cause);
+            return "";
+        }
     }
 
     private ModelFacts factsOf(final ProviderConfig config, final String modelId) {
@@ -186,10 +238,15 @@ public final class ModelCapabilityService implements ModelCapabilities {
     }
 
     @Override
-    public QuantAdvice quantAdviceByName(final String modelId) {
+    public @Nullable QuantAdvice quantAdviceByName(final String modelId) {
         Objects.requireNonNull(modelId, "modelId");
         log.debug("Quant advice by name model={}", modelId);
-        return quants.advise(parser.parse(modelId).identity(), null);
+        try {
+            return quants.advise(parser.parse(modelId).identity(), null);
+        } catch (RuntimeException cause) {
+            log.warn("Quant advice by name degraded to none model={}", modelId, cause);
+            return null;
+        }
     }
 
     // Pure text reading: the normalizer and parser never open a link or run a command (PastedTextIsNeverActedOnTest).
@@ -198,6 +255,15 @@ public final class ModelCapabilityService implements ModelCapabilities {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(kind, "kind");
         log.debug("Reading pasted text kind={} length={}", kind, text.length());
+        try {
+            return pasted(text, kind);
+        } catch (RuntimeException cause) {
+            log.warn("Pasted text could not be read kind={}", kind, cause);
+            return Optional.empty();
+        }
+    }
+
+    private Optional<PastedModel> pasted(final String text, final ProviderKind kind) {
         if (text.isBlank()) {
             log.debug("Pasted text is blank, nothing to explain");
             return Optional.empty();

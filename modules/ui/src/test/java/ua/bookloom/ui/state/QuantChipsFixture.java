@@ -8,6 +8,11 @@ final class QuantChipsFixture {
     private QuantChipsFixture() {}
 
     static ModelQuantChips idle() {
-        return new ModelQuantChips(ScriptedModelCapabilities.idle(), new DirectExecutor());
+        return on(ScriptedModelCapabilities.idle(), new DirectExecutor());
+    }
+
+    static ModelQuantChips on(
+            final ua.bookloom.api.llm.ModelCapabilities capabilities, final java.util.concurrent.ExecutorService io) {
+        return new ModelQuantChips(capabilities, new AdviceReader(capabilities, io), io);
     }
 }

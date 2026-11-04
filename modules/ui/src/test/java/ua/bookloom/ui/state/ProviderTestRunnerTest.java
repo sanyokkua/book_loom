@@ -48,7 +48,7 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
         return onFx(() -> new ProviderTestRunner(
                 new ProviderChecks(
-                        verifier, newModelListing(), new ModelQuantChips(ScriptedModelCapabilities.idle(), executor)),
+                        verifier, newModelListing(), QuantChipsFixture.on(ScriptedModelCapabilities.idle(), executor)),
                 new Voice(new Messages(() -> Locale.ENGLISH), errors),
                 executor,
                 subject,

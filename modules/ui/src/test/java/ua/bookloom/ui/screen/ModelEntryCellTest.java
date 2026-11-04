@@ -21,8 +21,12 @@ class ModelEntryCellTest extends FxTestBase {
     private static final ModelEntry PHI = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "phi4-mini");
     private static final ModelEntry LLAMA = new ModelEntry("ollama", "Ollama", ProviderKind.OLLAMA, "llama3.1:8b");
 
-    private final ModelQuantChips chips = new ModelQuantChips(
-            ScriptedModelCapabilities.idle(), java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+    private final ModelQuantChips chips = chipsOver(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+
+    private static ModelQuantChips chipsOver(final java.util.concurrent.ExecutorService io) {
+        final ScriptedModelCapabilities capabilities = ScriptedModelCapabilities.idle();
+        return new ModelQuantChips(capabilities, new ua.bookloom.ui.state.AdviceReader(capabilities, io), io);
+    }
 
     private static void fx(final Runnable action) {
         onFx(() -> {

@@ -69,17 +69,13 @@ public final class SettingsViewModel {
      * Starts reading the registry on the background executor; the list stays empty, and nothing is selected, until the
      * read is published. The first provider in {@link ua.bookloom.api.llm.ProviderKind} order is then selected.
      *
-     * @param store the registry the rows are read from (the order it lists in is not relied on), and where the model
-     *     chosen last time is read from, on the background executor
-     * @param checks the port a check is run through, and the models the selected provider offers; this view model
-     *     discards and re-asks the listing when the provider changes
-     * @param voice the catalogue a provider without a name of its own is named from, and where a refusal of the whole
-     *     check is shown
+     * @param store the registry the rows are read from (in no relied-on order) and the model chosen last time, both
+     *     read on the background executor; that model's server is not asked
+     * @param checks the check port and the selected provider's models, whose listing is re-asked on a provider change
+     * @param voice names a provider without a name of its own, and shows a refusal of the whole check
      * @param executor the daemon executor the verifier runs on, never the FX thread
-     * @param activities the work under way, which a provider test registers with and the inference test must not
-     *     overlap
-     * @param memory where the seconds per segment a passing inference test measured are kept, and whether the model
-     *     answered in the structured form for the session
+     * @param activities the work under way, which a test registers with and the inference test must not overlap
+     * @param memory the seconds per segment a passing inference test measured, and the session's structured answers
      * @param clock where the test card reads when a request was sent and how long it has been open
      */
     @Inject
@@ -142,7 +138,7 @@ public final class SettingsViewModel {
         }
         loadedOnce = true;
         repairEdited();
-        stored.ifPresent(this::adopt);
+        stored.ifPresent(this::show); // stored at an earlier launch: no server is asked until a person acts
         log.info("settings ready: {} provider(s), selected '{}'", rows.size(), selectedProviderId.get());
         afterPublished.run();
     }
@@ -188,10 +184,15 @@ public final class SettingsViewModel {
      * @param chosen the provider and model; ignored when no row carries the provider
      */
     public void adopt(final ModelSelection chosen) {
-        Objects.requireNonNull(chosen, "chosen");
+        if (show(Objects.requireNonNull(chosen, "chosen"))) {
+            quantChips.readFacts(chosen);
+        }
+    }
+
+    private boolean show(final ModelSelection chosen) {
         if (providers.stream().noneMatch(row -> row.id().equals(chosen.providerId()))) {
             log.debug("adopt ignored: no provider '{}' is listed", chosen.providerId());
-            return;
+            return false;
         }
         final boolean following =
                 !adding.get() && !formDirty && editedProviderId.get().equals(selectedProviderId.get());
@@ -202,7 +203,7 @@ public final class SettingsViewModel {
             editedProviderId.set(chosen.providerId());
         }
         log.info("model adopted: {}/{}", chosen.providerId(), chosen.modelId());
-        quantChips.readFacts(chosen);
+        return true;
     }
 
     /** The three provider tests and the findings of the last one. */

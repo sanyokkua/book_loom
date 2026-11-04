@@ -14,8 +14,8 @@ import ua.bookloom.api.project.BookBrief;
 
 /**
  * Builds the value a line follows: the reading for a chosen model and the open project's language pair. Working the
- * value out asks the reader for the reading, which is read once and idempotent, so a line that is shown always has its
- * reading on the way.
+ * value out asks the reader for the reading, which is offline, read once and idempotent, so a line that is shown always
+ * has its reading on the way without a request to the server.
  */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor.
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

@@ -7,8 +7,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The advice for the model a run will use and the open project's language pair, for the lines before Start. Like the
- * quant chip it follows the chosen model and the brief, and reads the model's facts once for each pair when a line
- * that shows them is built; it never blocks Start.
+ * quant chip it follows the chosen model and the brief; building a line reads only the name and the facts the session
+ * already holds, never the server, and it never blocks Start.
  */
 @Singleton
 public final class StartAdvice {

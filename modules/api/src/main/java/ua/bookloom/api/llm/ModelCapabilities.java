@@ -43,6 +43,20 @@ public interface ModelCapabilities {
     }
 
     /**
+     * What BookLoom knows about a model without asking its server: the name, the shipped tables and the facts this
+     * session already read for it (by {@link #report}), if any. Never sends a request, so a screen may ask it when it
+     * is built; the server is read only on the person's actions (selecting a model, the Models tab, Test, Detect
+     * again, Start, Continue).
+     *
+     * @param selection the provider and model to report; never {@code null}
+     * @return the report, or {@link ua.bookloom.api.ErrorCode#validation} for an unregistered provider id
+     */
+    default Result<ModelReport> heldReport(final ModelSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        return Result.ok(ModelReport.windowsOnly(null, null));
+    }
+
+    /**
      * Whether the server will load the model on the first call with settings of its own, so the window a run budgets
      * for may not be the one in use (LM Studio loads a model that is not in memory with its own defaults). Asked once
      * when a run is about to start; it never stops the run.
@@ -96,8 +110,8 @@ public interface ModelCapabilities {
     }
 
     /**
-     * What the maker's language list says about a language pair for a model. Offline apart from the one read of the
-     * model's facts the report makes.
+     * What the maker's language list says about a language pair for a model. Offline: it reads the name, the shipped
+     * tables and the facts this session already holds for the model, and never asks the server.
      *
      * @param selection the provider and model; never {@code null}
      * @param sourceTag the source language tag, or null for none (Auto); that side is not judged

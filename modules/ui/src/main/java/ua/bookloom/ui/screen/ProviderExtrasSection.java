@@ -157,7 +157,8 @@ final class ProviderExtrasSection {
         final String repo = input.repo();
         final String file = input.file();
         final String line = understoodLine(repo, file, shown);
-        return unlisted ? line + " " + messages.get(MessageKey.SETTINGS_FORM_MODELS_NOT_LISTED) : line;
+        // On a line of its own: after a quant token such as "Q4_K_M" a space alone reads as one run-on sentence.
+        return unlisted ? line + "\n" + messages.get(MessageKey.SETTINGS_FORM_MODELS_NOT_LISTED) : line;
     }
 
     private String understoodLine(final @Nullable String repo, final @Nullable String file, final String shown) {

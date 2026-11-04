@@ -16,6 +16,7 @@ import ua.bookloom.api.llm.ModelNotes;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.QuantAdvice;
 import ua.bookloom.api.llm.QuantTier;
+import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -36,7 +37,6 @@ public final class ModelAdviceLines {
         }
     }
 
-    private static final String ENGINE = "Ollama";
     private static final String SEPARATOR = " · ";
     private static final String ENGLISH = "en";
     private static final List<String> FIRST_CODES = List.of("uk", "ru");
@@ -313,7 +313,9 @@ public final class ModelAdviceLines {
         if (notes == null || notes.libraryTag() == null) {
             return Optional.empty();
         }
-        return Optional.of(messages.get(MessageKey.SETTINGS_ADVICE_THINKING_HINT, ENGINE, notes.libraryTag()));
+        // The port names a library model only for an Ollama provider, the one engine that has a library to fetch from.
+        return Optional.of(messages.get(
+                MessageKey.SETTINGS_ADVICE_THINKING_HINT, ServerEngine.OLLAMA.label(), notes.libraryTag()));
     }
 
     /**

@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +46,8 @@ public final class ModelKnowledgeFiles {
 
     private final @Nullable Path quantFile;
     private final @Nullable Path languageFile;
-    private final AtomicReference<@Nullable KnowledgeTables> cached = new AtomicReference<>();
+    // The first answer, success or failure: a damaged bundled file stays damaged, so it is logged once, not per call.
+    private final AtomicReference<@Nullable Result<KnowledgeTables>> cached = new AtomicReference<>();
 
     /** Reads the files bundled in this module. */
     @Inject
@@ -61,19 +63,24 @@ public final class ModelKnowledgeFiles {
     }
 
     /**
-     * Loads both tables on the first call and returns the same tables afterwards.
+     * Loads both tables on the first call and returns the same answer afterwards, a failure included.
      *
      * @return the tables, or {@link ErrorCode#internal} naming the file and the 1-based row of the first defect
      */
     public Result<KnowledgeTables> load() {
-        final KnowledgeTables known = cached.get();
+        final Result<KnowledgeTables> known = cached.get();
         if (known != null) {
-            return Result.ok(known);
+            return known;
         }
+        final Result<KnowledgeTables> loaded = read();
+        cached.compareAndSet(null, loaded);
+        return Objects.requireNonNull(cached.get(), "cached");
+    }
+
+    private Result<KnowledgeTables> read() {
         log.debug("loading model knowledge from {}", quantFile == null ? "bundled files" : "given files");
         try {
             final KnowledgeTables tables = readTables();
-            cached.set(tables);
             log.info(
                     "model knowledge loaded dataVersion={} quantRows={} languageRows={}",
                     tables.dataVersion(),

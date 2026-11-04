@@ -63,7 +63,7 @@ class ProviderPasteLineScreenTest extends SettingsScreenTestBase {
         assertThat(text("settings-form-model-understood"))
                 .isEqualTo(
                         "Understood: Hugging Face repo unsloth/GLM-4.7-Flash-GGUF, file GLM-4.7-Flash-UD-Q4_K_XL.gguf"
-                                + " → GLM 4.7 Flash · UD-Q4_K_XL Not in this server's list yet.");
+                                + " → GLM 4.7 Flash · UD-Q4_K_XL\nNot in this server's list yet.");
     }
 
     // IF Enter added the raw link, THEN the model list would hold a URL no server knows.

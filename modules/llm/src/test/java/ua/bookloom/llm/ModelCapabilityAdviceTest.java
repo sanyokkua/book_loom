@@ -102,6 +102,58 @@ class ModelCapabilityAdviceTest {
         assertThat(advice.familyLabel()).isEqualTo("Llama 3.1");
     }
 
+    // IF advice read the server, THEN building a screen that shows it would call the provider nobody asked.
+    @Test
+    void languageAdvice_noFactsHeld_asksTheServerNothing() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show")).willReturn(okJson(SHOW_131072)));
+
+        capabilities.languageAdvice(new ModelSelection("ollama", "llama3.1:8b"), "ru", "uk");
+
+        assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    @Test
+    void heldReport_noFactsHeld_readsTheNameAndAsksNothing() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+
+        final ModelReport report = capabilities
+                .heldReport(new ModelSelection("ollama", "gemma4:e4b-Q4_K_M"))
+                .data();
+
+        assertThat(report).isNotNull();
+        assertThat(report.notes()).isNotNull();
+        assertThat(report.notes().label()).isEqualTo("Gemma 4 E4B");
+        assertThat(server.getAllServeEvents()).isEmpty();
+    }
+
+    // One person's selection is one read of the server: what report() read is what the advice reads afterwards.
+    @Test
+    void heldReport_afterReport_usesTheHeldFactsWithNoSecondRead() {
+        register("ollama", ProviderKind.OLLAMA, server.baseUrl());
+        server.stubFor(post(urlEqualTo("/api/show"))
+                .willReturn(okJson("{\"details\":{\"quantization_level\":\"Q8_0\"},\"model_info\":"
+                        + "{\"general.architecture\":\"gemma3\",\"gemma3.context_length\":131072}}")));
+        server.stubFor(get(urlEqualTo("/api/ps")).willReturn(okJson("{\"models\":[]}")));
+        final ModelSelection gemma = new ModelSelection("ollama", "gemma4:e4b");
+
+        capabilities.report(gemma);
+        final ModelReport held = capabilities.heldReport(gemma).data();
+        capabilities.languageAdvice(gemma, "en", "uk");
+
+        assertThat(held).isNotNull();
+        assertThat(held.contextLength()).isEqualTo(131072);
+        assertThat(server.getAllServeEvents())
+                .as("one /api/show and one /api/ps, from report() alone")
+                .hasSize(2);
+    }
+
+    @Test
+    void heldReport_unknownProvider_isValidationError() {
+        assertThat(capabilities.heldReport(new ModelSelection("nobody", "m")).isErr())
+                .isTrue();
+    }
+
     @Test
     void languageAdvice_unknownProvider_isNeutral() {
         assertThat(capabilities.languageAdvice(new ModelSelection("nobody", "m"), "ru", "uk"))

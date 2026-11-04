@@ -3,11 +3,13 @@ package ua.bookloom.llm.provider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ProbeVerdicts;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.llm.client.ollama.OllamaClient;
@@ -89,6 +91,17 @@ public final class ProviderClientFactory {
             return new CachedClient(config, createClient(config));
         });
         return Objects.requireNonNull(cached, "cached client").client();
+    }
+
+    /**
+     * What a server last said about a model in this session, without asking it again.
+     *
+     * @param providerId the provider's id; never null
+     * @param modelId the model id; never null
+     * @return the facts, or empty when no person's action read them this session
+     */
+    public Optional<ModelFacts> heldFacts(String providerId, String modelId) {
+        return facts.lastRead(providerId, modelId);
     }
 
     /** Builds a client for a description that is not saved, leaving the cache and any saved client of that id alone. */

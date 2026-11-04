@@ -139,7 +139,7 @@ class StartAdviceLinesTest extends BookBriefScreenTestBase {
 
     // The data says nothing of this pair for e4b, so the line is the quiet information line, not a warning.
     @Test
-    void start_ruToUkOnGemma4E4b_quietLineNamesBoth() throws Exception {
+    void start_ruToUkOnGemma4E4b_showsInfoLineNotWarning() throws Exception {
         script(
                 "gemma4:e4b",
                 plain("Gemma 4", 4.0, null),

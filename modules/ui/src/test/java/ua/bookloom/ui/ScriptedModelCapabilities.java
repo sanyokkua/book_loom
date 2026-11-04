@@ -121,7 +121,7 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
         holds.put(providerId + "/" + modelId, release);
     }
 
-    /** Every {@code provider/model} asked about, oldest first. */
+    /** Every {@code provider/model} whose server was asked for a report, oldest first. */
     public List<String> asked() {
         return List.copyOf(asked);
     }
@@ -156,6 +156,14 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     public Result<ContextLength> contextLength(final String providerId, final String modelId) {
         final ModelReport report = reports.get(providerId + "/" + modelId);
         return Result.ok(report == null ? ContextLength.unknown() : new ContextLength(report.contextLength()));
+    }
+
+    // Offline by contract: what the test scripted stands for the name and the facts the session holds. Not recorded in
+    // asked(), which counts only the reads that would reach the server.
+    @Override
+    public Result<ModelReport> heldReport(final ModelSelection selection) {
+        return Result.ok(reports.getOrDefault(
+                selection.providerId() + "/" + selection.modelId(), ModelReport.windowsOnly(null, null)));
     }
 
     @Override

@@ -55,12 +55,10 @@ public final class QuantAdvisor {
                 facts == null || facts.format() == null ? null : facts.format().toUpperCase(Locale.ROOT);
         final QuantAdvice tokenOnly =
                 new QuantAdvice(token, null, format, dynamic, imatrix, qat, null, null, null, SOURCE_NONE);
-        final var tables = files.load();
-        if (token.isEmpty() || tables.isErr()) {
-            log.warn("quant advice is token-only model={} token={} tablesLoaded={}", id.family(), token, tables.isOk());
+        final KnowledgeTables knowledge = tablesFor(id, token);
+        if (knowledge == null) {
             return tokenOnly;
         }
-        final KnowledgeTables knowledge = Objects.requireNonNull(tables.data());
         final Optional<QuantRow> byName = label == null ? Optional.empty() : nameRow(knowledge, label);
         final Optional<QuantRow> byFacts = factsQuant == null ? Optional.empty() : knowledge.quantRow(factsQuant);
         logDisagreement(id, byName, byFacts);
@@ -70,6 +68,23 @@ public final class QuantAdvisor {
                 row.map(r -> judged(id, facts, tokenOnly, r, source)).orElseGet(() -> unmeasured(id, facts, tokenOnly));
         logAdvice(id, advice);
         return advice;
+    }
+
+    // A name with no quant label is ordinary (DEBUG); only tables that failed to load are a degraded answer (WARN).
+    private @Nullable KnowledgeTables tablesFor(final ModelIdentity id, final String token) {
+        final var tables = files.load();
+        if (tables.isErr()) {
+            log.warn(
+                    "quant advice is token-only: the model knowledge is not loaded model={} token={}",
+                    id.family(),
+                    token);
+            return null;
+        }
+        if (token.isEmpty()) {
+            log.debug("quant advice is token-only: no quant label model={}", id.family());
+            return null;
+        }
+        return Objects.requireNonNull(tables.data(), "tables");
     }
 
     private static QuantAdvice unmeasured(
