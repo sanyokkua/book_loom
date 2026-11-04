@@ -116,8 +116,9 @@ class StoredShapesTest {
     // A segment record no longer counts repair rounds (its components are listed in name order, so the reviewed mark
     // now follows the rejected reply directly), and a database that stored the count is set aside.
     @Test
-    void fingerprint_afterRepairRoundsGone_differs() {
+    void describe_afterRepairRoundsGone_holdsNoRepairRounds() {
         assertThat(StoredShapes.describe(StoredShapes.ROOTS))
-                .contains("rejectedTarget:java.lang.String,reviewed:boolean");
+                .contains("rejectedTarget:java.lang.String,reviewed:boolean")
+                .doesNotContain("repairRounds:");
     }
 }
