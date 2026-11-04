@@ -13,9 +13,13 @@ import ua.bookloom.ui.ScriptedProjectService;
 class BookBriefViewModelRecheckTest extends BookBriefViewModelTestBase {
 
     private void saveAnsweredWith(final int rechecked) {
+        saveAnsweredWith(rechecked, "Gothic novel");
+    }
+
+    private void saveAnsweredWith(final int rechecked, final String genre) {
         projects.onUpdateBrief(
                 Result.ok(new ProjectChange.Saved(ScriptedProjectService.storedProjectOf(BOOK), rechecked)));
-        change(() -> brief.setGenre("Gothic novel"));
+        change(() -> brief.setGenre(genre));
         runSaves();
     }
 
@@ -37,6 +41,17 @@ class BookBriefViewModelRecheckTest extends BookBriefViewModelTestBase {
         openBook(BookFixtures.frankensteinImport());
 
         saveAnsweredWith(0);
+
+        assertThat(rechecked()).isZero();
+    }
+
+    // IF a save that re-checked nothing kept the earlier count, THEN reverting the key would leave the banner up.
+    @Test
+    void rechecked_laterSaveAnsweredWithNone_isZero() {
+        openBook(BookFixtures.frankensteinImport());
+        saveAnsweredWith(12);
+
+        saveAnsweredWith(0, "Horror");
 
         assertThat(rechecked()).isZero();
     }

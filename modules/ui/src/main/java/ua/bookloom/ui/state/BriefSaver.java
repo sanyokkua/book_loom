@@ -106,9 +106,8 @@ final class BriefSaver {
         } else if (change instanceof ProjectChange.Saved stored) {
             final int count = stored.rechecked();
             log.debug("the brief was saved, {} decided segments re-checked", count);
-            if (count > 0) {
-                rechecked.set(count);
-            }
+            // Every save answers its own count, so a key set back to what it was clears the banner with its 0.
+            rechecked.set(count);
             outcomes.stored(save.projectId(), save.brief());
         } else if (change != null) {
             log.warn(
