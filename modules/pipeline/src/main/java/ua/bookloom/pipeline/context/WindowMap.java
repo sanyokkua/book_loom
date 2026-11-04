@@ -12,10 +12,13 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.NameForms;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -37,8 +40,8 @@ public final class WindowMap {
     private static final String JOIN = "\n\n";
     private static final String GLOSS = "; gloss once: ";
 
-    /** One chosen line with where the window first names its entry. */
-    private record Placed(int at, String line, boolean gloss) {}
+    /** One chosen line with where the window first names its entry and how often. */
+    private record Placed(int at, String line, boolean gloss, int occurrences, boolean kept) {}
 
     /** The glossary's share of one call's lines while they are chosen; used inside {@link #select} only. */
     private record Glossary(List<Placed> lines, Set<String> locked, List<Placed> suggested) {
@@ -72,6 +75,29 @@ public final class WindowMap {
             final List<ProtectedMask> masks,
             final LexiconFilter filter,
             @Nullable final String targetLanguage) {
+        return MapLines.of(selectCounted(window, targets, map, masks, filter, targetLanguage));
+    }
+
+    /**
+     * The map lines of one call with how often the window names each and whether it may be dropped, read as
+     * {@link #select} reads them.
+     *
+     * @param window the non-null window whose source text decides what is present
+     * @param targets the non-null current translations of the focus a proofread also reads; empty otherwise
+     * @param map the non-null book map
+     * @param masks the non-null masks of the focus items, whose tokens a locked entry is listed by
+     * @param filter the non-null filter that keeps function words and declined forms out of the recurring terms
+     * @param targetLanguage the target language tag the target forms are generated in, or null when unknown
+     * @return the entries, the glossary's first, then the locked, the suggested and the recurring terms', each in the
+     *     order the window names them; never null, empty when the window names nothing on the map
+     */
+    public static List<MapEntry> selectCounted(
+            final Window window,
+            final List<String> targets,
+            final BookMap map,
+            final List<ProtectedMask> masks,
+            final LexiconFilter filter,
+            @Nullable final String targetLanguage) {
         Objects.requireNonNull(window, "window");
         Objects.requireNonNull(targets, "targets");
         Objects.requireNonNull(map, "map");
@@ -84,13 +110,12 @@ public final class WindowMap {
                         targets.stream().map(text -> Tokens.replace(text, " ")).toList()),
                 targetLanguage);
         final Glossary glossary = glossary(window, map, masks, texts);
-        final MapLines lines = new MapLines(
-                ordered(glossary.lines()),
-                List.copyOf(glossary.locked()),
-                ordered(glossary.suggested()),
-                lexicon(map, texts.sources(), filter));
-        logLines(lines, map, glossary.glossed());
-        return lines;
+        final List<MapEntry> entries = new ArrayList<>(ordered(MapEntry.Section.GLOSSARY, glossary.lines()));
+        glossary.locked().forEach(line -> entries.add(new MapEntry(MapEntry.Section.LOCKED, line, 1, true)));
+        entries.addAll(ordered(MapEntry.Section.SUGGESTED, glossary.suggested()));
+        entries.addAll(ordered(MapEntry.Section.LEXICON, lexicon(map, texts.sources(), filter)));
+        logLines(MapLines.of(entries), map, glossary.glossed());
+        return List.copyOf(entries);
     }
 
     private static Glossary glossary(
@@ -108,8 +133,11 @@ public final class WindowMap {
                 continue;
             }
             final boolean gloss = glossesHere(entry, map, window);
+            final int occurrences = Math.max(1, TermMatch.namedCount(entry.names(), texts.sources()));
+            // A pinned name, and a character whose gender the line states, are never dropped to fit the window.
+            final boolean kept = !entry.isSuggested() || statesGender(entry);
             (entry.isSuggested() ? glossary.suggested() : glossary.lines())
-                    .add(new Placed(at, lineOf(entry, gloss), gloss));
+                    .add(new Placed(at, lineOf(entry, gloss), gloss, occurrences, kept));
         }
         return glossary;
     }
@@ -156,18 +184,23 @@ public final class WindowMap {
                 && window.focus().segmentIds().contains(firstUse);
     }
 
+    private static boolean statesGender(final GlossaryEntry entry) {
+        return entry.type() == TermType.CHARACTER
+                && entry.gender() != Gender.UNKNOWN
+                && entry.genderOrigin() != Origin.LIKELY;
+    }
+
     private static String lineOf(final GlossaryEntry entry, final boolean gloss) {
         final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
         return InjectedTerms.line(entry.term(), entry.target(), gloss ? facts + GLOSS + entry.meaning() : facts);
     }
 
-    private static List<String> lexicon(final BookMap map, final String sources, final LexiconFilter filter) {
+    private static List<Placed> lexicon(final BookMap map, final String sources, final LexiconFilter filter) {
         final List<Placed> placed = new ArrayList<>();
         for (final LexiconEntry entry : map.terms()) {
-            final int at = earliest(
-                    Stream.concat(Stream.of(entry.term()), entry.forms().stream())
-                            .toList(),
-                    sources);
+            final List<String> forms = Stream.concat(Stream.of(entry.term()), entry.forms().stream())
+                    .toList();
+            final int at = earliest(forms, sources);
             if (at < 0) {
                 log.trace("Window map left out term {}: not named in the window", entry.term());
                 continue;
@@ -177,15 +210,17 @@ public final class WindowMap {
                 continue;
             }
             final Optional<SnapshotRendering> rendering = InjectedLexicon.renderingOf(entry, filter);
-            rendering.ifPresent(found -> placed.add(new Placed(at, InjectedLexicon.line(found), false)));
+            final int occurrences = Math.max(1, TermMatch.namedCount(forms, sources));
+            rendering.ifPresent(
+                    found -> placed.add(new Placed(at, InjectedLexicon.line(found), false, occurrences, false)));
         }
-        return ordered(placed);
+        return placed;
     }
 
-    private static List<String> ordered(final List<Placed> placed) {
+    private static List<MapEntry> ordered(final MapEntry.Section section, final List<Placed> placed) {
         return placed.stream()
                 .sorted(Comparator.comparingInt(Placed::at))
-                .map(Placed::line)
+                .map(found -> new MapEntry(section, found.line(), found.occurrences(), found.kept()))
                 .toList();
     }
 

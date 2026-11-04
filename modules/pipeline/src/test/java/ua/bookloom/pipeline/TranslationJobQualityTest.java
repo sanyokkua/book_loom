@@ -165,7 +165,7 @@ class TranslationJobQualityTest {
 
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
-                .containsExactly(tuple(16, 128), tuple(164, 328));
+                .containsExactly(tuple(15, 128), tuple(163, 327));
     }
 
     @Test

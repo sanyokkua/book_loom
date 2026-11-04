@@ -14,12 +14,12 @@ import ua.bookloom.api.llm.SourceSize;
 class OutputLimitTest {
 
     @Test
-    void forSource_shortSourceWithTwoTokens_expectsSixteenAndCapsAtTheShortSourceFloor() {
+    void forSource_shortSourceWithTwoTokens_expectsFifteenAndCapsAtTheShortSourceFloor() {
         final OutputLimit limit = OutputLimit.forSource("He opened the ⟦g0⟧old⟦g1⟧ door.", "en", "uk");
 
         assertThat(limit)
                 .extracting(OutputLimit::expectedTokens, OutputLimit::capTokens)
-                .containsExactly(16, 128);
+                .containsExactly(15, 128);
     }
 
     // A one-word source under a 64-token cap came back as an empty target; the floor leaves the reply room.
@@ -31,12 +31,12 @@ class OutputLimitTest {
     }
 
     @Test
-    void forSource_sixHundredCharactersWithFourTokens_capsAtSixHundredSixtyOne() {
+    void forSource_sixHundredCharactersWithFourTokens_capsAtSixHundredSix() {
         final String masked = "⟦g0⟧⟦g1⟧" + "a".repeat(600) + "⟦g2⟧⟦g3⟧";
 
         assertThat(OutputLimit.forSource(masked, "en", "uk"))
                 .extracting(OutputLimit::expectedTokens, OutputLimit::capTokens)
-                .containsExactly(414, 661);
+                .containsExactly(377, 606);
     }
 
     @Test
@@ -46,14 +46,14 @@ class OutputLimitTest {
 
     @Test
     void forReview_onePair_capsAtTheBaseAndOneEnvelopeAndTheCandidateItself() {
-        // 128 base + 70 per pair + 120 for a possible edit + the candidate's own tokens (115), because a rewrite may
+        // 128 base + 70 per pair + 120 for a possible edit + the candidate's own tokens (113), because a rewrite may
         // repeat it whole.
         assertThat(OutputLimit.forReview(List.of("a".repeat(400)), "en").capTokens())
-                .isEqualTo(433);
+                .isEqualTo(431);
     }
 
     @ParameterizedTest
-    @CsvSource({"1,433", "4,1348", "8,2568"})
+    @CsvSource({"1,431", "4,1340", "8,2552"})
     void forReview_batchSizeTable_growsByOnePairAllowanceEach(final int pairs, final int cap) {
         assertThat(OutputLimit.forReview(Collections.nCopies(pairs, "a".repeat(400)), "en")
                         .capTokens())
@@ -80,15 +80,15 @@ class OutputLimitTest {
     void forBatch_threeSources_statesTheirTokensAndCount() {
         final OutputLimit limit = OutputLimit.forBatch(List.of("a".repeat(400), "b".repeat(400), "Well"), "en", "uk");
 
-        // 115 tokens for each 400-letter source, 2 for the one word.
-        assertThat(limit.source()).isEqualTo(new SourceSize(232, 3));
+        // 113 tokens for each 400-letter source, 2 for the one word.
+        assertThat(limit.source()).isEqualTo(new SourceSize(228, 3));
     }
 
     @Test
     void forSource_oneSource_statesItsTokensAndOneItem() {
         assertThat(OutputLimit.forSource("a".repeat(400), "en", "uk"))
                 .extracting(OutputLimit::source)
-                .isEqualTo(new SourceSize(115, 1));
+                .isEqualTo(new SourceSize(113, 1));
     }
 
     @Test

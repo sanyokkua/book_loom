@@ -44,7 +44,7 @@ class LanguagesTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"uk,CYRILLIC,3.0", "el,GREEK,3.5", "ja,JAPANESE,1.5", "ko,HANGUL,1.5", "en,LATIN,4.0", "sr,CYRILLIC,3.0"
+    @CsvSource({"uk,CYRILLIC,3.3", "el,GREEK,3.5", "ja,JAPANESE,1.5", "ko,HANGUL,1.5", "en,LATIN,4.1", "sr,CYRILLIC,3.3"
     })
     void byTag_catalogedTag_hasExpectedScriptAndFigure(String tag, Script expectedScript, double expectedFigure) {
         assertThat(Languages.byTag(tag)).isPresent().hasValueSatisfying(language -> {

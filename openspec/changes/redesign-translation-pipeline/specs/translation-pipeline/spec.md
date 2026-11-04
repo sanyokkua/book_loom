@@ -1233,7 +1233,7 @@ IF a segment's masked text alone is estimated above the current-part budget of t
 
 #### Scenario: A huge paragraph is drafted in pieces
 
-- **WHEN** segment `ch02.xhtml:7` holds 26,306 Latin characters, estimated at 7,563 tokens
+- **WHEN** segment `ch02.xhtml:7` holds 26,306 Latin characters, estimated at 7,379 tokens (4.1 characters per token, × 1.15)
 - **THEN** it is drafted in several sentence-aligned pieces, each with the same system part and map items
 - **AND** exactly one decision is made for `ch02.xhtml:7`, over the joined target
 
@@ -1267,7 +1267,7 @@ The system SHALL plan every model call a run makes — drafts, format re-asks, r
 #### Scenario: A draft states its output allowance
 
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` has 23 characters, from `en` to `uk`
-- **THEN** the draft request states 16 expected output tokens
+- **THEN** the draft request states 15 expected output tokens
 
 #### Scenario: The allowance follows length, band and script
 

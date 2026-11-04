@@ -129,6 +129,25 @@ public final class TermMatch {
     }
 
     /**
+     * How many places of a text name any of the terms, read as {@link #isNamedIn} reads one, so the window budgets
+     * can drop the entry a passage names least.
+     *
+     * @param terms the non-null forms of one entry; a blank one is named nowhere
+     * @param text the non-null text to search, tokens already removed
+     * @return the number of distinct places named, each counted once however many forms match there
+     */
+    public static int namedCount(final Collection<String> terms, final String text) {
+        Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(text, "text");
+        return (int) terms.stream()
+                .filter(term -> !term.isBlank())
+                .flatMap(term -> strict(term).matcher(text).results())
+                .map(MatchResult::start)
+                .distinct()
+                .count();
+    }
+
+    /**
      * The words or phrases of a text that name the term, as written.
      *
      * @param term the non-blank key term

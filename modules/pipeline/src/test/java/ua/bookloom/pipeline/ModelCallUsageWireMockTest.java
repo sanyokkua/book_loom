@@ -111,7 +111,7 @@ class ModelCallUsageWireMockTest {
                         f -> usageOf(f).completion(),
                         ModelCallFinished::outputChars,
                         ModelCallFinished::usageEstimated)
-                .containsExactly(null, 115, 300, true);
+                .containsExactly(null, 105, 300, true);
         assertThat(usageOf(finished).generation()).isEqualTo(finished.elapsed());
     }
 

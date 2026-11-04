@@ -50,7 +50,7 @@ class DirectedFixTest {
 
     private static final String ECHO_SOURCE = "He opened the ⟦g0⟧old⟦g1⟧ door.";
     private static final String ECHO_REJECTED_TARGET = "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.";
-    private static final int ECHO_SOURCE_ALLOWANCE = 16;
+    private static final int ECHO_SOURCE_ALLOWANCE = 15;
 
     private static final String REFUSAL_SOURCE = "He opened the old door.";
     private static final String REFUSAL_REJECTED_TARGET = "I'm sorry, but I can't translate this text.";

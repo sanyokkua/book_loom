@@ -24,6 +24,28 @@ public record MapLines(List<String> glossary, List<String> locked, List<String> 
         lexicon = List.copyOf(Objects.requireNonNull(lexicon, "lexicon"));
     }
 
+    /**
+     * The lines of the given entries, each section in the entries' order.
+     *
+     * @param entries the non-null entries
+     * @return the lines; {@link #NONE}-equal for no entry
+     */
+    public static MapLines of(final List<MapEntry> entries) {
+        Objects.requireNonNull(entries, "entries");
+        return new MapLines(
+                linesOf(entries, MapEntry.Section.GLOSSARY),
+                linesOf(entries, MapEntry.Section.LOCKED),
+                linesOf(entries, MapEntry.Section.SUGGESTED),
+                linesOf(entries, MapEntry.Section.LEXICON));
+    }
+
+    private static List<String> linesOf(final List<MapEntry> entries, final MapEntry.Section section) {
+        return entries.stream()
+                .filter(entry -> entry.section() == section)
+                .map(MapEntry::line)
+                .toList();
+    }
+
     /** {@return whether the window names nothing on the map, so block 9 is left out} */
     public boolean isEmpty() {
         return glossary.isEmpty() && locked.isEmpty() && suggested.isEmpty() && lexicon.isEmpty();

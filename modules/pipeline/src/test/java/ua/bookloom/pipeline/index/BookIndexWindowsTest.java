@@ -12,7 +12,7 @@ import ua.bookloom.api.document.UnitRole;
 /**
  * Windows around the mentions of one name: which mentions are shown (the first, then one per equal stretch of the
  * rest, narration preferred), how wide each window is (neighbouring segments inside the mention's unit) and how it is
- * trimmed to the token budget. The budget is estimated for the book's declared language (English: 4 characters per
+ * trimmed to the token budget. The budget is estimated for the book's declared language (English: 4.1 characters per
  * token, times 1.15, rounded up).
  */
 class BookIndexWindowsTest {
@@ -139,14 +139,14 @@ class BookIndexWindowsTest {
 
     // IF one sentence ran past the budget, THEN it would fill the window alone, however long: a sentence over the
     // budget (and over 50 tokens) is cut at word boundaries around the mention, the word before first. 60 tokens are
-    // 208 English characters: 34 words before, 33 after.
+    // 213 English characters: 35 words before, 34 after.
     @Test
     void windows_sentenceOverTheBudget_isCutAtWordsAroundTheMention() {
         final BookIndex index = narrationBook("aa ".repeat(200) + "Ivo" + " aa".repeat(200) + ".");
 
         final Window window = windowsOf(index, new WindowPlan(1, 1, 60)).getFirst();
 
-        assertThat(window.text()).isEqualTo("…" + "aa ".repeat(34) + "Ivo" + " aa".repeat(33) + "…");
+        assertThat(window.text()).isEqualTo("…" + "aa ".repeat(35) + "Ivo" + " aa".repeat(34) + "…");
         assertThat(window.text().substring(window.markStart(), window.markEnd()))
                 .isEqualTo("Ivo");
     }

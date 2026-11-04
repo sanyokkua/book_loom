@@ -112,17 +112,17 @@ class OversizedSegmentTest {
                 .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET);
 
         assertThat(segment.masked()).hasSize(10_399);
-        assertThat(TokenEstimator.estimate(segment.masked(), "en")).isEqualTo(2990);
+        assertThat(TokenEstimator.estimate(segment.masked(), "en")).isEqualTo(2917);
         assertThat(model.textBodies())
                 .extracting(body -> body.split("tonight\\.", -1).length - 1)
-                .containsExactly(160, 160, 80);
+                .containsExactly(164, 164, 72);
         assertThat(model.textBodies())
                 .allSatisfy(
                         body -> assertThat(TokenEstimator.estimate(body, "en")).isLessThanOrEqualTo(BUDGET));
         assertThat(String.join("", model.textBodies())).isEqualTo(segment.masked());
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens)
-                .containsExactly(2870, 2870, 1435);
+                .containsExactly(2675, 2675, 1174);
         assertThat(DraftStepFixtures.drafted(result))
                 .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::gateFinding)
                 .containsExactly(text.toUpperCase(Locale.ROOT), null);

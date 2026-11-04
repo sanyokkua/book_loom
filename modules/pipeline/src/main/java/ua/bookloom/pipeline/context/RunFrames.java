@@ -21,6 +21,7 @@ import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.FrameWording;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.pipeline.prompt.PairOutputRatio;
 import ua.bookloom.pipeline.prompt.PromptLanguages;
 import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -117,6 +118,7 @@ public final class RunFrames {
                 lines,
                 examples,
                 reminders(brief.narrator(), target),
+                PairOutputRatio.of(rules, brief.sourceLanguage(), target).orElse(OutputReserve.DEFAULT_OUTPUT_RATIO),
                 system,
                 analysisBlocks(brief),
                 hashOf(system));
@@ -126,10 +128,11 @@ public final class RunFrames {
 
     private static void logFrame(final RunFrame frame) {
         log.info(
-                "run frame hash={} rules={} examples={}",
+                "run frame hash={} rules={} examples={} outputRatio={}",
                 frame.frameHash(),
                 frame.rules().stream().map(RuleLine::rule).toList(),
-                frame.examples().kind().name().toLowerCase(Locale.ROOT));
+                frame.examples().kind().name().toLowerCase(Locale.ROOT),
+                frame.outputRatio());
         if (log.isTraceEnabled()) {
             frame.system().forEach(block -> log.trace("Run frame block {}: {}", block.slot(), block.text()));
         }

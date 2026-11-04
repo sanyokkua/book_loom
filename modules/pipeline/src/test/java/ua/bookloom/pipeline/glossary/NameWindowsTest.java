@@ -137,15 +137,15 @@ class NameWindowsTest {
     }
 
     // IF the window ended before the pronoun the code read, THEN it would claim a pronoun it does not show: a sentence
-    // of 514 characters is 148 tokens, and the next sentence would take the window past its 150.
+    // of 526 characters is 148 tokens, and the next sentence would take the window past its 150.
     @Test
     void of_pronounBeyondTheWindowsBudget_givesTheWindowNoPronoun() {
         final String sentence =
-                "Long ago " + String.join(" ", java.util.Collections.nCopies(123, "far")) + " Wren stopped.";
+                "Long ago " + String.join(" ", java.util.Collections.nCopies(126, "far")) + " Wren stopped.";
 
         final Evidence evidence = windowsOf(entry("Wren", TermType.CHARACTER), List.of(sentence + " She rested."));
 
-        assertThat(sentence).hasSize(514);
+        assertThat(sentence).hasSize(526);
         assertThat(evidence.windows()).singleElement().satisfies(window -> {
             assertThat(window.text()).isEqualTo(sentence);
             assertThat(window.pronoun()).isNull();
@@ -167,16 +167,16 @@ class NameWindowsTest {
     }
 
     // IF the review's window grew backward first, THEN the scene before a use would crowd out the "He" after it and the
-    // window would prove no gender: the 505-character sentence before fits with the use alone, not with "He rested."
-    // too (150 tokens are 521 characters), so growing forward first keeps the pronoun.
+    // window would prove no gender: the 517-character sentence before fits with the use alone, not with "He rested."
+    // too (150 tokens are 534 characters), so growing forward first keeps the pronoun.
     @Test
     void of_pronounInTheSentenceAfter_isKeptBeforeTheSentenceBefore() {
-        final String before = "Long ago " + String.join(" ", java.util.Collections.nCopies(122, "far")) + " the end.";
+        final String before = "Long ago " + String.join(" ", java.util.Collections.nCopies(125, "far")) + " the end.";
 
         final Evidence evidence =
                 windowsOf(entry("Wren", TermType.CHARACTER), List.of(before + " Wren stopped. He rested."));
 
-        assertThat(before).hasSize(505);
+        assertThat(before).hasSize(517);
         assertThat(evidence.windows())
                 .extracting(Window::text, Window::pronoun)
                 .containsExactly(tuple("Wren stopped. He rested.", Gender.MALE));

@@ -17,6 +17,7 @@ import ua.bookloom.pipeline.setup.BookFacts;
  * @param rules the book rules of block 3, in order; copied
  * @param examples what block 6 shows
  * @param reminders the reminder lines in the target's words
+ * @param outputRatio the pair's output tokens per source token, which sizes a translate call's output reserve; positive
  * @param system blocks 1–7 of the TRANSLATE frame, in order; copied
  * @param analysis blocks 1, 2 and 7 of the ANALYSIS frame, in order; copied
  * @param frameHash the SHA-256 of {@code system}, lower-case hex, which names the frame a stored prompt was sent with
@@ -29,6 +30,7 @@ public record RunFrame(
         List<RuleLine> rules,
         ExampleChoice examples,
         ReminderWords reminders,
+        double outputRatio,
         List<Block> system,
         List<Block> analysis,
         String frameHash) {
@@ -42,6 +44,9 @@ public record RunFrame(
         Objects.requireNonNull(examples, "examples");
         Objects.requireNonNull(reminders, "reminders");
         Objects.requireNonNull(frameHash, "frameHash");
+        if (!(outputRatio > 0)) {
+            throw new IllegalArgumentException("outputRatio must be positive: " + outputRatio);
+        }
         rules = List.copyOf(Objects.requireNonNull(rules, "rules"));
         system = List.copyOf(Objects.requireNonNull(system, "system"));
         analysis = List.copyOf(Objects.requireNonNull(analysis, "analysis"));

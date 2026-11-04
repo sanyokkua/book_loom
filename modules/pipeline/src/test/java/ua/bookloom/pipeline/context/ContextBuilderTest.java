@@ -15,6 +15,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ModelProfile;
+import ua.bookloom.api.llm.ReasoningControl;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -174,5 +175,48 @@ class ContextBuilderTest {
                 ModelProfile.defaults());
 
         assertThat(Objects.requireNonNull(plan.error()).code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // The reply is capped at the output reserve: 1.5 × 19 source tokens + 16 for the one item, for ru→uk with no ratio.
+    @Test
+    void plan_draftOfOneItem_capsTheReplyAtTheReserve() {
+        final PromptPlan plan = plan(CallKind.DRAFT, FrameFixtures.focus(NARRATION), FrameFixtures.frame(BOOK));
+
+        assertThat(plan.maxOutputTokens()).isEqualTo(45);
+    }
+
+    // A model that always reasons gets at least 2048 tokens for its reply.
+    @Test
+    void plan_alwaysReasoningModel_reservesTheReasoningFloor() {
+        final RunFrame frame = FrameFixtures.frame(BOOK);
+        final ModelProfile thinking = FrameFixtures.withReasoning(ReasoningControl.Kind.ALWAYS);
+
+        final PromptPlan plan = Objects.requireNonNull(BUILDER.plan(
+                        CallKind.DRAFT,
+                        FrameFixtures.focus(NARRATION),
+                        FrameFixtures.emptyMap(frame.brief()),
+                        frame,
+                        thinking)
+                .data());
+
+        assertThat(plan.maxOutputTokens()).isEqualTo(2048);
+    }
+
+    // The template's overhead is counted once per call.
+    @Test
+    void plan_profileWithTemplateOverhead_countsItOnce() {
+        final RunFrame frame = FrameFixtures.frame(BOOK);
+        final Focus focus = FrameFixtures.focus(NARRATION, DIALOGUE);
+        final PromptPlan bare = plan(CallKind.DRAFT, focus, frame);
+
+        final PromptPlan withOverhead = Objects.requireNonNull(BUILDER.plan(
+                        CallKind.DRAFT,
+                        focus,
+                        FrameFixtures.emptyMap(frame.brief()),
+                        frame,
+                        FrameFixtures.withOverhead(135))
+                .data());
+
+        assertThat(withOverhead.promptTokens() - bare.promptTokens()).isEqualTo(135);
     }
 }

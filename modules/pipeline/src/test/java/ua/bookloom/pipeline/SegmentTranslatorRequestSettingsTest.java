@@ -45,6 +45,6 @@ class SegmentTranslatorRequestSettingsTest {
         assertThat(model.requests())
                 .extracting(ChatRequest::contextWindow, ChatRequest::expectedOutputTokens)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(16384, 16), org.assertj.core.groups.Tuple.tuple(16384, 16));
+                        org.assertj.core.groups.Tuple.tuple(16384, 15), org.assertj.core.groups.Tuple.tuple(16384, 15));
     }
 }

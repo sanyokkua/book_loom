@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.llm.ModelProfile;
+import ua.bookloom.api.llm.ReasoningControl;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
@@ -71,6 +72,36 @@ final class FrameFixtures {
                 base.thinking(),
                 base.context(),
                 base.templateOverhead(),
+                base.batchSize(),
+                base.tier());
+    }
+
+    static ModelProfile withReasoning(final ReasoningControl.Kind kind) {
+        final ModelProfile base = ModelProfile.defaults();
+        return new ModelProfile(
+                new ReasoningControl(kind, List.of(), null, null),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.sampling(),
+                base.thinking(),
+                base.context(),
+                base.templateOverhead(),
+                base.batchSize(),
+                base.tier());
+    }
+
+    static ModelProfile withOverhead(final int templateOverhead) {
+        final ModelProfile base = ModelProfile.defaults();
+        return new ModelProfile(
+                base.reasoning(),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.sampling(),
+                base.thinking(),
+                base.context(),
+                templateOverhead,
                 base.batchSize(),
                 base.tier());
     }

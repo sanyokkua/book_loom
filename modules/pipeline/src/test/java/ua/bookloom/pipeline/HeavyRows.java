@@ -26,10 +26,12 @@ final class HeavyRows {
             + "Everything seemed to wait for the morning and the first grey light.";
     private static final String EXTRA_EN = "A heron stood motionless in the shallows near the slipway. "
             + "The ferryman coiled his rope and looked up at the darkening sky. "
-            + "Nothing else moved between the sea wall and the hills.";
+            + "Nothing else moved between the sea wall and the hills. "
+            + "The harbour master closed his ledger and blew out the lamp.";
     private static final String EXTRA_UK = "Чапля нерухомо стояла на мілині біля спуску. "
             + "Поромник змотав линву й глянув на темніюче небо. "
-            + "Більше ніщо не рухалося між морським муром і пагорбами.";
+            + "Більше ніщо не рухалося між морським муром і пагорбами. "
+            + "Начальник порту закрив журнал і задув лампу.";
     private static final String FILLER_UK = "Приплив повільно піднімався вздовж сірого каміння старого портового муру. "
             + "Ніхто на набережній не казав ані слова, поки одна за одною запалювали ліхтарі. "
             + "Тонкий туман лежав над водою й ховав далекий кінець пристані. "

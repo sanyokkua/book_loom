@@ -145,17 +145,18 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // The batch of eight paragraphs (four of them long) is capped by its items' allowances; the reviewer of eight pairs
-    // by its pairs. Batch (OutputLimit.forBatch, en -> uk): the items' allowances 26 + 28 + 27 + 4 x 944 + 18 = 3875,
-    // plus 8 x 16 envelope tokens = 4003; the cap is ceil(4003 x 3 / 2) = 6005 + 16 headroom + 6 x 2 placeholders =
-    // 6033. Reviewer (OutputLimit.forReview): 128 + 8 x (70 + 120) per pair + the drafts' estimated tokens 13 + 14 +
-    // 18 + 559 + 561 + 564 + 559 + 10 = 2298, so 3946.
+    // by its pairs. Batch (OutputLimit.forBatch, en -> uk): the items' allowances 24 + 26 + 25 + 858 + 859 + 858 + 858
+    // + 17 =
+    // 3525, plus 8 x 16 envelope tokens = 3653; the cap is ceil(3653 x 3 / 2) = 5480 + 16 headroom + 6 x 2 placeholders
+    // = 5508. Reviewer (OutputLimit.forReview): 128 + 8 x (70 + 120) per pair + the drafts' estimated tokens 12 + 13 +
+    // 16 + 509 + 510 + 512 + 509 + 10 = 2091, so 3739.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":6033");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":3946");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":5508");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":3739");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.
