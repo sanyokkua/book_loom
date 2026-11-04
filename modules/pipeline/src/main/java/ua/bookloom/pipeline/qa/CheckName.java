@@ -87,8 +87,8 @@ public enum CheckName {
     /** Text check, repair: a glossary name the target spells another way, with the exact replacement. */
     NAME_SPELLING(0.0, FindingKinds.GLOSSARY, "name-spelling", CheckLevel.REPAIR),
 
-    /** Text check, repair: a word of another language the target language's file replaces (тоже → теж). */
-    FOREIGN_WORD(0.0, FindingKinds.LANGUAGE, "foreign-word", CheckLevel.REPAIR),
+    /** Text check, repair: function words only the source language has, left in the target (что, это in Ukrainian). */
+    FUNCTION_WORD_RESIDUE(0.0, FindingKinds.LANGUAGE, "function-word-residue", CheckLevel.REPAIR),
 
     /** Text check, repair: one quoted speech that mixes ти-forms and capitalised Ви-forms for one listener. */
     ADDRESS_MIX(0.0, FindingKinds.LANGUAGE, "address-mix", CheckLevel.REPAIR),

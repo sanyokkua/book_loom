@@ -1,7 +1,7 @@
 package ua.bookloom.pipeline.checks;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -12,7 +12,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.pipeline.glossary.StopWords;
+import ua.bookloom.pipeline.index.Occurrences;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -44,16 +44,73 @@ final class LanguageIdentityCheck {
             final String target, @Nullable final String sourceLanguage, final String targetLanguage) {
         final Optional<Script> sourceScript = Languages.scriptOf(sourceLanguage);
         final Optional<Script> targetScript = Languages.scriptOf(targetLanguage);
-        final Set<String> sourceStops = sourceStops(sourceLanguage, targetLanguage);
+        final Set<String> sourceOnly = sourceOnly(sourceLanguage, targetLanguage);
         final List<CheckFinding> findings = new ArrayList<>();
+        final List<Hit> residue = new ArrayList<>();
         final Matcher lines = LINE.matcher(target);
         while (lines.find()) {
             final String line = NonProse.withoutLocators(lines.group());
-            if (Words.count(line) >= MIN_WORDS && isLeftover(line, sourceScript, targetScript, sourceStops)) {
+            if (Words.count(line) >= MIN_WORDS && isLeftover(line, sourceScript, targetScript, sourceOnly)) {
                 findings.add(finding(lines));
+            } else {
+                residue.addAll(hits(lines.group(), lines.start(), sourceOnly));
             }
         }
+        residueFinding(residue).ifPresent(findings::add);
         return List.copyOf(findings);
+    }
+
+    /** A source-only function word found in the target, with where it starts. */
+    record Hit(int start, String word) {}
+
+    /**
+     * The source-only function words in one text: whole words, lower-case initial, and a one-letter word only when
+     * the next word starts in lower case (a capital there is a name or a sentence start, not a conjunction).
+     */
+    static List<Hit> hits(final String text, final int offset, final Set<String> sourceOnly) {
+        if (sourceOnly.isEmpty()) {
+            return List.of();
+        }
+        final List<Hit> hits = new ArrayList<>();
+        final Matcher words = Words.WORD.matcher(text);
+        boolean more = words.find();
+        while (more) {
+            final String word = words.group();
+            final int start = words.start();
+            more = words.find();
+            if (Character.isLowerCase(word.codePointAt(0))
+                    && sourceOnly.contains(Occurrences.keyOf(word))
+                    && (word.codePointCount(0, word.length()) > 1 || (more && startsLower(words.group())))) {
+                hits.add(new Hit(offset + start, word));
+            }
+        }
+        return List.copyOf(hits);
+    }
+
+    /** How many source-only function words a text holds, counted the way the residue finding counts them. */
+    static int residueCount(final String text, @Nullable final String sourceLanguage, final String targetLanguage) {
+        return hits(text, 0, sourceOnly(sourceLanguage, targetLanguage)).size();
+    }
+
+    private static boolean startsLower(final String word) {
+        return Character.isLowerCase(word.codePointAt(0));
+    }
+
+    private static Optional<CheckFinding> residueFinding(final List<Hit> residue) {
+        if (residue.isEmpty()) {
+            return Optional.empty();
+        }
+        final Set<String> distinct = new LinkedHashSet<>();
+        residue.forEach(hit -> distinct.add(hit.word()));
+        log.debug("Function-word residue: {} word(s), {} distinct", residue.size(), distinct.size());
+        log.trace("Function-word residue words: {}", distinct);
+        final Hit first = residue.getFirst();
+        return Optional.of(new CheckFinding(
+                FindingKind.FUNCTION_WORD_RESIDUE,
+                new TextSpan(first.start(), first.start() + first.word().length(), first.word()),
+                "The text still holds words of the source language: " + String.join(", ", distinct)
+                        + ". Translate them into the target language.",
+                false));
     }
 
     private static CheckFinding finding(final Matcher lines) {
@@ -68,12 +125,12 @@ final class LanguageIdentityCheck {
             final String line,
             final Optional<Script> sourceScript,
             final Optional<Script> targetScript,
-            final Set<String> sourceStops) {
+            final Set<String> sourceOnly) {
         final boolean otherScript = sourceScript.isPresent()
                 && targetScript.isPresent()
                 && sourceScript.get() != targetScript.get()
                 && targetScriptShare(line, targetScript.get()) < MIN_TARGET_SCRIPT_SHARE;
-        final double rate = stopWordRate(line, sourceStops);
+        final double rate = stopWordRate(line, sourceOnly);
         final boolean leftover = otherScript || rate >= MAX_SOURCE_STOP_WORD_RATE;
         log.debug(
                 "Paragraph of {} words: other script {}, source stop-word rate {}, left in the source language {}",
@@ -93,8 +150,8 @@ final class LanguageIdentityCheck {
         return letters == 0 ? 1.0 : (double) inScript / letters;
     }
 
-    private static double stopWordRate(final String line, final Set<String> sourceStops) {
-        if (sourceStops.isEmpty()) {
+    private static double stopWordRate(final String line, final Set<String> sourceOnly) {
+        if (sourceOnly.isEmpty()) {
             return 0.0;
         }
         final Matcher words = STOP_WORD.matcher(line);
@@ -102,28 +159,15 @@ final class LanguageIdentityCheck {
         int hits = 0;
         while (words.find()) {
             total++;
-            if (sourceStops.contains(words.group().toLowerCase(Locale.ROOT).replace('’', '\''))) {
+            if (sourceOnly.contains(words.group().toLowerCase(Locale.ROOT).replace('’', '\''))) {
                 hits++;
             }
         }
         return total == 0 ? 0.0 : (double) hits / total;
     }
 
-    /** The source language's function words that the target language does not also use; empty when there is no list. */
-    private static Set<String> sourceStops(@Nullable final String sourceLanguage, final String targetLanguage) {
-        final Optional<Set<String>> source = StopWords.bundled(sourceLanguage);
-        if (source.isEmpty() || sameLanguage(sourceLanguage, targetLanguage)) {
-            return Set.of();
-        }
-        final Set<String> only = new HashSet<>(source.get());
-        StopWords.bundled(targetLanguage).ifPresent(only::removeAll);
-        return only;
-    }
-
-    private static boolean sameLanguage(@Nullable final String first, final String second) {
-        return first != null
-                && Locale.forLanguageTag(first)
-                        .getLanguage()
-                        .equals(Locale.forLanguageTag(second).getLanguage());
+    /** The pair's source-only function words; empty when the source is undeclared or either file is missing. */
+    private static Set<String> sourceOnly(@Nullable final String sourceLanguage, final String targetLanguage) {
+        return sourceLanguage == null ? Set.of() : FunctionWords.sourceOnly(sourceLanguage, targetLanguage);
     }
 }

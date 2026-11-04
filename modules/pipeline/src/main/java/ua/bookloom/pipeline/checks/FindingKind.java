@@ -54,8 +54,8 @@ public enum FindingKind {
     /** A glossary name the target spells another way than the glossary does. */
     NAME_SPELLING,
 
-    /** A word of another language that the target language's file lists with its replacement. */
-    FOREIGN_WORD,
+    /** Source-only function words left in the target: untranslated words in a target that shares an alphabet. */
+    FUNCTION_WORD_RESIDUE,
 
     /** A UUID, hexadecimal string, ISBN, web address or e-mail address of the source that the target changed or lost. */
     IDENTIFIER_CHANGED,

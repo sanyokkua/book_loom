@@ -43,15 +43,13 @@ class TextChecksLogTest {
                 .toList();
     }
 
-    // IF a listed foreign word were logged at DEBUG, THEN the book's words would reach an ordinary log file.
+    // IF residue words were logged at DEBUG, THEN the book's words would reach an ordinary log file.
     @Test
-    void run_listedForeignWord_logsTheWordAtTraceOnly() {
-        TextChecks.run("He came too.", "Він тоже прийшов.", "en", "uk", List.of(), List.of());
+    void run_residueWords_logsTheWordsAtTraceOnly() {
+        TextChecks.run("Он сказал это.", "Він сказав это і что.", "ru", "uk", List.of(), List.of());
 
-        assertThat(atDebugOrAbove()).noneMatch(line -> line.contains("тоже") || line.contains("теж"));
-        assertThat(appender.list)
-                .extracting(ILoggingEvent::getFormattedMessage)
-                .anyMatch(line -> line.contains("тоже"));
+        assertThat(atDebugOrAbove()).noneMatch(line -> line.contains("это") || line.contains("что"));
+        assertThat(appender.list).extracting(ILoggingEvent::getFormattedMessage).anyMatch(line -> line.contains("что"));
     }
 
     @Test

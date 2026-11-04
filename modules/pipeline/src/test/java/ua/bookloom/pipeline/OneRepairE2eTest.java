@@ -51,8 +51,7 @@ class OneRepairE2eTest {
     void run_russianWordsInDraft_makesExactlyOneRepairCall(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(List.of(
-                    provider.reply(
-                            WholeBookRun.batchReply(List.of("Вони сказали, что ключ у шухляді.")), Duration.ZERO),
+                    provider.target("Вони сказали, что ключ у шухляді.", Duration.ZERO),
                     provider.target("Вони сказали, що ключ у шухляді.", Duration.ZERO),
                     provider.reply("{\"results\":[]}", Duration.ZERO)));
             final Path book = TestBooks.markdown(directory.resolve("Book.md"), "Они сказали, что ключ в ящике.");

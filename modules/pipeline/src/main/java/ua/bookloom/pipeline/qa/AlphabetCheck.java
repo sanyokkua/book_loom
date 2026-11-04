@@ -4,16 +4,20 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.FindingKind;
 import ua.bookloom.pipeline.checks.TextSpan;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.util.lang.Languages;
+import ua.bookloom.util.lang.Script;
 
 /**
  * A letter the target language's alphabet does not have, inside a target word — the Russian {@code ы ъ э ё} in a
@@ -33,19 +37,23 @@ final class AlphabetCheck {
     private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ-][\\p{L}\\p{M}]+){0,32}");
 
     static List<CheckFinding> find(
-            final String source, final String target, final String targetLanguage, final List<String> glossaryPairs) {
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs) {
         final String forbidden = LanguageRules.bundled().forbiddenLetters(targetLanguage);
         if (forbidden.isEmpty()) {
             return List.of();
         }
-        final String lowerSource = source.toLowerCase(Locale.ROOT);
+        final String heldBySource = sharesScript(sourceLanguage, targetLanguage) ? "" : source.toLowerCase(Locale.ROOT);
         final Set<String> typed = renderingWords(glossaryPairs);
         final List<CheckFinding> findings = new ArrayList<>();
         final Matcher matcher = WORD.matcher(target);
         while (matcher.find()) {
             final String word = matcher.group();
             final String stray = strayLetters(word, forbidden);
-            if (!stray.isEmpty() && !lowerSource.contains(word.toLowerCase(Locale.ROOT)) && !isTyped(word, typed)) {
+            if (!stray.isEmpty() && !heldBySource.contains(word.toLowerCase(Locale.ROOT)) && !isTyped(word, typed)) {
                 log.debug(
                         "Alphabet check: letter(s) {} outside the {} alphabet at {}",
                         stray,
@@ -60,6 +68,15 @@ final class AlphabetCheck {
             }
         }
         return List.copyOf(findings);
+    }
+
+    // A source word is a kept foreign word only when the source is written in another script than the target: in a
+    // pair that shares an alphabet the source word is the untranslated text itself, so it must not exempt its own
+    // forbidden letter. A source of unknown script counts as different, as it always did.
+    private static boolean sharesScript(@Nullable final String sourceLanguage, final String targetLanguage) {
+        final Optional<Script> sourceScript = Languages.scriptOf(sourceLanguage);
+        final Optional<Script> targetScript = Languages.scriptOf(targetLanguage);
+        return sourceScript.isPresent() && sourceScript.equals(targetScript);
     }
 
     // A glossary rendering is what the person typed, so its word, or a word that declines its stem, is theirs to keep.

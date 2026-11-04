@@ -35,7 +35,7 @@ class CheckNameTest {
         "NAME_MISSING, REPAIR",
         "NAME_SPELLING, REPAIR",
         "ADDRESS_MIX, REPAIR",
-        "FOREIGN_WORD, REPAIR",
+        "FUNCTION_WORD_RESIDUE, REPAIR",
         "DUPLICATE_WORD, NOTE",
         "SPACING, NOTE",
         "UNKNOWN_WORD, NOTE",

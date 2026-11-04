@@ -17,7 +17,7 @@ class AlphabetCheckTest {
     @CsvSource({"бэкона,э", "кобыли,ы", "камыша,ы", "Ёлка,ё", "твердый,ы"})
     void find_russianOnlyLetter_isABlockingFindingOfThatWord(final String word, final String letter) {
         final List<CheckFinding> found =
-                AlphabetCheck.find("Some text.", "Він бачив " + word + " там.", "uk", List.of());
+                AlphabetCheck.find("Some text.", "Він бачив " + word + " там.", "en", "uk", List.of());
 
         assertThat(found).hasSize(1);
         assertThat(found.getFirst().kind()).isEqualTo(FindingKind.ALPHABET);
@@ -34,20 +34,39 @@ class AlphabetCheckTest {
         "Це ж єдиний їжак, що гукнув: «Ґанок!»"
     })
     void find_cleanUkrainian_saysNothing(final String target) {
-        assertThat(AlphabetCheck.find("Some text.", target, "uk", List.of())).isEmpty();
+        assertThat(AlphabetCheck.find("Some text.", target, "en", "uk", List.of()))
+                .isEmpty();
     }
 
     @Test
-    void find_wordAlsoInTheSource_isAKeptForeignWordAndIsLeftAlone() {
-        assertThat(AlphabetCheck.find("He wrote Мышь on the wall.", "Він написав Мышь на стіні.", "uk", List.of()))
+    void check_ruToUkWordHeldBySource_stillFlagsLetter() {
+        final List<CheckFinding> found =
+                AlphabetCheck.find("Он нашёл ещё ключ.", "Він знайшов ещё ключ.", "ru", "uk", List.of());
+
+        assertThat(found)
+                .singleElement()
+                .satisfies(f -> assertThat(f.span().text()).isEqualTo("ещё"));
+    }
+
+    @Test
+    void check_ruToUkWordNotHeldBySource_isStillFlagged() {
+        assertThat(AlphabetCheck.find("Он купил кобылу.", "Він купив кобылу.", "ru", "uk", List.of()))
+                .singleElement()
+                .satisfies(f -> assertThat(f.explanation()).contains("ы"));
+    }
+
+    @Test
+    void check_enToUkLatinNameInSource_exempt() {
+        assertThat(AlphabetCheck.find(
+                        "He wrote Мышь on the wall.", "Він написав Мышь на стіні.", "en", "uk", List.of()))
                 .isEmpty();
     }
 
     @Test
     void find_languageWithNoForbiddenLetters_isNotChecked() {
-        assertThat(AlphabetCheck.find("Some text.", "Он бачив кобыли.", "ru", List.of()))
+        assertThat(AlphabetCheck.find("Some text.", "Он бачив кобыли.", "en", "ru", List.of()))
                 .isEmpty();
-        assertThat(AlphabetCheck.find("Some text.", "Er sah kobыli.", "de", List.of()))
+        assertThat(AlphabetCheck.find("Some text.", "Er sah kobыli.", "en", "de", List.of()))
                 .isEmpty();
     }
 
@@ -55,9 +74,9 @@ class AlphabetCheckTest {
     void find_glossaryRenderingWithARussianLetter_isWhatThePersonTyped() {
         final List<String> pairs = List.of("Sin → Сын");
 
-        assertThat(AlphabetCheck.find("Sin spoke.", "Сын мовчав. Сына не було.", "uk", pairs))
+        assertThat(AlphabetCheck.find("Sin spoke.", "Сын мовчав. Сына не було.", "en", "uk", pairs))
                 .isEmpty();
-        assertThat(AlphabetCheck.find("Sin spoke.", "Сын мовчав. Кобыли не було.", "uk", pairs))
+        assertThat(AlphabetCheck.find("Sin spoke.", "Сын мовчав. Кобыли не було.", "en", "uk", pairs))
                 .hasSize(1);
     }
 }

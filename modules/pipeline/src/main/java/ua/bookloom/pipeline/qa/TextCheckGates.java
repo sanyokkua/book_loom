@@ -51,13 +51,23 @@ final class TextCheckGates {
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());
-        AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage(), input.glossaryPairs()).stream()
-                .map(TextCheckGates::resultOf)
-                .forEach(results::add);
+        results.addAll(alphabetResults(input, target));
         genderResult(input, target).ifPresent(results::add);
         characterResult(input, target).ifPresent(results::add);
         wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
+    }
+
+    private static List<CheckResult> alphabetResults(final SoftCheckInput input, final String target) {
+        return AlphabetCheck.find(
+                        input.sourceDisplayText(),
+                        target,
+                        input.sourceLanguage(),
+                        input.targetLanguage(),
+                        input.glossaryPairs())
+                .stream()
+                .map(TextCheckGates::resultOf)
+                .toList();
     }
 
     // An identifier stays as written whatever the policy. Under Keep original a term whose rendering is its own
@@ -175,7 +185,7 @@ final class TextCheckGates {
             case LATIN_RUN -> CheckName.LATIN_RUN;
             case NAME_MISSING -> CheckName.NAME_MISSING;
             case NAME_SPELLING -> CheckName.NAME_SPELLING;
-            case FOREIGN_WORD -> CheckName.FOREIGN_WORD;
+            case FUNCTION_WORD_RESIDUE -> CheckName.FUNCTION_WORD_RESIDUE;
             case IDENTIFIER_CHANGED -> CheckName.IDENTIFIER;
             case ADDRESS_MIX -> CheckName.ADDRESS_MIX;
         };

@@ -57,7 +57,7 @@ class RepairReplayTest {
     static Stream<Arguments> defects() {
         return Stream.of(
                 Arguments.of("mixed-script", List.of("script-purity"), true),
-                Arguments.of("english-accepted", List.of("script", "echo"), true),
+                Arguments.of("english-accepted", List.of("script", "echo", "function-word-residue"), true),
                 Arguments.of("leftover-english-paragraph", List.of("language-identity", "script", "echo"), false),
                 Arguments.of("mixed-script-look-alike", List.of("script-purity"), true),
                 Arguments.of("omission", List.of("length"), true),
