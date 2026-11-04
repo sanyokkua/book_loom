@@ -127,6 +127,20 @@ class OneRepairTest {
         assertThat(decided.machineTarget()).isEqualTo(draft);
     }
 
+    // IF only the first defect counted as the trigger, THEN a repair that clears the second at an equal score would be
+    // refused as no gain.
+    @Test
+    void repair_clearsSecondDefectAtEqualScore_isKept() {
+        final Segment segment = plain("Они спросили, что там?");
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(targetReply("Вони спитали, что там там?")));
+
+        final SegmentOutcome decided = decide(segment, "Вони спитали, что там.", "ru", model);
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(decided.machineTarget()).isEqualTo("Вони спитали, что там там?");
+    }
+
     @Test
     void repair_repairWorse_keepsDraftWithProofreadMark() {
         final Segment segment = plain("Где ключ и письмо?");

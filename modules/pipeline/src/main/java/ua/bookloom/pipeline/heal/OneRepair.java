@@ -121,13 +121,14 @@ final class OneRepair {
         final List<QaFinding> asked = fixing == Fixing.REDRAFT ? List.of() : defects;
         final RepairOutcome ran = evaluator.classify(outcome, send(outcome, standing, asked));
         RepairSteps.end(calls, stepKey, ran);
-        return settled(outcome, standing, defects, ran);
+        return settled(outcome, standing, defects, fixing, ran);
     }
 
     private Result<Repaired> settled(
             final DraftOutcome.Drafted outcome,
             final Resolution standing,
             final List<QaFinding> defects,
+            final Fixing fixing,
             final RepairOutcome ran) {
         final String segmentId = outcome.segment().id();
         return switch (ran) {
@@ -137,7 +138,7 @@ final class OneRepair {
             case RepairOutcome.Failed(var gateFinding, var rejectedForm) ->
                 Result.ok(refused(
                         segmentId, standing, defects, rejectedForm, null, gateFinding == null ? "unreadable" : "gate"));
-            case RepairOutcome.Evaluated evaluated -> Result.ok(judged(outcome, standing, defects, evaluated));
+            case RepairOutcome.Evaluated evaluated -> Result.ok(judged(outcome, standing, defects, fixing, evaluated));
         };
     }
 
@@ -180,8 +181,9 @@ final class OneRepair {
             final DraftOutcome.Drafted outcome,
             final Resolution standing,
             final List<QaFinding> defects,
+            final Fixing fixing,
             final RepairOutcome.Evaluated evaluated) {
-        final Verdict verdict = verdictOn(outcome, standing, defects, evaluated);
+        final Verdict verdict = verdictOn(outcome, standing, defects, fixing, evaluated);
         if (verdict instanceof Verdict.Reject(final String reason)) {
             return refused(outcome.segment().id(), standing, defects, null, null, reason);
         }
@@ -213,6 +215,7 @@ final class OneRepair {
             final DraftOutcome.Drafted outcome,
             final Resolution standing,
             final List<QaFinding> defects,
+            final Fixing fixing,
             final RepairOutcome.Evaluated evaluated) {
         if (standing.machine().restored() == null) {
             final boolean same = evaluated.maskedCandidate().equals(standing.maskedText());
@@ -232,12 +235,27 @@ final class OneRepair {
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
                 settings.names(),
-                defects.getFirst(),
+                trigger(defects, fixing, evaluated),
                 false);
         return NeverWorse.judge(
                 new Candidate(standing.maskedText(), standing.qa(), List.of()),
                 new Candidate(evaluated.maskedCandidate(), evaluated.qa(), List.of()),
                 facts);
+    }
+
+    // The finding the keep rule asks the candidate to clear: for a re-draft the lost marks it was made for; for the one
+    // repair, which names every defect, the first one the candidate clears, so clearing any of them counts.
+    private static QaFinding trigger(
+            final List<QaFinding> defects, final Fixing fixing, final RepairOutcome.Evaluated evaluated) {
+        final QaFinding chosen = fixing == Fixing.REDRAFT
+                ? defects.stream().filter(OneRepair::lostMarks).findFirst().orElse(defects.getFirst())
+                : defects.stream()
+                        .filter(defect -> evaluated.qa().findings().stream()
+                                .noneMatch(left -> left.raisedBy().equals(defect.raisedBy())))
+                        .findFirst()
+                        .orElse(defects.getFirst());
+        log.debug("Repair trigger fixing={} trigger={}", fixing, chosen.raisedBy());
+        return chosen;
     }
 
     private static Repaired refused(
