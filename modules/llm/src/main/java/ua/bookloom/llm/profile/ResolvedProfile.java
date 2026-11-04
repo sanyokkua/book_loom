@@ -51,6 +51,7 @@ public record ResolvedProfile(
                 profile.reasoning(),
                 null,
                 null,
-                baseModel);
+                baseModel,
+                null);
     }
 }

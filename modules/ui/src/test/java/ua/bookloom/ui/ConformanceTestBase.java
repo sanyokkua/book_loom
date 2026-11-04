@@ -89,6 +89,8 @@ abstract class ConformanceTestBase extends ShellTestBase {
     }
 
     /** A model whose name carries a quant the scripted port judges good, for the ready card's chip. */
+    static final String GAP_MODEL = "llama3.1:8b";
+
     static final String QUANT_MODEL = "hf.co/unsloth/GLM-4.7-Flash-GGUF:UD-Q4_K_XL";
 
     private final ScriptedModelCapabilities capabilities = quantCapabilities();
@@ -96,7 +98,37 @@ abstract class ConformanceTestBase extends ShellTestBase {
     private static ScriptedModelCapabilities quantCapabilities() {
         final ScriptedModelCapabilities scripted = ScriptedModelCapabilities.idle();
         scripted.nameQuant(QUANT_MODEL, "UD-Q4_K_XL", ua.bookloom.api.llm.QuantTier.GOOD);
+        scriptAdvice(scripted);
         return scripted;
+    }
+
+    private static void scriptAdvice(final ScriptedModelCapabilities scripted) {
+        scripted.advise(
+                "ollama",
+                "gemma4:e4b",
+                AdviceReports.report(
+                        ua.bookloom.api.llm.ModelReport.Match.EXACT,
+                        null,
+                        AdviceReports.identity("gemma", 4.0, "Q4_K_M"),
+                        AdviceReports.notes("Gemma 4 E4B", "Gemma 4"),
+                        null,
+                        java.util.List.of()),
+                ua.bookloom.api.llm.LanguageAdvice.NEUTRAL);
+        scripted.advise(
+                "ollama",
+                GAP_MODEL,
+                AdviceReports.report(
+                        ua.bookloom.api.llm.ModelReport.Match.FAMILY,
+                        null,
+                        AdviceReports.identity("llama", 8.0, "Q4_K_M"),
+                        AdviceReports.notes("Llama 3.1 8B", "Llama 3.1"),
+                        null,
+                        java.util.List.of()),
+                AdviceReports.advice(
+                        ua.bookloom.api.llm.LanguageState.DECLARED,
+                        ua.bookloom.api.llm.LanguageState.NOT_DECLARED,
+                        false,
+                        "Llama 3.1"));
     }
 
     @Override

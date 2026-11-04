@@ -23,8 +23,12 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.control.TextMatch;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.AdviceReader;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.ModelAdviceSources;
 import ua.bookloom.ui.state.ModelEntry;
 import ua.bookloom.ui.state.ModelForm;
 import ua.bookloom.ui.state.ModelQuantChips;
@@ -47,6 +51,9 @@ public final class ModelsController {
     private final TechnicalDetails technical;
     private final SettingsTabGuard guard;
     private final ModelQuantChips quantChips;
+    private final AdviceReader adviceReader;
+    private final CurrentProject current;
+    private final LanguageNames names;
     private final ChangeListener<ModelEntry> onSelected = (observed, was, now) -> showSelected(now);
     private final ChangeListener<ModelEntry> onChosen = (observed, was, now) -> chosen(now);
     // A new offer replaces the chooser's items, which clears its pick; the pick is put back.
@@ -107,6 +114,8 @@ public final class ModelsController {
      * @param technical whether the technical names are shown
      * @param guard asks before a change of model would drop changes
      * @param quantChips the quant chips drawn beside the models
+     * @param advice where the readings behind the advice lines come from, the open project they are about, and how
+     *     languages are named
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -117,19 +126,24 @@ public final class ModelsController {
             final Messages messages,
             final TechnicalDetails technical,
             final SettingsTabGuard guard,
-            final ModelQuantChips quantChips) {
+            final ModelQuantChips quantChips,
+            final ModelAdviceSources advice) {
         this.roster = Objects.requireNonNull(roster, "roster");
         this.form = Objects.requireNonNull(form, "form");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.technical = Objects.requireNonNull(technical, "technical");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.quantChips = Objects.requireNonNull(quantChips, "quantChips");
+        this.adviceReader = Objects.requireNonNull(advice, "advice").reader();
+        this.current = advice.current();
+        this.names = advice.names();
     }
 
     @FXML
     void initialize() {
         log.debug("building the models area");
-        body.getChildren().setAll(new ModelsFormView(form, messages, technical).node());
+        final ModelAdviceSection advice = new ModelAdviceSection(adviceReader, current, form, messages, names);
+        body.getChildren().setAll(advice.node(), new ModelsFormView(form, messages, technical).node(), advice.foot());
         buildChooser();
         bindVisibility();
         bindFooter();

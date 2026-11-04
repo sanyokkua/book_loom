@@ -25,7 +25,7 @@ import ua.bookloom.ui.state.SettingsViewModel;
 
 /**
  * The language advice in the real window over a fake Ollama: a Russian-to-Ukrainian project on a model whose maker
- * lists neither language reads the warning on the ready card and again in the Start question, and Start stays open.
+ * lists neither language reads the warning on the ready card and again under the estimate on the Book brief, and Start stays open.
  */
 // `slow`: an import and a start in the real window over a database file and a fake server.
 @Tag("slow")
@@ -42,7 +42,8 @@ class StartLanguageLineTest extends WorkspaceTestBase {
         try (OllamaWireMock ollama = new OllamaWireMock()) {
             prepareProject(ollama);
 
-            settle(() -> shell.root().lookup(READY_ID) != null);
+            settle(() -> shell.root().lookup(READY_ID) != null
+                    && !((Labeled) shell.root().lookup(READY_ID)).getText().isEmpty());
             final Node ready = onFx(() -> shell.root().lookup(READY_ID));
             assertThat(ready).as("the ready card's language line").isNotNull();
             assertThat(onFx(((Labeled) Objects.requireNonNull(ready))::getText))
@@ -50,12 +51,15 @@ class StartLanguageLineTest extends WorkspaceTestBase {
             final Button start = (Button) onFx(() -> shell.root().lookup("#translating-start"));
             assertThat(onFx(start::isDisabled)).as("Start stays enabled").isFalse();
 
-            onFx(start::fire);
-            settle(() -> shell.root().lookup(START_ID) != null);
+            onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
+            settle(() -> shell.root().lookup(START_ID) != null
+                    && !((Labeled) shell.root().lookup(START_ID)).getText().isEmpty());
             final Node line = onFx(() -> shell.root().lookup(START_ID));
-            assertThat(line).as("the Start question's language line").isNotNull();
+            assertThat(line)
+                    .as("the Book brief's language line under the estimate")
+                    .isNotNull();
             assertThat(onFx(((Labeled) Objects.requireNonNull(line))::getText)).contains("Ukrainian");
-            assertThat(runState()).as("nothing starts before the answer").isEqualTo(RunState.IDLE);
+            assertThat(runState()).as("nothing starts by itself").isEqualTo(RunState.IDLE);
         }
     }
 

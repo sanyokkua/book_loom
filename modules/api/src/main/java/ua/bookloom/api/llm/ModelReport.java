@@ -21,6 +21,7 @@ import org.jspecify.annotations.Nullable;
  * @param quantAdvice how the model's quant rates at its size, or null when the advice was not added
  * @param baseModel the display name of the base model a fine-tune is built on, such as {@code Qwen3}, or null when the
  *     model is not a known fine-tune
+ * @param notes the words the Models tab and Start need beyond the identity, or null when the advice was not added
  */
 public record ModelReport(
         @Nullable Integer contextLength,
@@ -32,7 +33,8 @@ public record ModelReport(
         ReasoningControl thinking,
         @Nullable LanguageDeclaration languages,
         @Nullable QuantAdvice quantAdvice,
-        @Nullable String baseModel) {
+        @Nullable String baseModel,
+        @Nullable ModelNotes notes) {
 
     /** The verdict of a model no built-in row knows. */
     public static final String UNKNOWN_MODEL = "unknown model";
@@ -92,6 +94,7 @@ public record ModelReport(
                 ReasoningControl.UNKNOWN,
                 null,
                 null,
+                null,
                 null);
     }
 
@@ -104,7 +107,39 @@ public record ModelReport(
      */
     public ModelReport withAdvice(final @Nullable LanguageDeclaration declared, final @Nullable QuantAdvice quant) {
         return new ModelReport(
-                contextLength, loadedContext, identity, match, verdict, warnings, thinking, declared, quant, baseModel);
+                contextLength,
+                loadedContext,
+                identity,
+                match,
+                verdict,
+                warnings,
+                thinking,
+                declared,
+                quant,
+                baseModel,
+                notes);
+    }
+
+    /**
+     * The same report with the model's notes added.
+     *
+     * @param added the notes; non-null
+     * @return the report with only the notes changed
+     */
+    public ModelReport withNotes(final ModelNotes added) {
+        Objects.requireNonNull(added, "added");
+        return new ModelReport(
+                contextLength,
+                loadedContext,
+                identity,
+                match,
+                verdict,
+                warnings,
+                thinking,
+                languages,
+                quantAdvice,
+                baseModel,
+                added);
     }
 
     private static void requirePositive(final @Nullable Integer value, final String name) {

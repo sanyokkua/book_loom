@@ -82,7 +82,7 @@ class ModelKnowledgeFilesTest {
         assertThat(errorOf(quant).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(quant).message()).contains("quant-tiers.csv").contains("row 56");
         assertThat(errorOf(lang).code()).isEqualTo(ErrorCode.internal);
-        assertThat(errorOf(lang).message()).contains("declared-languages.csv").contains("row 88");
+        assertThat(errorOf(lang).message()).contains("declared-languages.csv").contains("row 90");
     }
 
     @Test
@@ -149,5 +149,21 @@ class ModelKnowledgeFilesTest {
         assertThat(mamay.evidence()).contains("BOOKLOOM-RUN:ru>uk");
         assertThat(lapa.listKind()).isEqualTo(ListKind.POSITIVE_ONLY);
         assertThat(lapa.evidence()).doesNotContain("BOOKLOOM-RUN");
+    }
+
+    @Test
+    void load_qwen3_isPositiveOnlyWithRussianUkrainianAndEnglish() {
+        final LanguageRow qwen3 = bundled().languageRow("qwen3").orElseThrow();
+
+        assertThat(qwen3.listKind()).isEqualTo(ListKind.POSITIVE_ONLY);
+        assertThat(qwen3.codes()).containsExactlyInAnyOrder("ru", "uk", "en");
+    }
+
+    @Test
+    void load_gemma4_carriesTheBookLoomEnToUkRunAndNvfp4MeasurementOnE4b() {
+        final LanguageRow gemma4 = bundled().languageRow("gemma4").orElseThrow();
+
+        assertThat(gemma4.listKind()).isEqualTo(ListKind.NONE);
+        assertThat(gemma4.evidence()).contains("BOOKLOOM-RUN:en>uk@e4b").contains("BOOKLOOM-QUANT:nvfp4@e4b");
     }
 }

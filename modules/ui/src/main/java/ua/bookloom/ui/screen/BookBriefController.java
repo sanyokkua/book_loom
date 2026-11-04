@@ -20,6 +20,7 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.TranslatingViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -45,6 +46,7 @@ public final class BookBriefController {
     private final BriefLock lock;
     private final BriefProject stored;
     private final BriefEstimate estimate;
+    private final StartAdvice advice;
     private final TranslatingViewModel translating;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
@@ -87,6 +89,7 @@ public final class BookBriefController {
         this.lock = Objects.requireNonNull(facts, "facts").lock();
         this.stored = facts.stored();
         this.estimate = facts.estimate();
+        this.advice = facts.advice();
         this.translating = run.translating();
     }
 
@@ -113,6 +116,7 @@ public final class BookBriefController {
                                 lock,
                                 stored,
                                 estimate,
+                                advice,
                                 translating))
                         .root()
                 : NoBookView.build(messages, navigator);

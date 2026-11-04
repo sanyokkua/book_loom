@@ -20,6 +20,7 @@ import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -100,7 +101,8 @@ public final class TranslatingController {
         this.desk = reviewAccess.desk();
         this.sections = tools.sections();
         this.runs = run.runs();
-        this.reads = new TranslatingView.Reads(parts.estimate(), parts.summary(), parts.sleep(), parts.technical());
+        this.reads = new TranslatingView.Reads(
+                parts.estimate(), parts.summary(), parts.sleep(), parts.technical(), parts.advice());
     }
 
     /**
@@ -111,6 +113,7 @@ public final class TranslatingController {
      * @param summary the scene summary line's text
      * @param sleep the sleep help line
      * @param technical whether technical details are on
+     * @param advice the language advice shown under the model row
      * @param modals where "All calls…" opens
      * @param activities whose clock the calls dialog reads
      */
@@ -119,6 +122,7 @@ public final class TranslatingController {
             SceneSummary summary,
             SleepHelp sleep,
             TechnicalDetails technical,
+            StartAdvice advice,
             ModalHost modals,
             ActivityTracker activities) {
 
@@ -129,6 +133,7 @@ public final class TranslatingController {
             Objects.requireNonNull(summary, "summary");
             Objects.requireNonNull(sleep, "sleep");
             Objects.requireNonNull(technical, "technical");
+            Objects.requireNonNull(advice, "advice");
             Objects.requireNonNull(modals, "modals");
             Objects.requireNonNull(activities, "activities");
         }

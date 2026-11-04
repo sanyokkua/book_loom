@@ -12,6 +12,7 @@ import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.LanguageAdvice;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
@@ -31,8 +32,10 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
 
     private final Map<String, ModelReport> reports = new ConcurrentHashMap<>();
     private final Map<String, QuantAdvice> names = new ConcurrentHashMap<>();
+    private final Map<String, LanguageAdvice> advices = new ConcurrentHashMap<>();
     private final Map<String, PastedModel> pastes = new ConcurrentHashMap<>();
     private final List<String> asked = new CopyOnWriteArrayList<>();
+    private volatile String date = "";
     private final AtomicInteger fxThreadCalls = new AtomicInteger();
     private final Map<String, CountDownLatch> holds = new ConcurrentHashMap<>();
 
@@ -64,6 +67,7 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
                         thinking,
                         null,
                         null,
+                        null,
                         null));
     }
 
@@ -87,7 +91,20 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
                         ReasoningControl.UNKNOWN,
                         null,
                         advice(token, tier),
+                        null,
                         null));
+    }
+
+    /** From now on reports {@code report} for the model and advises {@code advice} for any language pair. */
+    public void advise(
+            final String providerId, final String modelId, final ModelReport report, final LanguageAdvice advice) {
+        reports.put(providerId + "/" + modelId, report);
+        advices.put(providerId + "/" + modelId, advice);
+    }
+
+    /** From now on the shipped model knowledge is dated {@code factsDate}. */
+    public void factsDate(final String factsDate) {
+        date = factsDate;
     }
 
     /** From now on reads the pasted {@code text} as {@code reading}. */
@@ -117,6 +134,17 @@ public final class ScriptedModelCapabilities implements ModelCapabilities {
     @Override
     public @Nullable QuantAdvice quantAdviceByName(final String modelId) {
         return names.get(modelId);
+    }
+
+    @Override
+    public LanguageAdvice languageAdvice(
+            final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
+        return advices.getOrDefault(selection.providerId() + "/" + selection.modelId(), LanguageAdvice.NEUTRAL);
+    }
+
+    @Override
+    public String factsDate() {
+        return date;
     }
 
     @Override

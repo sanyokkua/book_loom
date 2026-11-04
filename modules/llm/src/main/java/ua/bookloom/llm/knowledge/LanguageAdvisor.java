@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.LanguageAdvice;
 import ua.bookloom.api.llm.LanguageDeclaration;
 import ua.bookloom.api.llm.LanguageState;
 import ua.bookloom.api.llm.ListKind;
@@ -28,7 +29,10 @@ import ua.bookloom.api.llm.ModelIdentity;
 public final class LanguageAdvisor {
 
     private static final String ENGLISH = "en";
-    private static final Pattern RUN_TOKEN = Pattern.compile("BOOKLOOM-RUN:(\\w+(?:-\\w+)*)>(\\w+(?:-\\w+)*)");
+    private static final Pattern RUN_TOKEN =
+            Pattern.compile("BOOKLOOM-RUN:(\\w+(?:-\\w+)*)>(\\w+(?:-\\w+)*)(?:@(\\w+))?");
+    private static final Pattern QUANT_TOKEN = Pattern.compile("BOOKLOOM-QUANT:([\\w.-]+?)(?:@(\\w+))?(?=[;\\s]|$)");
+    private static final List<String> FIRST_CODES = List.of("uk", "ru");
     private static final LanguageResult NOTHING = new LanguageResult(LanguageState.UNKNOWN, LanguageSource.NONE, null);
 
     private final @Nullable KnowledgeTables tables;
@@ -90,15 +94,16 @@ public final class LanguageAdvisor {
      * @param id the parsed model name
      * @param source the source language tag
      * @param target the target language tag
-     * @return true only when the model's own row's evidence names a run for that pair; a maker's list, a base model's
-     *     row and a sibling model never count
+     * @return true only when the model's own row's evidence names a run for that pair (and, when the token names a
+     *     size such as {@code @e4b}, for this size); a maker's list, a base model's row and a sibling model never
+     *     count
      */
     public boolean testedPair(final ModelIdentity id, final String source, final String target) {
         Objects.requireNonNull(id, "id");
         final String from = LanguageGroups.groupOf(Objects.requireNonNull(source, "source"));
         final String to = LanguageGroups.groupOf(Objects.requireNonNull(target, "target"));
         final boolean tested =
-                rowFor(ownKey(id)).map(row -> hasRun(row, from, to)).orElse(false);
+                rowFor(ownKey(id)).map(row -> hasRun(row, id, from, to)).orElse(false);
         log.debug("tested pair model={} source={} target={} tested={}", id.family(), source, target, tested);
         return tested;
     }
@@ -164,15 +169,137 @@ public final class LanguageAdvisor {
         };
     }
 
-    private static boolean hasRun(final LanguageRow row, final String from, final String to) {
+    private static boolean hasRun(final LanguageRow row, final ModelIdentity id, final String from, final String to) {
         final Matcher matcher = RUN_TOKEN.matcher(row.evidence());
         while (matcher.find()) {
             if (LanguageGroups.groupOf(matcher.group(1)).equals(from)
-                    && LanguageGroups.groupOf(matcher.group(2)).equals(to)) {
+                    && LanguageGroups.groupOf(matcher.group(2)).equals(to)
+                    && sizeMatches(matcher.group(3), id)) {
                 return true;
             }
         }
         return false;
+    }
+
+    // A token without a size covers the whole row; "e4b" covers the effective size 4, "12b" the total size 12.
+    private static boolean sizeMatches(final @Nullable String size, final ModelIdentity id) {
+        if (size == null) {
+            return true;
+        }
+        return size.equalsIgnoreCase(billions("e", id.effB())) || size.equalsIgnoreCase(billions("", id.sizeB()));
+    }
+
+    private static String billions(final String prefix, final @Nullable Double size) {
+        if (size == null) {
+            return "";
+        }
+        final boolean whole = size == Math.rint(size);
+        return prefix + (whole ? String.valueOf(size.longValue()) : String.valueOf(size)) + "b";
+    }
+
+    /**
+     * The date of the bundled tables.
+     *
+     * @return the {@code data-version} of the knowledge files, or an empty text when they did not load
+     */
+    public String dataVersion() {
+        return tables == null ? "" : tables.dataVersion();
+    }
+
+    /**
+     * Whether a BookLoom run of this model at this quant is on record.
+     *
+     * @param id the parsed model name
+     * @param quantToken the quant as judged, such as {@code nvfp4}
+     * @return true only when the model's own row's evidence holds a {@code BOOKLOOM-QUANT:<token>} for this quant
+     *     (and this size when the token names one)
+     */
+    public boolean quantMeasured(final ModelIdentity id, final String quantToken) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(quantToken, "quantToken");
+        final boolean measured =
+                rowFor(ownKey(id)).map(row -> hasQuantRun(row, id, quantToken)).orElse(false);
+        log.debug("quant measured model={} quant={} measured={}", id.family(), quantToken, measured);
+        return measured;
+    }
+
+    private static boolean hasQuantRun(final LanguageRow row, final ModelIdentity id, final String quantToken) {
+        final Matcher matcher = QUANT_TOKEN.matcher(row.evidence());
+        while (matcher.find()) {
+            if (matcher.group(1).equalsIgnoreCase(quantToken) && sizeMatches(matcher.group(2), id)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * What the maker's list says about a language pair, for the Models tab and Start.
+     *
+     * @param id the parsed model name
+     * @param facts what the server said, or null when it has not been asked
+     * @param source the source tag, or null for none; that side is not judged
+     * @param target the target tag, or null for none; that side is not judged
+     * @param familyLabel the model's family name for a sentence, such as {@code Llama 3.1}
+     * @param baseLabel the display name of the model a fine-tune is built on, or null
+     * @return the advice; a base model's list never makes a warning, only an information line
+     */
+    public LanguageAdvice advise(
+            final ModelIdentity id,
+            final @Nullable ModelFacts facts,
+            final @Nullable String source,
+            final @Nullable String target,
+            final String familyLabel,
+            final @Nullable String baseLabel) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(familyLabel, "familyLabel");
+        final Optional<Located> located = rowOf(id);
+        final Optional<LanguageResult> from = source == null ? Optional.empty() : Optional.of(state(id, facts, source));
+        final Optional<LanguageResult> to = target == null ? Optional.empty() : Optional.of(state(id, facts, target));
+        final boolean fromBase =
+                located.map(row -> row.source() == LanguageSource.BASE).orElse(false);
+        final LanguageAdvice advice = new LanguageAdvice(
+                from.map(LanguageAdvisor::visibleState).orElse(LanguageState.DECLARED),
+                to.map(LanguageAdvisor::visibleState).orElse(LanguageState.DECLARED),
+                isBaseOnly(from, to),
+                source != null && target != null && testedPair(id, source, target),
+                familyLabel,
+                fromBase ? baseLabel : null,
+                fromBase && baseLabel != null
+                        ? located.map(row -> ordered(row.row().codes())).orElse(List.of())
+                        : List.of());
+        log.debug(
+                "language advice model={} source={} target={} states={}/{} baseOnly={} tested={}",
+                id.family(),
+                source,
+                target,
+                advice.sourceState(),
+                advice.targetState(),
+                advice.baseOnly(),
+                advice.pairTested());
+        return advice;
+    }
+
+    private static boolean isBaseOnly(final Optional<LanguageResult> from, final Optional<LanguageResult> to) {
+        return Stream.of(from, to)
+                .flatMap(Optional::stream)
+                .anyMatch(result -> result.source() == LanguageSource.BASE && result.state() == LanguageState.DECLARED);
+    }
+
+    // A fine-tune's own gap is not the maker's word: a base model's list can add a language, never warn about one.
+    private static LanguageState visibleState(final LanguageResult result) {
+        return result.source() == LanguageSource.BASE && result.state() == LanguageState.NOT_DECLARED
+                ? LanguageState.UNKNOWN
+                : result.state();
+    }
+
+    private static List<String> ordered(final Set<String> codes) {
+        return Stream.concat(
+                        FIRST_CODES.stream().filter(codes::contains),
+                        codes.stream()
+                                .filter(code -> !FIRST_CODES.contains(code))
+                                .sorted())
+                .toList();
     }
 
     private static Optional<String> ownKey(final ModelIdentity id) {

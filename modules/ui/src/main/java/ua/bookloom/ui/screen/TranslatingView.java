@@ -43,6 +43,7 @@ import ua.bookloom.ui.state.RunStateView;
 import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TechnicalDetails;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -86,7 +87,12 @@ final class TranslatingView {
      * What the strip and the live card read besides the mirror: the estimate before a start, the scene summary, the
      * sleep help line and whether technical details are on.
      */
-    record Reads(BriefEstimate estimate, SceneSummary summary, SleepHelp sleep, TechnicalDetails technical) {}
+    record Reads(
+            BriefEstimate estimate,
+            SceneSummary summary,
+            SleepHelp sleep,
+            TechnicalDetails technical,
+            StartAdvice advice) {}
 
     static Node build(
             final TranslatingViewModel viewModel,
@@ -125,7 +131,12 @@ final class TranslatingView {
                         TranslatingSummaryStrip.build(mirror, stripInputs(mirror, exits, reads), messages),
                         StateVisibility.shownIn(
                                 TranslatingReadyCard.build(
-                                        viewModel, mirror, current, exits.runs().view(), messages),
+                                        viewModel,
+                                        mirror,
+                                        current,
+                                        exits.runs().view(),
+                                        messages,
+                                        StartAdviceLines.readyLanguageLine(reads.advice(), messages, names)),
                                 mirror.runState(),
                                 Set.of(RunState.IDLE)),
                         StateVisibility.shownIn(

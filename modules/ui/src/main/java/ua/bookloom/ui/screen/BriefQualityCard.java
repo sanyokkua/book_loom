@@ -80,6 +80,7 @@ final class BriefQualityCard {
                 dial.node(),
                 hint,
                 new BriefEstimateLines(messages, parts.estimate()).node(),
+                new StartAdviceLines(parts.advice(), messages, parts.names()).node(),
                 modelRow(parts.navigator()));
     }
 

@@ -52,7 +52,8 @@ final class TranslatingReadyCard {
             final StateMirror mirror,
             final CurrentProject current,
             final ReadOnlyObjectProperty<RunStateView> runs,
-            final Messages messages) {
+            final Messages messages,
+            final Label languageLine) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(runs, "runs");
         final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
@@ -65,22 +66,26 @@ final class TranslatingReadyCard {
                 () -> bookName(mirror.runFileName().get(), current.book().get()),
                 mirror.runFileName(),
                 current.book());
-        final Label pending = boundLabel(
-                "translating-ready-pending",
-                KV_VALUE,
-                () -> grouping.format(viewModel.pendingCount().get()),
-                viewModel.pendingCount());
         return BriefCards.card(
                 "translating-ready-card",
                 messages,
                 MessageKey.TRANSLATING_READY_TITLE,
                 row("book", MessageKey.TRANSLATING_READY_BOOK, book, messages),
                 modelRow(viewModel, messages),
+                languageLine,
                 row("review", MessageKey.TRANSLATING_READY_REVIEW, fixed("translating-ready-review", review), messages),
                 row("dial", MessageKey.TRANSLATING_READY_DIAL, dialLabel(current, messages), messages),
-                row("pending", MessageKey.TRANSLATING_READY_PENDING, pending, messages),
+                row("pending", MessageKey.TRANSLATING_READY_PENDING, pendingLabel(viewModel, grouping), messages),
                 modelHint(viewModel, messages),
                 readyLine(runs, messages));
+    }
+
+    private static Label pendingLabel(final TranslatingViewModel viewModel, final NumberFormat grouping) {
+        return boundLabel(
+                "translating-ready-pending",
+                KV_VALUE,
+                () -> grouping.format(viewModel.pendingCount().get()),
+                viewModel.pendingCount());
     }
 
     // The run-state row's own line ("Nothing translated yet.", where Continue translation picks up).

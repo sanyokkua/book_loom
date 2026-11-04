@@ -38,6 +38,26 @@ public final class ModelLabels {
         return String.join(" ", words);
     }
 
+    /**
+     * Builds the label with the model's size, such as {@code Hermes 4 70B} or {@code Gemma 4 E4B}.
+     *
+     * @param id who the model is; never {@code null}
+     * @return {@link #of} followed by the effective or the total size when the name gave one
+     */
+    public static String withSize(final ModelIdentity id) {
+        final String label = of(id);
+        final Double effective = id.effB();
+        final Double total = id.sizeB();
+        if (effective != null) {
+            return (label + " E" + billions(effective) + "B").strip();
+        }
+        return total == null ? label : (label + " " + billions(total) + "B").strip();
+    }
+
+    private static String billions(final double size) {
+        return size == Math.rint(size) ? String.valueOf((long) size) : String.valueOf(size);
+    }
+
     private static void add(final List<String> words, final @Nullable String text) {
         if (text != null && !text.isBlank()) {
             words.add(word(text));

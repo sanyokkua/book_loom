@@ -1147,6 +1147,12 @@ ${ro ? `<div class="banner banner-warn" style="margin-bottom:12px"><span class="
       <span class="seg warm"><span>Fast</span><span class="on">Balanced</span><span>Max quality</span></span>
       <div class="hint">Balanced — each segment is translated, then checked. About 1.5× the time of Fast; Max quality about 3×.</div>
       <div class="hint">For this book on this computer: <b>${D.estimate}</b> (estimate from the model test).</div>
+      <div id="startAdvice" style="display:flex;flex-direction:column;gap:2px">
+        <div class="hint" id="startLanguageLine" style="color:var(--warn-fg)">Gemma 3 does not list Russian and Ukrainian among its languages. Translation may have problems.</div>
+        <div class="hint" id="startQuantLine">Slightly reduced precision. Usually fine, but names and word endings may drift, especially for Ukrainian; a larger version translates more reliably.</div>
+        <div class="hint" id="startLicenceLine">Thomson 1.0 Small is licensed for noncommercial use only (PolyForm Strict 1.0.0).</div>
+        <div class="hint" id="startThinkingLine">This download cannot turn thinking off in Ollama, so it is slower. The library model qwen3.5:4b or a Modelfile with RENDERER and PARSER fixes it.</div>
+      </div>
       <div class="kv mt2"><span class="k">AI model</span><span>${D.provider} · ${D.model} ${qchip('Q4_K_M', 'acceptable')} · <span class="badge b-ok">ready</span> <a href="#" onclick="go('settings');return false">change</a></span></div>
     </div></div>
   </div>
@@ -1287,7 +1293,7 @@ S.translating = () => {
 ${demo(runDemo())}
 <div class="page">
 <h2 class="page-h">Translating</h2>${HELP_SLEEP()}${strip()}
-<div class="card pad mt3"><b>${r === 'cannot' ? 'Cannot start yet' : 'Ready to translate'}</b><div class="small muted">${D.total} segments · ${D.dial} · ${D.provider} · ${D.model}. Translation runs by itself; you can pause, stop and continue at any time. Use ▶ Start translation at the top right.</div></div></div>`;
+<div class="card pad mt3"><b>${r === 'cannot' ? 'Cannot start yet' : 'Ready to translate'}</b><div class="small muted">${D.total} segments · ${D.dial} · ${D.provider} · ${D.model}. Translation runs by itself; you can pause, stop and continue at any time. Use ▶ Start translation at the top right.</div><div class="hint" id="readyLanguageLine" style="color:var(--warn-fg)">Gemma 3 does not list Russian and Ukrainian among its languages. Translation may have problems.</div></div></div>`;
     return `
 ${demo(runDemo())}
 <div class="page full" style="display:flex;flex-direction:column;flex:1;min-height:0">
@@ -1426,6 +1432,13 @@ SET.models = () => `
   ${demo(`Model ${demoSeg([['ok', 'gemma4:e4b (accepts everything)'], ['ref', 'gpt-x via a gateway (refused some settings)']], ST.refused ? 'ref' : 'ok', "(v=>{ST.refused=v==='ref';ST.temp=v==='ref'?'none':'app';rerender()})")} ${req('S6')}`)}
   ${fld('Model', `<div class="input-group w-model"><select class="input" ${dirtyOn}><option>${ST.refused ? 'gpt-x · Work gateway' : 'gemma4:e4b · Ollama'}</option><option>gemma4:26b · Ollama</option><option>lapa-v0.1.2-instruct · LM Studio</option></select><button class="btn btn-secondary">↻ Refresh</button></div>`, 'Each model keeps its own settings. All are optional — off means BookLoom picks the value per task.')}
   <div class="small" id="chooserChips" style="display:flex;flex-direction:column;gap:4px;margin:-4px 0 10px"><span class="gap8" style="flex-wrap:nowrap">gemma4:e4b · Ollama ${qchip('Q4_K_M', 'acceptable')}</span><span class="gap8" style="flex-wrap:nowrap">gemma4:26b · Ollama ${qchip('Q4_K_M', 'good')}</span><span class="gap8" style="flex-wrap:nowrap">Qwen_Qwen3.5-9B-Q2_K_L.gguf · LM Studio ${qchip('Q2_K_L', 'unusable')}</span></div>
+  <div id="modelsAdvice" style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px">
+    <div class="hint" id="modelsIdentityLine">Understood: Gemma 4 E4B · Q4_K_M (server reports Q8_0) · recognised as Gemma 4, not this exact model</div>
+    <div class="hint" id="modelsQuantLine">Slightly reduced precision. Usually fine, but names and word endings may drift, especially for Ukrainian; a larger version translates more reliably.</div>
+    <div class="hint" id="modelsLanguagesLine">Declared languages: not stated by the maker · BookLoom tested it for English → Ukrainian</div>
+    <div class="hint" id="modelsLicenceLine">Thomson 1.0 Small is licensed for noncommercial use only (PolyForm Strict 1.0.0).</div>
+    <div class="hint" id="modelsThinkingHint">This download cannot turn thinking off in Ollama, so it is slower. The library model qwen3.5:4b or a Modelfile with RENDERER and PARSER fixes it.</div>
+  </div>
   <div class="banner small"><span class="ico">ℹ</span><div>Found out from the program: it can read <b>131,072</b> tokens at once (32,768 loaded now) · structured answers: yes.</div></div>
   <div class="field mt2"><label class="fld">Temperature <span class="muted small" style="font-weight:400">— how varied the wording is ${tech('temperature')}</span></label>
     ${seg(['Let BookLoom choose', 'My value', 'Don’t send'], ST.temp === 'mine' ? 1 : ST.temp === 'none' ? 2 : 0, `onclick="const i=[...this.children].indexOf(event.target);if(i>=0){ST.temp=['app','mine','none'][i];ST.dirty=true;rerender()}"`)}
@@ -1449,6 +1462,7 @@ SET.models = () => `
     <div class="chk"><input type="radio" name="tl" checked disabled> <span class="muted">max_completion_tokens (standard)</span></div>
     <div class="chk"><input type="radio" name="tl" disabled> <span class="muted">max_tokens (older servers)</span></div>
     <div class="hint">Not used for Ollama, which has its own option.</div></div></details>
+  <div class="hint" id="modelsFactsDate" style="margin-top:10px">Model facts as of 2026-10-28</div>
 </div>${formFoot()}</div>`;
 const instant = (txt = 'Changes apply at once.') => `<div class="hint" style="margin-bottom:10px">✓ ${txt}</div>`;
 SET.generation = () => `

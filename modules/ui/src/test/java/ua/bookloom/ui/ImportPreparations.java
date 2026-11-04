@@ -10,13 +10,18 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import javafx.scene.Node;
+import javafx.scene.control.Labeled;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.TechnicalDetails;
 
@@ -55,6 +60,36 @@ final class ImportPreparations {
                 TimeUnit.SECONDS,
                 () -> onFx(() ->
                         injector.getInstance(Navigator.class).content().get().lookup("#quant-chip") != null));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Adopts the model whose maker's list leaves Ukrainian out, and waits for the ready card's warning. */
+    void chooseAModelWithALanguageGap() throws TimeoutException {
+        final SettingsViewModel settings = injector.getInstance(SettingsViewModel.class);
+        onFx(() -> {
+            OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "ru", "uk");
+            settings.reloadProviders();
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> !settings.providers().isEmpty()));
+        onFx(() -> {
+            settings.adopt(new ModelSelection("ollama", ConformanceTestBase.GAP_MODEL));
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> {
+                    final Node line = injector.getInstance(Navigator.class)
+                            .content()
+                            .get()
+                            .lookup("#translating-ready-language-line");
+                    return line instanceof Labeled labelled
+                            && !labelled.getText().isEmpty();
+                }));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

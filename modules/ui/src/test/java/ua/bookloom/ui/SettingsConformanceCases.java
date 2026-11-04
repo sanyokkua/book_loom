@@ -101,6 +101,7 @@ final class SettingsConformanceCases {
                             new Part("#models-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#models-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#models-found", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#models-identity-line", Kind.TEXT, "muted", "#5d686d", "#bdc9cd"),
                             new Part("#models-model", Kind.BORDER, "input-border", "#988462", "#7d949e"))),
             new Screen(
                     "SETTINGS_MODELS_DIRTY",

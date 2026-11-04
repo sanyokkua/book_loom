@@ -4,7 +4,9 @@
 # deliberate: EuroLLM is COMPLETE with its 35 codes, uk and ru among them.
 # deliberate: MamayLM is POSITIVE_ONLY (uk, en); its evidence names BookLoom's own ru>uk run, so a ru>uk project on it gets no line (owner decision D-26).
 # deliberate: Lapa is POSITIVE_ONLY (uk, en) with no BookLoom run.
-# deliberate: Qwen3 (119 codes) and TranslateGemma (55 codes) stay NONE: the vendors' appendices are not in the research folder, no code is invented.
+# deliberate: TranslateGemma (55 codes) stays NONE: the vendor's appendix is not in the research folder, no code is invented.
+# deliberate: Qwen3 is POSITIVE_ONLY (ru, uk, en): the Qwen3 blog and report name Russian and Ukrainian; the full 119-code list is not in the research folder, so no gap is claimed and no code beyond these three is invented.
+# deliberate: Gemma 4 carries BookLoom's own run for en>uk on the effective-4B size only (token BOOKLOOM-RUN:en>uk@e4b, the e4b runs measured in docs/DEVELOPMENT.md#15d-results); no other size and no other pair counts as tested.
 # deliberate: Mistral Small 4 is NONE: the research found CONFLICT (24 codes in metadata, 11 in prose).
 # deliberate: Mistral Small 3.2 repeats the 24 codes of 3.1 (pl and uk in, la out) so a 3.2 name reaches a row; a prefix on 3.1 would not match it.
 # deliberate: Ministral 3 Reasoning is NONE: its card list was not read. MADLAD-400 and NLLB-200 are NONE: the list is 'see metadata'.
@@ -16,7 +18,7 @@ llama-3.2,PREFIX,llama-3.2,COMPLETE,en;de;fr;it;pt;hi;es;th,card prose + HF meta
 llama-3.3,PREFIX,llama-3.3,COMPLETE,en;de;fr;it;pt;hi;es;th,HF metadata (official); unsloth mirror metadata narrowed to 'en'; prose not re-read,none found
 llama-4,PREFIX,llama-4,COMPLETE,ar;de;en;es;fr;hi;id;it;pt;th;tl;vi,card prose + HF metadata; prose: pre-training covered 200 languages; out-of-scope: languages beyond those listed,none found
 qwen2.5,PREFIX,qwen2.5,COMPLETE,zh;en;fr;es;pt;de;it;ru;ja;ko;vi;th;ar,"card prose ('over 29 languages, including ... and more'); HF metadata says only 'en' (contradicts prose); GGUF general.languages=['en'] measured locally on qwen2.5:1.5b",ZNO-style exam 31/156 for 7B (chance 33); WMT25 team had to LoRA-tune it for uk (03-models/families/qwen2.5.md F8)
-qwen3,PREFIX,qwen3,NONE,,"Qwen3 blog/report list (uk under Indo-European, per 03-models qwen3x.md F10); HF card prose '100+ languages and dialects' with no list; no HF metadata","Qwen3-8B-Base: Belebele 86.11, MMLU-uk 67.15, FLORES 18.53, WMT en-uk 5.16; Qwen3-8B (chat): near 0 on every task in the same harness (probable thinking/format artefact [inferred]) (leaderboard)"
+qwen3,PREFIX,qwen3,POSITIVE_ONLY,ru;uk;en,"Qwen3 blog/report list (uk under Indo-European, per 03-models qwen3x.md F10); HF card prose '100+ languages and dialects' with no list; no HF metadata","Qwen3-8B-Base: Belebele 86.11, MMLU-uk 67.15, FLORES 18.53, WMT en-uk 5.16; Qwen3-8B (chat): near 0 on every task in the same harness (probable thinking/format artefact [inferred]) (leaderboard)"
 qwen3-2507,PREFIX,qwen3-2507,NONE,,card says only 'multiple languages'; no metadata,none found
 qwen3.5,PREFIX,qwen3.5,NONE,,card prose 'Expanded support to 201 languages and dialects'; list unpublished; no metadata,vendor WMT24++ average over 55 languages (includes en-uk_UA) 66.6 for 4B / see qwen3x.md; no per-uk number
 qwen3.6,PREFIX,qwen3.6,NONE,,card silent on languages; no metadata,vendor WMT24++ average only (03-models qwen3x.md)
@@ -25,7 +27,7 @@ qwen3-vl,PREFIX,qwen3-vl,NONE,,"card: 'OCR supports 32 languages' only (image te
 gemma2,PREFIX,gemma2,NONE,,card has no language statement; google repo metadata none; unsloth mirror metadata 'en',Tower+ 9B is built on Gemma 2 9B and trains uk (so uk is reachable by tuning)
 gemma3,PREFIX,gemma3,NONE,,card prose 'multilingual support in over 140 languages'; the 35 are not named; no metadata (unsloth GGUF mirror narrowed to 'en'),"Gemma-3-12B-it: Belebele-uk 87.22, MMLU-uk 53.77, WMT en-uk 11.90; 4B-it 45.33/31.09/15.18 (leaderboard); Lapa/MamayLM both chose it as base"
 gemma3n,PREFIX,gemma3n,NONE,,card prose 'trained with data in over 140 spoken languages'; unsloth mirror metadata 'en',card WMT24++ ChrF (all-language avg) E4B 50.1; no uk number
-gemma4,PREFIX,gemma4,NONE,,"card prose 'Out-of-the-box support for 35+ languages, pre-trained on 140+'; no metadata","26B-A4B (reasoning): Belebele-uk 95.33, MMLU-uk 86.64, FLORES 36.68, WMT en-uk 30.03 (leaderboard, best of 13); other sizes: no uk number"
+gemma4,PREFIX,gemma4,NONE,,"card prose 'Out-of-the-box support for 35+ languages, pre-trained on 140+'; no metadata","BOOKLOOM-RUN:en>uk@e4b; BOOKLOOM-QUANT:nvfp4@e4b; 26B-A4B (reasoning): Belebele-uk 95.33, MMLU-uk 86.64, FLORES 36.68, WMT en-uk 30.03 (leaderboard, best of 13); other sizes: no uk number"
 translategemma,PREFIX,translategemma,NONE,,"tech report arXiv 2601.09012: SFT/RL over the 55 WMT24++ languages (WMT24++ configs include en-uk_UA and en-ru_RU); report names en-uk as an emphasised high-resource pair and cs-uk in human eval; full list is in an appendix not read; HF repos gated, no metadata",vendor: gains over Gemma 3 on WMT24++ 55 pairs and WMT25 human MQM (incl. cs-uk +1.0-1.6); no isolated en-uk number read
 mistral-small-3.1,PREFIX,mistral-small-3.1,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata; 3.1 card prose names Russian and Ukrainian,no vendor uk number; community UNKNOWN
 mistral-small-3.2,PREFIX,mistral-small-3.2,COMPLETE,en;fr;de;es;pt;it;ja;ko;ru;zh;ar;fa;id;ms;ne;pl;ro;sr;sv;tr;uk;vi;hi;bn,HF metadata (same 24 codes as 3.1; the name parser reads 3.2 as its own version),none found

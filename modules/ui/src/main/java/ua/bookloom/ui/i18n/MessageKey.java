@@ -4208,6 +4208,58 @@ public enum MessageKey {
     SETTINGS_QUANT_TIER_UNMEASURED("settings.quant.tier.unmeasured"),
     /** Hover explanation of the quant chip. */
     SETTINGS_QUANT_CHIP_TIP("settings.quant.chip.tip"),
+    /** The Models tab's identity line; &#123;0&#125; is the model, its quant and how it was recognised, joined by a middle dot. */
+    SETTINGS_ADVICE_IDENTITY("settings.advice.identity"),
+    /** The quant part of the identity line when the name and the server disagree; &#123;0&#125; is the name's label, &#123;1&#125; the server's. */
+    SETTINGS_ADVICE_IDENTITY_SERVER("settings.advice.identity.server"),
+    /** The match part of the identity line for a model BookLoom has a row for. */
+    SETTINGS_ADVICE_MATCH_EXACT("settings.advice.match.exact"),
+    /** The match part for a model only its family is known; &#123;0&#125; is the family. */
+    SETTINGS_ADVICE_MATCH_FAMILY("settings.advice.match.family"),
+    /** The match part for a fine-tune that takes its base model's behaviour; &#123;0&#125; is the base model. */
+    SETTINGS_ADVICE_MATCH_FINE_TUNE("settings.advice.match.fineTune"),
+    /** The match part for a model BookLoom knows nothing about. */
+    SETTINGS_ADVICE_MATCH_UNKNOWN("settings.advice.match.unknown"),
+    /** Added to a quant sentence to name the project's target language; &#123;0&#125; is that language. */
+    SETTINGS_ADVICE_ESPECIALLY("settings.advice.especially"),
+    /** The sentence for a good quant. */
+    SETTINGS_ADVICE_QUANT_GOOD("settings.advice.quant.good"),
+    /** The sentence for an acceptable quant; &#123;0&#125; is the target-language clause or nothing. */
+    SETTINGS_ADVICE_QUANT_ACCEPTABLE("settings.advice.quant.acceptable"),
+    /** The sentence for an acceptable quant of three bits or fewer. */
+    SETTINGS_ADVICE_QUANT_CAUTION("settings.advice.quant.caution"),
+    /** The sentence for a poor quant; &#123;0&#125; is the target-language clause or nothing. */
+    SETTINGS_ADVICE_QUANT_POOR("settings.advice.quant.poor"),
+    /** The sentence for an unusable quant. */
+    SETTINGS_ADVICE_QUANT_UNUSABLE("settings.advice.quant.unusable"),
+    /** The sentence for a quant format the engine no longer reads. */
+    SETTINGS_ADVICE_QUANT_REMOVED("settings.advice.quant.removed"),
+    /** The sentence for a quant nobody has measured. */
+    SETTINGS_ADVICE_QUANT_UNMEASURED("settings.advice.quant.unmeasured"),
+    /** The neutral languages line for a maker's list; &#123;0&#125; is the count, &#123;1&#125; some of the codes. */
+    SETTINGS_ADVICE_LANGUAGES_LIST("settings.advice.languages.list"),
+    /** The neutral languages line for a model that lists English only. */
+    SETTINGS_ADVICE_LANGUAGES_ENGLISH_ONLY("settings.advice.languages.englishOnly"),
+    /** The neutral languages line for a maker that gives no list. */
+    SETTINGS_ADVICE_LANGUAGES_NOT_STATED("settings.advice.languages.notStated"),
+    /** The neutral languages line for a fine-tune; &#123;0&#125; is its base model, &#123;1&#125; the base's codes. */
+    SETTINGS_ADVICE_LANGUAGES_BASE("settings.advice.languages.base"),
+    /** Added to the languages line where BookLoom tested the pair; &#123;0&#125; is the source language, &#123;1&#125; the target. */
+    SETTINGS_ADVICE_LANGUAGES_TESTED("settings.advice.languages.tested"),
+    /** Joins two language names; &#123;0&#125; and &#123;1&#125; are the names. */
+    SETTINGS_ADVICE_LANGUAGE_AND("settings.advice.language.and"),
+    /** The warning for a language the maker's complete list leaves out; &#123;0&#125; is the model's family, &#123;1&#125; the language names. */
+    SETTINGS_ADVICE_LANGUAGE_WARN("settings.advice.language.warn"),
+    /** The information line for a maker that says nothing; &#123;0&#125; is the model's family. */
+    SETTINGS_ADVICE_LANGUAGE_UNKNOWN("settings.advice.language.unknown"),
+    /** The information line for a fine-tune whose base model lists the languages; &#123;0&#125; is the model's family, &#123;1&#125; the base model, &#123;2&#125; the language names. */
+    SETTINGS_ADVICE_LANGUAGE_BASE("settings.advice.language.base"),
+    /** The licence note; &#123;0&#125; is the model. */
+    SETTINGS_ADVICE_LICENCE("settings.advice.licence"),
+    /** The thinking hint; &#123;0&#125; is the engine, &#123;1&#125; the library model. */
+    SETTINGS_ADVICE_THINKING_HINT("settings.advice.thinking"),
+    /** The foot of the Models tab; &#123;0&#125; is the date of the shipped model knowledge. */
+    SETTINGS_ADVICE_FACTS_DATE("settings.advice.factsDate"),
     /** What a pasted Hugging Face link or file was read as; &#123;0&#125; is the repository, &#123;1&#125; the file, &#123;2&#125; the model and its quant. */
     SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE("settings.form.models.understood.repoFile"),
     /** What a pasted repository id was read as; &#123;0&#125; is the repository, &#123;1&#125; the model and its quant. */

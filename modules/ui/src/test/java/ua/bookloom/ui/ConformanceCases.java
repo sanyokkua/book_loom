@@ -75,6 +75,7 @@ final class ConformanceCases {
         PROJECTS_LISTED,
         PROJECTS_EMPTY,
         READY_QUANT_CHIP,
+        READY_LANGUAGE_WARNING,
         PROVIDER_FORM_DIRTY,
         PROVIDER_FOLD_OPEN,
         PROVIDER_TESTED,

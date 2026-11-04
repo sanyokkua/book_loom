@@ -44,6 +44,14 @@ final class TranslatingConformanceCases {
                             new Part("#quant-chip", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
                             new Part("#quant-chip", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"),
                             new Part("#quant-chip", Kind.TEXT, "ok-fg", "#4a6c54", "#b0d0b7"))),
+            // The ready card's language line under the model row: a model whose list leaves the target out draws its
+            // warning in the warning text role.
+            new Screen(
+                    "TRANSLATING_LANGUAGE_WARNING",
+                    ViewNames.TRANSLATING,
+                    Preparation.READY_LANGUAGE_WARNING,
+                    Overlay.NONE,
+                    List.of(new Part("#translating-ready-language-line", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"))),
             // Running, with no banner: the strip's bar track surface-2 and its fill the primary, the full-height live
             // card, a segment being translated in the info-toned working marker, and the scene summary line.
             new Screen(

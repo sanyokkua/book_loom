@@ -10,6 +10,7 @@ import ua.bookloom.ui.state.BriefLock;
 import ua.bookloom.ui.state.BriefProject;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StartAdvice;
 import ua.bookloom.ui.state.TranslatingViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
@@ -27,6 +28,7 @@ import ua.bookloom.ui.state.WorkflowProgress;
  * @param lock whether the brief is read-only and whether its languages are locked
  * @param project the open project's stored name and size
  * @param estimate the time estimate under the quality choice
+ * @param advice the advice lines shown under the estimate
  * @param translating the run controls the read-only banner's Pause uses
  */
 record BriefParts(
@@ -40,6 +42,7 @@ record BriefParts(
         BriefLock lock,
         BriefProject project,
         BriefEstimate estimate,
+        StartAdvice advice,
         TranslatingViewModel translating) {
 
     /** Rejects a missing part. */
@@ -54,6 +57,7 @@ record BriefParts(
         Objects.requireNonNull(lock, "lock");
         Objects.requireNonNull(project, "project");
         Objects.requireNonNull(estimate, "estimate");
+        Objects.requireNonNull(advice, "advice");
         Objects.requireNonNull(translating, "translating");
     }
 }

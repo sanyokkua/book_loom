@@ -9,11 +9,13 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.llm.LanguageAdvice;
 import ua.bookloom.api.llm.LanguageState;
 import ua.bookloom.api.llm.ListKind;
 import ua.bookloom.api.llm.ModelFacts;
 import ua.bookloom.api.llm.ModelIdentity;
 import ua.bookloom.api.llm.ModelKind;
+import ua.bookloom.llm.profile.BaseFamilyAliases;
 import ua.bookloom.llm.profile.ModelIdentityParser;
 
 class LanguageAdvisorTest {
@@ -248,5 +250,73 @@ class LanguageAdvisorTest {
     @Test
     void testedPair_regionTagsCompareByGroup() {
         assertThat(bundled.testedPair(id("mamaylm"), "ru-RU", "uk-UA")).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "gemma4:e4b, en, uk, true",
+        "gemma4:e4b-mlx, en, uk, true",
+        "gemma4:12b, en, uk, false",
+        "gemma4:e4b, ru, uk, false",
+        "gemma4:e4b, uk, en, false"
+    })
+    void testedPair_gemma4Sizes_followsTheSizeInTheToken(
+            final String name, final String from, final String to, final boolean tested) {
+        assertThat(bundled.testedPair(id(name), from, to)).isEqualTo(tested);
+    }
+
+    @Test
+    void testedPair_gemma4E4bEnToUk_true_gemma4_12b_false() {
+        assertThat(bundled.testedPair(id("gemma4:e4b"), "en", "uk")).isTrue();
+        assertThat(bundled.testedPair(id("gemma4:12b"), "en", "uk")).isFalse();
+    }
+
+    @Test
+    void quantMeasured_gemma4E4bNvfp4_trueOnlyForThatSizeAndQuant() {
+        assertThat(bundled.quantMeasured(id("gemma4:e4b"), "nvfp4")).isTrue();
+        assertThat(bundled.quantMeasured(id("gemma4:e4b"), "Q4_K_M")).isFalse();
+        assertThat(bundled.quantMeasured(id("gemma4:12b"), "nvfp4")).isFalse();
+    }
+
+    @Test
+    void advise_ruToUkOnQwen25_warnsAboutUkrainianOnly() {
+        final LanguageAdvice advice = bundled.advise(id("qwen2.5:1.5b"), null, "ru", "uk", "Qwen 2.5", null);
+
+        assertThat(advice.sourceState()).isEqualTo(LanguageState.DECLARED);
+        assertThat(advice.targetState()).isEqualTo(LanguageState.NOT_DECLARED);
+        assertThat(advice.pairTested()).isFalse();
+        assertThat(advice.familyLabel()).isEqualTo("Qwen 2.5");
+    }
+
+    @Test
+    void advise_hermes14bOnQwen3Base_declaresFromTheBaseWithUkrainianFirst() {
+        final LanguageAdvisor advisor = new LanguageAdvisor(new ModelKnowledgeFiles(), new BaseFamilyAliases());
+
+        final LanguageAdvice advice = advisor.advise(
+                id("hf.co/bartowski/NousResearch_Hermes-4-14B-GGUF:Q4_K_M"), null, "ru", "uk", "Hermes 4", "Qwen3");
+
+        assertThat(advice.baseOnly()).isTrue();
+        assertThat(advice.baseLabel()).isEqualTo("Qwen3");
+        assertThat(advice.baseCodes()).containsExactly("uk", "ru", "en");
+        assertThat(advice.sourceState()).isEqualTo(LanguageState.DECLARED);
+    }
+
+    @Test
+    void advise_baseModelWithCompleteListWithoutTheLanguage_isNeverAWarning() {
+        final LanguageAdvisor advisor = new LanguageAdvisor(new ModelKnowledgeFiles(), new BaseFamilyAliases());
+
+        final LanguageAdvice advice = advisor.advise(
+                id("hf.co/bartowski/NousResearch_Hermes-4-70B-GGUF:Q4_K_M"), null, "ru", "uk", "Hermes 4", "Llama 3.1");
+
+        assertThat(advice.targetState()).isEqualTo(LanguageState.UNKNOWN);
+        assertThat(advice.baseLabel()).isEqualTo("Llama 3.1");
+    }
+
+    @Test
+    void advise_sideNotNamed_isNotJudged() {
+        final LanguageAdvice advice = bundled.advise(id("llama3.1:8b"), null, null, "uk", "Llama 3.1", null);
+
+        assertThat(advice.sourceState()).isEqualTo(LanguageState.DECLARED);
+        assertThat(advice.targetState()).isEqualTo(LanguageState.NOT_DECLARED);
     }
 }

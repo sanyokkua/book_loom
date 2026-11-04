@@ -5,13 +5,17 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.LanguageAdvice;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelFacts;
+import ua.bookloom.api.llm.ModelIdentity;
 import ua.bookloom.api.llm.ModelInputForm;
+import ua.bookloom.api.llm.ModelNotes;
 import ua.bookloom.api.llm.ModelReport;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.PastedModel;
@@ -30,6 +34,7 @@ import ua.bookloom.llm.profile.ModelProfiles;
 import ua.bookloom.llm.profile.ParsedName;
 import ua.bookloom.llm.profile.PullCommand;
 import ua.bookloom.llm.profile.ResolvedProfile;
+import ua.bookloom.llm.profile.ThinkingHint;
 import ua.bookloom.llm.provider.ModelSettingsCache;
 import ua.bookloom.llm.provider.ProviderClientFactory;
 
@@ -66,10 +71,10 @@ public final class ModelCapabilityService implements ModelCapabilities {
         final ModelFacts facts = factsOf(config.get(), modelId);
         final ResolvedProfile resolved =
                 profiles.resolve(config.get().effectiveEngine(), modelId, facts, settings.current(providerId, modelId));
+        final QuantAdvice quant = quants.advise(resolved.identity(), facts);
         final ModelReport report = resolved.report()
-                .withAdvice(
-                        languages.declaration(resolved.identity()).orElse(null),
-                        quants.advise(resolved.identity(), facts));
+                .withAdvice(languages.declaration(resolved.identity()).orElse(null), quant)
+                .withNotes(notes(config.get(), modelId, resolved, facts, quant));
         log.debug(
                 "Model reported providerId={} model={} contextLength={} loaded={} match={} verdict={}",
                 providerId,
@@ -79,6 +84,61 @@ public final class ModelCapabilityService implements ModelCapabilities {
                 report.match(),
                 report.verdict());
         return Result.ok(report);
+    }
+
+    private ModelNotes notes(
+            final ProviderConfig config,
+            final String modelId,
+            final ResolvedProfile resolved,
+            final ModelFacts facts,
+            final QuantAdvice quant) {
+        final ModelIdentity identity = resolved.identity();
+        final String label = ModelLabels.withSize(identity);
+        final String libraryTag = ThinkingHint.libraryTag(
+                        config.effectiveEngine(),
+                        modelId,
+                        identity,
+                        resolved.profile().reasoning())
+                .orElse(null);
+        return new ModelNotes(
+                label.isEmpty() ? modelId : label,
+                ModelLabels.of(identity),
+                libraryTag,
+                facts.quant(),
+                languages.quantMeasured(identity, quant.token()));
+    }
+
+    @Override
+    public LanguageAdvice languageAdvice(
+            final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
+        Objects.requireNonNull(selection, "selection");
+        log.debug(
+                "Advising languages providerId={} model={} source={} target={}",
+                selection.providerId(),
+                selection.modelId(),
+                sourceTag,
+                targetTag);
+        final Optional<ProviderConfig> config = configs.find(selection.providerId());
+        if (config.isEmpty()) {
+            log.debug("Language advice skipped branch=unknown-provider providerId={}", selection.providerId());
+            return LanguageAdvice.NEUTRAL;
+        }
+        final String modelId = selection.modelId();
+        final ModelFacts facts = factsOf(config.get(), modelId);
+        final ResolvedProfile resolved = profiles.resolve(
+                config.get().effectiveEngine(), modelId, facts, settings.current(selection.providerId(), modelId));
+        return languages.advise(
+                resolved.identity(),
+                facts,
+                sourceTag,
+                targetTag,
+                ModelLabels.of(resolved.identity()),
+                resolved.baseModel());
+    }
+
+    @Override
+    public String factsDate() {
+        return languages.dataVersion();
     }
 
     private ModelFacts factsOf(final ProviderConfig config, final String modelId) {

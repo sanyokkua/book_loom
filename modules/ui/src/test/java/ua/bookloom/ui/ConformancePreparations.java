@@ -64,11 +64,11 @@ final class ConformancePreparations {
         this.glossary = glossary;
     }
 
+    // NONE does nothing before the view is read; everything not listed is a Settings case, which SettingsPreparations
+    // refuses when it is not one.
     void prepare(final ConformanceCases.Preparation preparation) throws TimeoutException {
         switch (preparation) {
-            case NONE -> {
-                // nothing to do before the view is read
-            }
+            case NONE -> {}
             case BOOK_OPENED -> openABook();
             case BOOK_CHECKED -> checkABook();
             case BOOK_REFUSED -> refuseABook();
@@ -92,7 +92,7 @@ final class ConformancePreparations {
             case PROJECTS_LISTED -> listProjects();
             case PROJECTS_EMPTY -> awaitNode("projects-empty-card");
             case READY_QUANT_CHIP -> new ImportPreparations(injector, projects).chooseAModelWithAGoodQuant();
-            // Everything else is a Settings case; SettingsPreparations refuses a preparation that is not one.
+            case READY_LANGUAGE_WARNING -> new ImportPreparations(injector, projects).chooseAModelWithALanguageGap();
             default -> new SettingsPreparations(injector).prepare(preparation);
         }
     }

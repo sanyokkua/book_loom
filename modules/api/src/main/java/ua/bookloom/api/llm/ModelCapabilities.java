@@ -94,4 +94,28 @@ public interface ModelCapabilities {
         Objects.requireNonNull(kind, "kind");
         return Optional.empty();
     }
+
+    /**
+     * What the maker's language list says about a language pair for a model. Offline apart from the one read of the
+     * model's facts the report makes.
+     *
+     * @param selection the provider and model; never {@code null}
+     * @param sourceTag the source language tag, or null for none (Auto); that side is not judged
+     * @param targetTag the target language tag, or null for none; that side is not judged
+     * @return the advice, {@link LanguageAdvice#NEUTRAL} when this port reads no language tables
+     */
+    default LanguageAdvice languageAdvice(
+            final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
+        Objects.requireNonNull(selection, "selection");
+        return LanguageAdvice.NEUTRAL;
+    }
+
+    /**
+     * The date of the model knowledge shipped with the application.
+     *
+     * @return the date as {@code yyyy-MM-dd}, or an empty text when this port ships none
+     */
+    default String factsDate() {
+        return "";
+    }
 }
