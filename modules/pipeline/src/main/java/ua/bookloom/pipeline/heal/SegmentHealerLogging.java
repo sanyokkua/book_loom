@@ -46,11 +46,17 @@ final class SegmentHealerLogging {
 
     static void logAcceptanceDecision(
             final String segmentId, final QaResult qa, final int verifiedBlockersLeft, final boolean accepted) {
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa, verifiedBlockersLeft);
         log.debug(
-                "Acceptance decision segment={} confidence={} accepted={} blockingFindings={} verifiedBlockersLeft={}",
+                "Acceptance decision segment {} findings block={} repair={} note={} outcome={} mark={} confidence={}"
+                        + " blockingFindings={} verifiedBlockersLeft={}",
                 segmentId,
+                decision.block().size(),
+                decision.repair().size(),
+                decision.note().size(),
+                accepted ? "accepted" : "flagged",
+                decision.mark(),
                 qa.confidence(),
-                accepted,
                 SegmentFindings.kindsOf(SegmentFindings.concrete(qa)),
                 verifiedBlockersLeft);
     }

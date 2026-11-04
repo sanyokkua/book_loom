@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.checks.CharacterName;
 import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.checks.CheckFinding;
@@ -24,7 +23,8 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Turns the deterministic text findings into gate results: a blocking finding fails like a hard gate, so the
- * segment is repaired or flagged before any reviewer reads it, and a soft finding passes with a low note for review.
+ * segment is repaired or flagged before any reviewer reads it; a finding that does not block passes, at medium
+ * severity (repair level, it earns a fix) or, for a note-level check, at low severity (an audit note for review).
  * Skipped for a kept foreign passage, whose letters are meant to differ from the target's.
  */
 @Slf4j
@@ -97,9 +97,7 @@ final class TextCheckGates {
         }
         log.debug("Word validator doubts {} word(s)", found.size());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.UNKNOWN_WORD;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.UNKNOWN_WORD, note));
     }
 
     // One notice per segment that names every wrong word, so the repair prompt gets them all in a single finding.
@@ -117,9 +115,7 @@ final class TextCheckGates {
                 found.size(),
                 input.narrator().gender());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.GENDER;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.GENDER, note));
     }
 
     // One notice per segment that names every word that disagrees with a woman's name, like the narrator's notice.
@@ -135,17 +131,29 @@ final class TextCheckGates {
         }
         log.debug("Character agreement found {} word(s) for {} character(s)", found.size(), names.size());
         final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
-        final CheckName name = CheckName.NAME_GENDER;
-        return Optional.of(CheckResult.passWithNotice(
-                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+        return Optional.of(notice(CheckName.NAME_GENDER, note));
     }
 
     private static CheckResult resultOf(final CheckFinding finding) {
         final CheckName check = checkOf(finding);
-        return finding.blocking()
-                ? CheckResult.hardGateFailed(check, finding.note())
-                : CheckResult.passWithNotice(
-                        check, new QaFinding(check.findingKind(), Severity.LOW, finding.note(), check.raisedBy()));
+        return finding.blocking() ? CheckResult.hardGateFailed(check, finding.note()) : notice(check, finding.note());
+    }
+
+    // A finding that does not block passes the gate at the severity CheckLevels reads its level back from. A repair- or
+    // note-level check raises at its own level. A block-level check's finding that does not block is a style note (the
+    // quote check's balanced English marks), except a number, whose changed or lost number is a repair (design D12).
+    private static CheckResult notice(final CheckName check, final String note) {
+        final CheckLevel level = softLevel(check);
+        log.debug("Text check {} raised a {} notice", check.raisedBy(), level);
+        return CheckResult.passWithNotice(
+                check, new QaFinding(check.findingKind(), CheckLevels.severityFor(level), note, check.raisedBy()));
+    }
+
+    private static CheckLevel softLevel(final CheckName check) {
+        if (check == CheckName.NUMBER) {
+            return CheckLevel.REPAIR;
+        }
+        return check.level() == CheckLevel.BLOCK ? CheckLevel.NOTE : check.level();
     }
 
     private static CheckName checkOf(final CheckFinding finding) {

@@ -8,6 +8,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaEvaluator;
@@ -91,6 +93,54 @@ class AcceptanceRuleTest {
         final QaResult qa = QaEvaluator.evaluate(List.of(spanGate), reuse("Hale nodded.", "Хейл кивнув."));
 
         assertThat(AcceptanceRule.accepts(qa, 0)).isFalse();
+    }
+
+    @Test
+    void decide_onlyRepairFindingLeft_acceptsWithProofreadMark() {
+        final QaFinding gender = new QaFinding("gender", Severity.MEDIUM, "\"зачинила\"", "gender");
+        final QaResult qa = withFindings(List.of(gender));
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa, 0);
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.PROOFREAD);
+        assertThat(decision.repair()).containsExactly(gender);
+        assertThat(decision.block()).isEmpty();
+    }
+
+    @Test
+    void decide_noteOnly_acceptsWithAuditMark() {
+        final QaFinding spacing = new QaFinding("fluency", Severity.LOW, "\"  \"", "spacing");
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(withFindings(List.of(spacing)), 0);
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.AUDIT);
+        assertThat(decision.note()).containsExactly(spacing);
+    }
+
+    @Test
+    void decide_blockLeft_flags() {
+        final QaFinding alphabet = new QaFinding("language", Severity.HIGH, "\"кобылу\"", "alphabet");
+        final QaFinding gender = new QaFinding("gender", Severity.MEDIUM, "\"зачинила\"", "gender");
+
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(withFindings(List.of(alphabet, gender)), 0);
+
+        assertThat(decision.accepted()).isFalse();
+        assertThat(decision.block()).containsExactly(alphabet);
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.PROOFREAD);
+    }
+
+    @Test
+    void decide_lowConfidenceNoFinding_accepts() {
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa(0.30, false, false), 0);
+
+        assertThat(decision.accepted()).isTrue();
+        assertThat(decision.mark()).isEqualTo(AcceptanceRule.Mark.NONE);
+    }
+
+    private static QaResult withFindings(final List<QaFinding> findings) {
+        return new QaResult(List.of(), List.of(), 0.9, findings, false);
     }
 
     private static SoftCheckInput reuse(final String source, final String target) {

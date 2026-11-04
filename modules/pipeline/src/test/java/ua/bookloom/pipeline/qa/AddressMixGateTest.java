@@ -11,7 +11,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.heal.SoftFindings;
 
-/** How an address mix enters the gates: a low finding that passes the hard gates and earns a directed fix. */
+/** How an address mix enters the gates: a repair-level finding that passes the hard gates and earns a directed fix. */
 class AddressMixGateTest {
 
     private static final String SOURCE = "“You are tired, Nell. Sit down, you need rest, and I will bring you tea.”";
@@ -31,13 +31,13 @@ class AddressMixGateTest {
     }
 
     @Test
-    void evaluate_mixedAddress_passesTheHardGatesWithALowAddressMixFinding() {
+    void evaluate_mixedAddress_passesTheHardGatesWithAMediumAddressMixFinding() {
         final QaResult result = evaluate("«Ти втомилася, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»");
 
         assertThat(result.hardGatesPass()).isTrue();
         assertThat(result.findings())
                 .extracting(QaFinding::raisedBy, QaFinding::severity)
-                .contains(tuple("address-mix", Severity.LOW));
+                .contains(tuple("address-mix", Severity.MEDIUM));
     }
 
     // IF the finding were not on the fixable list, THEN the mix would only be noted and the book would keep it.
@@ -60,7 +60,7 @@ class AddressMixGateTest {
 
     @Test
     void isFixable_addressMixFinding_isTrueAndADuplicateWordIsStillFalse() {
-        assertThat(SoftFindings.isFixable(new QaFinding("language", Severity.LOW, "x", "address-mix")))
+        assertThat(SoftFindings.isFixable(new QaFinding("language", Severity.MEDIUM, "x", "address-mix")))
                 .isTrue();
         assertThat(SoftFindings.isFixable(new QaFinding("fluency", Severity.LOW, "x", "duplicate-word")))
                 .isFalse();

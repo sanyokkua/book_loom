@@ -1112,7 +1112,7 @@ The application SHALL record for every decided segment its confidence and each f
 
 WHEN the brief's narrator is first person with a male or female gender the person set, the book's evidence verified or the run
 inferred from the narrator's own forms, and the target language's file names a gender check with `genderCheck=<name>`,
-the application SHALL run it on every candidate and raise a low `gender` finding at REPAIR level (`raisedBy` `gender`) naming each
+the application SHALL run it on every candidate and raise a medium `gender` finding at REPAIR level (`raisedBy` `gender`) naming each
 word that disagrees; a gender shown as "likely" SHALL be held against no text.
 
 **Source**: FR-QA-01, ADR-0038; tasks 15d.10. In plain words: when the person says the narrator is a man and the draft says «я зачинила», code can see the wrong ending, so one repair call is made for it; because a suffix rule is sometimes wrong, the check can only note and repair, never reject.
