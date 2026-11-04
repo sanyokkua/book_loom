@@ -2477,3 +2477,10 @@ when no check got worse, the batch size comes from the model profile and the dia
 brought in line (`02_Architecture/05_PIPELINE_ENGINE.md#levels`, `12_PROMPT_CATALOG.md#repair`). Status of the
 task 10.10 checks: the K = 1 `mini-en`/`mini-ru` floors and the owner's hand check are **pending**; no result is
 recorded here yet.
+
+Open item (group-10 review): with the dial's chunk cap removed (10.8, not restored), a chunk closes only on the
+2,000-token budget. Two costs follow: `ChunkRunner.commitChunk` commits once per chunk, so a kill or crash loses every
+decision of the chunk in flight, which can now be more segments than before; and `QualityLoop.reviewChunk` sends every
+pair of the chunk in one reviewer call, so the reviewer prompt (and its output cap) is larger. Reviewer slicing and a
+per-batch commit belong to groups 11 and 14. Recommended first: measure, at Max on `mini`, the reviewer prompt's tokens
+and replies cut by length, and the decided segments a kill in mid-chunk loses.
