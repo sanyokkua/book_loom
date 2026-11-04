@@ -91,6 +91,28 @@ class ReviewDeskTabsTest extends ReviewDeskTestBase {
         assertThat(textOf("review-findings")).contains("omission · length ratio 0.29, expected 0.35–3.6");
     }
 
+    // IF the audit's doubt of a check the run already recorded were drawn too, THEN the desk would show two identical
+    // rows for one finding.
+    @Test
+    void findings_auditDoubtOfACarriedCheck_showsOneRow() throws Exception {
+        final String note = "The text still holds words of the source language: что.";
+        openDeskWith(
+                List.of(ReviewFixtures.view(
+                        "ch04.xhtml:2",
+                        "ch4 · p02",
+                        SegmentStatus.FLAGGED,
+                        List.of(
+                                new QaFinding("language", Severity.MEDIUM, note, "function-word-residue"),
+                                new QaFinding("language", Severity.MEDIUM, note, "audit:function-word-residue")),
+                        null,
+                        null)),
+                List.of());
+
+        assertThat(fx(() ->
+                        required("review-findings").lookupAll(".finding-kind").size()))
+                .isEqualTo(1);
+    }
+
     @Test
     void suggestion_segmentWithoutAProposal_saysThereIsNone() throws Exception {
         openDeskWith(List.of(ReviewFixtures.nameIssue()), List.of());

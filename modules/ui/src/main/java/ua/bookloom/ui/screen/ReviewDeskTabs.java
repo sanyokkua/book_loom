@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -16,6 +18,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.PromptView;
 import ua.bookloom.ui.control.ScrollHost;
@@ -23,6 +26,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
@@ -94,10 +98,29 @@ final class ReviewDeskTabs extends TabPane {
             findings.getChildren().setAll(empty);
             return;
         }
+        final List<QaFinding> shown = withoutRepeatedDoubts(view.findings());
+        log.debug(
+                "findings of segment {}: {} stored, {} shown",
+                view.segmentId(),
+                view.findings().size(),
+                shown.size());
         findings.getChildren()
-                .setAll(view.findings().stream()
+                .setAll(shown.stream()
                         .map(finding -> rows.of(finding, technical))
                         .toList());
+    }
+
+    // The audit doubts every accepted segment with the run's own checks, so a check the run already recorded comes back
+    // as its audit twin; the stored twin keeps the segment under "Worth a second look", and the desk draws it once.
+    private static List<QaFinding> withoutRepeatedDoubts(final List<QaFinding> stored) {
+        final Set<String> recorded = stored.stream()
+                .map(QaFinding::raisedBy)
+                .filter(raisedBy -> raisedBy.equals(RaiserWords.checkOf(raisedBy)))
+                .collect(Collectors.toSet());
+        return stored.stream()
+                .filter(finding -> finding.raisedBy().equals(RaiserWords.checkOf(finding.raisedBy()))
+                        || !recorded.contains(RaiserWords.checkOf(finding.raisedBy())))
+                .toList();
     }
 
     // A batch draft shows what its one request sent; a draft made alone shows the context it was given.
