@@ -91,8 +91,10 @@ testable.
   and the backward revision and consistency calls; the name scans and the summary are not. **Planned:** `CallSnapshot`
   also carries the parsed batch items (id → target, item status) so the reply view can show a per-item grid
   (`mockups/README.md`, G5).
-- `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
-  enters, for the log.
+- `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces, for the log, the reviewer's
+  directed fix for a refused edit (always round 1 of 1, no judge score). The one repair has no rounds and no event of
+  this name: it is announced by its `REPAIR` plan step and its model-call events (`CallKind.REPAIR`), until group 14
+  removes the reviewer and with it this event.
 - `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
   snapshot, announcing a segment as decided.
 - `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one

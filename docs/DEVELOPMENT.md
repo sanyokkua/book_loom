@@ -2466,3 +2466,14 @@ Result of 2026-10-29 on the owner's machine (log `.temporary_context/59-live.log
 Zero wrong detections. LM Studio: a listed id answers, `no-such-model-zzz` is refused with "LM Studio has no model".
 Skipped (not installed): llama-server (5 cases, among them the gpt-oss-style `low`), Unsloth (3).
 29 cases ran: 20 passed, 8 skipped, 1 failed. The one failure was an Ollama cached-token test that asserted the server's own behaviour; it was removed (BookLoom does not test what it does not control).
+
+### Redesign group 10 status {#redesign-group-10}
+
+Group 10 (`quality-gates` of `redesign-translation-pipeline`) is built in code: every finding has a level (`BLOCK`,
+`REPAIR`, `NOTE`; `CheckLevels.of`), `AcceptanceRule.decide` accepts by those levels, a text that holds a BLOCK or REPAIR
+finding gets one repair (`heal/OneRepair`; Fast re-drafts once only when marks are lost), `NeverWorse` keeps a repair only
+when no check got worse, the batch size comes from the model profile and the dial no longer caps a chunk, and
+`SegmentRecord.repairRounds` is gone (a database stored with it is set aside on the next launch). The specification was
+brought in line (`02_Architecture/05_PIPELINE_ENGINE.md#levels`, `12_PROMPT_CATALOG.md#repair`). Status of the
+task 10.10 checks: the K = 1 `mini-en`/`mini-ru` floors and the owner's hand check are **pending**; no result is
+recorded here yet.

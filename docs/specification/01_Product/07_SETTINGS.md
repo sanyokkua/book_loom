@@ -195,22 +195,23 @@ temperature for this retry" (DD-36).
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
 user-editable per knob:
 
-| Dial     | Preceding targets | Repair rounds N | Reviewer reads per chunk | Backward revision | Model-written summary | Chunk cap (segments) |
-|----------|-------------------|-----------------|--------------------------|-------------------|-----------------------|----------------------|
-| Fast     | 1                 | 1               | 0 (no reviewer)          | off               | off                   | 8                    |
-| Balanced | 2                 | 2               | 1                        | off               | off                   | 8                    |
-| Max      | 3                 | 3               | 2                        | on                | on                    | 2                    |
+| Dial     | Preceding targets | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision | Model-written summary |
+|----------|-------------------|----------------------------|--------------------------|-------------------|-----------------------|
+| Fast     | 1                 | marks-only re-draft        | 0 (no reviewer)          | off               | off                   |
+| Balanced | 2                 | one repair                 | 1                        | off               | off                   |
+| Max      | 3                 | one repair                 | 2                        | on                | on                    |
 
-Manual review mode caps a chunk at 1 segment. The chunk's token ceiling is `TokenBudget.MAX_CHUNK_TOKENS` = **2000**
-source tokens (`05_TRANSLATION_ALGORITHM.md#token-budget`).
+The dial sets no segment cap on a chunk, and Manual review mode does not either: a chunk closes on the token ceiling
+`TokenBudget.MAX_CHUNK_TOKENS` = **2000** source tokens (`05_TRANSLATION_ALGORITHM.md#token-budget`), and the drafting
+batch size is the model profile's (Settings › Models).
 
 **τ ownership (DD-45).** The **trust threshold τ is owned by the review-mode dial** (Unattended 0.60 / Assisted 0.75 /
 Manual 0.85), not the quality dial. **No manual τ or τ_judge override is offered**, now or in the planned Generation
 tab.
 
-**Repair budget N = QA re-entry rounds.** N is the number of times a segment that fails QA is fed back for a directed
-repair before it is flagged (FR-ALGO-C12), set by the quality dial alone (the table above). **N = 0 means
-flag-on-first-failure**; a review retry runs with N = 0 (`DialParameters.withoutRepairRounds`).
+**One repair, no rounds.** A segment whose draft keeps a BLOCK or REPAIR finding gets one repair call (FR-ALGO-C12),
+set by the quality dial alone (the table above); Fast has no fixing call. A review retry runs with no repair
+(`LoopSettings.repairs` false).
 
 **Token-budget constants (fixed).** Token counts use a deterministic characters ÷ K heuristic (no shipped tokenizer):
 the per-script **K table** and a **safety margin of `0.15`** are documented constants

@@ -1,26 +1,34 @@
 flowchart TD
-    A["Take next chunk<br/>(a few whole paragraphs)"] --> TM{"TM context match?<br/>(same text + same neighbours)"}
-    TM -- " yes — reuse saved translation<br/>(skip draft & judge) " --> D
+    A["Take next chunk<br/>(whole paragraphs, closed on the token budget)"] --> TM{"TM context match?<br/>(same text + same neighbours)"}
+    TM -- " yes — reuse saved translation<br/>(skip draft & reviewer) " --> D
     TM -- no --> B["Build the prompt<br/>brief + glossary + summary + previous translation + text"]
-    B --> C["Model translates<br/>(JSON out, keyed by segment id)"]
+    B --> C["Model translates a batch<br/>(JSON out, keyed by segment id;<br/>batch size comes from the model profile)"]
     C --> IDM{"All segment ids<br/>present once?"}
     IDM -- " missing ids " --> PS["Per-segment calls<br/>for the missing ids only"]
     PS --> D
-    IDM -- yes --> D["Restore tags & locked names<br/>check placeholders are intact"]
-    D --> E["Automatic checks<br/>language? nothing dropped? names right? tags ok?<br/>→ confidence score"]
-    E --> F{"Hard gates pass and<br/>no check blocks?"}
-    F -- yes --> G["LLM reviewer: ok / edits / rewrite<br/>(dial-gated; skipped for TM reuse)"]
+    IDM -- yes --> D["Restore tags & locked names<br/>put lost marks back by code<br/>check placeholders are intact"]
+    D --> E["Code repairs & automatic checks<br/>language? nothing dropped? names right? tags ok?<br/>every finding has a level: block, repair or note"]
+    E --> F{"Hard gates pass and<br/>no block-level finding?"}
+    F -- yes --> G["LLM reviewer: ok / edits / rewrite<br/>(dial-gated; skipped for TM reuse;<br/>a refused edit may get one directed fix)"]
     G --> H{"Reviewer off or<br/>no verified blocker left?"}
-    H -- yes --> ACC["Accept"]
     H -- no --> R
-    F -- no --> R["Repair"]
-    R --> R1{"Do we know<br/>what is wrong?"}
-    R1 -- " yes (from checks) " --> R2["Directed fix — 1 call<br/>tell model exactly what to correct"]
-    R1 -- " no (vague quality) " --> R3["Reflect then improve — 2 calls<br/>(+ optional monolingual polish<br/>if still borderline)"]
-    R2 --> E
-    R3 --> E
-    R -. " a segment still failing<br/>after N tries " .-> FLAG["Flag that segment<br/>for optional review"]
+    H -- yes --> K{"Any repair-level<br/>finding left?"}
+    K -- no --> ACC["Accept<br/>(note-level findings = audit mark)"]
+    K -- yes --> R
+    F -- no --> R["The one repair"]
+    R --> M{"Dial: Fast?"}
+    M -- " no (Balanced, Max) " --> R2["One repair call<br/>names every defect with its quoted span"]
+    M -- " yes (Fast) " --> R3["No fixing call<br/>only lost marks: one plain re-draft"]
+    R2 --> NW{"Hard gates pass and<br/>never-worse gate keeps it?"}
+    R3 --> NW
+    NW -- " yes — keep the new text " --> LEFT
+    NW -- " no — keep the old text " --> LEFT{"Findings left<br/>on the text that stays"}
+    LEFT -- " block level " --> FLAG["Flag that segment<br/>for optional review"]
+    LEFT -- " repair level " --> PROOF["Accept with proofread mark"]
+    LEFT -- " note level or none " --> ACC
     ACC --> SAVE["Save: translation + glossary + summary + memory<br/>(crash-safe); record deferrals<br/>for backward revision"]
+    PROOF --> SAVE
     FLAG --> SAVE
     style ACC fill: #d4edda, stroke: #28a745
+    style PROOF fill: #d4edda, stroke: #28a745
     style FLAG fill: #fff3cd, stroke: #e0a800

@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-11-04
 **Cross-references:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
 `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`,
@@ -20,10 +20,12 @@ goal, not an acceptance gate.
 Chunking is **paragraph-grouped**: whole segments are packed in document order into a chunk until adding the next
 segment would exceed the chunk **token budget**; the chunk then closes and a new one opens. A segment is never split
 across chunks, so one target block always maps back to one source block. Concretely, a chunk is a run of consecutive
-pending segments of one unit, packed to at most `min(effectiveContext − reservedHeadroom, chunkBudgetSetting)`
-estimated tokens (`min(8192 − reservedHeadroom, 1200)` with this build's constants) and capped at 8 segments on Fast,
-8 on Balanced, 2 on Max, and 1 under Manual review — whichever limit is reached first; a unit boundary always closes
-the current chunk and soft-resets the preceding-target window (ADR-0038).
+pending segments of one unit, closed on the **token budget alone** (`TokenBudget.MAX_CHUNK_TOKENS`, 2,000 estimated
+tokens in this build, until the window's current-part budget of redesign group 11 replaces it). There is **no
+segment cap per chunk**: neither the quality dial nor Manual review caps it any more (redesign group 10.8, owner
+decision D-17). How many segments go to the model in one request is the **batch size** (`#tiered-loop`, step 1), cut
+inside the chunk. A unit boundary always closes the current chunk and soft-resets the preceding-target window
+(ADR-0038).
 
 The budget is **derived from the provider's effective context window** rather than a fixed constant, and the Generation
 "chunk budget" setting is only a **cap** on it (DD-44). Because BookLoom ships no tokenizer, token counts are
@@ -80,55 +82,73 @@ N (preceding blocks), whether TM/summary are included, and budget are dial-drive
 ## tiered-loop {#tiered-loop}
 
 Scoring is **per chunk** when the judge runs, but each check and each repair act on **one segment**: a failure — a
-hard gate, a soft check, or a judge finding — repairs only the **offending segment**, and every repair call (directed
-fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see
-`chunk-translate-loop.mermaid`):
+hard gate, a check, or a judge finding — repairs only the **offending segment**, and the repair call returns exactly
+one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-translate-loop.mermaid`):
 
-1. **Draft** — consecutive segments of the chunk go out together in one batch call (up to 8 on Fast and Balanced, 2 on
-   Max, adapted down when the model loses the numbering), and the reply is read per id. When a readable reply leaves
-   out two or more ids, one **re-ask** names only those ids and its answers are merged into the first reply; a failed
-   or unreadable re-ask changes nothing. An id that is missing, malformed or wrong-shape after that is drafted alone:
-   one `chat` call for exactly one source segment, answered exactly `{"target":"…"}`, with one structural repair
-   containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag multiset gets one
-   separate repair containing the source, rejected target, and required token order. Neither repair recurses and no
-   text fallback is accepted. The last three accepted targets may provide context only within their section. A
-   **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the reviewer)
-   entirely.
+1. **Draft** — consecutive segments of the chunk go out together in one batch call, and the reply is read per id. The
+   batch **starts at the model profile's size** (`ModelProfile.batchSize`, read once per run by the run wiring; the
+   quality dial does not change it, so Fast, Balanced and Max batch alike, and Manual review drafts in the same
+   batches and still pauses as its review mode says). The size halves on a wrong, missing, merged or unknown id and
+   after three stalls, grows by one after three clean batches, never above the profile's size and never below the
+   smaller of 2 and that size; a call that returned no reply leaves it unchanged (`BatchDrafter`). When a readable
+   reply leaves out two or more ids, one **re-ask** names only those ids and its answers are merged into the first
+   reply; a failed or unreadable re-ask changes nothing. An id that is missing, malformed or wrong-shape after that is
+   drafted alone: one `chat` call for exactly one source segment, answered exactly `{"target":"…"}`, with one
+   structural repair containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag
+   multiset gets one separate repair containing the source, rejected target, and required token order. Neither repair
+   recurses and no text fallback is accepted. The last three accepted targets may provide context only within their
+   section. A **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the
+   reviewer) entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
-   (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Failure → self-heal with a concrete finding.
-3. **Deterministic QA gate** — run the checks in `#qa-checks`; compute `confidence`.
+   (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Lost formatting marks are first **put back by code** where they can
+   be; a mismatch that remains is a BLOCK finding.
+3. **Deterministic QA gate** — run the checks in `#qa-checks` (each finding has a level: BLOCK, REPAIR or NOTE);
+   compute `confidence`. Typography and code repairs (apostrophes, quote marks, dashes, a heading's number) are made
+   by code before any model reads the draft.
 4. **Reviewer (dial-gated)** — when the dial enables it, one reviewer call per chunk and pass (Balanced one, Max two)
    over the drafted pairs whose checks passed; it answers per segment `ok`, edits or a rewrite. The code verifies each
    edit (the quote occurs exactly once after normalisation, the replacement keeps the `⟦gN⟧` tokens in order, the
    deterministic checks pass on the edited text, the set of blocking checks does not grow) and applies the verified
-   ones; an edit whose quote was found but that was refused gets one directed fix naming the quote; a rewrite is taken
-   only when every check passes. A malformed reply is salvaged entry by entry and its unread pairs are asked
-   once more (another seed), those still unread being taken as `ok`; an empty reply, a refused prompt, or a call that
-   times out twice, flags its segments `reviewer-unavailable` instead of pausing the run.
-5. **Accept**, per segment — `accept = hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft`; a failed
-   untranslated-echo check on a source under 20 code points of display text does not count as a failed soft check
-   (`#qa-thresholds`). There is no score and no threshold: confidence only orders segments for review, and the review
-   mode decides when the run pauses (ADR-0038; a model-call error instead of a quality failure is routed by
-   `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`.
-6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (the repair budget: 1 / 2 / 3 by dial):
-    - **Directed fix (1 call)** when QA or a refused reviewer edit produced *concrete* findings (tag mismatch, wrong script, dropped
-      content, glossary miss) — inject the exact findings and ask for a targeted correction of this one segment; on a
-      **tag-multiset mismatch** inject the expected placeholder multiset ("restore exactly: …").
-    - **Nothing** when there is no concrete finding to name: the reflect → improve → polish chain was removed in 15d.7, and
-      the segment is flagged without a call. The repair path keeps a **best candidate** and stops when a step does not
-      lower the blocker set.
-    - Loop back through QA up to `N` rounds. With the judge on, a repaired target that passes its hard gates, fails
-      no soft check and reaches `τ` is **judged again on its own** — a one-pair call labelled `s1` whose score and
-      findings replace the chunk's for that segment; a target short of any of these goes to the next round with no
-      judge call. A self-heal reply that is blank or cut off flags the segment at once; one that is not the required
-      object fails its round (a self-heal call gets no format repair). Still failing → the offending segment (s)
-      `FLAGGED`, keeping the last target that passed every hard gate as its machine translation.
+   ones; an edit whose quote was found but that was refused gets one directed fix naming the quote (the directed fix
+   remains for this one use until redesign group 14 removes the reviewer); a rewrite is taken only when every check
+   passes. A malformed reply is salvaged entry by entry and its unread pairs are asked once more (another seed),
+   those still unread being taken as `ok`; an empty reply, a refused prompt, or a call that times out twice, flags
+   its segments `reviewer-unavailable` instead of pausing the run.
+5. **Accept**, per segment — `AcceptanceRule.decide`: `accepted = hardGatesPass ∧ noSoftCheckFailedOutright ∧
+   noBlockLevelFindingLeft ∧ noVerifiedBlockerLeft`, where a finding's level is read by `CheckLevels.of`
+   (`#qa-checks`, levels); a failed untranslated-echo check on a source under 20 code points of display text does not
+   count as a failed soft check (`#qa-thresholds`). There is no score and no threshold: confidence only orders
+   segments for review, and the review mode decides when the run pauses (ADR-0038; a model-call error instead of a
+   quality failure is routed by `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`. REPAIR findings
+   that remain on an accepted segment become its **proofread mark**, NOTE findings its **audit mark**
+   (`AcceptanceRule.Mark`).
+6. **The one repair** (`heal/OneRepair`, `RepairMode` of the dial) — otherwise, and also for an accepted draft that
+   still holds a REPAIR finding:
+    - **Balanced and Max (`RepairMode.ONE`)**: exactly **one** call (`CallKind.REPAIR`, prompt `repair`,
+      `12_PROMPT_CATALOG.md#repair`) names every BLOCK and REPAIR defect with the span it quotes, shows the previous
+      attempt as data and repeats the expected tokens. A segment drafted whole is repaired through its own request; one
+      drafted in pieces by drafting its pieces again with the defects. The repair **replaces the text only when it
+      passes the hard gates and `NeverWorse.judge` keeps it** (`#qa-checks`, never worse); a text that stands on no
+      machine target (a refusal, an echo, a wrong-language reply, lost marks) keeps its repair when it changed and
+      has fewer blockers, without the text vetoes. The outcome is then **read on the text that stays**: BLOCK findings
+      left → `FLAGGED`, keeping the last target that passed every hard gate as its machine translation; REPAIR left →
+      accepted with the proofread mark; NOTE only → accepted with the audit mark.
+    - **Fast (`RepairMode.MARKS_ONLY`)**: no fixing call. Only a segment whose formatting marks are still lost after
+      the code restore is drafted **once more**, plainly (the draft request with a new seed, no defect named), under
+      the same keep rule; otherwise the findings left mark it, and a BLOCK finding flags it (export then writes its
+      source). A refusal, an echo or a wrong-language draft at Fast gets no call and is flagged.
+    - **A review retry** from the desk makes no repair call: the retried draft is decided by the hard gates, the checks
+      and the acceptance rule alone.
+    - There are no repair rounds, no best-candidate path and no soft-fix call: the former round counter is gone
+      (`DialParameters.repairRounds`, `SegmentRecord.repairRounds`; a database stored with it is set aside on the next
+      launch). A reply that is blank or cut off flags the segment at once. A pause or a pausing error during the repair
+      makes the repair call again on resume from the draft kept in memory, counted as the one repair.
 7. **Persist + update memory** — atomically write the segment; update name dictionary, context-keyed TM, and
    preceding-target window; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
    (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Update the rolling summary on its size-based trigger
    (`#rolling-summary`).
 
-Every self-heal call passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).
+Every model call, the repair included, passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).
 
 **Step announcements.** The run tells its listeners what it will do and what it has done as `StepsPlanned(kind,
 added, estimated)` and `StepChanged(kind, label, index, state, itemRef, result)` events, so a progress bar can count
@@ -141,23 +161,23 @@ inside stays open — it is never ended `FAILED` — because the next run plans 
 |------|------------------|-----------|------|
 | `DRAFT` | one per segment, planned when its chunk is entered | the segment id | `DONE`; `NO_CALL` for a shortcut or memory reuse; `FAILED` when flagged at once |
 | `CHECK` | one per reviewer pass the dial enables, planned when the chunk is entered | the chunk's first segment id | `DONE`; `NO_CALL` when no pair qualified or the first verdict was unreadable (pass 2); `FAILED` when the reviewer is given up |
-| `REPAIR` | one added when a repair round, a directed fix or a soft fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
+| `REPAIR` | one added when the one repair (or Fast's marks-only re-draft) or the reviewer's directed fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
 | `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
 | `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
 | `SUMMARY` | one per unit, planned when it is entered, on dials that ask the model for the summary | the unit id | `DONE`; `NO_CALL` when nothing was refreshed |
 | `REVISION` | one forecast (`estimated`) at the start of a run whose dial revises backwards | none | `DONE` or `FAILED` |
 
-Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair-round-N`,
-`directed-fix`, `soft-fix`, `re-ask`, `resend-N`, `summary`, `revision`). The plan is per chunk, not per book; a screen
-that shows a book-level total seeds it from the run's figures.
+Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair`, `redraft`,
+`directed-fix`, `re-ask`, `resend-N`, `summary`, `revision`). The plan is per chunk, not per book; a screen that shows
+a book-level total seeds it from the run's figures.
 
 ## qa-checks {#qa-checks}
 
 Deterministic, in `:pipeline`. Checks are of two kinds: **hard gates** (boolean; a failure cannot be accepted and is
 excluded from `confidence`) and **soft checks** (each yields a margin in `[0,1]` that feeds `confidence`; a soft check
-that fails outright blocks acceptance regardless of the blended value — see `#confidence`). No numeral is masked in
-this build (owner decision D-7), so there is no number-preservation check; named-entity consistency comes from
-locked-glossary masking plus the judge.
+that fails outright blocks acceptance regardless of the blended value — see `#confidence`). Beside them run the
+**text checks** of `checks/` (each raises findings, none enters `confidence`), described under `#levels` below.
+Numerals are not masked in this build (owner decision D-7); they are compared by value by the number check instead.
 
 | Check                    | Kind          | Fails when                                                                                                                                                                                                              |
 |--------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -168,6 +188,77 @@ locked-glossary masking plus the judge.
 | repetition-loop          | soft          | pathological m-gram repetition                                                                                                                                                                                         |
 | omission by length ratio | soft          | target/source length ratio outside the expected band                                                                                                                                                                   |
 | glossary compliance      | soft          | a locked term not rendered per the dictionary                                                                                                                                                                          |
+
+### levels {#levels}
+
+Every finding has one **level**, the single answer to "what does this do to its segment". `qa/CheckLevel` has three
+values; `CheckName` carries each check's level for its high-severity findings (the one level table, design D12), and
+`CheckLevels.of(finding)` reads a stored or fresh finding back, so a level is **derived and never stored** (a stored
+finding keeps only its check's wire name and its severity):
+
+| Level | Effect on the segment | Severity it is raised at |
+|-------|-----------------------|--------------------------|
+| `BLOCK` | the segment cannot be accepted while the finding stays; if it survives the one repair the segment is `FLAGGED` | high (and a soft check with a confidence weight that fails outright, at medium) |
+| `REPAIR` | the segment may be accepted; the finding earns the one repair and, if it stays, the **proofread mark** | medium |
+| `NOTE` | the segment is accepted with an **audit mark**; the finding earns no call | low |
+
+A finding that no check raised (the reviewer's, an applied edit's, the audit's prefixed copies, a stored reply flag)
+reads as `NOTE`. `AcceptanceRule.decide` splits a segment's findings by level and accepts when the hard gates pass, no
+soft check failed outright, no `BLOCK` finding is left and no verified blocker is left. `BlockingFindings` is the
+reader the export and the consistency pass use; it answers `CheckLevels.of(finding) == BLOCK`, so a finding that kept a
+segment from being accepted is called blocking in the same way before and after the run (and none when the person's
+own text replaced the machine's).
+
+The levels of the checks (a check that differs by case raises the lower ones at medium or low severity):
+
+| Level | Checks (`raisedBy`) |
+|-------|---------------------|
+| `BLOCK` | `refusal`, `placeholder`, `locked-term`, `kept-run`, `script`, `echo`, `repetition`, `length`, `glossary`, `script-purity`, `quote-balance`, `language-identity`, `sentence-count`, `vocative`, `protocol-leak`, `name-swap`, `identifier`, `latin-run`, `alphabet`; `number` when a leading number was replaced; `name-spelling` for a pinned name |
+| `REPAIR` | `function-word-residue`, `terminal-mark`, `address-parity`, `address-mix`, `gender`, `name-gender`, `name-missing`; `number` for a lost number of two or more digits; `name-spelling` for a name that is not pinned |
+| `NOTE` | `duplicate-word`, `spacing`, `unknown-word`, `normalised` (the typography pass changed the text), an extra `number`, and every audit finding |
+
+The text checks added in redesign group 10, each generic for any language pair:
+
+- **Numbers** (`checks/NumberCheck`): compared by value, spelled-out numbers not compared. A leading number replaced
+  (`3. …` → `5. …`) is `BLOCK`; a missing number of two digits or more is `REPAIR`; an extra number is `NOTE`.
+- **Terminal mark** (`checks/TerminalMarkCheck`, `terminal-mark`): the last mark of a paragraph is another class than
+  its source's (a question that became a full stop). `REPAIR`.
+- **Form of address** (`checks/AddressMixCheck`): `address-mix` is one quoted speech that mixes informal and formal
+  forms; `address-parity` is a speech whose form of address changed between informal and formal against its source.
+  `REPAIR`; `address-parity` is off unless the source language file declares both the informal and the formal address
+  keys.
+- **Names**: `name-missing` (a glossary name lost) is `REPAIR`; `name-spelling` names the exact replacement and is
+  `BLOCK` for a pinned name whose target form is none of `NameForms.forms`, `REPAIR` otherwise; `name-swap` and
+  `vocative` stay `BLOCK`.
+- **Audit-only doubts** (`audit/FinalAudit`, `audit/NameVariants`, `audit/SourceVariants`; stored as `audit:…` findings,
+  `NOTE`): a source with two or more negations more than the target (`checks/NegationCount`, same-family pair whose
+  language files declare negation words on both sides), and the minority target of a repeated source paragraph of six
+  words or more.
+
+### function-word residue {#function-word-residue}
+
+A line translated into the wrong sister language slips past a script check when the two languages share an alphabet
+(Russian words left in a Ukrainian sentence). `checks/LanguageIdentityCheck` therefore counts, in the target, the hits
+of the **source-only function words** of the pair — the computed set `FunctionWords.sourceOnly(source, target)`, whole
+words, lower case, no exemption for words the source holds, a one-letter word only before a lower-case word — and
+raises `function-word-residue` (`REPAIR`) naming the words it found. It is a separate finding from the
+**wrong-language paragraph** finding `language-identity` (`BLOCK`, a paragraph of at least 12 words), which is raised
+when fewer than 60 % of the target's letters are in the target's script or, when the scripts match, when the share of
+source-only function words reaches 30 % (`MAX_SOURCE_STOP_WORD_RATE`); one stray word is residue and never that
+finding. The alphabet check exempts a word the source holds only when the two scripts differ. The list-based
+foreign-word check is gone: no language file holds another language's words (owner decision D-27).
+
+### never worse {#never-worse}
+
+`qa/NeverWorse.judge(current, candidate, facts)` is the one code gate that keeps an edit only when no check got worse;
+it returns `Keep` or `Reject(reason)`. It rejects a candidate that fails the placeholder gate, adds a blocking
+finding, adds a forbidden letter or raises the count of source-only function words, writes a name form outside
+`NameForms.forms` of a pinned or locked target, drops a map name, loses a sentence or a negation, loses a number,
+quotes, dashes or clauses, adds a new Latin run or a stress mark, or raises the count of any of the findings
+`alphabet`, `language-identity`, `script-purity`, `number`, `terminal-mark`, `address-parity` or `sentence-count`.
+A candidate that passes the vetoes is kept when its score is not higher and the finding that triggered the edit is
+cleared or the score is strictly lower; the score weighs a blocking finding 5, a repair-level (soft) one 1 and an
+audit one 1. The one repair uses it; the Proofread stage and the export pass reach it in later groups of the redesign.
 
 ### qa-thresholds {#qa-thresholds}
 
@@ -340,19 +431,34 @@ user opt-in (a `REVISED → REVISED` transition). The sweep is **bounded to segm
 **deterministic string substitution for locked terms** and invokes an **LLM re-render only** for gender/agreement
 deferrals.
 
+## brief-key-recheck {#brief-key-recheck}
+
+When the person saves a Book Brief whose **apostrophe** or **quote style** changed, `run/BriefKeyRecheck` re-runs the
+typography pass by code over the masked target of every decided segment that no person reviewed or edited, with the new
+keys, and compares it with the same pass under the old keys, so only a difference the key change causes counts. A
+segment it would still change gets the finding `audit:normalised` (listed under "Worth a second look" with the label
+`typography`); its status and target are not changed, and the audit's next run replaces the finding. A changed default
+address or declared convention has no check that reads stored text yet, so it re-checks nothing. The count of segments
+carrying the finding reaches the Book Brief as `ProjectChange.Saved.rechecked`, which shows a banner; a failed re-check
+is a warning in the log and the brief is saved all the same. The Export screen separately states, before Export book,
+how many segments will be written in the source language because their formatting marks were lost (flagged, no target,
+no edit, a `placeholder` finding).
+
 ## prompt-builder {#prompt-builder}
 
 Prompts are built from a **template + slots**: fixed instruction scaffolding with named slots (`{brief}`, `{summary}`,
-`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). The directed-fix template adds a `{findings}` slot. Templates are data, so the quality dial and policies
+`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). The directed-fix template adds a
+`{findings}` slot; the repair template adds `{previousAttempt}`, `{defects}` and the expected tokens on top of the draft
+prompt. Templates are data, so the quality dial and policies
 parameterize the prompt without code changes. The concrete system/user templates for every pipeline call — draft, judge,
-directed fix, backward revision, book-brief/tone setup, and rolling-summary update — with their
+repair, directed fix (the reviewer's), backward revision, book-brief/tone setup, and rolling-summary update — with their
 injected variables, required-vs-optional fields, parameters, and expected JSON shapes, are the normative catalogue in
 `01_Product/12_PROMPT_CATALOG.md`.
 
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
-output): draft 0.2 (the default), judge 0.1, directed fix 0.2, backward
+output): draft 0.2 (the default), judge 0.1, repair 0.1, directed fix 0.2, backward
 revision 0.2, pre-scan/summary 0.2. These are the pipeline's per-kind values; a model's own settings on Settings ›
 Models (`01_Product/07_SETTINGS.md#models-tab`) may replace them, and a review-desk retry can opt into 0.1 for its draft
 call when a lower temperature is asked. Every call carries a **reasoning intent** for its kind (off for draft, repair,
@@ -375,15 +481,15 @@ A single "quality vs speed" dial (`FAST | BALANCED | MAX`) parameterizes the eng
 the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual) alone — a manual
 Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.md`); `τ_judge` equals `τ`.
 
-| Parameter                          | FAST  | BALANCED | MAX   |
-|------------------------------------|-------|----------|-------|
-| chunk token budget                 | large | medium   | small |
-| segments per chunk (cap)           | 8     | 4        | 2     |
-| preceding-target blocks (N)        | 1     | 2        | 3     |
-| repair budget (QA re-entry rounds) | 1     | 2        | 3     |
-| judge runs                         | no    | yes      | yes   |
-| backward revision runs             | no    | no       | yes   |
+| Parameter                          | FAST             | BALANCED | MAX   |
+|------------------------------------|------------------|----------|-------|
+| chunk token budget                 | large            | medium   | small |
+| preceding-target blocks (N)        | 1                | 2        | 3     |
+| fixing call (`RepairMode`)         | marks-only re-draft | one repair | one repair |
+| reviewer passes per chunk          | 0                | 1        | 2     |
+| backward revision runs             | no               | no       | yes   |
 
-Manual review additionally caps every chunk at 1 segment, whatever the dial. The dial sets mechanics; `τ`/`τ_judge`
-come from the review-mode dial (DD-45). The automatic-first, tiered-pipeline model this dial serves is ADR-0007.
-Requirements: `FR-ALGO-*`, `FR-QA-*`.
+The dial no longer sets the batch size or a chunk's segment cap: the batch size belongs to the model profile
+(`#tiered-loop`, step 1), so the dial means the same for every model. A review retry runs with no repair
+(`LoopSettings.repairs` false). The dial sets mechanics; `τ`/`τ_judge` come from the review-mode dial (DD-45). The
+automatic-first, tiered-pipeline model this dial serves is ADR-0007. Requirements: `FR-ALGO-*`, `FR-QA-*`.

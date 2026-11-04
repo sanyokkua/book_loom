@@ -129,7 +129,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-ALGO-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. |
-| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 10: the dial now maps preceding targets, the one repair (Fast: marks-only re-draft), reviewer passes and backward revision; batch size is the model profile's. |
 | FR-ALGO-12 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-B2 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-C10 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |

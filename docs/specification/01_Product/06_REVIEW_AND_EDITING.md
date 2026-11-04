@@ -24,8 +24,8 @@ Every segment moves through a deterministic state machine (FR-REVIEW-06):
 | From                  | Event                                                                                     | To       |
 |-----------------------|---------------------------------------------------------------------------------------------|----------|
 | —                     | Imported                                                                                  | PENDING  |
-| PENDING               | `hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft` (15d.6)                          | ACCEPTED |
-| PENDING               | Still failing after repair budget N (QA re-entry rounds), or below τ with review required | FLAGGED  |
+| PENDING               | `hardGatesPass ∧ noSoftCheckFailedOutright ∧ noBlockLevelFindingLeft ∧ noVerifiedBlockerLeft` (15d.6; REPAIR/NOTE findings left become the proofread/audit mark) | ACCEPTED |
+| PENDING               | A BLOCK finding is still left after the one repair (Fast: after the marks-only re-draft), or below τ with review required | FLAGGED  |
 | FLAGGED               | User accepts as-is                                                                        | ACCEPTED |
 | FLAGGED               | User edits and confirms                                                                   | REVISED  |
 | FLAGGED               | User retries / retry-with-note and it now passes                                          | ACCEPTED |
@@ -89,7 +89,7 @@ The footer has **Close**, a **More ▾** menu and **one main button**.
 | Save edit (main button, text edited) | Persist the person's edited target, placeholders included, keeping the machine target apart so a later revert restores it exactly. Refused for a PENDING segment, and with `validation` (nothing stored) when a formatting mark is missing or doubled or the edit breaks the placeholders otherwise; the editor treats each mark as one unit and keeps the main button off until each is present once. Withdraws a backward-revision proposal waiting on the segment. | REVISED                                         |
 | Undo my edit (Revert) | Clear the saved edit and restore the stored machine target. Acts only on a REVISED segment that has a machine target; withdraws a waiting proposal.                  | ACCEPTED                                        |
 | Try again (Retry) | Re-run the segment through the pipeline, **reconstructing the original chunk context** (same brief, glossary, preceding-target window, and TM the segment first saw); allowed whenever no run of the project is running, refused with `ErrorCode.busy` while one is. | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
-| Try again with a note | Re-run as above, reconstructing the original chunk context and injecting the user's free-text note into the draft/directed-fix `{{userNote}}` slot.                | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
+| Try again with a note | Re-run as above, reconstructing the original chunk context and injecting the user's free-text note into the draft template's `{{userNote}}` slot (no repair call follows a retry).                | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Leave for later | Writes nothing: the row is marked "later" for this application run only and the desk moves to the next segment of the filter shown. The segment stays to review. | unchanged                                       |
 | Apply a proposal | Take the backward-revision proposal waiting on an edited segment as the person's own edit. Acts only on a REVISED segment with a proposal waiting.                      | REVISED                                         |
 
@@ -98,7 +98,7 @@ A refused action changes nothing and answers `validation` (`SegmentActions`); th
 | ID           | Requirement                                                                                                                                                                                                                      |
 |--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-REVIEW-A1 | Retry and retry-with-note route through the same InferenceGate and QA gate as the automatic pipeline, reconstructing the segment's original chunk context (single-segment call).                                                 |
-| FR-REVIEW-A2 | Retry-with-note captures a free-text instruction injected into the `{{userNote}}` slot of the draft/directed-fix templates (see `08_UI_SCREENS_AND_STATES.md`, `12_PROMPT_CATALOG.md#draft-translation`). The note is entered in an inline panel of the review desk. |
+| FR-REVIEW-A2 | Retry-with-note captures a free-text instruction injected into the `{{userNote}}` slot of the draft template (see `08_UI_SCREENS_AND_STATES.md`, `12_PROMPT_CATALOG.md#draft-translation`). The note is entered in an inline panel of the review desk. |
 | FR-REVIEW-A3 | Every action persists atomically for the rest of the session so review progress survives navigation; actions are stored in SQLite, so they also survive closing the application; the "later" marks are not stored. |
 
 ## export-any-time {#export-any-time}

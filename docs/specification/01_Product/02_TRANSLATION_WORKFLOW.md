@@ -80,10 +80,10 @@ segments). Concretely:
 
 - Before the run, the prep phase seeds the glossary via the deterministic frequency-and-capitalization scan (DD-46) so
   the Names & Style step opens pre-populated; the LLM pre-scan runs only from its own button, never at a run's start.
-- Every chunk is drafted, deterministically checked, judged (when the dial enables the judge), and self-healed on
-  failure, all without prompting the user.
-- Failures flag only the **offending segments** (shown to the person as "to review"): a segment that still fails after
-  the repair budget N is FLAGGED; everything else is auto-accepted.
+- Every chunk is drafted, deterministically checked, read by the reviewer (when the dial enables it), and repaired
+  once on failure, all without prompting the user.
+- Failures flag only the **offending segments** (shown to the person as "to review"): a segment that still holds a blocking finding after
+  the one repair is FLAGGED; everything else is auto-accepted.
 - The user can close the Book Brief and glossary steps quickly and rely on defaults; sensible defaults are provided for
   every brief field.
 - The run is crash-safe and resumable (FR-RESUME-01, FR-RESUME-02) once progress is stored (planned — SQLite), so
@@ -119,10 +119,10 @@ sets τ, the minimum deterministic confidence for automatic acceptance (DD-45):
 
 - A segment is ACCEPTED automatically when the hard gates pass **and** no soft check failed outright **and** its
   no verified reviewer blocker is left (15d.6: there is no confidence threshold and no judge score).
-- A segment that misses the accept rule enters self-heal; if it still fails after N attempts, it is FLAGGED.
+- A segment that misses the accept rule gets the one repair (Fast: a marks-only re-draft); if a BLOCK finding is still left, it is FLAGGED.
 - The three review modes are named positions of this dial (τ 0.60 / 0.75 / 0.85), and the dial is the **exclusive
-  owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — chunk size, preceding-target count,
-  repair budget N, and whether the judge and backward revision run — and never sets τ (FR-ALGO-11). A manual Settings
+  owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — preceding-target count,
+  the fixing call, reviewer passes, and whether backward revision runs (the batch size is the model profile's) — and never sets τ (FR-ALGO-11). A manual Settings
   override of τ is not offered.
 
 The dial is the only quality/automation knob the user must understand; all other tuning lives in Settings → Generation

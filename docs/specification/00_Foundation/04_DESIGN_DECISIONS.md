@@ -155,9 +155,12 @@ chunks pass without a human. **ADR:** ADR-0007 **Requirements:** FR-ALGO-01, FR-
 
 ### DD-16 — Tiered self-heal fires only on QA failure
 
-**Decision:** Repair uses a directed fix (1 call, concrete findings) or reflect→improve (2 calls) and runs only when a
-QA gate fails. **Why:** Spend extra inference only where needed. **Consequences:** Passing chunks incur no repair cost;
-repair budget N bounds attempts. **ADR:** ADR-0007 **Requirements:** FR-ALGO-08, FR-QA-02.
+**Decision:** Repair is **one call** (`REPAIR`: the draft's request plus the previous attempt and every BLOCK and
+REPAIR defect, replacing the text only when `NeverWorse` keeps it) and runs only when a check finds something at those
+levels; Fast re-drafts once, only when formatting marks are lost. **Why:** Spend extra inference only where needed, and
+stop the rounds that measured no gain. **Consequences:** Passing chunks incur no repair cost; there is no repair
+budget N, no reflect→improve chain and no soft-fix call (redesign group 10). **ADR:** ADR-0007
+**Requirements:** FR-ALGO-08, FR-QA-02.
 
 ## dd-17-deterministic-qa-plus-judge {#dd-17-deterministic-qa-plus-judge}
 
@@ -513,12 +516,12 @@ flight. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07
 ### DD-45 — Acceptance model: review-mode dial owns τ; deterministic confidence gate
 
 **Decision:** The **review-mode dial** (Unattended/Assisted/Manual) is the sole owner of the trust threshold τ — 0.60,
-0.75 and 0.85 respectively; the **quality dial** (Fast/Balanced/Max) owns only mechanics (chunk size, preceding-target
-count, repair budget N, judge on/off, backward-revision on/off) and never sets τ. A manual Settings override of τ is
+0.75 and 0.85 respectively; the **quality dial** (Fast/Balanced/Max) owns only mechanics (preceding-target
+count, the fixing call, reviewer passes, backward-revision on/off; the batch size is the model profile's) and never sets τ. A manual Settings override of τ is
 **not offered in this build**. The judge scores a **chunk** once; a **segment** — not a chunk — is accepted only when
 its hard gates pass, no soft check failed outright (a failed check raises at least a medium finding and sends the
-segment to a directed fix, except that a failed untranslated-echo check on a source under 20 code points only lowers
-confidence), and no verified reviewer blocker is left — 15d.6 retired the confidence threshold and the judge score; a
+segment to the one repair, except that a failed untranslated-echo check on a source under 20 code points only lowers
+confidence), and no BLOCK-level finding and no verified reviewer blocker is left (a finding's level is read by `CheckLevels.of`; `AcceptanceRule.decide`) — 15d.6 retired the confidence threshold and the judge score; a
 context-matched translation-memory reuse is accepted without the reviewer.
 `confidence` is a documented weighted blend of the soft deterministic-QA check margins (hard gates excluded; the judge
 score is not folded into it, and it only orders segments). The reviewer returns per segment `ok`, verified edits or a rewrite.

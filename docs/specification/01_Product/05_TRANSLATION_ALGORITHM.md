@@ -62,15 +62,15 @@ token budget; then run the per-chunk loop.
 Chunking is **paragraph-grouped**. Segments (whole paragraphs/blocks) are packed in document order into a chunk until
 the next segment would exceed the chunk **token budget**, then the chunk closes and a new one opens. A paragraph is
 never split across two chunks, so a translated block always corresponds to a single source block. Concretely, a chunk
-is a run of consecutive pending segments of one unit, packed to at most `min(8192 − reservedHeadroom, 1200)` estimated
-tokens (`#token-budget`) and capped at 8 segments on Fast, 8 on Balanced, 2 on Max, and 1 under Manual review —
-whichever limit is reached first; a unit boundary always closes the current chunk (ADR-0038).
+is a run of consecutive pending segments of one unit, closed on the **token budget alone** (`TokenBudget.MAX_CHUNK_TOKENS`, 2,000 estimated tokens in this build; `#token-budget`).
+The quality dial sets no segment cap on a chunk: the number of segments sent in one drafting call is the **batch size**,
+which starts at the model profile's (`ModelProfile.batchSize`; FR-ALGO-C4). A unit boundary always closes the current
+chunk (ADR-0038).
 
 The budget is **derived from the provider's effective context window**, not a fixed constant, and the Generation **"
 chunk budget" setting is only a CAP** on top of it (DD-44). The concrete arithmetic is in `#token-budget` below. Because
 the reserved slices scale with the dial (larger preceding-target window and more TM context on Max), the effective
-paragraph budget is smaller on Max and larger on Fast; this is why the quality dial's "chunk size" row moves inversely
-to context richness (`#quality-dial-mapping`).
+paragraph budget is smaller on Max and larger on Fast (`#quality-dial-mapping`).
 
 **Overflow only** triggers finer splitting: a single paragraph that alone exceeds the budget is **sentence-split** at
 source-language sentence boundaries, and only the offending paragraph is split — neighbouring paragraphs are unaffected.
@@ -167,35 +167,34 @@ For each chunk (see `chunk-translate-loop.mermaid`):
 | FR-ALGO-C4b | A **context-match TM auto-reuse** skips the draft and judge calls but still passes the unmask hard gate and the deterministic QA gate before acceptance (FR-ALGO-06).                                                                                                                                                                                                                                                                                                              |
 | FR-ALGO-C5  | Unmask and validate the placeholder multiset as a hard gate; a mismatch cannot be accepted (FR-DOC-05, FR-QA-04).                                                                                                                                                                                                                                                                                                                                                                  |
 | FR-ALGO-C6  | Run the deterministic QA gate and compute the `confidence` scalar — the documented weighted blend of the **soft** QA-check margins (hard gates and judge excluded; see `02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`) (FR-QA-01).                                                                                                                                                                                                                                              |
-| FR-ALGO-C7  | Accept each segment individually — never the whole chunk at once — by the rule `hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft` (15d.6): a verified blocker is an issue the **reviewer** evidenced with a quote the code found in the text and that no verified edit or directed fix resolved; there is no confidence threshold and no score. A failed echo check on a source whose display text is under 20 code points is not counted as a failed soft check — it only contributes its 0.0 margin to `confidence`, lowering it rather than blocking acceptance outright (ADR-0038). The confidence is derived for sorting only. The review-mode dial decides when the run pauses, never what is accepted. |
-| FR-ALGO-C8  | Otherwise enter self-heal (see below) for up to **N QA re-entry rounds** (the repair budget from the quality dial: 1 / 2 / 3); if still failing, mark the **offending segment(s)** FLAGGED.                                                                                                                                                                                                                                                                 |
+| FR-ALGO-C7  | Accept each segment individually — never the whole chunk at once — by the rule `hardGatesPass ∧ noSoftCheckFailedOutright ∧ noBlockLevelFindingLeft ∧ noVerifiedBlockerLeft` (15d.6; `AcceptanceRule.decide`, levels read by `CheckLevels.of`): a verified blocker is an issue the **reviewer** evidenced with a quote the code found in the text and that no verified edit or directed fix resolved; there is no confidence threshold and no score. A failed echo check on a source whose display text is under 20 code points is not counted as a failed soft check — it only contributes its 0.0 margin to `confidence`, lowering it rather than blocking acceptance outright (ADR-0038). The confidence is derived for sorting only. The review-mode dial decides when the run pauses, never what is accepted. |
+| FR-ALGO-C8  | Otherwise (or when a REPAIR-level finding is left) give the segment the **one repair** (see below; Fast: a marks-only re-draft); if a BLOCK finding is still left, mark the **offending segment(s)** FLAGGED.                                                                                                                                                                                                                                                                 |
 | FR-ALGO-C9  | On acceptance, update the name dictionary, the context-keyed TM, and the preceding-target window; register deferred-resolution items; persist atomically. Resume picks up at the **first PENDING** segment; FLAGGED is terminal-for-run and excluded from auto-resume (FR-RESUME-01).                                                                                                                                                                                              |
 | FR-ALGO-C10 | Update the rolling bilingual summary on a **size-based trigger — every K accepted blocks or at chapter end, whichever comes first** (FR-ALGO-07; `02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`).                                                                                                                                                                                                                                                                         |
 
 ### self-heal {#self-heal}
 
-The judge, when the dial enables it, scores the whole chunk **once**, seeing its accepted-hard-gate pairs labelled
-`s1…sk` in document order; QA runs **per segment**. A failure — hard gate, soft check, or judge — routes only the
-**offending segment** to repair, never its chunk-mates: generation and directed fix each
-return exactly one segment's target (`{"target":"…"}`), so a repair call never touches a sibling segment that already
-passed its checks. Self-heal fires only on a QA/judge failure (DD-16) and consumes the repair budget **N = the number
-of QA re-entry rounds**; each round takes exactly one path (ADR-0038):
+QA runs **per segment**. A failure routes only the **offending segment** to repair, never its chunk-mates: the repair
+call returns exactly one segment's target (`{"target":"…"}`), so it never touches a sibling segment that already passed
+its checks. Every finding has a **level** (`BLOCK`, `REPAIR` or `NOTE`; `02_Architecture/05_PIPELINE_ENGINE.md#levels`).
+The repair fires only when a BLOCK or REPAIR finding exists (DD-16) and is **one call, not rounds** (`heal/OneRepair`):
 
-| Path              | Trigger                                            | Calls                                                                                                                                                                                                                   |
-|-------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Directed fix      | Concrete QA/judge findings exist                   | 1 call injecting the findings, asking the model to correct exactly those in this one segment. On a **tag-multiset mismatch** the instruction is specialised to inject the expected placeholder multiset ("restore exactly: `⟦g1⟧ ⟦g2⟧ …`"). |
+| Dial              | Path                                                                                                                                                                                                                                  |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Balanced, Max     | One `REPAIR` call: the draft's request plus the previous attempt, every BLOCK and REPAIR defect with its quoted span, and the expected tokens (`12_PROMPT_CATALOG.md#repair`). Kept only when the hard gates pass and `NeverWorse.judge` keeps it. |
+| Fast              | No fixing call. A segment whose formatting marks are still lost after the code restore is re-drafted once, plainly; otherwise the findings left mark the segment.                                                                     |
 
-With the judge on, a repaired target that passes its hard gates, fails no soft check and reaches `τ` is judged again
-on its own (a one-pair call labelled `s1`) and decided by that call instead of its chunk's; a target short of any of
-these goes to the next round with no judge call. After N rounds the still-failing segment (s) are FLAGGED. This
-keeps the best candidate seen (fewest failed hard gates, then fewest blocking checks): a step whose result does not lower the blocker set is discarded and ends the repair. The reflect → improve → polish chain was removed in task 15d.7. This
-realizes the automatic-first, tiered self-heal model (ADR-0007).
+The outcome is read on the text that stays: BLOCK left → FLAGGED (export writes the last target that passed every hard
+gate, else the source), REPAIR left → accepted with the proofread mark, NOTE only → accepted with the audit mark. The
+reflect → improve → polish chain (15d.7), the repair rounds and the soft-fix call are gone. The directed fix survives
+only for a reviewer edit the checks refused, until redesign group 14. This realizes the automatic-first, tiered
+self-heal model (ADR-0007).
 
 | ID          | Requirement                                                                                                                                                                              |
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-ALGO-C11 | Send a directed fix only for a blocker with evidence (a failed check, or the quote of a reviewer edit that could not be verified); keep the best candidate, discard a step that does not lower the blocker set and stop on no progress; specialise the directed fix for a tag-multiset mismatch by injecting the expected placeholder multiset. |
-| FR-ALGO-C12 | Bound total repair rounds by the repair budget N from the quality dial (1 / 2 / 3).                                                                                                      |
-| FR-ALGO-C13 | Score the chunk once with the judge, labelling its qualifying pairs `s1…sk`; flag only the offending segment(s); repair each failing segment on its own — a directed fix call returns exactly one segment's target — and re-QA that segment alone (ADR-0038). |
+| FR-ALGO-C11 | Send the one repair only for a segment with a BLOCK or REPAIR finding, naming every defect with its span and the expected tokens; replace the text only when the hard gates pass and `NeverWorse.judge` keeps the repair. A directed fix is sent only for the quote of a reviewer edit the checks refused (until group 14). |
+| FR-ALGO-C12 | Make at most one repair call per segment per run of the loop (no repair rounds; a pause during the repair makes it again on resume, counted as the one).                                                                                                   |
+| FR-ALGO-C13 | Flag only the offending segment(s); repair each failing segment on its own — the repair call returns exactly one segment's target — and re-QA that segment alone (ADR-0038). |
 
 ## phase-d-backward-revision {#phase-d-backward-revision}
 
@@ -221,13 +220,15 @@ A single quality-vs-speed dial sets pipeline **mechanics** (FR-ALGO-11). It does
 `τ` is owned solely by the **review-mode dial** (Unattended/Assisted/Manual); a manual Settings override is not offered
 in this build (DD-45, `07_SETTINGS.md`). `τ_judge` equals `τ`.
 
-| Parameter                            | Fast       | Balanced | Max      |
-|--------------------------------------|------------|----------|----------|
-| Chunk size (paragraphs/tokens)       | Larger     | Medium   | Smaller  |
-| Preceding-target blocks              | Fewer (≤1) | ~2       | ~3 (cap) |
-| Repair budget N (QA re-entry rounds) | 1          | 2        | 3        |
-| Judge runs                           | Off        | On       | On       |
-| Backward revision runs               | Off        | Off      | On       |
+| Parameter                            | Fast                | Balanced   | Max        |
+|--------------------------------------|---------------------|------------|------------|
+| Chunk token budget                   | Larger              | Medium     | Smaller    |
+| Preceding-target blocks              | Fewer (≤1)          | ~2         | ~3 (cap)   |
+| Fixing call (`RepairMode`)           | Marks-only re-draft | One repair | One repair |
+| Reviewer passes per chunk            | 0                   | 1          | 2          |
+| Backward revision runs               | Off                 | Off        | On         |
+
+The batch size is not a dial row: it is the model profile's. A review retry runs with no repair.
 
 ## generation-parameters {#generation-parameters}
 
@@ -239,7 +240,8 @@ paraphrase-away-from-source failure mode. The per-phase guidance is:
 |-------------------------------------------|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | Draft translation                        | 0.2 (default)            | Faithful and reproducible; enough flexibility for fluent target phrasing without inventing content.                |
 | Judge / deterministic-QA-assisting judge | 0.1                      | A scorer should be near-deterministic so the same draft yields the same verdict; τ comparisons stay stable.        |
-| Directed fix                             | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
+| Repair                                   | 0.1                      | A second try that keeps what the draft got right and fixes the named defects.                                                      |
+| Directed fix (reviewer's refused edit)   | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
 | Backward revision                        | 0.2                      | Consistency alignment across the book; determinism preferred.                                                      |
 
 The default is **0.2**. Per model, Settings › Models can replace these values (`07_SETTINGS.md#models-tab`: the
