@@ -174,7 +174,7 @@ a pair whose double negation matches, ru→uk).
 | `names.policy.*`, `names.terms`, `names.convention` | the suggestion call's `{{nameRule}}`: the policy lines and neutral convention live in `generic`, a language's own spelling convention in its file |
 | `namesInflect`, `translit` | whether the language declines proper names (`true` or `false`; absent means `true`, so an unknown target inflects), which decides the lock rule; and the letter table `source>letters` of the languages whose names are transliterated (`sh>ш a>ае`), which the suggestion call checks a transliteration against (`#glossary-target-suggestions`) |
 | `titleRenderings` | in a pair file: forms of address and their one fixed rendering, `source>target` (`mr>пан`); the suggestion call renders a matching term by it without a model call, locked with the rule as origin (`#glossary-target-suggestions`) |
-| `status` | `tested` or `untested`; the Book Brief shows a note under the target box for any language that is not `tested` |
+| `status` | `tested` or `untested`; the Book Brief shows a note under the target box for any language that is not `tested`. Only BookLoom's own tests count as tested: a maker's claim for a language never sets `tested`, and the model advice line (`04_LLM_PROVIDERS_AND_MODELS.md#candidate-models`) is silent about a pair only where a BookLoom run for it is recorded |
 
 Size limits, enforced by `LanguageFilesTest` in estimated tokens: a target's rules 200 (its reviewer checks a further
 60), a source's notes 80, a pair's rules 100. The rules of languages whose files were drafted for native-speaker review

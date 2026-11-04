@@ -997,7 +997,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
     2. Settings › Models, choose `qwen2.5:1.5b`: identity line, "Declared languages: …" without uk, "Model facts as of 2026-10-28" at the foot.
     3. Open an invented ru→uk book, choose `qwen2.5:1.5b`, go to Start: one warning naming Ukrainian; Start works.
     4. Same book on `hf.co/bartowski/utter-project_EuroLLM-22B-Instruct-2512-GGUF:IQ4_NL`: no language line.
-    5. Same book on `gemma4:e4b-mlx`: the quieter line naming Russian and Ukrainian; no quant line (BookLoom measured e4b at nvfp4).
+    5. Same book on `gemma4:e4b-mlx`: the quieter line "The maker of Gemma 4 does not say which languages it supports. Check a few paragraphs first." (it names no language; BookLoom tested e4b for English → Ukrainian only, so a ru→uk book keeps the line); no quant line (BookLoom measured e4b at nvfp4).
     6. Paste `https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/blob/main/Qwen3.5-4B-Q4_K_M.gguf` into Add a model id: the "Understood:" line and the `ollama pull` text; nothing downloads.
   - **Done when:** the gate tail and the hand-check notes are in the merge commit.
 

@@ -140,11 +140,32 @@ A row is picked by the parsed name alone, by the whole family word and never by 
 reports never picks a row**: `llama` and `deepseek2` are shared by unrelated models, and a family with no row of its
 own (Nemotron 3.5 Bolt) keeps the default profile and its own unknown languages whatever architecture its server
 reports. A name that reads a reasoning, thinking or vision variant never falls to the plain instruct row of its family.
-The rows for Ministral 3 Reasoning, EuroLLM and Qwen 2.5's smallest sizes cover models the owner runs; further rows
-and the fine-tune fallback to a base family come with the language and quant advice. The rows are guidance for handling,
+The rows for Ministral 3 Reasoning, EuroLLM and Qwen 2.5's smallest sizes cover models the owner runs; a fine-tune takes
+its base family's handling and languages but never its verdict (`llm: profile`, `knowledge`). The rows are guidance for handling,
 not a supported-model guarantee or a fixed list (DD-42). What the app must handle regardless is captured by the
 response-handling contract (`#response-handling`, DD-33): request structured output where supported, strip reasoning,
 tolerate variance, fall back to text.
+
+**Quant and declared-languages advice (built, redesign group 9).** Two bundled tables, `quant-tiers.csv` and
+`declared-languages.csv` in `llm: knowledge`, each with a `# data-version:` line (`scripts/model-knowledge-check.py`
+compares them with the research data), feed advice that is shown and never enforced: no line blocks Start, changes a
+setting or sends a request.
+
+- *Quant.* `QuantAdvisor` takes the quant token from the name (`Q4_K_M`, `IQ4_NL`, `UD-Q4_K_XL`, `nvfp4`), or from the
+  server's facts when it reports one (the facts win on which table row applies), and judges it against the model's size
+  class (`SizeClassifier`: small up to 5B, mid up to 16B, large above, MoE by active parameters). The tier is one of
+  excellent, good, acceptable, poor, unusable, removed (an old format) or not measured (no row); a quantisation-aware
+  Q4_0 build reads the `Q4_0_QAT` row. The chip `token · tier` appears beside each model in every picker; a model whose
+  name has no quant token shows no chip until the server's facts are read (select, Test or Detect again). The sentence
+  under the tier is quiet for good and excellent and names the target language for the others.
+- *Declared languages.* `LanguageAdvisor` says whether the maker lists a language: a **complete** list can say "not
+  declared"; a list that only names languages (positive-only) can say "declared" but never "missing"; a model whose
+  maker says nothing is unknown; a fine-tune reads its base model's list and says so. The server's own language list
+  never overrides the table. A language counts as tested only where BookLoom's own run exists for that pair (the row's
+  evidence); a maker's claim does not.
+- *Where it is shown.* Settings › Models (`07_SETTINGS.md#models-tab`) and, as one line, at Start (`StartAdviceLines`):
+  a warning where a complete list leaves out the source or target, a quieter information line where the maker says
+  nothing or only a base model lists it, nothing where the model declares the language or BookLoom tested the pair.
 
 **Embedding models are used only by the local prompt-eval harness**
 (`04_Build_and_Release/06_TESTING_STRATEGY.md#prompt-evals`), never by the app: a small multilingual embedder is the

@@ -153,6 +153,18 @@ model or tab with unsaved changes asks "Save the settings of gemma4:e4b · Ollam
 | Measured seconds (read-only) | `ModelSettings.secondsPerCall` (`MeasuredSpeed`: seconds and `TEST` or `RUN`) | none | stored on the model, never typed: the inference test writes the seconds per segment of a draft (`TEST`); the end of every names pass and run writes the mean wall time of its successful calls per call kind (`RUN`; `DRAFT` per drafted segment, other kinds per call). The names-pass estimate and the Book Brief's time line read them: "measured on this model" only when a run measured every kind the plan makes, else a range marked "estimate" with its source, and no time when nothing was measured | FR-BRIEF-08 |
 | Per-provider remembered model | derived | last used        | —                                                                                                     | FR-MODEL-04                           |
 
+**Model advice lines (built, redesign 9.7).** Under the chooser, wrapped plain lines, each shown only while it has
+something to say; none is a dialog and none changes a setting. In order: *identity* ("Understood: {model} · {quant} ·
+exact match / recognised as {family}, not this exact model / recognised as a fine-tune of {base} (behaviour of {base}) /
+not recognised", with "(server reports {quant})" when the name and the server disagree); the *quant* sentence for the
+tier, naming the project's target language (none for excellent); the *languages* line ("Declared languages: {n}
+(includes uk, ru)", "English only", "not stated by the maker", or "Declared for its base model {base}: …", then "· BookLoom
+tested it for {source} → {target}" where a run exists); the *licence* note for a noncommercial-only model; and the
+*thinking* hint for an Ollama download that cannot turn thinking off. The foot of the tab reads "Model facts as of
+{date}", the `data-version` of the bundled knowledge. At Start the same advice becomes at most one language line, a quant
+line only for a poor, unusable or removed quant (or an acceptable one on a model of 5B or less, unless BookLoom measured
+it), a licence line and a thinking line; Start stays enabled.
+
 There is **no separate judge or helper model**: the reviewer and every other call use the project's one chosen model.
 These provider + model choices are the **defaults for new projects**; each project keeps its own binding thereafter
 (`04_LLM_PROVIDERS_AND_MODELS.md#per-project-binding`, DD-31).

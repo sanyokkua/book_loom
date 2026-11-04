@@ -1105,6 +1105,10 @@ suite (`mini-en` v2 root `febe1374fd3a…`, `mini-ru` v2 root `852efa31cc1e…`)
   character in `mini-en`) and the pilots are in `.temporary_context/arm4/void-runs/` and are not counted. `MiniReport` now writes
   every repeat's stored targets and characters (`repeats`), which these counts were read from.
 
+**Arm 8: quants of e4b (task 9.9).** Not run: it needs several e4b quants and only `gemma4:e4b-mlx` (nvfp4) is installed; a pull
+needs the owner's approval. Arm 8 not run – needs owner-approved pull of other e4b quants; advice unchanged (the NVFP4 cell of
+`quant-tiers.csv` keeps its `# deliberate:` line).
+
 **Task 3.4: LM Studio and llama-server error rows.** The fixtures under `modules/llm/src/test/resources/errors/lmstudio/`
 and `errors/llamacpp/` are named `<name>.<status>.json|sse` and hold only the server's own sentences. None of them was
 recorded from a running server in this task, so every status is, for now, taken from the research folder or chosen by
