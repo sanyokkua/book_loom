@@ -159,6 +159,11 @@ final class WholeBookRun {
     }
 
     static Project project(final Path book, final QualityDial dial) {
+        return project(book, dial, "en", "uk");
+    }
+
+    static Project project(
+            final Path book, final QualityDial dial, final String sourceLanguage, final String targetLanguage) {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(),
                 new LlmModule(),
@@ -168,7 +173,7 @@ final class WholeBookRun {
         final ProjectService projects = injector.getInstance(ProjectService.class);
         final ImportedBook imported = dataOf(projects.create(book));
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
-        dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief("en", "uk", dial)));
+        dataOf(projects.updateBrief(id, TranslationJobTestSupport.brief(sourceLanguage, targetLanguage, dial)));
         return new Project(injector, id);
     }
 
@@ -258,7 +263,7 @@ final class WholeBookRun {
         }
     }
 
-    private static ExportReport export(final Project project, final Path destination) {
+    static ExportReport export(final Project project, final Path destination) {
         final ExportRequest request = new ExportRequest(
                 project.id(),
                 destination,

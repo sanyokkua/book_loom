@@ -1,1 +1,58 @@
-[]
+[
+ {
+  "id": "dash-lost",
+  "source": "— Ты придёшь завтра? — спросил он.",
+  "target": "Ти прийдеш завтра? — спитав він.",
+  "expect": "leading-dash",
+  "note": "the dialogue dash opening the line is lost"
+ },
+ {
+  "id": "heading-number-lost",
+  "source": "4. Ночной перевал",
+  "target": "Нічний перевал",
+  "expect": "heading-number",
+  "note": "the heading's number is lost"
+ },
+ {
+  "id": "line-left-in-russian",
+  "source": "Она долго стояла у окна и смотрела на пустую улицу, где не было ни одного человека.",
+  "target": "Она долго стояла у окна и смотрела на пустую улицу, где не было ни одного человека.",
+  "expect": "leftover-language",
+  "note": "a whole line of 12+ words stays Russian"
+ },
+ {
+  "id": "residue-word",
+  "source": "Они сказали, что ключ в ящике.",
+  "target": "Вони сказали, что ключ у шухляді.",
+  "expect": "function-word-residue",
+  "note": "one Russian function word inside Ukrainian"
+ },
+ {
+  "id": "stress-mark",
+  "source": "Ларин вышел из дома.",
+  "target": "Ла́рин вийшов із дому.",
+  "expect": "stress-mark",
+  "note": "a combining acute left in the target"
+ },
+ {
+  "id": "clean-control",
+  "source": "Они сказали, что ключ в ящике.",
+  "target": "Вони сказали, що ключ у шухляді.",
+  "expect": "none",
+  "note": "a clean translation raises nothing"
+ },
+ {
+  "id": "content-word-error",
+  "source": "Он взял со стола тяжёлый нож.",
+  "target": "Він взяв зі столу важку ложку.",
+  "expect": "expected-miss",
+  "note": "a wrong content word; only the proofread can catch it"
+ },
+ {
+  "id": "mangled-stem",
+  "source": "Она вернулась домой поздно вечером.",
+  "target": "Вона повернуласяся додому пізно ввечері.",
+  "expect": "expected-miss",
+  "note": "a mangled stem; only the proofread can catch it"
+ }
+]

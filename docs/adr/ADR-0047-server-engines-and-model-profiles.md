@@ -4,8 +4,6 @@
 **Deciders:** owner (decisions D-5, D-6, D-2 of the 2026-10-27 pipeline research)
 **Amends:** ADR-0043 (stored shapes reset once more), ADR-0044 (clarified, not changed)
 
-ADR-0046 is intentionally unused (reserved).
-
 ## Context and problem statement
 
 Every server speaks Chat Completions, but the same intent needs different fields on each: the answer-length cap,

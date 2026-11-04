@@ -1009,7 +1009,7 @@ note), and a failing segment gets exactly one repair at Balanced and Max, none a
 findings keep `QaFinding.kind` as a string and do not change the fingerprint; `SegmentRecord` loses `repairRounds`,
 which changes it, so the next launch sets the database aside (ADR-0043).
 
-- [ ] 10.1 Write the group's acceptance test, add the `detectors-ru-uk` cases red, and write ADR-0046 before any code. The ADR records the decision the group makes real; the tests prove it. → :pipeline, docs
+- [x] 10.1 Write the group's acceptance test, add the `detectors-ru-uk` cases red, and write ADR-0046 before any code. The ADR records the decision the group makes real; the tests prove it. → :pipeline, docs
   - **Satisfies:** enabling work for design D12, D13 and D28
   - **Depends on:** groups 4, 6, 7; arm 3b's result (group 6)
   - **Read:** design.md D12–D14, D28; `docs/adr/template.md`; `pipeline: SegmentTranslator`, `pipeline: export/ExportServiceImpl`; the `detectors-ru-uk` runner and empty manifest from group 1
