@@ -256,6 +256,10 @@ finding, adds a forbidden letter or raises the count of source-only function wor
 `NameForms.forms` of a pinned or locked target, drops a map name, loses a sentence or a negation, loses a number,
 quotes, dashes or clauses, adds a new Latin run or a stress mark, or raises the count of any of the findings
 `alphabet`, `language-identity`, `script-purity`, `number`, `terminal-mark`, `address-parity` or `sentence-count`.
+The counted vetoes are compared with the current text and the source: a veto fires only if the candidate loses what
+the source holds (it falls below both; a number counts only when the source holds it; negations are bound by the
+source only when its language has a negation list), so a repair that replaces a wrong number with the source's,
+removes a stray quote or drops a doubled sentence is not refused for it.
 A candidate that passes the vetoes is kept when its score is not higher and the finding that triggered the edit is
 cleared or the score is strictly lower; the score weighs a blocking finding 5, a repair-level (soft) one 1 and an
 audit one 1. The one repair uses it; the Proofread stage and the export pass reach it in later groups of the redesign.

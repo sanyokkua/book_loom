@@ -493,7 +493,7 @@ IF the re-draft of a segment still loses formatting marks, or the keep rule reje
 
 ### Requirement: Reject a candidate text that breaks a never-worse veto
 
-The never-worse gate SHALL reject a candidate text, keeping the current one, when the candidate fails a hard gate, adds a BLOCK finding, adds a source-language word, writes a name in a form the book map does not list for it, drops a map name, has fewer sentences or fewer negation words than the current text, loses a number, a quote, a dash or a clause, or adds a Latin run or a stress mark.
+The never-worse gate SHALL reject a candidate text, keeping the current one, when the candidate fails a hard gate, adds a BLOCK finding, adds a source-language word, writes a name in a form the book map does not list for it, drops a map name, has fewer sentences or fewer negation words, loses a number, a quote, a dash or a clause, or adds a Latin run or a stress mark. Each veto compares the candidate with the current text and the source: a counted veto (sentences, negation words, numbers, quotes, dashes, clauses) fires only if the candidate loses what the source holds — it falls below both the current text and the source — so a repair that removes a wrong number, a stray quote or a doubled sentence is not rejected for it.
 
 **Source**: `design.md#d14--the-never-worse-gate`. In plain words: every edit the program makes after a draft (the one repair, a proofread rewrite) must pass this one test, so a fix can never cost the book something it had. The earlier reviewer edits were checked by three different 'no new blocker' rules; this is the single replacement.
 
@@ -524,18 +524,28 @@ The never-worse gate SHALL reject a candidate text, keeping the current one, whe
 
 #### Scenario: A lower sentence count is rejected
 
-- **WHEN** the current text has 3 sentences and the candidate has 2
+- **WHEN** the source and the current text have 3 sentences and the candidate has 2
 - **THEN** the gate rejects it
 
 #### Scenario: A lost negation is rejected
 
-- **WHEN** the current text holds `не` twice and the candidate holds it once
+- **WHEN** the current text holds `не` twice, the candidate holds it once, and the source holds two negation words or its language has no negation list
 - **THEN** the gate rejects it
 
 #### Scenario: A lost number is rejected
 
-- **WHEN** the current text holds `40` and the candidate does not
+- **WHEN** the source and the current text hold `40` and the candidate does not
 - **THEN** the gate rejects it
+
+#### Scenario: A wrong number replaced by the source's is kept
+
+- **WHEN** the source is `3. Night pass`, the current text `5. Нічний перевал` and the candidate `3. Нічний перевал`
+- **THEN** no veto rejects it, because `5` is a number the source does not hold
+
+#### Scenario: A stray quote or a doubled sentence removed is kept
+
+- **WHEN** the source holds no quote mark and one sentence, and the candidate removes a stray `«` or a doubled sentence of the current text
+- **THEN** no veto rejects it, because the candidate does not fall below the source
 
 #### Scenario: A new stress mark is rejected
 

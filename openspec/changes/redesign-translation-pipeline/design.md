@@ -603,10 +603,14 @@ task edits the delta requirement and this file's line; the result is written int
   finding and whether the focus is an unmarked Max paragraph.
 - **Vetoes (any → Reject):** the placeholder gate fails; a new blocking finding; a forbidden letter appears or the
   source-only function-word count rises; a name form outside `NameForms.forms` of a pinned or locked target; a map name
-  dropped; fewer sentences (`Sentences.countLenient`); `NegationCount.of(candidate) < NegationCount.of(current)`; a
-  number, quotes, dashes or clauses lost; a new Latin run; a stress mark; any per-check finding count rises for
+  dropped; fewer sentences (`Sentences.countLenient`); fewer negations (`NegationCount`); a number, quotes, dashes or
+  clauses lost; a new Latin run; a stress mark; any per-check finding count rises for
   `alphabet`, `language-identity`, `function-word-residue` (counted on its own), `script-purity`, `number`,
-  `terminal-mark`, `address-parity`, `sentence-count`.
+  `terminal-mark`, `address-parity`, `sentence-count`. The counted vetoes (sentences, negations, numbers, quotes,
+  dashes, clauses) are compared with the current text **and the source**: a veto fires only if the candidate loses what
+  the source holds — `candidate < min(current, source)`, a number only when the source holds it, a negation bound by
+  the source only when its language has a negation list — so a repair that removes a wrong number, a stray quote or a
+  doubled sentence passes (group-10 review).
 - **Score.** `WEIGHT_BLOCKING` (5) × blocking + `WEIGHT_SOFT` (1) × soft + `WEIGHT_AUDIT` (1) × audit doubts (from
   `QaEvaluator` and `FinalAudit.checksOf`). Keep iff no veto, score not higher, and the triggering finding cleared or
   the score strictly lower, or, for an unmarked Max focus only, changed words ≤ `REWRITE_CAP` (0.35). Weights, the cap
