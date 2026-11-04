@@ -37,7 +37,8 @@ class ReviewDeskLabelsTest extends ReviewDeskTestBase {
     @CsvSource({
         "audit:negation, en, negation",
         "audit:terminal-mark, en, terminal mark",
-        "audit:source-variants, en, source variants",
+        "audit:source-variants, en, repeated passage translated differently",
+        "audit:source-variants, uk, по-різному перекладений повтор",
         "audit:name-variants, en, name variants",
         "audit:token-leak, en, leaked placeholder",
         "audit:function-word-residue, en, untranslated word",

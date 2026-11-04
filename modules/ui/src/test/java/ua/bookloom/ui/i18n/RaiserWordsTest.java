@@ -99,6 +99,15 @@ class RaiserWordsTest {
         assertThat(RaiserWords.raiser(messages, raisedBy)).isNotEqualTo(RaiserWords.raiser(messages, "no-such-check"));
     }
 
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+        "en, the check for a repeated passage translated differently",
+        "uk, перевірка по-різному перекладених повторів",
+    })
+    void raiser_sourceVariants_namesTheRepeatedPassage(final String tag, final String expected) {
+        assertThat(RaiserWords.raiser(messagesFor(tag), "source-variants")).isEqualTo(expected);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"audit:negation", "negation"})
     void checkOf_prefixOrNot_givesTheCheck(final String raisedBy) {
@@ -109,7 +118,8 @@ class RaiserWordsTest {
     @CsvSource({
         "audit:negation, en, negation",
         "audit:terminal-mark, en, terminal mark",
-        "audit:source-variants, en, source variants",
+        "audit:source-variants, en, repeated passage translated differently",
+        "audit:source-variants, uk, по-різному перекладений повтор",
         "audit:name-variants, en, name variants",
         "audit:token-leak, en, leaked placeholder",
         "audit:function-word-residue, en, untranslated word",
