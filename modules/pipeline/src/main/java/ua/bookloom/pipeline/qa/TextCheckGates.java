@@ -16,6 +16,7 @@ import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
+import ua.bookloom.pipeline.checks.TextCheckInput;
 import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.glossary.IdentityRule;
@@ -40,7 +41,7 @@ final class TextCheckGates {
             return List.of();
         }
         final String target = NameRemoval.targetWithoutNames(input);
-        final List<CheckResult> results = new ArrayList<>(TextChecks.run(
+        final List<CheckResult> results = new ArrayList<>(TextChecks.run(new TextCheckInput(
                         NameRemoval.sourceWithoutNames(input),
                         target,
                         input.sourceLanguage(),
@@ -48,7 +49,7 @@ final class TextCheckGates {
                         input.glossaryPairs(),
                         keptAsWritten(input),
                         input.unitRole(),
-                        input.pinnedTargets())
+                        input.pinnedTargets()))
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());

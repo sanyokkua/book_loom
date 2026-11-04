@@ -23,6 +23,8 @@ import ua.bookloom.pipeline.qa.CheckLevel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class NumberCheck {
 
+    private static final String AS_SOURCE_DOES = " as the source does.";
+
     private static final Pattern NUMBER = Pattern.compile("(?<![\\p{L}\\p{M}\\d])\\d+(?:[.,:]\\d+){0,32}");
     private static final Pattern GROUP_SPACE = Pattern.compile("(?<=\\d)[\\s\u00A0\u202F](?=\\d{3}(?!\\d))");
     private static final Pattern THOUSANDS = Pattern.compile("\\d{1,3}(?:[.,]\\d{3})+");
@@ -93,7 +95,7 @@ final class NumberCheck {
                 FindingKind.NUMBER_CHANGED,
                 new TextSpan(at, at + written.length(), written),
                 "The source starts with the number " + wanted + " and the translation starts with " + written
-                        + " instead: start with " + wanted + " as the source does.",
+                        + " instead: start with " + wanted + AS_SOURCE_DOES,
                 CheckLevel.BLOCK);
     }
 
@@ -121,9 +123,9 @@ final class NumberCheck {
         final TextSpan span = at < 0 ? new TextSpan(0, 0, "") : new TextSpan(at, at + shown.length(), shown);
         final String explanation = shown.isEmpty()
                 ? "The source has the number " + number + " and the translation does not: write " + number
-                        + " as the source does."
+                        + AS_SOURCE_DOES
                 : "The source has the number " + number + " and the translation has " + shown + " instead: write "
-                        + number + " as the source does.";
+                        + number + AS_SOURCE_DOES;
         return new CheckFinding(FindingKind.NUMBER_CHANGED, span, explanation, CheckLevel.REPAIR);
     }
 }

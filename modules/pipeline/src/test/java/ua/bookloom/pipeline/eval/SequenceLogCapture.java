@@ -26,7 +26,8 @@ final class SequenceLogCapture implements AutoCloseable {
             Pattern.compile("Batch item falls back to its own draft segmentId=(\\S+) status=(\\S+) problems=(.*)");
     private static final Pattern FIRST_EVALUATION = Pattern.compile("Evaluated segment=(\\S+) repairs=0 ");
     private static final String GATES_FAILED = "hardGatesPass=false";
-    private static final Pattern FIRST_REPAIR = Pattern.compile("one repair segment=(\\S+) findings=\\[(.*)] keep=.*");
+    private static final Pattern FIRST_REPAIR =
+            Pattern.compile("one repair segment=(\\S+) findings=\\[(.*?)] keep=.*+");
     private static final Pattern COMMA = Pattern.compile(",\\s*");
     private static final String REFUSED = "Edit refused";
 

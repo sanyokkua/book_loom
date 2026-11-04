@@ -47,6 +47,6 @@ final class DialogueDash {
     }
 
     private static boolean followedBySpace(final String text, final int index) {
-        return index < text.length() && (text.charAt(index) == ' ' || text.charAt(index) == ' ');
+        return index < text.length() && (text.charAt(index) == ' ' || text.charAt(index) == '\u00A0');
     }
 }

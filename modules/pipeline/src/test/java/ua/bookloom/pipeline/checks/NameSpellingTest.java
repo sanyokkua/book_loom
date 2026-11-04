@@ -13,7 +13,7 @@ class NameSpellingTest {
     private static List<CheckFinding> run(
             final String source, final String target, final String pair, final boolean pinned) {
         final String rendering = pair.substring(pair.indexOf('→') + 1).strip();
-        return TextChecks.run(
+        return TextChecks.run(new TextCheckInput(
                 source,
                 target,
                 "en",
@@ -21,7 +21,7 @@ class NameSpellingTest {
                 List.of(pair),
                 List.of(),
                 UnitRole.BODY,
-                pinned ? List.of(rendering) : List.of());
+                pinned ? List.of(rendering) : List.of()));
     }
 
     @Test

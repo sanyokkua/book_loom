@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToLongFunction;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -136,16 +137,16 @@ final class NeverWorseVetoes {
         return qa.findings().stream().collect(Collectors.groupingBy(QaFinding::raisedBy, Collectors.counting()));
     }
 
-    private static boolean rises(final Pair pair, final Function<String, Long> measure) {
-        final long before = measure.apply(pair.old());
-        final long after = measure.apply(pair.fresh());
+    private static boolean rises(final Pair pair, final ToLongFunction<String> measure) {
+        final long before = measure.applyAsLong(pair.old());
+        final long after = measure.applyAsLong(pair.fresh());
         log.trace("Never-worse measure {}->{}", before, after);
         return after > before;
     }
 
-    private static boolean falls(final Pair pair, final Function<String, Long> measure) {
-        final long before = measure.apply(pair.old());
-        final long after = measure.apply(pair.fresh());
+    private static boolean falls(final Pair pair, final ToLongFunction<String> measure) {
+        final long before = measure.applyAsLong(pair.old());
+        final long after = measure.applyAsLong(pair.fresh());
         log.trace("Never-worse measure {}->{}", before, after);
         return after < before;
     }

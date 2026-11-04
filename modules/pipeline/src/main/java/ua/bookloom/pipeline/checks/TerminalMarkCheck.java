@@ -18,7 +18,7 @@ import ua.bookloom.pipeline.qa.CheckLevel;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TerminalMarkCheck {
 
-    private static final String CLOSERS = "\"'«»“”„‘’‹›)]}  \t\r\n";
+    private static final String CLOSERS = "\"'«»“”„‘’‹›)]}\u00A0 \t\r\n";
     private static final String ASCII_ELLIPSIS = "...";
 
     /** The class of a paragraph's last mark. */

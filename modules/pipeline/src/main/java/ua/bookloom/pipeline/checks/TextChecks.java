@@ -69,76 +69,59 @@ public final class TextChecks {
             final List<String> glossaryPairs,
             final List<String> keptTerms,
             final UnitRole role) {
-        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, List.of());
+        return run(new TextCheckInput(
+                source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, List.of()));
     }
 
     /**
      * Runs every deterministic text check on one segment, knowing which glossary renderings are pinned.
      *
-     * @param pinnedTargets the renderings of the pinned glossary entries among the pairs: a form the language's
-     *     table lists for one is no spelling error, and a name-spelling finding on one blocks; on any other rendering
-     *     it is a note; never null
      * @return the findings, as {@link #run(String, String, String, String, List, List)}
-     * @see #run(String, String, String, String, List, List, UnitRole)
      */
-    public static List<CheckFinding> run(
-            final String source,
-            final String target,
-            @Nullable final String sourceLanguage,
-            final String targetLanguage,
-            final List<String> glossaryPairs,
-            final List<String> keptTerms,
-            final UnitRole role,
-            final List<String> pinnedTargets) {
-        Objects.requireNonNull(pinnedTargets, "pinnedTargets");
-        Objects.requireNonNull(role, "role");
-        Objects.requireNonNull(source, "source");
-        Objects.requireNonNull(target, "target");
-        Objects.requireNonNull(targetLanguage, "targetLanguage");
-        Objects.requireNonNull(glossaryPairs, "glossaryPairs");
-        Objects.requireNonNull(keptTerms, "keptTerms");
-        if (NonProse.isLocatorOnly(target)) {
+    public static List<CheckFinding> run(final TextCheckInput input) {
+        Objects.requireNonNull(input, "input");
+        if (NonProse.isLocatorOnly(input.target())) {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
         }
-        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, pinnedTargets);
+        return runOn(input);
     }
 
     // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
-    private static List<CheckFinding> runOn(
-            final String original,
-            final String originalTarget,
-            @Nullable final String sourceLanguage,
-            final String targetLanguage,
-            final List<String> glossaryPairs,
-            final List<String> keptTerms,
-            final UnitRole role,
-            final List<String> pinnedTargets) {
-        final String source = Identifiers.masked(original);
-        final String target = Identifiers.masked(originalTarget);
-        final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
+    private static List<CheckFinding> runOn(final TextCheckInput input) {
+        final @Nullable String sourceLanguage = input.sourceLanguage();
+        final String targetLanguage = input.targetLanguage();
+        final String source = Identifiers.masked(input.source());
+        final String target = Identifiers.masked(input.target());
+        final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(input.source(), input.target()));
         ResidueCheck.find(source, target, targetLanguage).ifPresent(findings::add);
         findings.addAll(ScriptPurityCheck.find(source, target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
-        if (role != UnitRole.BODY) {
-            log.debug("Latin run check skipped: the unit is {}", role);
-        } else if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
-            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), keptTerms));
-        }
+        latinRun(input, source, target, findings);
         findings.addAll(AddressMixCheck.find(target, targetLanguage));
         findings.addAll(AddressMixCheck.parity(source, target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
-        findings.addAll(
-                glossaryNameChecks(source, target, sourceLanguage, targetLanguage, glossaryPairs, pinnedTargets));
+        findings.addAll(glossaryNameChecks(
+                source, target, sourceLanguage, targetLanguage, input.glossaryPairs(), input.pinnedTargets()));
         findings.addAll(NumberCheck.find(source, target));
-        TerminalMarkCheck.find(source, target, role).ifPresent(findings::add);
+        TerminalMarkCheck.find(source, target, input.role()).ifPresent(findings::add);
         if (!findings.isEmpty()) {
             report(findings);
         }
         return List.copyOf(findings);
+    }
+
+    private static void latinRun(
+            final TextCheckInput input, final String source, final String target, final List<CheckFinding> findings) {
+        if (input.role() != UnitRole.BODY) {
+            log.debug("Latin run check skipped: the unit is {}", input.role());
+        } else if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
+            findings.addAll(
+                    LatinRunCheck.find(source, target, Languages.scriptOf(input.targetLanguage()), input.keptTerms()));
+        }
     }
 
     // The vocative and the swap check hold the target to the glossary's renderings with the same stem rule.

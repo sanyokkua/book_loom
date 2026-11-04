@@ -30,21 +30,21 @@ class ExportStressTest {
     void export_translatedSegment_writesNoStressMark() {
         final Map<String, String> written = written("uk", false);
 
-        assertThat(written.get("s1")).isEqualTo("Вона прийшла додому.");
+        assertThat(written).containsEntry("s1", "Вона прийшла додому.");
     }
 
     @Test
     void export_languageWithoutTheStripKey_keepsTheMark() {
         final Map<String, String> written = written("bg", false);
 
-        assertThat(written.get("s1")).isEqualTo("Вона́ прийшла́ додо́му.");
+        assertThat(written).containsEntry("s1", "Вона́ прийшла́ додо́му.");
     }
 
     @Test
     void export_fallbackSegment_keepsSourceMark() {
         final Map<String, String> written = written("uk", true);
 
-        assertThat(written.get("s1")).isEqualTo(MARKED_SOURCE);
+        assertThat(written).containsEntry("s1", MARKED_SOURCE);
     }
 
     private static Map<String, String> written(final String target, final boolean isFallback) {

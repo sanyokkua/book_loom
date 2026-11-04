@@ -28,7 +28,8 @@ class ReviewDeskLabelsTest extends ReviewDeskTestBase {
     }
 
     private String firstRowLine() {
-        return fx(() -> ((Label) rowList().lookup(".review-row-line")).getText());
+        final Label line = fx(() -> (Label) rowList().lookup(".review-row-line"));
+        return fx(line::getText);
     }
 
     // IF a "Worth a second look" row showed only its text, THEN the person would not know which check doubts it.

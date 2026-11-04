@@ -104,10 +104,10 @@ final class BriefSaver {
         if (error != null) {
             log.warn("the brief was not saved: code {}", error.code());
         } else if (change instanceof ProjectChange.Saved stored) {
-            final int rechecked = stored.rechecked();
-            log.debug("the brief was saved, {} decided segments re-checked", rechecked);
-            if (rechecked > 0) {
-                this.rechecked.set(rechecked);
+            final int count = stored.rechecked();
+            log.debug("the brief was saved, {} decided segments re-checked", count);
+            if (count > 0) {
+                rechecked.set(count);
             }
             outcomes.stored(save.projectId(), save.brief());
         } else if (change != null) {

@@ -133,14 +133,9 @@ final class OneRepair {
             case RepairOutcome.StepError(var error) -> Result.err(error);
             case RepairOutcome.FlagNow(var error) ->
                 Result.ok(refused(segmentId, standing, defects, null, error, "flag-now"));
-            case RepairOutcome.Failed failed ->
+            case RepairOutcome.Failed(var gateFinding, var rejectedForm) ->
                 Result.ok(refused(
-                        segmentId,
-                        standing,
-                        defects,
-                        failed.rejectedForm(),
-                        null,
-                        failed.gateFinding() == null ? "unreadable" : "gate"));
+                        segmentId, standing, defects, rejectedForm, null, gateFinding == null ? "unreadable" : "gate"));
             case RepairOutcome.Evaluated evaluated -> Result.ok(judged(outcome, standing, defects, evaluated));
         };
     }
@@ -224,7 +219,10 @@ final class OneRepair {
                     outcome.segment().id(),
                     same,
                     worse);
-            return same || worse ? new Verdict.Reject(same ? "no-change" : "blockers") : new Verdict.Keep();
+            if (same) {
+                return new Verdict.Reject("no-change");
+            }
+            return worse ? new Verdict.Reject("blockers") : new Verdict.Keep();
         }
         final WindowFacts facts = new WindowFacts(
                 outcome.maskedSource(),

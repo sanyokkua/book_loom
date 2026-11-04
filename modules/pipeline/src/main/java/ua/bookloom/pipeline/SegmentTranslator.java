@@ -42,6 +42,9 @@ import ua.bookloom.pipeline.run.PauseDecider;
 @Slf4j
 public final class SegmentTranslator {
 
+    private static final String SEGMENT = "segment";
+    private static final String CONTEXT = "context";
+
     /** The code repairs of a refused reply, in their order: put back what it lost, then place every token again. */
     private static final List<PlaceholderRepair> CODE_REPAIRS =
             List.of(PlaceholderRepair.RESTORE_MISSING, PlaceholderRepair.REWRAP_ALL);
@@ -108,8 +111,8 @@ public final class SegmentTranslator {
             final ProtectedMask mask,
             final String extraInstruction,
             final boolean lowerTemperature) {
-        Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(context, CONTEXT);
         Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(extraInstruction, "extraInstruction");
         final DraftAttempt attempt = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
@@ -147,8 +150,8 @@ public final class SegmentTranslator {
      */
     public RepairCall repairCall(final Segment segment, final DraftContext context, final ProtectedMask mask) {
         final DraftAttempt attempt = DraftAttempt.of(
-                Objects.requireNonNull(segment, "segment"),
-                Objects.requireNonNull(context, "context"),
+                Objects.requireNonNull(segment, SEGMENT),
+                Objects.requireNonNull(context, CONTEXT),
                 Objects.requireNonNull(mask, "mask"));
         return (previous, defects, through) -> repair(attempt, previous, defects, through);
     }
@@ -231,8 +234,8 @@ public final class SegmentTranslator {
             final int budgetTokens,
             final String extraInstruction,
             final boolean lowerTemperature) {
-        Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(context, CONTEXT);
         Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(splitter, "splitter");
         Objects.requireNonNull(extraInstruction, "extraInstruction");

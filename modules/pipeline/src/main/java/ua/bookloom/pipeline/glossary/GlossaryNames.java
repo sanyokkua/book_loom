@@ -18,6 +18,8 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class GlossaryNames {
 
+    private static final String ENTRIES = "entries";
+
     private static final String ARROW = " → ";
 
     /**
@@ -27,7 +29,7 @@ public final class GlossaryNames {
      * @return the lines, each entry's term first; never null, empty when no entry has a target
      */
     public static List<String> pairs(final List<GlossaryEntry> entries) {
-        Objects.requireNonNull(entries, "entries");
+        Objects.requireNonNull(entries, ENTRIES);
         // Each caller logs the count it built; a line here would repeat it for every chunk and every check.
         return entries.stream()
                 .filter(entry -> entry.target() != null && !entry.target().isBlank())
@@ -43,7 +45,7 @@ public final class GlossaryNames {
      * @return the renderings; never null, empty when no entry is pinned with a target
      */
     public static List<String> pinnedTargets(final List<GlossaryEntry> entries) {
-        Objects.requireNonNull(entries, "entries");
+        Objects.requireNonNull(entries, ENTRIES);
         return entries.stream()
                 .filter(entry -> entry.targetState() == TargetState.PINNED)
                 .map(GlossaryEntry::target)
@@ -59,7 +61,7 @@ public final class GlossaryNames {
      * @return each entry's term, then its aliases; never null
      */
     public static List<String> terms(final List<GlossaryEntry> entries) {
-        Objects.requireNonNull(entries, "entries");
+        Objects.requireNonNull(entries, ENTRIES);
         return entries.stream().flatMap(entry -> entry.names().stream()).toList();
     }
 
