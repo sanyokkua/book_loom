@@ -969,7 +969,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Test first:** TestFX `ModelsAdviceLinesTest`: `identityLine_fineTune_namesBase`; `quantLine_acceptableAtSmall_namesTargetLanguage`; `languagesLine_bookLoomTestedPair_addsTestedNote`; `factsDate_shown`; `thinkingHint_hfGgufWithoutRenderer_namesTheLibraryTag` (`hf.co/unsloth/Qwen3.5-4B-GGUF:Q4_K_M` on Ollama names `qwen3.5:4b`, also at Start). `StartAdviceLinesTest`: `start_ruToUkOnQwen25_15b_warnsUkrainianOnly`; `start_enToUkOnGemma4E4b_noLanguageLine` (measured pair); `start_ruToUkOnGemma4E4b_quietLineNamesBoth`; `start_q4KmOnMidModel_noQuantLine`; `start_licenceRow_showsNoteAndStartEnabled`.
   - **Done when:** the tests are green; mockup conformance for the Models tab and the ready card updated.
 
-- [ ] 9.8 Add `scripts/model-knowledge-check.py`, which compares the bundled files with the research data folder without any network. Stale knowledge is found by a person's run, never by the app. → :llm (data tooling), scripts
+- [x] 9.8 Add `scripts/model-knowledge-check.py`, which compares the bundled files with the research data folder without any network. Stale knowledge is found by a person's run, never by the app. → :llm (data tooling), scripts
   - **Satisfies:** enabling work for design D22
   - **Depends on:** 9.2
   - **Read:** design.md D22 (Tooling)

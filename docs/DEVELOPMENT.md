@@ -1199,6 +1199,7 @@ Distribution) — switch it back to the Gradle Wrapper.
 | `./gradlew :ui:fastTest` | one module's tests without the `slow`-tagged end-to-end classes (not part of `check`) |
 | `scripts/test-focused.sh` | the inner loop: format and test what the working tree changed ([below](#test-speed)) |
 | `python3 scripts/slowest-tests.py [module...]` | where the last run's test time went, from the XML reports |
+| `python3 -I scripts/model-knowledge-check.py <research-data-dir>` | the bundled quant and language knowledge against the research CSVs (no network; exit 1 with the differing rows) |
 
 **Headless UI.** Every `Test` task gets `-Dglass.platform=Headless -Dprism.order=sw -Djava.awt.headless=true` from
 `bookloom.test-conventions`: JavaFX 26's built-in headless platform, not Monocle. No display server is needed.
