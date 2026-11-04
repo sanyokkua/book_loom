@@ -985,7 +985,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Test first:** none new; the arm's paired report is the evidence
   - **Done when:** the arm's line is in `docs/DEVELOPMENT.md#redesign-arms` with its paired counts.
 
-- [ ] 9.10 Make the acceptance test green, fix the docs, run the gate and the hand check. → :ui, docs
+- [x] 9.10 Make the acceptance test green, fix the docs, run the gate and the hand check. → :ui, docs
   - **Satisfies:** enabling work for design D22 (closes the group; every requirement is named by 9.2–9.7)
   - **Depends on:** 9.1–9.9
   - **Read:** design.md D1 "Done per group"; the group's acceptance test from 9.1; `docs/DEVELOPMENT.md#quality-gate`
