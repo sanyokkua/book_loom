@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -27,7 +28,7 @@ import ua.bookloom.util.lang.Script;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class LanguageIdentityCheck {
+public final class LanguageIdentityCheck {
 
     static final int MIN_WORDS = 12;
 
@@ -87,8 +88,19 @@ final class LanguageIdentityCheck {
         return List.copyOf(hits);
     }
 
-    /** How many source-only function words a text holds, counted the way the residue finding counts them. */
-    static int residueCount(final String text, @Nullable final String sourceLanguage, final String targetLanguage) {
+    /**
+     * How many source-only function words a text holds, counted the way the residue finding counts them; the
+     * never-worse gate compares it before and after an edit.
+     *
+     * @param text the non-null display text
+     * @param sourceLanguage the source language tag, or null when the book declares none
+     * @param targetLanguage the non-null target language tag
+     * @return the number of residue words; zero when the source is undeclared or either language has no list
+     */
+    public static int residueCount(
+            final String text, @Nullable final String sourceLanguage, final String targetLanguage) {
+        Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(targetLanguage, "targetLanguage");
         return hits(text, 0, sourceOnly(sourceLanguage, targetLanguage)).size();
     }
 

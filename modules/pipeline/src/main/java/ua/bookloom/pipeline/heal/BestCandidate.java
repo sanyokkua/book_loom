@@ -7,7 +7,7 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * The best candidate a segment's repair path has reached, carried from one round attempt into the next. A round's
- * result replaces it only when it has fewer blockers ({@link RoundProgress}), so a step can never leave the segment
+ * result replaces it only when it has fewer blockers ({@link ua.bookloom.pipeline.qa.NeverWorse#isWorseByBlockers}), so a step can never leave the segment
  * worse than it was; the final target is always this one.
  *
  * @param qa the best candidate's hard-gate and soft outcome

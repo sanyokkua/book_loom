@@ -1056,7 +1056,7 @@ which changes it, so the next launch sets the database aside (ADR-0043).
   - **Test first:** `NumberCheckTest.check_leadingNumberChanged_blocks` (`3. …` → `5. …`); `check_twoDigitMissing_repair` (`у 42 кімнатах` lost); `check_extraNumber_note`; `TerminalMarkCheckTest.check_questionBecameFullStop_repair`; `AddressMixCheckTest.check_informalSourceFormalTarget_repair` (`ты` → `Ви`); `NegationCountTest.of_ukTwoNegations_countsTwo`; `FinalAuditTest.audit_twoNegationsLost_doubts`; `SourceVariantsTest.audit_sameSixWordSourceTwoTargets_doubtsMinority`; `NameSpellingTest.check_pinnedNameInflected_noFinding` (`Ірвіна`); `check_pinnedNameRespelt_blocks` (`Ервін`).
   - **Done when:** the tests are green.
 
-- [ ] 10.6 Build `NeverWorse`, the one code gate that keeps an edit only when no check got worse. Accepted text must be protected from changes that make it worse. → :pipeline
+- [x] 10.6 Build `NeverWorse`, the one code gate that keeps an edit only when no check got worse. Accepted text must be protected from changes that make it worse. → :pipeline
   - **Satisfies:** "Reject a candidate text that breaks a never-worse veto" (quality-gates), "Keep a candidate text only when its score is not worse and its mark is cleared" (quality-gates), "Let no per-check finding count rise in a kept candidate" (quality-gates)
   - **Depends on:** 10.4, 10.5
   - **Excludes:** wiring into the Proofread stage (group 13) and porting `RevisionGuardsPolicyTest` and the `EditGuards` rules (group 14).

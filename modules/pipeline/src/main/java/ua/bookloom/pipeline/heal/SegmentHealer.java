@@ -12,6 +12,7 @@ import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.qa.NeverWorse;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.reviewer.EditApplier;
 import ua.bookloom.pipeline.reviewer.ReviewItem;
@@ -249,12 +250,30 @@ final class SegmentHealer {
                             round,
                             SegmentPath.REPAIRED))));
         }
-        if (!RoundProgress.improves(best, qa, segmentId, round)) {
+        if (!improves(best, qa, segmentId, round)) {
             return RoundStep.terminal(
                     Result.ok(SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round, null)));
         }
         return RoundStep.continueWith(
                 new BestCandidate(qa, machineOf(best, evaluated), evaluated.maskedCandidate(), null));
+    }
+
+    // A candidate beats the best one only with fewer failed hard gates, or as many and fewer blockers; a swap, a repeat
+    // and a regression make no progress, so the path stops and keeps the best. Deleted with the rounds (task 10.7).
+    private static boolean improves(
+            final BestCandidate best, final QaResult candidate, final String segmentId, final int round) {
+        final boolean improves = NeverWorse.isWorseByBlockers(best.qa(), candidate);
+        log.debug(
+                "Round blockers segment={} round={} before={} after={} improves={}",
+                segmentId,
+                round,
+                Blockers.of(best.qa()),
+                Blockers.of(candidate),
+                improves);
+        if (!improves) {
+            log.warn("Repair rounds stopped segment={} round={} reason=no-progress", segmentId, round);
+        }
+        return improves;
     }
 
     private static MachineTarget machineOf(final BestCandidate best, final RoundOutcome.Evaluated evaluated) {

@@ -1,11 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
-import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -13,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.Sentences;
+import ua.bookloom.pipeline.qa.TextGuards;
 
 /**
  * What a revision may not lose or bring in, read off the old and the new text alone: a gender, name or neighbour fix
@@ -25,19 +22,16 @@ import ua.bookloom.pipeline.checks.Sentences;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RevisionGuards {
 
-    private static final String QUOTE_MARKS = "«»„“”\"";
-    private static final String DASHES = "—–";
+    private static final String QUOTE_MARKS = TextGuards.QUOTE_MARKS;
+    private static final String DASHES = TextGuards.DASHES;
     private static final int WORD_LOSS_DIVISOR = 5;
-    private static final Pattern LATIN_RUN = Pattern.compile("\\b[a-z]{2,}(?:\\s+[a-z]{2,}){1,200}\\b");
-    private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ-]*");
-    private static final Pattern CYRILLIC = Pattern.compile("\\p{IsCyrillic}");
     static final String QUOTES = "quotes";
     static final String CLAUSES = "clauses";
     static final String REWRITE_CAP_RULE = "rewrite-cap";
     /** The largest share of a paragraph's words a neighbour check may replace or remove; a rewrite past it is refused. */
-    static final double REWRITE_CAP = 0.35;
+    static final double REWRITE_CAP = TextGuards.REWRITE_CAP;
 
-    private static final String CLAUSE_MARKS = ",;:";
+    private static final String CLAUSE_MARKS = TextGuards.CLAUSE_MARKS;
     private static final String DASH_RULE = "dashes";
     private static final String SENTENCES = "sentences";
     private static final String WORDS = "words";
@@ -99,13 +93,13 @@ public final class RevisionGuards {
      * @return {@code true} if more than {@link #REWRITE_CAP} of the old words are missing from the new text, in order
      */
     static boolean exceedsRewriteCap(final String before, final String after) {
-        final List<String> old = words(DisplayText.of(before));
-        final List<String> fresh = words(DisplayText.of(after));
-        final double share = old.isEmpty() ? 0 : (double) (old.size() - commonWords(old, fresh)) / old.size();
+        final String old = DisplayText.of(before);
+        final String fresh = DisplayText.of(after);
+        final double share = TextGuards.replacedShare(old, fresh);
         log.debug(
                 "Rewrite cap oldWords={} newWords={} replacedShare={} cap={}",
-                old.size(),
-                fresh.size(),
+                wordCount(old),
+                wordCount(fresh),
                 share,
                 REWRITE_CAP);
         return share > REWRITE_CAP;
@@ -116,27 +110,6 @@ public final class RevisionGuards {
         final long after = count(fresh, CLAUSE_MARKS);
         log.debug("Revision guards clause marks={}->{}", before, after);
         return after < before;
-    }
-
-    private static List<String> words(final String text) {
-        return WORD.matcher(text)
-                .results()
-                .map(match -> match.group().toLowerCase(Locale.ROOT))
-                .toList();
-    }
-
-    // The longest run of old words that survive in order: what the new text kept.
-    private static int commonWords(final List<String> old, final List<String> fresh) {
-        final int[] row = new int[fresh.size() + 1];
-        for (final String word : old) {
-            int diagonal = 0;
-            for (int at = 1; at <= fresh.size(); at++) {
-                final int above = row[at];
-                row[at] = word.equals(fresh.get(at - 1)) ? diagonal + 1 : Math.max(row[at], row[at - 1]);
-                diagonal = above;
-            }
-        }
-        return row[fresh.size()];
     }
 
     /**
@@ -232,11 +205,11 @@ public final class RevisionGuards {
     }
 
     private static int wordCount(final String text) {
-        return (int) WORD.matcher(text).results().count();
+        return TextGuards.wordCount(text);
     }
 
     private static long count(final String text, final String marks) {
-        return text.chars().filter(c -> marks.indexOf(c) >= 0).count();
+        return TextGuards.count(text, marks);
     }
 
     private static boolean losesWords(final String old, final String fresh) {
@@ -245,14 +218,6 @@ public final class RevisionGuards {
     }
 
     private static boolean bringsLatinRun(final String old, final String fresh) {
-        if (!CYRILLIC.matcher(fresh).find()) {
-            return false;
-        }
-        final List<String> known = runs(old);
-        return runs(fresh).stream().anyMatch(run -> !known.contains(run));
-    }
-
-    private static List<String> runs(final String text) {
-        return LATIN_RUN.matcher(text).results().map(MatchResult::group).toList();
+        return TextGuards.bringsLatinRun(old, fresh);
     }
 }

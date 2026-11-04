@@ -19,10 +19,10 @@ import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
 import ua.bookloom.pipeline.heal.DraftSubject;
 import ua.bookloom.pipeline.heal.QaEvaluation;
-import ua.bookloom.pipeline.heal.RoundProgress;
 import ua.bookloom.pipeline.heal.SoftContext;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.qa.CheckName;
+import ua.bookloom.pipeline.qa.NeverWorse;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
@@ -104,7 +104,7 @@ final class PassChecks {
                 FinalAudit.checksOf(inputs.book(), segment, before).size();
         final int newDoubts = FinalAudit.checksOf(inputs.book(), segment, after).size();
         final boolean better =
-                !AcceptanceRule.accepts(old, 0) || RoundProgress.isWorse(old, fresh) || newDoubts < oldDoubts;
+                !AcceptanceRule.accepts(old, 0) || NeverWorse.isWorseByBlockers(old, fresh) || newDoubts < oldDoubts;
         log.debug(
                 "Pass better segmentId={} oldAccepted={} doubts={}->{} better={}",
                 segment.id(),
@@ -192,6 +192,6 @@ final class PassChecks {
     }
 
     private static Optional<String> worseThan(final QaResult fresh, final QaResult old) {
-        return RoundProgress.isWorse(fresh, old) ? Optional.of(WORSE) : Optional.empty();
+        return NeverWorse.isWorseByBlockers(fresh, old) ? Optional.of(WORSE) : Optional.empty();
     }
 }
