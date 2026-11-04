@@ -69,9 +69,8 @@ class TranslationJobVerbatimTest {
                         SegmentRecord::status,
                         SegmentRecord::path,
                         SegmentRecord::machineTarget,
-                        SegmentRecord::findings,
-                        SegmentRecord::repairRounds)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, untranslatable, List.of(), 0);
+                        SegmentRecord::findings)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, untranslatable, List.of());
     }
 
     // A word is text: it still reaches the model, so the rule never keeps a real word untranslated.

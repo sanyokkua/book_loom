@@ -50,7 +50,6 @@ class OutcomeRecordsTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 null);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
@@ -123,38 +122,27 @@ class OutcomeRecordsTest {
                         SegmentRecord::maskedMachineTarget,
                         SegmentRecord::confidence,
                         SegmentRecord::judgeScore,
-                        SegmentRecord::path,
-                        SegmentRecord::repairRounds)
+                        SegmentRecord::path)
                 .containsExactly(
                         SegmentStatus.ACCEPTED,
                         "HE *OLD* DOOR.",
                         "HE ⟦g0⟧OLD⟦g1⟧ DOOR.",
                         0.8,
                         0.9,
-                        SegmentPath.REPAIRED,
-                        1);
+                        SegmentPath.REPAIRED);
     }
 
     // A quality flag has no error code of its own, so the report names it validation.
     @Test
-    void reportCode_outcomeFlaggedAfterTwoRounds_readsBackValidation() {
+    void reportCode_outcomeFlaggedAfterItsRepair_readsBackValidation() {
         final QaFinding markup = new QaFinding("markup", Severity.HIGH, "A token is missing.", "placeholder");
         final SegmentOutcome outcome = new SegmentOutcome(
-                "Book.md:0",
-                SegmentStatus.FLAGGED,
-                null,
-                null,
-                0.3,
-                null,
-                List.of(markup),
-                SegmentPath.REPAIRED,
-                2,
-                null);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.3, null, List.of(markup), SegmentPath.REPAIRED, null);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record.findings()).containsExactly(markup);
-        assertThat(record.repairRounds()).isEqualTo(2);
+        assertThat(record.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(OutcomeRecords.reportCode(record)).isEqualTo(ErrorCode.validation);
     }
 
@@ -163,7 +151,7 @@ class OutcomeRecordsTest {
     void decided_outcomeFlaggedAtOnce_storesItsReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.emptyCompletion, "Empty", "The model returned no text.");
         final SegmentOutcome outcome = new SegmentOutcome(
-                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, reason);
 
         final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
@@ -175,7 +163,7 @@ class OutcomeRecordsTest {
 
     private static SegmentOutcome flaggedAtOnce(final AppError reason) {
         return new SegmentOutcome(
-                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, reason);
     }
 
     private static SegmentOutcome acceptedAfterOneRepair() {
@@ -188,7 +176,6 @@ class OutcomeRecordsTest {
                 0.9,
                 List.of(),
                 SegmentPath.REPAIRED,
-                1,
                 null);
     }
 
@@ -208,7 +195,6 @@ class OutcomeRecordsTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

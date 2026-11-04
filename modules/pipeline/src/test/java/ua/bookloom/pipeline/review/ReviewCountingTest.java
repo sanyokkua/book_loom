@@ -93,7 +93,7 @@ class ReviewCountingTest {
             final SegmentStatus status,
             final SegmentPath path) {
         return new SegmentRecord(
-                "p1", id, unitId, 0, kind, status, "Ціль.", "Ціль.", null, null, 0.9, null, List.of(), path, 0, false,
+                "p1", id, unitId, 0, kind, status, "Ціль.", "Ціль.", null, null, 0.9, null, List.of(), path, false,
                 null);
     }
 }

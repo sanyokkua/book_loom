@@ -249,7 +249,6 @@ public final class ScriptedReviewDesk implements ReviewDesk {
                 view.judgeScore(),
                 view.findings(),
                 view.path(),
-                0,
                 view.reviewed(),
                 view.context());
     }

@@ -112,4 +112,12 @@ class StoredShapesTest {
         assertThat(described).contains("secondsPerCall:", "quoteStyle:", "defaultAddress:", "apostrophe:");
         assertThat(described).doesNotContain("measuredSecondsPerSegment");
     }
+
+    // A segment record no longer counts repair rounds (its components are listed in name order, so the reviewed mark
+    // now follows the rejected reply directly), and a database that stored the count is set aside.
+    @Test
+    void fingerprint_afterRepairRoundsGone_differs() {
+        assertThat(StoredShapes.describe(StoredShapes.ROOTS))
+                .contains("rejectedTarget:java.lang.String,reviewed:boolean");
+    }
 }

@@ -172,7 +172,6 @@ public final class ExportedBooks {
                 null,
                 List.<QaFinding>of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

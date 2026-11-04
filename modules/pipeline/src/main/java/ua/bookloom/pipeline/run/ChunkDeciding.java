@@ -74,12 +74,11 @@ final class ChunkDeciding {
         final JobProgress progress = current.work().apply(item, record.status(), record.path());
         final ErrorCode reason = record.status() == SegmentStatus.FLAGGED ? OutcomeRecords.reportCode(record) : null;
         log.debug(
-                "Decided segmentId={} status={} reason={} path={} rounds={}",
+                "Decided segmentId={} status={} reason={} path={}",
                 record.segmentId(),
                 record.status(),
                 reason,
-                record.path(),
-                record.repairRounds());
+                record.path());
         events.decided(record, reason, progress);
         if (record.path() == SegmentPath.TM_REUSE) {
             sinks.emit().accept(memory.announced(record.segmentId()));

@@ -57,7 +57,6 @@ final class RollingSummaryFixtures {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

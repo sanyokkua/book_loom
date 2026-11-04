@@ -84,12 +84,12 @@ final class OneRepair {
         }
 
         /**
-         * How many content-changing calls the segment used: the one repair, or the reviewer's change of it.
+         * Whether the segment was given a content-changing call: the one repair, or the reviewer's change of it.
          *
-         * @return 1 when the repair call was made or the reviewer changed the text, else 0
+         * @return {@code true} when the repair call was made or the reviewer changed the text, {@code false} otherwise
          */
-        int calls() {
-            return REASON_NONE.equals(reason) ? standing.rounds() : Math.max(standing.rounds(), 1);
+        boolean repaired() {
+            return !REASON_NONE.equals(reason) || standing.rounds() > 0;
         }
     }
 

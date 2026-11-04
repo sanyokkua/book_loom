@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -49,7 +50,7 @@ class QualityLoopReviewerFixTest {
         assertThat(model.requests()).hasSize(1);
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(DRAFT);
-        assertThat(decided.repairRounds()).isZero();
+        assertThat(decided.path()).isEqualTo(SegmentPath.DRAFT);
     }
 
     // The 78-worse pattern on the reviewer's path: a fix that adds a new defect never replaces the edited text.

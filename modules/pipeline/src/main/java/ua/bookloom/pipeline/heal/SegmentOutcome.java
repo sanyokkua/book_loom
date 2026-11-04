@@ -24,9 +24,9 @@ import ua.bookloom.api.project.SegmentPath;
  * @param judgeScore the score of the verdict that last decided this segment, or {@code null} when the judge was
  *     off, never ran for it, or that verdict was unreadable
  * @param findings every finding recorded against this segment, de-duplicated
- * @param path {@link SegmentPath#DRAFT} when decided with no round used — accepted, flagged at once by the draft
- *     step, or flagged by a review retry, which runs none; {@link SegmentPath#REPAIRED} when at least one self-heal round ran, whatever the final status
- * @param repairRounds 1 when the segment was given its one repair or the reviewer changed it, else 0
+ * @param path {@link SegmentPath#REPAIRED} when the one repair's text (or the reviewer's change) stays on an accepted
+ *     segment, or a flagged segment was given the repair; {@link SegmentPath#DRAFT} otherwise — accepted as drafted,
+ *     flagged at once by the draft step, or flagged by a review retry, which makes no repair
  * @param flagReason the error a {@code FlagNow} self-heal reply or a {@code FlaggedAtOnce} draft outcome flagged
  *     this segment with; {@code null} for every other FLAGGED or ACCEPTED segment
  * @param rejectedTarget the model's last refused reply in masked form, kept only when no target passed every hard
@@ -41,7 +41,6 @@ public record SegmentOutcome(
         @Nullable Double judgeScore,
         List<QaFinding> findings,
         SegmentPath path,
-        int repairRounds,
         @Nullable AppError flagReason,
         @Nullable String rejectedTarget) {
 
@@ -64,7 +63,6 @@ public record SegmentOutcome(
             @Nullable final Double judgeScore,
             final List<QaFinding> findings,
             final SegmentPath path,
-            final int repairRounds,
             @Nullable final AppError flagReason) {
         this(
                 segmentId,
@@ -75,7 +73,6 @@ public record SegmentOutcome(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 flagReason,
                 null);
     }
@@ -91,16 +88,6 @@ public record SegmentOutcome(
             return this;
         }
         return new SegmentOutcome(
-                segmentId,
-                status,
-                null,
-                null,
-                confidence,
-                judgeScore,
-                findings,
-                path,
-                repairRounds,
-                flagReason,
-                rejected);
+                segmentId, status, null, null, confidence, judgeScore, findings, path, flagReason, rejected);
     }
 }

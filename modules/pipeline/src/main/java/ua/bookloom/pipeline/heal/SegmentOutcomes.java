@@ -37,13 +37,11 @@ final class SegmentOutcomes {
             final MachineTarget machine,
             final QaResult qa,
             final List<QaFinding> reviewerFindings,
-            final int rounds,
             final SegmentPath path) {
         log.debug(
-                "Segment {} accepted path={} rounds={} confidence={} reviewerFindings={}",
+                "Segment {} accepted path={} confidence={} reviewerFindings={}",
                 segmentId,
                 path,
-                rounds,
                 qa.confidence(),
                 reviewerFindings.size());
         return new SegmentOutcome(
@@ -55,7 +53,6 @@ final class SegmentOutcomes {
                 null,
                 SegmentFindings.recorded(qa, reviewerFindings),
                 path,
-                rounds,
                 null);
     }
 
@@ -64,9 +61,10 @@ final class SegmentOutcomes {
             final MachineTarget machine,
             final QaResult qa,
             final List<QaFinding> reviewerFindings,
-            final int rounds,
+            final boolean repaired,
             @Nullable final AppError flagReason) {
-        return flaggedWith(segmentId, machine, qa, rounds, flagReason, SegmentFindings.recorded(qa, reviewerFindings));
+        return flaggedWith(
+                segmentId, machine, qa, repaired, flagReason, SegmentFindings.recorded(qa, reviewerFindings));
     }
 
     /**
@@ -78,29 +76,25 @@ final class SegmentOutcomes {
      *     read
      */
     static SegmentOutcome reviewerUnavailable(
-            final String segmentId,
-            final MachineTarget machine,
-            final QaResult qa,
-            final int rounds,
-            @Nullable final AppError cause) {
+            final String segmentId, final MachineTarget machine, final QaResult qa, @Nullable final AppError cause) {
         final List<QaFinding> findings = new ArrayList<>(SegmentFindings.recorded(qa, List.of()));
         findings.add(new QaFinding(REVIEWER_UNAVAILABLE, Severity.MEDIUM, REVIEWER_UNAVAILABLE_NOTE, REVIEWER));
-        log.debug(
-                "Reviewer unavailable for segment={} rounds={} code={}",
-                segmentId,
-                rounds,
-                cause == null ? null : cause.code());
-        return flaggedWith(segmentId, machine, qa, rounds, cause, findings);
+        log.debug("Reviewer unavailable for segment={} code={}", segmentId, cause == null ? null : cause.code());
+        return flaggedWith(segmentId, machine, qa, false, cause, findings);
     }
 
     private static SegmentOutcome flaggedWith(
             final String segmentId,
             final MachineTarget machine,
             final QaResult qa,
-            final int rounds,
+            final boolean repaired,
             @Nullable final AppError flagReason,
             final List<QaFinding> findings) {
-        log.warn("Segment {} flagged rounds={} findingKinds={}", segmentId, rounds, SegmentFindings.kindsOf(findings));
+        log.warn(
+                "Segment {} flagged repaired={} findingKinds={}",
+                segmentId,
+                repaired,
+                SegmentFindings.kindsOf(findings));
         return new SegmentOutcome(
                 segmentId,
                 SegmentStatus.FLAGGED,
@@ -109,8 +103,7 @@ final class SegmentOutcomes {
                 qa.confidence(),
                 null,
                 findings,
-                rounds > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT,
-                rounds,
+                repaired ? SegmentPath.REPAIRED : SegmentPath.DRAFT,
                 flagReason);
     }
 }

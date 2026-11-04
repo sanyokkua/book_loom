@@ -229,9 +229,8 @@ class QualityLoopReviewInputTest {
                         SegmentOutcome::machineTarget,
                         SegmentOutcome::maskedMachineTarget,
                         SegmentOutcome::confidence,
-                        SegmentOutcome::judgeScore,
-                        SegmentOutcome::repairRounds)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.TM_REUSE, "Так.", "Так.", 1.0, null, 0);
+                        SegmentOutcome::judgeScore)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.TM_REUSE, "Так.", "Так.", 1.0, null);
         assertThat(model.requests()).isEmpty();
     }
 

@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
@@ -180,7 +181,7 @@ class QualityLoopOneRepairCallTest {
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
         assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(outcomeResult.machineTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
-        assertThat(outcomeResult.repairRounds()).isEqualTo(1);
+        assertThat(outcomeResult.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     // D-3, Fast, Unattended (τ=0.60): each row's draft has no repair call. Despite confidence reaching τ, the soft
@@ -235,7 +236,7 @@ class QualityLoopOneRepairCallTest {
                 .singleElement()
                 .satisfies(kinds -> assertThat(kinds).contains("language"));
         assertThat(decision.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decision.repairRounds()).isEqualTo(1);
+        assertThat(decision.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     @Test
@@ -252,7 +253,7 @@ class QualityLoopOneRepairCallTest {
 
         assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decision.machineTarget()).isEqualTo("Він відчинив старі двері.");
-        assertThat(decision.repairRounds()).isEqualTo(1);
+        assertThat(decision.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     private static DraftOutcome.Drafted inPieces(final String reply, final PieceRedraft redraft) {

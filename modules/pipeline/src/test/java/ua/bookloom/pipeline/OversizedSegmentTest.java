@@ -98,8 +98,8 @@ class OversizedSegmentTest {
                         .contains("[Extra instruction]\n")
                         .contains("echo similarity 1.0 at or above 0.9\n\n<Text>\n"));
         assertThat(TranslationJobTestSupport.stored(project, "Book.md:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
-                .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 1);
+                .extracting(SegmentRecord::status, SegmentRecord::path)
+                .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.REPAIRED);
     }
 
     @Test

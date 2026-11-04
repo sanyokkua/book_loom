@@ -122,7 +122,6 @@ public final class ChunkDecider {
                 null,
                 reused.qa().findings(),
                 SegmentPath.TM_REUSE,
-                0,
                 null);
     }
 
@@ -138,7 +137,6 @@ public final class ChunkDecider {
                 null,
                 List.of(),
                 SegmentPath.VERBATIM,
-                0,
                 null);
     }
 
@@ -157,7 +155,6 @@ public final class ChunkDecider {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 flaggedAtOnce.error());
     }
 }

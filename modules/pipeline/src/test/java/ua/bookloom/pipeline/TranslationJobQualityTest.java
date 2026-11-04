@@ -46,6 +46,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.UnitPolicy;
@@ -151,8 +152,8 @@ class TranslationJobQualityTest {
         // The pseudo model's repair returns the echo unchanged, and no second repair is tried.
         assertThat(model.formats()).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::repairRounds)
-                .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, 1);
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::path)
+                .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, SegmentPath.REPAIRED);
     }
 
     @Test

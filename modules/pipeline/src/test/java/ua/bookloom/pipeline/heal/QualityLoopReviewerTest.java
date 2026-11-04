@@ -86,7 +86,6 @@ class QualityLoopReviewerTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.DRAFT);
         assertThat(decided.machineTarget()).isEqualTo(CLEAN_DRAFT);
-        assertThat(decided.repairRounds()).isZero();
     }
 
     @Test
@@ -114,7 +113,6 @@ class QualityLoopReviewerTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo(FIXED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
-        assertThat(decided.repairRounds()).isEqualTo(1);
         assertThat(decided.findings())
                 .flatMap(finding -> AppliedEdit.from(finding).stream().toList())
                 .containsExactly(new AppliedEdit("invented-word", "дверзі", "двері"));
@@ -130,7 +128,7 @@ class QualityLoopReviewerTest {
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo(CLEAN_DRAFT);
-        assertThat(decided.repairRounds()).isZero();
+        assertThat(decided.path()).isEqualTo(SegmentPath.DRAFT);
         assertThat(decided.findings())
                 .noneMatch(finding -> AppliedEdit.from(finding).isPresent());
         assertThat(model.requests()).hasSize(1);
@@ -166,7 +164,7 @@ class QualityLoopReviewerTest {
         assertThat(model.requests().get(1).messages().getLast().content()).contains("дверзі", "meaning");
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo(FIXED);
-        assertThat(decided.repairRounds()).isEqualTo(1);
+        assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     @Test
@@ -217,7 +215,7 @@ class QualityLoopReviewerTest {
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo("Він відчинив старі дубові двері.");
-        assertThat(decided.repairRounds()).isEqualTo(1);
+        assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     @Test
@@ -229,7 +227,7 @@ class QualityLoopReviewerTest {
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(CLEAN_DRAFT);
-        assertThat(decided.repairRounds()).isZero();
+        assertThat(decided.path()).isEqualTo(SegmentPath.DRAFT);
         assertThat(decided.findings())
                 .filteredOn(finding -> finding.kind().equals("rewrite"))
                 .singleElement()

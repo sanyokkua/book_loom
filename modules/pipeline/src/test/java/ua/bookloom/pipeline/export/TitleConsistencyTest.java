@@ -241,7 +241,6 @@ class TitleConsistencyTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

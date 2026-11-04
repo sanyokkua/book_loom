@@ -30,8 +30,8 @@ import ua.bookloom.api.document.Unit;
  * @param confidence the QA/judge confidence in {@code [0,1]}
  * @param judgeScore the judge stage's score, or null when not judged
  * @param findings the QA findings recorded against this segment
- * @param path how this segment reached its current target
- * @param repairRounds how many repair rounds this segment has gone through
+ * @param path how this segment reached its current target: {@link SegmentPath#REPAIRED} when the one repair's text
+ *     stays or a flagged segment was given it
  * @param reviewed true once a person accepted, saved, reverted, applied a proposal or retried this segment successfully
  * @param context the context snapshot a retry replays, or null when none was recorded
  * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, so
@@ -52,7 +52,6 @@ public record SegmentRecord(
         @Nullable Double judgeScore,
         List<QaFinding> findings,
         SegmentPath path,
-        int repairRounds,
         boolean reviewed,
         @Nullable ContextSnapshot context,
         @Nullable String rejectedTarget) {
@@ -88,7 +87,6 @@ public record SegmentRecord(
             @Nullable final Double judgeScore,
             final List<QaFinding> findings,
             final SegmentPath path,
-            final int repairRounds,
             final boolean reviewed,
             @Nullable final ContextSnapshot context) {
         this(
@@ -106,7 +104,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 null);
@@ -134,7 +131,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);
@@ -184,7 +180,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);
@@ -216,7 +211,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 keptRejected);
@@ -246,7 +240,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);
@@ -275,7 +268,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);
@@ -304,7 +296,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);
@@ -332,7 +323,6 @@ public record SegmentRecord(
                 judgeScore,
                 findings,
                 path,
-                repairRounds,
                 reviewed,
                 context,
                 rejectedTarget);

@@ -45,7 +45,7 @@ class QualityLoopProgressTest {
                 first(decider(ECHO, model, new DialParameters(1, RepairMode.ONE, 0, false, false, 4)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decided.repairRounds()).isEqualTo(1);
+        assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(model.requests()).hasSize(1);
     }
 
@@ -63,7 +63,6 @@ class QualityLoopProgressTest {
         assertThat(Objects.requireNonNull(failed.error()).code()).isEqualTo(ErrorCode.auth);
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
-        assertThat(decided.repairRounds()).isEqualTo(1);
         assertThat(decided.machineTarget()).isEqualTo(GOOD_TARGET);
         assertThat(model.requests())
                 .extracting(request ->

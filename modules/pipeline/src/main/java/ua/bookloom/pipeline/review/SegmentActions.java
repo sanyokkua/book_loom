@@ -190,14 +190,14 @@ public final class SegmentActions {
         if (record.machineTarget() == null) {
             return refuse(REVERT, record.segmentId(), NO_TARGET_TO_REVERT_TO);
         }
-        // The path the machine target came by is not kept once an edit replaces it; the repair rounds tell the two
-        // apart.
+        // The path the machine target came by is not kept once an edit replaces it, and no record says whether the
+        // repair made it, so the reverted target counts as the draft.
         return write(
                         REVERT,
                         record,
                         current -> current.withStatus(SegmentStatus.ACCEPTED)
                                 .withUserTarget(null, null)
-                                .withPath(current.repairRounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT)
+                                .withPath(SegmentPath.DRAFT)
                                 .withReviewed(true))
                 .flatMap(this::withoutProposal);
     }

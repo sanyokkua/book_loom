@@ -216,7 +216,6 @@ class ReviewQueriesTest {
                 score,
                 record.findings(),
                 record.path(),
-                record.repairRounds(),
                 record.reviewed(),
                 record.context());
     }

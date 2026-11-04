@@ -46,8 +46,11 @@ import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.retry.RetryPolicy;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 
-/** A real provider client pointed at a WireMock server, speaking either the Ollama-native or the OpenAI dialect. */
-final class WireMockProvider implements AutoCloseable {
+/**
+ * A real provider client pointed at a WireMock server, speaking either the Ollama-native or the OpenAI dialect. Public
+ * so the review package can test a desk retry at the HTTP seam.
+ */
+public final class WireMockProvider implements AutoCloseable {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String PROVIDER_ID = "wiremock";
@@ -67,7 +70,7 @@ final class WireMockProvider implements AutoCloseable {
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
-    WireMockProvider(final ProviderKind kind) {
+    public WireMockProvider(final ProviderKind kind) {
         this.kind = Objects.requireNonNull(kind, "kind");
         server.start();
     }
@@ -76,7 +79,7 @@ final class WireMockProvider implements AutoCloseable {
         return kind == ProviderKind.OLLAMA ? "/api/chat" : "/v1/chat/completions";
     }
 
-    ChatModel model(final Duration requestTimeout, final RetryPolicy.Sleeper sleeper) {
+    public ChatModel model(final Duration requestTimeout, final RetryPolicy.Sleeper sleeper) {
         return chatModels(requestTimeout, sleeper, 1).getFirst();
     }
 
@@ -168,7 +171,7 @@ final class WireMockProvider implements AutoCloseable {
     }
 
     /** A reply carrying {@code content} as the assistant message, after a delay. */
-    ResponseDefinitionBuilder reply(final String content, final Duration delay) {
+    public ResponseDefinitionBuilder reply(final String content, final Duration delay) {
         final ResponseDefinitionBuilder response = aResponse().withStatus(200).withBody(envelope(content));
         return delay.isZero() ? response : response.withFixedDelay((int) delay.toMillis());
     }
@@ -214,12 +217,12 @@ final class WireMockProvider implements AutoCloseable {
     }
 
     /** A reply carrying the strict one-field target object the engine asks for. */
-    ResponseDefinitionBuilder target(final String target, final Duration delay) {
+    public ResponseDefinitionBuilder target(final String target, final Duration delay) {
         return reply(TranslationJobTestSupport.targetReply(target), delay);
     }
 
     /** Answers the n-th chat request (counting from one) with the given reply; each earlier request must be stubbed. */
-    void stubSequence(final List<ResponseDefinitionBuilder> replies) {
+    public void stubSequence(final List<ResponseDefinitionBuilder> replies) {
         for (int index = 0; index < replies.size(); index++) {
             final ScenarioMappingBuilder mapping = post(urlEqualTo(chatPath()))
                     .inScenario("chat")
@@ -233,11 +236,11 @@ final class WireMockProvider implements AutoCloseable {
         server.stubFor(post(urlEqualTo(chatPath())).willReturn(reply));
     }
 
-    int chatRequests() {
+    public int chatRequests() {
         return server.findAll(postRequestedFor(urlEqualTo(chatPath()))).size();
     }
 
-    List<String> chatBodies() {
+    public List<String> chatBodies() {
         return server.findAll(postRequestedFor(urlEqualTo(chatPath()))).stream()
                 .map(LoggedRequest::getBodyAsString)
                 .toList();

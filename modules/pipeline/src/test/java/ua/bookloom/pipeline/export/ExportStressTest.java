@@ -112,7 +112,6 @@ class ExportStressTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

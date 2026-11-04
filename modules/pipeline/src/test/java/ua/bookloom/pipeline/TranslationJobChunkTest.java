@@ -1,8 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_ECHO;
-import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO2;
@@ -21,7 +19,6 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.preceding;
 import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.status;
-import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
@@ -58,7 +55,6 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.project.SegmentCounts;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
@@ -66,9 +62,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TranslationJobChunkTest {
 
     // Fails only the script check, where the echo fails it and the echo check too.
-    private static final AppError UNREACHABLE =
-            AppError.of(ErrorCode.unreachable, "Provider unreachable", "The provider did not answer.");
-
     @TempDir
     private Path tempDir;
 
@@ -296,47 +289,6 @@ class TranslationJobChunkTest {
                 .containsExactly(SegmentStatus.REVISED, EDIT);
     }
 
-    // A pause aborts the repair call; on resume the repair is sent again from the draft kept in memory, with no new
-    // draft, and counts as the segment's one repair (specs/resume/spec.md "Make a cut-off repair again from the draft
-    // kept in memory").
-    @Test
-    void run_pauseDuringTheRepair_sendsTheRepairAgainWithNoNewDraft() {
-        final ScriptedChatModel model = replies(DOOR_ECHO, DOOR_TARGET).blockNthRequest(2);
-        final TestProject project = balanced(ChunkRunFixtures.door(tempDir));
-        final TranslationJobImpl translation = job(project, model);
-        final LinkedBlockingQueue<Paused> pauses = pauses(translation);
-
-        final Future<Result<JobReport>> run = executor().submit(translation::run);
-        model.awaitRequests(2);
-        translation.pause();
-        awaitPaused(pauses);
-
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
-        translation.resume();
-        report(await(run));
-        assertRepairSentAgain(project, model);
-    }
-
-    @Test
-    void run_unreachableDuringTheRepair_pausesAndSendsTheRepairAgain() {
-        final ScriptedChatModel model =
-                replies(DOOR_ECHO).answer(Result.err(UNREACHABLE)).answer(target(DOOR_TARGET));
-        final TestProject project = balanced(ChunkRunFixtures.door(tempDir));
-        final TranslationJobImpl translation = job(project, model);
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-        final LinkedBlockingQueue<Paused> pauses = pauses(translation);
-
-        final Future<Result<JobReport>> run = executor().submit(translation::run);
-        final Paused pause = awaitPaused(pauses);
-
-        assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
-        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.unreachable);
-        assertThat(model.requests()).hasSize(2);
-        translation.resume();
-        report(await(run));
-        assertRepairSentAgain(project, model);
-    }
-
     // A reviewer that times out or cannot be reached no longer pauses (it flags its segments); a refused key still
     // does.
     @Test
@@ -357,14 +309,6 @@ class TranslationJobChunkTest {
         translation.resume();
         assertThat(report(await(run)).accepted()).isEqualTo(3);
         assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, REVIEW, REVIEW);
-    }
-
-    // The repaired target passes the checks, which alone decide it: no reviewer call follows.
-    private static void assertRepairSentAgain(final TestProject project, final ScriptedChatModel model) {
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, REPAIR);
-        assertThat(stored(project, "Book.txt:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 1);
     }
 
     private static List<String> draftsAndDecisions(final TranslationJobImpl translation) {

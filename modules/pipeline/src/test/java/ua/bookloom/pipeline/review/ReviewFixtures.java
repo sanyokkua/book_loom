@@ -254,7 +254,6 @@ public final class ReviewFixtures {
                 record.judgeScore(),
                 record.findings(),
                 record.path(),
-                record.repairRounds(),
                 record.reviewed(),
                 context);
     }

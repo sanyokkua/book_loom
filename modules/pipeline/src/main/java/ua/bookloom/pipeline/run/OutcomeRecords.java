@@ -37,8 +37,8 @@ public final class OutcomeRecords {
      * @param stored the non-null pending record
      * @param outcome the non-null outcome decided for it
      * @param context the non-null snapshot of what the segment's draft saw, which a retry replays
-     * @return the record with its status, both machine forms, confidence, findings, path, repair rounds
-     *     and context set; a segment flagged at once also carries its reason as the {@code reply} finding
+     * @return the record with its status, both machine forms, confidence, findings, path and
+     *     context set; a segment flagged at once also carries its reason as the {@code reply} finding
      */
     public static SegmentRecord decided(
             final SegmentRecord stored, final SegmentOutcome outcome, final ContextSnapshot context) {
@@ -66,7 +66,6 @@ public final class OutcomeRecords {
                 outcome.judgeScore(),
                 withReplyFinding(outcome.findings(), reason),
                 outcome.path(),
-                outcome.repairRounds(),
                 stored.reviewed(),
                 context,
                 outcome.rejectedTarget());
@@ -77,7 +76,7 @@ public final class OutcomeRecords {
      *
      * @param flagged the non-null flagged record
      * @return the error code named by its reply finding, or {@code validation} when it has none — a segment flagged
-     *     after repair rounds has only findings of the checks that failed
+     *     after its one repair has only findings of the checks that failed
      */
     public static ErrorCode reportCode(final SegmentRecord flagged) {
         Objects.requireNonNull(flagged, "flagged");

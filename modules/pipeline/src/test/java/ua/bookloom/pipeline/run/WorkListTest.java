@@ -320,7 +320,6 @@ class WorkListTest {
                 null,
                 List.of(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

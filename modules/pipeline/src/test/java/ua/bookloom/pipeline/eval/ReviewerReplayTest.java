@@ -22,6 +22,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
@@ -150,7 +151,7 @@ class ReviewerReplayTest {
 
         assertThat(decided.status().name()).isEqualTo("ACCEPTED");
         assertThat(decided.machineTarget()).isEqualTo(clean.candidate());
-        assertThat(decided.repairRounds()).isZero();
+        assertThat(decided.path()).isEqualTo(SegmentPath.DRAFT);
     }
 
     // The idiom the judge nitpicked: a style remark is a note, never an edit and never a reason to refuse.

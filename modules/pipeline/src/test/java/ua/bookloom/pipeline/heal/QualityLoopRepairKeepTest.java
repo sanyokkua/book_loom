@@ -62,7 +62,7 @@ class QualityLoopRepairKeepTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(QUOTE_ONLY);
         assertThat(raisedBy(decided)).contains("quote-balance").doesNotContain("script-purity");
-        assertThat(decided.repairRounds()).isEqualTo(1);
+        assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
     }
 
     // A swap (one blocker traded for another) is no progress, so the text in place stays.
@@ -87,7 +87,6 @@ class QualityLoopRepairKeepTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(decided.machineTarget()).isEqualTo(GOOD);
-        assertThat(decided.repairRounds()).isEqualTo(1);
     }
 
     @Test

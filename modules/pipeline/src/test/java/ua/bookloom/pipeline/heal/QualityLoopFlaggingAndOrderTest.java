@@ -50,7 +50,7 @@ class QualityLoopFlaggingAndOrderTest {
         assertThat(result.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(result.machineTarget()).isNull();
         assertThat(result.confidence()).isEqualTo(0.0);
-        assertThat(result.repairRounds()).isZero();
+        assertThat(result.path()).isEqualTo(SegmentPath.DRAFT);
         assertThat(Objects.requireNonNull(result.flagReason()).code()).isEqualTo(ErrorCode.contextWindow);
     }
 

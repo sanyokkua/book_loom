@@ -229,7 +229,6 @@ class PendingCommitTest {
                 null,
                 new ArrayList<>(),
                 SegmentPath.DRAFT,
-                0,
                 false,
                 null);
     }

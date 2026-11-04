@@ -167,7 +167,6 @@ class JsonCodecTest {
                         new QaFinding("language", Severity.MEDIUM, "residue " + UK, "function-word-residue"),
                         new QaFinding("omission", Severity.MEDIUM, "ends " + UK, "terminal-mark")),
                 SegmentPath.REPAIRED,
-                2,
                 true,
                 full ? context(full) : null,
                 full ? "rejected " + UK : null);

@@ -193,7 +193,7 @@ class TranslationJobStepsTest {
 
     // A refusal at Balanced gets the one repair: one added step, announced when the repair starts.
     @Test
-    void run_failingCheck_repairRoundAddsOneStep() {
+    void run_failingCheck_repairAddsOneStep() {
         final ScriptedChatModel model =
                 TranslationJobTestSupport.draftThenRepair("I'm sorry, but I can't translate this text.", DOOR_TARGET);
         final TestProject door = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));

@@ -1,6 +1,8 @@
 package ua.bookloom.pipeline.heal;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -19,7 +21,9 @@ import ua.bookloom.pipeline.reviewer.ReviewVerdict;
  * a reviewer that never answered flags the segment. The text that stays then gets the {@link OneRepair} when it still
  * holds a BLOCK or REPAIR finding, and the acceptance rule reads the findings left on the text that stays
  * ({@code specs/quality-gates/spec.md} "Read a segment's outcome from the findings left after the one repair"). A
- * decision a model call interrupted is made again from the draft kept in memory. Built fresh per chunk by
+ * decision a model call interrupted is made again from the draft kept in memory; a repair that was cut off is made
+ * again from the text it was given ({@code specs/resume/spec.md} "Make a cut-off repair again from the draft kept in
+ * memory"). Built fresh per chunk by
  * {@link QualityLoop}; never Guice-constructed.
  */
 @Slf4j
@@ -27,6 +31,10 @@ final class SegmentHealer {
 
     private final ReviewResolver resolver;
     private final OneRepair oneRepair;
+    // The text a segment's repair was cut off on, kept until the repair answers, so a re-decision after a pause or a
+    // pausing error makes only the repair again, not the reviewer's fix of a refused edit before it. A chunk is
+    // decided on one thread.
+    private final Map<String, Resolution> pendingRepair = new HashMap<>();
 
     SegmentHealer(
             final EditApplier editApplier,
@@ -55,13 +63,18 @@ final class SegmentHealer {
         Objects.requireNonNull(outcome, "outcome");
         Objects.requireNonNull(initialQa, "initialQa");
         final String segmentId = outcome.segment().id();
+        final Resolution pending = pendingRepair.get(segmentId);
+        if (pending != null) {
+            log.debug("Repair made again segment={} from the text it was cut off on", segmentId);
+            return settle(outcome, pending);
+        }
         SegmentHealerLogging.logEvaluation(segmentId, 0, initialQa);
         final MachineTarget machine = MachineTarget.of(outcome, initialQa);
         if (verdict != null && AcceptanceRule.readyForReview(initialQa)) {
             if (verdict.isUnavailable() || !verdict.readable()) {
                 return Result.ok(keepRejected(
                         SegmentOutcomes.reviewerUnavailable(
-                                segmentId, machine, initialQa, 0, verdict.unavailableBecause()),
+                                segmentId, machine, initialQa, verdict.unavailableBecause()),
                         outcome,
                         null));
             }
@@ -83,15 +96,29 @@ final class SegmentHealer {
      */
     SegmentOutcome giveUp(final DraftOutcome.Drafted outcome, final QaResult initialQa, final AppError reason) {
         log.debug("Giving up on segment={} code={}", outcome.segment().id(), reason.code());
+        pendingRepair.remove(outcome.segment().id());
         return keepRejected(
                 SegmentOutcomes.flagged(
-                        outcome.segment().id(), MachineTarget.of(outcome, initialQa), initialQa, List.of(), 0, reason),
+                        outcome.segment().id(),
+                        MachineTarget.of(outcome, initialQa),
+                        initialQa,
+                        List.of(),
+                        false,
+                        reason),
                 outcome,
                 null);
     }
 
     private Result<SegmentOutcome> settle(final DraftOutcome.Drafted outcome, final Resolution standing) {
-        return oneRepair.repair(outcome, standing).map(repaired -> decided(outcome, repaired));
+        final String segmentId = outcome.segment().id();
+        pendingRepair.put(segmentId, standing);
+        final Result<OneRepair.Repaired> repaired = oneRepair.repair(outcome, standing);
+        if (repaired.isOk()) {
+            pendingRepair.remove(segmentId);
+        } else {
+            log.debug("Repair of segment={} kept for the next decision", segmentId);
+        }
+        return repaired.map(done -> decided(outcome, done));
     }
 
     private static SegmentOutcome decided(final DraftOutcome.Drafted outcome, final OneRepair.Repaired repaired) {
@@ -100,14 +127,14 @@ final class SegmentHealer {
         final boolean accepted = AcceptanceRule.accepts(end.qa(), end.verifiedBlockersLeft());
         SegmentHealerLogging.logAcceptanceDecision(segmentId, end.qa(), end.verifiedBlockersLeft(), accepted);
         if (accepted) {
-            // The path says whose text stays; the count says whether the repair call was spent.
+            // The path says whose text stays: the repair's (or the reviewer's change), else the draft's.
             final SegmentPath path = end.rounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT;
-            return SegmentOutcomes.accepted(segmentId, end.machine(), end.qa(), end.findings(), repaired.calls(), path);
+            return SegmentOutcomes.accepted(segmentId, end.machine(), end.qa(), end.findings(), path);
         }
         log.warn("Segment flagged after its one repair segment={} reason={}", segmentId, repaired.reason());
         return keepRejected(
                 SegmentOutcomes.flagged(
-                        segmentId, end.machine(), end.qa(), end.findings(), repaired.calls(), end.reason()),
+                        segmentId, end.machine(), end.qa(), end.findings(), repaired.repaired(), end.reason()),
                 outcome,
                 repaired.rejected());
     }
