@@ -4,7 +4,6 @@ import java.util.Objects;
 import ua.bookloom.api.pipeline.DialProfile;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
-import ua.bookloom.api.pipeline.ReviewMode;
 
 /**
  * What one quality-dial setting means for a run's mechanics.
@@ -15,18 +14,10 @@ import ua.bookloom.api.pipeline.ReviewMode;
  *     second with a narrower checklist
  * @param backwardRevision whether the backward-revision pass runs after the last segment of the book
  * @param llmSummary whether the rolling summary is written by the model
- * @param chunkCap the most segments in one chunk
  */
 public record DialParameters(
-        int precedingTargets,
-        RepairMode repair,
-        int reviewPasses,
-        boolean backwardRevision,
-        boolean llmSummary,
-        int chunkCap)
+        int precedingTargets, RepairMode repair, int reviewPasses, boolean backwardRevision, boolean llmSummary)
         implements DialProfile {
-
-    private static final int MANUAL_CHUNK_CAP = 1;
 
     /** Rejects a missing repair mode. */
     public DialParameters {
@@ -41,9 +32,9 @@ public record DialParameters(
      */
     public static DialParameters of(final QualityDial dial) {
         return switch (Objects.requireNonNull(dial, "dial")) {
-            case FAST -> new DialParameters(1, RepairMode.MARKS_ONLY, 0, false, false, 8);
-            case BALANCED -> new DialParameters(2, RepairMode.ONE, 1, false, false, 8);
-            case MAX -> new DialParameters(3, RepairMode.ONE, 2, true, true, 2);
+            case FAST -> new DialParameters(1, RepairMode.MARKS_ONLY, 0, false, false);
+            case BALANCED -> new DialParameters(2, RepairMode.ONE, 1, false, false);
+            case MAX -> new DialParameters(3, RepairMode.ONE, 2, true, true);
         };
     }
 
@@ -54,15 +45,5 @@ public record DialParameters(
      */
     public boolean hasReviewer() {
         return reviewPasses > 0;
-    }
-
-    /**
-     * The chunk cap for a review mode: Manual review shows one segment at a time.
-     *
-     * @param mode the run's review mode; never null
-     * @return 1 for {@link ReviewMode#MANUAL}, otherwise this dial's cap
-     */
-    public int chunkCap(final ReviewMode mode) {
-        return Objects.requireNonNull(mode, "mode") == ReviewMode.MANUAL ? MANUAL_CHUNK_CAP : chunkCap;
     }
 }

@@ -79,7 +79,7 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
                         text("generation-quality-head-balanced"),
                         text("generation-quality-head-max")))
                 .containsExactly("Fast", "Balanced", "Max quality");
-        assertThat(text("generation-quality-batch-max")).isEqualTo("up to 2");
+        assertThat(lookup("#generation-quality-batch-max").tryQuery()).isEmpty();
         assertThat(text("generation-quality-reviews-fast")).isEqualTo("0");
         assertThat(text("generation-quality-backward-fast")).isEqualTo("—");
         assertThat(text("generation-quality-summary-max")).isEqualTo("✓");

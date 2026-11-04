@@ -144,14 +144,16 @@ class WholeBookPipelineEndToEndTest {
         assertThat(WholeBookRun.userMessage(run.bodies().get(2))).contains("пішла", "meaning");
     }
 
-    // The batch of eight short paragraphs is capped by its items' allowances; the reviewer of eight pairs by its pairs.
+    // The batch of eight paragraphs (four of them long) is capped by its items' allowances; the reviewer of eight pairs
+    // by
+    // its pairs.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":507");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":1753");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":6033");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":3946");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.

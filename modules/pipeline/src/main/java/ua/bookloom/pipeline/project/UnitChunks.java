@@ -24,7 +24,6 @@ import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.VerbatimRule;
 
 /**
@@ -44,7 +43,7 @@ final class UnitChunks {
      * Packs the segments a run would translate in a unit.
      *
      * @param unit the unit to pack
-     * @param brief the brief whose kept kinds, source language and dial decide the packing
+     * @param brief the brief whose kept kinds and source language decide the packing
      * @return the chunks in order; empty when the unit has nothing to translate
      */
     static List<Chunk> pack(final Unit unit, final BookBrief brief) {
@@ -52,11 +51,7 @@ final class UnitChunks {
         final List<Segment> translated = unit.segments().stream()
                 .filter(segment -> !isKeptAsSource(unit, segment, kept))
                 .toList();
-        return ChunkPacker.pack(
-                translated,
-                brief.sourceLanguage(),
-                TokenBudget.MAX_CHUNK_TOKENS,
-                DialParameters.of(brief.dial()).chunkCap());
+        return ChunkPacker.pack(translated, brief.sourceLanguage(), TokenBudget.MAX_CHUNK_TOKENS);
     }
 
     /**

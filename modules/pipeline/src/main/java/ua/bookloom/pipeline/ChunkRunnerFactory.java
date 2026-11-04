@@ -33,9 +33,8 @@ final class ChunkRunnerFactory {
     private final RunStores stores;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
-    private final int batchSize;
 
-    ChunkRunnerFactory(final JobTools tools, final RunStores stores, final RunChecks checks, final int batchSize) {
+    ChunkRunnerFactory(final JobTools tools, final RunStores stores, final RunChecks checks) {
         Objects.requireNonNull(tools, "tools");
         Objects.requireNonNull(checks, "checks");
         this.documents = tools.documents();
@@ -44,7 +43,6 @@ final class ChunkRunnerFactory {
         this.stores = Objects.requireNonNull(stores, "stores");
         this.qualityLoop = checks.qualityLoop();
         this.splitter = checks.splitter();
-        this.batchSize = batchSize;
     }
 
     ChunkRunner create(
@@ -52,7 +50,8 @@ final class ChunkRunnerFactory {
             final RunSettings settings,
             final RunWindow runWindow,
             final RunSinks sinks,
-            final ModelCalls calls) {
+            final ModelCalls calls,
+            final int batchSize) {
         log.debug(
                 "Wiring the chunk runner batchSize={} format={}",
                 batchSize,

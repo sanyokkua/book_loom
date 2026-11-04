@@ -103,6 +103,11 @@ class BatchDrafterTest {
     }
 
     static BatchDrafter scriptedDrafter(final List<Result<ChatResponse>> answers, final List<List<String>> segments) {
+        return scriptedDrafter(answers, segments, 8);
+    }
+
+    static BatchDrafter scriptedDrafter(
+            final List<Result<ChatResponse>> answers, final List<List<String>> segments, final int initialSize) {
         final ModelCalls scripted = new ModelCalls() {
             private int next;
 
@@ -127,7 +132,7 @@ class BatchDrafterTest {
                 scripted,
                 "en",
                 "uk",
-                8);
+                initialSize);
     }
 
     static String entries(final String... pairs) {

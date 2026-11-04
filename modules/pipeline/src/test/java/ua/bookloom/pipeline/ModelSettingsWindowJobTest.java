@@ -32,8 +32,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
  * A context window the person saves while a run goes applies from the next chunk: the chunk running keeps the window
- * it was packed for, and the segments not yet packed are packed again for the new one. Sixteen paragraphs in one
- * unit on the Fast dial are two chunks of eight.
+ * it was packed for, and the segments not yet packed are packed again for the new one. Thirty paragraphs of about
+ * 120 estimated tokens in one unit are a chunk of sixteen and one of fourteen at the default window, because only the token budget closes
+ * a chunk; each chunk is drafted in batches of eight.
  */
 class ModelSettingsWindowJobTest {
 
@@ -41,8 +42,9 @@ class ModelSettingsWindowJobTest {
     private static final Pattern NUMBER = Pattern.compile("number (\\d+)\\.");
     private static final String LATIN = "abcdefghijklmnopqrstuvwxyz";
     private static final String CYRILLIC = "абцдефгхіжклмнопкрстуввхуз";
-    private static final int PARAGRAPHS = 16;
-    private static final int FIRST_CHUNK_SIZE = 8;
+    private static final int PARAGRAPHS = 30;
+    private static final int FIRST_CHUNK_SIZE = 16;
+    private static final int BATCH_SIZE = 8;
     private static final int DEFAULT_WINDOW = 16384;
 
     @TempDir
@@ -103,7 +105,8 @@ class ModelSettingsWindowJobTest {
     private static String paragraph(final int index) {
         final String sentence = "Hale walked along the quay of the harbour town while the old men argued about the "
                 + "ship nobody had seen and the fishermen rolled barrels up from the beach before the tide turned";
-        return sentence + " and " + sentence + ", at the customs house number " + index + ".";
+        return sentence + " and " + sentence + " beneath the grey and silent sky, at the customs house number " + index
+                + ".";
     }
 
     private TestProject book() {
@@ -140,7 +143,7 @@ class ModelSettingsWindowJobTest {
         assertThat(firstOfChunkTwo.window()).isEqualTo(8192);
     }
 
-    // IF the new window is too small for the eight paragraphs waiting, THEN they are packed into smaller chunks.
+    // IF the new window is too small for the paragraphs waiting, THEN they are packed into chunks smaller than a batch.
     @Test
     void run_windowShrinksMidUnit_remainingSegmentsRepacked() {
         final Echoing model = new Echoing(4096);
@@ -152,10 +155,10 @@ class ModelSettingsWindowJobTest {
         final List<Seen> later = model.calls.stream()
                 .filter(seen -> seen.paragraphs().stream().allMatch(number -> number >= FIRST_CHUNK_SIZE))
                 .toList();
-        assertThat(model.calls.getFirst().paragraphs()).hasSize(FIRST_CHUNK_SIZE);
+        assertThat(model.calls.getFirst().paragraphs()).hasSize(BATCH_SIZE);
         assertThat(later)
                 .isNotEmpty()
-                .allSatisfy(seen -> assertThat(seen.paragraphs()).hasSizeLessThan(FIRST_CHUNK_SIZE));
+                .allSatisfy(seen -> assertThat(seen.paragraphs()).hasSizeLessThan(BATCH_SIZE));
         assertThat(run.end()).isEqualTo(ua.bookloom.api.pipeline.JobState.COMPLETED);
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, PARAGRAPHS, 0, 0, 0));
     }

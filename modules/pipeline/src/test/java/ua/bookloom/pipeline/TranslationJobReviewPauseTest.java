@@ -73,6 +73,7 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
  */
 class TranslationJobReviewPauseTest {
 
+    private static final String ECHO7 = "THE BAKER OPENED HIS SMALL SHOP.";
     private static final String S4 = "The gulls cried above the pier.";
     private static final String T4 = "Чайки кричали над старим причалом.";
     private static final String S5 = "The fishermen mended their nets.";
@@ -80,7 +81,6 @@ class TranslationJobReviewPauseTest {
     private static final String S6 = "The children ran along the shore.";
     private static final String T6 = "Діти весело бігли вздовж берега.";
     private static final String S7 = "The baker opened his small shop.";
-    private static final String ECHO7 = "THE BAKER OPENED HIS SMALL SHOP.";
     private static final String S8 = "The captain studied the old map.";
     private static final String T8 = "Капітан вивчав стару карту.";
 
@@ -169,9 +169,8 @@ class TranslationJobReviewPauseTest {
     @Test
     void run_assistedBalancedFlagged_pausesAfterTheJudgeAndFeedsTheEditToTheNextChunk() {
         // The fix returns the echo unchanged, so its segment is flagged after one round.
-        final ScriptedChatModel model = replies(T0, T1, T2, T3, T5, T6, ECHO7, T8, ECHO7, T4)
-                .answerTo(REVIEW, reviewed())
-                .answerTo(REVIEW, reviewed());
+        final ScriptedChatModel model =
+                nineRowReplies().answerTo(REVIEW, reviewed()).answerTo(REVIEW, reviewed());
         final TestProject project = project(nineParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -190,7 +189,7 @@ class TranslationJobReviewPauseTest {
         assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, REPAIR);
         assertThat(storedAtPause).containsExactlyElementsOf(sixAcceptedThenFlaggedThenPending());
         assertThat(formats(model)).hasSize(12).endsWith(DRAFT, REVIEW);
-        assertThat(userMessage(model.requests().get(10))).contains(shown(S4), preceding(EDIT, T8));
+        assertThat(userMessage(model.requests().get(10))).contains(shown(HeavyRows.weighty(S4)), preceding(EDIT, T8));
         assertThat(stored(project, "Book.md:7"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, T8);
@@ -234,8 +233,9 @@ class TranslationJobReviewPauseTest {
         assertThat(model.requests().subList(2, 8))
                 .extracting(ChunkRunFixtures::userMessage)
                 .allSatisfy(message -> assertThat(message).contains("<Text>\nHale counted"));
-        assertThat(userMessage(model.requests().getLast())).contains(shown("⟦g0⟧ counted the boats in row 8."));
-        assertThat(stored(project, "Book.md:8").machineTarget()).isEqualTo("Гейл рахував човни в ряду 8.");
+        assertThat(userMessage(model.requests().getLast()))
+                .contains(shown(HeavyRows.heavy("⟦g0⟧ counted the boats in row 8.")));
+        assertThat(stored(project, "Book.md:8").machineTarget()).isEqualTo(haleTarget(8));
     }
 
     @Test
@@ -323,7 +323,34 @@ class TranslationJobReviewPauseTest {
 
     /** One full Balanced chunk of eight paragraphs and a ninth that opens the next chunk. */
     private Path nineParagraphs() {
-        return TestBooks.markdown(tempDir.resolve("Book.md"), String.join("\n\n", S0, S1, S2, S3, S5, S6, S7, S8, S4));
+        return TestBooks.markdown(
+                tempDir.resolve("Book.md"),
+                String.join(
+                        "\n\n",
+                        HeavyRows.weighty(S0),
+                        HeavyRows.weighty(S1),
+                        HeavyRows.weighty(S2),
+                        HeavyRows.weighty(S3),
+                        HeavyRows.weighty(S5),
+                        HeavyRows.weighty(S6),
+                        S7,
+                        S8,
+                        HeavyRows.weighty(S4)));
+    }
+
+    /** Drafts of the nine-row book: the flagged seventh row is answered with its echo twice, draft and fix. */
+    private static ScriptedChatModel nineRowReplies() {
+        return replies(
+                HeavyRows.weightyT(T0),
+                HeavyRows.weightyT(T1),
+                HeavyRows.weightyT(T2),
+                HeavyRows.weightyT(T3),
+                HeavyRows.weightyT(T5),
+                HeavyRows.weightyT(T6),
+                ECHO7,
+                T8,
+                ECHO7,
+                HeavyRows.weightyT(T4));
     }
 
     /** Nine rows naming Hale at their start, where the name scan never proposes it. */
@@ -347,15 +374,15 @@ class TranslationJobReviewPauseTest {
                 haleTarget(5),
                 haleTarget(6),
                 haleTarget(7),
-                "⟦g0⟧ рахував човни в ряду 8.");
+                HeavyRows.heavyT("⟦g0⟧ рахував човни в ряду 8."));
     }
 
     private static String haleSource(final int row) {
-        return "Hale counted the boats in row " + row + ".";
+        return HeavyRows.heavy("Hale counted the boats in row " + row + ".");
     }
 
     private static String haleTarget(final int row) {
-        return "Гейл рахував човни в ряду " + row + ".";
+        return HeavyRows.heavyT("Гейл рахував човни в ряду " + row + ".");
     }
 
     private static String haleEcho(final int row) {

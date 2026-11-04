@@ -36,7 +36,7 @@ final class RunWiring {
     private final ConsistencyPass revision;
     private final WordValidator words;
     private final Clock clock;
-    private final int batchSize;
+    private final int pacedBatchSize;
     private final String providerKind;
     private final Live live;
 
@@ -56,16 +56,17 @@ final class RunWiring {
         this.request = Objects.requireNonNull(request, "request");
         this.model = tools.model();
         this.stores = Objects.requireNonNull(stores, "stores");
-        this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks, pacing.batchSize());
+        this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks);
         this.revision = checks.revision();
         this.words = checks.words();
         this.clock = pacing.clock();
-        this.batchSize = pacing.batchSize();
+        this.pacedBatchSize = pacing.batchSize();
         this.providerKind = logFacts.providerKind();
         this.live = Objects.requireNonNull(live, "live");
     }
 
     StageRunner stages(final RunStart.Started run, final PrepStage.Prepared prepared, final RunSinks sinks) {
+        final int batchSize = startBatchSize();
         log.debug("Wiring the stages project={} batchSize={}", request.projectId(), batchSize);
         final BookBrief brief = run.project().brief();
         final RunWindow runWindow = new RunWindow(model, request.detectedContext());
@@ -87,11 +88,21 @@ final class RunWiring {
         final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
         RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
         return new StageRunner(
-                chunkRunners.create(run, settings, runWindow, sinks, calls),
+                chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize),
                 revision,
                 settings,
                 sinks,
                 calls,
                 new NarratorStage(stores, sinks, run.document(), settings));
+    }
+
+    private int startBatchSize() {
+        final int size =
+                pacedBatchSize == RunPacing.FROM_PROFILE ? model.profile().batchSize() : pacedBatchSize;
+        log.debug(
+                "Batch size starts at {} ({})",
+                size,
+                pacedBatchSize == RunPacing.FROM_PROFILE ? "model profile" : "set by the pacing");
+        return size;
     }
 }

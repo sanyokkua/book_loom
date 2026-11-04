@@ -49,7 +49,7 @@ class ReplyJudgeParityTest {
                 new DirectedFix(templates, new DraftReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())));
         final LoopSettings settings = new LoopSettings(
                         ReviewMode.UNATTENDED,
-                        new DialParameters(0, RepairMode.ONE, 0, false, false, 4),
+                        new DialParameters(0, RepairMode.ONE, 0, false, false),
                         project.frame(),
                         project.settings().names(),
                         List.of())

@@ -36,8 +36,8 @@ import ua.bookloom.pipeline.prompt.PromptName;
 public final class BatchDrafter {
 
     /**
-     * Where a run's batch size starts: the number of items the measured A/B of the small and the large model class both
-     * answered with every id once and every token kept.
+     * A batch size for a drafter built without a model profile (tests and evals); a run starts at its model profile's
+     * size (redesign task 10.8).
      */
     public static final int DEFAULT_INITIAL_SIZE = 8;
 

@@ -6,32 +6,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 
-/** Packing a unit's segments into chunks by token budget and segment cap. */
+/** Packing a unit's segments into chunks by token budget alone. */
 class ChunkPackerTest {
 
     private static final int BUDGET = 1200;
 
-    @ParameterizedTest
-    @CsvSource({"4,'4,4,2'", "1,'1,1,1,1,1,1,1,1,1,1'", "8,'8,2'"})
-    void pack_tenShortSegments_splitsByCap(final int cap, final String expectedSizes) {
+    @Test
+    void pack_noSegmentCap_closesOnlyOnTokenBudget() {
         final List<Segment> segments = IntStream.rangeClosed(1, 10)
                 .mapToObj(i -> segment("U", i, "Short line " + i + "."))
                 .toList();
 
-        assertThat(sizes(ChunkPacker.pack(segments, "en", BUDGET, cap))).isEqualTo(expectedSizes);
+        assertThat(sizes(ChunkPacker.pack(segments, "en", BUDGET))).isEqualTo("10");
     }
 
     @Test
     void pack_twoUnitsPackedSeparately_neverShareAChunk() {
-        final List<Chunk> first = ChunkPacker.pack(unit("A", 3), "en", BUDGET, 8);
-        final List<Chunk> second = ChunkPacker.pack(unit("B", 2), "en", BUDGET, 8);
+        final List<Chunk> first = ChunkPacker.pack(unit("A", 3), "en", BUDGET);
+        final List<Chunk> second = ChunkPacker.pack(unit("B", 2), "en", BUDGET);
 
         assertThat(sizes(first)).isEqualTo("3");
         assertThat(sizes(second)).isEqualTo("2");
@@ -44,7 +41,7 @@ class ChunkPackerTest {
         final List<Segment> segments =
                 IntStream.range(0, 7).mapToObj(i -> segment("U", i, text)).toList();
 
-        assertThat(sizes(ChunkPacker.pack(segments, "en", BUDGET, 8))).isEqualTo("3,3,1");
+        assertThat(sizes(ChunkPacker.pack(segments, "en", BUDGET))).isEqualTo("3,3,1");
     }
 
     @Test
@@ -52,7 +49,7 @@ class ChunkPackerTest {
         final List<Segment> segments =
                 List.of(segment("U", 0, "Short."), segment("U", 1, "a".repeat(6000)), segment("U", 2, "Short."));
 
-        final List<Chunk> chunks = ChunkPacker.pack(segments, "en", BUDGET, 8);
+        final List<Chunk> chunks = ChunkPacker.pack(segments, "en", BUDGET);
 
         assertThat(sizes(chunks)).isEqualTo("1,1,1");
         assertThat(chunks).extracting(Chunk::oversized).containsExactly(false, true, false);
@@ -60,7 +57,7 @@ class ChunkPackerTest {
 
     @Test
     void pack_emptyUnit_yieldsNoChunk() {
-        assertThat(ChunkPacker.pack(List.of(), "en", BUDGET, 8)).isEmpty();
+        assertThat(ChunkPacker.pack(List.of(), "en", BUDGET)).isEmpty();
     }
 
     private static String sizes(final List<Chunk> chunks) {

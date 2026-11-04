@@ -116,14 +116,12 @@ final class ChunkPlanner {
         final List<Segment> segments = items.stream().map(WorkItem::segment).toList();
         final ContextBudget budgeted = ChunkBudget.budget(settings.frame(), settings.window());
         final int budget = budgeted.chunkTokens();
-        final int cap = settings.dial().chunkCap(settings.mode());
-        final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
+        final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget);
         log.debug(
-                "Packed unit unitId={} budget={} {} cap={} chunkSizes={}",
+                "Packed unit unitId={} budget={} {} chunkSizes={}",
                 segments.getFirst().unit(),
                 budget,
                 budgeted.describe(),
-                cap,
                 chunks.stream().map(chunk -> chunk.segments().size()).toList());
         return new Plan(chunks, budget);
     }

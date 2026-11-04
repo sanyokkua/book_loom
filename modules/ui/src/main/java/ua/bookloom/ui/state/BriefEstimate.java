@@ -35,6 +35,12 @@ import ua.bookloom.ui.BackgroundExecutor;
 @Singleton
 public final class BriefEstimate {
 
+    /**
+     * How many segments one request is assumed to carry in the estimate. The dial no longer caps a chunk, and the
+     * model's own batch size reaches the window only when the estimate is rebuilt on measured calls (group 14).
+     */
+    private static final int ESTIMATED_SEGMENTS_PER_CHUNK = 8;
+
     private final CurrentProject current;
     private final SettingsViewModel settings;
     private final BriefProject project;
@@ -111,7 +117,7 @@ public final class BriefEstimate {
         final long ask = ++asked;
         log.debug("estimate #{} asked for {} segments on {}, model chosen {}", ask, segments, dial, chosen.isPresent());
         final DialProfile profile = profiles.of(dial);
-        final int chunks = Math.ceilDiv(Math.max(0, segments), Math.max(1, profile.chunkCap()));
+        final int chunks = Math.ceilDiv(Math.max(0, segments), ESTIMATED_SEGMENTS_PER_CHUNK);
         background.execute(() -> {
             final StartEstimate now =
                     StartEstimates.of(speedsOf(chosen), segments, chunks, dial, profile.reviewPasses());

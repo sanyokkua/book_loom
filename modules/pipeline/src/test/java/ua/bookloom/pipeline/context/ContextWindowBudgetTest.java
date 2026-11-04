@@ -57,7 +57,7 @@ class ContextWindowBudgetTest {
         final DraftPromptBuilder builder = new DraftPromptBuilder(TEMPLATES, FRAME);
         int worst = 0;
 
-        for (final Chunk chunk : ChunkPacker.pack(unit, "en", budget.chunkTokens(), 8)) {
+        for (final Chunk chunk : ChunkPacker.pack(unit, "en", budget.chunkTokens())) {
             final int reply = budget.outputTokens(sourceTokens(chunk));
             for (final Segment segment : chunk.segments()) {
                 final List<ChatMessage> messages =
@@ -79,7 +79,7 @@ class ContextWindowBudgetTest {
         final DraftPromptBuilder builder = new DraftPromptBuilder(TEMPLATES, FRAME);
         int worst = 0;
 
-        for (final Chunk chunk : ChunkPacker.pack(unit, "en", budget.chunkTokens(), 50)) {
+        for (final Chunk chunk : ChunkPacker.pack(unit, "en", budget.chunkTokens())) {
             final int reply = budget.outputTokens(sourceTokens(chunk));
             for (final Segment segment : chunk.segments()) {
                 final ContextInputs inputs = new ContextInputs(

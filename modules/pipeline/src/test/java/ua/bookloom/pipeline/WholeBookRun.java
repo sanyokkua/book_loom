@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -73,17 +74,22 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class WholeBookRun {
 
+    // The four filler paragraphs weigh about 370 estimated tokens each and the ninth about 500, so the 2000-token chunk
+    // closes after the eighth paragraph and the ninth opens the next chunk: only the token budget closes a chunk.
+    private static final int FILLER_SENTENCES = 24;
+    private static final int LAST_SENTENCES = 32;
+
     static final String DRAFT_0 = "Двері відчинив Гейл пізно вночі.";
     static final String DRAFT_1 = "Вона пішла з Гейлом до темної зали.";
     static final String DRAFT_2 = "Вони чекали на ⟦g0⟧Гейла⟦g1⟧ до самого ранку.";
     static final String DRAFT_3 = "Він пішов з дому вдосвіта.";
-    static final String FILLER_0 = "Рибалки лагодили свої сіті.";
-    static final String FILLER_1 = "Діти весело бігли вздовж берега.";
-    static final String FILLER_2 = "Пекар відчинив свою маленьку крамницю.";
-    static final String FILLER_3 = "Капітан вивчав стару карту.";
+    static final String FILLER_0 = "Рибалки лагодили свої сіті. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_1 = "Діти весело бігли вздовж берега. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_2 = "Пекар відчинив свою маленьку крамницю. " + padUk(FILLER_SENTENCES);
+    static final String FILLER_3 = "Капітан вивчав стару карту. " + padUk(FILLER_SENTENCES);
     static final String FIX_1 = "Вона пройшла з Гейлом до темної зали.";
     static final String EDIT = "Він вийшов з дому на світанку.";
-    static final String DRAFT_4 = "Того вечора дощ так і не вщух.";
+    static final String DRAFT_4 = "Того вечора дощ так і не вщух. " + padUk(LAST_SENTENCES);
 
     private static final String SOURCE_3 = "He left the house at dawn.";
     private static final String BOOK = String.join(
@@ -91,12 +97,12 @@ final class WholeBookRun {
             "The door was opened by Hale at night.",
             "She walked with Hale into the dark hall.",
             "They waited for *Hale* until the morning.",
-            "The fishermen mended their nets.",
-            "The children ran along the shore.",
-            "The baker opened his small shop.",
-            "The captain studied the old map.",
+            "The fishermen mended their nets. " + padEn(FILLER_SENTENCES),
+            "The children ran along the shore. " + padEn(FILLER_SENTENCES),
+            "The baker opened his small shop. " + padEn(FILLER_SENTENCES),
+            "The captain studied the old map. " + padEn(FILLER_SENTENCES),
             SOURCE_3,
-            "The rain did not stop that evening.");
+            "The rain did not stop that evening. " + padEn(LAST_SENTENCES));
     // Two edits the code refuses as a swapped word, which leaves the reviewer's finding standing, so each segment gets
     // one directed fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the
     // second one
@@ -146,6 +152,9 @@ final class WholeBookRun {
         }
     }
 
+    /** The first chunk's eight paragraphs go to the model in one batch, as the scenario describes. */
+    private static final int FIRST_BATCH = 8;
+
     /** An imported project on the real modules, and the services that act on it. */
     record Project(Injector injector, String id) {
 
@@ -187,7 +196,7 @@ final class WholeBookRun {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(replies(provider));
             final Project project = project(book(directory), QualityDial.BALANCED);
-            final TranslationJob job = project.job(ReviewMode.ASSISTED, provider.model(REQUEST_TIMEOUT, ignored -> {}));
+            final TranslationJob job = project.job(ReviewMode.ASSISTED, profiled(provider));
             final List<JobEvent> events = new CopyOnWriteArrayList<>();
             final LinkedBlockingQueue<Paused> pauses = recordEvents(job, events);
 
@@ -212,6 +221,10 @@ final class WholeBookRun {
                     segments(project),
                     export(project, directory.resolve("Book.uk.md")));
         }
+    }
+
+    private static ChatModel profiled(final WireMockProvider provider) {
+        return new ProfiledChatModel(provider.model(REQUEST_TIMEOUT, ignored -> {}), FIRST_BATCH);
     }
 
     /** A pause for any other reason would mean the stubbed sequence was disturbed, so say what it was. */
@@ -332,5 +345,18 @@ final class WholeBookRun {
     static <T> T dataOf(final Result<T> result) {
         assertThat(result.isOk()).as("result: " + result.error()).isTrue();
         return Objects.requireNonNull(result.data(), "result data");
+    }
+
+    /** Numbered English sentences, so a long paragraph repeats none; the digits survive the translation. */
+    private static String padEn(final int sentences) {
+        return IntStream.rangeClosed(1, sentences)
+                .mapToObj(number -> "Lamp " + number + " was lit on the quay and the water stayed quiet.")
+                .collect(Collectors.joining(" "));
+    }
+
+    private static String padUk(final int sentences) {
+        return IntStream.rangeClosed(1, sentences)
+                .mapToObj(number -> "Ліхтар " + number + " засвітили на набережній, і вода залишалася тихою.")
+                .collect(Collectors.joining(" "));
     }
 }

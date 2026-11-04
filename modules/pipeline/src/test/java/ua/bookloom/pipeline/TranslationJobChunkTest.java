@@ -83,7 +83,7 @@ class TranslationJobChunkTest {
     }
 
     @Test
-    void run_balancedTenShortSegments_packs82() {
+    void run_balancedTenShortSegments_packOneChunkWithOneReview() {
         final String book = IntStream.rangeClosed(1, 10)
                 .mapToObj(index -> "Short line " + index + ".")
                 .collect(Collectors.joining("\n\n"));
@@ -97,7 +97,7 @@ class TranslationJobChunkTest {
         report(job(project, model).run());
 
         assertThat(formats(model))
-                .containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, REVIEW);
+                .containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW);
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 10, 0, 0, 0));
     }
 

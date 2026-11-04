@@ -928,12 +928,12 @@ WHEN a job runs, the system SHALL start at the project's first PENDING segment �
 - **WHEN** a book is translated from `zh-Hant` to `uk`
 - **THEN** the system message says `from Chinese (Traditional) (zh-Hant) into Ukrainian (uk)`
 
-#### Scenario: The dial caps a chunk
+#### Scenario: Every dial drafts in the model's batches
 
 - **WHEN** a Fast, a Balanced and a Max run each translate a chapter of 10 short segments with a model whose profile batch size is 4
 - **THEN** each run drafts them in batches of 4, 4 and 2, three draft calls, because the dial no longer caps a chunk
 
-#### Scenario: Manual review translates one segment per chunk
+#### Scenario: Manual review drafts in the same batches
 
 - **WHEN** the same chapter is translated in the Manual review mode
 - **THEN** it is drafted in the same batches of 4, 4 and 2, and the run still pauses for review as "Read the review mode at the start of each run" says
@@ -1630,7 +1630,7 @@ The system SHALL draft the segments that need a model call in batches: a segment
 - **WHEN** an item holds a locked name
 - **THEN** its line in the batch prompt is prefixed with the item's id (`3: ⟦g0⟧ → name`)
 
-#### Scenario: Manual review drafts every segment alone
+#### Scenario: Manual review drafts in the model's batches
 
 - **WHEN** the review mode is Manual review
 - **THEN** the segments are drafted in batches of the model's batch size as in any other mode, and a pause after a decided segment keeps the drafts of the rest of its batch

@@ -40,11 +40,4 @@ public interface DialProfile {
      * @return {@code true} when it does
      */
     boolean llmSummary();
-
-    /**
-     * The most segments in one request.
-     *
-     * @return the cap, at least one
-     */
-    int chunkCap();
 }

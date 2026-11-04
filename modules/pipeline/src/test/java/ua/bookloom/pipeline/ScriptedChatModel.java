@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelProfile;
 
 /**
  * A deterministic chat model that records requests and consumes scripted outcomes in order, safe to use from the job
@@ -36,6 +37,29 @@ public final class ScriptedChatModel implements ChatModel {
     private final AtomicInteger seen = new AtomicInteger();
     private final AtomicInteger blockedOrdinal = new AtomicInteger();
     private final CountDownLatch released = new CountDownLatch(1);
+    private volatile ModelProfile profile = ModelProfile.defaults();
+
+    /** Makes this model declare a profile whose batch is {@code batchSize} items, as a profiled real model would. */
+    public ScriptedChatModel withBatchSize(final int batchSize) {
+        final ModelProfile base = ModelProfile.defaults();
+        profile = new ModelProfile(
+                base.reasoning(),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.sampling(),
+                base.thinking(),
+                base.context(),
+                base.templateOverhead(),
+                batchSize,
+                base.tier());
+        return this;
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return profile;
+    }
 
     public ScriptedChatModel answer(final Result<ChatResponse> result) {
         Objects.requireNonNull(result, "result");

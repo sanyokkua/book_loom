@@ -48,6 +48,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class LiveTextEventsTest {
 
+    // Heavy enough that the token budget, not a segment count, closes the chunks.
+    private static final String FILLER = "The old keeper counted the lamps along the quay again. ".repeat(8);
+
     @TempDir
     private Path tempDir;
 
@@ -119,9 +122,10 @@ class LiveTextEventsTest {
     }
 
     @Test
-    void run_decisionInChunkTwentyOneOfThirtyThree_carriesSectionSevenOfElevenAndChunkTwentyOneOfThirtyThree() {
-        final List<String> paragraphs =
-                IntStream.range(0, 264).mapToObj(index -> "Line " + index + ".").toList();
+    void run_decisionInChunkElevenOfEighteen_carriesSectionSevenOfElevenAndChunkElevenOfEighteen() {
+        final List<String> paragraphs = IntStream.range(0, 264)
+                .mapToObj(index -> "Line " + index + ". " + FILLER)
+                .toList();
         final TestProject project = LiveTextFixtures.seventhChapterPending(tempDir, paragraphs);
         final TranslationJobImpl translation = job(project, LiveTextFixtures.acceptingModel());
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
@@ -131,7 +135,7 @@ class LiveTextEventsTest {
 
         assertThat(decided(events, "ch07.xhtml:160").progress())
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::chunk, JobProgress::chunks)
-                .containsExactly(7, 11, 21, 33);
+                .containsExactly(7, 11, 11, 18);
     }
 
     // A repair is its own call, and both belong to the segment before its decision.

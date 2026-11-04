@@ -52,16 +52,15 @@ class ProjectServiceSegmentsTest {
     }
 
     @Test
-    void segments_tenShortParagraphs_putsEightInTheFirstChunkAndTwoInTheSecond() {
+    void segments_tenShortParagraphs_fitOneChunkBecauseOnlyTheTokenBudgetClosesOne() {
         final String id = importId(markdownOf(SHORT, SHORT, SHORT, SHORT, SHORT, SHORT, SHORT, SHORT, SHORT, SHORT));
 
         final List<SegmentPreview> listed = segmentsOk(id, "Book.md");
 
         assertThat(listed).hasSize(10);
-        assertThat(listed.stream().map(SegmentPreview::chunkIndex).toList())
-                .containsExactly(1, 1, 1, 1, 1, 1, 1, 1, 2, 2);
+        assertThat(listed.stream().map(SegmentPreview::chunkIndex).toList()).containsOnly(1);
         assertThat(listed).allSatisfy(one -> {
-            assertThat(one.chunkCount()).isEqualTo(2);
+            assertThat(one.chunkCount()).isEqualTo(1);
             assertThat(one.displaySource()).isEqualTo(SHORT);
             assertThat(one.keptVerbatim()).isFalse();
             assertThat(one.keptAsSource()).isFalse();
@@ -131,7 +130,7 @@ class ProjectServiceSegmentsTest {
     }
 
     @Test
-    void segments_afterTheBriefChangesTheDial_maxHoldsTwoSegmentsPerChunk() {
+    void segments_afterTheBriefChangesTheDial_chunksStayTheSame() {
         final ImportedBook imported = importOk(markdownOf(SHORT, SHORT, SHORT, SHORT));
         final String id = Objects.requireNonNull(imported.projectId());
         assertThat(segmentsOk(id, "Book.md"))
@@ -142,7 +141,7 @@ class ProjectServiceSegmentsTest {
         assertThat(segmentsOk(id, "Book.md").stream()
                         .map(SegmentPreview::chunkIndex)
                         .toList())
-                .containsExactly(1, 1, 2, 2);
+                .containsOnly(1);
     }
 
     @Test

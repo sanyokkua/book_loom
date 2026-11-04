@@ -42,7 +42,7 @@ class QualityLoopProgressTest {
                 .answer(readable(targetReply(GOOD_TARGET)));
 
         final SegmentOutcome decided =
-                first(decider(ECHO, model, new DialParameters(1, RepairMode.ONE, 0, false, false, 4)));
+                first(decider(ECHO, model, new DialParameters(1, RepairMode.ONE, 0, false, false)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
@@ -55,7 +55,7 @@ class QualityLoopProgressTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
                 .answer(readable(targetReply(GOOD_TARGET)));
-        final ChunkDecider decider = decider(ECHO, model, new DialParameters(2, RepairMode.ONE, 0, false, false, 4));
+        final ChunkDecider decider = decider(ECHO, model, new DialParameters(2, RepairMode.ONE, 0, false, false));
 
         final Result<SegmentOutcome> failed = decider.nextDecision();
         final SegmentOutcome decided = first(decider);
@@ -76,7 +76,7 @@ class QualityLoopProgressTest {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
 
         final SegmentOutcome decided =
-                first(decider(ECHO, model, new DialParameters(2, RepairMode.ONE, 1, false, false, 4)));
+                first(decider(ECHO, model, new DialParameters(2, RepairMode.ONE, 1, false, false)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(model.requests()).hasSize(1);

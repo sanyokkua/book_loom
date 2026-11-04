@@ -264,7 +264,7 @@ class QualityLoopOneRepairCallTest {
     private static LoopSettings oneRepairReviewerOff() {
         return new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, RepairMode.ONE, 0, false, false, 4),
+                new DialParameters(1, RepairMode.ONE, 0, false, false),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

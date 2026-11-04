@@ -37,7 +37,7 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 class OneRepairTest {
 
     // A dial with the one repair and no reviewer, so every request a test sees is the draft's repair.
-    private static final DialParameters ONE_NO_REVIEWER = new DialParameters(2, RepairMode.ONE, 0, false, false, 8);
+    private static final DialParameters ONE_NO_REVIEWER = new DialParameters(2, RepairMode.ONE, 0, false, false);
 
     @TempDir
     private Path tempDir;

@@ -109,7 +109,7 @@ class RunStartLogTest {
                         .contains("providerKind=OLLAMA")
                         .contains("window=16384")
                         .contains("dial=FAST")
-                        .contains("batch=8")
+                        .contains("batch=2")
                         .contains("mode=UNATTENDED")
                         .contains("names pass entries=" + entries + " proposed=" + entries));
         assertThat(infoAndAbove()).noneMatch(line -> BOOK_WORDS.stream().anyMatch(line::contains));

@@ -190,12 +190,12 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void plan_tenShortParagraphsOnBalanced_plansTwoChunksAndNoOversized() {
+    void plan_tenShortParagraphsOnBalanced_plansOneChunkAndNoOversized() {
         final ImportedBook imported = importOk(markdownOfParagraphs(10, "A short paragraph."));
 
         final BookPlan plan = planOk(idOf(imported));
 
-        assertThat(plan.chunksPerUnit()).containsEntry("Book.md", 2);
+        assertThat(plan.chunksPerUnit()).containsEntry("Book.md", 1);
         assertThat(plan.oversizedSegmentIds()).isEmpty();
     }
 
@@ -237,7 +237,7 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void updateBrief_newDial_isStoredAndChangesTheChunkCount() {
+    void updateBrief_newDial_isStoredAndLeavesTheChunkCount() {
         final ImportedBook imported = importOk(markdownOfParagraphs(10, "A short paragraph."));
         final BookBrief fast = new BookBrief(
                 "en",
@@ -258,7 +258,7 @@ class ProjectServiceImplTest {
 
         assertThat(updated.isOk()).isTrue();
         assertThat(storedProject(imported).brief().dial()).isEqualTo(QualityDial.FAST);
-        assertThat(planOk(idOf(imported)).chunksPerUnit()).containsEntry("Book.md", 2);
+        assertThat(planOk(idOf(imported)).chunksPerUnit()).containsEntry("Book.md", 1);
     }
 
     @Test

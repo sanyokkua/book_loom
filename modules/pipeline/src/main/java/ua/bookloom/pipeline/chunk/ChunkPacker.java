@@ -16,20 +16,16 @@ import ua.bookloom.api.document.Segment;
 public final class ChunkPacker {
 
     /**
-     * Packs consecutive segments into chunks, closing a chunk when the next segment would exceed the token budget
-     * or the segment cap. A segment that exceeds the budget alone becomes an oversized chunk of its own.
+     * Packs consecutive segments into chunks, closing a chunk when the next segment would exceed the token budget;
+     * how many segments go to the model in one request is the batch size's business, not the chunk's. A segment that exceeds the budget alone becomes an oversized chunk of its own.
      *
      * @param unitSegments the unit's segments to translate, in document order; never null
      * @param sourceLanguage the source language tag, or null when unknown
      * @param budgetTokens the tokens one chunk may hold
-     * @param segmentCap the most segments in one chunk; 1 in Manual review
      * @return the chunks in order; empty when there is no segment
      */
     public static List<Chunk> pack(
-            final List<Segment> unitSegments,
-            @Nullable final String sourceLanguage,
-            final int budgetTokens,
-            final int segmentCap) {
+            final List<Segment> unitSegments, @Nullable final String sourceLanguage, final int budgetTokens) {
         Objects.requireNonNull(unitSegments, "unitSegments");
         final List<Chunk> chunks = new ArrayList<>();
         final List<Segment> open = new ArrayList<>();
@@ -42,7 +38,7 @@ public final class ChunkPacker {
                 openTokens = 0;
                 continue;
             }
-            if (!open.isEmpty() && (open.size() >= segmentCap || openTokens + tokens > budgetTokens)) {
+            if (!open.isEmpty() && openTokens + tokens > budgetTokens) {
                 close(chunks, open);
                 openTokens = 0;
             }
@@ -50,7 +46,7 @@ public final class ChunkPacker {
             openTokens += tokens;
         }
         close(chunks, open);
-        logPacked(unitSegments, budgetTokens, segmentCap, chunks);
+        logPacked(unitSegments, budgetTokens, chunks);
         return chunks;
     }
 
@@ -61,8 +57,7 @@ public final class ChunkPacker {
         }
     }
 
-    private static void logPacked(
-            final List<Segment> unitSegments, final int budget, final int cap, final List<Chunk> chunks) {
+    private static void logPacked(final List<Segment> unitSegments, final int budget, final List<Chunk> chunks) {
         if (!log.isDebugEnabled() || unitSegments.isEmpty()) {
             return;
         }
@@ -73,11 +68,10 @@ public final class ChunkPacker {
                 .map(c -> c.segments().get(0).id())
                 .toList();
         log.debug(
-                "packed unit {}: {} segments, budget {}, cap {}, {} chunks {}, oversized {}",
+                "packed unit {}: {} segments, budget {}, {} chunks {}, oversized {}",
                 unitSegments.get(0).unit(),
                 unitSegments.size(),
                 budget,
-                cap,
                 chunks.size(),
                 sizes,
                 oversized);

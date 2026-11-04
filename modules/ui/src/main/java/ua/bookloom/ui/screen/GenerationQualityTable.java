@@ -68,10 +68,6 @@ final class GenerationQualityTable {
     private static List<Row> rows(final Messages messages) {
         return List.of(
                 new Row(
-                        "batch",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_BATCH,
-                        profile -> messages.get(MessageKey.SETTINGS_GENERATION_QUALITY_UP_TO, profile.chunkCap())),
-                new Row(
                         "preceding",
                         MessageKey.SETTINGS_GENERATION_QUALITY_PRECEDING,
                         profile -> Integer.toString(profile.precedingTargets())),

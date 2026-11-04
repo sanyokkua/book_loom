@@ -114,12 +114,13 @@ class TranslationJobStepsTest {
         return planned(events, kind).stream().mapToInt(Integer::intValue).sum();
     }
 
-    // The task's Fast row: 12 drafts in chunks of 8 and 4, 2 done at once, and no check, summary or revision.
+    // The task's Fast row: 12 drafts in the one chunk the token budget allows, 2 done at once, and no check, summary or
+    // revision.
     @Test
     void run_fastTwelveSegmentsTwoVerbatim_plansTwelveDraftsNoCheck() {
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.FAST), tenDrafts()));
 
-        assertThat(planned(events, StepKind.DRAFT)).containsExactly(8, 4);
+        assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
         assertThat(ended(events, StepKind.DRAFT)).hasSize(12);
         assertThat(ended(events, StepKind.DRAFT))
                 .filteredOn(change -> change.result() == StepResult.NO_CALL)
@@ -136,21 +137,21 @@ class TranslationJobStepsTest {
 
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.BALANCED), model));
 
-        assertThat(planned(events, StepKind.DRAFT)).containsExactly(8, 4);
-        assertThat(planned(events, StepKind.CHECK)).containsExactly(1, 1);
-        assertThat(ended(events, StepKind.CHECK)).hasSize(2).allMatch(change -> change.result() == StepResult.DONE);
+        assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
+        assertThat(planned(events, StepKind.CHECK)).containsExactly(1);
+        assertThat(ended(events, StepKind.CHECK)).hasSize(1).allMatch(change -> change.result() == StepResult.DONE);
         assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
         assertThat(planned(events, StepKind.REVISION)).isEmpty();
     }
 
-    // Max: six chunks of 2, two checks each, one summary for the one unit that runs, and the revision as an estimate.
+    // Max: one chunk of 12, two checks, one summary for the one unit that runs, and the revision as an estimate.
     @Test
     void run_maxTwelveSegments_plansTwelveChecksOneSummaryOneRevision() {
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), maxModel()));
 
-        assertThat(planned(events, StepKind.DRAFT)).containsExactly(2, 2, 2, 2, 2, 2);
-        assertThat(planned(events, StepKind.CHECK)).containsExactly(2, 2, 2, 2, 2, 2);
-        assertThat(ended(events, StepKind.CHECK)).hasSize(12);
+        assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
+        assertThat(planned(events, StepKind.CHECK)).containsExactly(2);
+        assertThat(ended(events, StepKind.CHECK)).hasSize(2);
         assertThat(planned(events, StepKind.SUMMARY)).containsExactly(1);
         assertThat(ended(events, StepKind.SUMMARY))
                 .extracting(StepChanged::result)
