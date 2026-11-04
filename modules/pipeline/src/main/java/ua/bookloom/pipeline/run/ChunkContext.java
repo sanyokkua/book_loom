@@ -87,7 +87,9 @@ final class ChunkContext {
             final Map<String, ProtectedMask> masks = new LinkedHashMap<>();
             chunk.segments().forEach(segment -> masks.put(segment.id(), maskOf(segment, settings, entries)));
             final GateFunction gate = TypographyGate.around(
-                    ProtectedSpans.gate(masks, documentGate), settings.frame().targetLanguage());
+                    ProtectedSpans.gate(masks, documentGate),
+                    settings.frame().targetLanguage(),
+                    settings.frame().typography());
             return new ChunkContext(chunk, settings, entries, masks, gate, new Lexicon(lexicon));
         });
     }

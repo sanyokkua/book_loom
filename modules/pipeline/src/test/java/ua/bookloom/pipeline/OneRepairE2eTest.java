@@ -32,8 +32,8 @@ class OneRepairE2eTest {
     @EnumSource(ProviderKind.class)
     void run_headingNumberLost_exportsRestoredNumberWithNoModelCall(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
-            provider.stubSequence(
-                    List.of(provider.reply(WholeBookRun.batchReply(List.of("Нічний перевал")), Duration.ZERO)));
+            // A one-segment book is drafted alone, so the reply is the single-segment form, not a batch.
+            provider.stubSequence(List.of(provider.target("Нічний перевал", Duration.ZERO)));
             final Path book = TestBooks.markdown(directory.resolve("Book.md"), "# 4. Ночной перевал");
             final WholeBookRun.Project project = WholeBookRun.project(book, QualityDial.BALANCED, "ru", "uk");
 

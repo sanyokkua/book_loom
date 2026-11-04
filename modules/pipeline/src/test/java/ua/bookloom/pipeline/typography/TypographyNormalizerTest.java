@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.project.QuoteStyle;
 
 /**
  * The normaliser works on a segment's masked text, so {@code ⟦gN⟧} tokens stand for markup, code spans and protected
@@ -146,5 +147,85 @@ class TypographyNormalizerTest {
 
         assertThat(result.isChanged()).isFalse();
         assertThat(result.text()).isEqualTo("Усе гаразд.");
+    }
+
+    @Test
+    void normalise_stressedUkrainianWord_stripsMark() {
+        final Normalisation result = TypographyNormalizer.normalise("Ла\u0301рин вийшов.", "uk");
+
+        assertThat(result.text()).isEqualTo("Ларин вийшов.");
+        assertThat(result.repairs().stress()).isEqualTo(1);
+        assertThat(result.fired("stress-mark")).isTrue();
+    }
+
+    @Test
+    void normalise_englishTarget_keepsMark() {
+        final Normalisation result = TypographyNormalizer.normalise("Caf\u00e9 and cafe\u0301.", "en");
+
+        assertThat(result.text()).isEqualTo("Caf\u00e9 and cafe\u0301.");
+        assertThat(result.repairs().stress()).isZero();
+    }
+
+    @Test
+    void normalise_lostLeadingDashAndNumber_areRestoredFromTheSource() {
+        assertThat(TypographyNormalizer.normalise("— Де ключ?", "Хто тут?", "uk")
+                        .text())
+                .isEqualTo("— Хто тут?");
+        assertThat(TypographyNormalizer.normalise("4. Ночной перевал", "Нічний перевал", "uk")
+                        .text())
+                .isEqualTo("4. Нічний перевал");
+    }
+
+    @Test
+    void normalise_englishTarget_neverGetsADialogueDash() {
+        assertThat(TypographyNormalizer.normalise("— Где ключ?", "Where is the key?", "en")
+                        .text())
+                .isEqualTo("Where is the key?");
+    }
+
+    @Test
+    void normalise_lostDashBeforeAQuote_isOnlyNoted() {
+        final Normalisation result = TypographyNormalizer.normalise("— Где ключ?", "«Де ключ?»", "uk");
+
+        assertThat(result.text()).isEqualTo("«Де ключ?»");
+        assertThat(result.repairs().isDashLostBeforeQuote()).isTrue();
+        assertThat(result.note()).contains("leading dash is missing");
+    }
+
+    @Test
+    void normalise_briefApostropheStraight_staysStraight() {
+        final TypographyChoices straight = new TypographyChoices("'", null);
+
+        assertThat(TypographyNormalizer.normalise("", "Не пам'ятаю.", "uk", straight)
+                        .text())
+                .isEqualTo("Не пам'ятаю.");
+    }
+
+    @Test
+    void normalise_briefQuoteStyle_isUsedForStraightQuotes() {
+        final TypographyChoices low = new TypographyChoices(null, new QuoteStyle("„", "“", "«", "»"));
+
+        assertThat(TypographyNormalizer.normalise("", "Він сказав: \"Іди геть\".", "uk", low)
+                        .text())
+                .isEqualTo("Він сказав: „Іди геть“.");
+    }
+
+    @Test
+    void normalise_nullBriefKeys_fallBackToTheLanguagesOwn() {
+        assertThat(TypographyNormalizer.normalise("", "Не пам'ятаю: \"так\".", "uk", TypographyChoices.DEFAULTS)
+                        .text())
+                .isEqualTo("Не пам’ятаю: «так».");
+    }
+
+    @Test
+    void normalise_everythingAtOnce_secondPassChangesNothing() {
+        final String source = "— Де ключ?";
+        final String once = TypographyNormalizer.normalise(source, "Ла\u0301рин—Іди,-сказав\"так\"...", "uk")
+                .text();
+
+        final Normalisation again = TypographyNormalizer.normalise(source, once, "uk");
+
+        assertThat(again.isChanged()).isFalse();
+        assertThat(again.text()).isEqualTo(once);
     }
 }

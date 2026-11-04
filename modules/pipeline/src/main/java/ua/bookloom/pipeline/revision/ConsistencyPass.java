@@ -49,6 +49,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
+import ua.bookloom.pipeline.typography.TypographyChoices;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
@@ -313,7 +314,8 @@ public final class ConsistencyPass {
                 projectId,
                 CallFrame.forBook(brief, document, openProjects.index(projectId)),
                 brief.names(),
-                TypographyGate.around(GateFunction.of(documents, document.format()), target),
+                TypographyGate.around(
+                        GateFunction.of(documents, document.format()), target, TypographyChoices.of(brief)),
                 sources,
                 SegmentLocators.of(document),
                 entries,

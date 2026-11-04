@@ -246,7 +246,8 @@ public final class RetryDraft {
                 ProtectedSpans.gate(
                         Map.of(segment.id(), mask),
                         GateFunction.of(documents, plan.document().format())),
-                plan.frame().targetLanguage());
+                plan.frame().targetLanguage(),
+                plan.frame().typography());
         final SegmentTranslator translator = new SegmentTranslator(
                 gate,
                 calls,

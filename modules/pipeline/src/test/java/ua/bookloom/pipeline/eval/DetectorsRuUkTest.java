@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -13,6 +14,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.pipeline.checks.TextChecks;
+import ua.bookloom.pipeline.typography.Normalisation;
+import ua.bookloom.pipeline.typography.TypographyNormalizer;
 
 /**
  * Runs the ru-uk detector cases. A finding is named by its kebab-case kind, so a case for a check that group 10 has
@@ -22,6 +25,8 @@ import ua.bookloom.pipeline.checks.TextChecks;
 class DetectorsRuUkTest {
 
     private static final String CASES = "/eval/datasets/detectors-ru-uk/cases.json";
+    private static final List<String> REPAIRS =
+            List.of("stress-mark", "leading-dash", "dialogue-dash", "heading-number");
     private static final Set<String> NO_FINDING = Set.of("none", "expected-miss");
 
     static Stream<JsonNode> cases() throws IOException {
@@ -61,16 +66,16 @@ class DetectorsRuUkTest {
                 .isEmpty();
     }
 
+    // The code repairs run before any check, so a defect they remove is "raised" by the repair that fires (10.3).
     private static List<String> raised(final JsonNode detectorCase) {
-        return TextChecks.run(
-                        detectorCase.get("source").asText(),
-                        detectorCase.get("target").asText(),
-                        "ru",
-                        "uk",
-                        List.of(),
-                        List.of())
-                .stream()
+        final String source = detectorCase.get("source").asText();
+        final String target = detectorCase.get("target").asText();
+        final Normalisation normalised = TypographyNormalizer.normalise(source, target, "uk");
+        final List<String> raised =
+                new ArrayList<>(REPAIRS.stream().filter(normalised::fired).toList());
+        TextChecks.run(source, normalised.text(), "ru", "uk", List.of(), List.of()).stream()
                 .map(finding -> finding.kind().name().toLowerCase(Locale.ROOT).replace('_', '-'))
-                .toList();
+                .forEach(raised::add);
+        return raised;
     }
 }

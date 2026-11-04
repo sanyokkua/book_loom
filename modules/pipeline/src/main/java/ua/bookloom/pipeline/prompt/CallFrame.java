@@ -11,6 +11,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.typography.TypographyChoices;
 
 /**
  * What every model call of a run carries: its language pair, derived style sheet and foreign-passage policy, built once
@@ -42,7 +43,8 @@ public record CallFrame(
         Narrator narrator,
         WordValidator wordValidator,
         @Nullable UnicodeScript bookScript,
-        @Nullable String analysisLanguage) {
+        @Nullable String analysisLanguage,
+        TypographyChoices typography) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -51,6 +53,31 @@ public record CallFrame(
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(wordValidator, "wordValidator");
+        Objects.requireNonNull(typography, "typography");
+    }
+
+    /** A frame whose Brief keys for apostrophe and quotes are the language's own defaults. */
+    public CallFrame(
+            @Nullable String sourceLanguage,
+            String targetLanguage,
+            StyleSheet styleSheet,
+            ForeignPassagePolicy foreignPassagePolicy,
+            @Nullable String bookLanguage,
+            Narrator narrator,
+            WordValidator wordValidator,
+            @Nullable UnicodeScript bookScript,
+            @Nullable String analysisLanguage) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                styleSheet,
+                foreignPassagePolicy,
+                bookLanguage,
+                narrator,
+                wordValidator,
+                bookScript,
+                analysisLanguage,
+                TypographyChoices.DEFAULTS);
     }
 
     /**
@@ -122,7 +149,8 @@ public record CallFrame(
                 brief.narrator(),
                 words,
                 bookScript,
-                SourceLanguage.forAnalysis(brief, document));
+                SourceLanguage.forAnalysis(brief, document),
+                TypographyChoices.of(brief));
     }
 
     /**

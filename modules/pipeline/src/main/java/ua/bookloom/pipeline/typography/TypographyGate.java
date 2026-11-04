@@ -26,10 +26,12 @@ public final class TypographyGate implements GateFunction {
 
     private final GateFunction inner;
     private final String targetLanguage;
+    private final TypographyChoices choices;
 
-    private TypographyGate(final GateFunction inner, final String targetLanguage) {
+    private TypographyGate(final GateFunction inner, final String targetLanguage, final TypographyChoices choices) {
         this.inner = inner;
         this.targetLanguage = targetLanguage;
+        this.choices = choices;
     }
 
     /**
@@ -37,11 +39,26 @@ public final class TypographyGate implements GateFunction {
      *
      * @param inner the non-null gate every normalised candidate is passed to
      * @param targetLanguage the non-null BCP 47 tag of the language the candidates are written in
-     * @return the wrapping gate
+     * @return the wrapping gate, with the language's default apostrophe and quotes
      */
     public static GateFunction around(final GateFunction inner, final String targetLanguage) {
+        return around(inner, targetLanguage, TypographyChoices.DEFAULTS);
+    }
+
+    /**
+     * Wraps a gate with the Brief's apostrophe and quote-style keys.
+     *
+     * @param inner the non-null gate every normalised candidate is passed to
+     * @param targetLanguage the non-null BCP 47 tag of the language the candidates are written in
+     * @param choices the non-null Brief keys; a null key inside means the language's default
+     * @return the wrapping gate
+     */
+    public static GateFunction around(
+            final GateFunction inner, final String targetLanguage, final TypographyChoices choices) {
         return new TypographyGate(
-                Objects.requireNonNull(inner, "inner"), Objects.requireNonNull(targetLanguage, "targetLanguage"));
+                Objects.requireNonNull(inner, "inner"),
+                Objects.requireNonNull(targetLanguage, "targetLanguage"),
+                Objects.requireNonNull(choices, "choices"));
     }
 
     @Override
@@ -62,8 +79,8 @@ public final class TypographyGate implements GateFunction {
         final Optional<String> withoutClosers = ReplyClosers.strip(segment.masked(), maskedReply);
         withoutClosers.ifPresent(text -> log.debug(
                 "Reply closers cut segment={} before={} after={}", segment.id(), maskedReply.length(), text.length()));
-        final Normalisation normalised =
-                TypographyNormalizer.normalise(segment.masked(), withoutClosers.orElse(maskedReply), targetLanguage);
+        final Normalisation normalised = TypographyNormalizer.normalise(
+                segment.masked(), withoutClosers.orElse(maskedReply), targetLanguage, choices);
         return new Cleaned(normalised, withoutClosers.isPresent());
     }
 

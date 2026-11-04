@@ -116,4 +116,20 @@ class TypographyGateTest {
 
         assertThat(seen).containsExactly("Задайте {a}");
     }
+
+    @Test
+    void restore_briefApostropheStraight_handsOnTheStraightMark() {
+        TypographyGate.around(recording, "uk", new TypographyChoices("'", null)).restore(segment(), "Не пам'ятаю.");
+
+        assertThat(seen).containsExactly("Не пам'ятаю.");
+    }
+
+    @Test
+    void restore_lostHeadingNumberAndStress_arePutRightBeforeTheGateAndNoted() {
+        final GateResult result =
+                TypographyGate.around(recording, "uk").restore(segment("4. Ночной перевал"), "Ні\u0301чний перевал");
+
+        assertThat(seen).containsExactly("4. Нічний перевал");
+        assertThat(noteOf(result)).contains("1 stress mark removed", "1 lost heading number put back");
+    }
 }

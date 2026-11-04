@@ -51,7 +51,7 @@ public final class TargetText {
      * @param targetLanguage the non-null target language tag
      * @return {@code true} if its file says {@code stripStressMarks=true}, {@code false} otherwise
      */
-    static boolean stripsStress(final String targetLanguage) {
+    public static boolean stripsStress(final String targetLanguage) {
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         return LanguageRules.bundled().wordsOf(targetLanguage, STRIP_KEY).stream()
                 .anyMatch("true"::equalsIgnoreCase);
