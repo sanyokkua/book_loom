@@ -37,6 +37,16 @@ class LanguageIdentityCheckTest {
         assertThat(found).extracting(CheckFinding::kind).containsExactly(FindingKind.FUNCTION_WORD_RESIDUE);
     }
 
+    // IF the paragraph's share of function words read a modifier-letter apostrophe as a letter, THEN «donʼt» would be
+    // a residue word in one count and no function word in the other.
+    @Test
+    void check_englishParagraphWithModifierApostrophes_isTheWrongLanguageFinding() {
+        final List<CheckFinding> found = LanguageIdentityCheck.find(
+                "I donʼt know, she didnʼt say, we wasnʼt sure, they couldnʼt go home today.", "en", "pl");
+
+        assertThat(found).extracting(CheckFinding::kind).containsExactly(FindingKind.LEFTOVER_LANGUAGE);
+    }
+
     @Test
     void check_capitalisedResidueWord_isNotCounted() {
         assertThat(ruToUk("Что ж, вона пішла.")).isEmpty();

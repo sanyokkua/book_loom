@@ -26,6 +26,24 @@ class TextChecksLatinRunTest {
         assertThat(found).extracting(CheckFinding::kind).doesNotContain(FindingKind.LATIN_RUN);
     }
 
+    // IF the residue check also counted the English words inside a Latin run, THEN one copied phrase would be two
+    // findings and the repair would be told twice.
+    @Test
+    void run_latinRunHoldingEnglishFunctionWords_isOnlyTheLatinRun() {
+        final List<CheckFinding> found = TextChecks.run(
+                "She said it was the end of the road for them.",
+                "Вона тихо сказала братові, що для них це вже was the end of the road назавжди.",
+                "en",
+                "uk",
+                List.of(),
+                List.of());
+
+        assertThat(found)
+                .extracting(CheckFinding::kind)
+                .contains(FindingKind.LATIN_RUN)
+                .doesNotContain(FindingKind.FUNCTION_WORD_RESIDUE);
+    }
+
     private static final String PUBLISHER_SOURCE = "Published in Northfield by Harbor Lane Press.";
     private static final String PUBLISHER_TARGET = "Видано в Нортфілді видавництвом Harbor Lane Press.";
 

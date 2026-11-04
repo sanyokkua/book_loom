@@ -99,6 +99,7 @@ public final class TextChecks {
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         latinRun(input, source, target, findings);
+        withoutResidueInLatinRuns(findings, target, sourceLanguage, targetLanguage);
         findings.addAll(AddressMixCheck.find(target, targetLanguage));
         findings.addAll(AddressMixCheck.parity(source, target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
@@ -122,6 +123,32 @@ public final class TextChecks {
             findings.addAll(
                     LatinRunCheck.find(source, target, Languages.scriptOf(input.targetLanguage()), input.keptTerms()));
         }
+    }
+
+    // A Latin run already names the English words it holds; counting them again as residue would make one copied
+    // phrase two findings, so the residue finding is read again with the runs left out.
+    private static void withoutResidueInLatinRuns(
+            final List<CheckFinding> findings,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage) {
+        final List<TextSpan> runs = findings.stream()
+                .filter(finding -> finding.kind() == FindingKind.LATIN_RUN)
+                .map(CheckFinding::span)
+                .toList();
+        final boolean residue =
+                findings.stream().anyMatch(finding -> finding.kind() == FindingKind.FUNCTION_WORD_RESIDUE);
+        log.debug("Residue against Latin runs: runs={} residue={}", runs.size(), residue);
+        if (runs.isEmpty() || !residue) {
+            return;
+        }
+        final int at = findings.indexOf(findings.stream()
+                .filter(finding -> finding.kind() == FindingKind.FUNCTION_WORD_RESIDUE)
+                .findFirst()
+                .orElseThrow());
+        findings.remove(at);
+        LanguageIdentityCheck.residueOutside(target, sourceLanguage, targetLanguage, runs)
+                .ifPresent(left -> findings.add(at, left));
     }
 
     // The vocative and the swap check hold the target to the glossary's renderings with the same stem rule.

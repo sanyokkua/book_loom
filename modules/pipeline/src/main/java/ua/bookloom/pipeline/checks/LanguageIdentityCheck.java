@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.checks;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -59,6 +58,35 @@ public final class LanguageIdentityCheck {
         }
         residueFinding(residue).ifPresent(findings::add);
         return List.copyOf(findings);
+    }
+
+    /**
+     * The residue finding of a target, leaving out the words inside the given spans: a Latin run already names the
+     * English words it holds, so they are not a second finding. Read only when no paragraph of the target is left in
+     * the source language, as the Latin-run check is.
+     *
+     * @param target the non-null target text the spans were found in
+     * @param sourceLanguage the source language tag, or null when the book declares none
+     * @param targetLanguage the non-null target language tag
+     * @param skipped the non-null spans whose words are not counted
+     * @return the residue finding if a word outside the spans is left, or empty if none is
+     */
+    static Optional<CheckFinding> residueOutside(
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<TextSpan> skipped) {
+        final Set<String> sourceOnly = sourceOnly(sourceLanguage, targetLanguage);
+        final List<Hit> residue = new ArrayList<>();
+        final Matcher lines = LINE.matcher(target);
+        while (lines.find()) {
+            hits(lines.group(), lines.start(), sourceOnly).stream()
+                    .filter(hit ->
+                            skipped.stream().noneMatch(span -> span.start() <= hit.start() && hit.start() < span.end()))
+                    .forEach(residue::add);
+        }
+        log.debug("Function-word residue outside {} span(s): {} word(s)", skipped.size(), residue.size());
+        return residueFinding(residue);
     }
 
     /** A source-only function word found in the target, with where it starts. */
@@ -171,7 +199,7 @@ public final class LanguageIdentityCheck {
         int hits = 0;
         while (words.find()) {
             total++;
-            if (sourceOnly.contains(words.group().toLowerCase(Locale.ROOT).replace('’', '\''))) {
+            if (sourceOnly.contains(Occurrences.keyOf(words.group()))) {
                 hits++;
             }
         }
