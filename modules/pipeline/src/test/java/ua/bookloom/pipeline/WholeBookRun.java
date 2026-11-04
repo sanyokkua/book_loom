@@ -105,9 +105,7 @@ final class WholeBookRun {
             "The rain did not stop that evening. " + padEn(LAST_SENTENCES));
     // Two edits the code refuses as a swapped word, which leaves the reviewer's finding standing, so each segment gets
     // one directed fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the
-    // second one
-    // echoes
-    // the English source, which the echo check blocks.
+    // second one echoes the English source, which the echo check blocks.
     private static final String CHUNK_REVIEW = "{\"results\":["
             + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"пішла\","
             + "\"replacement\":\"побігла\"}]},"

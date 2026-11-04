@@ -145,8 +145,10 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // The batch of eight paragraphs (four of them long) is capped by its items' allowances; the reviewer of eight pairs
-    // by
-    // its pairs.
+    // by its pairs. Batch (OutputLimit.forBatch, en -> uk): the items' allowances 26 + 28 + 27 + 4 x 944 + 18 = 3875,
+    // plus 8 x 16 envelope tokens = 4003; the cap is ceil(4003 x 3 / 2) = 6005 + 16 headroom + 6 x 2 placeholders =
+    // 6033. Reviewer (OutputLimit.forReview): 128 + 8 x (70 + 120) per pair + the drafts' estimated tokens 13 + 14 +
+    // 18 + 559 + 561 + 564 + 559 + 10 = 2298, so 3946.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
