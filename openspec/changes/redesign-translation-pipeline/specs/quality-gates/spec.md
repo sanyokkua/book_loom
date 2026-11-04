@@ -101,7 +101,7 @@ WHERE the target language sets `dialogue-dash`, the application SHALL write a da
 
 ### Requirement: Put back a heading number that the target lost
 
-WHEN a source paragraph starts with digits or a Roman numeral followed by `.`, `)` or `:` and its target starts with no number, the application SHALL put the source's number and its mark before the target; a bare `I` followed by a space SHALL NOT count as a numeral.
+WHEN a source paragraph starts with digits or a Roman numeral followed by `.`, `)` or `:` and its target starts with no number, the application SHALL put the source's number and its mark before the target; a bare `I` followed by a space SHALL NOT count as a numeral, and a Roman numeral SHALL count only when it has two letters or more and no sentence follows it in the source, so a person's initial (`M. Poirot smiled.`) is never put before a target.
 
 **Source**: `design.md#d12--checks-levels-and-code-repairs-before-checks`. In plain words: a chapter heading `4. Ночной перевал` must keep its `4.` whatever the model did with it; code puts it back, so the segment never needs a model call for it. A lost number is not a different number: a target that starts with another number is the separate blocking case.
 
@@ -114,6 +114,11 @@ WHEN a source paragraph starts with digits or a Roman numeral followed by `.`, `
 
 - **WHEN** the source is `XII) Возвращение` and the draft is `Повернення`
 - **THEN** the stored target is `XII) Повернення`
+
+#### Scenario: A Latin initial is not a numeral
+
+- **WHEN** the source is `M. Poirot smiled.` and the draft is `Пуаро усміхнувся.`
+- **THEN** the draft is unchanged
 
 #### Scenario: The pronoun I is not a numeral
 
@@ -493,9 +498,9 @@ IF the re-draft of a segment still loses formatting marks, or the keep rule reje
 
 ### Requirement: Reject a candidate text that breaks a never-worse veto
 
-The never-worse gate SHALL reject a candidate text, keeping the current one, when the candidate fails a hard gate, adds a BLOCK finding, adds a source-language word, writes a name in a form the book map does not list for it, drops a map name, has fewer sentences or fewer negation words, loses a number, a quote, a dash or a clause, or adds a Latin run or a stress mark. Each veto compares the candidate with the current text and the source: a counted veto (sentences, negation words, numbers, quotes, dashes, clauses) fires only if the candidate loses what the source holds — it falls below both the current text and the source — so a repair that removes a wrong number, a stray quote or a doubled sentence is not rejected for it.
+The never-worse gate SHALL reject a candidate text, keeping the current one, when the candidate fails a hard gate, adds a BLOCK finding, adds a source-language word, writes a name in a form the book map does not list for it, drops a map name, adds a Latin run or a stress mark, or has fewer sentences, negation words, numbers, quotes, dashes or clauses than both the current text and the source.
 
-**Source**: `design.md#d14--the-never-worse-gate`. In plain words: every edit the program makes after a draft (the one repair, a proofread rewrite) must pass this one test, so a fix can never cost the book something it had. The earlier reviewer edits were checked by three different 'no new blocker' rules; this is the single replacement.
+**Source**: `design.md#d14--the-never-worse-gate`. In plain words: every edit the program makes after a draft (the one repair, a proofread rewrite) must pass this one test, so a fix can never cost the book something it had. The earlier reviewer edits were checked by three different 'no new blocker' rules; this is the single replacement. A count is compared with the current text and the source, so a veto fires only when the candidate loses what the source holds: a repair that replaces a wrong number with the source's, removes a stray quote or drops a doubled sentence is kept.
 
 #### Scenario: A hard-gate failure is rejected
 

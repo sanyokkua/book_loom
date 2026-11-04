@@ -10,6 +10,10 @@ import lombok.NoArgsConstructor;
  * and then {@code .}, {@code )} or {@code :} gives its number and mark back to a target that starts with a letter. A
  * target that starts with a number of its own is left alone, whatever the number, because a changed number is a
  * different case. A Markdown heading marker before the number is looked past and kept.
+ *
+ * <p>A Roman numeral is read as one only when it has two letters or more and the source has no sentence after it:
+ * a single capital and a point is far more often a person's initial ({@code M. Poirot smiled.}, {@code C. S. Lewis})
+ * than a heading number, and an initial is no number the target lost. Arabic numbers are read as before.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -18,13 +22,17 @@ final class LeadingNumber {
     private static final String HEADING = "(?<marker>#{1,6}[ \\t]+)?";
     private static final String ROMAN = "M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})";
     private static final String NUMBER = "(?<number>\\d{1,3}|(?=[MDCLXVI])" + ROMAN + "(?![\\p{L}\\p{N}]))";
-    private static final Pattern SOURCE = Pattern.compile("^" + HEADING + NUMBER + "(?<mark>[.):])[ \\t\\u00A0]+");
+    private static final String SOURCE_NUMBER =
+            "(?:(?<number>\\d{1,3})|(?<roman>(?=[MDCLXVI]{2})" + ROMAN + "(?![\\p{L}\\p{N}])))";
+    private static final Pattern SOURCE =
+            Pattern.compile("^" + HEADING + SOURCE_NUMBER + "(?<mark>[.):])[ \\t\\u00A0]+");
+    private static final Pattern SENTENCE_END = Pattern.compile("[.!?…]");
     private static final Pattern TARGET = Pattern.compile("^" + HEADING + NUMBER + "[.):]");
     private static final Pattern TARGET_LETTER = Pattern.compile("^" + HEADING + "\\p{L}");
 
     static Edit apply(final String source, final String text) {
         final Matcher lead = SOURCE.matcher(source);
-        if (!lead.find() || TARGET.matcher(text).find()) {
+        if (!lead.find() || TARGET.matcher(text).find() || isSentenceAfterRoman(lead, source)) {
             return new Edit(text, 0);
         }
         final Matcher target = TARGET_LETTER.matcher(text);
@@ -32,7 +40,13 @@ final class LeadingNumber {
             return new Edit(text, 0);
         }
         final String marker = target.group("marker") == null ? "" : target.group("marker");
-        final String number = lead.group("number") + lead.group("mark") + " ";
+        final String digits = lead.group("number");
+        final String number = (digits != null ? digits : lead.group("roman")) + lead.group("mark") + " ";
         return new Edit(marker + number + text.substring(marker.length()), 1);
+    }
+
+    private static boolean isSentenceAfterRoman(final Matcher lead, final String source) {
+        return lead.group("roman") != null
+                && SENTENCE_END.matcher(source.substring(lead.end())).find();
     }
 }

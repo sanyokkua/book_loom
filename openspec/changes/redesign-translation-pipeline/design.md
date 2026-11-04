@@ -519,7 +519,7 @@ task edits the delta requirement and this file's line; the result is written int
 - **NORM (group 10, `typography/`).** In `TypographyNormalizer` and `SpeechRepairs`, before any check: `StressMarks`
   first; new `LeadingDash` (source starts with a dash, target with a letter → prepend `— `; target starts with a quote
   → NOTE); new `DialogueDash` after `CommaBeforeDash` (line-start dash forms to `— `, glued dashes split, never inside a
-  word or between digits); new `LeadingNumber` (a source's leading number or Roman numeral before `. ) :` restored);
+  word or between digits); new `LeadingNumber` (a source's leading number or Roman numeral before `. ) :` restored; a Roman numeral only with two letters or more and no sentence after it, so an initial such as `M. Poirot` is left alone);
   quotes and apostrophes from the Brief keys. `LeadingDash` and `DialogueDash` run only when the target sets
   `dialogue-dash=true` in `typography-rules.properties` (uk, ru).
 - **Checks.**

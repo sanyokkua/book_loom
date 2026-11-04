@@ -43,6 +43,25 @@ class LeadingNumberTest {
         assertThat(LeadingNumber.apply(source, target)).isEqualTo(new Edit(target, 0));
     }
 
+    // IF a Latin initial were read as a Roman numeral, THEN «M. Poirot smiled.» would give the target an «M.».
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "M. Poirot smiled.|Пуаро усміхнувся.",
+                "C. S. Lewis wrote it.|Це написав Клайв Льюїс.",
+                "V. I. Lenin spoke.|Ленін промовляв."
+            })
+    void restore_latinInitial_unchanged(final String source, final String target) {
+        assertThat(LeadingNumber.apply(source, target)).isEqualTo(new Edit(target, 0));
+    }
+
+    @Test
+    void restore_romanHeading_restored() {
+        assertThat(LeadingNumber.apply("IV. The Night Pass", "Нічний перевал").text())
+                .isEqualTo("IV. Нічний перевал");
+    }
+
     @Test
     void restore_restoredText_isUnchangedOnASecondPass() {
         final Edit first = LeadingNumber.apply("4. Ночной перевал", "Нічний перевал");
