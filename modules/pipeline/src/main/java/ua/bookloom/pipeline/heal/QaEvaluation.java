@@ -60,7 +60,8 @@ public final class QaEvaluation {
                 frame.narrator(),
                 context.glossaryPairs(),
                 context.characters(),
-                context.unitRole());
+                context.unitRole(),
+                context.pinnedTargets());
         return QaEvaluator.evaluate(givenHardGates, input, frame.wordValidator());
     }
 }

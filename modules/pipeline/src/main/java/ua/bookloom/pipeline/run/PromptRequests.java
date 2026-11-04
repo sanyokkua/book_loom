@@ -231,14 +231,15 @@ public final class PromptRequests {
     public LoopSettings loopSettings() {
         log.debug("Reading the chunk's loop settings project={}", settings.projectId());
         return new LoopSettings(
-                settings.mode(),
-                settings.dial(),
-                settings.frame(),
-                settings.names(),
-                context.terms(),
-                context.termPairs(),
-                context.characterLines(),
-                context.reviewerSheets());
+                        settings.mode(),
+                        settings.dial(),
+                        settings.frame(),
+                        settings.names(),
+                        context.terms(),
+                        context.termPairs(),
+                        context.characterLines(),
+                        context.reviewerSheets())
+                .withPinnedTargets(context.pinnedTargets());
     }
 
     private PreparedBatch prepared(

@@ -61,5 +61,11 @@ public enum FindingKind {
     IDENTIFIER_CHANGED,
 
     /** One quoted speech that addresses its listener with ти-forms and capitalised Ви-forms together. */
-    ADDRESS_MIX
+    ADDRESS_MIX,
+
+    /** A paragraph whose last mark (question, exclamation, full stop, ellipsis) is another class than its source's. */
+    TERMINAL_MARK,
+
+    /** A speech the source addresses one way (informal or formal) that the target addresses the other way. */
+    ADDRESS_PARITY
 }

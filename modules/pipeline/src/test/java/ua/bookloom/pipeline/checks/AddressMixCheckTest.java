@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.pipeline.qa.CheckLevel;
 
 /**
  * One quoted speech must address its listener one way: ти-forms and capitalised Ви-forms together are a mix the
@@ -150,5 +151,46 @@ class AddressMixCheckTest {
     @Test
     void find_emptyTarget_saysNothing() {
         assertThat(uk("")).isEmpty();
+    }
+
+    @Test
+    void check_informalSourceFormalTarget_repair() {
+        final List<CheckFinding> found = AddressMixCheck.parity("— Ты придёшь?", "— Ви прийдете?", "ru", "uk");
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.kind()).isEqualTo(FindingKind.ADDRESS_PARITY);
+            assertThat(finding.level()).isEqualTo(CheckLevel.REPAIR);
+            assertThat(finding.blocking()).isFalse();
+        });
+    }
+
+    @Test
+    void check_formalSourceInformalTarget_repair() {
+        assertThat(AddressMixCheck.parity("— Вы придёте?", "— Ти прийдеш?", "ru", "uk"))
+                .hasSize(1);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "the matching form|— Ты придёшь?|— Ти прийдеш?",
+                "a mixed source speech|— Ты знаешь, что я вас видел?|— Ви прийдете, тобі ж казали?",
+                "no speeches|Ты придёшь?|Ви прийдете?",
+            })
+    void check_noSwitch_noFinding(final String name, final String source, final String target) {
+        assertThat(AddressMixCheck.parity(source, target, "ru", "uk")).isEmpty();
+    }
+
+    @Test
+    void check_unequalNumberOfSpeeches_isNotPaired() {
+        assertThat(AddressMixCheck.parity("«Ты придёшь?» Он ждал. «Ты придёшь?»", "«Ви прийдете?»", "ru", "uk"))
+                .isEmpty();
+    }
+
+    @Test
+    void check_pairWithoutAddressFormsOnOneSide_isOff() {
+        assertThat(AddressMixCheck.parity("— You will come?", "— Ви прийдете?", "en", "uk"))
+                .isEmpty();
     }
 }

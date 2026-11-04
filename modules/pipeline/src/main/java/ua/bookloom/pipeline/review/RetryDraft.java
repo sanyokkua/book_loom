@@ -36,7 +36,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
@@ -280,18 +279,15 @@ public final class RetryDraft {
             final ReviewMode current) {
         final BookBrief brief = plan.brief();
         final LoopSettings settings = new LoopSettings(
-                current,
-                DialParameters.of(brief.dial()).withoutRepairRounds(),
-                plan.frame(),
-                brief.names(),
-                plan.snapshot().glossary().stream().map(SnapshotTerm::term).toList(),
-                plan.snapshot().glossary().stream()
-                        .filter(term -> term.target() != null && !term.locked())
-                        .map(term -> term.term() + " → " + term.target())
-                        .toList(),
-                // Uncut lists (LoopSettings' fixed sheets): a retry reviews one pair, so there is nothing to cut them
-                // to.
-                plan.snapshot().characters());
+                        current,
+                        DialParameters.of(brief.dial()).withoutRepairRounds(),
+                        plan.frame(),
+                        brief.names(),
+                        SnapshotTerms.termNames(plan.snapshot()),
+                        SnapshotTerms.pairs(plan.snapshot()),
+                        // Uncut lists (LoopSettings' fixed sheets): a retry reviews one pair, so nothing to cut.
+                        plan.snapshot().characters())
+                .withPinnedTargets(SnapshotTerms.pinnedTargets(plan.snapshot()));
         log.debug(
                 "retry: deciding segment={} dial={} reviewPasses={}",
                 plan.segment().id(),

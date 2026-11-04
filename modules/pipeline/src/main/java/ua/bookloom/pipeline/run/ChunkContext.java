@@ -125,6 +125,11 @@ final class ChunkContext {
         return pairs;
     }
 
+    /** The renderings of the chunk's pinned terms, whose declined forms the name-spelling check accepts. */
+    List<String> pinnedTargets() {
+        return GlossaryNames.pinnedTargets(occurringIn(chunk.segments(), glossary));
+    }
+
     /**
      * What each reviewer call of this chunk is shown of the glossary, the lexicon and the characters: the call cuts it to
      * its own pairs, so a name only another pair of the chunk holds never reaches it (15j.J14).

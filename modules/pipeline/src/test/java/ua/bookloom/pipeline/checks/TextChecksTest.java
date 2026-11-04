@@ -106,7 +106,7 @@ class TextChecksTest {
 
     @Test
     void run_dashDialogueAndOtherPunctuation_isNeverReadAsAQuote() {
-        assertThat(uk("“Come here,” she said.", "— Іди сюди, — сказала вона. (Тихо!)"))
+        assertThat(uk("“Come here,” she said.", "— Іди сюди, — сказала вона. (Тихо.)"))
                 .isEmpty();
     }
 

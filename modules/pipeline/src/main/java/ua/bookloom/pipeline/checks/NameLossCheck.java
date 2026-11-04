@@ -14,13 +14,17 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.glossary.NameForms;
 import ua.bookloom.pipeline.prompt.LanguageRules;
+import ua.bookloom.pipeline.qa.CheckLevel;
 
 /**
  * A glossary name the source holds and the target no longer has, found while the segment is drafted so a directed fix can
  * mend it. When exactly one capitalised word of the target is the rendering written another way (Майлс for Майлз) the
  * finding names that word and the exact replacement; otherwise it names the lost rendering. Soft: a sentence may
- * legitimately turn a name into a pronoun, so the finding earns one fix and never flags the segment.
+ * legitimately turn a name into a pronoun, so the finding earns one fix and never flags the segment. A word that is
+ * one of the forms the book map lists for the rendering is no spelling error. A misspelt pinned name blocks; a misspelt
+ * suggested name is only a note.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -36,7 +40,8 @@ final class NameLossCheck {
             final String target,
             final List<String> glossaryPairs,
             @Nullable final String sourceLanguage,
-            final String targetLanguage) {
+            final String targetLanguage,
+            final List<String> pinnedTargets) {
         final List<GlossaryEntry> entries = entriesOf(glossaryPairs, sourceLanguage);
         if (entries.isEmpty()) {
             return List.of();
@@ -44,17 +49,22 @@ final class NameLossCheck {
         final List<GlossaryEntry> lost = NameMissingCheck.lost(entries, source, target, targetLanguage);
         final List<CheckFinding> found = new ArrayList<>();
         for (final GlossaryEntry entry : lost) {
-            found.add(findingOf(entry, target, targetLanguage));
+            found.add(findingOf(entry, target, targetLanguage, pinnedTargets));
         }
         return List.copyOf(found);
     }
 
-    private static CheckFinding findingOf(final GlossaryEntry entry, final String target, final String targetLanguage) {
+    private static CheckFinding findingOf(
+            final GlossaryEntry entry,
+            final String target,
+            final String targetLanguage,
+            final List<String> pinnedTargets) {
         final String rendering = Objects.requireNonNull(entry.target(), "target");
         final List<String> candidates = candidates(rendering, target, targetLanguage);
         if (candidates.size() == 1) {
             final String spelled = candidates.getFirst();
-            log.debug("Name check: a glossary name is written another way in the target");
+            final CheckLevel level = pinnedTargets.contains(rendering) ? CheckLevel.BLOCK : CheckLevel.NOTE;
+            log.debug("Name check: a glossary name is written another way in the target, level {}", level);
             log.trace("Name spelling {} → {} instead of {}", entry.term(), rendering, spelled);
             return new CheckFinding(
                     FindingKind.NAME_SPELLING,
@@ -62,7 +72,7 @@ final class NameLossCheck {
                     "The glossary renders \"" + entry.term() + "\" as \"" + rendering + "\", and the translation"
                             + " writes \"" + spelled + "\": replace \"" + spelled + "\" with \"" + rendering
                             + "\", in the form the sentence needs.",
-                    false);
+                    level);
         }
         log.debug("Name check: a glossary name is lost from the target");
         log.trace("Name check: {} is lost from the target", entry.term());
@@ -83,9 +93,12 @@ final class NameLossCheck {
         final Set<String> lowerCase = NameSpelling.lowerCaseWords(List.of(target));
         final String folded = NameSpelling.fold(rendering, pairs);
         final Matcher words = NameSpelling.CAPITALISED.matcher(target);
+        final Set<String> listed =
+                NameForms.forms(rendering, Gender.UNKNOWN, targetLanguage).all();
         return words.results()
                 .map(MatchResult::group)
                 .filter(word -> !word.equalsIgnoreCase(rendering))
+                .filter(word -> !listed.contains(word))
                 .filter(word -> NameSpelling.fold(word, pairs).equals(folded))
                 .filter(word -> !NameSpelling.isCommonWord(word, targetLanguage, lowerCase))
                 .distinct()

@@ -73,8 +73,8 @@ public enum CheckName {
 
     /**
      * Text check: a number the source writes in digits that the target changed or lost. Its level is BLOCK (design D12:
-     * a replaced leading number blocks); today every number finding is raised at medium severity, so it reads as
-     * REPAIR.
+     * a replaced leading number blocks); a lost number of two digits is raised at medium severity (repair), an extra
+     * one at low severity (note).
      */
     NUMBER(0.0, FindingKinds.MEANING, "number", CheckLevel.BLOCK),
 
@@ -84,8 +84,11 @@ public enum CheckName {
     /** Text check, repair: a glossary name of the source that the target has lost. */
     NAME_MISSING(0.0, FindingKinds.GLOSSARY, "name-missing", CheckLevel.REPAIR),
 
-    /** Text check, repair: a glossary name the target spells another way, with the exact replacement. */
-    NAME_SPELLING(0.0, FindingKinds.GLOSSARY, "name-spelling", CheckLevel.REPAIR),
+    /**
+     * Text check: a glossary name the target spells another way, with the exact replacement. A pinned name blocks
+     * (high severity); a suggested name is only a note (low severity).
+     */
+    NAME_SPELLING(0.0, FindingKinds.GLOSSARY, "name-spelling", CheckLevel.BLOCK),
 
     /** Text check, repair: function words only the source language has, left in the target (что, это in Ukrainian). */
     FUNCTION_WORD_RESIDUE(0.0, FindingKinds.LANGUAGE, "function-word-residue", CheckLevel.REPAIR),
@@ -100,7 +103,13 @@ public enum CheckName {
     ALPHABET(0.0, FindingKinds.LANGUAGE, "alphabet", CheckLevel.BLOCK),
 
     /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
-    TYPOGRAPHY(0.0, FindingKinds.FLUENCY, "normalised", CheckLevel.NOTE);
+    TYPOGRAPHY(0.0, FindingKinds.FLUENCY, "normalised", CheckLevel.NOTE),
+
+    /** Text check, repair: a paragraph whose last mark is another class than its source's. */
+    TERMINAL_MARK(0.0, FindingKinds.OMISSION, "terminal-mark", CheckLevel.REPAIR),
+
+    /** Text check, repair: a speech whose form of address the target changed between informal and formal. */
+    ADDRESS_PARITY(0.0, FindingKinds.LANGUAGE, "address-parity", CheckLevel.REPAIR);
 
     private final double weight;
     private final String findingKind;

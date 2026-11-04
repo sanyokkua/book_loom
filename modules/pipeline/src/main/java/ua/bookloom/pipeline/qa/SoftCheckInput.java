@@ -32,6 +32,8 @@ import ua.bookloom.api.project.Narrator;
  * @param characters the chunk's character sheet, one {@code name — gender} line each, which the target language's
  *     character-agreement check reads with the glossary pairs
  * @param unitRole the role of the unit the segment belongs to; the Latin-run check reads running prose only
+ * @param pinnedTargets the renderings of the pinned glossary entries among the pairs; a name-spelling finding on one is
+ *     blocking and its listed forms are no error, on any other it is a note
  */
 public record SoftCheckInput(
         String sourceDisplayText,
@@ -47,7 +49,42 @@ public record SoftCheckInput(
         Narrator narrator,
         List<String> glossaryPairs,
         List<String> characters,
-        UnitRole unitRole) {
+        UnitRole unitRole,
+        List<String> pinnedTargets) {
+
+    /** An input that knows no pinned entry. */
+    public SoftCheckInput(
+            final String sourceDisplayText,
+            final String targetDisplayText,
+            final String targetWithRenderings,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final ForeignPassagePolicy foreignPassagePolicy,
+            final NamePolicy namePolicy,
+            @Nullable final String declaredLanguage,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final Narrator narrator,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final UnitRole unitRole) {
+        this(
+                sourceDisplayText,
+                targetDisplayText,
+                targetWithRenderings,
+                sourceLanguage,
+                targetLanguage,
+                foreignPassagePolicy,
+                namePolicy,
+                declaredLanguage,
+                glossaryTerms,
+                lockedRenderings,
+                narrator,
+                glossaryPairs,
+                characters,
+                unitRole,
+                List.of());
+    }
 
     /** An input for a segment of a body unit. */
     public SoftCheckInput(
@@ -127,6 +164,8 @@ public record SoftCheckInput(
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(unitRole, "unitRole");
+        Objects.requireNonNull(pinnedTargets, "pinnedTargets");
+        pinnedTargets = List.copyOf(pinnedTargets);
         characters = List.copyOf(characters);
         glossaryPairs = List.copyOf(glossaryPairs);
         glossaryTerms = List.copyOf(glossaryTerms);

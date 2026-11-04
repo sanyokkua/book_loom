@@ -25,6 +25,8 @@ import ua.bookloom.pipeline.reviewer.ReviewerSheets;
  * @param reviewerSheets what each reviewer call is shown of the glossary, the lexicon and the characters, cut to its own
  *     pairs; for settings built from ready lines, those lines for every call
  * @param unitRole the role of the chunk's unit, which the Latin-run check reads
+ * @param pinnedTargets the renderings of the chunk's pinned glossary entries, which the name-spelling check lets
+ *     inflect; empty when none is known
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -35,7 +37,32 @@ public record LoopSettings(
         List<String> glossaryPairs,
         List<String> characters,
         ReviewerSheets reviewerSheets,
-        UnitRole unitRole) {
+        UnitRole unitRole,
+        List<String> pinnedTargets) {
+
+    /** Settings that know no pinned entry. */
+    public LoopSettings(
+            final ReviewMode reviewMode,
+            final DialParameters dial,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewerSheets reviewerSheets,
+            final UnitRole unitRole) {
+        this(
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                reviewerSheets,
+                unitRole,
+                List.of());
+    }
 
     /** Settings for a chunk of a body unit. */
     public LoopSettings(
@@ -62,7 +89,31 @@ public record LoopSettings(
     /** These settings for a chunk of a unit with another role. */
     public LoopSettings withUnitRole(final UnitRole role) {
         return new LoopSettings(
-                reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, characters, reviewerSheets, role);
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                reviewerSheets,
+                role,
+                pinnedTargets);
+    }
+
+    /** These settings that let the given pinned renderings inflect. */
+    public LoopSettings withPinnedTargets(final List<String> pinned) {
+        return new LoopSettings(
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                reviewerSheets,
+                unitRole,
+                pinned);
     }
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
@@ -76,6 +127,8 @@ public record LoopSettings(
         Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(reviewerSheets, "reviewerSheets");
         Objects.requireNonNull(unitRole, "unitRole");
+        Objects.requireNonNull(pinnedTargets, "pinnedTargets");
+        pinnedTargets = List.copyOf(pinnedTargets);
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
         characters = List.copyOf(characters);
@@ -83,7 +136,7 @@ public record LoopSettings(
 
     /** What the soft checks read of these settings. */
     public SoftContext softContext() {
-        return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters, unitRole);
+        return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters, unitRole, pinnedTargets);
     }
 
     /** Settings whose reviewer is shown the glossary pairs and the character lines as they stand, in every call. */

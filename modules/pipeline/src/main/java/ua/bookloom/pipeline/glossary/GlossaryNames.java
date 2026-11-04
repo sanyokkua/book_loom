@@ -5,6 +5,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetState;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
@@ -31,6 +32,23 @@ public final class GlossaryNames {
         return entries.stream()
                 .filter(entry -> entry.target() != null && !entry.target().isBlank())
                 .flatMap(entry -> entry.names().stream().map(name -> name + ARROW + entry.target()))
+                .toList();
+    }
+
+    /**
+     * The renderings of the entries whose target is pinned: a pinned name inflects freely, so a form the book map
+     * lists is no spelling error.
+     *
+     * @param entries the non-null entries
+     * @return the renderings; never null, empty when no entry is pinned with a target
+     */
+    public static List<String> pinnedTargets(final List<GlossaryEntry> entries) {
+        Objects.requireNonNull(entries, "entries");
+        return entries.stream()
+                .filter(entry -> entry.targetState() == TargetState.PINNED)
+                .map(GlossaryEntry::target)
+                .filter(target -> target != null && !target.isBlank())
+                .distinct()
                 .toList();
     }
 

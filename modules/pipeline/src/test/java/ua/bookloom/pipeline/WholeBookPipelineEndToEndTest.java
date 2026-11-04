@@ -300,6 +300,12 @@ class WholeBookPipelineEndToEndTest {
                 .containsExactly(0, 2);
     }
 
+    // Letters, not digits: a number the scripted target never writes would now earn a repair call the stub cannot
+    // answer.
+    private static String nightLetters(final int night) {
+        return "" + (char) ('a' + night / 26) + (char) ('a' + night % 26);
+    }
+
     private void runSeaBook(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             // Fifty paragraphs in Fast chunks of eight: six full batches and one of two, each answered whole.
@@ -309,7 +315,7 @@ class WholeBookPipelineEndToEndTest {
                             WholeBookRun.batchReply(Collections.nCopies(size, SEA_TARGET)), Duration.ZERO))
                     .toList());
             final String book = IntStream.rangeClosed(1, PARAGRAPHS)
-                    .mapToObj(night -> "Tom watched the grey sea on night " + night + ".")
+                    .mapToObj(night -> "Tom watched the grey sea on night " + nightLetters(night) + ".")
                     .collect(Collectors.joining("\n\n"));
             final WholeBookRun.Project project =
                     WholeBookRun.project(TestBooks.markdown(tempDir.resolve("Book.md"), book), QualityDial.FAST);

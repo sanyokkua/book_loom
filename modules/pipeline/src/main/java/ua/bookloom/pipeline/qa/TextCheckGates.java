@@ -47,7 +47,8 @@ final class TextCheckGates {
                         input.targetLanguage(),
                         input.glossaryPairs(),
                         keptAsWritten(input),
-                        input.unitRole())
+                        input.unitRole(),
+                        input.pinnedTargets())
                 .stream()
                 .map(TextCheckGates::resultOf)
                 .toList());
@@ -146,23 +147,28 @@ final class TextCheckGates {
 
     private static CheckResult resultOf(final CheckFinding finding) {
         final CheckName check = checkOf(finding);
-        return finding.blocking() ? CheckResult.hardGateFailed(check, finding.note()) : notice(check, finding.note());
+        if (finding.blocking()) {
+            return CheckResult.hardGateFailed(check, finding.note());
+        }
+        final CheckLevel level = finding.level() == null ? softLevel(check) : finding.level();
+        return notice(check, level, finding.note());
     }
 
-    // A finding that does not block passes the gate at the severity CheckLevels reads its level back from. A repair- or
-    // note-level check raises at its own level. A block-level check's finding that does not block is a style note (the
-    // quote check's balanced English marks), except a number, whose changed or lost number is a repair (design D12).
+    // A finding that does not block passes the gate at the severity CheckLevels reads its level back from. A finding
+    // names its own level when the check's findings differ (a lost number repairs, an extra one is a note); otherwise a
+    // repair- or note-level check raises at its own level and a block-level check's finding that does not block is a
+    // style note (the quote check's balanced English marks).
     private static CheckResult notice(final CheckName check, final String note) {
-        final CheckLevel level = softLevel(check);
+        return notice(check, softLevel(check), note);
+    }
+
+    private static CheckResult notice(final CheckName check, final CheckLevel level, final String note) {
         log.debug("Text check {} raised a {} notice", check.raisedBy(), level);
         return CheckResult.passWithNotice(
                 check, new QaFinding(check.findingKind(), CheckLevels.severityFor(level), note, check.raisedBy()));
     }
 
     private static CheckLevel softLevel(final CheckName check) {
-        if (check == CheckName.NUMBER) {
-            return CheckLevel.REPAIR;
-        }
         return check.level() == CheckLevel.BLOCK ? CheckLevel.NOTE : check.level();
     }
 
@@ -188,6 +194,8 @@ final class TextCheckGates {
             case FUNCTION_WORD_RESIDUE -> CheckName.FUNCTION_WORD_RESIDUE;
             case IDENTIFIER_CHANGED -> CheckName.IDENTIFIER;
             case ADDRESS_MIX -> CheckName.ADDRESS_MIX;
+            case TERMINAL_MARK -> CheckName.TERMINAL_MARK;
+            case ADDRESS_PARITY -> CheckName.ADDRESS_PARITY;
         };
     }
 }

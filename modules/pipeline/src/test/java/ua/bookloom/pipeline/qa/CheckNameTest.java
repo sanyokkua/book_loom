@@ -33,12 +33,14 @@ class CheckNameTest {
         "GENDER, REPAIR",
         "NAME_GENDER, REPAIR",
         "NAME_MISSING, REPAIR",
-        "NAME_SPELLING, REPAIR",
+        "NAME_SPELLING, BLOCK",
         "ADDRESS_MIX, REPAIR",
         "FUNCTION_WORD_RESIDUE, REPAIR",
         "DUPLICATE_WORD, NOTE",
         "SPACING, NOTE",
         "UNKNOWN_WORD, NOTE",
+        "TERMINAL_MARK, REPAIR",
+        "ADDRESS_PARITY, REPAIR",
         "TYPOGRAPHY, NOTE"
     })
     void level_everyCheckName_hasOneLevel(final CheckName check, final CheckLevel expected) {

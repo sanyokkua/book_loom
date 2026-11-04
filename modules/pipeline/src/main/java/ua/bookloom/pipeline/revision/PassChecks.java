@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.audit.FinalAudit;
@@ -181,7 +182,9 @@ final class PassChecks {
                         inputs.namePolicy(),
                         GlossaryNames.terms(inputs.glossary()),
                         pairs(inputs.glossary()),
-                        List.of()));
+                        List.of(),
+                        UnitRole.BODY,
+                        GlossaryNames.pinnedTargets(inputs.glossary())));
     }
 
     private static List<String> pairs(final List<GlossaryEntry> glossary) {

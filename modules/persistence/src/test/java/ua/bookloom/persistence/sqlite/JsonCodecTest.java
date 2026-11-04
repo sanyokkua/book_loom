@@ -164,7 +164,8 @@ class JsonCodecTest {
                 List.of(
                         new QaFinding("name-swap", Severity.HIGH, "note " + UK, "check"),
                         new QaFinding("number", Severity.LOW, "n", "reviewer-edit"),
-                        new QaFinding("language", Severity.MEDIUM, "residue " + UK, "function-word-residue")),
+                        new QaFinding("language", Severity.MEDIUM, "residue " + UK, "function-word-residue"),
+                        new QaFinding("omission", Severity.MEDIUM, "ends " + UK, "terminal-mark")),
                 SegmentPath.REPAIRED,
                 2,
                 true,

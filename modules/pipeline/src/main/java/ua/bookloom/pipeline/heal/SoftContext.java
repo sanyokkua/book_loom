@@ -16,6 +16,8 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param glossaryPairs the unlocked glossary renderings of the chunk as {@code term → target} lines
  * @param characters the chunk's character gender sheet, one line each
  * @param unitRole the role of the chunk's unit
+ * @param pinnedTargets the renderings of the chunk's pinned glossary entries, whose declined forms are no spelling
+ *     error; an empty list when none is known
  */
 public record SoftContext(
         CallFrame frame,
@@ -23,7 +25,19 @@ public record SoftContext(
         List<String> glossaryTerms,
         List<String> glossaryPairs,
         List<String> characters,
-        UnitRole unitRole) {
+        UnitRole unitRole,
+        List<String> pinnedTargets) {
+
+    /** A context that knows no pinned entry. */
+    public SoftContext(
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final UnitRole unitRole) {
+        this(frame, namePolicy, glossaryTerms, glossaryPairs, characters, unitRole, List.of());
+    }
 
     /** A context for a segment of a body unit. */
     public SoftContext(
@@ -43,5 +57,6 @@ public record SoftContext(
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(unitRole, "unitRole");
+        Objects.requireNonNull(pinnedTargets, "pinnedTargets");
     }
 }

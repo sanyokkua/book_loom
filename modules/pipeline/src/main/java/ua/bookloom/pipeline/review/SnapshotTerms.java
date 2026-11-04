@@ -46,6 +46,27 @@ final class SnapshotTerms {
                 .toList();
     }
 
+    /** Every term of the snapshot, which the checks' name removal reads. */
+    static List<String> termNames(final ContextSnapshot snapshot) {
+        return snapshot.glossary().stream().map(SnapshotTerm::term).toList();
+    }
+
+    /** The unlocked {@code term → target} lines of the snapshot, which the name checks hold the text to. */
+    static List<String> pairs(final ContextSnapshot snapshot) {
+        return snapshot.glossary().stream()
+                .filter(term -> term.target() != null && !term.locked())
+                .map(term -> term.term() + " → " + term.target())
+                .toList();
+    }
+
+    /** The renderings of the snapshot's pinned terms, which the name-spelling check lets inflect. */
+    static List<String> pinnedTargets(final ContextSnapshot snapshot) {
+        return snapshot.glossary().stream()
+                .filter(term -> term.target() != null && stateOf(term) == TargetState.PINNED)
+                .map(SnapshotTerm::target)
+                .toList();
+    }
+
     private static TargetState stateOf(final SnapshotTerm term) {
         if (term.locked()) {
             return TargetState.LOCKED;

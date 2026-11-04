@@ -69,6 +69,28 @@ public final class TextChecks {
             final List<String> glossaryPairs,
             final List<String> keptTerms,
             final UnitRole role) {
+        return run(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, List.of());
+    }
+
+    /**
+     * Runs every deterministic text check on one segment, knowing which glossary renderings are pinned.
+     *
+     * @param pinnedTargets the renderings of the pinned glossary entries among the pairs: a form the language's
+     *     table lists for one is no spelling error, and a name-spelling finding on one blocks; on any other rendering
+     *     it is a note; never null
+     * @return the findings, as {@link #run(String, String, String, String, List, List)}
+     * @see #run(String, String, String, String, List, List, UnitRole)
+     */
+    public static List<CheckFinding> run(
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs,
+            final List<String> keptTerms,
+            final UnitRole role,
+            final List<String> pinnedTargets) {
+        Objects.requireNonNull(pinnedTargets, "pinnedTargets");
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(target, "target");
@@ -79,7 +101,7 @@ public final class TextChecks {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
         }
-        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role);
+        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs, keptTerms, role, pinnedTargets);
     }
 
     // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
@@ -90,7 +112,8 @@ public final class TextChecks {
             final String targetLanguage,
             final List<String> glossaryPairs,
             final List<String> keptTerms,
-            final UnitRole role) {
+            final UnitRole role,
+            final List<String> pinnedTargets) {
         final String source = Identifiers.masked(original);
         final String target = Identifiers.masked(originalTarget);
         final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
@@ -104,11 +127,14 @@ public final class TextChecks {
             findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage), keptTerms));
         }
         findings.addAll(AddressMixCheck.find(target, targetLanguage));
+        findings.addAll(AddressMixCheck.parity(source, target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
-        findings.addAll(glossaryNameChecks(source, target, sourceLanguage, targetLanguage, glossaryPairs));
+        findings.addAll(
+                glossaryNameChecks(source, target, sourceLanguage, targetLanguage, glossaryPairs, pinnedTargets));
         findings.addAll(NumberCheck.find(source, target));
+        TerminalMarkCheck.find(source, target, role).ifPresent(findings::add);
         if (!findings.isEmpty()) {
             report(findings);
         }
@@ -121,12 +147,13 @@ public final class TextChecks {
             final String target,
             @Nullable final String sourceLanguage,
             final String targetLanguage,
-            final List<String> glossaryPairs) {
+            final List<String> glossaryPairs,
+            final List<String> pinnedTargets) {
         final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
         final List<CheckFinding> found =
                 new ArrayList<>(VocativeCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
         found.addAll(NameSwapCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
-        found.addAll(NameLossCheck.find(source, target, glossaryPairs, sourceLanguage, targetLanguage));
+        found.addAll(NameLossCheck.find(source, target, glossaryPairs, sourceLanguage, targetLanguage, pinnedTargets));
         return found;
     }
 
