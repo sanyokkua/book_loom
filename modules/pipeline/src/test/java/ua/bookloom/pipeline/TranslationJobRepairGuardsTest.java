@@ -46,7 +46,8 @@ class TranslationJobRepairGuardsTest {
     private static final String RUSSIAN_LETTER = "Я відчинив стары двері.";
     private static final String RIGHT = "Я відчинив старі двері.";
     private static final String WITH_INVENTED_TOKENS = "Я відчинив ⟦g0⟧старі⟦g1⟧ двері.";
-    private static final String STARTS_WITH_QUOTE_CODE = "{\"target\":\"\\u001eЯ відчинив старі двері.\"}";
+    private static final String STARTS_WITH_QUOTE_CODE =
+            "{\"items\":[{\"id\":\"1\",\"target\":\"\\u001eЯ відчинив старі двері.\"}]}";
 
     private static final String CHISEL_SOURCE = "Chisel opened the old door.";
     private static final String MASCULINE = "Чизел відчинив старі двері.";

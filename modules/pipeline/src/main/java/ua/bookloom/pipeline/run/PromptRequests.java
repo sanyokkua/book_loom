@@ -1,36 +1,42 @@
 package ua.bookloom.pipeline.run;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.SegmentTranslator;
-import ua.bookloom.pipeline.batch.BatchContext;
-import ua.bookloom.pipeline.batch.BatchContexts;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.context.AcceptedTargets;
+import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.ContextPackage;
+import ua.bookloom.pipeline.context.Focus;
+import ua.bookloom.pipeline.context.FocusItem;
+import ua.bookloom.pipeline.context.PromptPlan;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TmLookup;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * The prompts of one chunk, built the one way a run builds them: the context each draft is shown, the batch that
- * fits the window, the requests of a draft and its repairs, and the inputs of the chunk's reviewer. The job takes its
- * chunk's context, its batches and its loop settings from here, and the prompt evals build their requests through the
- * same methods, so what an eval measures is what a run sends — a hand-made context is how an eval drifts from the app.
+ * fits the window, the requests of a draft, its format re-ask and its repair, and the inputs of the chunk's reviewer.
+ * Every translate-family request is planned by the run's context builder over the window the book's reading order
+ * gives and the book map as it stands. The job takes its chunk's context, its batches and its loop
+ * settings from here, and the prompt evals build their requests through the same methods, so what an eval measures is
+ * what a run sends — a hand-made context is how an eval drifts from the app.
  *
  * <p>The reviewer's and the directed fix's requests are built inside their own production classes
  * ({@code ReviewerCall}, {@code DirectedFix}) from the inputs given here, {@link #loopSettings()} and a mask's text.
@@ -40,26 +46,23 @@ import ua.bookloom.pipeline.prompt.DraftContext;
 @Slf4j
 public final class PromptRequests {
 
-    // The previous pairs a batch shows; the dial's own count when it is larger.
-    private static final int MIN_PAIRS = 2;
-    private static final int MAX_PAIRS = 3;
-
     private final ChunkContext context;
     private final RunSettings settings;
     private final SegmentTranslator translator;
     private final BatchDrafter drafter;
-    private final BatchFit fit;
+    private final TranslatePlanner planner;
 
     private PromptRequests(
             final ChunkContext context,
             final RunSettings settings,
             final SegmentTranslator translator,
-            final BatchDrafter drafter) {
+            final BatchDrafter drafter,
+            final TranslatePlanner planner) {
         this.context = context;
         this.settings = settings;
         this.translator = translator;
         this.drafter = drafter;
-        this.fit = new BatchFit(drafter, settings);
+        this.planner = planner;
     }
 
     /** A segment that needs a call, with the mask it is shown and what the memory offered it. */
@@ -75,20 +78,27 @@ public final class PromptRequests {
 
     /**
      * What one batch call is made of: the slots it covers (a prefix of those offered, when the window made it shrink),
-     * their items and the context it carries.
+     * their items, the context they are shown and the plan the call sends.
      */
-    public record PreparedBatch(List<BatchSlot> shown, List<BatchItem> items, BatchContext context) {
+    public record PreparedBatch(
+            List<BatchSlot> shown, List<BatchItem> items, TranslateContext context, PromptPlan plan) {
 
         /** Rejects a missing part and copies the lists. */
         public PreparedBatch {
             shown = List.copyOf(Objects.requireNonNull(shown, "shown"));
             items = List.copyOf(Objects.requireNonNull(items, "items"));
             Objects.requireNonNull(context, "context");
+            Objects.requireNonNull(plan, "plan");
+        }
+
+        /** The segment ids of the shown slots, in order. */
+        public List<String> segmentIds() {
+            return shown.stream().map(slot -> slot.segment().id()).toList();
         }
     }
 
     /**
-     * Reads the glossary and lexicon for one chunk and hides each of its segments' protected spans.
+     * Reads the glossary and lexicon for one chunk, hides each of its segments' protected spans and reads the book map.
      *
      * @param glossary the non-null glossary store
      * @param lexicon the non-null lexicon store, read live because a batch of this chunk may add to it
@@ -96,7 +106,8 @@ public final class PromptRequests {
      * @param chunk the non-null chunk about to be drafted
      * @param documentGate the non-null gate that checks the document's own markup once the spans are back
      * @param translator the non-null draft step of the run; it is gated through this chunk's spans here
-     * @param drafter the non-null batch drafter, whose prompt weighs a batch against the window
+     * @param drafter the non-null batch drafter
+     * @param planner the non-null planner of the run's translate-family calls
      * @return the chunk's prompts, or the glossary's error
      */
     public static Result<PromptRequests> read(
@@ -106,11 +117,13 @@ public final class PromptRequests {
             final Chunk chunk,
             final GateFunction documentGate,
             final SegmentTranslator translator,
-            final BatchDrafter drafter) {
+            final BatchDrafter drafter,
+            final TranslatePlanner planner) {
         Objects.requireNonNull(translator, "translator");
         Objects.requireNonNull(drafter, "drafter");
+        Objects.requireNonNull(planner, "planner");
         return ChunkContext.read(glossary, lexicon, settings, chunk, documentGate)
-                .map(read -> new PromptRequests(read, settings, translator.gatedBy(read.gate()), drafter));
+                .map(read -> new PromptRequests(read, settings, translator.gatedBy(read.gate()), drafter, planner));
     }
 
     /** The chunk's context, which the job reads its masks, gate and glossary from. */
@@ -121,6 +134,20 @@ public final class PromptRequests {
     /** The run's draft step, gated through this chunk's protected spans. */
     public SegmentTranslator translator() {
         return translator;
+    }
+
+    /**
+     * The book map now: the glossary as it stood when the chunk started, and the recurring terms as they stand, since
+     * a batch of this chunk may have established a rendering a later draft must keep.
+     */
+    public BookMap map() {
+        final BookMap map = planner.map(context.glossary(), context.lexicon().entries(settings.projectId()));
+        log.debug(
+                "Book map entries={} terms={} glossed={}",
+                map.entries().size(),
+                map.terms().size(),
+                map.glossFirstUse().size());
+        return map;
     }
 
     /** The segment's text with its protected spans hidden, as the model is shown it. */
@@ -134,37 +161,61 @@ public final class PromptRequests {
     }
 
     /**
-     * Assembles what one draft is shown besides its source.
+     * Assembles the snapshot of what one draft is shown besides its source, and the memory's lines for it. The rolling
+     * summary no longer reaches a draft: the recently-present card says who is who (design D10).
      *
      * @param segment the segment about to be drafted
      * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
      * @param memory what the translation memory offers the segment
-     * @param summary the rolling summary's text, or {@code null} while there is none
      * @return the draft's context and its snapshot
      */
     public ContextPackage contextFor(
-            final Segment segment,
-            final List<String> earlierMaskedTargets,
-            final TmLookup memory,
-            @Nullable final String summary) {
-        return context.contextFor(segment, earlierMaskedTargets, memory, summary);
+            final Segment segment, final List<String> earlierMaskedTargets, final TmLookup memory) {
+        return context.contextFor(segment, earlierMaskedTargets, memory, null);
+    }
+
+    /**
+     * The window, map and memory one or more consecutive segments are drafted with.
+     *
+     * @param slots the non-null segments, in reading order, with their masks and memory offers
+     * @param accepted the non-null reader of the earlier segments' kept targets
+     * @param keyTerms the non-null recurring key terms the call asks renderings for; empty when it asks none
+     * @return the context, or the reader's error
+     */
+    public Result<TranslateContext> translateContext(
+            final List<BatchSlot> slots, final AcceptedTargets accepted, final List<String> keyTerms) {
+        Objects.requireNonNull(slots, "slots");
+        final Focus focus = new Focus(
+                slots.stream()
+                        .map(slot ->
+                                new FocusItem(slot.segment().id(), slot.mask().maskedText()))
+                        .toList(),
+                Map.of());
+        final Map<String, ProtectedMask> masks = new LinkedHashMap<>();
+        slots.forEach(slot -> masks.put(slot.segment().id(), slot.mask()));
+        final List<String> memory = slots.stream()
+                .flatMap(slot ->
+                        contextFor(slot.segment(), List.of(), slot.memory()).draftContext().memoryLines().stream())
+                .toList();
+        return planner.window(focus, accepted)
+                .map(window -> new TranslateContext(window, map(), memory, masks, keyTerms));
     }
 
     /** The request of a segment's first draft, as the draft step sends it. */
-    public ChatRequest draftRequest(final Segment segment, final DraftContext draft, final ProtectedMask mask) {
+    public ChatRequest draftRequest(final Segment segment, final TranslateContext draft, final ProtectedMask mask) {
         return translator.requests().draft(segment, draft, mask);
     }
 
-    /** The request of the structural repair a draft whose reply was not the required JSON object is sent. */
-    public ChatRequest structuralRepairRequest(
-            final Segment segment, final DraftContext draft, final ProtectedMask mask, final String rejectedReply) {
-        return translator.requests().structuralRepair(segment, draft, mask, rejectedReply);
+    /** The request of the one format re-ask a draft whose reply could not be read is sent. */
+    public ChatRequest formatReaskRequest(
+            final Segment segment, final TranslateContext draft, final ProtectedMask mask, final String rejectedReply) {
+        return translator.requests().formatReask(segment, draft, mask, rejectedReply);
     }
 
     /** The one repair's request for a draft whose text {@code previous} still holds {@code defects}. */
     public ChatRequest repairRequest(
             final Segment segment,
-            final DraftContext draft,
+            final TranslateContext draft,
             final ProtectedMask mask,
             final String previous,
             final List<QaFinding> defects) {
@@ -173,69 +224,60 @@ public final class PromptRequests {
 
     /** The one repair's request for a reply whose marks the code cannot put back, or empty when no call is needed. */
     public Optional<ChatRequest> repairRequest(
-            final Segment segment, final DraftContext draft, final ProtectedMask mask, final String rejectedTarget) {
+            final Segment segment,
+            final TranslateContext draft,
+            final ProtectedMask mask,
+            final String rejectedTarget) {
         return translator.requests().repairOfLostMarks(segment, draft, mask, rejectedTarget);
     }
 
-    /** How many earlier pairs of the unit a batch shows. */
-    public int batchPairCount() {
-        return Math.clamp(settings.dial().precedingTargets(), MIN_PAIRS, MAX_PAIRS);
-    }
-
     /**
-     * Makes the batch of the given slots. It is shown whole when its prompt fits the window; else without the optional
-     * context, else with fewer slots, the rest of which batch at their
-     * own turn. Fewer than two slots is no batch.
+     * Makes the batch of the given slots, fitted to the model tier's budgets: what helps least is dropped first, and
+     * only then batch items, the rest of which batch at their own turn. Fewer than two slots is no batch.
      *
      * @param slots the segments that need a call, in document order, the first being the batch's first
-     * @param unit the unit's segments, which decide the next source shown
-     * @param earlier the unit's last earlier pairs before the first slot, oldest first
-     * @param summary the rolling summary's text, or {@code null}
-     * @return the batch, or empty when not even two slots fit
+     * @param accepted the non-null reader of the earlier segments' kept targets
+     * @return the batch, empty when not even two slots fit, or the reader's or the builder's error
      */
-    public Optional<PreparedBatch> batch(
-            final List<BatchSlot> slots,
-            final List<Segment> unit,
-            final List<EarlierPair> earlier,
-            @Nullable final String summary) {
-        log.debug("Preparing a batch slots={} earlier={} summary={}", slots.size(), earlier.size(), summary != null);
-        final List<BatchContext.Pair> pairs = fit.capPairs(pairsOf(earlier));
-        List<BatchSlot> shown = slots;
-        while (shown.size() >= BatchDrafter.MIN_BATCHING_SIZE) {
-            final PreparedBatch full = prepared(shown, unit, pairs, summary);
-            final Optional<PreparedBatch> fitted = fitted(full);
-            if (fitted.isPresent()) {
-                return fitted;
+    public Result<Optional<PreparedBatch>> batch(final List<BatchSlot> slots, final AcceptedTargets accepted) {
+        log.debug("Preparing a batch slots={}", slots.size());
+        final Result<Optional<PreparedBatch>> whole = prepared(slots, accepted);
+        final Optional<PreparedBatch> batch = whole.data();
+        if (batch == null || batch.isEmpty() || batch.get().shown().size() == slots.size()) {
+            return whole;
+        }
+        // The window kept fewer items, so the next source is the first one left out: the shown prefix is planned again.
+        log.debug(
+                "Batch kept {} of {} slots; planned again for them",
+                batch.get().shown().size(),
+                slots.size());
+        return prepared(batch.get().shown(), accepted);
+    }
+
+    private Result<Optional<PreparedBatch>> prepared(final List<BatchSlot> slots, final AcceptedTargets accepted) {
+        final List<String> keyTerms = drafter.keyTermAsks().isAsking()
+                ? context.keyTermsIn(slots.stream().map(BatchSlot::segment).toList())
+                : List.of();
+        final Result<TranslateContext> read = translateContext(slots, accepted, keyTerms);
+        final TranslateContext shown = read.data();
+        if (shown == null) {
+            return Result.err(Objects.requireNonNull(read.error(), "error"));
+        }
+        final List<BatchItem> items = itemsOf(slots);
+        final List<String> ids = slots.stream().map(slot -> slot.segment().id()).toList();
+        return drafter.plan(shown, items, ids).map(fitted -> {
+            final int kept = fitted.keptItems();
+            if (kept < BatchDrafter.MIN_BATCHING_SIZE) {
+                log.debug("No batch fits the window slots={} kept={}", slots.size(), kept);
+                return Optional.empty();
             }
-            shown = shown.subList(0, shown.size() > BatchDrafter.MIN_BATCHING_SIZE ? (shown.size() + 1) / 2 : 0);
-        }
-        return Optional.empty();
-    }
-
-    // What goes first when the window is short: the optional context.
-    private Optional<PreparedBatch> fitted(final PreparedBatch full) {
-        if (fit.fits(full.context(), full.items())) {
-            return Optional.of(full);
-        }
-        final PreparedBatch lean = new PreparedBatch(full.shown(), full.items(), BatchFit.lean(full.context()));
-        if (fit.fits(lean.context(), lean.items())) {
-            log.debug(
-                    "Batch of {} fits only without its optional context",
-                    full.shown().size());
-            return Optional.of(lean);
-        }
-        return Optional.empty();
-    }
-
-    private static List<BatchContext.Pair> pairsOf(final List<EarlierPair> earlier) {
-        return earlier.stream()
-                .map(e -> new BatchContext.Pair(DisplayText.of(e.segment().masked()), DisplayText.of(e.target())))
-                .toList();
+            return Optional.of(new PreparedBatch(slots.subList(0, kept), items.subList(0, kept), shown, fitted.plan()));
+        });
     }
 
     /** The request of a batch's one call, which asks for the batch schema, with the key-terms request when it has any. */
     public ChatRequest batchRequest(final PreparedBatch prepared) {
-        return drafter.request(prepared.context(), prepared.items());
+        return drafter.request(prepared.plan(), prepared.items());
     }
 
     /** What the chunk's quality loop and its reviewer are given: the chunk's term pairs and character sheet. */
@@ -254,37 +296,10 @@ public final class PromptRequests {
                 .withNames(context.names());
     }
 
-    private PreparedBatch prepared(
-            final List<BatchSlot> shown,
-            final List<Segment> unit,
-            final List<BatchContext.Pair> pairs,
-            @Nullable final String summary) {
-        final List<BatchItem> items = itemsOf(shown);
-        final List<DraftContext> perItem = shown.stream()
-                .map(slot -> context.contextFor(slot.segment(), List.of(), slot.memory(), summary)
-                        .draftContext())
-                .toList();
-        final List<String> keyTerms = drafter.keyTermAsks().isAsking()
-                ? context.keyTermsIn(shown.stream().map(BatchSlot::segment).toList())
-                : List.of();
-        final BatchContext batch = new BatchContext(
-                merged(items, perItem),
-                pairs,
-                fit.capNext(BatchFit.nextSourceAfter(unit, shown.getLast().segment())),
-                BatchFit.characters(perItem),
-                keyTerms);
-        return new PreparedBatch(shown, items, batch);
-    }
-
     private static List<BatchItem> itemsOf(final List<BatchSlot> shown) {
         return IntStream.range(0, shown.size())
                 .mapToObj(i -> new BatchItem(
                         Integer.toString(i + 1), shown.get(i).mask().maskedText()))
                 .toList();
-    }
-
-    private static DraftContext merged(final List<BatchItem> items, final List<DraftContext> perItem) {
-        return BatchContexts.of(items.stream().map(BatchItem::id).toList(), perItem, List.of(), null, List.of())
-                .draft();
     }
 }

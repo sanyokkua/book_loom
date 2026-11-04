@@ -96,7 +96,7 @@ class BatchItemsJobTest {
     void run_replyMissingTwoIds_eachCallShowsItsOwnItems() {
         run(new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(items(entry("1", T0), entry("4", T3))))
-                .answerTo(BATCH, batchReply(items(entry("2", T1), entry("3", T2)))));
+                .answerTo(BATCH, batchReply(items(entry("1", T1), entry("2", T2)))));
 
         assertThat(lastOf(1L).items())
                 .extracting(CallItem::status)

@@ -82,13 +82,7 @@ final class BatchEvalRunner {
 
     private BatchDrafter sizing(final int initialSize) {
         final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
-        return new BatchDrafter(
-                new BatchPromptBuilder(EvalVariants.templates(), any.frame()),
-                parser,
-                calls,
-                SOURCE,
-                TARGET,
-                initialSize);
+        return new BatchDrafter(new BatchPromptBuilder(any.planner()), parser, calls, SOURCE, TARGET, initialSize);
     }
 
     BatchEvalRow run(final Batch batch) {

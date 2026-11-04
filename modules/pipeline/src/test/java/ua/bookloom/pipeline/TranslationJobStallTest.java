@@ -134,7 +134,7 @@ class TranslationJobStallTest {
     void run_resumedAfterTheFixForARefusedEditFailed_continuesAtTheFix() {
         final ScriptedChatModel model = replies(T0, T1)
                 .answer(Result.err(error(ErrorCode.upstream)))
-                .answer(target(FIXED_T0))
+                .answer(ChunkRunFixtures.singleTarget(FIXED_T0))
                 .answerTo(REVIEW, ok(REFUSED_EDIT_ON_S1));
         final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model);

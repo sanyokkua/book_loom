@@ -4,14 +4,22 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.checks.WordValidator;
+import ua.bookloom.pipeline.context.BookMap;
+import ua.bookloom.pipeline.context.BookRules;
+import ua.bookloom.pipeline.context.ContextBuilder;
+import ua.bookloom.pipeline.context.RunFrame;
+import ua.bookloom.pipeline.context.RunFrames;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.JobModelCalls;
@@ -33,6 +41,7 @@ final class RunWiring {
     private final ChatModel model;
     private final RunStores stores;
     private final ChunkRunnerFactory chunkRunners;
+    private final PromptTemplates templates;
     private final ConsistencyPass revision;
     private final WordValidator words;
     private final Clock clock;
@@ -57,6 +66,7 @@ final class RunWiring {
         this.model = tools.model();
         this.stores = Objects.requireNonNull(stores, "stores");
         this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks);
+        this.templates = tools.templates();
         this.revision = checks.revision();
         this.words = checks.words();
         this.clock = pacing.clock();
@@ -65,7 +75,21 @@ final class RunWiring {
         this.live = Objects.requireNonNull(live, "live");
     }
 
-    StageRunner stages(final RunStart.Started run, final PrepStage.Prepared prepared, final RunSinks sinks) {
+    /**
+     * Wires the run's stages. The run's fixed frame is built here, once, from the brief, the book and the map at Start,
+     * so every translate-family call of the run sends the same system bytes.
+     *
+     * @return the stages, or the frame's error, which fails the run before its first chunk
+     */
+    Result<StageRunner> stages(final RunStart.Started run, final PrepStage.Prepared prepared, final RunSinks sinks) {
+        return frameOf(run, run.project().brief()).map(runFrame -> wired(run, prepared, sinks, runFrame));
+    }
+
+    private StageRunner wired(
+            final RunStart.Started run,
+            final PrepStage.Prepared prepared,
+            final RunSinks sinks,
+            final RunFrame runFrame) {
         final int batchSize = startBatchSize();
         log.debug("Wiring the stages project={} batchSize={}", request.projectId(), batchSize);
         final BookBrief brief = run.project().brief();
@@ -76,7 +100,26 @@ final class RunWiring {
                 run.document(),
                 run.index().majorityScript().orElse(null),
                 words);
-        final ModelCalls calls = new JobModelCalls(
+        final ModelCalls calls = callsOf(run, runWindow, frame);
+        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
+        RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
+        final TranslatePlanner planner = new TranslatePlanner(
+                new ContextBuilder(templates),
+                runFrame,
+                model.profile(),
+                runWindow::current,
+                run.document().units());
+        return new StageRunner(
+                chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner),
+                revision,
+                settings,
+                sinks,
+                calls,
+                new NarratorStage(stores, sinks, run.document(), settings));
+    }
+
+    private ModelCalls callsOf(final RunStart.Started run, final RunWindow runWindow, final CallFrame frame) {
+        return new JobModelCalls(
                         onSent -> new CancellableChatModel(model, live.control(), onSent, live.watchdog()),
                         live.emit(),
                         clock,
@@ -85,15 +128,26 @@ final class RunWiring {
                         SegmentLocators.of(run.document()))
                 .withSteps(StepAnnouncer.over(live.emit()))
                 .inRun();
-        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
-        RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
-        return new StageRunner(
-                chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize),
-                revision,
-                settings,
-                sinks,
-                calls,
-                new NarratorStage(stores, sinks, run.document(), settings));
+    }
+
+    // The frame reads the map as it stands at Start; a later glossary change reaches the map of the next chunk.
+    private Result<RunFrame> frameOf(final RunStart.Started run, final BookBrief brief) {
+        final String projectId = request.projectId();
+        return stores.glossary()
+                .all(projectId)
+                .flatMap(entries -> stores.lexicon()
+                        .all(projectId)
+                        .flatMap(terms -> new RunFrames(templates, new BookRules(templates.languageRules()))
+                                .build(
+                                        brief,
+                                        run.document(),
+                                        run.index(),
+                                        BookMap.of(
+                                                entries,
+                                                terms,
+                                                brief,
+                                                run.document().units()),
+                                        model.profile())));
     }
 
     private int startBatchSize() {

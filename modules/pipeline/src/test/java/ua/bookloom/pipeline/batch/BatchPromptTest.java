@@ -5,92 +5,129 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.ForeignPassagePolicy;
-import ua.bookloom.pipeline.batch.BatchContext.Pair;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.TestPlanners;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.context.BookMap;
+import ua.bookloom.pipeline.context.ContextBuilder;
+import ua.bookloom.pipeline.context.Focus;
+import ua.bookloom.pipeline.context.PromptPlan;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.context.Window;
+import ua.bookloom.pipeline.context.WindowPair;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 
-/** The batch prompt as really built: its blocks, its byte-identical prefix and examples a run's parser would accept. */
+/** The batch prompt as really planned: its blocks, its byte-identical prefix and examples a run's parser would accept. */
 class BatchPromptTest {
 
-    private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final int SYSTEM_BUDGET_TOKENS = 875;
     private static final String ITEMS_OPEN = "<Items>\n";
     private static final String REPLY_OPEN = "</Items>\nReply:";
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
     private static final List<BatchItem> ITEMS = List.of(
-            new BatchItem("1", "She opened the door."),
+            new BatchItem("1", "Hale opened the door for the master."),
             new BatchItem("2", "1881"),
             new BatchItem("3", "⟦g0⟧Hello⟦g1⟧ there."));
+    private static final List<String> IDS = List.of("x:1", "x:2", "x:3");
+    private static final GlossaryEntry HALE =
+            GlossaryEntry.of("h", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false);
+    private static final LexiconEntry MASTER = new LexiconEntry("p1", "master", List.of(), "господар", null, null);
 
-    private static BatchPromptBuilder builder(final String source, final String target) {
-        return new BatchPromptBuilder(
-                TEMPLATES,
-                new CallFrame(source, target, StyleSheet.from(BookBrief.defaults(source)), ForeignPassagePolicy.KEEP));
+    private static BookBrief brief(final String source, final String target) {
+        return BookBrief.defaults(source).withLanguages(source, target);
     }
 
-    private static BatchContext fullContext() {
-        return new BatchContext(
-                new DraftContext(List.of(), "Hale searches.", List.of("Hale → Гейл (character, male)"), List.of()),
-                List.of(new Pair("He left.", "Він пішов.")),
+    private static TranslatePlanner planner(final String source, final String target) {
+        return TestPlanners.planner(
+                brief(source, target), IndexTestBooks.oneUnit("Hale opened the door."), ModelProfile.defaults());
+    }
+
+    private static TranslateContext context(
+            final BookBrief brief,
+            final List<WindowPair> previous,
+            @Nullable final String next,
+            final List<GlossaryEntry> glossary,
+            final List<LexiconEntry> terms,
+            final List<String> memory,
+            final List<String> keyTerms) {
+        return new TranslateContext(
+                new Window(previous, new Focus(List.of(), Map.of()), next),
+                BookMap.of(glossary, terms, brief),
+                memory,
+                Map.of(),
+                keyTerms);
+    }
+
+    private static TranslateContext empty() {
+        return context(brief("en", "uk"), List.of(), null, List.of(), List.of(), List.of(), List.of());
+    }
+
+    private static TranslateContext full() {
+        return context(
+                brief("en", "uk"),
+                List.of(new WindowPair("x:0", "He left.", "Він пішов.")),
                 "She smiled.",
-                List.of("Hale — male"),
+                List.of(HALE),
+                List.of(),
+                List.of("He left. → Він пішов."),
                 List.of());
     }
 
+    private static PromptPlan plan(
+            final TranslatePlanner planner, final TranslateContext context, final List<BatchItem> items) {
+        final ContextBuilder.FittedPlan fitted = Objects.requireNonNull(new BatchPromptBuilder(planner)
+                .plan(context, items, IDS.subList(0, items.size()))
+                .data());
+        assertThat(fitted.keptItems()).isEqualTo(items.size());
+        return fitted.plan();
+    }
+
+    private static PromptPlan plan(final TranslateContext context, final List<BatchItem> items) {
+        return plan(planner("en", "uk"), context, items);
+    }
+
     @Test
-    void messagesFor_fullContext_carriesEveryBlockAndTheNumberedItems() {
-        final String user =
-                builder("en", "uk").messagesFor(fullContext(), ITEMS).get(1).content();
+    void plan_fullContext_carriesEveryBlockAndTheNumberedItems() {
+        final String user = plan(full(), ITEMS).userText();
 
         assertThat(user)
-                .contains("[Book so far", "[Glossary", "[Characters in these items", "[Previous pairs")
-                .contains("Source: He left.\nTranslation: Він пішов.", "[Next item after the batch")
-                .contains("She smiled.", "<s id=\"1\">She opened the door.</s>", "<s id=\"2\">1881</s>")
-                .contains("[Immutable tokens per item", "3: ⟦g0⟧ ⟦g1⟧")
-                .doesNotContain("1: ⟦g", "2: ⟦g", "{{", "}}");
+                .contains("[Glossary", "Hale → Гейл (character, male)", "[Previous pairs")
+                .contains("Source: He left.\nTranslation: Він пішов.", "[Next item after the batch", "She smiled.")
+                .contains("[Earlier decisions — keep consistent]\nHe left. → Він пішов.")
+                .contains("<s id=\"1\">Hale opened the door for the master.</s>", "<s id=\"2\">1881</s>")
+                .contains("<s id=\"3\">⟦g0⟧Hello⟦g1⟧ there.</s>")
+                .doesNotContain("{{", "}}", "[Book so far", "[Characters");
     }
 
     @Test
-    void messagesFor_batchWithoutToken_sendsNoTokenRulesAndNoTokenBlock() {
-        final List<BatchItem> plain = List.of(new BatchItem("1", "She opened the door."), new BatchItem("2", "1881"));
+    void plan_batchWithoutToken_remindsOfNoMark() {
+        final List<BatchItem> plain = ITEMS.subList(0, 2);
 
-        final List<ChatMessage> messages = builder("en", "uk").messagesFor(fullContext(), plain);
+        final PromptPlan plan = plan(full(), plain);
 
-        assertThat(messages.getFirst().content())
-                .doesNotContain("⟦gN⟧", "tokens", "Two tokens", "list-marker")
-                .contains("7. Follow any [Extra instruction]");
-        assertThat(messages.get(1).content()).doesNotContain("Immutable", "token");
+        assertThat(plan.userText()).doesNotContain("⟦");
+        assertThat(plan(full(), ITEMS).userText()).endsWith("Keep every ⟦…⟧ mark exactly once.");
     }
 
     @Test
-    void messagesFor_batchWithOneTokenItem_sendsTheFullTokenRules() {
-        final List<ChatMessage> messages = builder("en", "uk").messagesFor(fullContext(), ITEMS);
+    void plan_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
+        final TranslateContext context = context(
+                brief("en", "uk"), List.of(), null, List.of(), List.of(MASTER), List.of(), List.of("master", "imp"));
 
-        assertThat(messages.getFirst().content())
-                .contains("4. ⟦gN⟧ tokens stand for", "10. Follow any [Extra instruction]");
-    }
-
-    @Test
-    void messagesFor_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
-        final BatchContext context = new BatchContext(
-                new DraftContext(List.of(), null, List.of(), List.of(), List.of(), List.of("master → господар")),
-                List.of(),
-                null,
-                List.of(),
-                List.of("master", "imp"));
-
-        final String user =
-                builder("en", "uk").messagesFor(context, ITEMS).get(1).content();
+        final String user = plan(context, ITEMS).userText();
 
         assertThat(user)
                 .contains("[Established renderings of recurring terms", "master → господар")
@@ -99,96 +136,80 @@ class BatchPromptTest {
     }
 
     @Test
-    void messagesFor_noLexiconAndNoKeyTerms_leavesBothBlocksOut() {
-        final String user = builder("en", "uk")
-                .messagesFor(BatchContext.empty(), ITEMS)
-                .get(1)
-                .content();
-
-        assertThat(user).doesNotContain("[Established renderings", "[Key terms");
+    void plan_noLexiconAndNoKeyTerms_leavesBothBlocksOut() {
+        assertThat(plan(empty(), ITEMS).userText()).doesNotContain("[Established renderings", "[Key terms");
     }
 
     @Test
-    void messagesFor_emptyContext_leavesEveryOptionalBlockOut() {
-        final String user = builder("en", "uk")
-                .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "1881")))
-                .get(1)
-                .content();
+    void plan_emptyContext_leavesEveryOptionalBlockOut() {
+        final String user = plan(empty(), List.of(new BatchItem("1", "1881"))).userText();
 
         assertThat(user)
-                .doesNotContain(
-                        "[Book so far", "[Glossary", "[Characters", "[Previous pairs", "[Related earlier", "[Next item")
-                .doesNotContain("[Immutable tokens", "(none");
+                .doesNotContain("[Glossary", "[Recently", "[Previous pairs", "[Earlier decisions", "[Next item")
+                .doesNotContain("[Defects", "[Rejected reply", "(none");
     }
 
     @Test
-    void messagesFor_twoBatches_shareTheSameSystemBytes() {
-        final BatchPromptBuilder builder = builder("en", "uk");
+    void plan_twoBatches_shareTheSameSystemBytes() {
+        final TranslatePlanner planner = planner("en", "uk");
 
-        final String first =
-                builder.messagesFor(fullContext(), ITEMS).getFirst().content();
-        final String second = builder.messagesFor(BatchContext.empty(), List.of(ITEMS.getLast()))
-                .getFirst()
-                .content();
+        final String first = plan(planner, full(), ITEMS).systemText();
+        final String second = plan(planner, empty(), List.of(ITEMS.getLast())).systemText();
 
         assertThat(first).isEqualTo(second);
     }
 
     @Test
-    void messagesFor_system_carriesOneLanguageRulesSectionAndStaysWithinTheBudget() {
-        final String system = builder("en", "uk")
-                .messagesFor(BatchContext.empty(), ITEMS)
-                .getFirst()
-                .content();
+    void plan_system_carriesOneLanguageRulesSectionAndStaysWithinTheBudget() {
+        final String system = plan(empty(), ITEMS).systemText();
 
-        assertThat(system).containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian");
+        assertThat(system).containsOnlyOnce("[Language rules: English -> Ukrainian]");
         assertThat(TokenEstimator.estimate(system, "en")).isLessThanOrEqualTo(SYSTEM_BUDGET_TOKENS);
     }
 
     @Test
-    void messagesFor_pairExample_hasABatchWithANumberOnlyLine() {
-        final String system = builder("en", "uk")
-                .messagesFor(BatchContext.empty(), ITEMS)
-                .getFirst()
-                .content();
+    void plan_pairExample_hasABatchWithANumberOnlyLine() {
+        final String system = plan(empty(), ITEMS).systemText();
 
-        assertThat(system).contains("<s id=\"2\">1881</s>");
-        assertThat(system).contains("{\"id\":\"2\",\"target\":\"1881\"}");
+        assertThat(system).contains("<s id=\"2\">1881</s>", "{\"id\":\"2\",\"target\":\"1881\"}");
     }
 
     @Test
-    void messagesFor_pairWithoutBatchExamples_fallsBackToTheGenericNumberOnlyExample() {
-        final String system = builder("en", "de")
-                .messagesFor(BatchContext.empty(), ITEMS)
-                .getFirst()
-                .content();
+    void plan_pairWithoutExamples_showsNoBatchExample() {
+        final TranslatePlanner german = planner("en", "de");
 
-        assertThat(system).contains("<s id=\"1\">1881</s>", "<s id=\"2\">* * *</s>");
+        final String system = plan(
+                        german,
+                        context(brief("en", "de"), List.of(), null, List.of(), List.of(), List.of(), List.of()),
+                        ITEMS)
+                .systemText();
+
+        assertThat(system).doesNotContain(ITEMS_OPEN);
     }
 
     @Test
-    void messagesFor_everyShownExample_isAReplyTheBatchParserAcceptsCleanly() {
+    void plan_everyShownExample_isAReplyTheBatchParserAcceptsCleanly() {
         final BatchReplyParser parser = new BatchReplyParser(new ObjectMapper());
-        final String system = builder("en", "uk")
-                .messagesFor(BatchContext.empty(), ITEMS)
-                .getFirst()
-                .content();
+        final String system = plan(empty(), ITEMS).systemText();
 
         final List<Example> examples = examplesIn(system);
 
         assertThat(examples).hasSize(1);
-        examples.forEach(example -> {
-            final List<BatchItem> items = ITEM.matcher(example.items())
-                    .results()
-                    .map(item -> new BatchItem(item.group(1), item.group(2)))
-                    .toList();
-            assertThat(parser.parse(example.reply().strip(), items, "en", "uk").isClean())
-                    .as(example.reply())
-                    .isTrue();
-        });
+        assertThat(examples)
+                .allSatisfy(example -> assertThat(parser.parse(example.reply().strip(), itemsOf(example), "en", "uk")
+                                .isClean())
+                        .as(example.reply())
+                        .isTrue());
     }
 
     private record Example(String items, String reply) {}
+
+    private static List<BatchItem> itemsOf(final Example example) {
+        return ITEM.matcher(example.items())
+                .results()
+                .map(item -> new BatchItem(item.group(1), item.group(2)))
+                .toList();
+    }
 
     // Each "<Items>…</Items>\nReply:…" block of the prompt: the item lines, and the reply up to a blank line.
     private static List<Example> examplesIn(final String system) {
@@ -209,25 +230,34 @@ class BatchPromptTest {
     }
 
     @Test
-    void requestFor_json_asksForTheSchemaAndCapsTheReply() {
-        final BatchPromptBuilder builder = builder("en", "uk");
-        final List<ChatMessage> messages = builder.messagesFor(BatchContext.empty(), ITEMS);
+    void requestFor_json_asksForTheSchemaAndCapsTheReplyAtThePlansWindow() {
+        final TranslatePlanner planner = planner("en", "uk");
+        final PromptPlan plan = plan(planner, empty(), ITEMS);
 
-        final ChatRequest request = builder.requestFor(messages, ITEMS, false);
+        final ChatRequest request = new BatchPromptBuilder(planner).requestFor(plan, ITEMS, false);
 
         assertThat(request.responseFormat()).isNotNull();
         assertThat(request.responseFormat().name()).isEqualTo("draft-batch-json");
         assertThat(request.callKind()).isEqualTo(CallKind.DRAFT);
-        assertThat(request.maxOutputTokens()).isGreaterThanOrEqualTo(128);
+        assertThat(request.contextWindow()).isEqualTo(plan.contextSize());
+        // The reserve, never below the short-source floor a one-word reply once needed for its envelope.
+        assertThat(request.maxOutputTokens()).isEqualTo(Math.max(plan.maxOutputTokens(), 128));
+        assertThat(request.messages()).hasSize(2);
+        assertThat(request.messages().getLast().content()).isEqualTo(plan.userText());
     }
 
     @Test
     void requestFor_moreItems_getsALargerCap() {
-        final BatchPromptBuilder builder = builder("en", "uk");
-        final List<ChatMessage> messages = builder.messagesFor(BatchContext.empty(), ITEMS);
+        final TranslatePlanner planner = planner("en", "uk");
+        final BatchPromptBuilder builder = new BatchPromptBuilder(planner);
 
-        final ChatRequest one = builder.requestFor(messages, ITEMS.subList(0, 1), false);
-        final ChatRequest three = builder.requestFor(messages, ITEMS, false);
+        final List<BatchItem> long1 = List.of(new BatchItem("1", "The tide came in. ".repeat(40)));
+        final List<BatchItem> long3 = List.of(
+                long1.getFirst(),
+                new BatchItem("2", "The gulls cried. ".repeat(40)),
+                new BatchItem("3", "Night fell. ".repeat(40)));
+        final ChatRequest one = builder.requestFor(plan(planner, empty(), long1), long1, false);
+        final ChatRequest three = builder.requestFor(plan(planner, empty(), long3), long3, false);
 
         assertThat(three.maxOutputTokens()).isGreaterThan(one.maxOutputTokens());
     }

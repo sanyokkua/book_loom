@@ -2,9 +2,9 @@ package ua.bookloom.pipeline.heal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.calls;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.itemReply;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.segment;
-import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.targetReply;
 
 import java.util.List;
 import java.util.Objects;
@@ -48,7 +48,7 @@ class QualityLoopQuoteFixTest {
 
     @Test
     void nextDecision_repairReplyWithOnlyAnUnclosedQuote_isRepairedAndAccepted() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(UNCLOSED)));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(itemReply(UNCLOSED)));
 
         final SegmentOutcome decided = decide(SOURCE, PURITY_ONLY + " «", model, true);
 

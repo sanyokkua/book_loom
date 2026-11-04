@@ -221,15 +221,16 @@ class BatchDraftingJobTest {
     void run_replyMissingTwoIds_asksAgainForOnlyThoseTwoAndDraftsNoneAlone() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(items(entry("1", T0), entry("4", T3))))
-                .answerTo(BATCH, batchReply(items(entry("2", T1), entry("3", T2))));
+                .answerTo(BATCH, batchReply(items(entry("1", T1), entry("2", T2))));
         final TestProject project = fourParagraphs();
 
         report(batchedJob(project, model).run());
 
+        // The re-ask is its own batch, numbered from 1, and its answers are read back under the first call's ids.
         assertThat(formats(model)).containsExactly(BATCH, BATCH);
         final String second = userMessage(model.requests().get(1));
-        assertThat(second).contains("<s id=\"2\">" + S1 + "</s>", "<s id=\"3\">" + S2 + "</s>");
-        assertThat(second).doesNotContain("<s id=\"1\">", "<s id=\"4\">");
+        assertThat(second).contains("<s id=\"1\">" + S1 + "</s>", "<s id=\"2\">" + S2 + "</s>");
+        assertThat(second).doesNotContain("<s id=\"3\">", S0 + "</s>", S3 + "</s>");
         assertThat(counts(project)).isEqualTo(ALL_FOUR_ACCEPTED);
     }
 
@@ -253,7 +254,7 @@ class BatchDraftingJobTest {
                 .collect(Collectors.joining("\n\n"));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(numbered(1, 8, 3).replace(entry("4", "Короткий рядок 4.") + ",", "")))
-                .answerTo(BATCH, batchReply(items(entry("3", "Короткий рядок 3."), entry("4", "Короткий рядок 4."))))
+                .answerTo(BATCH, batchReply(items(entry("1", "Короткий рядок 3."), entry("2", "Короткий рядок 4."))))
                 .answerTo(BATCH, batchReply(numbered(9, 4, 0)))
                 .answerTo(BATCH, batchReply(numbered(13, 4, 0)));
         final TestProject project = project(TestBooks.markdown(tempDir.resolve("Book.md"), book), brief("en", "uk"));

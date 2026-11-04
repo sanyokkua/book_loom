@@ -33,7 +33,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
-import ua.bookloom.pipeline.prompt.PromptBreakdown;
 
 /**
  * A small window is never sent a batch that outgrows it: with long paragraphs, a glossary the items name and previous
@@ -129,16 +128,21 @@ class BatchWindowFitJobTest {
                 .allSatisfy(needed -> assertThat(needed).isLessThanOrEqualTo(window));
     }
 
-    // The prompt as sent, the reply the items are expected to need and the margin the window keeps back.
+    // The prompt as sent, each letter at its own script's rate, the reply room the request asks for and the margin
+    // the window keeps back.
     private static int needed(final ChatRequest request) {
-        final Matcher items = ITEM.matcher(request.messages().get(1).content());
-        int source = 0;
-        while (items.find()) {
-            source += TokenEstimator.estimate(Objects.requireNonNull(items.group(2)), "en");
-        }
-        final double ratio = TokenEstimator.outputRatio("en", "uk");
-        return PromptBreakdown.of(request.messages()).total()
-                + (int) Math.ceil(source * ratio)
-                + ContextBudget.SAFETY_MARGIN;
+        final int prompt = request.messages().stream()
+                .mapToInt(message -> scriptEstimate(message.content()))
+                .sum();
+        return prompt + Objects.requireNonNull(request.maxOutputTokens(), "cap") + ContextBudget.SAFETY_MARGIN;
+    }
+
+    private static int scriptEstimate(final String text) {
+        final StringBuilder cyrillic = new StringBuilder();
+        final StringBuilder other = new StringBuilder();
+        text.codePoints()
+                .forEach(c -> (Character.UnicodeScript.of(c) == Character.UnicodeScript.CYRILLIC ? cyrillic : other)
+                        .appendCodePoint(c));
+        return TokenEstimator.estimate(cyrillic.toString(), "uk") + TokenEstimator.estimate(other.toString(), "en");
     }
 }

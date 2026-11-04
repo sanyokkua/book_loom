@@ -14,7 +14,11 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.Tokens;
 
-/** Renders the catalog's one-segment draft-translation prompt with the currently available context. */
+/**
+ * Renders the catalog's one-segment draft-translation prompt with the currently available context: a review retry's
+ * draft and its format correction, replayed from the stored snapshot until the retry is planned by the context builder
+ * (task 11.7). A run drafts through the context builder.
+ */
 @Slf4j
 public final class DraftPromptBuilder {
 
@@ -122,30 +126,6 @@ public final class DraftPromptBuilder {
     }
 
     /**
-     * Builds the one repair request: the draft's own messages followed by the previous attempt, its defects and the
-     * tokens the target must hold.
-     *
-     * @param previousAttempt the non-null masked text the repair rewrites, shown as data
-     * @param defects the non-null defects, one {@code kind (severity): explanation} line each
-     */
-    public List<ChatMessage> messagesForRepair(
-            final Segment segment,
-            final DraftContext context,
-            final String shownText,
-            final String extraInstruction,
-            final String previousAttempt,
-            final String defects) {
-        Objects.requireNonNull(previousAttempt, "previousAttempt");
-        Objects.requireNonNull(defects, "defects");
-        return withCorrection(
-                segment,
-                context,
-                shownText,
-                extraInstruction,
-                templates.renderUser(PromptName.REPAIR, repairValues(shownText, previousAttempt, defects)));
-    }
-
-    /**
      * The parts of a draft step's prompt as its messages send them, in order: the draft's system and user parts, then
      * the correction a repair adds.
      *
@@ -179,21 +159,13 @@ public final class DraftPromptBuilder {
             case DRAFT -> log.debug("A draft adds no correction section");
             case STRUCTURAL_REPAIR ->
                 sections.addAll(templates.userSectionsOf(step.promptName(), structuralValues(rejected, diagnostic)));
-            case REPAIR ->
-                sections.addAll(
-                        templates.userSectionsOf(step.promptName(), repairValues(shownText, rejected, diagnostic)));
+            case REPAIR -> throw new IllegalStateException("A review retry sends no repair");
         }
         return sections;
     }
 
     private static Map<String, String> structuralValues(final String rejectedReply, final String diagnostic) {
         return Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic);
-    }
-
-    private static Map<String, String> repairValues(
-            final String shownText, final String previousAttempt, final String defects) {
-        return Map.of(
-                "previousAttempt", previousAttempt, "defects", defects, "tokens", expectedTokenSequence(shownText));
     }
 
     private List<ChatMessage> withCorrection(

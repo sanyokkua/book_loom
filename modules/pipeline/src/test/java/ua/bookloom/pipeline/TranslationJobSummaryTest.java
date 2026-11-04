@@ -90,7 +90,7 @@ class TranslationJobSummaryTest {
     // A model-written summary stored by an earlier run is what the next run's drafts are shown, never the deterministic
     // glossary-and-headings text stored beside it.
     @Test
-    void run_storedModelSummary_isTheSummaryEveryDraftIsShown() {
+    void run_storedModelSummary_neverReachesTheDraft() {
         final TestProject project =
                 project(TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo."), brief("en", "uk"));
         project.stores()
@@ -100,12 +100,12 @@ class TranslationJobSummaryTest {
 
         report(job(project, model).run());
 
+        // The rolling summary no longer reaches a draft: the recently-present card says who is who (design D10).
         assertThat(userMessage(model.requests().getFirst()))
-                .contains(SUMMARY_BLOCK + "\n" + MODEL_SUMMARY)
-                .doesNotContain(GLOSSARY_LINES);
+                .doesNotContain(SUMMARY_BLOCK, MODEL_SUMMARY, GLOSSARY_LINES);
         assertThat(Objects.requireNonNull(stored(project, "Book.txt:0").context(), "snapshot")
                         .summary())
-                .isEqualTo(MODEL_SUMMARY);
+                .isNull();
     }
 
     @Test

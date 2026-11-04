@@ -8,10 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.llm.ReasoningLevel;
 import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.llm.SourceSize;
+import ua.bookloom.pipeline.context.PromptPlan;
 
 /** The one place a generation request gets its settings, so no call leaves without a context size. */
 @Slf4j
@@ -69,5 +71,38 @@ public final class ChatRequests {
                 source,
                 null,
                 false);
+    }
+
+    /**
+     * Builds the request of a call the context builder planned: its system blocks as one system message and its user
+     * blocks as one last user message, sized for the plan's window and capped at the plan's output reserve, never above
+     * the runaway guard of {@code limit} and never below the short-source floor, since a one-word reply once came back
+     * empty when the JSON envelope shared a smaller cap with it.
+     *
+     * @param name the call's template name; never null
+     * @param plan the call's plan; never null
+     * @param limit the expected completion length and its runaway cap; never null
+     * @param lowerTemperature whether a retry asks for the name's lower temperature
+     * @return the request
+     */
+    public static ChatRequest build(
+            final PromptName name, final PromptPlan plan, final OutputLimit limit, final boolean lowerTemperature) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(limit, "limit");
+        final List<ChatMessage> messages = List.of(
+                new ChatMessage(ChatRole.SYSTEM, plan.systemText()), new ChatMessage(ChatRole.USER, plan.userText()));
+        final int cap =
+                Math.min(limit.capTokens(), Math.max(plan.maxOutputTokens(), OutputLimit.SHORT_SOURCE_CAP_FLOOR));
+        final OutputLimit capped =
+                new OutputLimit(Math.min(limit.expectedTokens(), cap), limit.capTokens(), limit.source());
+        final ChatRequest built = build(name, messages, capped, lowerTemperature);
+        log.debug(
+                "Planned request call={} contextSize={} reserve={} guard={} cap={}",
+                name.callKind(),
+                plan.contextSize(),
+                plan.maxOutputTokens(),
+                limit.capTokens(),
+                cap);
+        return built.sizedTo(plan.contextSize(), cap);
     }
 }

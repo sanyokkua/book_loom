@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.calls;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.segment;
-import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.targetReply;
 
 import java.util.List;
 import java.util.Objects;
@@ -42,7 +41,8 @@ class QualityLoopRepairKeepTest {
     // A repair that adds a blocking finding must not replace the draft that only failed another check.
     @Test
     void nextDecision_repairThatAddsABlocker_isNotKept() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(SHORT_WITH_PURITY)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(SHORT_WITH_PURITY)));
 
         final SegmentOutcome decided = decide(TOO_SHORT, model, true);
 
@@ -55,7 +55,8 @@ class QualityLoopRepairKeepTest {
     // A repair that clears one blocker and adds none stays, even though a blocker is left: it is the best text.
     @Test
     void nextDecision_repairThatClearsOneOfTwoBlockers_isKeptAndTheSegmentFlagged() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(QUOTE_ONLY)));
 
         final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, true);
 
@@ -68,7 +69,8 @@ class QualityLoopRepairKeepTest {
     // A swap (one blocker traded for another) is no progress, so the text in place stays.
     @Test
     void nextDecision_repairThatSwapsOneBlockerForAnother_keepsTheDraft() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(QUOTE_ONLY)));
 
         final SegmentOutcome decided = decide(PURITY_ONLY, model, true);
 
@@ -80,7 +82,8 @@ class QualityLoopRepairKeepTest {
 
     @Test
     void nextDecision_repairThatPasses_isAcceptedAsRepaired() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(GOOD)));
 
         final SegmentOutcome decided = decide(PURITY_ONLY, model, true);
 
@@ -92,8 +95,8 @@ class QualityLoopRepairKeepTest {
     @Test
     void nextDecision_repairThatLeavesABlocker_getsNoSecondRepair() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(QUOTE_ONLY)))
-                .answer(readable(targetReply(GOOD)));
+                .answer(readable(QualityLoopTestSupport.itemReply(QUOTE_ONLY)))
+                .answer(readable(QualityLoopTestSupport.itemReply(GOOD)));
 
         final SegmentOutcome decided = decide(ECHO_AND_QUOTE, model, true);
 
@@ -104,7 +107,8 @@ class QualityLoopRepairKeepTest {
 
     @Test
     void nextDecision_noFixingCallAllowed_makesNoRepairCall() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(GOOD)));
 
         final SegmentOutcome decided = decide(PURITY_ONLY, model, false);
 
@@ -115,7 +119,8 @@ class QualityLoopRepairKeepTest {
     // The placeholder gate restored the text fine; only a text check blocked it, so its words are the machine target.
     @Test
     void nextDecision_repairThatChangesNothing_keepsTheDraftAsTheMachineTarget() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(QualityLoopTestSupport.itemReply(QUOTE_ONLY)));
 
         final SegmentOutcome decided = decide(QUOTE_ONLY, model, true);
 
@@ -128,8 +133,8 @@ class QualityLoopRepairKeepTest {
     // The typography pass turns a lone straight quote into an unclosed guillemet, so the checks must read that text.
     @Test
     void nextDecision_repairWhoseNormalisedTextLeavesAQuoteOpen_isNotAccepted() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"Він \\\"відчинив \\\"старі двері.\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він \\\"відчинив \\\"старі двері.\"}]}"));
         final GateFunction gate = TypographyGate.around(QualityLoopFixtures.PASSTHROUGH_GATE, "uk");
 
         final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, true, gate);

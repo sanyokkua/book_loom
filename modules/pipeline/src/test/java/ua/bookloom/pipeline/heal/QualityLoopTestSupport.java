@@ -44,8 +44,14 @@ final class QualityLoopTestSupport {
                 0.0);
     }
 
+    /** A single-target reply, the shape a directed fix is read in. */
     static String targetReply(final String target) {
         return "{\"target\":\"" + target + "\"}";
+    }
+
+    /** A translate-family reply of one item, the shape a draft and its repair are read in. */
+    static String itemReply(final String target) {
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 
     static ModelCalls calls(final ScriptedChatModel model) {

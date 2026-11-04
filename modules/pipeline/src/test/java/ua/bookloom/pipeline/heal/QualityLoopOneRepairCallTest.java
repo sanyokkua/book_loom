@@ -24,6 +24,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -56,8 +57,9 @@ class QualityLoopOneRepairCallTest {
         final Segment segment = threeTokenSegment();
         final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(new DraftOutcome.Drafted(
                 segment, segment.masked(), List.of(), "ЗАЛИШАЄТЬСЯ ⟦g1⟧ ⟦g2⟧ РЕЧІ.", null, null, placeholderFinding()));
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"x\"}")).answer(readable("{\"target\":\"x\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"))
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"));
 
         final ChunkDecider decider = start(
                 List.of(outcome),
@@ -69,9 +71,7 @@ class QualityLoopOneRepairCallTest {
 
         // The initial gate failure excludes this outcome from the chunk's reviewer call, so the one call is the repair.
         assertThat(model.requests()).hasSize(1);
-        assertThat(Objects.requireNonNull(model.requests().getFirst().responseFormat())
-                        .name())
-                .isEqualTo("repair");
+        assertThat(model.requests().getFirst().callKind()).isEqualTo(CallKind.REPAIR);
         final String userMessage =
                 model.requests().getFirst().messages().getLast().content();
         assertThat(userMessage).contains("⟦g0⟧ ⟦g1⟧ ⟦g2⟧");
@@ -86,8 +86,8 @@ class QualityLoopOneRepairCallTest {
         final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
                 QualityLoopFixtures.drafted(segment, documents, "ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ."));
         assertThat(outcome.restoredTarget()).isNull();
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ.\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ.\"}]}"));
 
         final ChunkDecider decider = start(
                 List.of(outcome),
@@ -117,7 +117,8 @@ class QualityLoopOneRepairCallTest {
                 QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         assertThat(outcome.restoredTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
+                .answer(Result.ok(
+                        new ChatResponse("{\"items\":[{\"id\":\"1\",\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
         final ChunkDecider decider = start(
                 List.of(outcome), ReviewMode.ASSISTED, QualityDial.MAX, QualityLoopFixtures.PASSTHROUGH_GATE, model);
@@ -139,7 +140,8 @@ class QualityLoopOneRepairCallTest {
         final DraftOutcome.Drafted outcome = QualityLoopFixtures.repairing(
                 QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
+                .answer(Result.ok(
+                        new ChatResponse("{\"items\":[{\"id\":\"1\",\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
         final ChunkDecider decider = start(
                 List.of(outcome),
@@ -151,8 +153,7 @@ class QualityLoopOneRepairCallTest {
 
         assertThat(model.requests()).hasSize(1);
         assertThat(model.requests().stream()
-                        .map(request ->
-                                Objects.requireNonNull(request.responseFormat()).name())
+                        .map(request -> ScriptedChatModel.callName(request))
                         .toList())
                 .containsExactly("repair");
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
@@ -171,7 +172,7 @@ class QualityLoopOneRepairCallTest {
                 QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"segments\":[]}"))
-                .answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив старі двері.\"}]}"));
 
         final ChunkDecider decider =
                 start(List.of(outcome), oneRepairReviewerOff(), QualityLoopFixtures.PASSTHROUGH_GATE, model);
@@ -310,7 +311,7 @@ class QualityLoopOneRepairCallTest {
     }
 
     private static String targetReply(final String target) {
-        return "{\"target\":\"" + target + "\"}";
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 
     private ChunkDecider start(

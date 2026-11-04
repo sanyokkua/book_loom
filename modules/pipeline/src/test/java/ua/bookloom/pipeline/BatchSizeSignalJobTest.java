@@ -49,6 +49,14 @@ class BatchSizeSignalJobTest {
         return project(TestBooks.markdown(tempDir.resolve("Book.md"), book), brief("en", "uk"));
     }
 
+    // A re-ask numbers its own items from 1, so the batch's ids firstLocalId…lastLocalId are answered as 1, 2, ….
+    private static String reasked(final int firstLocalId, final int lastLocalId, final int firstLine) {
+        return items(IntStream.rangeClosed(firstLocalId, lastLocalId)
+                .mapToObj(id ->
+                        entry(Integer.toString(id - firstLocalId + 1), "Короткий рядок " + (firstLine + id - 1) + "."))
+                .toArray(String[]::new));
+    }
+
     private static String idsFrom(final int firstLocalId, final int lastLocalId, final int firstLine) {
         return items(IntStream.rangeClosed(firstLocalId, lastLocalId)
                 .mapToObj(id -> entry(Integer.toString(id), "Короткий рядок " + (firstLine + id - 1) + "."))
@@ -61,7 +69,7 @@ class BatchSizeSignalJobTest {
     void run_firstItemOnlyReply_reaskedAndTheNextBatchKeepsItsSize() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(idsFrom(1, 1, 1)))
-                .answerTo(BATCH, batchReply(idsFrom(2, 8, 1)))
+                .answerTo(BATCH, batchReply(reasked(2, 8, 1)))
                 .answerTo(BATCH, batchReply(numbered(9, 8, 0)));
         final TestProject project = sixteenShortLines();
 
@@ -78,7 +86,7 @@ class BatchSizeSignalJobTest {
     void run_replyCutAtTheLengthCap_reasksTheMissingIdsAndTheNextBatchKeepsItsSize() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, Result.ok(new ChatResponse(idsFrom(1, 3, 1), FinishReason.LENGTH)))
-                .answerTo(BATCH, batchReply(idsFrom(4, 8, 1)))
+                .answerTo(BATCH, batchReply(reasked(4, 8, 1)))
                 .answerTo(BATCH, batchReply(numbered(9, 8, 0)));
         final TestProject project = sixteenShortLines();
 
@@ -86,8 +94,8 @@ class BatchSizeSignalJobTest {
 
         assertThat(formats(model)).containsExactly(BATCH, BATCH, BATCH);
         assertThat(userMessage(model.requests().get(1)))
-                .contains("<s id=\"4\">")
-                .doesNotContain("<s id=\"3\">");
+                .contains("<s id=\"1\">Short line 4.</s>", "<s id=\"5\">Short line 8.</s>")
+                .doesNotContain("<s id=\"6\">", "Short line 3.</s>");
         assertThat(userMessage(model.requests().get(2))).contains("<s id=\"8\">Short line 16.</s>");
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 16, 0, 0, 0));
     }

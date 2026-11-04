@@ -222,7 +222,7 @@ class QualityLoopFlaggingAndOrderTest {
     }
 
     private static String targetReply(final String target) {
-        return "{\"target\":\"" + target + "\"}";
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 
     private static Result<ChatResponse> readable(final String content) {

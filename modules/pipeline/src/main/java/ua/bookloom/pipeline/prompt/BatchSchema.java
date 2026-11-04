@@ -9,6 +9,12 @@ import lombok.NoArgsConstructor;
 public final class BatchSchema {
 
     /**
+     * The answer schema's name every translate-family call asks for; a refused setting is remembered by it, so it keeps
+     * the batch draft's old name.
+     */
+    public static final String FORMAT_NAME = "draft-batch-json";
+
+    /**
      * One entry per item with its id and target. Deliberately flat — no {@code maxItems}, {@code maxLength} or
      * {@code additionalProperties} — because LM Studio never answered a structured reviewer call that carried such limits
      * on one model; the reply parser enforces the ids, so the schema need not. The optional {@code terms} object maps a

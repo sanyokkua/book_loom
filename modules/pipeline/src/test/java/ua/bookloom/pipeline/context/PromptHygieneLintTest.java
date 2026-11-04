@@ -23,6 +23,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.context.PromptLint.Facts;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -138,7 +139,7 @@ class PromptHygieneLintTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"STRUCTURAL_REPAIR", "REPAIR"},
+            names = {"STRUCTURAL_REPAIR"},
             mode = EnumSource.Mode.EXCLUDE)
     void staticPrefix_everyCall_isTheSameBytesForTwoCalls(final PromptName name) {
         final String first = system(name);
@@ -262,6 +263,9 @@ class PromptHygieneLintTest {
     }
 
     private static List<ChatMessage> messages(final PromptName name, final boolean withOptional) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.messages(name, SOURCE + " ⟦g0⟧ ⟦g1⟧");
+        }
         final List<ChatMessage> messages = new ArrayList<>();
         if (name.systemSlots().isPresent()) {
             messages.add(new ChatMessage(ChatRole.SYSTEM, system(name).strip()));
@@ -271,6 +275,9 @@ class PromptHygieneLintTest {
     }
 
     private static String system(final PromptName name) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, SOURCE).systemText();
+        }
         return name == PromptName.SUGGEST_TARGETS
                 ? TEMPLATES.renderSystem(
                         name, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))

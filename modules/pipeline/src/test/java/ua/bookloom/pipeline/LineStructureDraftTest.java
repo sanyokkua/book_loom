@@ -51,7 +51,8 @@ class LineStructureDraftTest {
         final DraftOutcome.Drafted drafted = drafted(model);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("Copy this exact ordered sequence unchanged: ⟦g0⟧");
+                .contains("<s id=\"1\">• Mass describes how much matter an object contains.⟦g0⟧")
+                .endsWith("Keep every ⟦…⟧ mark exactly once.");
         assertThat(drafted.restoredTarget())
                 .isEqualTo(
                         "• Маса описує, скільки речовини містить тіло.\n• Вага описує силу тяжіння, що діє на цю масу.");

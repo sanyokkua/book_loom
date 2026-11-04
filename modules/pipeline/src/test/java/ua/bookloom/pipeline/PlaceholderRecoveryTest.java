@@ -85,7 +85,7 @@ class PlaceholderRecoveryTest {
         final DraftOutcome.Drafted drafted = drafted(segment, mask, model);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("<Text>\n“Above all,” said his master.\n</Text>")
+                .contains("<s id=\"1\">“Above all,” said his master.</s>")
                 .doesNotContain("Immutable tokens", "⟦gN⟧");
         assertThat(drafted.restoredTarget())
                 .isEqualTo("<span class=\"calibre8\">«П</span>онад усе», — сказав його господар.");

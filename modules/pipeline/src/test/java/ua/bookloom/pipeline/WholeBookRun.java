@@ -251,8 +251,8 @@ final class WholeBookRun {
         return List.of(
                 provider.replyWithUsage(firstBatch(), PROMPT_TOKENS, COMPLETION_TOKENS, EVAL_NANOS),
                 provider.reply(CHUNK_REVIEW, Duration.ZERO),
-                provider.target(FIX_1, Duration.ZERO),
-                provider.target(SOURCE_3, Duration.ZERO),
+                provider.singleTarget(FIX_1, Duration.ZERO),
+                provider.singleTarget(SOURCE_3, Duration.ZERO),
                 provider.target(DRAFT_4, Duration.ZERO),
                 provider.reply(LAST_REVIEW, Duration.ZERO));
     }
@@ -320,12 +320,12 @@ final class WholeBookRun {
         }
     }
 
-    /** The text between the draft prompt's preceding-translations tags, or empty when it has none. */
+    /** The window's previous pairs section of a draft prompt, up to the blank line that ends it, or empty. */
     static String precedingTargets(final String body) {
         final String message = userMessage(body);
-        final int start = message.indexOf("<PreviousTranslations>");
-        final int end = message.indexOf("</PreviousTranslations>");
-        return start < 0 || end < start ? "" : message.substring(start, end);
+        final int start = message.indexOf("[Previous pairs");
+        final int end = start < 0 ? -1 : message.indexOf("\n\n", start);
+        return start < 0 ? "" : message.substring(start, end < 0 ? message.length() : end);
     }
 
     static TokenUsage usage(final ModelCallFinished finished) {

@@ -32,7 +32,7 @@ class BatchDrafterCeilingTest {
 
         IntStream.range(0, 30)
                 .forEach(round -> drafter.record(Objects.requireNonNull(
-                        drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS).data(), "reply")));
+                        drafter.draft(BatchDrafterTest.CONTEXT, FOUR, FOUR_IDS).data(), "reply")));
 
         assertThat(drafter.size()).isEqualTo(8);
         assertThat(FOUR_SOURCES).hasSize(4);
@@ -50,7 +50,9 @@ class BatchDrafterCeilingTest {
         final List<Integer> sizes = IntStream.range(0, 10)
                 .mapToObj(round -> {
                     drafter.record(Objects.requireNonNull(
-                            drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS).data(), "reply"));
+                            drafter.draft(BatchDrafterTest.CONTEXT, FOUR, FOUR_IDS)
+                                    .data(),
+                            "reply"));
                     return drafter.size();
                 })
                 .toList();
@@ -63,7 +65,7 @@ class BatchDrafterCeilingTest {
         final Result<ChatResponse> failed = Result.err(AppError.of(ErrorCode.timeout, "Timed out", "No reply."));
         final BatchDrafter drafter = scriptedDrafter(List.of(failed), new ArrayList<>(), 4);
 
-        final Result<BatchReply> result = drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS);
+        final Result<BatchReply> result = drafter.draft(BatchDrafterTest.CONTEXT, FOUR, FOUR_IDS);
 
         assertThat(result.isErr()).isTrue();
         assertThat(drafter.size()).isEqualTo(4);

@@ -132,11 +132,10 @@ class TranslateCommandShutdownTest {
 
         private Result<ChatResponse> answer(ChatRequest request) {
             final String user = request.messages().getLast().content();
-            final int start = user.lastIndexOf("<Text>\n");
-            if (start < 0) {
+            final String text = CliRunFakes.singleItem(user);
+            if (text == null) {
                 return Result.ok(new ChatResponse("{\"target\":\"\"}", FinishReason.STOP));
             }
-            final String text = user.substring(start + "<Text>\n".length(), user.indexOf("\n</Text>", start));
             if (drafts.incrementAndGet() == 2) {
                 Thread.ofVirtual().start(() -> {
                     shutdown.run();
@@ -145,8 +144,7 @@ class TranslateCommandShutdownTest {
                 return awaitCancel();
             }
             return Result.ok(new ChatResponse(
-                    "{\"target\":\"" + text.toUpperCase(Locale.ROOT).replace("ONE", "ОДИН") + "\"}",
-                    FinishReason.STOP));
+                    CliRunFakes.itemReply(text.toUpperCase(Locale.ROOT).replace("ONE", "ОДИН")), FinishReason.STOP));
         }
 
         // The stop interrupts the call in flight, as it interrupts a real provider call.

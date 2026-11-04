@@ -34,7 +34,7 @@ import ua.bookloom.pipeline.setup.BriefSynthesisSchema;
 @SuppressWarnings("ImmutableEnumChecker")
 public enum PromptName {
 
-    /** The first translation attempt; a review retry may ask for the lower temperature. */
+    /** A review retry's single draft, one {@code {"target"}} object; a run drafts through {@link #TRANSLATE}. */
     DRAFT(
             "draft",
             CallKind.DRAFT,
@@ -60,12 +60,30 @@ public enum PromptName {
                             "extraInstruction"))),
 
     /**
-     * A batch of consecutive segments drafted in one call, answered as one JSON object with an entry per id; the flat
-     * schema carries no length limits, because a bounded schema once stalled a structured call on one provider.
+     * The one translate prompt of a run (design D8): every draft, a single one a batch of one item. Its files hold
+     * blocks 1 and 12; the context builder plans the rest. The answer schema keeps the batch draft's name, so a setting
+     * a model refused for it stays refused.
      */
-    DRAFT_BATCH_JSON("draft-batch-json", "draft-batch-json", BatchSchema.SCHEMA, BatchSlots.USER),
+    TRANSLATE(
+            "translate",
+            CallKind.DRAFT,
+            BatchSchema.FORMAT_NAME,
+            BatchSchema.SCHEMA,
+            new Temperatures(0.2, 0.1),
+            new Slots(Set.of(SOURCE, "target"), Set.of()),
+            new Slots(Set.of(SOURCE, "target"), Set.of())),
 
-    /** The correction call after a reply is not the required JSON object. */
+    /** The one format re-ask of an unreadable translate reply, block 11 of the draft's plan; never the repair. */
+    FORMAT_REASK(
+            "format-reask",
+            CallKind.STRUCTURAL_REPAIR,
+            BatchSchema.FORMAT_NAME,
+            BatchSchema.SCHEMA,
+            new Temperatures(0.2, null),
+            null,
+            new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),
+
+    /** A review retry's correction of a reply that is not the {@code {"target"}} object, until task 11.7. */
     STRUCTURAL_REPAIR(
             "structural-repair",
             CallKind.STRUCTURAL_REPAIR,
@@ -75,18 +93,15 @@ public enum PromptName {
             null,
             new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),
 
-    /**
-     * The one repair of a draft that kept a blocking or repair-level finding: the draft's prompt with the previous
-     * attempt and its defects, at a low temperature so the second try stays close to what was right.
-     */
+    /** The one repair: the draft's plan with the previous attempt and its defects in block 11, at a low temperature. */
     REPAIR(
             "repair",
             CallKind.REPAIR,
-            "repair",
-            DraftSchema.SCHEMA,
+            BatchSchema.FORMAT_NAME,
+            BatchSchema.SCHEMA,
             new Temperatures(0.1, null),
             null,
-            new Slots(Set.of("previousAttempt", "defects", TOKENS), Set.of())),
+            new Slots(Set.of("defects"), Set.of("previousAttempt"))),
 
     /**
      * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a
@@ -305,11 +320,6 @@ public enum PromptName {
                 new Temperatures(0.0, null),
                 system,
                 new Slots(Set.of("term", textSlot), Set.of()));
-    }
-
-    // A batch draft (15i.X1 has three formats): the draft call kind and temperatures, the batch system slots.
-    PromptName(final String name, final String format, final String schema, final Slots user) {
-        this(name, CallKind.DRAFT, format, schema, new Temperatures(0.2, 0.1), BatchSlots.SYSTEM, user);
     }
 
     PromptName(

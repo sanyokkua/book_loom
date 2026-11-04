@@ -74,9 +74,7 @@ class QualityLoopReviewerTest {
     }
 
     private static List<String> formats(final ScriptedChatModel model) {
-        return model.requests().stream()
-                .map(request -> Objects.requireNonNull(request.responseFormat()).name())
-                .toList();
+        return model.requests().stream().map(ScriptedChatModel::callName).toList();
     }
 
     @Test

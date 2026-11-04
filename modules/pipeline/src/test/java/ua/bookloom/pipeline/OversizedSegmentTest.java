@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -32,14 +33,19 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.BookMap;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.context.Window;
+import ua.bookloom.pipeline.context.WindowPair;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** A segment above the chunk budget is drafted in sentence-aligned pieces and decided once. */
 class OversizedSegmentTest {
@@ -96,7 +102,7 @@ class OversizedSegmentTest {
         assertThat(model.userMessages().subList(2, 4))
                 .allSatisfy(user -> assertThat(user)
                         .contains("[Extra instruction]\n")
-                        .contains("echo similarity 1.0 at or above 0.9\n\n<Text>\n"));
+                        .contains("echo similarity 1.0 at or above 0.9\n\nTranslate every item"));
         assertThat(TranslationJobTestSupport.stored(project, "Book.md:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path)
                 .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.REPAIRED);
@@ -108,8 +114,8 @@ class OversizedSegmentTest {
         final Segment segment = segments(text).getFirst();
         final UppercasingModel model = new UppercasingModel();
 
-        final Result<DraftOutcome> result = translator(model)
-                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET);
+        final Result<DraftOutcome> result =
+                translator(model).translateSplit(segment, null, ProtectedMask.none(segment.masked()), splitter, BUDGET);
 
         assertThat(segment.masked()).hasSize(10_399);
         assertThat(TokenEstimator.estimate(segment.masked(), "en")).isEqualTo(2917);
@@ -122,7 +128,7 @@ class OversizedSegmentTest {
         assertThat(String.join("", model.textBodies())).isEqualTo(segment.masked());
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens)
-                .containsExactly(2675, 2675, 1174);
+                .containsExactly(1810, 1810, 804);
         assertThat(DraftStepFixtures.drafted(result))
                 .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::gateFinding)
                 .containsExactly(text.toUpperCase(Locale.ROOT), null);
@@ -133,7 +139,7 @@ class OversizedSegmentTest {
         final Segment segment = segments(SENTENCE.repeat(400).stripTrailing()).getFirst();
 
         final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(translator(new UppercasingModel())
-                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET));
+                .translateSplit(segment, null, ProtectedMask.none(segment.masked()), splitter, BUDGET));
 
         assertThat(drafted.inPieces()).isTrue();
     }
@@ -143,7 +149,7 @@ class OversizedSegmentTest {
         final Segment segment = segments("The sea was calm tonight.").getFirst();
 
         final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(translator(new UppercasingModel())
-                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET));
+                .translateSplit(segment, null, ProtectedMask.none(segment.masked()), splitter, BUDGET));
 
         assertThat(drafted.inPieces()).isFalse();
     }
@@ -155,8 +161,8 @@ class OversizedSegmentTest {
         final Segment segment = segments(text).getFirst();
         final UppercasingModel model = new UppercasingModel();
 
-        final Result<DraftOutcome> result = translator(model)
-                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET);
+        final Result<DraftOutcome> result =
+                translator(model).translateSplit(segment, null, ProtectedMask.none(segment.masked()), splitter, BUDGET);
 
         assertThat(segment.masked()).contains("⟦g0⟧Ends here. Starts there.⟦g1⟧");
         assertThat(model.textBodies()).hasSizeGreaterThan(1);
@@ -172,22 +178,30 @@ class OversizedSegmentTest {
         final UppercasingModel model = new UppercasingModel();
 
         final Result<DraftOutcome> result = translator(model)
-                .translateSplit(
-                        huge,
-                        new DraftContext(List.of("Попередній абзац.")),
-                        ProtectedMask.none(huge.masked()),
-                        splitter,
-                        BUDGET);
+                .translateSplit(huge, previousPair(huge), ProtectedMask.none(huge.masked()), splitter, BUDGET);
 
         assertThat(huge.id()).isEqualTo("Book.md:1");
         assertThat(model.requests()).hasSize(1);
-        assertThat(model.userMessages().getFirst()).doesNotContain("<PreviousTranslations>");
+        assertThat(model.userMessages().getFirst()).doesNotContain("[Previous pairs", "Попередній абзац.");
         assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
         assertThat(logEvents.list)
                 .filteredOn(event -> event.getLevel() == Level.WARN)
                 .extracting(ILoggingEvent::getFormattedMessage)
-                .filteredOn(message -> message.contains("Book.md:1"))
+                .filteredOn(message -> message.contains("Book.md:1") && message.contains("cannot be split"))
                 .hasSize(1);
+    }
+
+    // The window a run would show the huge paragraph: the short one before it, accepted.
+    private static TranslateContext previousPair(final Segment huge) {
+        return new TranslateContext(
+                new Window(
+                        List.of(new WindowPair("Book.md:0", "First short paragraph.", "Попередній абзац.")),
+                        TranslatePlanner.focusOf(huge.id(), huge.masked()),
+                        null),
+                BookMap.of(List.of(), List.of(), BookBrief.defaults("en").withLanguages("en", "uk")),
+                List.of(),
+                Map.of(),
+                List.of());
     }
 
     private List<Segment> segments(final String content) {
@@ -209,7 +223,7 @@ class OversizedSegmentTest {
      */
     private static final class RedraftingModel implements ChatModel {
 
-        private static final Pattern TEXT = Pattern.compile("<Text>\n(.*)\n</Text>", Pattern.DOTALL);
+        private static final Pattern TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
         private static final Pattern NIGHT = Pattern.compile("The night number (\\d+) was calm\\.");
         private final List<ChatRequest> requests = new ArrayList<>();
 
@@ -240,7 +254,7 @@ class OversizedSegmentTest {
         }
 
         private static String format(final ChatRequest request) {
-            return Objects.requireNonNull(request.responseFormat()).name();
+            return ScriptedChatModel.callName(request);
         }
 
         private static String user(final ChatRequest request) {
@@ -251,7 +265,7 @@ class OversizedSegmentTest {
     /** Answers every draft with its own text body upper-cased, leaving the tokens untouched. */
     private static final class UppercasingModel implements ChatModel {
 
-        private static final Pattern TEXT = Pattern.compile("<Text>\n(.*)\n</Text>", Pattern.DOTALL);
+        private static final Pattern TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
         private final List<ChatRequest> requests = new ArrayList<>();
 
         @Override

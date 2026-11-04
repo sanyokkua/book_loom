@@ -1,0 +1,15 @@
+[Recently present — context only; do NOT translate]
+Scene so far: Chapter 2, after paragraph 12. Recently present, not in this passage: Глафира → Глафіра (female).
+
+[Previous pairs — context only; do NOT translate or answer them]
+Source: Туман лежал над рекой, и лодки стояли у берега.
+Source: Туман лежал над рекой, и лодки стояли у берега.
+
+[Next item after the batch — context only; read it for pronouns and gender, do NOT translate or answer it]
+Туман лежал над рекой, и лодки стояли у берега.
+
+Translate every item inside <Items> from Russian into Ukrainian. Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}
+
+<Items>
+<s id="1">Туман лежал над рекой, и лодки стояли у берега.</s>
+</Items>

@@ -9,15 +9,18 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
@@ -40,13 +43,14 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.reviewer.ReviewPass;
 import ua.bookloom.pipeline.reviewer.ReviewedPair;
 import ua.bookloom.pipeline.run.JobModelCalls;
-import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
+import ua.bookloom.pipeline.run.PromptRequests;
 
 /**
  * What the prompt evals send is what a running job sends: the same scripted book is run through the job, whose model
- * records every request, and the eval path — {@link EvalProject} over the run's own request factory, the calls through
- * {@link JobModelCalls} — builds each request again from the same case; the two must be equal in messages, response
- * format and every sampling and size parameter.
+ * records every request, and the eval path — {@link EvalProject} over the run's own request factory and context
+ * builder, the calls through {@link JobModelCalls} — builds each request again from the same case; the two must be
+ * equal in messages, response format and every sampling and size parameter. The case's earlier pairs carry no target,
+ * because a chunk drafts every segment before it decides any, so a window shows its neighbours as source only.
  */
 class PromptRequestsEquivalenceTest {
 
@@ -54,8 +58,10 @@ class PromptRequestsEquivalenceTest {
     private static final String DRAFT = "draft";
     private static final String REVIEW = "reviewer";
     private static final String REPAIR = "repair";
+    private static final String REASK = "structural-repair";
     private static final int PARAGRAPHS = 8;
     private static final String SUMMARY_TEXT = "Раніше: Едвін шукав стару мапу.";
+    private static final String PROSE = "Sorry, I can only describe the passage.";
 
     private static final List<String> SOURCES = List.of(
             "Zerubin waited by the old fireplace for hours.",
@@ -127,18 +133,28 @@ class PromptRequestsEquivalenceTest {
         return new ScriptedChatModel().answerTimes(PARAGRAPHS * 2, reply("{\"results\":[],\"items\":[]}"));
     }
 
-    private static EvalProject.Setup setup(final EvalContext context) {
-        return new EvalProject.Setup("en", "uk", "en", GLOSSARY, context, SOURCES, List.of());
-    }
-
-    private static EvalContext context(final boolean withLexicon, final int earlierPairs) {
-        return new EvalContext(
-                IntStream.range(0, earlierPairs)
-                        .mapToObj(i -> new Pair(SOURCES.get(i), TARGETS.get(i).replace("⟦g0⟧", "Едвін")))
+    /**
+     * The eval project of the book's segments {@code from} to {@code to}: the segments before them as earlier pairs a
+     * window shows as source only, and the segments after them as the rest of the unit.
+     */
+    private static EvalProject eval(final int from, final int to, final ScriptedChatModel recording) {
+        final EvalContext context = new EvalContext(
+                IntStream.range(0, from)
+                        .mapToObj(i -> new Pair(SOURCES.get(i), ""))
                         .toList(),
                 SUMMARY_TEXT,
-                withLexicon ? List.of(new EvalContext.Rendering("master", "господар")) : List.of(),
+                List.of(new EvalContext.Rendering("master", "господар")),
                 FIRST_PERSON_MALE);
+        return EvalProject.of(
+                new EvalProject.Setup(
+                        "en",
+                        "uk",
+                        "en",
+                        GLOSSARY,
+                        context,
+                        SOURCES.subList(from, to),
+                        SOURCES.subList(to, PARAGRAPHS)),
+                evalCalls(recording));
     }
 
     private static ChatRequest sent(final ScriptedChatModel recording, final int index) {
@@ -157,64 +173,6 @@ class PromptRequestsEquivalenceTest {
         return model;
     }
 
-    @Test
-    void batchRequest_evalPath_equalsTheJobsRequest() {
-        final ScriptedChatModel job = runBatchedJob(true);
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, 0)), evalCalls(recording));
-        final PreparedBatch prepared = eval.batch(0, 4).orElseThrow();
-
-        evalCalls(recording).callAbout(CallKind.DRAFT, List.of("a"), eval.batchRequest(prepared));
-
-        assertThat(job.requests().getFirst().messages().get(1).content()).contains("master");
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 0));
-    }
-
-    @Test
-    void batchRequest_secondBatchWithEarlierPairsAndSummary_equalsTheRequestTheJobSends() {
-        final ScriptedChatModel job = runBatchedJob(true);
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, 4)), evalCalls(recording));
-        final PreparedBatch prepared = eval.batch(4, 4).orElseThrow();
-
-        evalCalls(recording).callAbout(CallKind.DRAFT, List.of("a"), eval.batchRequest(prepared));
-
-        assertThat(sent(job, 1).messages().get(1).content()).contains(TARGETS.get(3), SUMMARY_TEXT);
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 1));
-    }
-
-    @Test
-    void batchRequest_noRecurringTerms_equalsTheRequestTheJobSendsAndAsksForNoTerms() {
-        final ScriptedChatModel job = runBatchedJob(false);
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(false, 0)), evalCalls(recording));
-
-        evalCalls(recording)
-                .callAbout(
-                        CallKind.DRAFT,
-                        List.of("a"),
-                        eval.batchRequest(eval.batch(0, 4).orElseThrow()));
-
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 0));
-        assertThat(sent(job, 0).messages().get(1).content()).doesNotContain("\"terms\"");
-    }
-
-    @Test
-    void reviewerRequest_wholeBatchWithTermPairsAndCharacters_equalsTheRequestTheJobSends() {
-        final ScriptedChatModel job = runBatchedJob(true);
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, 0)), evalCalls(recording));
-        final List<ReviewedPair> pairs = IntStream.range(0, PARAGRAPHS)
-                .mapToObj(
-                        i -> new ReviewedPair(eval.segment(i).id(), eval.mask(i).maskedText(), TARGETS.get(i)))
-                .toList();
-
-        TranslationJobTestSupport.qualityLoop().review(pairs, eval.loop(), ReviewPass.FIRST, evalCalls(recording));
-
-        assertThat(sent(job, 2).messages().get(1).content()).contains("Зерубін", "господар", "<Pair id=\"s8\">");
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 2));
-    }
-
     private ScriptedChatModel runSingleDraftJobWithAnEchoedLastSegment() {
         final ScriptedChatModel model = new ScriptedChatModel();
         TARGETS.subList(0, PARAGRAPHS - 1).forEach(target -> model.answerTo(DRAFT, draftReply(target)));
@@ -228,28 +186,63 @@ class PromptRequestsEquivalenceTest {
         return model;
     }
 
-    @Test
-    void draftRequest_singleDraftWithEarlierTargets_equalsTheRequestTheJobSends() {
-        final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, 3)), evalCalls(recording));
+    // The first draft's reply is prose, so its one format re-ask is the run's second request.
+    private ScriptedChatModel runSingleDraftJobWithAProseFirstReply() {
+        final ScriptedChatModel model = new ScriptedChatModel().answerTo(DRAFT, reply(PROSE));
+        model.answerTo(REASK, draftReply(TARGETS.getFirst()));
+        TARGETS.subList(1, PARAGRAPHS).forEach(target -> model.answerTo(DRAFT, draftReply(target)));
+        model.answerTo(REVIEW, reply("{\"results\":[]}"));
+        final TestProject project = book(true);
 
-        evalCalls(recording).call(CallKind.DRAFT, "a", eval.draftRequest(3));
-
-        assertThat(sent(job, 3).messages().get(1).content()).contains("господар усміхнувся", "холодний дощ");
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 3));
+        report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 1)
+                .run());
+        return model;
     }
 
-    @Test
-    void repairRequest_echoedDraft_equalsTheRequestTheJobSends() {
-        final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = EvalProject.of(setup(context(true, PARAGRAPHS - 1)), evalCalls(recording));
-        final int last = PARAGRAPHS - 1;
-        final ProtectedMask mask = eval.mask(last);
+    /** Every translate-family call: how the job is run, which of its requests it is, and how the eval builds it. */
+    // The functions are stateless method references and lambdas; Error Prone cannot see that without @Immutable.
+    @SuppressWarnings("ImmutableEnumChecker")
+    private enum Kind {
+        BATCH(test -> test.runBatchedJob(true), 0, recording -> {
+            final EvalProject eval = eval(0, 4, recording);
+            return eval.batchRequest(eval.batch(0, 4).orElseThrow());
+        }),
+        LATER_BATCH(test -> test.runBatchedJob(true), 1, recording -> {
+            final EvalProject eval = eval(4, PARAGRAPHS, recording);
+            return eval.batchRequest(eval.batch(0, 4).orElseThrow());
+        }),
+        DRAFT(
+                PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment,
+                3,
+                recording -> eval(3, 4, recording).draftRequest(0)),
+        FORMAT_REASK(PromptRequestsEquivalenceTest::runSingleDraftJobWithAProseFirstReply, 1, recording -> {
+            final EvalProject eval = eval(0, 1, recording);
+            return eval.requests().formatReaskRequest(eval.segment(0), eval.translateContext(0), eval.mask(0), PROSE);
+        }),
+        REPAIR(PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment, PARAGRAPHS + 1, recording -> {
+            final EvalProject eval = eval(PARAGRAPHS - 1, PARAGRAPHS, recording);
+            return repairOfTheEcho(eval);
+        });
+
+        private final Function<PromptRequestsEquivalenceTest, ScriptedChatModel> job;
+        private final int index;
+        private final Function<ScriptedChatModel, ChatRequest> eval;
+
+        Kind(
+                final Function<PromptRequestsEquivalenceTest, ScriptedChatModel> job,
+                final int index,
+                final Function<ScriptedChatModel, ChatRequest> eval) {
+            this.job = job;
+            this.index = index;
+            this.eval = eval;
+        }
+    }
+
+    private static ChatRequest repairOfTheEcho(final EvalProject eval) {
+        final ProtectedMask mask = eval.mask(0);
         final List<QaFinding> defects = SegmentFindings.defects(DraftEvaluation.evaluate(
                 new DraftOutcome.Drafted(
-                        eval.segment(last),
+                        eval.segment(0),
                         mask.maskedText(),
                         mask.presentLocked(),
                         ECHO_OF_LAST,
@@ -257,21 +250,53 @@ class PromptRequestsEquivalenceTest {
                         ECHO_OF_LAST,
                         null),
                 eval.loop()));
-
-        evalCalls(recording)
-                .call(
-                        CallKind.REPAIR,
-                        eval.segment(last).id(),
-                        eval.requests()
-                                .repairRequest(
-                                        eval.segment(last),
-                                        eval.draftContext(last).draftContext(),
-                                        mask,
-                                        ECHO_OF_LAST,
-                                        defects));
-
         assertThat(defects).isNotEmpty();
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, PARAGRAPHS + 1));
+        final PromptRequests requests = eval.requests();
+        return requests.repairRequest(eval.segment(0), eval.translateContext(0), mask, ECHO_OF_LAST, defects);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Kind.class)
+    void equivalence_everyTranslateKind_sameRequestAsEval(final Kind kind) {
+        final ScriptedChatModel job = kind.job.apply(this);
+        final ScriptedChatModel recording = answeringAnything();
+        final ChatRequest built = kind.eval.apply(recording);
+
+        evalCalls(recording).callAbout(Objects.requireNonNull(built.callKind(), "callKind"), List.of("a"), built);
+
+        assertThat(sent(job, kind.index).callKind()).isEqualTo(built.callKind());
+        assertThat(sent(recording, 0)).isEqualTo(sent(job, kind.index));
+    }
+
+    @Test
+    void batchRequest_recurringTerm_reachesTheMapAndTheRollingSummaryNever() {
+        final ScriptedChatModel job = runBatchedJob(true);
+
+        assertThat(job.requests().getFirst().messages().get(1).content()).contains("master → господар");
+        assertThat(sent(job, 1).messages().get(1).content()).doesNotContain(SUMMARY_TEXT, "[Book so far");
+    }
+
+    @Test
+    void batchRequest_noRecurringTerms_asksForNoTerms() {
+        final ScriptedChatModel job = runBatchedJob(false);
+
+        assertThat(sent(job, 0).messages().get(1).content()).doesNotContain("\"terms\"");
+    }
+
+    @Test
+    void reviewerRequest_wholeBatchWithTermPairsAndCharacters_equalsTheRequestTheJobSends() {
+        final ScriptedChatModel job = runBatchedJob(true);
+        final ScriptedChatModel recording = answeringAnything();
+        final EvalProject eval = eval(0, PARAGRAPHS, recording);
+        final List<ReviewedPair> pairs = IntStream.range(0, PARAGRAPHS)
+                .mapToObj(
+                        i -> new ReviewedPair(eval.segment(i).id(), eval.mask(i).maskedText(), TARGETS.get(i)))
+                .toList();
+
+        TranslationJobTestSupport.qualityLoop().review(pairs, eval.loop(), ReviewPass.FIRST, evalCalls(recording));
+
+        assertThat(sent(job, 2).messages().get(1).content()).contains("Зерубін", "господар", "<Pair id=\"s8\">");
+        assertThat(sent(recording, 0)).isEqualTo(sent(job, 2));
     }
 
     private static final String NARRATOR_LINE = "Narrator: first person, male.";
@@ -295,6 +320,6 @@ class PromptRequestsEquivalenceTest {
         final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
 
         assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);
-        assertThat(system(sent(job, PARAGRAPHS + 1))).contains(NARRATOR_LINE);
+        assertThat(system(sent(job, PARAGRAPHS + 1))).isEqualTo(system(sent(job, 0)));
     }
 }

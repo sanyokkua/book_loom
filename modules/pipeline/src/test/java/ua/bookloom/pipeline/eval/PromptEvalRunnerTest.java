@@ -69,12 +69,12 @@ class PromptEvalRunnerTest {
 
         assertThat(user(sent.getFirst()))
                 .contains("⟦g0⟧ → Зерубін, character, male")
-                .contains("<Text>\n⟦g0⟧ walked into the library")
-                .doesNotContain("<Text>\nZerubin");
+                .contains("<s id=\"1\">⟦g0⟧ walked into the library")
+                .doesNotContain("<s id=\"1\">Zerubin");
     }
 
     @Test
-    void runAll_draftWithContext_showsEarlierPairsSummaryRecurringTermsAndNarrator() {
+    void runAll_draftWithContext_showsEarlierPairsRecurringTermsAndNarratorButNoSummary() {
         final Draft draft = new Draft(
                 "ctx",
                 "I told the master the door was open.",
@@ -88,7 +88,8 @@ class PromptEvalRunnerTest {
 
         final Sent sent = run(draft).getFirst();
 
-        assertThat(user(sent)).contains("Він постукав.", "Раніше: хлопчик чекав.", "master → господар");
+        // The rolling summary no longer reaches a draft (design D10); the recently-present card takes its place.
+        assertThat(user(sent)).contains("Він постукав.", "master → господар").doesNotContain("Раніше: хлопчик чекав.");
         assertThat(sent.request().messages().getFirst().content()).contains("Narrator: first person, male");
     }
 

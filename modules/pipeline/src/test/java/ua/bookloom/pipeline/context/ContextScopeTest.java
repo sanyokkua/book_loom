@@ -15,7 +15,6 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.batch.BatchContexts;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.prompt.DraftContext;
 
@@ -57,22 +56,6 @@ class ContextScopeTest {
                 .extracting(SnapshotTerm::term)
                 .containsExactly("Harrow");
         assertThat(assembled.draftContext().glossaryLines()).containsExactly("Harrow → Герроу (place)");
-    }
-
-    @Test
-    void batchOf_threeItems_carriesTheUnionOfTheirThreeSets() {
-        final Chunk chunk = ContextFixtures.chunk("Corvin sat down.", "Fallow was far away.", "Harrow and Corvin met.");
-        final List<DraftContext> perItem = List.of(
-                assemble(chunk, 0, SIX).draftContext(),
-                assemble(chunk, 1, SIX).draftContext(),
-                assemble(chunk, 2, SIX).draftContext());
-
-        final DraftContext joined = BatchContexts.of(List.of("1", "2", "3"), perItem, List.of(), null, List.of())
-                .draft();
-
-        assertThat(joined.glossaryLines())
-                .containsExactlyInAnyOrder(
-                        "Corvin → Корвін (place)", "Fallow → Феллоу (place)", "Harrow → Герроу (place)");
     }
 
     @ParameterizedTest(name = "[{index}] {0} in «{1}» -> {2}")

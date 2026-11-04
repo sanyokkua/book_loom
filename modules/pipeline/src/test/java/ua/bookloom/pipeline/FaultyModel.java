@@ -127,9 +127,7 @@ final class FaultyModel implements ChatModel {
     @Override
     public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
         calls++;
-        final String format = request.responseFormat() == null
-                ? "plain"
-                : Objects.requireNonNull(request.responseFormat()).name();
+        final String format = request.responseFormat() == null ? "plain" : ScriptedChatModel.callName(request);
         final boolean rejudge = REVIEW.equals(format) && DIRECTED_FIX.equals(previousFormat);
         previousFormat = format;
         final Fault fault = choose(format, rejudge);

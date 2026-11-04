@@ -43,7 +43,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TermLearningJobTest {
 
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");
-    private static final Pattern SHOWN = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
+    private static final Pattern SHOWN = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
     private static final String ESTABLISHED_LINE = "master → господар";
     private static final String P4 = "The master sat in the dark.";
     private static final List<List<String>> CHAPTERS = List.of(
@@ -86,7 +86,9 @@ class TermLearningJobTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String user = userMessage(request);
-            final String rendering = user.contains(P4) && !user.contains(ESTABLISHED_LINE) ? "учитель" : "господар";
+            // The next source after a batch may be the fourth chapter's paragraph; only translating it can drift.
+            final String rendering =
+                    isTranslating(user, P4) && !user.contains(ESTABLISHED_LINE) ? "учитель" : "господар";
             final Matcher items = ITEM.matcher(user);
             final List<String> entries = new ArrayList<>();
             while (items.find()) {
@@ -100,7 +102,7 @@ class TermLearningJobTest {
         }
 
         private static boolean isTranslating(final String user, final String source) {
-            return user.contains(">" + source + "</s>") || user.contains("<Text>\n" + source + "\n</Text>");
+            return user.contains(">" + source + "</s>") || user.contains("<s id=\"1\">" + source + "</s>");
         }
 
         private static String shown(final String user) {
@@ -110,7 +112,7 @@ class TermLearningJobTest {
 
         private static String target(final String source, final String rendering) {
             final String word = Character.toUpperCase(rendering.charAt(0)) + rendering.substring(1);
-            return Objects.requireNonNull(TARGETS.get(source)).formatted(word);
+            return TARGETS.getOrDefault(source, source).formatted(word);
         }
 
         // A source shown only as a related earlier pair (15i.T8) is not being translated there.
@@ -152,7 +154,7 @@ class TermLearningJobTest {
         }
         assertThat(model.namesRenderingFor(P4)).isTrue();
         assertThat(model.requests.stream()
-                        .filter(request -> userMessage(request).contains(P4))
+                        .filter(request -> DriftingModel.isTranslating(userMessage(request), P4))
                         .map(ChatRequest::messages)
                         .flatMap(List::stream)
                         .map(ChatMessage::content)

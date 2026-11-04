@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.context.ContextPackage;
+import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.memory.ProtectedMask;
@@ -33,7 +34,6 @@ final class ChunkDrafting {
     private final PrecedingTargets preceding;
     private final MemoryReuse memory;
     private final RoutedCalls calls;
-    private final DecisionFollowUp followUp;
     private final SegmentEvents events;
     private final DraftShortcuts shortcuts;
     private final BatchStage batches;
@@ -45,7 +45,6 @@ final class ChunkDrafting {
         this.preceding = collaborators.preceding();
         this.memory = collaborators.memory();
         this.calls = collaborators.calls();
-        this.followUp = collaborators.followUp();
         this.events = collaborators.events();
         this.shortcuts = collaborators.shortcuts();
         this.batches = collaborators.batches();
@@ -62,6 +61,22 @@ final class ChunkDrafting {
             DraftShortcuts shortcuts,
             BatchStage batches,
             ChunkSteps announced) {
+
+        private static BatchStage batchStageOf(
+                final RunSteps steps,
+                final RunSettings settings,
+                final MemoryReuse memory,
+                final PrecedingTargets preceding,
+                final RoutedCalls calls) {
+            return new BatchStage(
+                    steps.batch(),
+                    settings,
+                    memory,
+                    preceding,
+                    calls,
+                    steps.planner().frame().examples(),
+                    steps.calls());
+        }
 
         /** Builds the collaborators of one run, each from the stores and sinks it is given. */
         static Collaborators wire(
@@ -93,7 +108,7 @@ final class ChunkDrafting {
                     followUp,
                     new SegmentEvents(sinks.emit(), locators, steps.calls()),
                     DraftShortcuts.forFrame(settings.frame()),
-                    new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls()),
+                    batchStageOf(steps, settings, memory, preceding, calls),
                     announced);
         }
     }
@@ -153,18 +168,15 @@ final class ChunkDrafting {
         final ContextSnapshot snapshot = context.snapshot().withSent(sections);
         events.contextAssembled(segment.id(), snapshot);
         final DraftOutcome batched = current.batches().take(segment.id());
-        final Step<DraftOutcome> drafted = batched != null
-                ? new Step.Done<>(batched)
-                : calls.untilAnsweredOrFlagged(
-                        current.work(),
-                        segment.id(),
-                        new RoutedCalls.StepName("draft", segment.id()),
-                        () -> current.translator()
-                                .translateSplit(
-                                        segment, context.draftContext(), mask, steps.splitter(), current.budget()),
-                        error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
+        final Result<TranslateContext> shown = shownTo(current, ready, batched != null);
+        final TranslateContext window = shown.data();
+        if (window == null) {
+            return new Step.Stopped<>(RoutedCalls.failedBy(Objects.requireNonNull(shown.error(), ERROR)));
+        }
+        final Step<DraftOutcome> drafted =
+                batched != null ? new Step.Done<>(batched) : draftAlone(current, ready, window);
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome done)) {
-            final DraftOutcome outcome = repairable(current, done, context, mask);
+            final DraftOutcome outcome = repairable(current, done, window, mask);
             current.drafts().drafted(outcome, snapshot);
             events.drafted(outcome, current.loop());
             announced.drafted(segment.id(), outcome);
@@ -173,20 +185,58 @@ final class ChunkDrafting {
         return drafted;
     }
 
-    // A batch-adopted draft and a single one alike carry the call that repairs them with their own context and mask.
+    // A segment no batch answered is drafted on its own; after a batch answer that copied an example, that draft is the
+    // answer's one re-ask.
+    private Step<DraftOutcome> draftAlone(final Current current, final Ready ready, final TranslateContext window) {
+        final Segment segment = ready.item().segment();
+        return calls.untilAnsweredOrFlagged(
+                current.work(),
+                segment.id(),
+                new RoutedCalls.StepName("draft", segment.id()),
+                () -> current.translator()
+                        .translateSplit(
+                                segment,
+                                window,
+                                ready.mask(),
+                                steps.splitter(),
+                                current.budget(),
+                                current.batches().wasEchoed(segment.id())),
+                error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
+    }
+
+    // A batch-adopted draft is repaired over its batch's window and map, its focus the one item; a single draft is
+    // planned over its own window, read now from the segments accepted before it.
+    private Result<TranslateContext> shownTo(final Current current, final Ready ready, final boolean batched) {
+        final Segment segment = ready.item().segment();
+        final TranslateContext fromBatch = batched ? current.batches().takeShown(segment.id()) : null;
+        if (fromBatch != null) {
+            return Result.ok(fromBatch);
+        }
+        return current.requests()
+                .translateContext(
+                        List.of(new PromptRequests.BatchSlot(
+                                segment, ready.mask(), ready.offer().lookup())),
+                        preceding.accepted(current.drafts()),
+                        List.of());
+    }
+
+    // A batch-adopted draft and a single one alike carry the call that repairs them with the context and mask they
+    // were drafted with, so the repair sees the names its draft saw.
     private static DraftOutcome repairable(
-            final Current current, final DraftOutcome outcome, final ContextPackage context, final ProtectedMask mask) {
+            final Current current,
+            final DraftOutcome outcome,
+            final TranslateContext context,
+            final ProtectedMask mask) {
         if (outcome instanceof DraftOutcome.Drafted drafted && drafted.repairCall() == null) {
             log.trace("Repair call attached segmentId={}", drafted.segment().id());
-            return drafted.withRepair(current.translator().repairCall(drafted.segment(), context.draftContext(), mask));
+            return drafted.withRepair(current.translator().repairCall(drafted.segment(), context, mask));
         }
         return outcome;
     }
 
     private ContextPackage contextOf(
             final Current current, final Segment segment, final List<String> targets, final MemoryReuse.Offer offer) {
-        final ContextPackage context =
-                current.requests().contextFor(segment, targets, offer.lookup(), followUp.summary());
+        final ContextPackage context = current.requests().contextFor(segment, targets, offer.lookup());
         if (log.isTraceEnabled()) {
             log.trace(
                     "Preceding targets segmentId={} targets={}",

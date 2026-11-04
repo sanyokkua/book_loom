@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -142,9 +143,13 @@ public final class WindowMap {
         return glossary;
     }
 
+    // Tokens are numbered per segment, so in a batch two items' ⟦g0⟧ differ: a line is prefixed with its item's id.
     private static List<String> lockedLines(final SnapshotTerm term, final List<ProtectedMask> masks) {
-        final List<String> lines = masks.stream()
-                .flatMap(mask -> InjectedTerms.lines(term, mask).stream())
+        final boolean batch = masks.size() > 1;
+        final List<String> lines = IntStream.range(0, masks.size())
+                .boxed()
+                .flatMap(index -> InjectedTerms.lines(term, masks.get(index)).stream()
+                        .map(line -> batch ? (index + 1) + ": " + line : line))
                 .distinct()
                 .toList();
         if (lines.isEmpty()) {

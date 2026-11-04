@@ -211,7 +211,7 @@ class RealRunCorpusTest {
     }
 
     @Test
-    void batch_contextCase_carriesTheRollingSummary() {
+    void batch_contextCase_carriesNoRollingSummary() {
         final BatchCase batchCase = RunCorpus.batches().stream()
                 .filter(c -> c.kind().equals("batch-context"))
                 .findFirst()
@@ -221,7 +221,8 @@ class RealRunCorpusTest {
         });
 
         assertThat(user(project.batchRequest(project.batch().orElseThrow())))
-                .contains("Раніше: Нелл і хлопчик прийшли до дому господаря");
+                .contains("Nell → Нелл")
+                .doesNotContain("Раніше: Нелл і хлопчик прийшли до дому господаря");
     }
 
     @ParameterizedTest(name = "{0}")

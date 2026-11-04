@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.context;
 
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.pipeline.PromptSection;
 
 /**
  * One call's prompt as the context builder planned it.
@@ -36,6 +37,26 @@ public record PromptPlan(List<Block> blocks, int promptTokens, int maxOutputToke
      */
     public String userText() {
         return text(Block.Role.USER);
+    }
+
+    /**
+     * The blocks as the parts a person reads on "What the model saw": a block whose first line is a bracketed heading
+     * keeps it as the part's heading.
+     *
+     * @return never null; one part per block, in the order sent
+     */
+    public List<PromptSection> sections() {
+        return blocks.stream().map(PromptPlan::section).toList();
+    }
+
+    private static PromptSection section(final Block block) {
+        final List<String> lines = block.text().lines().toList();
+        final boolean headed = lines.getFirst().startsWith("[");
+        return new PromptSection(
+                block.slot(),
+                headed ? lines.getFirst() : "",
+                block.role() == Block.Role.SYSTEM ? PromptSection.Origin.SYSTEM : PromptSection.Origin.USER,
+                headed ? lines.subList(1, lines.size()) : lines);
     }
 
     private String text(final Block.Role role) {

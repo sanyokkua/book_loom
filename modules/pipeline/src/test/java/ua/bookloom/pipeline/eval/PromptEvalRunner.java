@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.TextChecks;
+import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
@@ -33,7 +34,6 @@ import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.heal.SoftContext;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
@@ -211,11 +211,11 @@ final class PromptEvalRunner {
     static Optional<ChatRequest> repairRequest(
             final EvalProject project, final RepairStep step, final String rejected) {
         final Segment segment = project.segment(0);
-        final DraftContext context = project.draftContext(0).draftContext();
+        final TranslateContext context = project.translateContext(0);
         final ProtectedMask mask = project.mask(0);
         final PromptRequests requests = project.requests();
         return step == RepairStep.STRUCTURAL
-                ? Optional.of(requests.structuralRepairRequest(segment, context, mask, rejected))
+                ? Optional.of(requests.formatReaskRequest(segment, context, mask, rejected))
                 : requests.repairRequest(segment, context, mask, rejected);
     }
 

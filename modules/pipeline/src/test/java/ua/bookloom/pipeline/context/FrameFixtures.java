@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ReasoningControl;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
 
 /** An invented ru→uk book and the services the context-builder tests build its run frame with. */
@@ -27,8 +28,9 @@ final class FrameFixtures {
     static final String MARKED = "В ⟦g0⟧тот⟦g1⟧ день было 1881 шагов до моста.";
 
     static final BookRules BOOK_RULES = new BookRules(PromptVariants.DEFAULTS);
-    static final RunFrames RUN_FRAMES = new RunFrames(PromptVariants.DEFAULTS, BOOK_RULES);
-    static final ContextBuilder BUILDER = new ContextBuilder();
+    static final PromptTemplates TEMPLATES = new PromptTemplates();
+    static final RunFrames RUN_FRAMES = new RunFrames(TEMPLATES, BOOK_RULES);
+    static final ContextBuilder BUILDER = new ContextBuilder(TEMPLATES);
 
     static Document book(final String... paragraphs) {
         return IndexTestBooks.document(IndexTestBooks.unit("ch1", UnitRole.BODY, paragraphs));

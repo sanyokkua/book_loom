@@ -4,6 +4,7 @@ import java.util.Objects;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
@@ -19,6 +20,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * @param splitter the sentence splitter an oversized segment is drafted in pieces with
  * @param summary the rolling summary's keeper, whose unit-end refresh is a model call where the dial asks for one
  * @param batch the drafter of a chunk's segments in batches, whose size adapts over the run
+ * @param planner the planner of the run's translate-family calls, bound to the run's fixed frame
  */
 public record RunSteps(
         SegmentTranslator translator,
@@ -27,7 +29,8 @@ public record RunSteps(
         ModelCalls calls,
         SentenceSplitter splitter,
         RollingSummaryKeeper summary,
-        BatchDrafter batch) {
+        BatchDrafter batch,
+        TranslatePlanner planner) {
 
     /** Rejects a missing step. */
     public RunSteps {
@@ -38,5 +41,6 @@ public record RunSteps(
         Objects.requireNonNull(splitter, "splitter");
         Objects.requireNonNull(summary, "summary");
         Objects.requireNonNull(batch, "batch");
+        Objects.requireNonNull(planner, "planner");
     }
 }

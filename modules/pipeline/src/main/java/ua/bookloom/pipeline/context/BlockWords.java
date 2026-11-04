@@ -19,7 +19,6 @@ final class BlockWords {
 
     static final String FILE = "blocks.properties";
 
-    static final String ROLE = "role";
     static final String DATA = "data";
     static final String REPLY = "reply";
     static final String RULES_HEADING = "rules.heading";
@@ -28,9 +27,11 @@ final class BlockWords {
     static final String ANALYSIS_ROLE = "analysis.role";
     static final String ANALYSIS_DATA = "analysis.data";
     static final String ANALYSIS_REPLY = "analysis.reply";
-    static final String REPAIR_HEADING = "repair.heading";
     static final String REPAIR_LINE = "repair.line";
-    static final String TASK_TRANSLATE = "task.translate";
+    static final String REPAIR_LINE_ONE = "repair.lineOne";
+    static final String NOTE_HEADING = "note.heading";
+    static final String MEMORY_HEADING = "memory.heading";
+    static final String KEY_TERMS_HEADING = "keyTerms.heading";
     static final String ITEMS_OPEN = "items.open";
     static final String ITEMS_CLOSE = "items.close";
     static final String ITEM = "item";
@@ -44,9 +45,15 @@ final class BlockWords {
     static final String WINDOW_TARGET = "window.target";
     static final String WINDOW_NEXT = "window.next";
     static final String LABEL = "label.";
+    static final String CARD_HEADING = "card.heading";
+    static final String CARD_SCENE = "card.scene";
+    static final String CARD_PRESENT = "card.present";
+    static final String CARD_LIKELY = "card.likely";
+    static final String CARD_TYPE = "card.type.";
+    static final String CARD_GENDER = "card.gender.";
+    static final String CARD_NARRATOR = "card.narrator.";
 
     private static final List<String> REQUIRED = List.of(
-            ROLE,
             DATA,
             REPLY,
             RULES_HEADING,
@@ -55,9 +62,11 @@ final class BlockWords {
             ANALYSIS_ROLE,
             ANALYSIS_DATA,
             ANALYSIS_REPLY,
-            REPAIR_HEADING,
             REPAIR_LINE,
-            TASK_TRANSLATE,
+            REPAIR_LINE_ONE,
+            NOTE_HEADING,
+            MEMORY_HEADING,
+            KEY_TERMS_HEADING,
             ITEMS_OPEN,
             ITEMS_CLOSE,
             ITEM,
@@ -75,7 +84,21 @@ final class BlockWords {
             LABEL + "address",
             LABEL + "numbers",
             LABEL + "agreement",
-            LABEL + "inflect");
+            LABEL + "inflect",
+            CARD_HEADING,
+            CARD_SCENE,
+            CARD_PRESENT,
+            CARD_LIKELY,
+            CARD_TYPE + "CHARACTER",
+            CARD_TYPE + "PLACE",
+            CARD_GENDER + "FEMALE",
+            CARD_GENDER + "MALE",
+            CARD_GENDER + "NEUTER",
+            CARD_NARRATOR + "UNKNOWN",
+            CARD_NARRATOR + "MALE",
+            CARD_NARRATOR + "FEMALE",
+            CARD_NARRATOR + "LIKELY_MALE",
+            CARD_NARRATOR + "LIKELY_FEMALE");
 
     private static final class Holder {
         static final BlockWords INSTANCE = load();

@@ -15,6 +15,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Genre;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /**
@@ -35,7 +36,6 @@ class PromptShapeTest {
     private static final Map<String, String> REPLY_KEYS = Map.ofEntries(
             Map.entry("draft", "target"),
             Map.entry("structural-repair", "target"),
-            Map.entry("repair", "target"),
             Map.entry("directed-fix", "target"),
             Map.entry("improve", "target"),
             Map.entry("polish", "target"),
@@ -101,11 +101,24 @@ class PromptShapeTest {
                 "TERM_READING",
                 "LEXICON_READING",
                 "TERM_SUMMARY",
-                "NAME_KNOWLEDGE"
+                "NAME_KNOWLEDGE",
+                "TRANSLATE",
+                "FORMAT_REASK",
+                "REPAIR"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
         assertThat(prompt(name)).contains("⟦gN⟧ token");
+    }
+
+    // A planned call states the mark rule once among the book's rules, and reminds of it last.
+    @ParameterizedTest
+    @EnumSource(
+            value = PromptName.class,
+            names = {"TRANSLATE", "FORMAT_REASK", "REPAIR"})
+    void render_plannedCallWithMarks_statesTheMarkRuleAndRemindsOfItLast(final PromptName name) {
+        assertThat(system(name)).contains("- Marks: ⟦gN⟧ marks stand for");
+        assertThat(user(name)).endsWith("Keep every ⟦…⟧ mark exactly once.");
     }
 
     @ParameterizedTest
@@ -326,8 +339,11 @@ class PromptShapeTest {
         return system(name) + "\n" + user(name);
     }
 
-    /** The system message the call is sent with; the two repairs reuse the draft's. */
+    /** The system message the call is sent with; the translate family is planned by the context builder. */
     private static String system(final PromptName name) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, MASKED).systemText();
+        }
         final PromptName owner = name.systemSlots().isPresent() ? name : PromptName.DRAFT;
         return owner == PromptName.SUGGEST_TARGETS
                 ? TEMPLATES.renderSystem(
@@ -337,6 +353,9 @@ class PromptShapeTest {
 
     /** The user message with every slot the template declares filled, tokens included where it lists them. */
     private static String user(final PromptName name) {
+        if (PlannedPrompts.PLANNED.contains(name)) {
+            return PlannedPrompts.plan(name, MASKED).userText();
+        }
         final Map<String, String> values = new HashMap<>();
         name.userSlots().required().forEach(slot -> values.put(slot, MASKED));
         name.userSlots().optional().forEach(slot -> values.put(slot, MASKED));

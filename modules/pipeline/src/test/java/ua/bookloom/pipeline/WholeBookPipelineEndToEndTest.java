@@ -73,13 +73,11 @@ class WholeBookPipelineEndToEndTest {
     private static final int SEA_CHUNK = 8;
     private static final int SEA_BATCHES = 7;
     private static final String SEA_TARGET = "Том дивився на сіре море тієї ночі.";
-    // Measured: about 5,500 events at DEBUG or higher (15i: the book index, the open-book and Auto-language lines;
-    // redesign 6.9: the model's window and sampling lines) in each dialect once every attempt and context was
-    // announced,
-    // 14
-    // of them at INFO or higher (the seven batch drafts each log one INFO line); the bound is the next multiple of 500
-    // above the first count.
-    private static final int DEBUG_OR_HIGHER_BOUND = 6_000;
+    // Measured: about 6,000 events at DEBUG or higher (15i: the book index, the open-book and Auto-language lines;
+    // redesign 6.9: the model's window and sampling lines; redesign 11.5: each call's plan, window and map lines) in
+    // each dialect once every attempt and context was announced, 14 of them at INFO or higher (the seven batch drafts
+    // each log one INFO line); the bound is the next multiple of 500 above the first count.
+    private static final int DEBUG_OR_HIGHER_BOUND = 6_500;
     private static final int INFO_OR_HIGHER_BOUND = 30;
 
     @TempDir
@@ -144,18 +142,16 @@ class WholeBookPipelineEndToEndTest {
         assertThat(WholeBookRun.userMessage(run.bodies().get(2))).contains("пішла", "meaning");
     }
 
-    // The batch of eight paragraphs (four of them long) is capped by its items' allowances; the reviewer of eight pairs
-    // by its pairs. Batch (OutputLimit.forBatch, en -> uk): the items' allowances 24 + 26 + 25 + 858 + 859 + 858 + 858
-    // + 17 =
-    // 3525, plus 8 x 16 envelope tokens = 3653; the cap is ceil(3653 x 3 / 2) = 5480 + 16 headroom + 6 x 2 placeholders
-    // = 5508. Reviewer (OutputLimit.forReview): 128 + 8 x (70 + 120) per pair + the drafts' estimated tokens 12 + 13 +
-    // 16 + 509 + 510 + 512 + 509 + 10 = 2091, so 3739.
+    // The batch of eight paragraphs (four of them long) is capped at the reserve the context builder computes, the
+    // pair's output ratio times the items' source tokens plus 16 per item, 2500, well inside the items' runaway guard
+    // (OutputLimit.forBatch, 5508); the reviewer of eight pairs by its pairs (OutputLimit.forReview): 128 + 8 x (70 +
+    // 120) per pair + the drafts' estimated tokens 12 + 13 + 16 + 509 + 510 + 512 + 509 + 10 = 2091, so 3739.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":5508");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":2500");
         assertThat(run.bodies().get(1)).contains(capField(kind) + ":3739");
     }
 

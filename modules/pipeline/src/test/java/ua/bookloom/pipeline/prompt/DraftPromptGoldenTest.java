@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 
-/** Pins the messages the draft and repair prompts produced before they moved into template files. */
+/** Pins the messages a review retry's single-draft prompts produce; the run's prompts are pinned by the translate golden test. */
 class DraftPromptGoldenTest {
 
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
@@ -22,8 +22,7 @@ class DraftPromptGoldenTest {
                 "draft-en-uk-preceding",
                 "draft-unknown-source",
                 "draft-zh-hant",
-                "structural-repair",
-                "repair"
+                "structural-repair"
             })
     void messages_pinnedScenario_areByteEqualToGolden(final String name) throws IOException {
         final var messages = GoldenCases.render(

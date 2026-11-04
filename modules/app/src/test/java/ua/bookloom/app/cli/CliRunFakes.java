@@ -12,8 +12,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
@@ -96,16 +99,14 @@ final class CliRunFakes {
 
         private Result<ChatResponse> answer(ChatRequest request) {
             final String user = request.messages().getLast().content();
-            final int start = user.lastIndexOf("<Text>\n");
-            if (start < 0) {
+            final String text = singleItem(user);
+            if (text == null) {
                 return Result.ok(new ChatResponse(OTHER_REPLY, FinishReason.STOP));
             }
             if (failingDrafts.contains(drafts.incrementAndGet())) {
                 return Result.err(AppError.of(failure, "Provider failure", "The scripted provider failed."));
             }
-            final String text = user.substring(start + "<Text>\n".length(), user.indexOf("\n</Text>", start));
-            return Result.ok(new ChatResponse(
-                    "{\"target\":\"" + translations.getOrDefault(text, text) + "\"}", FinishReason.STOP));
+            return Result.ok(new ChatResponse(itemReply(translations.getOrDefault(text, text)), FinishReason.STOP));
         }
     }
 
@@ -169,5 +170,21 @@ final class CliRunFakes {
         public Instant instant() {
             return Objects.requireNonNull(now.get(), "now");
         }
+    }
+
+    /** The one item of a single draft, a batch of one, or null for any other call. */
+    static @Nullable String singleItem(final String user) {
+        final int block = user.lastIndexOf("<Items>");
+        if (block < 0) {
+            return null;
+        }
+        final Matcher items =
+                Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL).matcher(user.substring(block));
+        return items.find() && !user.substring(block).contains("<s id=\"2\">") ? items.group(1) : null;
+    }
+
+    /** A translate-family reply of one item. */
+    static String itemReply(final String target) {
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 }

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.batch;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -40,6 +41,22 @@ public record BatchReply(boolean readable, List<ItemOutcome> outcomes, boolean c
                 false,
                 ids.stream().map(id -> ItemOutcome.bare(id, ItemStatus.MISSING)).toList(),
                 false);
+    }
+
+    /**
+     * The same reply with its ids renamed, as a re-ask numbered its own items from 1 answers for the first call's ids.
+     *
+     * @param ids the non-null first call's id of each re-asked id; an id not named keeps its own
+     * @return the renamed reply; never null
+     */
+    public BatchReply renamed(final Map<String, String> ids) {
+        Objects.requireNonNull(ids, "ids");
+        return new BatchReply(
+                readable,
+                outcomes.stream()
+                        .map(outcome -> outcome.withId(ids.getOrDefault(outcome.id(), outcome.id())))
+                        .toList(),
+                cut);
     }
 
     /** The outcome of an id, or empty when the reply and the batch never named it. */

@@ -8,11 +8,10 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.ChunkRunner;
@@ -51,29 +50,26 @@ final class ChunkRunnerFactory {
             final RunWindow runWindow,
             final RunSinks sinks,
             final ModelCalls calls,
-            final int batchSize) {
+            final int batchSize,
+            final TranslatePlanner planner) {
         log.debug(
                 "Wiring the chunk runner batchSize={} format={}",
                 batchSize,
                 run.document().format());
         final GateFunction gate = GateFunction.of(documents, run.document().format());
-        final SegmentTranslator translator = new SegmentTranslator(
-                gate,
-                calls,
-                run.document().format(),
-                new DraftPromptBuilder(templates, settings.frame()),
-                new DraftReplyParser(mapper));
+        final SegmentTranslator translator =
+                new SegmentTranslator(gate, calls, run.document().format(), planner, mapper);
         final RollingSummaryKeeper summary = new RollingSummaryKeeper(
                 stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
         final BatchDrafter batch = new BatchDrafter(
-                new BatchPromptBuilder(templates, settings.frame()),
+                new BatchPromptBuilder(planner),
                 new BatchReplyParser(mapper),
                 calls,
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
                 batchSize);
         return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch, planner),
                 settings,
                 runWindow,
                 stores,

@@ -21,7 +21,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,6 @@ class TranslationJobQualityTest {
 
     // Both tokens missing and one word left: the pair cannot hold it and leave text outside, so no repair passes.
     private static final String MISSING_TOKEN = "ВІДЧИНИВ";
-    private static final String TOKENS = "⟦g0⟧ ⟦g1⟧";
 
     @TempDir
     private Path tempDir;
@@ -74,7 +72,9 @@ class TranslationJobQualityTest {
 
         // Fast's one retry of lost marks is the plain draft again, naming no defect.
         assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT);
-        assertThat(userMessage(model.requests().get(1))).contains(TOKENS).doesNotContain("[Defects to fix");
+        assertThat(userMessage(model.requests().get(1)))
+                .contains("<s id=\"1\">He opened the ⟦g0⟧old⟦g1⟧ door.</s>")
+                .doesNotContain("[Defects to fix");
         assertThat(userMessage(model.requests().get(2))).contains(shown("She left."));
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
         assertThat(stored(project, "Book.md:0").rejectedTarget()).isEqualTo(MISSING_TOKEN);
@@ -92,7 +92,7 @@ class TranslationJobQualityTest {
         report(job(project, model).run());
 
         assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
-        assertThat(userMessage(model.requests().get(1))).contains(TOKENS);
+        assertThat(userMessage(model.requests().get(1))).contains("[Defects to fix]\n- markup");
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
     }
 
@@ -165,7 +165,7 @@ class TranslationJobQualityTest {
 
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
-                .containsExactly(tuple(15, 128), tuple(163, 327));
+                .containsExactly(tuple(31, 128), tuple(163, 327));
     }
 
     @Test
@@ -216,8 +216,7 @@ class TranslationJobQualityTest {
 
         @Override
         public Result<ChatResponse> chat(final ChatRequest request) {
-            formats.add(
-                    Objects.requireNonNull(request.responseFormat(), "format").name());
+            formats.add(ScriptedChatModel.callName(request));
             return delegate.chat(request);
         }
 

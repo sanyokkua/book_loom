@@ -117,7 +117,7 @@ class RepairResumeTest {
     void resume_errorDuringRepairAfterARefusedEditFix_resendsOnlyTheRepair() {
         final ScriptedChatModel model = replies(DRAFTED)
                 .answerTo(REVIEW, ok(REFUSED_EDIT))
-                .answerTo(FIX, target(FIXED))
+                .answerTo(FIX, ChunkRunFixtures.singleTarget(FIXED))
                 .answerTo(REPAIR, Result.err(AppError.of(ErrorCode.upstream, "Provider failure", "Scripted.")))
                 .answerTo(REPAIR, target(REPAIRED));
         final TestProject project = project(

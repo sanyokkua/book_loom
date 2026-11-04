@@ -3,9 +3,12 @@ package ua.bookloom.pipeline.context;
 import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -19,11 +22,13 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.FrameWording;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PairOutputRatio;
 import ua.bookloom.pipeline.prompt.PromptLanguages;
-import ua.bookloom.pipeline.prompt.PromptVariants;
+import ua.bookloom.pipeline.prompt.PromptName;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.setup.BookFacts;
 import ua.bookloom.util.hash.HashUtil;
@@ -36,24 +41,25 @@ import ua.bookloom.util.hash.HashUtil;
 public final class RunFrames {
 
     private static final String SOURCE = "{source}";
-    private static final String TARGET = "{target}";
     private static final String BULLET = "- ";
     private static final String SLOT_END = "\n";
     private static final String BLOCK_SEPARATOR = "\u0000";
 
+    private final PromptTemplates templates;
     private final LanguageRules rules;
     private final BookRules bookRules;
     private final BlockWords words = BlockWords.bundled();
 
     /**
-     * Reads the language rules the bound variants choose, as {@link BookRules} does.
+     * Reads the catalogue's translate prompt and the language rules its variants chose, as {@link BookRules} does.
      *
-     * @param variants the non-null prompt alternatives
+     * @param templates the non-null prompt catalogue, whose translate system template holds block 1
      * @param bookRules the non-null chooser of block 3's lines
      */
     @Inject
-    public RunFrames(final PromptVariants variants, final BookRules bookRules) {
-        this.rules = Objects.requireNonNull(variants, "variants").rules();
+    public RunFrames(final PromptTemplates templates, final BookRules bookRules) {
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.rules = templates.languageRules();
         this.bookRules = Objects.requireNonNull(bookRules, "bookRules");
     }
 
@@ -113,6 +119,7 @@ public final class RunFrames {
         final RunFrame frame = new RunFrame(
                 brief,
                 BookFacts.of(document),
+                index,
                 facts,
                 sheet,
                 lines,
@@ -121,9 +128,34 @@ public final class RunFrames {
                 PairOutputRatio.of(rules, brief.sourceLanguage(), target).orElse(OutputReserve.DEFAULT_OUTPUT_RATIO),
                 system,
                 analysisBlocks(brief),
-                hashOf(system));
+                hashOf(system),
+                firstPersonUnits(brief, index));
         logFrame(frame);
         return frame;
+    }
+
+    // A chapter whose own text is told as "I" gets the narrator line on its card; read once for the whole book, since a
+    // card is drawn for every call. A narrator the brief names is the style sheet's, so nothing is read then.
+    private static Set<String> firstPersonUnits(final BookBrief brief, final BookIndex index) {
+        if (brief.narrator().person() != NarratorPerson.UNSPECIFIED) {
+            return Set.of();
+        }
+        final Map<String, List<Integer>> byUnit = new LinkedHashMap<>();
+        index.story()
+                .forEach(
+                        ordinal -> byUnit.computeIfAbsent(index.segment(ordinal).unitId(), unit -> new ArrayList<>())
+                                .add(ordinal));
+        final List<String> units = List.copyOf(byUnit.keySet());
+        final List<List<String>> chapters =
+                byUnit.values().stream().map(index::visibleTexts).toList();
+        final Set<String> first = NarratorDetector.detect(chapters, brief.sourceLanguage())
+                .map(hint -> hint.chapters().stream()
+                        .filter(position -> position >= 1 && position <= units.size())
+                        .map(position -> units.get(position - 1))
+                        .collect(Collectors.toUnmodifiableSet()))
+                .orElse(Set.of());
+        log.debug("Run frame first-person units={} of {}", first, units.size());
+        return first;
     }
 
     private static void logFrame(final RunFrame frame) {
@@ -145,12 +177,20 @@ public final class RunFrames {
             final StyleSheet sheet,
             final ExampleChoice examples) {
         final List<Block> blocks = new ArrayList<>();
-        blocks.add(system(BlockSlots.ROLE, languages(words.get(BlockWords.ROLE), brief.sourceLanguage(), target)));
+        blocks.add(system(
+                BlockSlots.ROLE,
+                templates
+                        .renderSystem(PromptName.TRANSLATE, languageSlots(brief.sourceLanguage(), target))
+                        .strip()));
         blocks.add(system(BlockSlots.DATA, words.get(BlockWords.DATA)));
         if (!lines.isEmpty()) {
             blocks.add(system(BlockSlots.BOOK_RULES, words.get(BlockWords.RULES_HEADING) + "\n" + bullets(lines)));
         }
-        blocks.add(system(BlockSlots.STYLE_SHEET, words.get(BlockWords.STYLE_HEADING) + "\n" + sheet.text()));
+        // The foreign-passage choice of the brief is a style line too, so every call of the run carries it.
+        final String foreign = StyleSheet.foreignPassageRule(
+                brief.foreignPassages(), PromptLanguages.describe(brief.sourceLanguage()));
+        blocks.add(system(
+                BlockSlots.STYLE_SHEET, words.get(BlockWords.STYLE_HEADING) + "\n" + sheet.text() + "\n" + foreign));
         final String section =
                 FrameWording.section(rules, brief.sourceLanguage(), target, BookRules.sectionExclusions());
         if (!section.isBlank()) {
@@ -190,8 +230,9 @@ public final class RunFrames {
                 line);
     }
 
-    static String languages(final String text, @Nullable final String source, final String target) {
-        return text.replace(SOURCE, nameOf(source)).replace(TARGET, FrameWording.englishName(target));
+    /** The {@code source} and {@code target} slots of the translate templates: the languages' English names. */
+    static Map<String, String> languageSlots(@Nullable final String source, final String target) {
+        return Map.of("source", nameOf(source), "target", FrameWording.englishName(target));
     }
 
     private static String nameOf(@Nullable final String tag) {

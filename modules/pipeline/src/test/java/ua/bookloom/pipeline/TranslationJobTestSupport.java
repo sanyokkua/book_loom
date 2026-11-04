@@ -1,12 +1,10 @@
 package ua.bookloom.pipeline;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -63,7 +61,6 @@ import ua.bookloom.pipeline.run.RunStores;
 final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     static final SentenceSplitter SPLITTER =
             Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
@@ -284,12 +281,9 @@ final class TranslationJobTestSupport {
         return Result.ok(new ChatResponse(targetReply("HE OPENED"), FinishReason.LENGTH));
     }
 
+    /** A translate-family reply of one item; see {@link TestReplies#targetReply(String)}. */
     static String targetReply(final String target) {
-        try {
-            return MAPPER.writeValueAsString(Map.of("target", target));
-        } catch (JsonProcessingException cause) {
-            throw new AssertionError("could not encode scripted target", cause);
-        }
+        return TestReplies.targetReply(target);
     }
 
     static JobReport report(final Result<JobReport> result) {

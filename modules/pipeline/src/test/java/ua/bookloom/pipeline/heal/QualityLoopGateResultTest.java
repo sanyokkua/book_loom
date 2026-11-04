@@ -46,8 +46,9 @@ class QualityLoopGateResultTest {
                 segment, segment.masked(), List.of(), "x", null, null, gateFinding("initial-gate-note")));
         final GateFunction gate = (unusedSegment, maskedReply) -> new GateResult.GateFailed(
                 gateFinding("round-gate-note"), AppError.of(ErrorCode.validation, "Placeholder mismatch", "bad"));
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"x\"}")).answer(readable("{\"target\":\"x\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"))
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"x\"}]}"));
 
         final ChunkDecider decider = start(outcome, ReviewMode.UNATTENDED, QualityDial.BALANCED, gate, model);
         final SegmentOutcome result =
@@ -67,8 +68,8 @@ class QualityLoopGateResultTest {
                 QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR."));
         final GateFunction gate = (unusedSegment, maskedReply) ->
                 new GateResult.Restored("Він відчинив Гейл старі двері.", "Він відчинив Гейл старі двері.");
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"Він відчинив ⟦g5⟧ старі двері.\"}"));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив ⟦g5⟧ старі двері.\"}]}"));
 
         final ChunkDecider decider = start(outcome, ReviewMode.UNATTENDED, QualityDial.BALANCED, gate, model);
         final SegmentOutcome result =

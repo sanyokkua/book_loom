@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
+import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
@@ -78,7 +79,7 @@ class QualityLoopPseudoModelTest {
 
     private static List<String> responseFormatNames(final List<ChatRequest> requests) {
         return requests.stream()
-                .map(request -> Objects.requireNonNull(request.responseFormat()).name())
+                .map(request -> ScriptedChatModel.callName(request))
                 .toList();
     }
 

@@ -16,7 +16,6 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
-import static ua.bookloom.pipeline.ChunkRunFixtures.preceding;
 import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.status;
@@ -189,7 +188,8 @@ class TranslationJobReviewPauseTest {
         assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, REPAIR);
         assertThat(storedAtPause).containsExactlyElementsOf(sixAcceptedThenFlaggedThenPending());
         assertThat(formats(model)).hasSize(12).endsWith(DRAFT, REVIEW);
-        assertThat(userMessage(model.requests().get(10))).contains(shown(HeavyRows.weighty(S4)), preceding(EDIT, T8));
+        assertThat(userMessage(model.requests().get(10)))
+                .contains(shown(HeavyRows.weighty(S4)), "Translation: " + EDIT, "Translation: " + T8);
         assertThat(stored(project, "Book.md:7"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, T8);
@@ -212,7 +212,7 @@ class TranslationJobReviewPauseTest {
         report(await(run));
 
         assertThat(model.requests()).hasSize(3);
-        assertThat(userMessage(model.requests().getLast())).contains(shown(S2), preceding(EDIT));
+        assertThat(userMessage(model.requests().getLast())).contains(shown(S2), "Translation: " + EDIT);
     }
 
     // A chunk reads the glossary once, when it starts, so a lock made inside it applies from the next chunk.
@@ -232,7 +232,7 @@ class TranslationJobReviewPauseTest {
         assertThat(model.requests()).hasSize(9);
         assertThat(model.requests().subList(2, 8))
                 .extracting(ChunkRunFixtures::userMessage)
-                .allSatisfy(message -> assertThat(message).contains("<Text>\nHale counted"));
+                .allSatisfy(message -> assertThat(message).contains("<s id=\"1\">Hale counted"));
         assertThat(userMessage(model.requests().getLast()))
                 .contains(shown(HeavyRows.heavy("⟦g0⟧ counted the boats in row 8.")));
         assertThat(stored(project, "Book.md:8").machineTarget()).isEqualTo(haleTarget(8));

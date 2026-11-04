@@ -219,4 +219,36 @@ class ContextBuilderTest {
 
         assertThat(withOverhead.promptTokens() - bare.promptTokens()).isEqualTo(135);
     }
+
+    @Test
+    void plan_midChapterDraft_sceneBlockHoldsTheCard() {
+        final Document book = FrameFixtures.book("Зотов ждал у моста.", NARRATION, NARRATION, NARRATION, NARRATION);
+        final RunFrame frame = FrameFixtures.frame(book);
+        final Window window = new Window(
+                List.of(new WindowPair("ch1:2", NARRATION, null)),
+                new Focus(List.of(new FocusItem("ch1:3", NARRATION)), Map.of()),
+                NARRATION);
+
+        final PromptPlan plan = Objects.requireNonNull(BUILDER.plan(
+                        CallKind.DRAFT,
+                        window,
+                        BookMap.of(List.of(ZOTOV), List.of(), frame.brief()),
+                        frame,
+                        ModelProfile.defaults(),
+                        List.of())
+                .data());
+
+        assertThat(plan.blocks())
+                .extracting(Block::slot)
+                .containsSubsequence(BlockSlots.REPLY, BlockSlots.SCENE, BlockSlots.WINDOW, BlockSlots.TASK);
+        assertThat(plan.blocks())
+                .filteredOn(block -> block.slot().equals(BlockSlots.SCENE))
+                .singleElement()
+                .satisfies(block -> {
+                    assertThat(block.stability()).isEqualTo(Block.Stability.CHAPTER);
+                    assertThat(block.text())
+                            .endsWith("Scene so far: Chapter 1, after paragraph 2. Recently present, not in this"
+                                    + " passage: Зотов → Зотов (male).");
+                });
+    }
 }

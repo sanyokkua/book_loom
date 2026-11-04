@@ -56,8 +56,8 @@ class SegmentTranslatorProtectedSpansTest {
                 translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
+                .endsWith("Keep every ⟦…⟧ mark exactly once.")
                 .doesNotContain("Hale opened");
         assertThat(DraftStepFixtures.drafted(result))
                 .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::lockedRenderings)
@@ -77,7 +77,7 @@ class SegmentTranslatorProtectedSpansTest {
         final DraftOutcome.Drafted draft =
                 DraftStepFixtures.drafted(translator.translate(segment, DraftContext.empty(), mask));
         final Result<RepairReply> repaired = translator
-                .repairCall(segment, DraftContext.empty(), mask)
+                .repairCall(segment, null, mask)
                 .send(
                         draft.maskedReply(),
                         List.of(Objects.requireNonNull(draft.gateFinding())),
@@ -86,8 +86,8 @@ class SegmentTranslatorProtectedSpansTest {
         assertThat(draft.restoredTarget()).isNull();
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
-                .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
+                .contains("The protected token ⟦g2⟧ came back 0 times")
                 .contains("<PreviousAttempt>\nВін відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</PreviousAttempt>");
         assertThat(model.requests().get(1).expectedOutputTokens())
                 .isEqualTo(model.requests().getFirst().expectedOutputTokens());
@@ -108,7 +108,7 @@ class SegmentTranslatorProtectedSpansTest {
                 translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
+                .contains("<s id=\"1\">⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.</s>")
                 .doesNotContain("Hale opened");
         assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
     }
@@ -128,7 +128,7 @@ class SegmentTranslatorProtectedSpansTest {
                 translator(segment, mask, model, BookFormat.EPUB).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("<Text>\nShe whispered ⟦g2⟧ and left.\n</Text>")
+                .contains("<s id=\"1\">She whispered ⟦g2⟧ and left.</s>")
                 .doesNotContain("au revoir");
         assertThat(DraftStepFixtures.drafted(result).restoredTarget())
                 .isEqualTo("Вона прошепотіла <i xml:lang=\"fr\">au revoir</i> і пішла.");

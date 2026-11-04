@@ -1,8 +1,8 @@
 package ua.bookloom.pipeline;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import lombok.AccessLevel;
@@ -67,23 +67,32 @@ final class ChunkRunFixtures {
         return Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(text), FinishReason.STOP));
     }
 
+    /** A single-target reply, the shape a directed fix and a revision are read in. */
+    static Result<ChatResponse> singleTarget(final String text) {
+        return Result.ok(new ChatResponse(TestReplies.singleTargetReply(text), FinishReason.STOP));
+    }
+
     static List<String> formats(final ScriptedChatModel model) {
-        return model.requests().stream()
-                .map(request -> Objects.requireNonNull(request.responseFormat(), "format")
-                        .name())
-                .toList();
+        return model.requests().stream().map(ScriptedChatModel::callName).toList();
     }
 
     static String userMessage(final ChatRequest request) {
         return request.messages().get(1).content();
     }
 
-    static String preceding(final String... targets) {
-        return "<PreviousTranslations>\n" + String.join("\n\n", targets) + "\n</PreviousTranslations>";
+    /** The previous pairs block of a window whose neighbours were accepted, each as its source and translation. */
+    static String preceding(final String... sourcesAndTargets) {
+        final List<String> lines = new ArrayList<>();
+        for (int i = 0; i + 1 < sourcesAndTargets.length; i += 2) {
+            lines.add("Source: " + sourcesAndTargets[i]);
+            lines.add("Translation: " + sourcesAndTargets[i + 1]);
+        }
+        return String.join("\n", lines);
     }
 
+    /** The one item of a single draft, a batch of one. */
     static String shown(final String source) {
-        return "<Text>\n" + source + "\n</Text>";
+        return "<s id=\"1\">" + source + "</s>";
     }
 
     static void pauseOn(final TranslationJobImpl translation, final String segmentId, final JobEvent event) {

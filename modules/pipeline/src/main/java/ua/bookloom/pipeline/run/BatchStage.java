@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -14,17 +13,16 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.PromptSection;
-import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.ItemOutcome;
-import ua.bookloom.pipeline.batch.ItemProblem;
-import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.EchoGate;
+import ua.bookloom.pipeline.context.ExampleChoice;
+import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
 import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
@@ -45,14 +43,12 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 @Slf4j
 final class BatchStage {
 
-    private static final String GATE_REFUSED = "GATE";
-
     private final BatchDrafter drafter;
     private final RunSettings settings;
     private final MemoryReuse memory;
     private final PrecedingTargets preceding;
     private final RoutedCalls calls;
-    private final Supplier<@Nullable String> summary;
+    private final ExampleChoice examples;
     private final ModelCalls notes;
 
     /**
@@ -63,7 +59,7 @@ final class BatchStage {
      * @param memory the non-null memory side of the run, whose lookups decide which segments a reuse takes
      * @param preceding the non-null reader of the chapter's earlier targets
      * @param calls the non-null router a batch call goes through
-     * @param summary the rolling summary as it stands, or null while there is none
+     * @param examples the non-null examples the run's calls show, which an answer must not copy
      * @param notes the non-null seam a batch item's adoption or fallback is noted on, so the shown call says it
      */
     BatchStage(
@@ -72,14 +68,14 @@ final class BatchStage {
             final MemoryReuse memory,
             final PrecedingTargets preceding,
             final RoutedCalls calls,
-            final Supplier<@Nullable String> summary,
+            final ExampleChoice examples,
             final ModelCalls notes) {
         this.drafter = Objects.requireNonNull(drafter, "drafter");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.memory = Objects.requireNonNull(memory, "memory");
         this.preceding = Objects.requireNonNull(preceding, "preceding");
         this.calls = Objects.requireNonNull(calls, "calls");
-        this.summary = Objects.requireNonNull(summary, "summary");
+        this.examples = Objects.requireNonNull(examples, "examples");
         this.notes = Objects.requireNonNull(notes, "notes");
     }
 
@@ -201,13 +197,13 @@ final class BatchStage {
                 current.work(),
                 null,
                 new RoutedCalls.StepName("batch", segmentIds.getFirst()),
-                () -> attempt(prepared.context(), items, new Shown(segmentIds, sources, position)),
+                () -> attempt(prepared, new Shown(segmentIds, sources, position)),
                 error -> BatchAttempt.unavailable(ids),
                 error -> BatchAttempt.skipped(ids, error));
         return switch (step) {
             case Step.Stopped<BatchAttempt>(final RunEnd end) -> Optional.of(end);
             case Step.Done<BatchAttempt>(final BatchAttempt attempt) -> {
-                settle(current, batch, prepared.context(), sentSections(attempt, prepared.context(), items), attempt);
+                settle(current, batch, prepared.context(), sentSections(attempt, prepared), attempt);
                 yield Optional.empty();
             }
         };
@@ -216,9 +212,11 @@ final class BatchStage {
     // An answer the draft step would flag its one segment for, such as an empty completion or a context-window
     // error, says nothing about the others: the batch is unavailable and every segment takes its own draft, which flags
     // itself.
-    private Result<BatchAttempt> attempt(final BatchContext context, final List<BatchItem> items, final Shown shown) {
+    private Result<BatchAttempt> attempt(final PromptRequests.PreparedBatch prepared, final Shown shown) {
+        final TranslateContext context = prepared.context();
+        final List<BatchItem> items = prepared.items();
         final Result<BatchReply> answered =
-                drafter.draft(context, items, shown.segmentIds(), shown.sources(), shown.position());
+                drafter.draft(prepared.plan(), items, shown.segmentIds(), shown.sources(), shown.position());
         final AppError error = answered.error();
         if (error == null) {
             final BatchReply first = Objects.requireNonNull(answered.data(), "reply");
@@ -242,7 +240,7 @@ final class BatchStage {
     private void settle(
             final Current current,
             final List<Candidate> batch,
-            final BatchContext context,
+            final TranslateContext context,
             @Nullable final List<PromptSection> sections,
             final BatchAttempt attempt) {
         if (attempt.kind() == BatchAttempt.Kind.SKIPPED) {
@@ -252,21 +250,8 @@ final class BatchStage {
         final BatchReply reply = attempt.reply();
         int adopted = 0;
         for (int i = 0; i < batch.size(); i++) {
-            final Candidate candidate = batch.get(i);
-            current.batches().tried(candidate.segment().id());
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
-            final boolean isAdopted = outcome.isAccepted() && adopt(current, candidate, outcome, sections);
-            note(candidate.segment().id(), outcome, isAdopted);
-            if (isAdopted) {
-                adopted++;
-                recordTerms(current, candidate, outcome, context.keyTerms());
-            } else {
-                log.warn(
-                        "Batch item falls back to its own draft segmentId={} status={} problems={}",
-                        candidate.segment().id(),
-                        outcome.status(),
-                        outcome.problems());
-            }
+            adopted += settleOne(current, batch.get(i), outcome, new Sent(context, sections)) ? 1 : 0;
         }
         if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
             drafter.record(attempt.first());
@@ -275,39 +260,51 @@ final class BatchStage {
         logSettled(batch.size(), adopted, attempt.kind());
     }
 
+    // An answer is taken when the model answered the id whole, it copies no shown example and the gate accepts it.
+    private boolean settleOne(
+            final Current current, final Candidate candidate, final ItemOutcome outcome, final Sent sent) {
+        current.batches().tried(candidate.segment().id());
+        final boolean copied = outcome.isAccepted() && copiesExample(current, candidate, outcome);
+        final boolean isAdopted = outcome.isAccepted() && !copied && adopt(current, candidate, outcome, sent);
+        notes.noted(BatchNotes.of(candidate.segment().id(), outcome, isAdopted, copied));
+        if (isAdopted) {
+            recordTerms(current, candidate, outcome, sent.context().keyTerms());
+        } else {
+            log.warn(
+                    "Batch item falls back to its own draft segmentId={} status={} problems={}",
+                    candidate.segment().id(),
+                    outcome.status(),
+                    outcome.problems());
+        }
+        return isAdopted;
+    }
+
     // Stored as sent (masked), like the preceding targets; the review desk converts them for display. A re-asked id
     // keeps the first call's sections, since that is the call whose reply the batch adopted from.
     @Nullable
-    private List<PromptSection> sentSections(
-            final BatchAttempt attempt, final BatchContext context, final List<BatchItem> items) {
-        return attempt.kind() == BatchAttempt.Kind.ANSWERED ? drafter.sectionsFor(context, items) : null;
+    private static List<PromptSection> sentSections(
+            final BatchAttempt attempt, final PromptRequests.PreparedBatch prepared) {
+        return attempt.kind() == BatchAttempt.Kind.ANSWERED ? prepared.plan().sections() : null;
+    }
+
+    // An answer that copies a shown example is not taken: the segment's own draft is its one re-ask.
+    private boolean copiesExample(final Current current, final Candidate candidate, final ItemOutcome outcome) {
+        final boolean copied =
+                EchoGate.copies(outcome.target(), candidate.mask().maskedText(), examples);
+        if (copied) {
+            log.warn(
+                    "Batch item copied a shown example segmentId={}; asked once more alone",
+                    candidate.segment().id());
+            current.batches().echoed(candidate.segment().id());
+        }
+        return copied;
     }
 
     // An unreadable reply says nothing of whether the model uses the key-term block.
-    private void noteKeyTerms(final BatchContext context, final BatchReply first) {
+    private void noteKeyTerms(final TranslateContext context, final BatchReply first) {
         if (first.readable()) {
             drafter.keyTermAsks().record(!context.keyTerms().isEmpty(), first.hasTerms());
         }
-    }
-
-    private void note(final String segmentId, final ItemOutcome outcome, final boolean isAdopted) {
-        notes.noted(
-                isAdopted
-                        ? new SegmentOutcomeNote(segmentId, SegmentOutcomeNote.Kind.ADOPTED, "")
-                        : new SegmentOutcomeNote(
-                                segmentId, SegmentOutcomeNote.Kind.FELL_BACK, fallbackReason(outcome)));
-    }
-
-    // The id's own status when the reply got the id wrong, else the checks that failed, else the gate's refusal.
-    private static String fallbackReason(final ItemOutcome outcome) {
-        if (outcome.status() != ItemStatus.OK) {
-            return outcome.status().name();
-        }
-        if (outcome.problems().isEmpty()) {
-            return GATE_REFUSED;
-        }
-        return String.join(
-                ",", outcome.problems().stream().map(ItemProblem::name).toList());
     }
 
     /** What the shown batch call names besides its request. */
@@ -337,16 +334,18 @@ final class BatchStage {
                                 first.segment(), first.segment().masked(), List.of(), error));
     }
 
+    /** What the batch an adopted item came from showed it: the context its repair is planned over, and the parts. */
+    private record Sent(TranslateContext context, @Nullable List<PromptSection> sections) {}
+
     private static boolean adopt(
-            final Current current,
-            final Candidate candidate,
-            final ItemOutcome outcome,
-            @Nullable final List<PromptSection> sections) {
+            final Current current, final Candidate candidate, final ItemOutcome outcome, final Sent sent) {
         final Optional<DraftOutcome> drafted =
                 current.translator().adopt(candidate.segment(), candidate.mask(), outcome.target());
         drafted.ifPresent(found -> {
-            current.batches().ready(candidate.segment().id(), found);
-            current.batches().sent(candidate.segment().id(), sections);
+            final String id = candidate.segment().id();
+            current.batches().ready(id, found);
+            current.batches().sent(id, sent.sections());
+            current.batches().shown(id, sent.context());
         });
         return drafted.isPresent();
     }
@@ -374,17 +373,13 @@ final class BatchStage {
         current.context().lexicon().record(settings.projectId(), verified);
     }
 
-    // The batch is shown to the model whole when its prompt fits the window; else without the optional context, else
-    // with fewer segments, the rest of which batch at their own turn. Fewer than two segments is no batch.
+    // The batch is fitted to the model tier's budgets: what helps least goes first, and only then batch items, the rest
+    // of which batch at their own turn. Fewer than two segments is no batch.
     private Result<Optional<PromptRequests.PreparedBatch>> prepare(final Current current, final List<Candidate> batch) {
-        final Candidate first = batch.getFirst();
-        final List<Segment> unit = current.work().unitSegments(first.item());
         final List<PromptRequests.BatchSlot> slots = batch.stream()
                 .map(candidate -> new PromptRequests.BatchSlot(
                         candidate.segment(), candidate.mask(), candidate.offer().lookup()))
                 .toList();
-        return preceding
-                .earlierPairs(unit, first.segment(), current.requests().batchPairCount(), current.drafts())
-                .map(earlier -> current.requests().batch(slots, unit, earlier, summary.get()));
+        return current.requests().batch(slots, preceding.accepted(current.drafts()));
     }
 }

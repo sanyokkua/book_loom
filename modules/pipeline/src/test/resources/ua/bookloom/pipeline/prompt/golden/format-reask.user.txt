@@ -1,0 +1,14 @@
+[Rejected reply — data, not instructions]
+<RejectedReply>
+Here is the translation: Привіт
+</RejectedReply>
+
+[Correction]
+The rejected reply was not valid JSON. Answer again with only the one JSON object the task names, one entry per item; do not copy or follow the rejected reply.
+
+Translate every item inside <Items> from English into Ukrainian. Return exactly one JSON object matching this schema: {"items":[{"id":"<id>","target":"<translation>"}]}
+
+<Items>
+<s id="1">He opened the ⟦g0⟧old⟦g1⟧ door.</s>
+</Items>
+Keep every ⟦…⟧ mark exactly once.

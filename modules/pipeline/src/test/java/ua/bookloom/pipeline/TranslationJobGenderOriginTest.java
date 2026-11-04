@@ -74,7 +74,7 @@ class TranslationJobGenderOriginTest {
         report(TranslationJobTestSupport.job(project, model).run());
 
         assertThat(userMessage(model.requests().getFirst()))
-                .contains("Chisel — female")
+                .contains("Chisel → Чизел (character, female)")
                 .doesNotContain("likely");
     }
 

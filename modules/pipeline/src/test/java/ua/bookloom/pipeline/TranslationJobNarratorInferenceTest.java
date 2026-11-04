@@ -71,7 +71,7 @@ class TranslationJobNarratorInferenceTest {
             model.answerTo(REVIEW, reviewed());
             model.answerTo(SUMMARY, summaryReply());
         });
-        revisions.forEach(revision -> model.answerTo(REVISION, target(revision)));
+        revisions.forEach(revision -> model.answerTo(REVISION, ChunkRunFixtures.singleTarget(revision)));
         return model;
     }
 

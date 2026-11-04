@@ -31,7 +31,7 @@ class ChatRequestsReasoningTest {
     void build_limitWithASourceSize_carriesItToTheRequest() {
         final OutputLimit limit = new OutputLimit(40, 160, new SourceSize(300, 4));
 
-        assertThat(ChatRequests.build(PromptName.DRAFT_BATCH_JSON, MESSAGES, limit, false)
+        assertThat(ChatRequests.build(PromptName.TRANSLATE, MESSAGES, limit, false)
                         .source())
                 .isEqualTo(new SourceSize(300, 4));
     }

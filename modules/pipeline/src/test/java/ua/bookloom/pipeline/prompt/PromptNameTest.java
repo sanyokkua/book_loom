@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.List;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -26,7 +25,9 @@ class PromptNameTest {
     @CsvSource({
         "DRAFT,draft,DRAFT,draft,0.2",
         "STRUCTURAL_REPAIR,structural-repair,STRUCTURAL_REPAIR,structural-repair,0.2",
-        "REPAIR,repair,REPAIR,repair,0.1",
+        "REPAIR,repair,REPAIR,draft-batch-json,0.1",
+        "TRANSLATE,translate,DRAFT,draft-batch-json,0.2",
+        "FORMAT_REASK,format-reask,STRUCTURAL_REPAIR,draft-batch-json,0.2",
         "REVIEWER,reviewer,REVIEW,reviewer,0.0",
         "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2",
         "REVISION,revision,REVISION,revision,0.2",
@@ -58,19 +59,21 @@ class PromptNameTest {
 
     // Task 2.3: batches go out in one JSON format; the marked and dual batch prompts must not come back.
     @ParameterizedTest
-    @ValueSource(strings = {"DRAFT_BATCH_" + "MARKERS", "DRAFT_BATCH_" + "DUAL"})
+    @ValueSource(strings = {"DRAFT_BATCH_" + "MARKERS", "DRAFT_BATCH_" + "DUAL", "DRAFT_BATCH_" + "JSON"})
     void values_retiredBatchPrompt_isNotAName(final String retired) {
         assertThat(Arrays.stream(PromptName.values()).map(PromptName::name)).doesNotContain(retired);
     }
 
-    @Test
-    void temperature_draftLower_isPointOne() {
-        assertThat(PromptName.DRAFT.temperature(true)).isEqualTo(0.1);
+    @ParameterizedTest
+    @CsvSource({"DRAFT", "TRANSLATE"})
+    void temperature_draftLower_isPointOne(final PromptName name) {
+        assertThat(name.temperature(true)).isEqualTo(0.1);
     }
 
     @ParameterizedTest
     @CsvSource({
         "STRUCTURAL_REPAIR",
+        "FORMAT_REASK",
         "REPAIR",
         "REVIEWER",
         "DIRECTED_FIX",
@@ -91,7 +94,7 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"DRAFT", "STRUCTURAL_REPAIR", "REPAIR"})
+    @CsvSource({"DRAFT", "STRUCTURAL_REPAIR"})
     void pseudoModel_everyResponseFormatName_answersTargetObject(final PromptName name) {
         final ChatRequest request = new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),
@@ -103,5 +106,23 @@ class PromptNameTest {
 
         assertThat(result.isOk()).isTrue();
         assertThat(result.data()).extracting(ChatResponse::content).isEqualTo("{\"target\":\"HI.\"}");
+    }
+
+    // A single draft is a batch of one: the offline model answers every translate-family call by its items.
+    @ParameterizedTest
+    @CsvSource({"TRANSLATE", "FORMAT_REASK", "REPAIR"})
+    void pseudoModel_translateFamily_answersTheItemsObject(final PromptName name) {
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "<Items>\n<s id=\"1\">Hi.</s>\n</Items>")),
+                name.temperature(false),
+                new ResponseFormat(name.responseFormatName(), name.responseSchema()),
+                ReasoningLevel.OFF);
+
+        final var result = new PseudoChatModel(new ObjectMapper()).chat(request);
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(result.data())
+                .extracting(ChatResponse::content)
+                .isEqualTo("{\"items\":[{\"id\":\"1\",\"target\":\"HI.\"}]}");
     }
 }

@@ -2,7 +2,9 @@ package ua.bookloom.pipeline.context;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.setup.BookFacts;
 
@@ -12,6 +14,7 @@ import ua.bookloom.pipeline.setup.BookFacts;
  *
  * @param brief the Book Brief the run started with
  * @param bookFacts what the book says about itself
+ * @param index the book's index, which the recently-present card reads its chapter and paragraphs from
  * @param ruleFacts what the book holds that chooses the book rules
  * @param styleSheet the style sheet derived from the brief
  * @param rules the book rules of block 3, in order; copied
@@ -21,10 +24,13 @@ import ua.bookloom.pipeline.setup.BookFacts;
  * @param system blocks 1–7 of the TRANSLATE frame, in order; copied
  * @param analysis blocks 1, 2 and 7 of the ANALYSIS frame, in order; copied
  * @param frameHash the SHA-256 of {@code system}, lower-case hex, which names the frame a stored prompt was sent with
+ * @param firstPersonUnits the body units whose own narration is told in the first person, read once at run start so a
+ *     call's card never reads its chapter again; copied, empty when the brief names the narrator or none is
  */
 public record RunFrame(
         BookBrief brief,
         BookFacts bookFacts,
+        BookIndex index,
         RuleFacts ruleFacts,
         StyleSheet styleSheet,
         List<RuleLine> rules,
@@ -33,12 +39,14 @@ public record RunFrame(
         double outputRatio,
         List<Block> system,
         List<Block> analysis,
-        String frameHash) {
+        String frameHash,
+        Set<String> firstPersonUnits) {
 
     /** Rejects a missing part and copies the lists. */
     public RunFrame {
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(bookFacts, "bookFacts");
+        Objects.requireNonNull(index, "index");
         Objects.requireNonNull(ruleFacts, "ruleFacts");
         Objects.requireNonNull(styleSheet, "styleSheet");
         Objects.requireNonNull(examples, "examples");
@@ -50,6 +58,7 @@ public record RunFrame(
         rules = List.copyOf(Objects.requireNonNull(rules, "rules"));
         system = List.copyOf(Objects.requireNonNull(system, "system"));
         analysis = List.copyOf(Objects.requireNonNull(analysis, "analysis"));
+        firstPersonUnits = Set.copyOf(Objects.requireNonNull(firstPersonUnits, "firstPersonUnits"));
     }
 
     /**

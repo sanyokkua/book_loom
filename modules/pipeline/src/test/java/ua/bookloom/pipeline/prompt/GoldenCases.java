@@ -20,12 +20,7 @@ final class GoldenCases {
 
     /** Scenario names, one golden file pair (system and user) each. */
     static final List<String> NAMES = List.of(
-            "draft-en-uk",
-            "draft-en-uk-preceding",
-            "draft-unknown-source",
-            "draft-zh-hant",
-            "structural-repair",
-            "repair");
+            "draft-en-uk", "draft-en-uk-preceding", "draft-unknown-source", "draft-zh-hant", "structural-repair");
 
     static List<ChatMessage> render(final String name, final BiFunction<String, String, DraftPromptBuilder> builders) {
         return switch (name) {
@@ -39,15 +34,6 @@ final class GoldenCases {
                 builders.apply("en", "uk")
                         .messagesForStructuredRepair(
                                 segment(SOURCE), DraftContext.empty(), "Він відчинив", "was not a JSON object");
-            case "repair" ->
-                builders.apply("en", "uk")
-                        .messagesForRepair(
-                                segment(SOURCE),
-                                DraftContext.empty(),
-                                SOURCE,
-                                "",
-                                "Він відчинив ⟦g0⟧старі двері.",
-                                "markup (HIGH): Missing: ⟦g1⟧.");
             default -> throw new IllegalArgumentException(name);
         };
     }

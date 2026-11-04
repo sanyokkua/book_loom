@@ -37,6 +37,7 @@ import ua.bookloom.pipeline.run.RunReports;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.RunStores;
+import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.WorkList;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
@@ -209,7 +210,12 @@ final class TranslationJobImpl implements TranslationJob {
             emit(MemoryEvents.namesAdded(proposed));
         }
         announceProfile();
-        final RunEnd end = wiring.stages(run, dataOf(prepared), sinks()).run(work);
+        final Result<StageRunner> stages = wiring.stages(run, dataOf(prepared), sinks());
+        if (stages.isErr()) {
+            log.warn("The run's prompt frame could not be built project={}", request.projectId());
+            return finish(JobState.FAILED, run, errorOf(stages));
+        }
+        final RunEnd end = dataOf(stages).run(work);
         new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
     }

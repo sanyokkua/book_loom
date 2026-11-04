@@ -44,7 +44,7 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 /** Every error a model call answers is routed by the table: pause, flag, cancel or fail the run. */
 class TranslationJobProviderErrorTest {
 
-    private static final Pattern SOURCE_TEXT = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
+    private static final Pattern SOURCE_TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
 
     @TempDir
     private Path tempDir;

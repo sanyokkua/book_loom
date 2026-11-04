@@ -137,7 +137,7 @@ class BatchRoutingJobTest {
     void run_batchReplyMissingIds_addsOneReAskStep() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(items(entry("1", T0), entry("4", T3))))
-                .answerTo(BATCH, batchReply(items(entry("2", T1), entry("3", T2))));
+                .answerTo(BATCH, batchReply(items(entry("1", T1), entry("2", T2))));
         final TranslationJobImpl translation = batchedJob(fourParagraphs(), model);
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
         translation.subscribe(events::add);

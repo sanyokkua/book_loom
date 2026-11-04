@@ -98,6 +98,15 @@ public final class PromptTemplates {
                         .toList());
     }
 
+    /**
+     * The language-rules map the templates were loaded with, which the run frame chooses its rules and examples from.
+     *
+     * @return never null
+     */
+    public LanguageRules languageRules() {
+        return rules;
+    }
+
     /** Renders the system template of {@code name}; the map holds every required slot and only declared ones. */
     public String renderSystem(final PromptName name, final Map<String, String> values) {
         final Template template = systems.get(Objects.requireNonNull(name, "name"));
@@ -240,9 +249,7 @@ public final class PromptTemplates {
         if (name.showsNameExamples()) {
             return rules.nameExamples(source, target, NamePolicy.TRANSLITERATE);
         }
-        return name == PromptName.DRAFT_BATCH_JSON
-                ? BatchExamples.render(rules.batchExamples(source, target))
-                : rules.examples(source, target);
+        return rules.examples(source, target);
     }
 
     /**

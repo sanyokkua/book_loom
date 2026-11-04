@@ -216,7 +216,12 @@ public final class WireMockProvider implements AutoCloseable {
         return aResponse().withStatus(status);
     }
 
-    /** A reply carrying the strict one-field target object the engine asks for. */
+    /** A single-target reply, the shape a directed fix and a revision are read in. */
+    public ResponseDefinitionBuilder singleTarget(final String target, final Duration delay) {
+        return reply(TestReplies.singleTargetReply(target), delay);
+    }
+
+    /** A translate-family reply of one item, the shape a draft, its re-ask and its repair are read in. */
     public ResponseDefinitionBuilder target(final String target, final Duration delay) {
         return reply(TranslationJobTestSupport.targetReply(target), delay);
     }

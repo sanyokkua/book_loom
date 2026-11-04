@@ -29,6 +29,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 
@@ -251,8 +252,8 @@ class ConsistencyPassRetryTest {
         ok(book.runExport(PassOptions.BACKWARD_REVISION));
 
         assertThat(book.model().requests())
-                .noneMatch(request -> request.responseFormat() != null
-                        && DRAFT.equals(request.responseFormat().name()));
+                .noneMatch(request ->
+                        request.responseFormat() != null && DRAFT.equals(ScriptedChatModel.callName(request)));
         assertThat(book.stored(DANNY).machineTarget()).isEqualTo(DROPPED);
         assertThat(book.stored(DANNY).status()).isEqualTo(SegmentStatus.FLAGGED);
     }

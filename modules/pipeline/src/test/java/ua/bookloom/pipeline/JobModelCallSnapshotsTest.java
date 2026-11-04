@@ -319,7 +319,7 @@ class JobModelCallSnapshotsTest {
         final CallSnapshot shown = snapshots().getLast();
         assertThat(shown.callId()).isEqualTo(1L);
         assertThat(shown.state()).isEqualTo(CallState.ANSWERED);
-        assertThat(shown.reply()).isEqualTo("{\"target\":\"x\"}");
+        assertThat(shown.reply()).isEqualTo(TranslationJobTestSupport.targetReply("x"));
         assertThat(shown.items()).hasSize(4);
         assertThat(shown.items())
                 .filteredOn(item -> item.status() == CallItemStatus.MISSING)

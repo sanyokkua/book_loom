@@ -110,7 +110,7 @@ class QualityLoopModelErrorTest {
     }
 
     private static String targetReply(final String target) {
-        return "{\"target\":\"" + target + "\"}";
+        return "{\"items\":[{\"id\":\"1\",\"target\":\"" + target + "\"}]}";
     }
 
     private static ModelCalls calls(final ScriptedChatModel model) {

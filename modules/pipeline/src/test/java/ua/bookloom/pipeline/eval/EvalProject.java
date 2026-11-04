@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -30,19 +31,18 @@ import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.context.ContextPackage;
+import ua.bookloom.pipeline.context.AcceptedTargets;
+import ua.bookloom.pipeline.context.TranslateContext;
+import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.run.EarlierPair;
 import ua.bookloom.pipeline.run.PromptRequests;
 import ua.bookloom.pipeline.run.PromptRequests.BatchSlot;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
@@ -54,8 +54,8 @@ import ua.bookloom.pipeline.run.RunSettings;
  * window — and every request is built by the run's own {@link PromptRequests}. An eval therefore sends what the app
  * sends; the only inputs it makes up are the ones the case file states.
  *
- * <p>The earlier pairs of the unit and the summary are read the way a run reads them: the dial's count of the latest
- * pairs, and a batch's own count with the production cap.
+ * <p>The earlier pairs of the case are the unit's segments before the chunk, accepted with the case's targets, so a
+ * call's window reads them as a run reads what it accepted; the rolling summary no longer reaches a draft (design D10).
  */
 public final class EvalProject {
 
@@ -98,23 +98,23 @@ public final class EvalProject {
     private final RunSettings settings;
     private final PromptRequests requests;
     private final BatchDrafter drafter;
-    private final EvalContext context;
     private final List<Segment> chunk;
-    private final List<Segment> unit;
+    private final AcceptedTargets accepted;
+    private final TranslatePlanner planner;
 
     private EvalProject(
             final RunSettings settings,
             final PromptRequests requests,
             final BatchDrafter drafter,
-            final EvalContext context,
             final List<Segment> chunk,
-            final List<Segment> unit) {
+            final AcceptedTargets accepted,
+            final TranslatePlanner planner) {
         this.settings = settings;
         this.requests = requests;
         this.drafter = drafter;
-        this.context = context;
         this.chunk = chunk;
-        this.unit = unit;
+        this.accepted = accepted;
+        this.planner = planner;
     }
 
     /** The window every eval request is sized against; see {@link EvalWindow#window()}. */
@@ -141,11 +141,16 @@ public final class EvalProject {
                 PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window);
     }
 
-    /** A project whose brief is given instead of read from the environment; the case's narrator still applies. */
+    /**
+     * A project whose brief is given instead of read from the environment; the case's narrator still applies. The
+     * case's earlier pairs are the unit's segments before the chunk, accepted with their targets, so a call's window
+     * reads them as a run reads the segments it accepted.
+     */
     static EvalProject of(final Setup setup, final ModelCalls calls, final int window, final BookBrief chosen) {
         Objects.requireNonNull(setup, "setup");
         Objects.requireNonNull(calls, "calls");
-        final BookBrief brief = withNarrator(chosen, setup);
+        final BookBrief brief =
+                withNarrator(chosen, setup).withLanguages(setup.sourceLanguage(), setup.targetLanguage());
         final CallFrame frame = new CallFrame(
                 setup.sourceLanguage(),
                 setup.targetLanguage(),
@@ -154,41 +159,52 @@ public final class EvalProject {
                 setup.bookLanguage(),
                 brief.narrator());
         final RunSettings settings = settingsOf(brief, frame, window);
-        final List<Segment> chunk = segments(setup.chunk(), 0);
-        final List<Segment> unit = new ArrayList<>(chunk);
-        unit.addAll(segments(setup.after(), chunk.size()));
+        final Stores stores = stores(setup);
+        final EvalBook book = EvalBook.of(setup, brief, stores.glossary(), stores.lexicon(), window, TEMPLATES);
+        final TranslatePlanner planner = book.planner();
+        final List<Segment> chunk = book.chunk();
         final BatchDrafter drafter = new BatchDrafter(
-                new BatchPromptBuilder(TEMPLATES, frame),
+                new BatchPromptBuilder(planner),
                 new BatchReplyParser(MAPPER),
                 calls,
                 frame.sourceLanguage(),
                 frame.targetLanguage(),
                 BatchDrafter.DEFAULT_INITIAL_SIZE);
-        final PromptRequests requests = requestsOf(setup, settings, chunk, calls, drafter);
-        return new EvalProject(settings, requests, drafter, setup.context(), chunk, unit);
+        final PromptRequests requests = requestsOf(stores, settings, chunk, calls, drafter, planner);
+        return new EvalProject(settings, requests, drafter, chunk, book.accepted(), planner);
     }
 
-    // The glossary and the lexicon sit in the in-memory stores a run reads them from.
-    private static PromptRequests requestsOf(
-            final Setup setup,
-            final RunSettings settings,
-            final List<Segment> chunk,
-            final ModelCalls calls,
-            final BatchDrafter drafter) {
+    /** The glossary and the lexicon in the in-memory stores a run reads them from. */
+    private record Stores(GlossaryRepository glossary, LexiconRepository lexicon) {}
+
+    private static Stores stores(final Setup setup) {
         final var injector = Guice.createInjector(new InMemoryPersistenceModule());
         final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
         final LexiconRepository lexicon = injector.getInstance(LexiconRepository.class);
         setup.glossary().forEach(term -> glossary.add(term.entry(PROJECT)));
         setup.context().lexicon().forEach(entry -> lexicon.put(lexiconEntry(entry)));
+        return new Stores(glossary, lexicon);
+    }
+
+    private static PromptRequests requestsOf(
+            final Stores stores,
+            final RunSettings settings,
+            final List<Segment> chunk,
+            final ModelCalls calls,
+            final BatchDrafter drafter,
+            final TranslatePlanner planner) {
         final GateFunction documentGate = GateFunction.of(DOCUMENTS, BookFormat.TXT);
-        final SegmentTranslator translator = new SegmentTranslator(
-                documentGate,
-                calls,
-                BookFormat.TXT,
-                new DraftPromptBuilder(TEMPLATES, settings.frame()),
-                new DraftReplyParser(MAPPER));
+        final SegmentTranslator translator =
+                new SegmentTranslator(documentGate, calls, BookFormat.TXT, planner, MAPPER);
         final Result<PromptRequests> read = PromptRequests.read(
-                glossary, lexicon, settings, new Chunk(UNIT, chunk, false), documentGate, translator, drafter);
+                stores.glossary(),
+                stores.lexicon(),
+                settings,
+                new Chunk(UNIT, chunk, false),
+                documentGate,
+                translator,
+                drafter,
+                planner);
         return Objects.requireNonNull(read.data(), () -> "chunk context: " + read.error());
     }
 
@@ -202,7 +218,7 @@ public final class EvalProject {
         return new LexiconEntry(PROJECT, rendering.term(), List.of(), rendering.rendering(), null, null);
     }
 
-    private static List<Segment> segments(final List<String> texts, final int offset) {
+    static List<Segment> segments(final List<String> texts, final int offset) {
         final List<Segment> segments = new ArrayList<>();
         for (int i = 0; i < texts.size(); i++) {
             segments.add(segment(offset + i, texts.get(i)));
@@ -219,7 +235,7 @@ public final class EvalProject {
                 SegmentKind.PARAGRAPH,
                 masked,
                 masked,
-                java.util.Map.of(),
+                Map.of(),
                 "hash",
                 null,
                 null,
@@ -311,22 +327,27 @@ public final class EvalProject {
         return requests.loopSettings();
     }
 
-    /** The last masked targets a single draft shows, as many as the dial says. */
-    public List<String> earlierTargets() {
-        final List<EvalContext.Pair> all = context.preceding();
-        return all.subList(Math.max(0, all.size() - settings.dial().precedingTargets()), all.size()).stream()
-                .map(EvalContext.Pair::target)
-                .toList();
+    /** The planner of this project's translate-family calls, bound to the frame a run on it starts with. */
+    public TranslatePlanner planner() {
+        return planner;
     }
 
-    /** What a single draft of the segment at {@code index} is shown. */
-    public ContextPackage draftContext(final int index) {
-        return requests.contextFor(chunk.get(index), earlierTargets(), NO_MEMORY, context.summary());
+    /** The earlier segments' kept targets, as a run reads the segments it accepted before the chunk. */
+    public AcceptedTargets accepted() {
+        return accepted;
+    }
+
+    /** The window, map and memory a single draft of the segment at {@code index} is shown. */
+    public TranslateContext translateContext(final int index) {
+        final Segment segment = chunk.get(index);
+        final Result<TranslateContext> read = requests.translateContext(
+                List.of(new BatchSlot(segment, requests.mask(segment), NO_MEMORY)), accepted, List.of());
+        return Objects.requireNonNull(read.data(), () -> "window: " + read.error());
     }
 
     /** The request a run sends for the segment at {@code index}'s first draft. */
     public ChatRequest draftRequest(final int index) {
-        return requests.draftRequest(chunk.get(index), draftContext(index).draftContext(), mask(index));
+        return requests.draftRequest(chunk.get(index), translateContext(index), mask(index));
     }
 
     /** The batch of the whole chunk as the run would make it, or empty when the window takes fewer than two. */
@@ -335,21 +356,15 @@ public final class EvalProject {
     }
 
     /**
-     * The batch a run makes from {@code count} segments of the chunk that start at {@code from}, with the earlier pairs
-     * the case states, or empty when the window takes fewer than two.
+     * The batch a run makes from {@code count} segments of the chunk that start at {@code from}, after the earlier
+     * pairs the case states, or empty when the window takes fewer than two.
      */
     public Optional<PreparedBatch> batch(final int from, final int count) {
         final List<BatchSlot> slots = chunk.subList(from, from + count).stream()
                 .map(segment -> new BatchSlot(segment, requests.mask(segment), NO_MEMORY))
                 .toList();
-        final List<EvalContext.Pair> all = context.preceding();
-        final int first = Math.max(0, all.size() - requests.batchPairCount());
-        final List<EarlierPair> earlier = new ArrayList<>();
-        for (int i = first; i < all.size(); i++) {
-            earlier.add(
-                    new EarlierPair(segment(i, all.get(i).source()), all.get(i).target()));
-        }
-        return requests.batch(slots, unit, earlier, context.summary());
+        final Result<Optional<PreparedBatch>> prepared = requests.batch(slots, accepted);
+        return Objects.requireNonNull(prepared.data(), () -> "batch: " + prepared.error());
     }
 
     /** The request of a prepared batch's one call. */

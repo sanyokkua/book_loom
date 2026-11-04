@@ -59,7 +59,7 @@ class TranslationJobForeignBlockTest {
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests())
                 .hasSize(2)
-                .noneMatch(request -> userMessage(request).contains("<Text>\n" + LATIN));
+                .noneMatch(request -> userMessage(request).contains("<s id=\"1\">" + LATIN));
         assertThat(stored(project, LATIN_ID))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.VERBATIM, LATIN);
@@ -100,8 +100,8 @@ class TranslationJobForeignBlockTest {
 
     private static List<ChatRequest> drafts(final ScriptedChatModel model) {
         return model.requests().stream()
-                .filter(request -> request.responseFormat() != null
-                        && DRAFT.equals(request.responseFormat().name()))
+                .filter(request ->
+                        request.responseFormat() != null && DRAFT.equals(ScriptedChatModel.callName(request)))
                 .toList();
     }
 

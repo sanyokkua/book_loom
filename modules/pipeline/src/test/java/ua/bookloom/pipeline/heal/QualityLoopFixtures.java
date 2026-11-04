@@ -23,12 +23,11 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
+import ua.bookloom.pipeline.TestPlanners;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -125,11 +124,10 @@ final class QualityLoopFixtures {
                 GateFunction.of(documents, BookFormat.MARKDOWN),
                 noDraftCall,
                 BookFormat.MARKDOWN,
-                new DraftPromptBuilder(new PromptTemplates(), frame),
-                new DraftReplyParser(new ObjectMapper()));
+                TestPlanners.planner(frame.sourceLanguage(), frame.targetLanguage()),
+                new ObjectMapper());
         final Segment segment = draft.segment();
-        return draft.withRepair(
-                translator.repairCall(segment, DraftContext.empty(), ProtectedMask.none(segment.masked())));
+        return draft.withRepair(translator.repairCall(segment, null, ProtectedMask.none(segment.masked())));
     }
 
     /** The draft carrying the run's own repair call, over the fixtures' English to Ukrainian frame. */

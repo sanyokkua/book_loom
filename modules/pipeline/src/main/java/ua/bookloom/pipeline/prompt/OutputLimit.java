@@ -38,7 +38,7 @@ public record OutputLimit(
     private static final int EXPECTED_SHARE_DIVISOR = 2;
     // A one-word source under the estimator's 64-token floor came back as an empty target ("Model returned no
     // translated text"): the JSON envelope and any reasoning preamble share the cap with the word itself.
-    private static final int SHORT_SOURCE_CAP_FLOOR = 128;
+    static final int SHORT_SOURCE_CAP_FLOOR = 128;
     // Per item the reply spends tokens on the id and its wrapper: {"id":"12","target":""}.
     private static final int BATCH_ITEM_ENVELOPE_TOKENS = 16;
     // A summary reply holds the summary in both languages, each kept under the prompt's 150 words, and a few facts.

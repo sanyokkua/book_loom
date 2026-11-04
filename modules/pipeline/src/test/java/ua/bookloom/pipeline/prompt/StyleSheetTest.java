@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -186,6 +187,18 @@ class StyleSheetTest {
         assertThat(StyleSheet.from(brief).text())
                 .startsWith(DEFAULT_LINE + "\n")
                 .contains(expected);
+    }
+
+    // A suggested gender is a guess: it is told as likely and orders no form.
+    @Test
+    void narrator_likelyFemale_readsLikely() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withNarrator(
+                        new Narrator(NarratorPerson.FIRST, Gender.FEMALE, Narrator.GenderOrigin.SUGGESTED, List.of()));
+
+        assertThat(StyleSheet.from(brief).text())
+                .contains("Narrator: first person, likely female")
+                .doesNotContain("feminine form");
     }
 
     @Test

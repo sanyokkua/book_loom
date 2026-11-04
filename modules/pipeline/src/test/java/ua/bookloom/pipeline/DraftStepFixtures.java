@@ -47,6 +47,17 @@ final class DraftStepFixtures {
             final String targetLanguage,
             @Nullable final String sourceLanguage) {
         return new SegmentTranslator(
+                gate, calls, format, TestPlanners.planner(sourceLanguage, targetLanguage), new ObjectMapper());
+    }
+
+    /** A review retry's draft step, which still replays the single-draft prompt (task 11.7 moves it). */
+    static SegmentTranslator retryTranslator(
+            final GateFunction gate,
+            final ModelCalls calls,
+            final BookFormat format,
+            final String targetLanguage,
+            @Nullable final String sourceLanguage) {
+        return new SegmentTranslator(
                 gate,
                 calls,
                 format,

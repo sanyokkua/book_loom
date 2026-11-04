@@ -110,7 +110,10 @@ class TranslationJobChunkTest {
         report(job(project, model).run());
 
         assertThat(formats(model).subList(0, 6)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, REPAIR);
-        assertThat(userMessage(model.requests().get(2))).contains(preceding(T0, ECHO1));
+        // A neighbour drafted in the same chunk is not decided yet, so the window shows it as source only.
+        assertThat(userMessage(model.requests().get(2)))
+                .contains("Source: " + ChunkRunFixtures.S0 + "\nSource: " + ChunkRunFixtures.S1)
+                .doesNotContain(T0, ECHO1);
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 4, 0, 0, 0));
     }
 
@@ -126,7 +129,7 @@ class TranslationJobChunkTest {
 
         // Fast makes no repair: the echo is flagged at once, and the third draft is shown the second one decided.
         assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT);
-        assertThat(userMessage(model.requests().get(2))).contains(preceding(T2));
+        assertThat(userMessage(model.requests().get(2))).contains(preceding(ChunkRunFixtures.S2, T2));
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 2, 0, 1, 0));
     }
 

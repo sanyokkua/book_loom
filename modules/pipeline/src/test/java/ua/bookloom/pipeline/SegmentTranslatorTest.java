@@ -31,7 +31,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.DraftOutcome;
-import ua.bookloom.pipeline.prompt.DraftSchema;
+import ua.bookloom.pipeline.prompt.BatchSchema;
 
 /** The draft step's prompt, whitespace, placeholder gate and reply precedence table. */
 class SegmentTranslatorTest {
@@ -57,10 +57,10 @@ class SegmentTranslatorTest {
         DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
         assertThat(model.requests()).singleElement().satisfies(request -> {
-            assertThat(request.messages().getFirst().content()).contains("from English (en) into Ukrainian (uk)");
+            assertThat(request.messages().getFirst().content()).contains("from English into Ukrainian.");
             assertThat(request.messages().get(1).content())
-                    .contains("<Text>\n" + MASKED_SOURCE + "\n</Text>")
-                    .doesNotContain("\"id\":", "\"source\":");
+                    .contains("<s id=\"1\">" + MASKED_SOURCE + "</s>")
+                    .doesNotContain("\"source\":");
         });
     }
 
@@ -72,7 +72,7 @@ class SegmentTranslatorTest {
         DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null)
                 .translate(segment);
         assertThat(model.requests().getFirst().messages().getFirst().content())
-                .contains("from the language of this segment (infer it from its text) into Ukrainian (uk)");
+                .contains("from the language of this segment (infer it from its text) into Ukrainian.");
     }
 
     // The already-resolved requested source is used even when the opened book declares another language.
@@ -83,8 +83,8 @@ class SegmentTranslatorTest {
         DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "de")
                 .translate(segment);
         assertThat(model.requests().getFirst().messages().getFirst().content())
-                .contains("from German (de) into Ukrainian (uk)")
-                .doesNotContain("from English (en)");
+                .contains("from German into Ukrainian.")
+                .doesNotContain("from English");
     }
 
     // Each draft request must constrain the provider to the catalog's low-variance JSON response contract.
@@ -96,7 +96,8 @@ class SegmentTranslatorTest {
                 .translate(segment);
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.temperature()).isEqualTo(0.2);
-            assertThat(request.responseFormat()).isEqualTo(new ResponseFormat("draft", DraftSchema.SCHEMA));
+            assertThat(request.responseFormat())
+                    .isEqualTo(new ResponseFormat(BatchSchema.FORMAT_NAME, BatchSchema.SCHEMA));
             assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
         });
     }
@@ -181,7 +182,7 @@ class SegmentTranslatorTest {
         assertThat(DraftStepFixtures.drafted(thirdResult).restoredTarget()).isEqualTo("THIRD.");
         assertThat(model.requests())
                 .extracting(request -> request.messages().get(1).content())
-                .allSatisfy(message -> assertThat(message).contains("<Text>"));
+                .allSatisfy(message -> assertThat(message).contains("<Items>"));
     }
 
     private static Stream<Arguments> decisionCases() {
@@ -330,10 +331,9 @@ class SegmentTranslatorTest {
     }
 
     private static Consumer<Result<DraftOutcome>> restored(final String target) {
-        return result -> {
-            assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo(target);
-            assertThat(DraftStepFixtures.drafted(result).gateFinding()).isNull();
-        };
+        return result -> assertThat(DraftStepFixtures.drafted(result))
+                .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::gateFinding)
+                .containsExactly(target, null);
     }
 
     // Design D3 rule 5: after its one placeholder repair the draft goes to self-heal with the gate's markup finding.

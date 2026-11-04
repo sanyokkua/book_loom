@@ -54,11 +54,11 @@ class TranslationJobStartTest {
         job(project, second).run();
 
         assertThat(second.requests()).hasSize(PARAGRAPHS - DECIDED_BEFORE_STOP);
-        assertThat(promptOf(second.requests().getFirst())).contains("\nPara 5.\n");
+        assertThat(promptOf(second.requests().getFirst())).contains("<s id=\"1\">Para 5.</s>");
         assertThat(second.requests())
                 .extracting(TranslationJobStartTest::promptOf)
                 .noneMatch(prompt -> IntStream.range(0, DECIDED_BEFORE_STOP)
-                        .anyMatch(index -> prompt.contains("\nPara " + index + ".\n")));
+                        .anyMatch(index -> prompt.contains(">Para " + index + ".</s>")));
     }
 
     // Counting only this run's decisions would report 7 of the 12 segments after the second run.
@@ -90,7 +90,7 @@ class TranslationJobStartTest {
         final JobReport completed = report(job(project, second).run());
 
         assertThat(second.requests()).hasSize(1);
-        assertThat(promptOf(second.requests().getFirst())).contains("\nTwo.\n");
+        assertThat(promptOf(second.requests().getFirst())).contains("<s id=\"1\">Two.</s>");
         assertThat(stored(project, "Book.md:0").status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(completed)
                 .extracting(JobReport::segments, JobReport::accepted, JobReport::flagged)

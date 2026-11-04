@@ -38,6 +38,11 @@ public record ItemOutcome(
         return new ItemOutcome(id, status, "", List.of());
     }
 
+    /** This outcome under another id. */
+    ItemOutcome withId(final String other) {
+        return new ItemOutcome(other, status, target, problems, terms);
+    }
+
     /** This outcome with the renderings the model reported for its id. */
     ItemOutcome withTerms(final Map<String, String> reported) {
         return new ItemOutcome(id, status, target, problems, reported);

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.heal;
 
 import java.util.Objects;
+import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.AppError;
@@ -38,10 +39,23 @@ public final class RepairReplies {
             final DraftReplyParser parser,
             final String source,
             final String targetLanguage) {
-        Objects.requireNonNull(reply, "reply");
         Objects.requireNonNull(parser, "parser");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
+        return read(reply, text -> parser.parseRepair(text, source, targetLanguage));
+    }
+
+    /**
+     * Classifies one self-heal call's outcome with the reader of the reply's shape the call asked for.
+     *
+     * @param reply the model call's result
+     * @param reader the non-null reader of the raw reply text: the single-target reader or a batch of one's
+     * @return as {@link #read(Result, DraftReplyParser, String, String)}
+     */
+    public static Result<RepairReply> read(
+            final Result<ChatResponse> reply, final Function<String, ParsedReply> reader) {
+        Objects.requireNonNull(reply, "reply");
+        Objects.requireNonNull(reader, "reader");
         if (reply.isErr()) {
             return routeCallFailure(Objects.requireNonNull(reply.error()));
         }
@@ -52,7 +66,7 @@ public final class RepairReplies {
         if (response.finishReason() != FinishReason.STOP) {
             return Result.ok(new RepairReply.FlagNow(invalidFinish()));
         }
-        final ParsedReply parsed = parser.parseRepair(response.content(), source, targetLanguage);
+        final ParsedReply parsed = reader.apply(response.content());
         return parsed.kind() == ReplyKind.INVALID_STRUCTURED
                 ? Result.ok(new RepairReply.Malformed(parsed.diagnostic()))
                 : Result.ok(new RepairReply.Rewritten(parsed.translation().strip()));

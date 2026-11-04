@@ -158,7 +158,7 @@ class TranslationJobRevisionTest {
                 .answerTo(REVIEW, reviewed())
                 .answerTo(REVIEW, reviewed())
                 .answerTo(SUMMARY, summaryReply())
-                .answerTo(REVISION, target("Сем пішла."));
+                .answerTo(REVISION, ChunkRunFixtures.singleTarget("Сем пішла."));
     }
 
     private static void pauseOnRevise(final TranslationJobImpl translation, final JobEvent event) {

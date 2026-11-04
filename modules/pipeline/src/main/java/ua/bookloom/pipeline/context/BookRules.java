@@ -39,7 +39,16 @@ public final class BookRules {
      */
     @Inject
     public BookRules(final PromptVariants variants) {
-        this.rules = Objects.requireNonNull(variants, "variants").rules();
+        this(Objects.requireNonNull(variants, "variants").rules());
+    }
+
+    /**
+     * Reads its wording from a language-rules map already loaded, such as the one a run's templates hold.
+     *
+     * @param rules the non-null language-rules map
+     */
+    public BookRules(final LanguageRules rules) {
+        this.rules = Objects.requireNonNull(rules, "rules");
     }
 
     /**

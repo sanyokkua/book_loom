@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
@@ -17,12 +19,13 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
-import ua.bookloom.pipeline.batch.BatchContext;
+import ua.bookloom.pipeline.TestPlanners;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -150,8 +153,17 @@ class ContextWindowBudgetTest {
 
     @Test
     void staticPrefix_batchSystemMessage_fitsTheReservedPrefix() {
-        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME)
-                        .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "He left."))))
+        final TranslatePlanner planner = TestPlanners.planner(
+                BookBrief.defaults("en").withLanguages("en", "uk"),
+                IndexTestBooks.oneUnit("He left."),
+                ModelProfile.defaults());
+        final List<BatchItem> items = List.of(new BatchItem("1", "He left."));
+        final BatchPromptBuilder builder = new BatchPromptBuilder(planner);
+        final PromptPlan plan = Objects.requireNonNull(builder.plan(TestPlanners.empty(planner), items, List.of("x:0"))
+                        .data())
+                .plan();
+        final int actual = PromptBreakdown.of(
+                        builder.requestFor(plan, items, false).messages())
                 .systemTokens();
 
         assertThat(ChunkBudget.staticPrefix(FRAME)).isGreaterThanOrEqualTo(actual);

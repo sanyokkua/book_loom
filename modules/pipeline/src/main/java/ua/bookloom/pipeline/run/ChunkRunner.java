@@ -145,7 +145,8 @@ public final class ChunkRunner {
                 chunk,
                 steps.gate(),
                 steps.translator(),
-                steps.batch());
+                steps.batch(),
+                steps.planner());
         if (read.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), ERROR)));
         }

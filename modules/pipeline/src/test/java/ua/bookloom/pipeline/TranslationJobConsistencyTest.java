@@ -320,8 +320,7 @@ class TranslationJobConsistencyTest {
 
     private static List<String> messagesOf(final ScriptedChatModel model, final String format) {
         return model.requests().stream()
-                .filter(request -> format.equals(Objects.requireNonNull(request.responseFormat(), "format")
-                        .name()))
+                .filter(request -> format.equals(ScriptedChatModel.callName(request)))
                 .map(ChunkRunFixtures::userMessage)
                 .toList();
     }
