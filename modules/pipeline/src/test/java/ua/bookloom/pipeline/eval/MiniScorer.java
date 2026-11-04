@@ -106,7 +106,7 @@ final class MiniScorer {
 
     private static MiniResult segmentResult(final Expectation expectation, final MiniRun run) {
         final Verdict verdict = segment(expectation, run);
-        final List<String> blocks = MiniGraders.isGlossaryLevel(expectation.check())
+        final List<String> blocks = MiniGraders.isRunLevel(expectation.check())
                 ? List.of()
                 : expectation.segment() == null ? expectation.group() : List.of(expectation.segment());
         return result(
@@ -191,6 +191,7 @@ final class MiniScorer {
             case NARRATOR_GENDER -> MiniGraders.narratorGender(joined, expectation.args());
             case ONE_SPELLING_PER_LEMMA -> MiniGraders.oneSpelling(joined, expectation.args());
             case GLOSSARY_ONE_ENTRY, GLOSSARY_GENDER -> throw new IllegalStateException("glossary level");
+            case WINDOW_INJECTION -> throw new IllegalStateException("run level");
             case NOT_FLAGGED, NO_FINDING -> throw new IllegalStateException("handled above");
         };
     }

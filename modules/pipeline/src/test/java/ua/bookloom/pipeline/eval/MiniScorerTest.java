@@ -160,10 +160,63 @@ class MiniScorerTest {
         "DIALOGUE_DASH,SOFT",
         "VOCATIVE,SOFT",
         "NARRATOR_GENDER,SOFT",
-        "ADDRESS_SAME,SOFT"
+        "ADDRESS_SAME,SOFT",
+        "WINDOW_INJECTION,HARD"
     })
     void level_ruGraders_followTheDesignTable(final CheckKind check, final CheckKind.Level level) {
         assertThat(check.level()).isEqualTo(level);
+    }
+
+    private static final List<MiniGold.Entry> GOLD = List.of(
+            new MiniGold.Entry("Ilsabet Corwen", List.of("Ilsabet Corwen", "Ilsabet"), "Ілсабет Корвен", Gender.FEMALE),
+            new MiniGold.Entry("Dorrin Vask", List.of("Dorrin Vask", "Dorrin"), "Дорін Васк", Gender.MALE));
+
+    private static CaseRecord.Exchange glossaryCall(final String items) {
+        return new CaseRecord.Exchange(
+                "[system] Translate.\n[user] [Glossary — apply these renderings exactly]\n"
+                        + "Ilsabet Corwen → Ілсабет Корвен (character, female)\n"
+                        + "Dorrin Vask → Дорін Васк (character, male)\n\n<Items>\n"
+                        + items + "\n</Items>\n\nReminder.",
+                "{}");
+    }
+
+    @Test
+    void windowInjection_entryNamedOutsideItsWindow_fails() {
+        // A glossary line for Dorrin Vask in a call whose items never mention him is an injection.
+        final MiniScorer.Verdict verdict = MiniGraders.windowInjection(
+                List.of(glossaryCall("<s id=\"1\">Ilsabet locked the door.</s>")),
+                List.of("Ilsabet locked the door."),
+                GOLD);
+
+        assertThat(verdict.ok()).isFalse();
+        assertThat(verdict.detail()).contains("Dorrin Vask").contains("mapChecked=2 mapOutside=1");
+    }
+
+    @Test
+    void windowInjection_everyEntryNamedInItsWindow_passes() {
+        // The control: both names occur in the items, so nothing is outside.
+        final MiniScorer.Verdict verdict = MiniGraders.windowInjection(
+                List.of(glossaryCall("<s id=\"1\">Ilsabet locked the door; Dorrin knocked.</s>")),
+                List.of("Ilsabet locked the door; Dorrin knocked."),
+                GOLD);
+
+        assertThat(verdict.ok()).isTrue();
+        assertThat(verdict.detail()).contains("mapChecked=2 mapOutside=0");
+    }
+
+    @Test
+    void windowInjection_blockEightNamesAPersonTheBookHasNotSaidYet_fails() {
+        // The summary mentions Dorrin, who first appears in the second block, after the window's end.
+        final CaseRecord.Exchange call = new CaseRecord.Exchange(
+                "[system] x\n[user] [Book so far — context only]\nDorrin arrived at the gate.\n\n<Items>\n"
+                        + "<s id=\"1\">Ilsabet locked the door.</s>\n</Items>",
+                "{}");
+
+        final MiniScorer.Verdict verdict = MiniGraders.windowInjection(
+                List.of(call), List.of("Ilsabet locked the door.", "Dorrin knocked."), GOLD);
+
+        assertThat(verdict.ok()).isFalse();
+        assertThat(verdict.detail()).contains("block8Checked=1 block8Outside=1");
     }
 
     @Test

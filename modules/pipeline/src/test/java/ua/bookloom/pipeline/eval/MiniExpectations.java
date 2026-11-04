@@ -75,7 +75,9 @@ record MiniExpectations(List<Expectation> every, List<Expectation> segments, Lis
         /** The target holds one of the listed vocative forms. */
         VOCATIVE(Level.SOFT),
         /** The target holds one of the wanted narrator forms and none of those marked with a leading {@code !}. */
-        NARRATOR_GENDER(Level.SOFT);
+        NARRATOR_GENDER(Level.SOFT),
+        /** A run-level check: no recorded call names a map entry outside its window or a block-8 name the book has not said yet. */
+        WINDOW_INJECTION(Level.HARD);
 
         private final Level level;
 

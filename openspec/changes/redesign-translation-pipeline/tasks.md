@@ -1129,7 +1129,7 @@ same task that moves drafts onto the builder, so no draft loses it (design D10, 
 classes are deleted. Arms 5a and 5c run here with the card present; arm 5b runs at the end of group 12. The stored
 snapshot changes shape, so the database is set aside.
 
-- [ ] 11.1 Write the group's acceptance test and record it red. It proves that a call names only what its window holds and that a draft and its repair share their system bytes. → :pipeline
+- [x] 11.1 Write the group's acceptance test and record it red. It proves that a call names only what its window holds and that a draft and its repair share their system bytes. → :pipeline
   - **Satisfies:** enabling work for design D8
   - **Depends on:** group 10; group 1 (`mini-en`, `mini-ru`, `CheckKind`, `CaseRecord` and its recorded calls folder)
   - **Read:** design.md D8, D24 (graders: `window-injection` is a hard grader from group 11, two scopes); `pipeline/src/test/java/ua/bookloom/pipeline/eval/MiniRunner`, `MiniScorer`, `CheckKind`, `CaseRecord`

@@ -35,6 +35,24 @@ final class MiniGraders {
         return check == CheckKind.GLOSSARY_ONE_ENTRY || check == CheckKind.GLOSSARY_GENDER;
     }
 
+    static boolean isRunLevel(final CheckKind check) {
+        return isGlossaryLevel(check) || check == CheckKind.WINDOW_INJECTION;
+    }
+
+    /**
+     * Grades the recorded translate-family calls of a run: map-block entries must occur in their call's window, and
+     * block-8 names must already be said by the book at the window's end.
+     *
+     * @param calls the run's recorded calls; other families are skipped
+     * @param bookTexts the book's block texts in reading order
+     * @param gold the gold map, which gives the forms of each name
+     * @return the verdict, whose detail counts what was checked and names what lies outside
+     */
+    static Verdict windowInjection(
+            final List<CaseRecord.Exchange> calls, final List<String> bookTexts, final List<MiniGold.Entry> gold) {
+        return WindowInjectionGrader.grade(calls, bookTexts, gold);
+    }
+
     static Verdict targetAlphabet(final String target, final List<String> args) {
         final String alphabet = args.isEmpty() ? null : ALPHABETS.get(args.get(0));
         if (alphabet == null) {
