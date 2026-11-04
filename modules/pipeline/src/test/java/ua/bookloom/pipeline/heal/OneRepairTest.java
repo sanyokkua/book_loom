@@ -18,8 +18,11 @@ import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -68,6 +71,32 @@ class OneRepairTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo("Вони сказали, що ключ у кишені.");
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
+    }
+
+    // IF the one repair's never-worse gate knew no names, THEN a repair that clears the residue word but respells the
+    // pinned name would replace the draft.
+    @Test
+    void repair_respellsPinnedNameWhileClearingResidue_keepsTheDraft() {
+        final Segment segment = plain("Велемир сказал, что ключ в кармане.");
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(targetReply("Велемер сказав, що ключ у кишені.")));
+        final GlossaryEntry velemir =
+                GlossaryEntry.of("e1", "p1", "Велемир", "Велемир", TermType.CHARACTER, Gender.MALE, false);
+        final LoopSettings named = new LoopSettings(
+                        ReviewMode.UNATTENDED,
+                        ONE_NO_REVIEWER,
+                        frame("ru"),
+                        NamePolicy.TRANSLITERATE,
+                        List.of("Велемир"),
+                        List.of("Велемир → Велемир"))
+                .withPinnedTargets(List.of("Велемир"))
+                .withNames(List.of(velemir));
+
+        final SegmentOutcome decided =
+                decide(drafted(segment, "Велемир сказав, что ключ у кишені."), "ru", model, named);
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(decided.machineTarget()).isEqualTo("Велемир сказав, что ключ у кишені.");
     }
 
     @Test
@@ -160,12 +189,22 @@ class OneRepairTest {
 
     private SegmentOutcome decide(
             final DraftOutcome.Drafted draft, final String sourceLanguage, final ScriptedChatModel model) {
-        final ChunkDecider decider = Objects.requireNonNull(loop.start(
-                        List.of(draft),
-                        settings(sourceLanguage),
-                        GateFunction.of(documents, BookFormat.MARKDOWN),
-                        calls(model))
-                .data());
+        return decide(draft, model, settings(sourceLanguage));
+    }
+
+    private SegmentOutcome decide(
+            final DraftOutcome.Drafted draft,
+            final String sourceLanguage,
+            final ScriptedChatModel model,
+            final LoopSettings settings) {
+        return decide(QualityLoopFixtures.repairing(draft, documents, frame(sourceLanguage)), model, settings);
+    }
+
+    private SegmentOutcome decide(
+            final DraftOutcome.Drafted repairing, final ScriptedChatModel model, final LoopSettings settings) {
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(List.of(repairing), settings, GateFunction.of(documents, BookFormat.MARKDOWN), calls(model))
+                        .data());
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 

@@ -125,6 +125,11 @@ final class ChunkContext {
         return pairs;
     }
 
+    /** The glossary entries whose names occur in the chunk, which the one repair's name vetoes read. */
+    List<GlossaryEntry> names() {
+        return occurringIn(chunk.segments(), glossary);
+    }
+
     /** The renderings of the chunk's pinned terms, whose declined forms the name-spelling check accepts. */
     List<String> pinnedTargets() {
         return GlossaryNames.pinnedTargets(occurringIn(chunk.segments(), glossary));

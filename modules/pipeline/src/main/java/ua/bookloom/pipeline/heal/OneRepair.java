@@ -224,11 +224,11 @@ final class OneRepair {
             }
             return worse ? new Verdict.Reject("blockers") : new Verdict.Keep();
         }
-        final WindowFacts facts = new WindowFacts(
+        final WindowFacts facts = WindowFacts.of(
                 outcome.maskedSource(),
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
-                List.of(),
+                settings.names(),
                 defects.getFirst(),
                 false);
         return NeverWorse.judge(

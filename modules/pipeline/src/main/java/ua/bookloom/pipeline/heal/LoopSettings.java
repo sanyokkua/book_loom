@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -27,6 +28,8 @@ import ua.bookloom.pipeline.reviewer.ReviewerSheets;
  * @param unitRole the role of the chunk's unit, which the Latin-run check reads
  * @param pinnedTargets the renderings of the chunk's pinned glossary entries, which the name-spelling check lets
  *     inflect; empty when none is known
+ * @param names the chunk's glossary entries, which the never-worse name vetoes of the one repair hold a repair to; an
+ *     entry with no rendering is ignored there; empty when none is known
  * @param repairs whether a draft that fails a check may be given a fixing call — the one repair, or the reviewer's
  *     fix of a refused edit; {@code false} for a review retry, which is one attempt the person asked for
  */
@@ -41,6 +44,7 @@ public record LoopSettings(
         ReviewerSheets reviewerSheets,
         UnitRole unitRole,
         List<String> pinnedTargets,
+        List<GlossaryEntry> names,
         boolean repairs) {
 
     /** Settings whose drafts may be repaired. */
@@ -66,6 +70,7 @@ public record LoopSettings(
                 reviewerSheets,
                 unitRole,
                 pinnedTargets,
+                List.of(),
                 true);
     }
 
@@ -128,6 +133,7 @@ public record LoopSettings(
                 reviewerSheets,
                 role,
                 pinnedTargets,
+                names,
                 repairs);
     }
 
@@ -144,6 +150,24 @@ public record LoopSettings(
                 reviewerSheets,
                 unitRole,
                 pinned,
+                names,
+                repairs);
+    }
+
+    /** These settings whose one repair is held to the given glossary entries' names. */
+    public LoopSettings withNames(final List<GlossaryEntry> entries) {
+        return new LoopSettings(
+                reviewMode,
+                dial,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                glossaryPairs,
+                characters,
+                reviewerSheets,
+                unitRole,
+                pinnedTargets,
+                entries,
                 repairs);
     }
 
@@ -160,6 +184,7 @@ public record LoopSettings(
                 reviewerSheets,
                 unitRole,
                 pinnedTargets,
+                names,
                 false);
     }
 
@@ -176,6 +201,7 @@ public record LoopSettings(
         Objects.requireNonNull(unitRole, "unitRole");
         Objects.requireNonNull(pinnedTargets, "pinnedTargets");
         pinnedTargets = List.copyOf(pinnedTargets);
+        names = List.copyOf(Objects.requireNonNull(names, "names"));
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
         characters = List.copyOf(characters);

@@ -250,7 +250,8 @@ public final class PromptRequests {
                         context.termPairs(),
                         context.characterLines(),
                         context.reviewerSheets())
-                .withPinnedTargets(context.pinnedTargets());
+                .withPinnedTargets(context.pinnedTargets())
+                .withNames(context.names());
     }
 
     private PreparedBatch prepared(
