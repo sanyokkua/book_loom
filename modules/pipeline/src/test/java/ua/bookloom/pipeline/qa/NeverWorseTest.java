@@ -15,7 +15,6 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -24,7 +23,7 @@ import ua.bookloom.api.project.TermType;
  */
 class NeverWorseTest {
 
-    private static final String EN = "en";
+    static final String EN = "en";
     private static final String RU = "ru";
     private static final String UK = "uk";
     private static final String RESIDUE = "function-word-residue";
@@ -62,7 +61,7 @@ class NeverWorseTest {
         return new Candidate(target, QaEvaluator.evaluate(gates, input), List.of());
     }
 
-    private static Candidate en(final String source, final String target) {
+    static Candidate en(final String source, final String target) {
         return evaluated(source, target, EN, Narrator.unspecified(), List.of());
     }
 
@@ -70,11 +69,11 @@ class NeverWorseTest {
         return evaluated(RU_SOURCE, target, RU, Narrator.unspecified(), List.of());
     }
 
-    private static WindowFacts facts(final String source, final String sourceLanguage) {
+    static WindowFacts facts(final String source, final String sourceLanguage) {
         return WindowFacts.of(source, sourceLanguage, UK, List.of(), null, false);
     }
 
-    private static WindowFacts marked(final String source, final String sourceLanguage, final QaFinding trigger) {
+    static WindowFacts marked(final String source, final String sourceLanguage, final QaFinding trigger) {
         return WindowFacts.of(source, sourceLanguage, UK, List.of(), trigger, false);
     }
 
@@ -84,7 +83,7 @@ class NeverWorseTest {
         return WindowFacts.of(source, EN, UK, List.of(velemir), null, false);
     }
 
-    private static QaFinding findingOf(final Candidate text, final String raisedBy) {
+    static QaFinding findingOf(final Candidate text, final String raisedBy) {
         return text.qa().findings().stream()
                 .filter(finding -> finding.raisedBy().equals(raisedBy))
                 .findFirst()
@@ -241,40 +240,6 @@ class NeverWorseTest {
         final Verdict verdict = NeverWorse.judge(current, candidate, marked(source, RU, findingOf(current, RESIDUE)));
 
         assertThat(verdict).isEqualTo(new Verdict.Reject("number-lost"));
-    }
-
-    @Test
-    void judge_fixesReplacedLeadingNumber_keeps() {
-        final String source = "3. Night pass";
-        final Candidate current = en(source, "5. Нічний перевал");
-
-        final Verdict verdict = NeverWorse.judge(
-                current, en(source, "3. Нічний перевал"), marked(source, EN, findingOf(current, "number")));
-
-        assertThat(verdict).isEqualTo(new Verdict.Keep());
-    }
-
-    @Test
-    void judge_removesStrayQuote_keeps() {
-        final String source = "He said go, and he left.";
-        final Candidate current = en(source, "Він сказав «іди, і пішов.");
-
-        final Verdict verdict = NeverWorse.judge(current, en(source, "Він сказав іди, і пішов."), facts(source, EN));
-
-        assertThat(verdict).isEqualTo(new Verdict.Keep());
-    }
-
-    @Test
-    void judge_dropsDuplicatedSentence_keeps() {
-        final String source = "He came home.";
-        final Candidate current = en(source, "Він прийшов додому. Він прийшов додому.");
-        // No check counts a sentence too many, so the reviewer's note is what marked the text.
-        final QaFinding doubled = new QaFinding("repetition", Severity.HIGH, "the sentence is doubled", "reviewer");
-
-        final Verdict verdict =
-                NeverWorse.judge(current, en(source, "Він прийшов додому."), marked(source, EN, doubled));
-
-        assertThat(verdict).isEqualTo(new Verdict.Keep());
     }
 
     @Test
