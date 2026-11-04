@@ -97,8 +97,7 @@ public final class SettingsViewModel {
         this.modelListing = Objects.requireNonNull(checks, "checks").modelListing();
         this.quantChips = checks.quantChips();
         this.tests = new ProviderTestRunner(
-                checks.verifier(),
-                quantChips,
+                checks,
                 voice,
                 Objects.requireNonNull(executor, "executor"),
                 testTarget.subject(),

@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
  * The quant chip of the model chosen for a run. It starts from the model's name as soon as the model or its provider
  * changes, so the ready card has a chip even when Settings was never opened.
  */
-final class ReadyQuantChip {
+public final class ReadyQuantChip {
 
     private final SettingsViewModel settings;
     private final ObjectBinding<@Nullable QuantChipModel> chip;
@@ -31,7 +31,12 @@ final class ReadyQuantChip {
         readChosenName();
     }
 
-    ObservableValue<@Nullable QuantChipModel> chip() {
+    /**
+     * The chip of the chosen model.
+     *
+     * @return a value holding the chip, or null while the chosen model's quant is not known; FX thread only
+     */
+    public ObservableValue<@Nullable QuantChipModel> chip() {
         return chip;
     }
 

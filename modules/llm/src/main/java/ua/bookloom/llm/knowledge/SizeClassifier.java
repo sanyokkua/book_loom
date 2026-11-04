@@ -18,7 +18,7 @@ final class SizeClassifier {
 
     static final double SMALL_MAX_B = 5.0;
     static final double MID_MAX_B = 16.0;
-    private static final Pattern PARAMETERS = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([KMBT]?)\\s*$");
+    private static final Pattern PARAMETERS = Pattern.compile("(\\d+(?:\\.\\d+)?) ?([KMBT]?)");
     private static final double PER_MILLION = 1_000.0;
     private static final double PER_TRILLION = 1_000.0;
 
@@ -51,7 +51,7 @@ final class SizeClassifier {
         if (text == null) {
             return null;
         }
-        final Matcher matcher = PARAMETERS.matcher(text.toUpperCase(Locale.ROOT));
+        final Matcher matcher = PARAMETERS.matcher(text.strip().toUpperCase(Locale.ROOT));
         if (!matcher.matches()) {
             return null;
         }

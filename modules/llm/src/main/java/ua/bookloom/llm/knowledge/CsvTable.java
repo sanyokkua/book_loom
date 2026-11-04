@@ -89,7 +89,8 @@ record CsvTable(String dataVersion, List<Row> rows) {
         final List<String> fields = new ArrayList<>();
         final StringBuilder field = new StringBuilder();
         boolean quoted = false;
-        for (int i = 0; i < line.length(); i++) {
+        int i = 0;
+        while (i < line.length()) {
             final char c = line.charAt(i);
             if (quoted && c == '"' && i + 1 < line.length() && line.charAt(i + 1) == '"') {
                 field.append('"');
@@ -102,6 +103,7 @@ record CsvTable(String dataVersion, List<Row> rows) {
             } else {
                 field.append(c);
             }
+            i++;
         }
         if (quoted) {
             throw new KnowledgeFormatException(file, number, "unterminated quote");

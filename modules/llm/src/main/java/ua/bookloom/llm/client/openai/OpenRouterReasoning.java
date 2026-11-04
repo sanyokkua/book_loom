@@ -29,7 +29,7 @@ final class OpenRouterReasoning {
     private static final String MINIMAL = "minimal";
     private static final String ROUTER_PREFIX = "openrouter/";
     // OpenRouter's efforts from least to most reasoning.
-    private static final List<String> EFFORT_ORDER = List.of(NONE, "minimal", "low", "medium", "high", "xhigh", "max");
+    private static final List<String> EFFORT_ORDER = List.of(NONE, MINIMAL, "low", "medium", "high", "xhigh", "max");
 
     /**
      * The reasoning object of one call.

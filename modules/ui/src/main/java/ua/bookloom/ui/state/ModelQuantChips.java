@@ -35,6 +35,8 @@ import ua.bookloom.ui.IoExecutor;
 @Singleton
 public final class ModelQuantChips {
 
+    private static final String SELECTION = "selection";
+
     /** Which model a chip belongs to. */
     public record Key(String providerId, String modelId) {
 
@@ -107,7 +109,7 @@ public final class ModelQuantChips {
      * @param selection a stored provider and the model on it
      */
     public void readFacts(final ModelSelection selection) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         log.debug("reading the quant facts of {}/{}", selection.providerId(), selection.modelId());
         io.execute(() -> readFactsNow(selection));
     }
@@ -150,7 +152,7 @@ public final class ModelQuantChips {
      * @param selection a stored provider and the model on it
      */
     public void readFactsNow(final ModelSelection selection) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         try {
             final Result<ModelReport> asked = capabilities.report(selection);
             final ModelReport report = asked.data();
@@ -169,7 +171,7 @@ public final class ModelQuantChips {
      * @param advice the report's quant advice, or null when it carries none
      */
     public void publishFacts(final ModelSelection selection, final @Nullable QuantAdvice advice) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         if (advice == null || advice.token().isBlank()) {
             log.debug("no quant in the facts of {}", selection.modelId());
             return;

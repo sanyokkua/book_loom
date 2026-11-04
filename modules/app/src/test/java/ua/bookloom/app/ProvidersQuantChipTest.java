@@ -49,7 +49,9 @@ class ProvidersQuantChipTest extends WorkspaceTestBase {
             onFx(((Button) Objects.requireNonNull(shell.root().lookup("#settings-summary-test")))::fire);
             settle(() -> ollama.chatRequests() > 0);
             settle(() -> !((Button) shell.root().lookup("#settings-summary-test")).isDisabled());
-            onFx(() -> ((ComboBox<?>) Objects.requireNonNull(shell.root().lookup("#settings-model"))).show());
+            final ComboBox<?> models =
+                    (ComboBox<?>) Objects.requireNonNull(shell.root().lookup("#settings-model"));
+            onFx(models::show);
             settle(() -> !chips().isEmpty());
 
             assertThat(ollama.requests()).as("the Test reached the fake server").isPositive();

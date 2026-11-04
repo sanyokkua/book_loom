@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ModelInput;
 import ua.bookloom.api.llm.PastedModel;
 import ua.bookloom.api.llm.ProviderKind;
@@ -155,12 +156,17 @@ final class ProviderExtrasSection {
         final String shown = quant == null ? label : messages.get(MessageKey.SETTINGS_QUANT_CHIP, label, quant);
         final String repo = input.repo();
         final String file = input.file();
-        final String line = repo == null
-                ? messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_ID, shown)
-                : file == null
-                        ? messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO, repo, shown)
-                        : messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE, repo, file, shown);
+        final String line = understoodLine(repo, file, shown);
         return unlisted ? line + " " + messages.get(MessageKey.SETTINGS_FORM_MODELS_NOT_LISTED) : line;
+    }
+
+    private String understoodLine(final @Nullable String repo, final @Nullable String file, final String shown) {
+        if (repo == null) {
+            return messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_ID, shown);
+        }
+        return file == null
+                ? messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO, repo, shown)
+                : messages.get(MessageKey.SETTINGS_FORM_MODELS_UNDERSTOOD_REPO_FILE, repo, file, shown);
     }
 
     private static void bindPart(final ToggleSwitch toggle, final VBox part) {

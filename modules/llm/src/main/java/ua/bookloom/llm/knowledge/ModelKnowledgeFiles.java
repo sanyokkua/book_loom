@@ -200,7 +200,7 @@ public final class ModelKnowledgeFiles {
     private static double number(CsvTable.Row row, int column) {
         try {
             return Double.parseDouble(row.fields().get(column));
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             throw new KnowledgeFormatException(QUANT_FILE, row.number(), "not a number in column " + (column + 1));
         }
     }
@@ -208,7 +208,7 @@ public final class ModelKnowledgeFiles {
     private static <E extends Enum<E>> E enumValue(String file, CsvTable.Row row, String cell, Class<E> type) {
         try {
             return Enum.valueOf(type, cell);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             throw new KnowledgeFormatException(
                     file, row.number(), "unknown " + type.getSimpleName() + " '" + cell + "'");
         }

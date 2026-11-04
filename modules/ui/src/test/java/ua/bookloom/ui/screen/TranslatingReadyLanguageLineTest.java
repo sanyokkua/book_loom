@@ -67,7 +67,7 @@ class TranslatingReadyLanguageLineTest extends TranslatingScreenTestBase {
         final Labeled line = (Labeled) required("translating-ready-language-line");
         assertThat(ThemeTestSupport.onFx(line::getText))
                 .isEqualTo("Llama 3.1 does not list Ukrainian among its languages. Translation may have problems.");
-        assertThat(ThemeTestSupport.onFx(() -> line.getStyleClass())).contains(Tone.WARN.statusClass());
+        assertThat(ThemeTestSupport.onFx(line::getStyleClass)).contains(Tone.WARN.statusClass());
         assertThat(ThemeTestSupport.onFx(((Button) required("translating-start"))::isDisabled))
                 .isFalse();
     }

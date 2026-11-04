@@ -47,7 +47,7 @@ public final class QuantAdvisor {
         final String label = id.quantLabel();
         final String factsQuant =
                 facts == null || facts.quant() == null ? null : facts.quant().trim();
-        final String token = label != null ? label : factsQuant == null ? "" : factsQuant;
+        final String token = label != null ? label : Objects.requireNonNullElse(factsQuant, "");
         final boolean dynamic = label != null && QuantLabel.isDynamic(label);
         final boolean qat = id.variants().contains(QAT_VARIANT);
         final boolean imatrix = id.variants().contains(IMATRIX_VARIANT);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javafx.scene.Node;
@@ -79,7 +80,7 @@ class ModelPickerChipTest extends WorkspaceTestBase {
             showAllModels();
 
             final List<Boolean> whole = onFx(() -> chips().stream()
-                    .map(node -> (Labeled) node)
+                    .map(Labeled.class::cast)
                     .map(chip -> chip.getWidth() >= chip.prefWidth(-1) - 0.5)
                     .toList());
             assertThat(whole).isNotEmpty().containsOnly(true);
@@ -118,8 +119,8 @@ class ModelPickerChipTest extends WorkspaceTestBase {
             WaitForAsyncUtils.waitForFxEvents();
 
             final TextField pull = (TextField) onFx(() -> shell.root().lookup("#settings-form-model-pull"));
-            final String shown = onFx(() -> pull.getText());
-            final boolean editable = onFx(() -> pull.isEditable());
+            final String shown = onFx((Callable<String>) pull::getText);
+            final boolean editable = onFx((Callable<Boolean>) pull::isEditable);
             assertThat(shown).isEqualTo(QWEN_PULL);
             assertThat(editable).isFalse();
         }

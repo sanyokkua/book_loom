@@ -29,8 +29,7 @@ import ua.bookloom.api.llm.ModelIdentity;
 public final class LanguageAdvisor {
 
     private static final String ENGLISH = "en";
-    private static final Pattern RUN_TOKEN =
-            Pattern.compile("BOOKLOOM-RUN:(\\w+(?:-\\w+)*)>(\\w+(?:-\\w+)*)(?:@(\\w+))?");
+    private static final Pattern RUN_TOKEN = Pattern.compile("BOOKLOOM-RUN:([\\w-]+)>([\\w-]+)(?:@(\\w+))?");
     private static final Pattern QUANT_TOKEN = Pattern.compile("BOOKLOOM-QUANT:([\\w.-]+?)(?:@(\\w+))?(?=[;\\s]|$)");
     private static final List<String> FIRST_CODES = List.of("uk", "ru");
     private static final LanguageResult NOTHING = new LanguageResult(LanguageState.UNKNOWN, LanguageSource.NONE, null);

@@ -64,11 +64,14 @@ final class ConformancePreparations {
         this.glossary = glossary;
     }
 
-    // NONE does nothing before the view is read; everything not listed is a Settings case, which SettingsPreparations
-    // refuses when it is not one.
+    private static void nothingToPrepare() {
+        // NONE: the view is read as it opens
+    }
+
+    // Everything not listed is a Settings case, which SettingsPreparations refuses when it is not one.
     void prepare(final ConformanceCases.Preparation preparation) throws TimeoutException {
         switch (preparation) {
-            case NONE -> {}
+            case NONE -> nothingToPrepare();
             case BOOK_OPENED -> openABook();
             case BOOK_CHECKED -> checkABook();
             case BOOK_REFUSED -> refuseABook();

@@ -57,7 +57,8 @@ class StartAdviceLinesTest extends BookBriefScreenTestBase {
     }
 
     private String line(final String id) {
-        return ThemeTestSupport.onFx(() -> ((Labeled) required(id)).getText());
+        final Labeled label = (Labeled) required(id);
+        return ThemeTestSupport.onFx(label::getText);
     }
 
     private boolean shown(final String id) {

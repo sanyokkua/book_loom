@@ -83,8 +83,8 @@ public final class ProviderTestRunner {
     /**
      * Starts idle, and drops whatever is in flight or on show when the provider or the model changes.
      *
-     * @param verifier the port a test is run through
-     * @param quantChips where the quant facts a test of a saved provider's model reads are published
+     * @param checks the port a test is run through, and where the quant facts a test of a saved provider's model
+     *     reads are published
      * @param voice the catalogue a refusal shown in place is worded from, and where a refusal of the whole test is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param subject what a test is run against: the description in the form, saved or not, and the model typed
@@ -95,8 +95,7 @@ public final class ProviderTestRunner {
      * @param clock where the test card reads when a request was sent and how long it has been open
      */
     public ProviderTestRunner(
-            final ProviderVerifier verifier,
-            final ModelQuantChips quantChips,
+            final ProviderChecks checks,
             final Voice voice,
             final ExecutorService executor,
             final ReadOnlyObjectProperty<Optional<TestSubject>> subject,
@@ -105,8 +104,9 @@ public final class ProviderTestRunner {
             final Clock clock) {
         this.progress = new TestProgress(clock);
         this.messages = Objects.requireNonNull(voice, "voice").messages();
-        this.verifier = Objects.requireNonNull(verifier, "verifier");
-        this.quantChips = Objects.requireNonNull(quantChips, "quantChips");
+        Objects.requireNonNull(checks, "checks");
+        this.verifier = checks.verifier();
+        this.quantChips = checks.quantChips();
         this.errors = voice.errors();
         this.executor = Objects.requireNonNull(executor, "executor");
         this.subject = Objects.requireNonNull(subject, "subject");

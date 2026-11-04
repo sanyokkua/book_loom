@@ -110,8 +110,8 @@ public final class AdviceReader {
             final @Nullable String source,
             final @Nullable String target) {
         try {
-            final Result<ModelReport> asked = capabilities.report(selection);
-            final ModelReport report = asked.data();
+            final Result<ModelReport> answer = capabilities.report(selection);
+            final ModelReport report = answer.data();
             if (report == null) {
                 log.debug("no report for {}, no advice", selection.modelId());
                 return;

@@ -128,8 +128,8 @@ final class TranslatingReadyCard {
         // The view model outlives the card, so the listener is weak and the row, which lives as long as the card
         // does, keeps it: the chip is not in the row while it has nothing to say, so it cannot be the keeper.
         box.getProperties().put(FOLLOW_KEY, follow);
-        viewModel.quantChip().addListener(new WeakChangeListener<>(follow));
-        showChip(box, chip, viewModel.quantChip().getValue(), messages);
+        viewModel.subject().readyQuantChip().chip().addListener(new WeakChangeListener<>(follow));
+        showChip(box, chip, viewModel.subject().readyQuantChip().chip().getValue(), messages);
         return row;
     }
 

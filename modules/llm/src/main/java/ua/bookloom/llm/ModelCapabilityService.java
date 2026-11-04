@@ -52,6 +52,8 @@ public final class ModelCapabilityService implements ModelCapabilities {
     private final ModelSettingsCache settings;
     private final QuantAdvisor quants;
     private final LanguageAdvisor languages;
+    private static final String SELECTION = "selection";
+
     private final ModelIdentityParser parser = new ModelIdentityParser();
     private final ModelInputNormalizer normalizer = new ModelInputNormalizer();
 
@@ -59,7 +61,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
     // the server's facts unknown; the name alone still gives the identity and the default profile.
     @Override
     public Result<ModelReport> report(ModelSelection selection) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         final String providerId = selection.providerId();
         final String modelId = selection.modelId();
         log.debug("Reporting model providerId={} model={}", providerId, modelId);
@@ -111,7 +113,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
     @Override
     public LanguageAdvice languageAdvice(
             final ModelSelection selection, final @Nullable String sourceTag, final @Nullable String targetTag) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         log.debug(
                 "Advising languages providerId={} model={} source={} target={}",
                 selection.providerId(),
@@ -153,7 +155,7 @@ public final class ModelCapabilityService implements ModelCapabilities {
     // Only LM Studio's own list says whether a model is in memory; asking any other server would be a GET for nothing.
     @Override
     public boolean loadsWithOwnSettings(ModelSelection selection) {
-        Objects.requireNonNull(selection, "selection");
+        Objects.requireNonNull(selection, SELECTION);
         final Optional<ProviderConfig> config = configs.find(selection.providerId());
         if (config.isEmpty() || config.get().effectiveEngine() != ServerEngine.LM_STUDIO) {
             log.debug(

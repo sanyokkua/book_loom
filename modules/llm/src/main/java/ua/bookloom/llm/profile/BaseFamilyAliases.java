@@ -20,6 +20,8 @@ import ua.bookloom.llm.knowledge.BaseKeyResolver;
 @Singleton
 public final class BaseFamilyAliases implements BaseKeyResolver {
 
+    private static final String LLAMA = "llama";
+    private static final String DEEPSEEK_DISTILL = "deepseek-r1-distill";
     private static final double ANY_MIN = 0.0;
     private static final double ANY_MAX = Double.MAX_VALUE;
 
@@ -96,7 +98,7 @@ public final class BaseFamilyAliases implements BaseKeyResolver {
                     60.0,
                     80.0,
                     new Base(
-                            "llama",
+                            LLAMA,
                             "3.1",
                             "Llama 3.1",
                             "llama-3.1",
@@ -170,7 +172,7 @@ public final class BaseFamilyAliases implements BaseKeyResolver {
                             true,
                             "MamayLM 9B is a Ukrainian-adapted Gemma 2 (the MamayLM cards).")),
             entry(
-                    Set.of("deepseek-r1-distill"),
+                    Set.of(DEEPSEEK_DISTILL),
                     null,
                     "qwen",
                     ANY_MIN,
@@ -184,13 +186,13 @@ public final class BaseFamilyAliases implements BaseKeyResolver {
                             "The DeepSeek-R1 distills on Qwen are students of Qwen 2.5; they reason by their own"
                                     + " template, so only the declared languages are taken.")),
             entry(
-                    Set.of("deepseek-r1-distill"),
+                    Set.of(DEEPSEEK_DISTILL),
                     null,
-                    "llama",
+                    LLAMA,
                     ANY_MIN,
                     20.0,
                     new Base(
-                            "llama",
+                            LLAMA,
                             "3.1",
                             "Llama 3.1",
                             "llama-3.1",
@@ -198,13 +200,13 @@ public final class BaseFamilyAliases implements BaseKeyResolver {
                             "The 8B DeepSeek-R1 distill is a student of Llama 3.1; it reasons by its own template, so"
                                     + " only the declared languages are taken.")),
             entry(
-                    Set.of("deepseek-r1-distill"),
+                    Set.of(DEEPSEEK_DISTILL),
                     null,
-                    "llama",
+                    LLAMA,
                     60.0,
                     80.0,
                     new Base(
-                            "llama",
+                            LLAMA,
                             "3.3",
                             "Llama 3.3",
                             "llama-3.3",

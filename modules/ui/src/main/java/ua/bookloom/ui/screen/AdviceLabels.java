@@ -33,7 +33,7 @@ final class AdviceLabels {
             final ObservableValue<@Nullable AdviceReading> reading,
             final Function<AdviceReading, Optional<String>> words) {
         final Label label = base(id);
-        label.textProperty().bind(text(reading, current -> words.apply(current)));
+        label.textProperty().bind(text(reading, words));
         return Visibility.bind(label, Bindings.isNotEmpty(label.textProperty()));
     }
 
