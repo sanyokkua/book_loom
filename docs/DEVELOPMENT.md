@@ -2474,9 +2474,14 @@ Group 10 (`quality-gates` of `redesign-translation-pipeline`) is built in code: 
 finding gets one repair (`heal/OneRepair`; Fast re-drafts once only when marks are lost), `NeverWorse` keeps a repair only
 when no check got worse, the batch size comes from the model profile and the dial no longer caps a chunk, and
 `SegmentRecord.repairRounds` is gone (a database stored with it is set aside on the next launch). The specification was
-brought in line (`02_Architecture/05_PIPELINE_ENGINE.md#levels`, `12_PROMPT_CATALOG.md#repair`). Status of the
-task 10.10 checks: the K = 1 `mini-en`/`mini-ru` floors and the owner's hand check are **pending**; no result is
-recorded here yet.
+brought in line (`02_Architecture/05_PIPELINE_ENGINE.md#levels`, `12_PROMPT_CATALOG.md#repair`). Task 10.10 results: the whole gate
+(`./gradlew clean build check spotlessCheck`) passed in 18 min and Sonar reports 0 open issues with the gate OK;
+`scripts/ci-linux-ui.sh` was green. K = 1 floors: `mini-en` 55/57 = 0.9649 (floor 0.9065), `mini-ru` 25/26 = 0.9615
+(floor 0.8077), every hard grader 0 failures (dataset v2 against the v1 baselines is not like for like);
+`DetectorsRuUkTest` 8 cases, 0 failures. Hand check steps 1-6 ran: step 3 passed only with the source language
+declared, because an auto-source book runs no source-dependent checks; the desk label reads "untranslated word" with
+`function-word residue` under Technical details; the Worth-a-second-look filter showed (0) though rows were badged
+(group 13.8). The database was set aside on the next launch.
 
 Open item (group-10 review): with the dial's chunk cap removed (10.8, not restored), a chunk closes only on the
 2,000-token budget. Two costs follow: `ChunkRunner.commitChunk` commits once per chunk, so a kill or crash loses every
