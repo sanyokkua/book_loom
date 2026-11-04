@@ -1105,9 +1105,31 @@ suite (`mini-en` v2 root `febe1374fd3a…`, `mini-ru` v2 root `852efa31cc1e…`)
   character in `mini-en`) and the pilots are in `.temporary_context/arm4/void-runs/` and are not counted. `MiniReport` now writes
   every repeat's stored targets and characters (`repeats`), which these counts were read from.
 
-**Arm 8: quants of e4b (task 9.9).** Not run: it needs several e4b quants and only `gemma4:e4b-mlx` (nvfp4) is installed; a pull
-needs the owner's approval. Arm 8 not run – needs owner-approved pull of other e4b quants; advice unchanged (the NVFP4 cell of
-`quant-tiers.csv` keeps its `# deliberate:` line).
+**Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
+`6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
+every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.
+The run is `.temporary_context/arm8/run.sh` (`scripts/eval-matrix.sh --suite mini --repeats 3 --models ...`), paired with
+`eval-score.py diff --paired`. The run did not use `--baseline-of`, so it is no baseline reproduction. No judge runner is left after
+arm 2, so the changed outputs were read by the agent (all repeats); the judge `gemma4:26b-mlx` was not called.
+
+- *`mini-ru`, graders.* All four quants: 318 of 321 grader results, the same single miss (`every-usable`, one flagged segment,
+  `ch02.md:14`), 0 hard failures, 0 Russian letters, 0 stress marks. Against NVFP4 every grader is discordant 0:0 for MXFP8, Q8_0 and
+  QAT (p = 1.00); noise band 0.
+- *`mini-ru`, outputs read.* MXFP8 and Q8_0 differ from NVFP4 in 4 of 17 segments per repeat and are not worse: NVFP4 cut a sentence
+  ("А я просто повз,") in 2 of 3 repeats, which both fuller quants completed ("повз проходив"). QAT differs in 4-6 of 17: its names
+  pass chose the spelling "Мирена" where the others chose "Мірена", and it kept that spelling in all 9 segment-repeats that name
+  her, consistent with its own glossary (a valid Ukrainian spelling, not a defect); it wrote "мимо" (a Russianism for "повз") in 3 of
+  51 segment-repeats against 1 of 51 for NVFP4 and 0 for MXFP8 and Q8_0, which is inside the noise at this size.
+- *`mini-en`, reported.* Grader results of 462: NVFP4 455, MXFP8 450, Q8_0 448, QAT 456; 0 hard failures and 0 flagged for all.
+  `address-same` is lost in 2 repeats by MXFP8 and by Q8_0 (b:a 0:2, p = 0.50) and `brand-written-dravik` and
+  `brand-written-quorrel` once by Q8_0, which trips the screen rule but not a real effect (no p < 0.05). 28-31 of 33 outputs
+  differ in every pair, as expected for different weights.
+- *Cost, reported and not weighed.* Run seconds as reported, `mini-ru` / `mini-en`: NVFP4 83.8 / 125.7, MXFP8 95.3 / 150.8,
+  Q8_0 100.2 / 167.8, QAT 82.0 / 122.5 (translation calls: `mini-ru` 11 for all four; `mini-en` 14, 12, 13 and 12).
+- *Decision rule.* The advice changes only if a quant is worse beyond noise on `mini-ru`. None is (no grader moved, the outputs read
+  equal or better), so **the advice stays**: the NVFP4 cell of `quant-tiers.csv` keeps its `# deliberate:` line and no
+  `QuantAdvisorTest` row changes. Kept for later: K = 3 on 17 short segments cannot see a small loss, and MXFP8 and Q8_0 cost
+  14-33 % more time here.
 
 **Task 3.4: LM Studio and llama-server error rows.** The fixtures under `modules/llm/src/test/resources/errors/lmstudio/`
 and `errors/llamacpp/` are named `<name>.<status>.json|sse` and hold only the server's own sentences. None of them was

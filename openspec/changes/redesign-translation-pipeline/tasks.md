@@ -977,7 +977,7 @@ only: it never blocks, changes no request and stores nothing (design D22). No st
   - **Test first:** run it against an empty scratch folder (prints "research data not found", exit 0) and against the research folder (prints no rows right after 9.2).
   - **Done when:** both runs' output is pasted in the commit message.
 
-- [ ] 9.9 Run arm 8 (quant comparison on e4b) and record it. It may change only a recommendation, never a requirement. → :llm (data), docs
+- [x] 9.9 Run arm 8 (quant comparison on e4b) and record it. It may change only a recommendation, never a requirement. → :llm (data), docs
   - **Satisfies:** enabling work for design D24 (arm 8)
   - **Depends on:** 9.3; group 1 (harness, mini-en, mini-ru)
   - **Read:** design.md D24 arm 8; `scripts/eval-matrix.sh`, `scripts/eval-score.py`

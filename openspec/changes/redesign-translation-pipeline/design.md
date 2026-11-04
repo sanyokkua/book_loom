@@ -1041,7 +1041,7 @@ task edits the delta requirement and this file's line; the result is written int
 | 7a reviewer | 14, first (gates its removals) | reviewer off at every dial (one repair + Proofread) | today's reviewer on at Balanced, as built, on the same pipeline | the reviewer stays only on p < 0.05 on the final text, or ≥ 2 mini cases confirmed on `sequence` | — |
 | 7b Max | 14, first (gates its removals) | Max = Balanced + whole-book re-read | — (reported; today's Max from the `79ffede6` baseline) | round 2 graded worse than better → tighten `NeverWorse` or the round-2 prompt | — |
 | 7c proofread prompt | 13 | P1 (target-language block) | P2 (English frame) | P1 unless P2 wins | — |
-| 8 quant | 9 | current advice | another quant recommended on e4b | changes only if a quant is worse beyond noise on mini-ru | — |
+| 8 quant | 9 | current advice | another quant recommended on e4b | changes only if a quant is worse beyond noise on mini-ru | Advice stays. e4b K = 3, Balanced, NVFP4 against MXFP8, Q8_0 and QAT: `mini-ru` 318 of 321 grader results for all four, every grader discordant 0:0 (p = 1.00), outputs read equal or better (NVFP4 cut a sentence in 2 of 3 repeats; QAT chose another valid spelling of one name and wrote one more Russianism, 3 of 51 against 1); `mini-en` 455 / 450 / 448 / 456 of 462, no hard failure, no p < 0.05; MXFP8 and Q8_0 took 14-33 % more time (`docs/DEVELOPMENT.md#redesign-arms`) |
 
 - **Measurements without an arm.** Group 4's residue replay (precision ≥ 0.9 keeps REPAIR, else NOTE; D12); the ru→uk
   `outputRatio` (1.5 until mini-ru and the closing ru→uk rerun show under 1 % of replies cut by length at 1.2); the
