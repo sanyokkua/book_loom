@@ -128,7 +128,8 @@ class SequenceEvalOfflineTest {
     @Test
     void run_echoedParagraph_isTheOnlyFirstRoundHardGateFailure() {
         assertThat(scripted.hardGateFailuresRound0()).isEqualTo(1);
-        assertThat(scripted.hardGateKinds()).containsKey("language");
+        // Fast makes no repair, so no repair names the echo's findings.
+        assertThat(scripted.hardGateKinds()).isEmpty();
         assertThat(scripted.leakedProtocol()).isZero();
         assertThat(scripted.reviewerTruncated()).isZero();
         assertThat(scripted.termClaimedWrong()).isZero();

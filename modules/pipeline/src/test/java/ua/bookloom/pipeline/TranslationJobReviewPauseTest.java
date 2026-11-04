@@ -94,7 +94,7 @@ class TranslationJobReviewPauseTest {
 
     @Test
     void run_assistedFastFlagged_pausesOnFlaggedBeforeTheNextCall() {
-        final ScriptedChatModel model = replies(T0, ECHO1, ECHO1, T2);
+        final ScriptedChatModel model = replies(T0, ECHO1, T2);
         final TestProject project = project(ChunkRunFixtures.threeParagraphs(tempDir), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -112,7 +112,7 @@ class TranslationJobReviewPauseTest {
                 .extracting(JobProgress::accepted, JobProgress::flagged, JobProgress::pending)
                 .containsExactly(1, 1, 1);
         assertThat(beforeResume)
-                .hasSize(3)
+                .hasSize(2)
                 .noneMatch(request -> userMessage(request).contains(shown(S2)));
         assertThat(pauses).isEmpty();
         assertThat(ended.end()).isEqualTo(JobState.COMPLETED);
@@ -120,7 +120,7 @@ class TranslationJobReviewPauseTest {
 
     @Test
     void run_unattendedFlagged_neverPauses() {
-        final ScriptedChatModel model = replies(T0, ECHO1, ECHO1, T2);
+        final ScriptedChatModel model = replies(T0, ECHO1, T2);
         final TestProject project = project(ChunkRunFixtures.threeParagraphs(tempDir), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, model, ReviewMode.UNATTENDED);
         final List<PauseSeen> seen = resumeEveryPause(translation, model);
@@ -150,7 +150,7 @@ class TranslationJobReviewPauseTest {
 
     @Test
     void run_manualFlagged_pausesOnceOnFlagged() {
-        final ScriptedChatModel model = replies(T0, ECHO1, ECHO1, T2);
+        final ScriptedChatModel model = replies(T0, ECHO1, T2);
         final TestProject project = project(ChunkRunFixtures.threeParagraphs(tempDir), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, model, ReviewMode.MANUAL);
         final List<PauseSeen> seen = resumeEveryPause(translation, model);
@@ -160,8 +160,8 @@ class TranslationJobReviewPauseTest {
         assertThat(seen)
                 .containsExactly(
                         new PauseSeen(PauseReason.AFTER_SEGMENT, "Book.md:0", 1),
-                        new PauseSeen(PauseReason.ON_FLAGGED, "Book.md:1", 3),
-                        new PauseSeen(PauseReason.AFTER_SEGMENT, "Book.md:2", 4));
+                        new PauseSeen(PauseReason.ON_FLAGGED, "Book.md:1", 2),
+                        new PauseSeen(PauseReason.AFTER_SEGMENT, "Book.md:2", 3));
     }
 
     // With the judge on, the rest of the chunk is drafted and judged before any decision, so the edit reaches the
@@ -201,7 +201,7 @@ class TranslationJobReviewPauseTest {
 
     @Test
     void run_assistedFastEditDuringPause_feedsTheNextDraft() {
-        final ScriptedChatModel model = replies(T0, ECHO1, ECHO1, T2);
+        final ScriptedChatModel model = replies(T0, ECHO1, T2);
         final TestProject project = project(ChunkRunFixtures.threeParagraphs(tempDir), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -212,7 +212,7 @@ class TranslationJobReviewPauseTest {
         translation.resume();
         report(await(run));
 
-        assertThat(model.requests()).hasSize(4);
+        assertThat(model.requests()).hasSize(3);
         assertThat(userMessage(model.requests().getLast())).contains(shown(S2), preceding(EDIT));
     }
 
@@ -230,8 +230,8 @@ class TranslationJobReviewPauseTest {
         translation.resume();
         report(await(run));
 
-        assertThat(model.requests()).hasSize(10);
-        assertThat(model.requests().subList(3, 9))
+        assertThat(model.requests()).hasSize(9);
+        assertThat(model.requests().subList(2, 8))
                 .extracting(ChunkRunFixtures::userMessage)
                 .allSatisfy(message -> assertThat(message).contains("<Text>\nHale counted"));
         assertThat(userMessage(model.requests().getLast())).contains(shown("⟦g0⟧ counted the boats in row 8."));
@@ -240,7 +240,7 @@ class TranslationJobReviewPauseTest {
 
     @Test
     void runRecord_assistedPauseOnFlagged_readsRunningPausedRunningCompleted() {
-        final ScriptedChatModel model = replies(T0, ECHO1, ECHO1, T2);
+        final ScriptedChatModel model = replies(T0, ECHO1, T2);
         final TestProject project = project(ChunkRunFixtures.threeParagraphs(tempDir), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final List<JobState> observed = new CopyOnWriteArrayList<>();
@@ -340,7 +340,6 @@ class TranslationJobReviewPauseTest {
     private static ScriptedChatModel haleReplies() {
         return replies(
                 haleTarget(0),
-                haleEcho(1),
                 haleEcho(1),
                 haleTarget(2),
                 haleTarget(3),

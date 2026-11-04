@@ -7,6 +7,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
@@ -80,12 +81,12 @@ class TranslationJobGenderOriginTest {
     // A gender the book verified (a pronoun count, a model answer its windows show) is enforced like the person's.
     @Test
     void run_womanVerified_earnsOneDirectedFix() {
-        final ScriptedChatModel model = replies(MASCULINE, FEMININE);
-        final TestProject project = chisel(QualityDial.FAST, entry -> entry.withInferredGender(Gender.FEMALE));
+        final ScriptedChatModel model = draftThenRepair(MASCULINE, FEMININE);
+        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withInferredGender(Gender.FEMALE));
 
         report(TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);

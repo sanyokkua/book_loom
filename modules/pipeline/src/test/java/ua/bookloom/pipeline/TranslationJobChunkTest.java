@@ -123,7 +123,7 @@ class TranslationJobChunkTest {
 
     @Test
     void run_fastChunk_draftsAndDecidesInTurn() {
-        final ScriptedChatModel model = replies(ECHO1, T1, T2, T3);
+        final ScriptedChatModel model = replies(ECHO1, T2, T3);
         final Path book = TestBooks.markdown(
                 tempDir.resolve("Book.md"),
                 String.join("\n\n", ChunkRunFixtures.S1, ChunkRunFixtures.S2, ChunkRunFixtures.S3));
@@ -131,9 +131,10 @@ class TranslationJobChunkTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, DRAFT, DRAFT);
-        assertThat(userMessage(model.requests().get(2))).contains(preceding(T1));
-        assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 3, 0, 0, 0));
+        // Fast makes no repair: the echo is flagged at once, and the third draft is shown the second one decided.
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT);
+        assertThat(userMessage(model.requests().get(2))).contains(preceding(T2));
+        assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 2, 0, 1, 0));
     }
 
     // The live card shows a reviewed chunk's drafts one by one and its decisions together: the reviewer reads the

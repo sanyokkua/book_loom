@@ -22,13 +22,39 @@ import ua.bookloom.pipeline.qa.WindowFacts;
  * {@link NeverWorse} keeps it — the acceptance rule alone never decides it. A segment drafted whole is repaired through
  * its {@link RepairCall}, one drafted in pieces by drafting its pieces again with the defects. Nothing else is tried:
  * the outcome is read from the findings on the text that stays ({@code specs/quality-gates/spec.md} "Give a failing
- * segment one repair at Balanced and Max"). Built fresh per chunk by {@link SegmentHealer}.
+ * segment one repair at Balanced and Max"). At Fast ({@code RepairMode.MARKS_ONLY}) no repair is made: only a text whose
+ * formatting marks the code restore could not put back is drafted once more, plainly, under the same keep rule ("Make
+ * no fixing call at Fast and mark the segment instead"). Built fresh per chunk by {@link SegmentHealer}.
  */
 @Slf4j
 final class OneRepair {
 
     private static final String REASON_KEEP = "keep";
     private static final String REASON_NONE = "none";
+
+    /** The fixing call a segment gets, if any. */
+    private enum Fixing {
+
+        /** No call: the outcome is read on the text in place. */
+        NONE("none"),
+
+        /** The plain draft once more, for formatting marks still lost after the code restore (Fast). */
+        REDRAFT("redraft"),
+
+        /** The one repair naming every BLOCK and REPAIR defect (Balanced and Max). */
+        REPAIR("repair");
+
+        private final String label;
+
+        Fixing(final String label) {
+            this.label = label;
+        }
+
+        /** The step's label in the step list and the log. */
+        String label() {
+            return label;
+        }
+    }
 
     private final ReplyEvaluator evaluator;
     private final LoopSettings settings;
@@ -77,18 +103,32 @@ final class OneRepair {
     Result<Repaired> repair(final DraftOutcome.Drafted outcome, final Resolution standing) {
         final String segmentId = outcome.segment().id();
         final List<QaFinding> defects = SegmentFindings.defects(standing.qa());
-        if (defects.isEmpty() || !settings.repairsEveryFinding() || !canRepair(outcome)) {
-            log.debug(
-                    "No repair segment={} defects={} repairs={} canRepair={}",
-                    segmentId,
-                    defects.size(),
-                    settings.repairsEveryFinding(),
-                    canRepair(outcome));
+        final Fixing fixing = fixing(outcome, defects);
+        log.debug(
+                "Fixing decision segment={} defects={} mode={} repairs={} canRepair={} fixing={}",
+                segmentId,
+                defects.size(),
+                settings.dial().repair(),
+                settings.repairs(),
+                canRepair(outcome),
+                fixing);
+        if (fixing == Fixing.NONE) {
             return Result.ok(new Repaired(standing, null, REASON_NONE));
         }
-        final String stepKey = RepairSteps.begin(calls, segmentId, RepairSteps.REPAIR_SUFFIX, "repair");
-        final RepairOutcome ran = evaluator.classify(outcome, send(outcome, standing, defects));
+        final String stepKey = RepairSteps.begin(calls, segmentId, RepairSteps.REPAIR_SUFFIX, fixing.label());
+        // A re-draft of lost marks is the plain draft again: it names no defect.
+        final List<QaFinding> asked = fixing == Fixing.REDRAFT ? List.of() : defects;
+        final RepairOutcome ran = evaluator.classify(outcome, send(outcome, standing, asked));
         RepairSteps.end(calls, stepKey, ran);
+        return settled(outcome, standing, defects, ran);
+    }
+
+    private Result<Repaired> settled(
+            final DraftOutcome.Drafted outcome,
+            final Resolution standing,
+            final List<QaFinding> defects,
+            final RepairOutcome ran) {
+        final String segmentId = outcome.segment().id();
         return switch (ran) {
             case RepairOutcome.StepError(var error) -> Result.err(error);
             case RepairOutcome.FlagNow(var error) ->
@@ -103,6 +143,22 @@ final class OneRepair {
                         failed.gateFinding() == null ? "unreadable" : "gate"));
             case RepairOutcome.Evaluated evaluated -> Result.ok(judged(outcome, standing, defects, evaluated));
         };
+    }
+
+    // Balanced and Max repair every BLOCK or REPAIR finding; Fast spends a call only on formatting marks the code
+    // restore could not put back, and a review retry spends none.
+    private Fixing fixing(final DraftOutcome.Drafted outcome, final List<QaFinding> defects) {
+        if (defects.isEmpty() || !settings.repairs() || !canRepair(outcome)) {
+            return Fixing.NONE;
+        }
+        return switch (settings.dial().repair()) {
+            case ONE -> Fixing.REPAIR;
+            case MARKS_ONLY -> defects.stream().anyMatch(OneRepair::lostMarks) ? Fixing.REDRAFT : Fixing.NONE;
+        };
+    }
+
+    private static boolean lostMarks(final QaFinding finding) {
+        return CheckName.PLACEHOLDER.raisedBy().equals(finding.raisedBy());
     }
 
     private static boolean canRepair(final DraftOutcome.Drafted outcome) {

@@ -191,11 +191,12 @@ class TranslationJobStepsTest {
                 .allSatisfy(kind -> assertThat(ended(events, kind)).hasSizeLessThanOrEqualTo(total(events, kind)));
     }
 
-    // A refusal on Fast is repaired by one directed fix: one added step, announced when the round starts.
+    // A refusal at Balanced gets the one repair: one added step, announced when the repair starts.
     @Test
     void run_failingCheck_repairRoundAddsOneStep() {
-        final ScriptedChatModel model = replies("I'm sorry, but I can't translate this text.", DOOR_TARGET);
-        final TestProject door = project(ChunkRunFixtures.door(tempDir), brief("en", "uk"));
+        final ScriptedChatModel model =
+                TranslationJobTestSupport.draftThenRepair("I'm sorry, but I can't translate this text.", DOOR_TARGET);
+        final TestProject door = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         final List<JobEvent> events = run(job(door, model));
 

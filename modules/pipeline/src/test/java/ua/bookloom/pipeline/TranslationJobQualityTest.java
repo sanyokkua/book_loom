@@ -46,7 +46,6 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Register;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.UnitPolicy;
@@ -72,8 +71,9 @@ class TranslationJobQualityTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, DRAFT);
-        assertThat(userMessage(model.requests().get(1))).contains(TOKENS);
+        // Fast's one retry of lost marks is the plain draft again, naming no defect.
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT);
+        assertThat(userMessage(model.requests().get(1))).contains(TOKENS).doesNotContain("[Defects to fix");
         assertThat(userMessage(model.requests().get(2))).contains(shown("She left."));
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
         assertThat(stored(project, "Book.md:0").rejectedTarget()).isEqualTo(MISSING_TOKEN);
@@ -96,16 +96,16 @@ class TranslationJobQualityTest {
     }
 
     @Test
-    void run_refusalFast_isRepaired() {
-        final ScriptedChatModel model = replies("I'm sorry, but I can't translate this text.", DOOR_TARGET);
+    void run_refusalFast_isFlaggedWithNoCall() {
+        final ScriptedChatModel model = replies("I'm sorry, but I can't translate this text.");
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk"));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT);
         assertThat(stored(project, "Book.txt:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, DOOR_TARGET);
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.FLAGGED, null);
     }
 
     @Test

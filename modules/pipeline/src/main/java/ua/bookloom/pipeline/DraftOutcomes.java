@@ -52,8 +52,8 @@ final class DraftOutcomes {
                 restored.normalised()));
     }
 
-    // Design D3 rule 5: a reply whose markup still does not restore after its repair is not flagged here; its markup
-    // finding sends it to a directed fix that states the expected tokens.
+    // Design D3 rule 5: a reply whose markup the code repairs cannot restore is not flagged here; its markup finding
+    // earns the one repair stating the expected tokens, or at Fast one plain re-draft.
     static Result<DraftOutcome> stillFailingTheGate(
             final DraftAttempt attempt, final String maskedReply, final GateResult.GateFailed failed) {
         final Segment segment = attempt.segment();

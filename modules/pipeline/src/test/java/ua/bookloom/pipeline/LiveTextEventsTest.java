@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -103,8 +104,10 @@ class LiveTextEventsTest {
                 tempDir.resolve("Book.md"),
                 String.join("\n\n", ChunkRunFixtures.S1, ChunkRunFixtures.S2, ChunkRunFixtures.S3));
         final TranslationJobImpl translation = job(
-                project(book, TranslationJobTestSupport.brief("en", "uk")),
-                replies(ChunkRunFixtures.ECHO1, ChunkRunFixtures.T1, ChunkRunFixtures.T2, ChunkRunFixtures.T3));
+                project(book, TranslationJobTestSupport.brief("en", "uk", QualityDial.BALANCED)),
+                replies(ChunkRunFixtures.ECHO1, ChunkRunFixtures.T2, ChunkRunFixtures.T3)
+                        .answerTo(ChunkRunFixtures.REVIEW, ChunkRunFixtures.reviewed())
+                        .answerTo(ChunkRunFixtures.REPAIR, ChunkRunFixtures.target(ChunkRunFixtures.T1)));
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
         translation.subscribe(events::add);
 

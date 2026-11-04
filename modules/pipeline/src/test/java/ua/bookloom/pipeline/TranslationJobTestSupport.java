@@ -269,6 +269,16 @@ final class TranslationJobTestSupport {
         return model;
     }
 
+    /**
+     * A Balanced run's answers for one segment that earns the one repair: the draft, the reviewer's answer of no edit
+     * when it reads the chunk, and the repair. Fast makes no repair, so a test of the repair runs at Balanced.
+     */
+    static ScriptedChatModel draftThenRepair(final String draft, final String repair) {
+        return replies(draft)
+                .answerTo(ChunkRunFixtures.REVIEW, ChunkRunFixtures.reviewed())
+                .answerTo(ChunkRunFixtures.REPAIR, ChunkRunFixtures.target(repair));
+    }
+
     /** A reply cut off by the length limit, which the run flags as {@code validation} without a repair call. */
     static Result<ChatResponse> cutOffReply() {
         return Result.ok(new ChatResponse(targetReply("HE OPENED"), FinishReason.LENGTH));

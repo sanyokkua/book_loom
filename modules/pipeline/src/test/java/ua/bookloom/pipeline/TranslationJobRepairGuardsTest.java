@@ -7,6 +7,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -65,7 +66,7 @@ class TranslationJobRepairGuardsTest {
     @Test
     void run_fixReplyStartsWithAQuoteCode_isReadAndRepairsTheSegment() {
         final ScriptedChatModel model = replies(RUSSIAN_LETTER).answer(answer(STARTS_WITH_QUOTE_CODE));
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -88,7 +89,7 @@ class TranslationJobRepairGuardsTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(answer(targetReply(RUSSIAN_LETTER)))
                 .answerTimes(2, answer(malformed));
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -104,8 +105,8 @@ class TranslationJobRepairGuardsTest {
     // defect; the alphabet check reads the fix too, and the segment is flagged with the first draft.
     @Test
     void run_fixStillHoldsARussianLetter_flagsTheSegmentAndKeepsTheDraft() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, "Я відчинив стыри двері.");
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, "Я відчинив стыри двері.");
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -119,8 +120,8 @@ class TranslationJobRepairGuardsTest {
     // tokens aside, the good fix is adopted, and a low note says the markup was restored without a model.
     @Test
     void run_fixWrapsWordsInTokensTheSegmentLacks_adoptsTheTextWithTheTokensRemovedAndALowNote() {
-        final ScriptedChatModel model = replies(RUSSIAN_LETTER, WITH_INVENTED_TOKENS);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(RUSSIAN_LETTER, WITH_INVENTED_TOKENS);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
@@ -153,12 +154,12 @@ class TranslationJobRepairGuardsTest {
     // The same woman set by the person is enforced, before and after the task.
     @Test
     void run_womanSetByThePerson_earnsOneDirectedFix() {
-        final ScriptedChatModel model = replies(MASCULINE, FEMININE);
-        final TestProject project = chisel(QualityDial.FAST, entry -> entry.withGender(Gender.FEMALE));
+        final ScriptedChatModel model = draftThenRepair(MASCULINE, FEMININE);
+        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withGender(Gender.FEMALE));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);

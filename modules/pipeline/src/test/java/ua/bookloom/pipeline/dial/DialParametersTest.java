@@ -12,7 +12,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 class DialParametersTest {
 
     @ParameterizedTest
-    @CsvSource({"FAST,1,ONE,0,false,false,8", "BALANCED,2,ONE,1,false,false,8", "MAX,3,ONE,2,true,true,2"})
+    @CsvSource({"FAST,1,MARKS_ONLY,0,false,false,8", "BALANCED,2,ONE,1,false,false,8", "MAX,3,ONE,2,true,true,2"})
     void of_eachDial_holdsItsRow(
             final QualityDial dial,
             final int preceding,

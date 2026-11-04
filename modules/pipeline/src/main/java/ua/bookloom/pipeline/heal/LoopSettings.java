@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.heal;
 import java.util.List;
 import java.util.Objects;
 import ua.bookloom.api.document.UnitRole;
-import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -162,15 +161,6 @@ public record LoopSettings(
                 unitRole,
                 pinnedTargets,
                 false);
-    }
-
-    /**
-     * Whether a draft that keeps a blocking or repair-level finding gets the one repair call.
-     *
-     * @return {@code true} if fixing calls are allowed and the dial's repair mode is {@link RepairMode#ONE}
-     */
-    public boolean repairsEveryFinding() {
-        return repairs && dial.repair() == RepairMode.ONE;
     }
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */

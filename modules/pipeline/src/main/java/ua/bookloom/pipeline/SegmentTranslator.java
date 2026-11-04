@@ -24,6 +24,7 @@ import ua.bookloom.pipeline.heal.RepairCall;
 import ua.bookloom.pipeline.heal.RepairReplies;
 import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -136,7 +137,8 @@ public final class SegmentTranslator {
 
     /**
      * How the one repair of a segment drafted whole is sent: the draft's own prompt and context, the previous attempt
-     * and its defects, at the repair's temperature with the retry seed.
+     * and its defects, at the repair's temperature with the retry seed; with no defect, the plain draft again with the
+     * retry seed (Fast's re-draft of lost marks).
      *
      * @param segment the non-null segment the draft is for
      * @param context the non-null context the draft was shown
@@ -156,6 +158,9 @@ public final class SegmentTranslator {
             final String previous,
             final List<QaFinding> defects,
             final ModelCalls through) {
+        if (defects.isEmpty()) {
+            return redraft(attempt, through);
+        }
         final Segment segment = attempt.segment();
         final String lines = DraftRequests.defectLines(defects);
         log.debug("Sending the one repair segmentId={} defects={}", segment.id(), defects.size());
@@ -166,6 +171,18 @@ public final class SegmentTranslator {
                 request,
                 requests.descriptor(attempt, DraftStep.REPAIR, previous, lines),
                 through);
+        return RepairReplies.read(reply, replyParser, attempt.shownText(), promptBuilder.targetLanguage());
+    }
+
+    // Fast's one retry of formatting marks the code could not put back: the plain draft again, with the retry seed so
+    // the model does not answer the same reply.
+    private Result<RepairReply> redraft(final DraftAttempt attempt, final ModelCalls through) {
+        final Segment segment = attempt.segment();
+        log.debug("Sending the plain re-draft of lost marks segmentId={}", segment.id());
+        final ChatRequest request =
+                requests.build(attempt, DraftStep.DRAFT, "", "").withSeed(ChatRequests.RETRY_SEED);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                DraftStep.DRAFT, segment, request, requests.descriptor(attempt, DraftStep.DRAFT, "", ""), through);
         return RepairReplies.read(reply, replyParser, attempt.shownText(), promptBuilder.targetLanguage());
     }
 

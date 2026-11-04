@@ -41,7 +41,7 @@ public record DialParameters(
      */
     public static DialParameters of(final QualityDial dial) {
         return switch (Objects.requireNonNull(dial, "dial")) {
-            case FAST -> new DialParameters(1, RepairMode.ONE, 0, false, false, 8);
+            case FAST -> new DialParameters(1, RepairMode.MARKS_ONLY, 0, false, false, 8);
             case BALANCED -> new DialParameters(2, RepairMode.ONE, 1, false, false, 8);
             case MAX -> new DialParameters(3, RepairMode.ONE, 2, true, true, 2);
         };

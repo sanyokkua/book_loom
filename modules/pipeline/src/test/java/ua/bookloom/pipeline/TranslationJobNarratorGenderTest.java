@@ -8,6 +8,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -55,13 +56,15 @@ class TranslationJobNarratorGenderTest {
 
     @Test
     void run_wrongGenderThenFix_repairsTheSegmentWithOneDirectedFix() {
-        final ScriptedChatModel model = replies(WRONG, RIGHT);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), maleNarrator(QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(WRONG, RIGHT);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), maleNarrator(QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
-        assertThat(userMessage(model.requests().get(1))).contains("відчинила").contains("gender");
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
+        assertThat(userMessage(model.requests().getLast()))
+                .contains("відчинила")
+                .contains("gender");
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -72,12 +75,12 @@ class TranslationJobNarratorGenderTest {
 
     @Test
     void run_wrongGenderFixStillWrong_keepsTheDraftAcceptedWithTheNoteAndSpendsNoSecondFix() {
-        final ScriptedChatModel model = replies(WRONG, WRONG);
-        final TestProject project = project(ChunkRunFixtures.door(tempDir), maleNarrator(QualityDial.FAST));
+        final ScriptedChatModel model = draftThenRepair(WRONG, WRONG);
+        final TestProject project = project(ChunkRunFixtures.door(tempDir), maleNarrator(QualityDial.BALANCED));
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, WRONG);
@@ -163,15 +166,15 @@ class TranslationJobNarratorGenderTest {
     // A narrator gender the brief verified from the book is enforced like the person's.
     @Test
     void run_narratorGenderVerified_earnsOneDirectedFix() {
-        final BookBrief verified = brief("en", "uk", QualityDial.FAST)
+        final BookBrief verified = brief("en", "uk", QualityDial.BALANCED)
                 .withNarrator(new Narrator(
                         NarratorPerson.FIRST, Gender.MALE, GenderOrigin.VERIFIED, List.of("Thank you, sir")));
-        final ScriptedChatModel model = replies(WRONG, RIGHT);
+        final ScriptedChatModel model = draftThenRepair(WRONG, RIGHT);
         final TestProject project = project(ChunkRunFixtures.door(tempDir), verified);
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
         assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(RIGHT);
     }
 }
