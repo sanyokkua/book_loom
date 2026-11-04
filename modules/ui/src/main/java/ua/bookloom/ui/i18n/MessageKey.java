@@ -1395,6 +1395,8 @@ public enum MessageKey {
     BRIEF_SUGGEST_NO_MODEL("brief.suggest.noModel"),
     /** Banner over the brief while a translation is at work: why nothing can be changed. */
     BRIEF_READ_ONLY_BANNER("brief.readOnly.banner"),
+    /** Banner after a saved Brief key change; argument 0 is how many decided segments now need a look. */
+    BRIEF_RECHECK_BANNER("brief.recheck.banner"),
     /** Second line of the read-only banner: when a change takes effect. */
     BRIEF_READ_ONLY_NOTE("brief.readOnly.note"),
     /** Button on the read-only banner that pauses the translation. */
@@ -2638,6 +2640,8 @@ public enum MessageKey {
     EXPORT_BANNER_NOTHING("export.banner.nothing"),
     /** Banner text while nothing is translated. */
     EXPORT_BANNER_NOTHING_NOTE("export.banner.nothing.note"),
+    /** Banner before Export book: argument 0 is how many segments will be written in the source language. */
+    EXPORT_BANNER_SOURCE_FALLBACK("export.banner.source_fallback"),
     /** Banner while the export runs in the background. */
     EXPORT_HIDDEN_BANNER("export.hidden.banner"),
     /** Label of the original title. */
@@ -3966,6 +3970,8 @@ public enum MessageKey {
     REVIEW_FINDING_LABEL("review.finding.label"),
     /** Who raised a finding, from its machine code. */
     REVIEW_RAISER("review.raiser"),
+    /** The short noun of the check that doubts an accepted segment; argument 0 is the check's machine code. */
+    REVIEW_DOUBT("review.doubt"),
     /** Switch that shows rule codes and figures. */
     REVIEW_TECHNICAL("review.technical"),
     /** Hover explanation of {@link #REVIEW_TECHNICAL}. */

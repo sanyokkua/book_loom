@@ -41,6 +41,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /**
  * Imports a book once, keeps it open in {@link OpenProjects} and answers every later question from the stored
@@ -60,6 +61,7 @@ public final class ProjectServiceImpl implements ProjectService {
     private final RunRepository runs;
     private final ProjectCopies copies;
     private final SettingsRepository settings;
+    private final BriefKeyRecheck rechecks;
 
     @Override
     public Result<ImportedBook> create(final Path source) {
@@ -130,7 +132,10 @@ public final class ProjectServiceImpl implements ProjectService {
                     brief.dial(),
                     brief.sourceLanguage(),
                     brief.targetLanguage());
-            return findProject(projectId).flatMap(project -> new ProjectRenames(projects).updateBrief(project, brief));
+            return findProject(projectId)
+                    .flatMap(project -> new ProjectRenames(projects)
+                            .updateBrief(project, brief)
+                            .map(change -> rechecks.after(project.brief(), change)));
         } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("update the brief", cause));
         }

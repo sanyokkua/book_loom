@@ -16,6 +16,8 @@ package ua.bookloom.api.pipeline;
  *     character) and not yet reviewed; never in {@code autoAccepted}, and never "kept as source by choice"
  * @param suspicious accepted segments no person has reviewed that the final audit doubts; they stay counted in the
  *     accepted figures too
+ * @param sourceFallback the flagged segments with no target and no edit whose formatting marks were lost, so an
+ *     export writes them in the source language; a part of {@code flaggedWithoutTarget}
  */
 public record ReviewCounts(
         int total,
@@ -27,9 +29,10 @@ public record ReviewCounts(
         int sourceKept,
         int flaggedWithoutTarget,
         int keptVerbatim,
-        int suspicious) {
+        int suspicious,
+        int sourceFallback) {
 
-    /** Counts with no suspicious segment. */
+    /** Counts with no suspicious segment and no source-language fallback. */
     public ReviewCounts(
             final int total,
             final int autoAccepted,
@@ -50,10 +53,37 @@ public record ReviewCounts(
                 sourceKept,
                 flaggedWithoutTarget,
                 keptVerbatim,
+                0,
                 0);
     }
 
-    /** Rejects a negative count, and a {@code flaggedWithoutTarget} above {@code flagged}. */
+    /** Counts with no source-language fallback. */
+    public ReviewCounts(
+            final int total,
+            final int autoAccepted,
+            final int repairedAccepted,
+            final int flagged,
+            final int reviewed,
+            final int pending,
+            final int sourceKept,
+            final int flaggedWithoutTarget,
+            final int keptVerbatim,
+            final int suspicious) {
+        this(
+                total,
+                autoAccepted,
+                repairedAccepted,
+                flagged,
+                reviewed,
+                pending,
+                sourceKept,
+                flaggedWithoutTarget,
+                keptVerbatim,
+                suspicious,
+                0);
+    }
+
+    /** Rejects a negative count, a {@code flaggedWithoutTarget} above {@code flagged} and a larger fallback. */
     public ReviewCounts {
         if (total < 0
                 || autoAccepted < 0
@@ -64,14 +94,19 @@ public record ReviewCounts(
                 || sourceKept < 0
                 || flaggedWithoutTarget < 0
                 || keptVerbatim < 0
-                || suspicious < 0) {
+                || suspicious < 0
+                || sourceFallback < 0) {
             throw new IllegalArgumentException("no count may be negative: " + total + ", " + autoAccepted + ", "
                     + repairedAccepted + ", " + flagged + ", " + reviewed + ", " + pending + ", " + sourceKept + ", "
-                    + flaggedWithoutTarget + ", " + keptVerbatim + ", " + suspicious);
+                    + flaggedWithoutTarget + ", " + keptVerbatim + ", " + suspicious + ", " + sourceFallback);
         }
         if (flaggedWithoutTarget > flagged) {
             throw new IllegalArgumentException(
                     "flaggedWithoutTarget " + flaggedWithoutTarget + " exceeds flagged " + flagged);
+        }
+        if (sourceFallback > flaggedWithoutTarget) {
+            throw new IllegalArgumentException(
+                    "sourceFallback " + sourceFallback + " exceeds flaggedWithoutTarget " + flaggedWithoutTarget);
         }
     }
 }

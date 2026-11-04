@@ -25,7 +25,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
  * The Export screen's banners, at most one of each at a time: a translating run (with Pause, since an export waits for
- * it), a partial book (how much is translated; the rest keeps the original text), nothing translated yet, and the
+ * it), a partial book (how much is translated; the rest keeps the original text), segments that will be written in the source
+ * language because their marks were lost, nothing translated yet, and the
  * export running in the background while the screen is read-only. Each follows the view model; nothing is recomputed
  * here beyond which one applies.
  */
@@ -40,6 +41,7 @@ final class ExportBanners {
     private final Messages messages;
     // Held here, so the screen keeps the banner's words alive exactly as long as its nodes.
     private final StringBinding partialWords;
+    private final StringBinding fallbackWords;
 
     ExportBanners(
             final ExportViewModel exports,
@@ -58,13 +60,28 @@ final class ExportBanners {
                             : messages.get(MessageKey.EXPORT_BANNER_PARTIAL, figures.translated(), figures.ofTotal());
                 },
                 exports.figures());
+        this.fallbackWords = Bindings.createStringBinding(
+                () -> {
+                    final ExportFigures figures = exports.figures().get();
+                    return figures == null
+                            ? ""
+                            : messages.get(
+                                    MessageKey.EXPORT_BANNER_SOURCE_FALLBACK,
+                                    figures.counts().sourceFallback());
+                },
+                exports.figures());
     }
 
     Node build() {
         final BooleanBinding running = Bindings.createBooleanBinding(
                 () -> exports.blocker().get() == ActivityKind.TRANSLATION, exports.blocker());
         final VBox banners = new VBox(
-                SPACING, runningBanner(running), partialBanner(running), nothingBanner(running), hiddenBanner());
+                SPACING,
+                runningBanner(running),
+                partialBanner(running),
+                fallbackBanner(running),
+                nothingBanner(running),
+                hiddenBanner());
         banners.setId("export-banners");
         return banners;
     }
@@ -104,6 +121,21 @@ final class ExportBanners {
         partialWords.addListener((observed, was, now) -> banner.setTitle(now));
         banner.setTitle(partialWords.get());
         return Visibility.bind(banner, partial.and(running.not()));
+    }
+
+    // Marks lost in a segment make the export write its source text; saying so before Export book lets the person fix
+    // it on the desk first.
+    private Banner fallbackBanner(final BooleanBinding running) {
+        final Banner banner = new Banner("export-banner-source-fallback", Tone.WARN, ImportViews.WARNING_GLYPH, "", "");
+        final BooleanBinding fallback = Bindings.createBooleanBinding(
+                () -> {
+                    final ExportFigures figures = exports.figures().get();
+                    return figures != null && figures.counts().sourceFallback() > 0;
+                },
+                exports.figures());
+        fallbackWords.addListener((observed, was, now) -> banner.setTitle(now));
+        banner.setTitle(fallbackWords.get());
+        return Visibility.bind(banner, fallback.and(running.not()));
     }
 
     private Banner nothingBanner(final BooleanBinding running) {

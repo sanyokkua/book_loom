@@ -31,6 +31,7 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.UuidIdSource;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** An import that fails after the book was opened leaves no open book and no open document behind. */
 class ProjectServiceImportFailureTest {
@@ -97,6 +98,11 @@ class ProjectServiceImportFailureTest {
                 });
     }
 
+    private static BriefKeyRecheck rechecks(final Injector injector) {
+        return new BriefKeyRecheck(
+                injector.getInstance(SegmentRepository.class), injector.getInstance(OpenProjects.class));
+    }
+
     private static ProjectServiceImpl service(final Injector injector, final SegmentRepository segments) {
         return new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
@@ -112,7 +118,8 @@ class ProjectServiceImportFailureTest {
                         injector.getInstance(LexiconRepository.class),
                         injector.getInstance(SegmentRepository.class),
                         new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                injector.getInstance(SettingsRepository.class),
+                rechecks(injector));
     }
 
     // Records each closed document and each saved project id; the segment store throws when asked to save.
@@ -144,7 +151,8 @@ class ProjectServiceImportFailureTest {
                         injector.getInstance(LexiconRepository.class),
                         injector.getInstance(SegmentRepository.class),
                         new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                injector.getInstance(SettingsRepository.class),
+                rechecks(injector));
     }
 
     private interface Spy {

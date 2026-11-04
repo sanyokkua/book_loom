@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -81,6 +82,7 @@ public final class BookBriefViewModel {
                 Objects.requireNonNull(outcomes, "outcomes"));
         this.policyKeys = new BriefPolicyKeys(languages, this::change);
         project.brief().addListener((observed, was, now) -> derive(now));
+        project.book().addListener((observed, was, now) -> saver.clearRechecked());
         derive(project.brief().get());
         this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
@@ -104,6 +106,15 @@ public final class BookBriefViewModel {
             final ExecutorService executor,
             final LanguageSupport languages) {
         this(project, projects, executor, languages, null);
+    }
+
+    /**
+     * How many decided segments the last saved Brief change left with a finding to look at.
+     *
+     * @return a read-only property; 0 until a save says otherwise, and again when another book is opened
+     */
+    public ReadOnlyIntegerProperty rechecked() {
+        return saver.rechecked();
     }
 
     /**

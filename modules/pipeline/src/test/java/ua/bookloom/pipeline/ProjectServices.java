@@ -21,6 +21,7 @@ import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectCopies;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** Test shortcuts over {@link ProjectService}: what {@code list} and {@code open} say about one file's project. */
 public final class ProjectServices {
@@ -85,6 +86,7 @@ public final class ProjectServices {
                         injector.getInstance(LexiconRepository.class),
                         segments,
                         new UuidIdSource()),
-                settings);
+                settings,
+                new BriefKeyRecheck(segments, openProjects));
     }
 }

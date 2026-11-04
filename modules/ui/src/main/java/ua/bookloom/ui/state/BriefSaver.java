@@ -7,6 +7,8 @@ import java.util.function.UnaryOperator;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -31,6 +33,7 @@ final class BriefSaver {
     private final ExecutorService executor;
     private final BriefSaveOutcomes outcomes;
     private final ReadOnlyBooleanWrapper saving = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyIntegerWrapper rechecked = new ReadOnlyIntegerWrapper(0);
     private @Nullable Save waiting;
 
     BriefSaver(final ProjectService projects, final ExecutorService executor, final BriefSaveOutcomes outcomes) {
@@ -41,6 +44,14 @@ final class BriefSaver {
 
     ReadOnlyBooleanProperty saving() {
         return saving.getReadOnlyProperty();
+    }
+
+    void clearRechecked() {
+        rechecked.set(0);
+    }
+
+    ReadOnlyIntegerProperty rechecked() {
+        return rechecked.getReadOnlyProperty();
     }
 
     void enqueue(final String projectId, final BookBrief brief) {
@@ -92,8 +103,12 @@ final class BriefSaver {
         }
         if (error != null) {
             log.warn("the brief was not saved: code {}", error.code());
-        } else if (change instanceof ProjectChange.Saved) {
-            log.debug("the brief was saved");
+        } else if (change instanceof ProjectChange.Saved stored) {
+            final int rechecked = stored.rechecked();
+            log.debug("the brief was saved, {} decided segments re-checked", rechecked);
+            if (rechecked > 0) {
+                this.rechecked.set(rechecked);
+            }
             outcomes.stored(save.projectId(), save.brief());
         } else if (change != null) {
             log.warn(

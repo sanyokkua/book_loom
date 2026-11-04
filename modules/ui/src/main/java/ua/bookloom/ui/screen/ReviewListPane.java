@@ -30,6 +30,7 @@ import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.FindingBadge;
 import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.ReviewViewModel;
@@ -284,6 +285,18 @@ final class ReviewListPane extends VBox {
             line.setMaxWidth(Double.MAX_VALUE);
         }
 
+        // A flagged row says why in plain words; an accepted one doubted by the audit names the check.
+        private String lineOf(final ReviewRow item) {
+            final FindingBadge badge = item.badge();
+            final String doubt = item.doubtCheck();
+            if (badge != null) {
+                return messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.why()), item.fullText());
+            }
+            return doubt == null
+                    ? item.fullText()
+                    : messages.get(MessageKey.REVIEW_ROW_LINE, RaiserWords.doubt(messages, doubt), item.fullText());
+        }
+
         @Override
         protected void updateItem(final @Nullable ReviewRow item, final boolean empty) {
             super.updateItem(item, empty);
@@ -294,11 +307,7 @@ final class ReviewListPane extends VBox {
                 return;
             }
             locator.setText(item.locator());
-            final FindingBadge badge = item.badge();
-            line.setText(
-                    badge == null
-                            ? item.fullText()
-                            : messages.get(MessageKey.REVIEW_ROW_LINE, messages.get(badge.why()), item.fullText()));
+            line.setText(lineOf(item));
             whole.setText(item.fullText());
             setTooltip(whole);
             top.getChildren()

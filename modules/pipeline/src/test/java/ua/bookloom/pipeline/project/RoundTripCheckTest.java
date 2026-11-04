@@ -38,6 +38,7 @@ import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.UuidIdSource;
+import ua.bookloom.pipeline.run.BriefKeyRecheck;
 
 /** The zero-edit round trip over the real document module, with decorators that damage the written copy. */
 class RoundTripCheckTest {
@@ -173,7 +174,8 @@ class RoundTripCheckTest {
                         injector.getInstance(LexiconRepository.class),
                         injector.getInstance(SegmentRepository.class),
                         new UuidIdSource()),
-                injector.getInstance(SettingsRepository.class));
+                injector.getInstance(SettingsRepository.class),
+                new BriefKeyRecheck(injector.getInstance(SegmentRepository.class), new OpenProjects()));
     }
 
     private Path book(@Nullable final String language) {

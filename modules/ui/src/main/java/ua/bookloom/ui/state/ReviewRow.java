@@ -5,7 +5,9 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.ui.i18n.RaiserWords;
 
 /**
  * One entry of the review desk's list.
@@ -13,6 +15,8 @@ import ua.bookloom.api.project.SegmentPath;
  * @param segmentId the segment's stable id, which every action names
  * @param locator the human-readable locator the person reads
  * @param badge the main finding of a flagged segment, or {@code null} when it is not flagged or has no finding
+ * @param doubtCheck the name of the check that doubts an accepted segment, from its first audit finding, or {@code null}
+ *     when the segment is flagged (its badge speaks then) or no audit check doubts it
  * @param keptAsSource whether the record was kept as source by choice, so the row says so
  * @param marker what became of the segment, as the row's marker shows it
  * @param line why it is listed (the badge's code word) then its text, with no formatting tokens; the cell words the
@@ -23,6 +27,7 @@ public record ReviewRow(
         String segmentId,
         String locator,
         @Nullable FindingBadge badge,
+        @Nullable String doubtCheck,
         boolean keptAsSource,
         DeskMarker marker,
         String line,
@@ -52,16 +57,27 @@ public record ReviewRow(
         final FindingBadge badge = view.status() == SegmentStatus.FLAGGED
                 ? FindingBadge.of(view.findings(), view.judgeScore()).orElse(null)
                 : null;
+        final String doubt = view.status() == SegmentStatus.FLAGGED ? null : doubtOf(view);
         final String text = readable(view);
         final String line = badge == null ? text : badge.code() + SEPARATOR + text;
         return new ReviewRow(
                 view.segmentId(),
                 view.locator(),
                 badge,
+                doubt,
                 view.path() == SegmentPath.SOURCE_KEPT,
                 DeskMarker.of(view, later),
                 line,
                 text);
+    }
+
+    private static @Nullable String doubtOf(final SegmentView view) {
+        return view.findings().stream()
+                .map(QaFinding::raisedBy)
+                .filter(raisedBy -> raisedBy.startsWith(RaiserWords.AUDIT_PREFIX))
+                .map(RaiserWords::checkOf)
+                .findFirst()
+                .orElse(null);
     }
 
     private static String readable(final SegmentView view) {

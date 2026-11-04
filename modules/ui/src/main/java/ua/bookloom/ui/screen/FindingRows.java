@@ -11,6 +11,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.FindingBadge;
 
 /**
@@ -74,7 +75,7 @@ final class FindingRows {
                 MessageKey.REVIEW_FINDING_LABEL,
                 messages.get(badge.label()),
                 finding.severity().name().toLowerCase(Locale.ROOT),
-                messages.get(MessageKey.REVIEW_RAISER, finding.raisedBy().replace('-', '_'))));
+                RaiserWords.raiser(messages, RaiserWords.checkOf(finding.raisedBy()))));
         label.getStyleClass().add("finding-kind");
         final Label why = wrapped(messages.get(MessageKey.REVIEW_WHY_LINE, messages.get(badge.why())), "finding-note");
         final VBox row = new VBox(2, label, why);
