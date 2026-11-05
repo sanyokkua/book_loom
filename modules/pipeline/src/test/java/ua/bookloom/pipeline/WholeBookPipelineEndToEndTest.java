@@ -184,7 +184,7 @@ class WholeBookPipelineEndToEndTest {
                 .containsExactly("Hale", null, false);
         assertThat(memoryUpdates(run.events(), MemoryKind.GLOSSARY)).containsExactly("+1");
         assertThat(memoryUpdates(run.events(), MemoryKind.SUMMARY)).isEmpty();
-        assertThat(run.calls()).noneMatch(call -> call.startsWith(CallKind.SUMMARY.name()));
+        assertThat(run.calls()).noneMatch(call -> call.startsWith(CallKind.CHAPTER_SUMMARY.name()));
     }
 
     // The batch draft's reply carries the dialect's own usage fields, which reach its finished-call event as reported;

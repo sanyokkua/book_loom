@@ -47,11 +47,11 @@ class CallLedgerImplTest {
         final long mark = ledger.mark();
 
         ledger.record(failed(CallKind.REVIEW));
-        ledger.record(failed(CallKind.SUMMARY));
+        ledger.record(failed(CallKind.CHAPTER_SUMMARY));
 
         assertThat(ledger.since(mark))
                 .extracting(CallRecord::callKind)
-                .containsExactly(CallKind.REVIEW, CallKind.SUMMARY);
+                .containsExactly(CallKind.REVIEW, CallKind.CHAPTER_SUMMARY);
         assertThat(ledger.since(ledger.mark())).isEmpty();
     }
 

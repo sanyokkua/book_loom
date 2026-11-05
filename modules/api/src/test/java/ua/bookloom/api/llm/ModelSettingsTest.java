@@ -124,7 +124,7 @@ class ModelSettingsTest {
 
         assertThat(measured.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(4.0, MeasuredFrom.RUN));
         assertThat(measured.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(1.2, MeasuredFrom.TEST));
-        assertThat(measured.speedOf(CallKind.SUMMARY)).isEmpty();
+        assertThat(measured.speedOf(CallKind.CHAPTER_SUMMARY)).isEmpty();
     }
 
     @Test

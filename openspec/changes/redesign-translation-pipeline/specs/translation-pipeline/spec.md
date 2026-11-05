@@ -440,7 +440,7 @@ The system SHALL take a book's chapters from its body structure, a chapter being
 
 ### Requirement: Write a two-to-three-sentence summary when a chapter finishes
 
-WHERE the book's chapter-summaries switch is on (the `book-brief` capability), WHEN every story segment of a chapter has a decided status, the system SHALL make one chapter-summary call before the next batch is drafted, reading the chapter's source text with the map lines of the entries the chapter names, and SHALL keep the reply's two or three sentences, written in the target language, as that chapter's summary.
+WHERE the book's chapter-summaries switch is on (the `book-brief` capability), WHEN every story segment of a chapter has a decided status, the system SHALL make one chapter-summary call before the next batch is drafted, reading the chapter's source text with the map lines of the entries the chapter names, and SHALL keep the reply's two or three sentences, written in the target language, as that chapter's summary; the book's last chapter SHALL get no call.
 
 **Source**: `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`, `docs/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: the owner chose a short summary per finished chapter over a rolling summary that only Max refreshed. It reads the source because the draft may still hold mistakes the Proofread stage fixes later, and it is written in the target language with the glossary's spellings so the names in it are the names the draft must use.
 
@@ -458,6 +458,11 @@ WHERE the book's chapter-summaries switch is on (the `book-brief` capability), W
 
 - **WHEN** chapter 1's last segment is FLAGGED
 - **THEN** chapter 1 counts as finished and is summarised
+
+#### Scenario: The last chapter is not summarised
+
+- **WHEN** the last segment of chapter 2 of a two-chapter book is decided, with the switch on
+- **THEN** no chapter-summary call is made for chapter 2, since no later window reads it
 
 ### Requirement: Read a long chapter in parts
 

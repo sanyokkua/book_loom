@@ -22,7 +22,8 @@ import ua.bookloom.pipeline.index.BookIndex;
  * whole chunk; with it off each segment is drafted and decided before the next is drafted. The reviewer on or off is
  * this one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
  * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
- * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
+ * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary. A chunk whose commit
+ * finishes a chapter is followed by that chapter's summary call ({@link ChapterSummaries}) before the next chunk.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
@@ -45,6 +46,7 @@ public final class ChunkRunner {
     private final ChunkSteps announced;
     private final ChunkDrafting drafting;
     private final ChunkDeciding deciding;
+    private final ChapterSummaries summaries;
 
     /**
      * Creates the runner of one run.
@@ -85,6 +87,8 @@ public final class ChunkRunner {
                 settings.frame().targetLanguage());
         this.drafting = new ChunkDrafting(steps, shared);
         this.deciding = new ChunkDeciding(sinks, learning, shared);
+        this.summaries =
+                new ChapterSummaries(steps.summary(), steps.planner(), stores, settings, sinks.emit(), document);
     }
 
     /**
@@ -156,7 +160,13 @@ public final class ChunkRunner {
             return end;
         }
         log.debug("Chunk decided chunk={} segments={}", index, items.size());
-        return commitChunk(index, items.size());
+        final Optional<RunEnd> committed = commitChunk(index, items.size());
+        if (committed.isPresent()) {
+            return committed;
+        }
+        // A chapter this chunk finished is summarised before the next chunk is drafted.
+        summaries.afterCommit(work, items);
+        return Optional.empty();
     }
 
     // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.

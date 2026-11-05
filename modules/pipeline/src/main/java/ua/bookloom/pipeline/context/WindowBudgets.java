@@ -33,6 +33,12 @@ public final class WindowBudgets {
     /** The large tier's budgets; unmeasured. */
     public static final Shares LARGE = new Shares(500, 1000, 250, 1200, 6000);
 
+    /** The most source tokens one chapter-summary call reads on a small model (design D10); unmeasured. */
+    public static final int CHAPTER_PART_TOKENS_SMALL = 2_500;
+
+    /** The most source tokens one chapter-summary call reads on a large model (design D10); unmeasured. */
+    public static final int CHAPTER_PART_TOKENS_LARGE = 4_500;
+
     private static final String DROP_NEXT = "next";
     private static final String DROP_SUMMARY = "summary";
     private static final String DROP_PREVIOUS = "previous";
@@ -167,6 +173,20 @@ public final class WindowBudgets {
      */
     public static int currentPart(final ModelProfile.Tier tier) {
         return of(tier).currentPart();
+    }
+
+    /**
+     * The chapter-part budget of a tier, above which a finished chapter is summarised in consecutive parts.
+     *
+     * @param tier the non-null tier
+     * @return the budget in source tokens
+     */
+    public static int chapterPart(final ModelProfile.Tier tier) {
+        Objects.requireNonNull(tier, "tier");
+        return switch (tier) {
+            case SMALL -> CHAPTER_PART_TOKENS_SMALL;
+            case LARGE -> CHAPTER_PART_TOKENS_LARGE;
+        };
     }
 
     /**

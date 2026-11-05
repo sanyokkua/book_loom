@@ -70,7 +70,7 @@ class RequestTimeoutsTest {
 
         assertThat(RequestTimeouts.forChat(base, request(CallKind.REVIEW, null)).requestTimeout())
                 .isEqualTo(CallLimits.REVIEW_TIMEOUT);
-        assertThat(RequestTimeouts.forChat(base, request(CallKind.SUMMARY, null))
+        assertThat(RequestTimeouts.forChat(base, request(CallKind.CHAPTER_SUMMARY, null))
                         .requestTimeout())
                 .isEqualTo(CallLimits.HELPER_TIMEOUT);
         assertThat(RequestTimeouts.forChat(base, request(CallKind.DRAFT, 100_000))
@@ -79,7 +79,7 @@ class RequestTimeoutsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY", "TERM_CHOICE"})
+    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "CHAPTER_SUMMARY", "TERM_CHOICE"})
     void forChat_prescanOrSummary_isTwoMinutes(CallKind kind) {
         final ProviderConfig bounded = RequestTimeouts.forChat(config(Duration.ofMinutes(3)), request(kind, null));
 

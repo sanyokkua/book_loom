@@ -8,9 +8,11 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.memory.ChapterSummaryCall;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.RunSettings;
@@ -26,6 +28,7 @@ final class ChunkRunnerFactory {
 
     private final DocumentPort documents;
     private final ObjectMapper mapper;
+    private final ContextBuilder builder;
     private final RunStores stores;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
@@ -35,6 +38,7 @@ final class ChunkRunnerFactory {
         Objects.requireNonNull(checks, "checks");
         this.documents = tools.documents();
         this.mapper = tools.mapper();
+        this.builder = new ContextBuilder(tools.templates());
         this.stores = Objects.requireNonNull(stores, "stores");
         this.qualityLoop = checks.qualityLoop();
         this.splitter = checks.splitter();
@@ -62,8 +66,10 @@ final class ChunkRunnerFactory {
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
                 batchSize);
+        final ChapterSummaryCall summary = new ChapterSummaryCall(
+                builder, mapper, settings.frame(), calls, planner.profile().tier());
         return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, batch, planner),
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, batch, planner, summary),
                 settings,
                 runWindow,
                 stores,

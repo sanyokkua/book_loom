@@ -46,7 +46,7 @@ record CallHeadings(MessageKey input, MessageKey output) {
             case SUGGEST_TARGETS -> TARGETS;
             case BRIEF_SUGGESTION, BRIEF_SYNTHESIS, BOOK_KNOWLEDGE -> BRIEF;
             case REVISION -> REVISION;
-            case SUMMARY -> SUMMARY;
+            case CHAPTER_SUMMARY -> SUMMARY;
             case FILE_NAME -> FILE_NAME;
             case DRAFT, STRUCTURAL_REPAIR, REPAIR, REVIEW, DIRECTED_FIX -> GENERIC;
         };

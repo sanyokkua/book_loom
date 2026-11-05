@@ -41,7 +41,7 @@ public final class PseudoChatModel implements ChatModel {
 
     private static final String FORMAT_REVIEWER = "reviewer";
     private static final String FORMAT_PRESCAN = "prescan";
-    private static final String FORMAT_SUMMARY = "summary";
+    private static final String FORMAT_CHAPTER_SUMMARY = "chapter_summary";
     private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
@@ -58,7 +58,6 @@ public final class PseudoChatModel implements ChatModel {
     private static final Pattern READING_WINDOW = Pattern.compile("(?m)^\\[(\\d{1,6})] ");
 
     private static final String REVIEWER_REPLY = "{\"results\":[]}";
-    private static final String SUMMARY_REPLY = "{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}";
 
     private final ObjectMapper mapper;
 
@@ -124,7 +123,7 @@ public final class PseudoChatModel implements ChatModel {
         return switch (formatName) {
             case FORMAT_REVIEWER -> REVIEWER_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
-            case FORMAT_SUMMARY -> SUMMARY_REPLY;
+            case FORMAT_CHAPTER_SUMMARY -> writeValue(Map.of("summary", translation));
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
             case FORMAT_TERM_READING -> readingReply(source);

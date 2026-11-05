@@ -463,14 +463,14 @@ task edits the delta requirement and this file's line; the result is written int
   (`run/ChunkPlanner`) and the planned ones (`project/UnitChunks`) end at a chapter boundary, so no batch holds two
   chapters. `mini-ru` (about 170 and 190 tokens per chapter) is one chapter under this rule; `mini-en` is two.
 - **Call.** `memory/SummaryModelCall` grows into `memory/ChapterSummaryCall`: `PromptName.CHAPTER_SUMMARY`,
-  `CallKind.CHAPTER_SUMMARY` (replaces `SUMMARY`), `chapter-summary.{system,user}.prompt` rewritten from `summary.*`,
-  ANALYSIS frame; the finished chapter's source in, 2–3 sentences in the target language out, with the chapter's map
+  `CallKind.CHAPTER_SUMMARY` (replaces `SUMMARY`), one `chapter-summary.user.prompt` replacing `summary.*`, on the
+  ANALYSIS frame (its system part is the frame's three sentences, no system file); the finished chapter's source in, 2–3 sentences in the target language out, with the chapter's map
   lines (lemma → target, most frequent first). Chapters over `CHAPTER_PART_TOKENS` (2,500/4,500) are read in parts,
   each part given the previous part's summary. Reply `{"summary"}`, cap 200 tokens. Code gate: at most three whole
   sentences; a sentence with a forbidden letter or a source-only function word gets one re-ask, then is dropped; a
   sentence naming a map entry absent from the chapter is dropped. Renderings never come from a summary.
 - **When.** Right after the chunk commit that finishes a chapter (every story segment decided), before the next draft,
-  single-flight. Continue first writes every missing summary of a finished chapter (or one whose `sourceHash`
+  single-flight. The book's last chapter is not summarised: no later window reads it. Continue first writes every missing summary of a finished chapter (or one whose `sourceHash`
   changed). A failed call leaves the chapter without one (WARN) and is tried once more on the next Continue.
 - **Store.** `api: project/ChapterSummary(projectId, chapterKey, unitId, firstSegment, segmentCount, text, sourceHash)`
   replaces `RollingSummary`; the port `api: persistence/SummaryRepository` is reshaped to save and list chapter

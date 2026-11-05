@@ -245,17 +245,19 @@ public enum PromptName {
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
             new Slots(Set.of("items"), Set.of())),
 
-    /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
-    SUMMARY(
-            "summary",
-            CallKind.SUMMARY,
-            "summary",
-            SummarySchema.SCHEMA,
+    /**
+     * The summary of one finished chapter (design D10), an analysis call: the chapter's source, or one part of a long
+     * chapter with the part before it summarised, and the names the chapter holds, answered with two or three sentences
+     * in the target language.
+     */
+    CHAPTER_SUMMARY(
+            "chapter-summary",
+            CallKind.CHAPTER_SUMMARY,
+            ChapterSummarySchema.FORMAT_NAME,
+            ChapterSummarySchema.SCHEMA,
             new Temperatures(0.2, null),
-            new Slots(
-                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE),
-                    Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, LANGUAGE_RULES)),
-            new Slots(Set.of("chapterSource", "chapterTarget"), Set.of("previousSummary")));
+            null,
+            new Slots(Set.of("chapterSource", TARGET_LANGUAGE), Set.of("mapLines", "previousPart", "correction")));
 
     /**
      * The temperatures of a call.

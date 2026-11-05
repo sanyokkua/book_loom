@@ -94,7 +94,7 @@ Prompts are built from **templates + slots**: fixed instruction scaffolding in p
 The repair template adds the previous attempt, the defects and the expected tokens to the same frame. Templates are
 data, so the quality dial and policies parameterize the prompt without code changes. The concrete system/user
 templates for every pipeline call — batch draft, reviewer, repair, backward revision, book-brief/tone setup, and
-rolling-summary update — with their injected variables, required-vs-optional fields, parameters, and expected JSON
+the chapter summary — with their injected variables, required-vs-optional fields, parameters, and expected JSON
 shapes, are the normative catalogue in `01_Product/12_PROMPT_CATALOG.md`.
 
 ## tiered-loop {#tiered-loop}
@@ -420,8 +420,31 @@ and first segment it starts at, its segment count, the text in the target langua
 written from), saved one per chapter in one transaction and listed oldest first through `SummaryRepository`. Store:
 `06_DATA_MODEL_SQLITE.md#record-shapes` (`project_docs` kind `chapterSummary:<chapter key>`). Whether summaries are
 written follows the brief: `BookBrief.chapterSummaries` when the person forced it, else on unless the story shape is
-`SEPARATE_STORIES` (no analysis means on). The call that writes a summary and the earlier chapters' block of the draft
-prompt come with the group's later tasks (12.4, 12.5).
+`SEPARATE_STORIES` (no analysis means on).
+
+**When.** `run/ChapterSummaries` runs on the job thread right after the chunk commit that decides a chapter's last
+story segment (a FLAGGED one counts), before the next chunk is drafted, so the call is single-flight through the same
+gate as every other. Nothing is called when the switch is off, when a segment of the chapter is still pending, for the
+book's last chapter (no later window reads it), or for a chapter already tried in this run. A pause or a stop during
+the call is a plain failure in 12.4 (task 12.6 resends it on resume).
+
+**The call** (`memory/ChapterSummaryCall`, `12_PROMPT_CATALOG.md#rolling-summary-update`). It reads the chapter's
+masked source (tokens removed) with the map lines of the entries the chapter names, on the ANALYSIS frame, and asks
+for two or three sentences in the target language. A chapter over the tier's part budget (2,500 estimated source
+tokens on a small model, 4,500 on a large one) is read in consecutive parts cut at segment ends, each part's call given
+the previous part's kept summary; the last part's sentences are kept.
+
+**The gate** (`memory/SummaryGate`). At most three whole sentences; a sentence that names a glossary entry the chapter
+never names is dropped; a sentence with a letter the target alphabet lacks or a source-only function word is asked once
+more and dropped if the second answer still has it. The glossary and lexicon are only read: no rendering is learned
+from a summary.
+
+**Outcome.** A kept summary is saved with the hash of the chapter's masked sources and announced with the job event
+`ChapterSummaryKept` (chapter key, number, sentence count, text; its `toString` leaves the text out). A failed call
+(`contextWindow` included), an unreadable reply or nothing left keeps no summary and logs one WARN
+`Chapter summary not kept chapter=… key=… reason=…`; a storage failure logs one WARN too; the run goes on. The INFO line
+is `chapter summary chapter=… sentences=… dropped=…`; the text is logged at TRACE only. The earlier chapters' block of
+the draft prompt comes with task 12.5.
 
 ## deferred-resolution-and-backward-revision {#deferred-resolution}
 

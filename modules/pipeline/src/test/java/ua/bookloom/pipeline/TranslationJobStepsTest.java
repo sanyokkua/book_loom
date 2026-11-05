@@ -150,7 +150,7 @@ class TranslationJobStepsTest {
         assertThat(planned(events, StepKind.CHECK)).containsExactly(2);
         assertThat(ended(events, StepKind.CHECK)).hasSize(2);
         assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
-        assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.SUMMARY);
+        assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.CHAPTER_SUMMARY);
         assertThat(events).contains(new StepsPlanned(StepKind.REVISION, 1, true));
         assertThat(ended(events, StepKind.REVISION)).hasSize(1);
     }

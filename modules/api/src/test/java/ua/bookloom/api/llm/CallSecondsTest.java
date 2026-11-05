@@ -47,7 +47,7 @@ class CallSecondsTest {
 
     @Test
     void of_meanTime_isRoundedToATenthAndNeverZero() {
-        assertThat(CallSeconds.of(List.of(answered(CallKind.SUMMARY, 2_345), answered(CallKind.FILE_NAME, 10))))
-                .isEqualTo(Map.of(CallKind.SUMMARY, 2.3, CallKind.FILE_NAME, 0.1));
+        assertThat(CallSeconds.of(List.of(answered(CallKind.CHAPTER_SUMMARY, 2_345), answered(CallKind.FILE_NAME, 10))))
+                .isEqualTo(Map.of(CallKind.CHAPTER_SUMMARY, 2.3, CallKind.FILE_NAME, 0.1));
     }
 }

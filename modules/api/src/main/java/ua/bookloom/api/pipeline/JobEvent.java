@@ -21,4 +21,5 @@ public sealed interface JobEvent
                 CallSnapshotUpdated,
                 StepsPlanned,
                 StepChanged,
-                BriefSampleRead {}
+                BriefSampleRead,
+                ChapterSummaryKept {}

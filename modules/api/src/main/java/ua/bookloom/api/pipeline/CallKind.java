@@ -32,8 +32,8 @@ public enum CallKind {
     /** A glossary suggestion call: the model proposes a target rendering and a gender for held terms. */
     SUGGEST_TARGETS,
 
-    /** A rolling-summary update call. */
-    SUMMARY,
+    /** The summary of one finished chapter, written in the target language for later windows (design D10). */
+    CHAPTER_SUMMARY,
 
     /** A backward-revision call re-rendering an already-decided segment. */
     REVISION,

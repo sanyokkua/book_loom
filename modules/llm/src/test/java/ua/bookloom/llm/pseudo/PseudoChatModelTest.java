@@ -147,12 +147,13 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"terms\":[]}");
     }
 
-    // Summary is always empty and reports no facts.
+    // The offline model summarises a chapter as it translates: the <Text> block in capitals, the instructions left out.
     @Test
-    void chat_summaryFormat_repliesWithEmptyBilingualSummary() {
-        final ChatResponse response = send("anything", "summary");
+    void answer_chapterSummary_textInCapitals() {
+        final ChatResponse response =
+                send("Summarise the chapter.\n\n<Text>\nA clerk finds a ledger.\n</Text>\n", "chapter_summary");
 
-        assertThat(response.content()).isEqualTo("{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}");
+        assertThat(response.content()).isEqualTo("{\"summary\":\"A CLERK FINDS A LEDGER.\"}");
     }
 
     // The cap is a provider-side control the pseudo model has no use for; the reply is the same with it set.

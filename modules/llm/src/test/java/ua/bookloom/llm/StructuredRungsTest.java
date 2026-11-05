@@ -56,7 +56,7 @@ class StructuredRungsTest {
 
         model.chat(request(DRAFT, CallKind.DRAFT));
         model.chat(request(DRAFT, CallKind.DRAFT));
-        model.chat(request(SUMMARY, CallKind.SUMMARY));
+        model.chat(request(SUMMARY, CallKind.CHAPTER_SUMMARY));
 
         assertThat(models.bodies(Dialect.LM_STUDIO))
                 .extracting(body -> body.has("response_format"))
@@ -72,7 +72,7 @@ class StructuredRungsTest {
         final GatedChatModel model = models.model(Dialect.LM_STUDIO, GEMMA);
 
         model.chat(request(DRAFT, CallKind.DRAFT));
-        model.chat(request(SUMMARY, CallKind.SUMMARY));
+        model.chat(request(SUMMARY, CallKind.CHAPTER_SUMMARY));
 
         assertThat(models.bodies(Dialect.LM_STUDIO))
                 .extracting(body -> body.has("response_format"))

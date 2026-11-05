@@ -72,7 +72,7 @@ public final class RequestTimeouts {
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,
-                    SUMMARY,
+                    CHAPTER_SUMMARY,
                     FILE_NAME,
                     BRIEF_SUGGESTION,
                     BOOK_KNOWLEDGE,

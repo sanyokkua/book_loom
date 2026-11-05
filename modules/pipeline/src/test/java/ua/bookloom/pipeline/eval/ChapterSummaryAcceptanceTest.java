@@ -181,10 +181,13 @@ class ChapterSummaryAcceptanceTest {
                 .toList();
     }
 
+    // A draft of chapter 2 holds its heading among its items; chapter 1's last window only shows it as the next source.
     private static String firstChapter2Draft(final List<String> bodies) {
         return bodies.stream()
                 .filter(ChapterSummaryAcceptanceTest::isDraft)
-                .filter(body -> userMessage(body).contains(CHAPTER_2))
+                .filter(body -> ITEM.matcher(userMessage(body))
+                        .results()
+                        .anyMatch(item -> item.group(2).contains(CHAPTER_2)))
                 .findFirst()
                 .orElse("");
     }

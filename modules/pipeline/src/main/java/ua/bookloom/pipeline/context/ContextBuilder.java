@@ -263,8 +263,8 @@ public final class ContextBuilder {
         if (!focus.items().isEmpty()) {
             blocks.add(user(BlockSlots.ITEMS, calls.items(focus, List.of())));
         }
-        final int cap = kind == CallKind.SUMMARY
-                ? OutputLimit.forSummary().capTokens()
+        final int cap = kind == CallKind.CHAPTER_SUMMARY
+                ? OutputLimit.forChapterSummary().capTokens()
                 : profile.context().outputMax();
         final PromptPlan plan = new PromptPlan(
                 blocks,

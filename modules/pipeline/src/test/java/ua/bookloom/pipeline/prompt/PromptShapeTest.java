@@ -49,7 +49,7 @@ class PromptShapeTest {
     private static final Map<String, String> OTHER_REPLY_KEYS = Map.ofEntries(
             Map.entry("review-terms", "verdicts"),
             Map.entry("suggest-targets", "suggestions"),
-            Map.entry("summary", "summary"),
+            Map.entry("chapter_summary", "summary"),
             Map.entry("draft-batch-json", "items"),
             Map.entry("suspicious-words", "words"),
             Map.entry("brief-suggestion", "genre"),
@@ -91,7 +91,7 @@ class PromptShapeTest {
                 "PRESCAN",
                 "REVIEW_TERMS",
                 "SUGGEST_TARGETS",
-                "SUMMARY",
+                "CHAPTER_SUMMARY",
                 "SUSPICIOUS_WORDS",
                 "FILE_NAME",
                 "BRIEF_SUGGESTION",
@@ -303,7 +303,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"TRANSLATE", "REVIEWER", "SUMMARY", "SUGGEST_TARGETS"})
+            names = {"TRANSLATE", "REVIEWER", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
         assertThat(prompt(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")

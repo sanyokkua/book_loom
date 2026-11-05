@@ -120,6 +120,45 @@ public final class WindowMap {
         return List.copyOf(entries);
     }
 
+    /**
+     * The map lines of a chapter-summary call (design D10): one {@code term → target} line per glossary entry with a
+     * target that the texts name, locked or not, and the recurring terms' established renderings as a window's lines
+     * carry them; the most often named first, then in the order the texts name them.
+     *
+     * @param sources the non-null source texts, tokens already removed, in reading order
+     * @param map the non-null book map
+     * @param filter the non-null filter that keeps function words and declined forms out of the recurring terms
+     * @return the lines; never null, empty when the texts name nothing on the map
+     */
+    public static List<String> chapterCounted(
+            final List<String> sources, final BookMap map, final LexiconFilter filter) {
+        Objects.requireNonNull(sources, "sources");
+        Objects.requireNonNull(map, "map");
+        Objects.requireNonNull(filter, "filter");
+        final String text = String.join(JOIN, sources);
+        final List<Placed> placed = new ArrayList<>();
+        for (final GlossaryEntry entry : map.entries()) {
+            final int occurrences = hasTarget(entry) ? TermMatch.namedCount(entry.names(), text) : 0;
+            if (occurrences > 0) {
+                final String line = entry.term() + " → "
+                        + Objects.requireNonNull(entry.target(), "target").strip();
+                placed.add(new Placed(earliest(entry.names(), text), line, false, occurrences, true));
+            }
+        }
+        placed.addAll(lexicon(map, text, filter));
+        final List<String> lines = placed.stream()
+                .sorted(Comparator.comparingInt(Placed::occurrences).reversed().thenComparingInt(Placed::at))
+                .map(Placed::line)
+                .toList();
+        log.debug(
+                "Chapter map texts={} entries={} terms={} lines={}",
+                sources.size(),
+                map.entries().size(),
+                map.terms().size(),
+                lines.size());
+        return lines;
+    }
+
     private static Glossary glossary(
             final Window window, final BookMap map, final List<ProtectedMask> masks, final Texts texts) {
         final Glossary glossary = new Glossary(new ArrayList<>(), new LinkedHashSet<>(), new ArrayList<>());

@@ -188,7 +188,7 @@ class JobModelCallSnapshotsTest {
 
     @Test
     void callAbout_notDescribed_showsNoSnapshot() {
-        callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.SUMMARY, List.of(), REQUEST);
+        callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.CHAPTER_SUMMARY, List.of(), REQUEST);
 
         assertThat(snapshots()).isEmpty();
     }
@@ -223,7 +223,7 @@ class JobModelCallSnapshotsTest {
                 "REVIEW_TERMS",
                 "SUGGEST_TARGETS",
                 "TERM_CHOICE",
-                "SUMMARY",
+                "CHAPTER_SUMMARY",
                 "SUSPICIOUS_WORDS",
                 "BRIEF_SUGGESTION",
                 "FILE_NAME",

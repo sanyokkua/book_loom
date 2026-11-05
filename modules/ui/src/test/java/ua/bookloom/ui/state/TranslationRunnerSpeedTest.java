@@ -151,7 +151,7 @@ class TranslationRunnerSpeedTest extends RunnerTestBase {
         final ModelSpeeds speeds = new ModelSpeeds();
         final ModelSpeedRecorder recorder = new ModelSpeedRecorder(store, speeds, executor);
         final ListLedger ledger = new ListLedger();
-        ledger.record(new CallRecord(CallKind.SUMMARY, null, Duration.ofSeconds(50), null, null));
+        ledger.record(new CallRecord(CallKind.CHAPTER_SUMMARY, null, Duration.ofSeconds(50), null, null));
         runner = new TranslationRunner(
                 mirror, executor, ticks, desk, clock, RunSpeedSink.NONE, new MeasuredCalls(ledger, store, recorder));
         startJob();
@@ -165,7 +165,7 @@ class TranslationRunnerSpeedTest extends RunnerTestBase {
         final var row =
                 store.stored(SELECTION.providerId(), SELECTION.modelId()).orElseThrow();
         assertThat(row.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
-        assertThat(row.speedOf(CallKind.SUMMARY)).isEmpty();
+        assertThat(row.speedOf(CallKind.CHAPTER_SUMMARY)).isEmpty();
         assertThat(row.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(3.0, MeasuredFrom.TEST));
     }
 

@@ -90,6 +90,7 @@ class JobEventContractsTest {
             case StepsPlanned _ -> "StepsPlanned";
             case StepChanged _ -> "StepChanged";
             case BriefSampleRead _ -> "BriefSampleRead";
+            case ChapterSummaryKept _ -> "ChapterSummaryKept";
         };
     }
 
@@ -244,5 +245,22 @@ class JobEventContractsTest {
     void briefSampleRead_sampleOutsideTheWindows_isRejected(final int sample, final int samples) {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new BriefSampleRead(sample, samples, java.util.Map.of(), "", ""));
+    }
+
+    @Test
+    void chapterSummaryKept_toString_holdsNoSummaryText() {
+        final ChapterSummaryKept kept = new ChapterSummaryKept("ch1.xhtml:0", 1, 2, "Оповідачка вирушає до перевалу.");
+
+        assertThat(kept.text()).isEqualTo("Оповідачка вирушає до перевалу.");
+        assertThat(kept.toString())
+                .contains("ch1.xhtml:0", "chapter=1", "sentences=2")
+                .doesNotContain("Оповідачка");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,1,Text.", "1,0,Text.", "1,4,Text.", "1,2,' '"})
+    void chapterSummaryKept_outOfRange_isRejected(final int chapter, final int sentences, final String text) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ChapterSummaryKept("ch1.xhtml:0", chapter, sentences, text));
     }
 }

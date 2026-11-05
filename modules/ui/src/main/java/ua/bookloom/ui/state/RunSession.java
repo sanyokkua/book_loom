@@ -14,6 +14,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -261,6 +262,9 @@ final class RunSession implements JobListener {
             case StepsPlanned planned -> locked(() -> progress.planned(planned));
             case StepChanged changed -> onStep(changed);
             case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
+            // The live card shows a kept summary from task 12.8; its text is book text, never logged here.
+            case ChapterSummaryKept kept ->
+                log.debug("chapter summary kept chapter={} sentences={}", kept.chapter(), kept.sentences());
         }
     }
 

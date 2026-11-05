@@ -47,7 +47,7 @@ class MeasuredCallsTest {
     // The spec's names pass: 40 name-reading calls in 200 s store 5.0 s per name-reading call.
     @Test
     void keep_namesPassOfFortyReadings_storesFiveSecondsPerReading() {
-        ledger.record(new CallRecord(CallKind.SUMMARY, null, Duration.ofSeconds(30), null, null));
+        ledger.record(new CallRecord(CallKind.CHAPTER_SUMMARY, null, Duration.ofSeconds(30), null, null));
         final long mark = measured.mark();
         Collections.nCopies(40, new CallRecord(CallKind.TERM_READING, null, Duration.ofSeconds(5), null, null))
                 .forEach(ledger::record);

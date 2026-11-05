@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.MemoryUpdated;
@@ -34,6 +35,7 @@ final class JobEventLabels {
                 "CallSnapshotUpdated " + updated.snapshot().callId() + " "
                         + updated.snapshot().state() + " outcomes="
                         + updated.snapshot().outcomes().size();
+            case ChapterSummaryKept kept -> "ChapterSummaryKept " + kept.chapter();
             default -> event.getClass().getSimpleName();
         };
     }

@@ -7,7 +7,7 @@ import ua.bookloom.api.pipeline.CallKind;
 enum FrameKind {
     /** Blocks 1–13: drafts, format re-asks and repairs. */
     TRANSLATE,
-    /** Blocks 1, 2 and 7 and the kind's user blocks: the names pass, the brief, the file name, the summary. */
+    /** Blocks 1, 2 and 7 and the kind's user blocks: the names pass, the brief, the file name, the chapter summary. */
     ANALYSIS,
     /** A call the builder does not plan. */
     NONE;
@@ -18,7 +18,7 @@ enum FrameKind {
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,
-                    SUMMARY,
+                    CHAPTER_SUMMARY,
                     FILE_NAME,
                     BRIEF_SUGGESTION,
                     BOOK_KNOWLEDGE,

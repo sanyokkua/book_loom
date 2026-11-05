@@ -145,10 +145,10 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
     void callOfNoSegment_hasNoLocator() {
         final RunSession session = session();
 
-        session.onEvent(new ModelCallFinished(null, CallKind.SUMMARY, Duration.ofSeconds(1), null, 10, false));
+        session.onEvent(new ModelCallFinished(null, CallKind.CHAPTER_SUMMARY, Duration.ofSeconds(1), null, 10, false));
         tick(session);
 
-        assertThat(logEntries()).containsExactly(technicalCall("summary", "", "0", "1", "0:01"));
+        assertThat(logEntries()).containsExactly(technicalCall("chapter_summary", "", "0", "1", "0:01"));
     }
 
     // IF the same failure repeated as four lines, THEN a stall would push every other line out of view.

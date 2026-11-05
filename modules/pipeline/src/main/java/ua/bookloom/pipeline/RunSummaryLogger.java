@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.BriefSampleRead;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -120,7 +121,8 @@ final class RunSummaryLogger {
                     CallSnapshotUpdated _,
                     StepsPlanned _,
                     StepChanged _,
-                    BriefSampleRead _ -> {}
+                    BriefSampleRead _,
+                    ChapterSummaryKept _ -> {}
         }
         writeWhenDue();
     }

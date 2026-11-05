@@ -7,7 +7,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
-/** The summary call is shown a long chapter's beginning and end, never more than its context can hold. */
+/** A segment longer than a chapter part is shown by its beginning and end, never more than the part can hold. */
 class ChapterTextTest {
 
     @Test

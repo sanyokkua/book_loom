@@ -127,9 +127,26 @@ public final class LanguageIdentityCheck {
      */
     public static int residueCount(
             final String text, @Nullable final String sourceLanguage, final String targetLanguage) {
+        return residueWords(text, sourceLanguage, targetLanguage).size();
+    }
+
+    /**
+     * The source-only function words a text holds, found the way the residue finding finds them, so a re-ask can name
+     * them.
+     *
+     * @param text the non-null display text
+     * @param sourceLanguage the source language tag, or null when the book declares none
+     * @param targetLanguage the non-null target language tag
+     * @return the words in text order, repeats kept; never null, empty when the source is undeclared or either language
+     *     has no list
+     */
+    public static List<String> residueWords(
+            final String text, @Nullable final String sourceLanguage, final String targetLanguage) {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
-        return hits(text, 0, sourceOnly(sourceLanguage, targetLanguage)).size();
+        return hits(text, 0, sourceOnly(sourceLanguage, targetLanguage)).stream()
+                .map(Hit::word)
+                .toList();
     }
 
     private static boolean startsLower(final String word) {

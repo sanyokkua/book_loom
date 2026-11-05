@@ -27,7 +27,10 @@ import ua.bookloom.pipeline.prompt.BatchSchema;
  *
  * <p>An outcome added with {@link #answerTo(String, Result)} answers only a request whose response format has that
  * name — a translate-family call is also found under {@code draft}, {@code repair} or {@code structural-repair} by its
- * kind — and every other request takes the next outcome added with {@link #answer(Result)}.
+ * kind — and every other request takes the next outcome added with {@link #answer(Result)}. A chapter-summary
+ * request never takes from that general queue: a test that scripts none under {@code chapter_summary} gets a
+ * {@code validation} error for it, so a multi-chapter run's summary call never eats a draft's reply and the run, which
+ * only warns about a summary it could not keep, goes on.
  */
 public final class ScriptedChatModel implements ChatModel {
 
@@ -36,6 +39,7 @@ public final class ScriptedChatModel implements ChatModel {
     private static final String REPAIR = "repair";
     private static final String REASK = "structural-repair";
     private static final Pattern ITEM = Pattern.compile("<s id=\"[^\"]+\">");
+    private static final String CHAPTER_SUMMARY = "chapter_summary";
 
     private final ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>> outcomes = new ConcurrentLinkedDeque<>();
     private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>>> named =
@@ -138,6 +142,10 @@ public final class ScriptedChatModel implements ChatModel {
             final var byName = forName == null ? null : forName.pollFirst();
             if (byName != null) {
                 return byName;
+            }
+            if (CHAPTER_SUMMARY.equals(name)) {
+                return () -> Result.err(
+                        AppError.of(ErrorCode.validation, "Not scripted", "No chapter summary was scripted."));
             }
         }
         return outcomes.removeFirst();

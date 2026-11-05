@@ -41,9 +41,10 @@ public record OutputLimit(
     static final int SHORT_SOURCE_CAP_FLOOR = 128;
     // Per item the reply spends tokens on the id and its wrapper: {"id":"12","target":""}.
     private static final int BATCH_ITEM_ENVELOPE_TOKENS = 16;
-    // A summary reply holds the summary in both languages, each kept under the prompt's 150 words, and a few facts.
-    private static final int SUMMARY_EXPECTED_TOKENS = 600;
-    private static final int SUMMARY_CAP_TOKENS = 1024;
+    // A chapter summary is two or three short sentences in the target language (design D10): about 120 tokens of
+    // Cyrillic with its JSON envelope, capped at 200 so a reply that runs on is cut, not paid for.
+    private static final int CHAPTER_SUMMARY_EXPECTED_TOKENS = 120;
+    private static final int CHAPTER_SUMMARY_CAP_TOKENS = 200;
     // A pre-scan reply holds at most one short entry per candidate sent: the term, its type, gender, a note and a
     // confidence.
     private static final int PRESCAN_BASE_TOKENS = 64;
@@ -81,12 +82,12 @@ public record OutputLimit(
     }
 
     /**
-     * The limit for one rolling-summary call, bounded by the prompt's word budget per language.
+     * The limit for one chapter-summary call.
      *
-     * @return the limit: 1024 tokens at most
+     * @return the limit: 200 tokens at most
      */
-    public static OutputLimit forSummary() {
-        return new OutputLimit(SUMMARY_EXPECTED_TOKENS, SUMMARY_CAP_TOKENS);
+    public static OutputLimit forChapterSummary() {
+        return new OutputLimit(CHAPTER_SUMMARY_EXPECTED_TOKENS, CHAPTER_SUMMARY_CAP_TOKENS);
     }
 
     /**

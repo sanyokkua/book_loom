@@ -92,8 +92,8 @@ class OutputLimitTest {
     }
 
     @Test
-    void forSummary_capsAtTenTwentyFour() {
-        assertThat(OutputLimit.forSummary()).isEqualTo(new OutputLimit(600, 1024));
+    void forChapterSummary_capsAtTwoHundred() {
+        assertThat(OutputLimit.forChapterSummary()).isEqualTo(new OutputLimit(120, 200));
     }
 
     @Test

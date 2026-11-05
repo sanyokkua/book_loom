@@ -54,7 +54,8 @@ public final class PlannedPrompts {
             PromptName.TERM_SUMMARY,
             PromptName.PRESCAN,
             PromptName.REVIEW_TERMS,
-            PromptName.SUGGEST_TARGETS);
+            PromptName.SUGGEST_TARGETS,
+            PromptName.CHAPTER_SUMMARY);
 
     /** The task slots the call frame fills; a caller gives the others. */
     public static final Set<String> FRAME_SLOTS = Set.of(
