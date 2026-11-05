@@ -137,4 +137,58 @@ class BookBriefTest {
         assertThat(base.conventions()).isEmpty();
         assertThat(base.likely()).isEmpty();
     }
+
+    @Test
+    void summariesOn_noAnalysis_true() {
+        assertThat(BookBrief.defaults("en").summariesOn()).isTrue();
+    }
+
+    @Test
+    void summariesOn_separateStoriesNotForced_false() {
+        final BookBrief brief = BookBrief.defaults("en").withStoryShape(StoryShape.SEPARATE_STORIES);
+
+        assertThat(brief.summariesOn()).isFalse();
+    }
+
+    @Test
+    void summariesOn_forcedOnWithSeparateStories_true() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.SEPARATE_STORIES)
+                .withChapterSummaries(true);
+
+        assertThat(brief.summariesOn()).isTrue();
+    }
+
+    @Test
+    void summariesOn_forcedOffWithOneStory_false() {
+        final BookBrief brief =
+                BookBrief.defaults("en").withStoryShape(StoryShape.ONE_STORY).withChapterSummaries(false);
+
+        assertThat(brief.summariesOn()).isFalse();
+    }
+
+    @Test
+    void withKeysOf_storyShapeAndSwitch_kept() {
+        final BookBrief other = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.SEPARATE_STORIES)
+                .withChapterSummaries(true);
+
+        final BookBrief merged = BookBrief.defaults("uk").withGenre("Fable").withKeysOf(other);
+
+        assertThat(merged.storyShape()).isEqualTo(StoryShape.SEPARATE_STORIES);
+        assertThat(merged.chapterSummaries()).isTrue();
+        assertThat(merged.genre()).isEqualTo("Fable");
+    }
+
+    @Test
+    void withLanguages_storyShapeAndSwitch_kept() {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withStoryShape(StoryShape.ONE_STORY)
+                .withChapterSummaries(false)
+                .withLanguages("en", "uk")
+                .withApostrophe("\u2019");
+
+        assertThat(brief.storyShape()).isEqualTo(StoryShape.ONE_STORY);
+        assertThat(brief.chapterSummaries()).isFalse();
+    }
 }

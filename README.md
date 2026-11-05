@@ -11,7 +11,7 @@ review. Nothing leaves your machine.
 - **Private:** fully offline, no account, no telemetry; the only network traffic is your own requests to your own model
   server (inference, model discovery, verification).
 - **Faithful:** structure-preserving round-trip — the translated book opens exactly like the original.
-- **Consistent:** a name/term glossary, translation memory, rolling summary, deterministic quality checks and an
+- **Consistent:** a name/term glossary, translation memory, chapter summaries, deterministic quality checks and an
   LLM-as-judge keep names, tone and formatting steady across a whole book.
 - **Cross-platform:** Java 25 + JavaFX 26; unsigned native packages for macOS (`.app`/`.dmg`), Windows (portable zip —
   no installer), and Linux (tar.gz/`.deb`).

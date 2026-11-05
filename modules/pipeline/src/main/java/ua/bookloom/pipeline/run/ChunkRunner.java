@@ -22,7 +22,7 @@ import ua.bookloom.pipeline.index.BookIndex;
  * whole chunk; with it off each segment is drafted and decided before the next is drafted. The reviewer on or off is
  * this one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
  * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
- * rolling summary and a unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
+ * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
@@ -41,7 +41,6 @@ public final class ChunkRunner {
     private final RunStores stores;
     private final RunSinks sinks;
     private final RoutedCalls calls;
-    private final DecisionFollowUp followUp;
     private final TermLearning learning;
     private final ChunkSteps announced;
     private final ChunkDrafting drafting;
@@ -79,7 +78,6 @@ public final class ChunkRunner {
                 ChunkDrafting.Collaborators.wire(steps, settings, stores, sinks, index, document);
         this.calls = shared.calls();
         this.announced = shared.announced();
-        this.followUp = shared.followUp();
         this.learning = new TermLearning(
                 stores,
                 settings.projectId(),
@@ -98,10 +96,6 @@ public final class ChunkRunner {
      */
     public RunEnd run(final WorkList work) {
         Objects.requireNonNull(work, "work");
-        final Optional<RunEnd> unread = followUp.readSummary();
-        if (unread.isPresent()) {
-            return unread.get();
-        }
         learning.replay(work.decidedSegments());
         while (work.hasPending()) {
             final Optional<RunEnd> end = runUnit(work, work.nextSection());
@@ -116,14 +110,13 @@ public final class ChunkRunner {
         return new RunEnd(JobState.COMPLETED, null);
     }
 
-    // The unit's glossary lines and summary are reserved as they stand when it is packed; a chunk re-reads the
-    // glossary anyway, and a summary refreshed inside the unit is estimated when the next unit is packed.
+    // The unit's glossary is read as it stands when the unit is packed, so an unreadable glossary ends the run before
+    // any chunk; a chunk re-reads it anyway.
     private Optional<RunEnd> runUnit(final WorkList work, final List<WorkItem> items) {
         final Result<List<GlossaryEntry>> glossary = stores.glossary().all(settings.projectId());
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), ERROR)));
         }
-        announced.unitEntered();
         return runChunks(work, planner.walk(items));
     }
 

@@ -36,7 +36,6 @@ final class ConsistencyPassFixture {
                 new ObjectMapper(),
                 retryDraft(project, templates),
                 project.stores().lexicon(),
-                project.stores().summaries(),
                 new CheckedParagraphs());
     }
 

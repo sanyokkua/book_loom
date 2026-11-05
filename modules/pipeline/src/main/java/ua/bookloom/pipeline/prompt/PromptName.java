@@ -8,7 +8,6 @@ import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
 import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE;
 import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE_LANGUAGE;
 import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
-import static ua.bookloom.pipeline.prompt.SlotNames.SUMMARY_SLOT;
 import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
 import static ua.bookloom.pipeline.prompt.SlotNames.TERMS;
 import static ua.bookloom.pipeline.prompt.SlotNames.TITLE;
@@ -121,7 +120,7 @@ public enum PromptName {
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(
                     Set.of(SOURCE, "text"),
-                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", CHARACTERS, SUMMARY_SLOT, TOKENS))),
+                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", CHARACTERS, TOKENS))),
 
     /** The Fast dial's choice among recurring words (15i.N7): keep or drop, a batch of candidates a call. */
     TERM_CHOICE(

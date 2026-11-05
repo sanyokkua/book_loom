@@ -22,9 +22,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -44,9 +42,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TranslationJobStepsTest {
 
     private static final int PARAGRAPHS = 12;
-    private static final String SUMMARY = "summary";
-    private static final String SUMMARY_REPLY =
-            "{\"summary\":{\"source\":\"Numbered lines.\",\"target\":\"Пронумеровані рядки.\"},\"facts\":[]}";
 
     @TempDir
     private Path tempDir;
@@ -78,7 +73,7 @@ class TranslationJobStepsTest {
     private static ScriptedChatModel maxModel() {
         final ScriptedChatModel model = tenDrafts();
         IntStream.range(0, 12).forEach(ignored -> model.answerTo(REVIEW, reviewed()));
-        return model.answerTo(SUMMARY, Result.ok(new ChatResponse(SUMMARY_REPLY, FinishReason.STOP)));
+        return model;
     }
 
     private static List<JobEvent> run(final TranslationJobImpl translation) {
@@ -144,18 +139,18 @@ class TranslationJobStepsTest {
         assertThat(planned(events, StepKind.REVISION)).isEmpty();
     }
 
-    // Max: one chunk of 12, two checks, one summary for the one unit that runs, and the revision as an estimate.
+    // Max: one chunk of 12, two checks and the revision as an estimate; the unit-end summary of the rolling summary
+    // is gone (12.3), so no summary step is planned and no summary call is made.
     @Test
-    void run_maxTwelveSegments_plansTwelveChecksOneSummaryOneRevision() {
-        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), maxModel()));
+    void run_maxTwelveSegments_plansNoSummaryAndMakesNoSummaryCall() {
+        final ScriptedChatModel model = maxModel();
+        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), model));
 
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
         assertThat(planned(events, StepKind.CHECK)).containsExactly(2);
         assertThat(ended(events, StepKind.CHECK)).hasSize(2);
-        assertThat(planned(events, StepKind.SUMMARY)).containsExactly(1);
-        assertThat(ended(events, StepKind.SUMMARY))
-                .extracting(StepChanged::result)
-                .containsExactly(StepResult.DONE);
+        assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
+        assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.SUMMARY);
         assertThat(events).contains(new StepsPlanned(StepKind.REVISION, 1, true));
         assertThat(ended(events, StepKind.REVISION)).hasSize(1);
     }

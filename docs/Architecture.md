@@ -19,7 +19,7 @@ dial, who narrates, the "Also translate" switches), settles names and recurring 
 on Translating, where the review panel lives (accept, edit, revert, leave for later, apply a proposal, retry with a note), and
 writes the book from Export, which is its own action and not a job stage. A run is a pausable job over a **stored
 project**: it packs each unit into chunks, drafts, reviews and decides every segment through the acceptance rule and the
-quality loop, reuses translation memory, keeps a rolling summary and the glossary, pauses as the review mode says
+quality loop, reuses translation memory, keeps the glossary, pauses as the review mode says
 (`BOOKLOOM_REVIEW_MODE`, §5), recovers from a provider outage by itself, and on Max revises backwards after the last
 segment. Importing another book while a run can continue asks first (one translation per application run). The model
 is the offline `pseudo` provider, an Ollama-native endpoint or an OpenAI-compatible one; every call is capped in output
@@ -184,7 +184,7 @@ writes what the project has decided, leaving the rest in the source, so a stoppe
 ### 3.6 Project, storage and service ports
 
 - `ua.bookloom.api.project` (records): `Project`, `BookBrief` (languages, genre, register, policies, quality dial,
-  `AlsoTranslate`, `Narrator`), `GlossaryEntry`, `LexiconEntry`, `TmEntry`, `RollingSummary`, `RunRecord`,
+  `AlsoTranslate`, `Narrator`), `GlossaryEntry`, `LexiconEntry`, `TmEntry`, `ChapterSummary`, `RunRecord`,
   `SegmentRecord` (the stored decision, its `QaFinding`s and its `ContextSnapshot`), `SegmentPath`/`SegmentLocator`,
   `Deferral`/`DeferralReason`, `ChunkCommit`.
 - `ua.bookloom.api.persistence` (ports): `ProjectRepository`, `SegmentRepository`, `GlossaryRepository`,
@@ -368,7 +368,7 @@ boundaries, write the book back canonical-equal (byte-exact for TXT), and releas
 over a stored project with the pseudo model or a real local provider — drafts go out in token-budgeted JSON batches,
 deterministic checks and a typography pass run before any model reads a draft, a per-chunk reviewer fixes in place and
 the code verifies every edit, the acceptance rule and quality loop repair or flag an echo, and protected spans, the
-context package, translation memory, the rolling summary, the glossary and recurring terms keep the book consistent;
+context package, translation memory, the recently-present card, the glossary and recurring terms keep the book consistent;
 pause on a flagged segment or after each segment as the review mode says; recover from an outage by itself; on Max,
 revise backwards; export a stopped or partial run, with the chosen side files and an optional consistency pass, never
 overwriting a source or an existing destination without being told.

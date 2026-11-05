@@ -1,6 +1,7 @@
 package ua.bookloom.persistence.sqlite;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
 import java.time.Clock;
@@ -28,11 +29,11 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -265,7 +266,6 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         segmentRepository().saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
         segmentRepository().update("p1", "ch1:0", r -> r.withStatus(SegmentStatus.ACCEPTED));
         tmRepository().put(new TmEntry("t1", "p1", "h1", "c1", "Hello", "Привіт"));
-        summaryRepository().save(new RollingSummary("p1", null, "src", "tgt", 3, null, 0));
         glossaryRepository().add(GlossaryEntry.of("e1", "p1", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         glossaryRepository().add(GlossaryEntry.of("e2", "p1", "Milton", null, TermType.PLACE, Gender.NEUTER, false));
         glossaryRepository().remove("p1", "e2");
@@ -281,8 +281,6 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                         .accepted())
                 .isEqualTo(1);
         assertThat(tmRepository().context("p1", "h1", "c1").data()).isPresent();
-        assertThat(summaryRepository().latest("p1").data())
-                .hasValueSatisfying(s -> assertThat(s.version()).isEqualTo(3));
         assertThat(glossaryRepository().all("p1").data())
                 .extracting(GlossaryEntry::term)
                 .containsExactly("Hale");
@@ -291,5 +289,18 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                 .extracting(LexiconEntry::term)
                 .containsExactly("warden");
         assertThat(lexiconRepository().wasRemoved("p1", "Master").data()).isTrue();
+    }
+
+    @Test
+    void chapterSummary_survivesReopen() {
+        givenProjects("p1");
+        summaryRepository().save(new ChapterSummary("p1", "ch2.xhtml:0", "ch2.xhtml", 0, 7, "Вони втекли.", "h2"));
+        summaryRepository().save(new ChapterSummary("p1", "ch1.xhtml:0", "ch1.xhtml", 0, 5, "Вони зустрілися.", "h1"));
+
+        restart();
+
+        assertThat(summaryRepository().list("p1").data())
+                .extracting(ChapterSummary::chapterKey, ChapterSummary::segmentCount, ChapterSummary::text)
+                .containsExactly(tuple("ch2.xhtml:0", 7, "Вони втекли."), tuple("ch1.xhtml:0", 5, "Вони зустрілися."));
     }
 }

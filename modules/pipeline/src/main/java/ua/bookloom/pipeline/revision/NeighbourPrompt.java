@@ -29,7 +29,7 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 /**
  * The slots of one check against the neighbours: the paragraph before and after it as source and translation, the
  * glossary renderings of the names the three paragraphs hold, the established renderings of recurring terms, the
- * genders of the characters they name, the rolling summary, the source, its tokens and the text to check. The
+ * genders of the characters they name, the source, its tokens and the text to check. The
  * narrator rides in the system message's style sheet, which every call carries. Each list is cut to a token allowance
  * from its first line, so a long cast or glossary never crowds out the paragraph itself.
  */
@@ -88,7 +88,6 @@ final class NeighbourPrompt {
         user.put("resolvedFacts", facts(inputs, present));
         user.put("lexiconTerms", lexicon(inputs, present));
         user.put("characters", lines(CharacterSheet.select(present, inputs.glossary()), CHARACTER_TOKENS));
-        user.put("summary", Objects.requireNonNullElse(inputs.context().summary(), ""));
         return user;
     }
 

@@ -27,7 +27,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param order the opened book's segment ids in reading order, which the neighbours of a paragraph are read from
  * @param book the brief, the opened book and the glossary as the audit reads them, so a new text is never one the
  *     audit doubts more than the old
- * @param context the recurring-term lexicon and the rolling summary the check against the neighbours shows
+ * @param context the recurring-term lexicon the check against the neighbours shows
  * @param matter the ids of the segments outside the story: those of a front or back matter unit, and the auxiliary
  *     unit's (navigation labels, title, creator, image text), which the pass never sends to the model
  */

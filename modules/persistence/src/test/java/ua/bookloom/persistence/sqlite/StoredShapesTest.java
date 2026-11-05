@@ -121,4 +121,17 @@ class StoredShapesTest {
                 .contains("rejectedTarget:java.lang.String,reviewed:boolean")
                 .doesNotContain("repairRounds:");
     }
+
+    // The rolling summary's root is replaced by the chapter summary, and the brief holds the story shape and the
+    // switch, so a database from before group 12 is set aside.
+    @Test
+    void describe_afterChapterSummaries_holdsTheChapterAndStoryShape() {
+        assertThat(StoredShapes.describe(StoredShapes.ROOTS))
+                .contains(
+                        "chapterKey:",
+                        "sourceHash:",
+                        "storyShape:enum[ONE_STORY,SEPARATE_STORIES]",
+                        "chapterSummaries:java.lang.Boolean")
+                .doesNotContain("lastSummarizedKey");
+    }
 }

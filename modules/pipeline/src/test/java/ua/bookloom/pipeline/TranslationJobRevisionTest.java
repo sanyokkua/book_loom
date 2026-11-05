@@ -30,8 +30,6 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -59,7 +57,6 @@ class TranslationJobRevisionTest {
     private static final String SAM_LEFT = "Book.md:1";
     private static final String WIND = "Book.md:2";
     private static final String REVISION = "revision";
-    private static final String SUMMARY = "summary";
 
     @TempDir
     private Path tempDir;
@@ -157,7 +154,6 @@ class TranslationJobRevisionTest {
                 .answer(target(T3))
                 .answerTo(REVIEW, reviewed())
                 .answerTo(REVIEW, reviewed())
-                .answerTo(SUMMARY, summaryReply())
                 .answerTo(REVISION, ChunkRunFixtures.singleTarget("Сем пішла."));
     }
 
@@ -207,12 +203,6 @@ class TranslationJobRevisionTest {
                 .filter(candidate -> candidate.id().equals(segmentId))
                 .findFirst()
                 .orElseThrow();
-    }
-
-    private static Result<ChatResponse> summaryReply() {
-        return Result.ok(new ChatResponse(
-                "{\"summary\":{\"source\":\"The wind rose.\",\"target\":\"Вітер здійнявся.\"},\"facts\":[]}",
-                FinishReason.STOP));
     }
 
     private static <T> T ok(final Result<T> result) {

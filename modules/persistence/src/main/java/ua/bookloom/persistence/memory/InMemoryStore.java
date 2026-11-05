@@ -14,6 +14,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.ExportRecord;
@@ -21,7 +22,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.PromptFrame;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
@@ -49,7 +49,7 @@ final class InMemoryStore {
     private final Map<String, ProjectSegments> segmentsByProject = new ConcurrentHashMap<>();
     private final Map<String, ProjectGlossary> glossaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, TmEntry>> tmByProject = new ConcurrentHashMap<>();
-    private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, ChapterSummary>> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
     private final Map<String, ExportRecord> exportByProject = new ConcurrentHashMap<>();
     private final Map<String, RunRecord> latestRunByProject = new ConcurrentHashMap<>();
@@ -92,7 +92,11 @@ final class InMemoryStore {
         return tmByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
     }
 
-    Map<String, RollingSummary> summaries() {
+    /**
+     * Returns the chapter summaries by project, each project's held in the order its chapters were first saved; a
+     * project's map is replaced by a changed copy, never changed in place, so a reader holds a stable map.
+     */
+    Map<String, Map<String, ChapterSummary>> summaries() {
         return summaryByProject;
     }
 

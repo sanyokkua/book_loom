@@ -23,11 +23,6 @@
 {{characters}}
 
 {{/characters}}
-{{#summary}}
-[Book so far — context only]
-{{summary}}
-
-{{/summary}}
 <Source>
 {{source}}
 </Source>

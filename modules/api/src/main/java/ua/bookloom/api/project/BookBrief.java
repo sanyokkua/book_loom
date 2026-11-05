@@ -33,6 +33,9 @@ import ua.bookloom.api.pipeline.QualityDial;
  * @param defaultAddress the default form of address between characters, or null when not declared
  * @param conventions declared language choices by name; copied, never null
  * @param likely the fields the analysis filled that the person has not confirmed; copied, never null
+ * @param storyShape whether the chapters tell one story or separate ones, or null when no analysis has read it
+ * @param chapterSummaries {@code true} or {@code false} when the person forced chapter summaries on or off, or null
+ *     to follow the story shape; read it through {@link #summariesOn()}
  */
 public record BookBrief(
         @Nullable String sourceLanguage,
@@ -53,15 +56,15 @@ public record BookBrief(
         @Nullable QuoteStyle quoteStyle,
         @Nullable Address defaultAddress,
         Map<String, String> conventions,
-        Set<BriefField> likely) {
+        Set<BriefField> likely,
+        @Nullable StoryShape storyShape,
+        @Nullable Boolean chapterSummaries) {
 
     private static final int MIN_BALANCE = 0;
     private static final int MAX_BALANCE = 100;
     private static final int DEFAULT_BALANCE = 55;
 
-    /**
-     * Validates the invariants a caller is entitled to assume.
-     */
+    /** Validates the invariants a caller is entitled to assume. */
     public BookBrief {
         Objects.requireNonNull(register, "register");
         Objects.requireNonNull(names, "names");
@@ -117,7 +120,9 @@ public record BookBrief(
                 null,
                 null,
                 Map.of(),
-                Set.of());
+                Set.of(),
+                null,
+                null);
     }
 
     /** A brief with no narrator stated, which is what every brief made before the narrator existed holds. */
@@ -244,7 +249,7 @@ public record BookBrief(
      * @return a new brief with the apostrophe
      */
     public BookBrief withApostrophe(@Nullable final String apostrophe) {
-        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
     }
 
     /**
@@ -254,7 +259,7 @@ public record BookBrief(
      * @return a new brief with the quotation marks
      */
     public BookBrief withQuoteStyle(@Nullable final QuoteStyle quoteStyle) {
-        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
     }
 
     /**
@@ -264,7 +269,7 @@ public record BookBrief(
      * @return a new brief with the address
      */
     public BookBrief withDefaultAddress(@Nullable final Address defaultAddress) {
-        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
     }
 
     /**
@@ -274,7 +279,7 @@ public record BookBrief(
      * @return a new brief with the conventions
      */
     public BookBrief withConventions(final Map<String, String> conventions) {
-        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely);
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
     }
 
     /**
@@ -284,19 +289,54 @@ public record BookBrief(
      * @return a new brief with the set
      */
     public BookBrief withLikely(final Set<BriefField> fields) {
-        return keys(apostrophe, quoteStyle, defaultAddress, conventions, fields);
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, fields, storyShape, chapterSummaries);
     }
 
     /**
-     * Returns this brief with the policy keys and the likely marks of another brief, everything else kept; for a
-     * brief rebuilt through the 14-argument constructor, which declares no key.
+     * Returns this brief with another brief's keys and likely marks, for one the 14-argument constructor rebuilt.
      *
-     * @param other the non-null brief whose apostrophe, quotation marks, address, conventions and likely set to take
-     * @return a new brief with those five parts of {@code other}
+     * @param other the non-null brief whose keys, likely set, story shape and summaries switch to take
+     * @return a new brief with those parts of {@code other}
      */
     public BookBrief withKeysOf(final BookBrief other) {
         Objects.requireNonNull(other, "other");
-        return keys(other.apostrophe, other.quoteStyle, other.defaultAddress, other.conventions, other.likely);
+        return keys(
+                other.apostrophe,
+                other.quoteStyle,
+                other.defaultAddress,
+                other.conventions,
+                other.likely,
+                other.storyShape,
+                other.chapterSummaries);
+    }
+
+    /**
+     * Returns this brief with its story shape replaced, everything else kept.
+     *
+     * @param storyShape the replacement, or null when no analysis has read it
+     * @return a new brief with the story shape
+     */
+    public BookBrief withStoryShape(@Nullable final StoryShape storyShape) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
+    }
+
+    /**
+     * Returns this brief with its chapter-summaries switch replaced, everything else kept.
+     *
+     * @param chapterSummaries {@code true} or {@code false} to force it, or null to follow the story shape
+     * @return a new brief with the switch
+     */
+    public BookBrief withChapterSummaries(@Nullable final Boolean chapterSummaries) {
+        return keys(apostrophe, quoteStyle, defaultAddress, conventions, likely, storyShape, chapterSummaries);
+    }
+
+    /**
+     * Whether chapter summaries are on: forced, else on unless separate stories; no bean name, so it is never stored.
+     *
+     * @return {@code true} when chapter summaries are on, {@code false} otherwise
+     */
+    public boolean summariesOn() {
+        return chapterSummaries != null ? chapterSummaries : storyShape != StoryShape.SEPARATE_STORIES;
     }
 
     private BookBrief keys(
@@ -304,7 +344,9 @@ public record BookBrief(
             @Nullable final QuoteStyle quoteStyle,
             @Nullable final Address defaultAddress,
             final Map<String, String> conventions,
-            final Set<BriefField> likely) {
+            final Set<BriefField> likely,
+            @Nullable final StoryShape storyShape,
+            @Nullable final Boolean chapterSummaries) {
         return new BookBrief(
                 sourceLanguage,
                 targetLanguage,
@@ -324,7 +366,9 @@ public record BookBrief(
                 quoteStyle,
                 defaultAddress,
                 conventions,
-                likely);
+                likely,
+                storyShape,
+                chapterSummaries);
     }
 
     private BookBrief copy(
@@ -336,24 +380,20 @@ public record BookBrief(
             final QualityDial dial,
             final Narrator narrator) {
         return new BookBrief(
-                sourceLanguage,
-                targetLanguage,
-                genre,
-                register,
-                voiceEra,
-                audience,
-                names,
-                foreignPassages,
-                footnotes,
-                units,
-                balance,
-                alsoTranslate,
-                dial,
-                narrator,
-                apostrophe,
-                quoteStyle,
-                defaultAddress,
-                conventions,
-                likely);
+                        sourceLanguage,
+                        targetLanguage,
+                        genre,
+                        register,
+                        voiceEra,
+                        audience,
+                        names,
+                        foreignPassages,
+                        footnotes,
+                        units,
+                        balance,
+                        alsoTranslate,
+                        dial,
+                        narrator)
+                .withKeysOf(this);
     }
 }

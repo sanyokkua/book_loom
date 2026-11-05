@@ -1210,8 +1210,6 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
     /** Row of the quality table: the backward revision. */
     SETTINGS_GENERATION_QUALITY_BACKWARD("settings.generation.quality.backward"),
-    /** Row of the quality table: the model-written summary. */
-    SETTINGS_GENERATION_QUALITY_SUMMARY("settings.generation.quality.summary"),
     /** Cell of the quality table for a step that runs. */
     SETTINGS_GENERATION_QUALITY_YES("settings.generation.quality.yes"),
     /** Cell of the quality table for a step that does not run. */
@@ -3793,7 +3791,7 @@ public enum MessageKey {
     LIVE_SUMMARY_TITLE("live.summary.title"),
     /** Live card: the scene summary line before there is one. */
     LIVE_SUMMARY_NONE("live.summary.none"),
-    /** Live card: how the scene summary is kept; its argument is the refresh interval. */
+    /** Live card: how the scene summary is kept. */
     LIVE_SUMMARY_SOURCE("live.summary.source"),
     /** Title of the review desk dialog. */
     REVIEW_DESK_TITLE("review.desk.title"),

@@ -39,6 +39,7 @@ import ua.bookloom.api.project.AddressForm;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.BriefField;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -58,11 +59,11 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.RenderingOrigin;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.api.project.StoryShape;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -89,8 +90,7 @@ class JsonCodecTest {
                 frame(),
                 glossary(),
                 lexicon(),
-                new RollingSummary("p1", "u1", "Source " + UK, "Target " + UK, 3, "seg-9", 120),
-                new RollingSummary("p1", null, "s", "t", 0, null, 0),
+                new ChapterSummary("p1", "u1:0", "u1", 0, 12, "Summary " + UK, "hash"),
                 new Deferral("d1", "p1", "s1", DeferralReason.GENDER_UNKNOWN, "Nia", "old", "new " + UK, "⟦g1⟧"),
                 new Deferral("d2", "p1", "s2", DeferralReason.TERM, null, null, null, null),
                 running(),
@@ -264,6 +264,33 @@ class JsonCodecTest {
                 ServerEngine.LLAMA_CPP,
                 "0.3.9",
                 true);
+    }
+
+    // A chapter summary keeps its key, its place in the unit and its Ukrainian text exactly.
+    @Test
+    void roundTrip_chapterSummary() {
+        final ChapterSummary summary =
+                new ChapterSummary("p1", "ch3.xhtml:14", "ch3.xhtml", 14, 22, "Марія й Тарас ідуть до міста.", "ab12");
+
+        final String json = codec.write(summary);
+
+        assertThat(json).contains("\"chapterKey\":\"ch3.xhtml:14\"", "Марія й Тарас ідуть до міста.");
+        assertThat(codec.read(json, ChapterSummary.class)).isEqualTo(summary);
+    }
+
+    // The story shape and the forced switch come back as written, and so does a brief that holds neither.
+    @Test
+    void roundTrip_briefWithStoryShape() {
+        final BookBrief forced =
+                brief().withStoryShape(StoryShape.SEPARATE_STORIES).withChapterSummaries(true);
+        final BookBrief neither = brief().withStoryShape(null).withChapterSummaries(null);
+
+        final String json = codec.write(forced);
+
+        assertThat(json).contains("\"storyShape\":\"SEPARATE_STORIES\"", "\"chapterSummaries\":true");
+        assertThat(json).doesNotContain("summariesOn");
+        assertThat(codec.read(json, BookBrief.class)).isEqualTo(forced);
+        assertThat(codec.read(codec.write(neither), BookBrief.class)).isEqualTo(neither);
     }
 
     // The person's overrides and a refusal scoped to one call kind come back as written.

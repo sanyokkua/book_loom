@@ -31,7 +31,6 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.eval.EvalContext;
@@ -106,7 +105,6 @@ class PromptRequestsEquivalenceTest {
         if (withLexicon) {
             project.stores().lexicon().put(new LexiconEntry(project.id(), "master", List.of(), "господар", null, null));
         }
-        project.stores().summaries().save(new RollingSummary(project.id(), null, "Earlier.", SUMMARY_TEXT, 1, null, 0));
         return project;
     }
 
@@ -272,7 +270,7 @@ class PromptRequestsEquivalenceTest {
     }
 
     @Test
-    void batchRequest_recurringTerm_reachesTheMapAndTheRollingSummaryNever() {
+    void batchRequest_recurringTerm_reachesTheMapAndNoBookSoFar() {
         final ScriptedChatModel job = runBatchedJob(true);
 
         assertThat(job.requests().getFirst().messages().get(1).content()).contains("master → господар");

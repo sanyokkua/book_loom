@@ -10,9 +10,6 @@ enum DocKind {
     /** The recurring-term lexicon with the terms removed from it ({@link LexiconDocument}). */
     LEXICON("lexicon"),
 
-    /** The rolling summary. */
-    SUMMARY("summary"),
-
     /** The run started last. */
     RUN("run"),
 
@@ -23,7 +20,13 @@ enum DocKind {
      * One fixed prompt frame ({@link ua.bookloom.api.project.PromptFrame}); a project holds one row per distinct frame,
      * its kind this key, a colon and the frame's hash.
      */
-    PROMPT_FRAME("promptFrame");
+    PROMPT_FRAME("promptFrame"),
+
+    /**
+     * One chapter's summary ({@link ua.bookloom.api.project.ChapterSummary}); a project holds one row per chapter, its
+     * kind this key, a colon and the chapter key.
+     */
+    CHAPTER_SUMMARY("chapterSummary");
 
     private final String key;
 

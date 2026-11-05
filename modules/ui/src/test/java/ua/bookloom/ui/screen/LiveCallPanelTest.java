@@ -28,8 +28,7 @@ import ua.bookloom.ui.state.TechnicalDetails;
 /** The live card as a whole: its two tabs, its Simple and Detailed choice, its scene summary and the log tab. */
 class LiveCallPanelTest extends LiveCardTestBase {
 
-    private static final String SUMMARY_NOTE = "Updated after every 20 accepted segments and at the end of each"
-            + " chapter. On Max quality the model writes the one at the end of each chapter.";
+    private static final String SUMMARY_NOTE = "Written when a chapter is finished.";
 
     private void showCard() {
         showRows(List.of(row(1, Stage.ACCEPTED, "Перший."), row(2, Stage.IN_CALL, null)));
@@ -136,13 +135,13 @@ class LiveCallPanelTest extends LiveCardTestBase {
 
     // IF the line did not read the summary the run keeps, THEN it would stay "none" while the model remembers a story.
     @Test
-    void sceneSummary_runSavedOne_showsItsTargetText() {
+    void sceneSummary_runSavedOne_showsItsText() {
         onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
         showCard();
         final String id = ThemeTestSupport.onFx(
                 () -> injector.getInstance(CurrentProject.class).book().get().projectId());
         ((MemorySummaries) injector.getInstance(SummaryRepository.class))
-                .put(id, "Mira Holt goes back to Velk.", "Міра Холт повертається до Велка.", 1);
+                .put(id, "ch1.xhtml:0", "Міра Холт повертається до Велка.");
 
         publishCalls(new LiveCalls(null, null, Map.of(), null, LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(), 1));
 

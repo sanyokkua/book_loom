@@ -23,5 +23,4 @@ final class SlotNames {
     static final String AUTHOR = "author";
     static final String SOURCE = "source";
     static final String TOKENS = "tokens";
-    static final String SUMMARY_SLOT = "summary";
 }

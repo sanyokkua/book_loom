@@ -160,8 +160,7 @@ one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-tra
       launch). A reply that is blank or cut off flags the segment at once. A pause or a pausing error during the repair
       makes the repair call again on resume from the draft kept in memory, counted as the one repair.
 7. **Persist + update memory** — atomically write the segment; update name dictionary and context-keyed TM; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
-   (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Update the rolling summary on its size-based trigger
-   (`#rolling-summary`).
+   (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Chapter summaries are kept per finished chapter (`#rolling-summary`).
 
 Every model call, the repair included, passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).
 
@@ -179,7 +178,6 @@ inside stays open — it is never ended `FAILED` — because the next run plans 
 | `REPAIR` | one added when the one repair (or Fast's marks-only re-draft) or the reviewer's directed fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
 | `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
 | `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
-| `SUMMARY` | one per unit, planned when it is entered, on dials that ask the model for the summary | the unit id | `DONE`; `NO_CALL` when nothing was refreshed |
 | `REVISION` | one forecast (`estimated`) at the start of a run whose dial revises backwards | none | `DONE` or `FAILED` |
 
 Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair`, `redraft`,
@@ -413,26 +411,17 @@ Match kinds:
 This prevents a repeated sentence from being blindly reused where surrounding context changed its correct rendering.
 Store: `06_DATA_MODEL_SQLITE.md#tm`.
 
-## rolling-summary {#rolling-summary}
+## chapter-summaries {#rolling-summary}
 
-A rolling **bilingual** summary is maintained and carried into the scene card (`#context-builder`). The window of previous pairs crosses chapter
-starts, so the summary and the recently-present card carry book-level facts and who was last seen. Store: `06_DATA_MODEL_SQLITE.md#summaries`.
-
-**Update trigger** is **size-based: every K accepted blocks OR at chapter end, whichever comes first** (default
-`K = 20`). This bounds how stale the summary can get inside a long chapter. **Condensation rule:** if appending a
-chapter would push the summary over its token budget, the summary is **condensed** — oldest narrative detail is
-dropped/re-summarized first while character, place, and terminology facts are retained — so it always fits its reserved
-slice.
-
-On a dial that asks the model for the summary, each unit's end refresh is one `SUMMARY` step (`#tiered-loop`, step
-announcements) that ends `NO_CALL` when no segment was accepted in the unit.
-
-**Default is a deterministic summary** (accumulated key facts truncated to budget); the **LLM-generated** variant
-(`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. Only the LLM-generated text is shown to drafts and in the
-context panel as the running summary; the deterministic text (glossary lines and heading titles) is stored but never
-presented as a summary, so a run without the model summary has none and says so. **No-chapter case** (TXT / single-chapter documents): the
-whole document is treated as one chapter, the every-`K`-blocks trigger is the only periodic trigger, and
-**end-of-document** acts as the chapter-end trigger.
+The rolling summary, its every-`K`-segments refresh and the Max unit-end `SUMMARY` call are gone (design D10 of
+`redesign-translation-pipeline`, task 12.3); the recently-present card (`#context-builder`) carries who was last seen.
+In their place each finished chapter gets its own summary: a `ChapterSummary` record (project, chapter key, the unit
+and first segment it starts at, its segment count, the text in the target language and the hash of the source it was
+written from), saved one per chapter in one transaction and listed oldest first through `SummaryRepository`. Store:
+`06_DATA_MODEL_SQLITE.md#record-shapes` (`project_docs` kind `chapterSummary:<chapter key>`). Whether summaries are
+written follows the brief: `BookBrief.chapterSummaries` when the person forced it, else on unless the story shape is
+`SEPARATE_STORIES` (no analysis means on). The call that writes a summary and the earlier chapters' block of the draft
+prompt come with the group's later tasks (12.4, 12.5).
 
 ## deferred-resolution-and-backward-revision {#deferred-resolution}
 
@@ -479,7 +468,7 @@ with a lower cap and a new seed, and that second attempt is announced as a `RESE
 
 The consistency stack this engine relies on is the **name/term dictionary** (`#name-term-dictionary`), the
 **context-aware translation memory** (`#context-aware-tm`, matched by deterministic string similarity —
-exact/context/fuzzy, never vector embeddings), and the **rolling bilingual summary** (`#rolling-summary`). There is no
+exact/context/fuzzy, never vector embeddings), and the **chapter summaries** (`#rolling-summary`). There is no
 embedding or RAG stage.
 
 ## quality-dial {#quality-dial}

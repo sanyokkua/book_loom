@@ -15,6 +15,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
@@ -22,7 +23,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.PromptFrame;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -231,15 +231,31 @@ public abstract class ProjectStorageContractTest extends GlossaryIndexTest {
         assertThat(segmentRepository().all("p1").data()).isEmpty();
         assertThat(glossaryRepository().all("p1").data()).isEmpty();
         assertThat(tmRepository().exact("p1", "h1").data()).isEmpty();
-        assertThat(summaryRepository().latest("p1").data()).isEmpty();
+        assertThat(summaryRepository().list("p1").data()).isEmpty();
         assertThat(lexiconRepository().all("p1").data()).isEmpty();
         assertThat(segmentRepository().all("p2").data()).hasSize(1);
         assertThat(glossaryRepository().all("p2").data()).hasSize(1);
         assertThat(tmRepository().exact("p2", "h1").data()).hasSize(1);
-        assertThat(summaryRepository().latest("p2").data()).isPresent();
+        assertThat(summaryRepository().list("p2").data()).hasSize(1);
         assertThat(lexiconRepository().all("p2").data()).hasSize(1);
         assertThat(repository.find("p2").data())
                 .hasValueSatisfying(p -> assertThat(p.source()).isEqualTo(Path.of("h1.epub")));
+    }
+
+    @Test
+    void chapterSummary_removeProject_gone() {
+        final ProjectRepository repository = projectRepository();
+        repository.save(project("p1", "h1", "One", "en", "uk"));
+        repository.save(project("p2", "h2", "Two", "en", "uk"));
+        summaryRepository().save(new ChapterSummary("p1", "ch1:0", "ch1", 0, 3, "Перший.", "s1"));
+        summaryRepository().save(new ChapterSummary("p2", "ch1:0", "ch1", 0, 3, "Інший.", "s2"));
+
+        repository.delete("p1");
+
+        assertThat(summaryRepository().list("p1").data()).isEmpty();
+        assertThat(summaryRepository().list("p2").data())
+                .extracting(ChapterSummary::text)
+                .containsExactly("Інший.");
     }
 
     @Test
@@ -287,7 +303,7 @@ public abstract class ProjectStorageContractTest extends GlossaryIndexTest {
                 .add(GlossaryEntry.of(
                         "g-" + projectId, projectId, "Hale", null, TermType.CHARACTER, Gender.MALE, false));
         tmRepository().put(new TmEntry("t-" + projectId, projectId, "h1", "c1", "Hello", "Привіт"));
-        summaryRepository().save(new RollingSummary(projectId, null, "src", "tgt", 1, null, 0));
+        summaryRepository().save(new ChapterSummary(projectId, "ch1:0", "ch1", 0, 1, "Розділ.", "h1"));
         lexiconRepository().put(LexiconEntry.of(projectId, "master"));
         assertThat(segmentRepository()
                         .countsByStatus(projectId, Set.of())

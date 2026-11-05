@@ -121,7 +121,6 @@ final class RevisionBook {
                 new ObjectMapper(),
                 desk.retryDraft(ReviewMode.UNATTENDED),
                 desk.lexicon(),
-                desk.summaries(),
                 checked);
     }
 

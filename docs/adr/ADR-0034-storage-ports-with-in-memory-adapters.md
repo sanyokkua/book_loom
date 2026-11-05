@@ -71,3 +71,7 @@ pauses between a chunk's decisions for review: the person edits a decided segmen
 must already be stored. The commit is now defined by what it holds — decided segments only — rather than by the chunk
 boundary. The run record's state replaces an end-only field, because an end-only record cannot tell a paused run from a
 running one. The masked user target lets a second edit of a segment with inline markup restore.
+
+## Amended in `redesign-translation-pipeline` (group 12)
+
+`ChapterSummary` replaces the rolling summary in the storage ports (`SummaryRepository.save`/`list`; removal by the project cascade).

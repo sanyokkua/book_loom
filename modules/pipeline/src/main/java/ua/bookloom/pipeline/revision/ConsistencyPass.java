@@ -29,14 +29,12 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -73,7 +71,6 @@ public final class ConsistencyPass {
     private final ObjectMapper mapper;
     private final RetryDraft retryDraft;
     private final LexiconRepository lexicon;
-    private final SummaryRepository summaries;
     private final CheckedParagraphs checked;
 
     /**
@@ -290,16 +287,8 @@ public final class ConsistencyPass {
     }
 
     private Result<BookContext> bookContext(final String projectId) {
-        final Result<Optional<RollingSummary>> summary = summaries.latest(projectId);
-        if (summary.isErr()) {
-            return Result.err(Objects.requireNonNull(summary.error(), ERROR));
-        }
-        final String text = Objects.requireNonNull(summary.data(), "summary")
-                .map(RollingSummary::target)
-                .filter(target -> !target.isBlank())
-                .orElse(null);
-        log.debug("Backward revision context project={} summary={}", projectId, text != null);
-        return lexicon.all(projectId).map(terms -> new BookContext(terms, text));
+        log.debug("Backward revision context project={}", projectId);
+        return lexicon.all(projectId).map(BookContext::new);
     }
 
     private PassInputs inputsOf(

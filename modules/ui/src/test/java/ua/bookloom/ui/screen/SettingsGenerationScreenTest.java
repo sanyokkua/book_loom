@@ -82,7 +82,7 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
         assertThat(lookup("#generation-quality-batch-max").tryQuery()).isEmpty();
         assertThat(text("generation-quality-reviews-fast")).isEqualTo("0");
         assertThat(text("generation-quality-backward-fast")).isEqualTo("—");
-        assertThat(text("generation-quality-summary-max")).isEqualTo("✓");
+        assertThat(lookup("#generation-quality-summary-max").tryQuery()).isEmpty();
         assertThat(text("generation-quality-repair-balanced")).isEqualTo("one repair");
         assertThat(text("generation-quality-repair-fast")).isEqualTo("lost marks only");
         assertThat(ThemeTestSupport.onFx(() -> holdsInput(required("generation-quality"))))

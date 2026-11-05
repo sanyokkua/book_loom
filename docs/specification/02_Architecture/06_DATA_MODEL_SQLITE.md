@@ -69,7 +69,7 @@ migrations arrives with the first release; until then no statement here about mi
 | `model_settings` | PK (`provider_id`, `model_id`), `json` | `ModelSettings`, refusals and the measured speeds included (`secondsPerCall`: a map from call kind to `{seconds, from}` (`MeasuredSpeed`), `from` being `TEST` or `RUN`; the inference test writes `DRAFT` as `TEST`, and the end of every names pass and run writes the mean wall time of its successful calls per kind as `RUN` — `DRAFT` in seconds per drafted segment, every other kind in seconds per call), the `probeVerdicts` of the Advanced features checks (answer schema, thinking switch, extra samplers, cap field: each an outcome of honoured, ignored or refused, its source `test` and its time), and the person's overrides: `thinkingOverride` (`RECOMMENDED`, `ALLOW_PROOFREAD_AND_NAMES` or `ALWAYS`) and `samplingOverride` (`PROFILE_DEFAULT`, or `CUSTOM` with the person's temperature, `top_k`, `top_p` and `min_p`). Each refusal (`RefusedSetting`) holds its setting, day, what was done instead and a `scope`: null for the whole model, or the one call kind whose answer schema was refused. What a server says about a model (window, capabilities, quant, size, loaded state) is never stored |
 | `books` | `content_hash` PK, `source_path`, `format`, `title`, `json` | the book, stored once; `title` is the book's title (the base of an automatic project name); `source_path` is written when the book is first stored and changed only by `relocateBook`, so saving a project never moves it |
 | `projects` | `id` PK, `content_hash` → `books`, `name`, `name_key`, `name_origin`, `source_lang`, `target_lang`, `created_at`, `last_opened_at`, `brief_json`; `UNIQUE (content_hash, name_key)`; index (`content_hash`, `source_lang`, `target_lang`) | the project; a name is unique within its book, ignoring letter case. `brief_json` holds the Brief, whose policy keys are `apostrophe` (one code point), `quoteStyle` (`outerOpen`, `outerClose`, `innerOpen`, `innerClose`), `defaultAddress` (`strangers`, `family`, each `INFORMAL` or `FORMAL`), `conventions` (name to choice) and `likely` (the Brief fields the analysis filled that the person has not confirmed); a null key means the target file's default |
-| `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), summary, latest run, last export, and one fixed prompt frame per distinct frame of the project's runs (`PromptFrame`, kind `promptFrame:<hash>`: blocks 1–7 every translate-family call of a run sends; a segment's `ContextSnapshot` keeps only that hash, its call's own user-message sections and its chapter-summary keys) |
+| `project_docs` | PK (`project_id`, `kind`), `json` | glossary (with tombstones), lexicon (with removals), one chapter summary per finished chapter (`ChapterSummary`, kind `chapterSummary:<chapter key>`, listed in the order each chapter was first saved; removed with the project by the cascade), latest run, last export, and one fixed prompt frame per distinct frame of the project's runs (`PromptFrame`, kind `promptFrame:<hash>`: blocks 1–7 every translate-family call of a run sends; a segment's `ContextSnapshot` keeps only that hash, its call's own user-message sections and its chapter-summary keys) |
 | `segments` | PK (`project_id`, `segment_id`), `ord`, `unit_id`, `status`, `json`; index (`project_id`, `status`) | `SegmentRecord` |
 | `tm_entries` | PK (`project_id`, `source_hash`, `context_key`), `json` | `TmEntry` |
 | `deferrals` | PK (`project_id`, `segment_id`, `reason`, `waiting_on`), `json` | `Deferral` |
@@ -146,7 +146,7 @@ A failure to create even the fresh file is an `internal` `AppError` surfaced bef
 The JSON codec reads strictly (an unknown property fails the read), so a document written before an `:api` record
 gained, lost, renamed or retyped a component cannot be read back. Before the first release the owner's decision is to
 **start fresh** rather than migrate documents: `StoredShapes` fingerprints the JSON shape of every stored type
-(`Project` with its brief, `SegmentRecord`, the glossary and lexicon documents, `RollingSummary`, `Deferral`,
+(`Project` with its brief, `SegmentRecord`, the glossary and lexicon documents, `ChapterSummary`, `Deferral`,
 `RunRecord`, `TmEntry`, `ExportRecord`, `ProviderConfig`, `ModelSettings`) as the SHA-256 of a text that lists each
 record's components sorted by name with their types, nested records inline and enums by their constant names. The
 class name of a record is not part of it, so moving or renaming a record changes nothing. The schema step writes the
@@ -157,6 +157,8 @@ changed the fingerprint once, so a database from before them was set aside on it
 `thinkingOverride` and `samplingOverride` of `ModelSettings` and the `scope` of `RefusedSetting` changed it again. The
 lemma glossary entry (`forms`, `lemmaInferred`, `targetState`, the origins, `placeKind`, `meaning`, `meaningChoice`, `knowledge`, `unsureMentions`) and the lexicon's
 `forms` changed it once more (group 7 of `redesign-translation-pipeline`), so a database from before them is set aside.
+Group 12 replaced the rolling summary's root with `ChapterSummary` and gave the brief `storyShape` and
+`chapterSummaries`, so a database from before group 12 is set aside too.
 
 ## resume-support {#resume-support}
 

@@ -17,22 +17,16 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.ScanEntries;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
- * What follows a decision besides the decision itself: the deferrals it leaves, the rolling summary's count, and at a
- * unit's end the summary's refresh and — for a body unit — the names the book has introduced so far, each glossary and
- * summary update announced once. It also holds the latest summary, which every later draft is shown; the person
- * cannot edit a summary, so the versions this run writes are the only change it needs to follow.
+ * What follows a decision besides the decision itself: the deferrals it leaves, and at a body unit's end the names the
+ * book has introduced so far, a glossary update announced once.
  *
  * <p>Used from the job thread only, which is why the state is plain fields.
  */
@@ -41,16 +35,10 @@ final class DecisionFollowUp {
 
     private final String projectId;
     private final @Nullable String analysisLanguage;
-    private final RollingSummaryKeeper keeper;
-    private final SummaryRepository summaries;
-    private final SegmentRepository segments;
     private final GlossaryRepository glossary;
     private final BookIndex index;
     private final RunSinks sinks;
-    private final RoutedCalls calls;
-    private final ChunkSteps announced;
     private final List<Segment> decidedInUnit = new ArrayList<>();
-    private @Nullable String summary;
 
     /**
      * The book a run follows up.
@@ -61,55 +49,12 @@ final class DecisionFollowUp {
      */
     record BookFacts(String projectId, @Nullable String analysisLanguage, BookIndex index) {}
 
-    DecisionFollowUp(
-            final BookFacts book,
-            final RollingSummaryKeeper keeper,
-            final RunStores stores,
-            final RunSinks sinks,
-            final RoutedCalls calls,
-            final ChunkSteps announced) {
+    DecisionFollowUp(final BookFacts book, final RunStores stores, final RunSinks sinks) {
         this.projectId = Objects.requireNonNull(book.projectId(), "projectId");
         this.analysisLanguage = book.analysisLanguage();
-        this.keeper = Objects.requireNonNull(keeper, "keeper");
-        this.summaries = Objects.requireNonNull(stores, "stores").summaries();
-        this.segments = stores.segments();
-        this.glossary = stores.glossary();
+        this.glossary = Objects.requireNonNull(stores, "stores").glossary();
         this.index = Objects.requireNonNull(book.index(), "index");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
-        this.calls = Objects.requireNonNull(calls, "calls");
-        this.announced = Objects.requireNonNull(announced, "announced");
-    }
-
-    /**
-     * Reads the latest stored summary, so a run started after an earlier one shows its first drafts what that run
-     * summarized, and starts the summary keeper's count from the segments that run already accepted.
-     *
-     * @return empty, or the failed end when the summary or the stored records could not be read
-     */
-    Optional<RunEnd> readSummary() {
-        final Result<Optional<RollingSummary>> latest = summaries.latest(projectId);
-        if (latest.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(latest.error(), ERROR)));
-        }
-        final Optional<RollingSummary> stored = Objects.requireNonNull(latest.data(), "latest");
-        stored.ifPresent(this::hold);
-        final Result<List<SegmentRecord>> records = segments.all(projectId);
-        if (records.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(records.error(), ERROR)));
-        }
-        keeper.seed(Objects.requireNonNull(records.data(), "records"), stored);
-        log.debug("Read the latest summary projectId={} present={}", projectId, summary != null);
-        return Optional.empty();
-    }
-
-    /**
-     * The summary text a draft is shown: the model's, when it wrote one.
-     *
-     * @return the text, or {@code null} while there is no summary or it is empty
-     */
-    @Nullable
-    String summary() {
-        return summary;
     }
 
     /**
@@ -129,15 +74,14 @@ final class DecisionFollowUp {
         final Segment segment = item.segment();
         sinks.pending().deferred(DeferralRegister.unknownGender(projectId, segment, chunkGlossary));
         decidedInUnit.add(segment);
-        final Result<Optional<RollingSummary>> counted = keeper.onDecided(segment, record);
-        if (counted.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(counted.error(), ERROR)));
-        }
-        announce(Objects.requireNonNull(counted.data(), "counted"), "count");
+        log.debug(
+                "Decision followed segment={} status={} endsUnit={}",
+                segment.id(),
+                record.status(),
+                work.endsUnit(item));
         return work.endsUnit(item) ? unitEnded(work, item) : Optional.empty();
     }
 
-    // The names go first, so the refreshed summary can already list a name the unit introduced.
     private Optional<RunEnd> unitEnded(final WorkList work, final WorkItem item) {
         final String unitId = item.segment().unit();
         log.debug("Unit ended unitId={} body={} decidedInUnit={}", unitId, work.isBody(item), decidedInUnit.size());
@@ -148,15 +92,7 @@ final class DecisionFollowUp {
             }
         }
         decidedInUnit.clear();
-        announced.summarizing(unitId);
-        return calls.untilAnswered(work, null, () -> keeper.onUnitEnd(unitId))
-                .fold(
-                        refreshed -> {
-                            announced.summarized(unitId, refreshed);
-                            announce(refreshed, "unit end");
-                            return Optional.<RunEnd>empty();
-                        },
-                        Optional::of);
+        return Optional.empty();
     }
 
     /**
@@ -233,42 +169,5 @@ final class DecisionFollowUp {
                 proposals,
                 added,
                 proposals - added);
-    }
-
-    private void announce(final Optional<RollingSummary> refreshed, final String trigger) {
-        if (refreshed.isEmpty()) {
-            return;
-        }
-        final RollingSummary version = refreshed.get();
-        if (!hold(version)) {
-            log.debug(
-                    "Summary refresh not announced trigger={} version={}: the text shown to drafts is unchanged",
-                    trigger,
-                    version.version());
-            return;
-        }
-        log.debug("Summary refresh announced trigger={} version={}", trigger, version.version());
-        if (log.isTraceEnabled()) {
-            log.trace("Summary text now shown to drafts {}", summary);
-        }
-        sinks.emit().accept(MemoryEvents.summaryRefreshed(version));
-    }
-
-    /**
-     * Holds the model-written summary of {@code version}. The deterministic text in its source side — the glossary
-     * lines and the heading titles — is not a summary of the story and is never shown as one: the chunk's names travel
-     * in their own glossary block, and a list of chapter titles told the model nothing (fixture run, 2026-10-02).
-     *
-     * @return {@code true} if the text shown to later drafts changed, {@code false} otherwise
-     */
-    private boolean hold(final RollingSummary version) {
-        final @Nullable String previous = summary;
-        summary = version.target().isBlank() ? null : version.target();
-        log.debug(
-                "Summary held version={} modelWritten={} changed={}",
-                version.version(),
-                summary != null,
-                !Objects.equals(previous, summary));
-        return !Objects.equals(previous, summary);
     }
 }

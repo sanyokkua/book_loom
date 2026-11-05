@@ -1,6 +1,7 @@
 package ua.bookloom.persistence.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -14,12 +15,12 @@ import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Origin;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -263,21 +264,28 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends GlossaryP
     // ===== SummaryRepository ===================================================================================
 
     @Test
-    void save_higherVersion_becomesLatest() {
+    void chapterSummary_saveAndList_oldestFirst() {
         givenProjects("p1");
         final SummaryRepository repository = summaryRepository();
-        repository.save(new RollingSummary("p1", null, "src v1", "tgt v1", 1, null, 0));
+        repository.save(chapterSummary("p1", "ch10.xhtml:0", "Перший розділ."));
+        repository.save(chapterSummary("p1", "ch2.xhtml:0", "Другий розділ."));
 
-        repository.save(new RollingSummary("p1", null, "src v2", "tgt v2", 2, null, 0));
+        repository.save(chapterSummary("p1", "ch10.xhtml:0", "Перший розділ, переписаний."));
 
-        assertThat(repository.latest("p1").data())
-                .isPresent()
-                .hasValueSatisfying(s -> assertThat(s.version()).isEqualTo(2));
+        assertThat(repository.list("p1").data())
+                .extracting(ChapterSummary::chapterKey, ChapterSummary::text)
+                .containsExactly(
+                        tuple("ch10.xhtml:0", "Перший розділ, переписаний."), tuple("ch2.xhtml:0", "Другий розділ."));
     }
 
     @Test
-    void latest_unknownProject_answersEmpty() {
-        assertThat(summaryRepository().latest("unknown").data()).isEmpty();
+    void chapterSummary_unknownProject_listsNone() {
+        assertThat(summaryRepository().list("unknown").data()).isEmpty();
+    }
+
+    private static ChapterSummary chapterSummary(final String projectId, final String chapterKey, final String text) {
+        final String unitId = chapterKey.substring(0, chapterKey.indexOf(':'));
+        return new ChapterSummary(projectId, chapterKey, unitId, 0, 4, text, "hash-" + unitId);
     }
 
     // ===== DeferralRepository ===================================================================================

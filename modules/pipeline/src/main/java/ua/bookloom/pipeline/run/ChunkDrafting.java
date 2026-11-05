@@ -93,11 +93,8 @@ final class ChunkDrafting {
             final DecisionFollowUp followUp = new DecisionFollowUp(
                     new DecisionFollowUp.BookFacts(
                             settings.projectId(), settings.frame().analysisLanguage(), index),
-                    steps.summary(),
                     stores,
-                    sinks,
-                    calls,
-                    announced);
+                    sinks);
             return new Collaborators(
                     kept,
                     memory,

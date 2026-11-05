@@ -26,11 +26,4 @@ public interface DialProfile {
      * @return {@code true} when it runs
      */
     boolean backwardRevision();
-
-    /**
-     * Whether the model writes the rolling summary.
-     *
-     * @return {@code true} when it does
-     */
-    boolean llmSummary();
 }

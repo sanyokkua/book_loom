@@ -9,7 +9,7 @@ import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 
-/** The review-side ports, the launch-time review mode, and the in-memory rolling summaries the live card reads. */
+/** The review-side ports, the launch-time review mode, and the in-memory chapter summaries the live card reads. */
 final class ReviewPortsModule extends AbstractModule {
 
     private final GlossaryService glossary;

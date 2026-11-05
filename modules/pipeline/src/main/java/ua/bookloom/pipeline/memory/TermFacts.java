@@ -9,8 +9,8 @@ import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 
 /**
- * The facts a prompt line states about a glossary term, worded once so the glossary lines and the rolling summary tell
- * a model the same thing: the type, and for a character its gender when the person set it, the book proved it or a
+ * The facts a prompt line states about a glossary term, worded once so every glossary line tells a model the same
+ * thing: the type, and for a character its gender when the person set it, the book proved it or a
  * rule gave it. A gender the model only guessed is not stated, so a wrong guess is not spread over the book (design
  * D5; translation-pipeline "Write each injected map item as one line of its target, type and settled gender"). A
  * place, a term or a title has no gender.

@@ -20,7 +20,6 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.LexiconEntry;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -28,7 +27,7 @@ import ua.bookloom.pipeline.review.ReviewFixtures;
 
 /**
  * What the export's check against the neighbours reads and which paragraphs it reads: the paragraphs around as source
- * and translation, the glossary, the recurring terms, the characters and the summary, in prompt order, and the
+ * and translation, the glossary, the recurring terms and the characters, in prompt order, and the
  * doubted or — when asked — every paragraph besides the repaired and flagged ones.
  */
 class ConsistencyPassNeighbourContextTest {
@@ -66,14 +65,11 @@ class ConsistencyPassNeighbourContextTest {
         ok(book.desk()
                 .lexicon()
                 .put(new LexiconEntry(book.desk().projectId(), "line", List.of(), "рядок", null, null)));
-        ok(book.desk()
-                .summaries()
-                .save(new RollingSummary(
-                        book.desk().projectId(), null, "Sam meets Hale.", "Сем зустрічає Гейла.", 1, null, 0)));
     }
 
     // IF the check saw only the translations around it, THEN it could not tell a wrong rendering from a right one; the
-    // owner asked for source and translation of both neighbours, names, terms, characters and the summary.
+    // owner asked for source and translation of both neighbours, names, terms and characters. The rolling summary that
+    // stood here is gone (12.3), so no "[Book so far" block is sent.
     @Test
     void run_repairedParagraph_promptCarriesNeighboursAndTheBookContextInOrder() {
         repaired(BEFORE);
@@ -93,10 +89,9 @@ class ConsistencyPassNeighbourContextTest {
                         "line → рядок",
                         "[Characters in this text",
                         "Sam — female",
-                        "[Book so far",
-                        "Сем зустрічає Гейла.",
                         "<Source>",
                         "<Translation>\n" + BEFORE);
+        assertThat(book.userMessage(0)).doesNotContain("[Book so far");
     }
 
     // IF the live call view got no description, THEN the export's calls would be invisible while the busy card waits.
@@ -131,7 +126,8 @@ class ConsistencyPassNeighbourContextTest {
 
         assertThat(slots)
                 .containsSubsequence(
-                        "previous", "next", "resolvedFacts", "lexiconTerms", "characters", "summary", "source", "text");
+                        "previous", "next", "resolvedFacts", "lexiconTerms", "characters", "source", "text");
+        assertThat(slots).doesNotContain("summary");
     }
 
     // IF an accepted paragraph the audit doubts were left out, THEN only the run's own trouble would ever be checked.

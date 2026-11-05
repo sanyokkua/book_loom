@@ -25,7 +25,8 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * The one model call that writes a chapter's summary. It only asks and reads; whether an unreadable reply or a failed
- * call is worth a warning, and what is kept, is the keeper's decision.
+ * call is worth a warning, and what is kept, is its caller's decision. It has no caller since the rolling summary went
+ * (12.3); task 12.4 grows it into the chapter-summary call.
  */
 @Slf4j
 @RequiredArgsConstructor

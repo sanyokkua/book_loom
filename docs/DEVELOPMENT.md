@@ -1314,7 +1314,7 @@ term pairs and character sheet. A locked name is written out in the case text an
 the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
 exactly as in a run; the window is the context length the provider reports for the model, limited to 16,384 tokens as a run limits it (16,384 when it reports none), and `BOOKLOOM_EVAL_WINDOW` overrides it; the chosen window is logged at INFO (`Eval window …`) and in the report line. The brief the requests carry is the defaults unless `BOOKLOOM_EVAL_PRESET` (`burning-chrome`: formal literary register, names translated, Balanced, cyberpunk genre — one model's frozen answer, kept so earlier reports can be measured again), `BOOKLOOM_EVAL_GOLD` (the owner's gold file for the book, [judgement evals](#judgement-evals): its brief's register, names, genre, voice, audience and narrator — prefer it for a new measurement), `BOOKLOOM_EVAL_BRIEF` (a JSON file with `register`, `names`, `genre`, `voiceEra`, `audience`, `dial`, `balance`) or `BOOKLOOM_EVAL_REGISTER` / `_NAMES` (`translate`, `transliterate`, `keep`) / `_GENRE` / `_DIAL` say otherwise The equality of the
 two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path yet: the name prescan, the glossary
-review and the rolling summary call, which build their own frame (deferred from 15e.2 to 15e.13, which tunes those
+review and the summary call (the chapter-summary call from 12.4), which build their own frame (deferred from 15e.2 to 15e.13, which tunes those
 prompts; `SummaryModelCall` is package-private).
 
 ### The fast loop {#fast-loop}
@@ -1408,7 +1408,7 @@ the "before" numbers and the thresholds per model class from this suite.
 **Sequence eval (15e.3).** Every case above stands alone; the defects of the 6 h run (a title drifting between renderings, a
 name in two spellings, a narrator's gender slipping, English paragraphs exported as source) only show over many segments
 with the context accumulating. The sequence suite runs a synthetic book through the *real batched job* — preparation, token-budgeted
-batches, the reviewer the dial enables, the repair path, the lexicon and its learner, the rolling summary — against a real
+batches, the reviewer the dial enables, the repair path, the lexicon and its learner — against a real
 model, unattended, then reads what the run decided and measures it with production checks only.
 
 ```bash

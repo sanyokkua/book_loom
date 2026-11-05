@@ -31,7 +31,6 @@ import org.controlsfx.control.SegmentedButton;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
-import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveCalls;
@@ -283,7 +282,7 @@ public final class LiveCallPanel extends VBox {
                             return summary == null ? messages.get(MessageKey.LIVE_SUMMARY_NONE) : summary;
                         },
                         sources.summary()));
-        final Label source = new Label(messages.get(MessageKey.LIVE_SUMMARY_SOURCE, RollingSummary.REFRESH_EVERY));
+        final Label source = new Label(messages.get(MessageKey.LIVE_SUMMARY_SOURCE));
         source.setId("translating-live-summary-source");
         source.setWrapText(true);
         source.getStyleClass().add("muted");

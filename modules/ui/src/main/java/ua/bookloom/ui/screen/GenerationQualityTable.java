@@ -81,11 +81,7 @@ final class GenerationQualityTable {
                 new Row(
                         "backward",
                         MessageKey.SETTINGS_GENERATION_QUALITY_BACKWARD,
-                        profile -> mark(messages, profile.backwardRevision())),
-                new Row(
-                        "summary",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_SUMMARY,
-                        profile -> mark(messages, profile.llmSummary())));
+                        profile -> mark(messages, profile.backwardRevision())));
     }
 
     private static String mark(final Messages messages, final boolean runs) {

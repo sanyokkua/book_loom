@@ -16,6 +16,8 @@ final class ProjectDocs {
     private static final String SELECT = "SELECT json FROM project_docs WHERE project_id = :project AND kind = :kind";
     private static final String SELECT_PREFIXED =
             "SELECT json FROM project_docs WHERE project_id = :project AND kind >= :from AND kind < :to ORDER BY kind";
+    private static final String SELECT_PREFIXED_IN_WRITE_ORDER = "SELECT json FROM project_docs"
+            + " WHERE project_id = :project AND kind >= :from AND kind < :to ORDER BY rowid";
     private static final char SUFFIX_SEPARATOR = ':';
     private static final String UPSERT = """
             INSERT INTO project_docs (project_id, kind, json) VALUES (:project, :kind, :json)
@@ -72,8 +74,33 @@ final class ProjectDocs {
             final String projectId,
             final DocKind kind,
             final Class<T> type) {
+        return prefixed(handle, codec, projectId, kind, type, SELECT_PREFIXED);
+    }
+
+    /**
+     * Reads every document of a kind a project holds several of, in the order each row was first written: the upsert
+     * updates a row in place, so a replaced document keeps its row id and its place.
+     *
+     * @return never null; empty if the project has none, oldest first
+     */
+    static <T> List<T> readAllInWriteOrder(
+            final Handle handle,
+            final JsonCodec codec,
+            final String projectId,
+            final DocKind kind,
+            final Class<T> type) {
+        return prefixed(handle, codec, projectId, kind, type, SELECT_PREFIXED_IN_WRITE_ORDER);
+    }
+
+    private static <T> List<T> prefixed(
+            final Handle handle,
+            final JsonCodec codec,
+            final String projectId,
+            final DocKind kind,
+            final Class<T> type,
+            final String sql) {
         // Every "<kind>:" row sorts at or after "<kind>:" and before "<kind>;", the next character after the colon.
-        return handle.createQuery(SELECT_PREFIXED)
+        return handle.createQuery(sql)
                 .bind(PROJECT, projectId)
                 .bind("from", kind.key() + SUFFIX_SEPARATOR)
                 .bind("to", kind.key() + (char) (SUFFIX_SEPARATOR + 1))

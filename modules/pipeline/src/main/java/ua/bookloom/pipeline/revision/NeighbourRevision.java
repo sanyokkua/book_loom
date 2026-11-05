@@ -27,8 +27,8 @@ import ua.bookloom.pipeline.qa.BlockingFindings;
 
 /**
  * The model's check of decided paragraphs against their neighbours. Each paragraph in scope is shown to the model with
- * the paragraph before and after it (source and translation), the names, terms and characters the book holds, the
- * rolling summary and the source, and the model fixes what disagrees. Only a machine-owned target is ever replaced:
+ * the paragraph before and after it (source and translation), the names, terms and characters the book holds and the
+ * source, and the model fixes what disagrees. Only a machine-owned target is ever replaced:
  * the person's own edit is not touched. An answer that changes nothing stores nothing, and one that breaks a rule of
  * {@link PassChecks} is refused and counted by the rule.
  */

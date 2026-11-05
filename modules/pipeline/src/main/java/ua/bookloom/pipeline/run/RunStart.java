@@ -95,6 +95,11 @@ public final class RunStart {
                     "No open project has this id; open the book again."));
         }
         log.debug("Run start checks passed project={}", project.id());
+        log.debug(
+                "Run start chapter summaries on={} storyShape={} forced={}",
+                project.brief().summariesOn(),
+                project.brief().storyShape(),
+                project.brief().chapterSummaries());
         return Result.ok(new Started(project, document, index, chapters));
     }
 

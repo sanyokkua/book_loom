@@ -211,7 +211,7 @@ class RealRunCorpusTest {
     }
 
     @Test
-    void batch_contextCase_carriesNoRollingSummary() {
+    void batch_contextCase_carriesNoBookSoFar() {
         final BatchCase batchCase = RunCorpus.batches().stream()
                 .filter(c -> c.kind().equals("batch-context"))
                 .findFirst()

@@ -2,8 +2,8 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
@@ -13,14 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
- * The scene summary line under the live detail: the open project's newest rolling summary, read off the FX thread when
- * the project changes and again whenever the run says it refreshed the summary (the version the live calls carry).
+ * The scene summary line under the live detail: the open project's newest chapter summary, read off the FX thread when
+ * the project changes and again whenever the live calls carry another summary version.
  *
- * <p>It shows the summary's target-language text, else its source text, and nothing while the project has none. A read
+ * <p>It shows the text of the summary saved last, and nothing while the project has none. A read
  * that finishes after another project was opened is dropped. FX thread only, except the read itself.
  */
 @Slf4j
@@ -37,7 +37,7 @@ public final class SceneSummary {
     /**
      * Follows the open project and the run's summary refreshes, reading on the background executor.
      *
-     * @param summaries the stored rolling summaries
+     * @param summaries the stored chapter summaries
      * @param background where the summary is read
      * @param current the open project
      * @param mirror the run's state, whose live calls carry the summary's version
@@ -54,7 +54,7 @@ public final class SceneSummary {
     /**
      * Follows the open project and the run's summary refreshes with the given executors, as a test needs.
      *
-     * @param summaries the stored rolling summaries
+     * @param summaries the stored chapter summaries
      * @param background where the summary is read
      * @param fx where the read text is shown
      * @param current the open project
@@ -84,7 +84,7 @@ public final class SceneSummary {
     /**
      * The text of the line.
      *
-     * @return the summary's target text, else its source text, holding {@code null} while there is none; FX only
+     * @return the newest chapter summary's text, holding {@code null} while there is none; FX only
      */
     public ReadOnlyObjectProperty<@Nullable String> text() {
         return text.getReadOnlyProperty();
@@ -100,7 +100,7 @@ public final class SceneSummary {
         final String projectId = book.projectId();
         log.debug("scene summary: reading project {} at version {}", projectId, shownVersion);
         background.execute(() -> {
-            final String found = textOf(summaries.latest(projectId), projectId);
+            final String found = textOf(summaries.list(projectId), projectId);
             fx.execute(() -> show(projectId, found));
         });
     }
@@ -114,20 +114,19 @@ public final class SceneSummary {
         text.set(found);
     }
 
-    private static @Nullable String textOf(final Result<Optional<RollingSummary>> read, final String projectId) {
+    private static @Nullable String textOf(final Result<List<ChapterSummary>> read, final String projectId) {
         if (read.isErr()) {
-            log.warn("scene summary: the summary of project {} could not be read", projectId);
+            log.warn("scene summary: the chapter summaries of project {} could not be read", projectId);
             return null;
         }
-        final Optional<RollingSummary> stored = Objects.requireNonNull(read.data());
+        final List<ChapterSummary> stored = Objects.requireNonNull(read.data());
         if (stored.isEmpty()) {
-            log.debug("scene summary: project {} has no summary yet", projectId);
+            log.debug("scene summary: project {} has no chapter summary yet", projectId);
             return null;
         }
-        final RollingSummary summary = stored.get();
-        final String shown = summary.target().isBlank() ? summary.source() : summary.target();
-        log.debug("scene summary: project {} has version {}", projectId, summary.version());
-        log.trace("scene summary text: {}", shown);
-        return shown.isBlank() ? null : shown;
+        final ChapterSummary newest = stored.getLast();
+        log.debug("scene summary: project {} shows chapter {} of {}", projectId, newest.chapterKey(), stored.size());
+        log.trace("scene summary text: {}", newest.text());
+        return newest.text();
     }
 }

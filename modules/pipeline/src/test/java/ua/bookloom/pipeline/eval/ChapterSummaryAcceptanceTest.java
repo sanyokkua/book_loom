@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,6 +22,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
@@ -30,9 +32,10 @@ import ua.bookloom.pipeline.SequenceJobs.Prepared;
 import ua.bookloom.pipeline.WireMockProvider;
 
 /**
- * Group 12's acceptance (design D8): a chapter's draft carries the earlier chapters' summaries, and only the part
- * of a summary that names what the earlier text holds. Written red in task 12.1; the chapter-summary call's schema
- * must carry {@code "title":"chapter_summary"} so the Ollama body, which names no schema, shows it too (task 12.3).
+ * Group 12's acceptance (design D10): a chapter's draft carries the earlier chapters' summaries, and only the part
+ * of a summary that names what the earlier text holds; with the brief's switch off no summary is asked or sent. Written
+ * red in task 12.1; the chapter-summary call's schema must carry {@code "title":"chapter_summary"} so the Ollama body,
+ * which names no schema, shows it too (task 12.4).
  */
 @Tag("slow")
 class ChapterSummaryAcceptanceTest {
@@ -54,7 +57,7 @@ class ChapterSummaryAcceptanceTest {
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_switchOn_chapter2FirstDraftCarriesChapter1Summary(final ProviderKind kind) {
-        final List<String> bodies = bodiesOfRun(kind, false);
+        final List<String> bodies = bodiesOfRun(kind, false, null).bodies();
 
         assertThat(summaryRequests(bodies))
                 .as("one chapter-summary call, for chapter 1")
@@ -70,7 +73,7 @@ class ChapterSummaryAcceptanceTest {
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_switchOn_noChapter1CallCarriesSummary(final ProviderKind kind) {
-        final List<String> bodies = bodiesOfRun(kind, false);
+        final List<String> bodies = bodiesOfRun(kind, false, null).bodies();
 
         assertThat(firstChapter2Draft(bodies)).as("chapter 2 was drafted").isNotEmpty();
         final int firstChapter2 = bodies.indexOf(firstChapter2Draft(bodies));
@@ -87,27 +90,50 @@ class ChapterSummaryAcceptanceTest {
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_summaryNamesEntryAbsentFromChapter1_sentenceDropped(final ProviderKind kind) {
-        final List<String> bodies = bodiesOfRun(kind, true);
+        final List<String> bodies = bodiesOfRun(kind, true, null).bodies();
 
         assertThat(firstChapter2Draft(bodies)).as("chapter 2 was drafted").isNotEmpty();
         final String block = earlierBlock(userMessage(firstChapter2Draft(bodies)));
         assertThat(block).contains("S1.", "S3.").doesNotContain(ABSENT_NAME);
     }
 
-    private List<String> bodiesOfRun(final ProviderKind kind, final boolean seedAbsentName) {
+    // The switch-off case. Until the chapter-summary call (12.4) and block 8 (12.5) exist, no run makes such a call or
+    // sends such a block, so the two "none" assertions below hold whatever the switch says; they become discriminating
+    // once those tasks land. What proves the switch today is the stored brief reading it back as off.
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void run_switchOff_noChapterSummaryRequest(final ProviderKind kind) {
+        final RunSeen run = bodiesOfRun(kind, false, false);
+
+        assertThat(run.storedBrief().summariesOn())
+                .as("the stored brief keeps the switch off")
+                .isFalse();
+        assertThat(firstChapter2Draft(run.bodies())).as("chapter 2 was drafted").isNotEmpty();
+        assertThat(summaryRequests(run.bodies())).as("no chapter-summary call").isEmpty();
+        assertThat(run.bodies().stream().filter(ChapterSummaryAcceptanceTest::isDraft))
+                .as("no draft carries an earlier-chapters block")
+                .noneMatch(body -> userMessage(body).contains(EARLIER));
+    }
+
+    private RunSeen bodiesOfRun(
+            final ProviderKind kind, final boolean seedAbsentName, @Nullable final Boolean chapterSummaries) {
         final MiniBook book = MiniBook.load(MiniBook.MINI_EN);
         final MiniRunner runner = new MiniRunner(book, QualityDial.BALANCED, NamePolicy.TRANSLITERATE, null);
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubResponder(ChapterSummaryAcceptanceTest::replyTo);
-            final Prepared prepared = SequenceJobs.importBook(book.writeEpub(directory), runner.brief());
+            final Prepared prepared = SequenceJobs.importBook(
+                    book.writeEpub(directory), runner.brief().withChapterSummaries(chapterSummaries));
             if (seedAbsentName) {
                 seed(prepared, ABSENT_NAME);
             }
             SequenceJobs.run(
                     prepared, provider.model(REQUEST_TIMEOUT, ignored -> {}), ReviewMode.UNATTENDED, null, e -> {});
-            return provider.chatBodies();
+            return new RunSeen(provider.chatBodies(), SequenceJobs.storedBrief(prepared));
         }
     }
+
+    /** The request bodies a run sent and the brief its project holds afterwards. */
+    private record RunSeen(List<String> bodies, BookBrief storedBrief) {}
 
     private static void seed(final Prepared prepared, final String term) {
         Objects.requireNonNull(

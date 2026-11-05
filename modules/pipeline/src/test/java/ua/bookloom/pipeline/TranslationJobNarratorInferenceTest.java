@@ -21,10 +21,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Deferral;
@@ -44,7 +41,6 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
  */
 class TranslationJobNarratorInferenceTest {
 
-    private static final String SUMMARY = "summary";
     private static final String REVISION = "revision";
     private static final int GENEROUS = 60;
     private static final Narrator UNKNOWN_FIRST = new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN);
@@ -62,14 +58,13 @@ class TranslationJobNarratorInferenceTest {
         return TranslationJobTestSupport.project(book, brief("en", "uk", dial).withNarrator(narrator));
     }
 
-    // Drafts in book order, a reviewer that finds nothing and a summary for as many calls as the run may make, then
+    // Drafts in book order, a reviewer that finds nothing for as many calls as the run may make, then
     // the revisions a Max run asks for.
     private static ScriptedChatModel model(final List<String> drafts, final List<String> revisions) {
         final ScriptedChatModel model = new ScriptedChatModel();
         drafts.forEach(draft -> model.answerTo(DRAFT, target(draft)));
         IntStream.range(0, GENEROUS).forEach(index -> {
             model.answerTo(REVIEW, reviewed());
-            model.answerTo(SUMMARY, summaryReply());
         });
         revisions.forEach(revision -> model.answerTo(REVISION, ChunkRunFixtures.singleTarget(revision)));
         return model;
@@ -82,12 +77,6 @@ class TranslationJobNarratorInferenceTest {
                         ? NarratorInferenceBooks.masculine(index)
                         : NarratorInferenceBooks.feminine(index))
                 .toList();
-    }
-
-    private static Result<ChatResponse> summaryReply() {
-        return Result.ok(new ChatResponse(
-                "{\"summary\":{\"source\":\"The night went on.\",\"target\":\"Ніч тривала.\"},\"facts\":[]}",
-                FinishReason.STOP));
     }
 
     private static Narrator narratorOf(final TestProject project) {

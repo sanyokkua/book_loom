@@ -195,11 +195,13 @@ temperature for this retry" (DD-36).
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
 user-editable per knob:
 
-| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision | Model-written summary |
-|----------|----------------------------|--------------------------|-------------------|-----------------------|
-| Fast     | marks-only re-draft        | 0 (no reviewer)          | off               | off                   |
-| Balanced | one repair                 | 1                        | off               | off                   |
-| Max      | one repair                 | 2                        | on                | on                    |
+| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision |
+|----------|----------------------------|--------------------------|-------------------|
+| Fast     | marks-only re-draft        | 0 (no reviewer)          | off               |
+| Balanced | one repair                 | 1                        | off               |
+| Max      | one repair                 | 2                        | on                |
+
+Chapter summaries are not a dial setting: the Book Brief's switch decides them, the same at every dial.
 
 The dial no longer sets a preceding count: the window's 2 or 3 previous pairs follow the model's tier.
 
@@ -217,8 +219,7 @@ set by the quality dial alone (the table above); Fast has no fixing call. A revi
 
 **Token-budget constants (fixed).** Token counts use a deterministic characters ÷ K heuristic (no shipped tokenizer):
 the per-script **K table** and a **safety margin of `0.15`** are documented constants
-(`05_TRANSLATION_ALGORITHM.md#chunking`), not user settings. The **rolling-summary window K** is likewise a constant,
-**default 20**. These are recorded here for traceability; they are not editable settings.
+(`05_TRANSLATION_ALGORITHM.md#chunking`), not user settings. These are recorded here for traceability; they are not editable settings.
 
 ## appearance-tab {#appearance-tab}
 

@@ -11,9 +11,7 @@ import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
-import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
@@ -28,7 +26,6 @@ final class ChunkRunnerFactory {
 
     private final DocumentPort documents;
     private final ObjectMapper mapper;
-    private final PromptTemplates templates;
     private final RunStores stores;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
@@ -38,7 +35,6 @@ final class ChunkRunnerFactory {
         Objects.requireNonNull(checks, "checks");
         this.documents = tools.documents();
         this.mapper = tools.mapper();
-        this.templates = tools.templates();
         this.stores = Objects.requireNonNull(stores, "stores");
         this.qualityLoop = checks.qualityLoop();
         this.splitter = checks.splitter();
@@ -59,8 +55,6 @@ final class ChunkRunnerFactory {
         final GateFunction gate = GateFunction.of(documents, run.document().format());
         final SegmentTranslator translator =
                 new SegmentTranslator(gate, calls, run.document().format(), planner, mapper);
-        final RollingSummaryKeeper summary = new RollingSummaryKeeper(
-                stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
         final BatchDrafter batch = new BatchDrafter(
                 new BatchPromptBuilder(planner),
                 new BatchReplyParser(mapper),
@@ -69,7 +63,7 @@ final class ChunkRunnerFactory {
                 settings.frame().targetLanguage(),
                 batchSize);
         return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch, planner),
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, batch, planner),
                 settings,
                 runWindow,
                 stores,
