@@ -476,7 +476,10 @@ task edits the delta requirement and this file's line; the result is written int
   replaces `RollingSummary`; the port `api: persistence/SummaryRepository` is reshaped to save and list chapter
   summaries per project, with in-memory and SQLite adapters and contract tests. One transaction per summary. A renamed
   pinned or locked target is swapped into stored summaries by the term sweep's rule (whole word for LOCKED, generated
-  forms for PINNED; D15). Summary text is logged at TRACE only.
+  forms for PINNED; D15), at the moment the rename is recorded (`revision/SummarySweep` over `revision/TargetSwap`,
+  called where the glossary service and the CSV import record a changed target), not by `TermSweep`, which is
+  deferral-driven and runs only in the Proofread pass; `TermSweep`'s PINNED path (13.4) reuses `TargetSwap`. Summary
+  text is logged at TRACE only.
 - **Use.** Block 8 carries every earlier finished chapter's summary, oldest first, within its budget (newest kept);
   Proofread windows and desk retries get the summaries of chapters before the window's chapter; the snapshot stores
   keys only.

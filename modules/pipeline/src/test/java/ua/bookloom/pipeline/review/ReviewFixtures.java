@@ -106,6 +106,7 @@ public final class ReviewFixtures {
                     lexicon,
                     frames,
                     runs,
+                    summaries,
                     new PromptTemplates(),
                     new ObjectMapper(),
                     Guice.createInjector().getInstance(QualityLoop.class),

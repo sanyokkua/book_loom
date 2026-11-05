@@ -46,6 +46,7 @@ class PromptSectionsTest {
                 BookMap.of(List.of(ZERUBIN), List.of(), brief),
                 List.of(),
                 Map.of(),
+                List.of(),
                 List.of());
         final List<BatchItem> items = List.of(new BatchItem("1", "Zerubin left."), new BatchItem("2", "She stayed."));
         return Objects.requireNonNull(new BatchPromptBuilder(planner)

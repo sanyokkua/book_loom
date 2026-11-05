@@ -161,7 +161,13 @@ public final class NamesPassImpl implements NamesPass {
                         scans,
                         book,
                         new GlossaryServiceImpl(
-                                names, stores.segments(), deferrals, stores.projects(), stores.openProjects(), scans),
+                                names,
+                                stores.segments(),
+                                deferrals,
+                                stores.projects(),
+                                stores.openProjects(),
+                                scans,
+                                stores.summaries()),
                         new LexiconServiceImpl(terms, names, stores.projects(), stores.openProjects(), scans)));
     }
 

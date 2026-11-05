@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.memory.ProtectedMask;
@@ -28,6 +30,7 @@ public final class TranslatePlanner {
     private final ModelProfile profile;
     private final IntSupplier contextSize;
     private final List<Unit> units;
+    private final Supplier<Result<List<ChapterSummary>>> summaries;
 
     /**
      * Binds the builder to one run.
@@ -37,18 +40,22 @@ public final class TranslatePlanner {
      * @param profile the non-null profile of the run's model
      * @param contextSize the window the run latched, read again for each call so a chunk at another window plans for it
      * @param units the non-null units of the book in reading order
+     * @param summaries the non-null reader of the project's kept chapter summaries, read again for each draft so a
+     *     summary kept mid-run reaches the next chapter's first draft
      */
     public TranslatePlanner(
             final ContextBuilder builder,
             final RunFrame frame,
             final ModelProfile profile,
             final IntSupplier contextSize,
-            final List<Unit> units) {
+            final List<Unit> units,
+            final Supplier<Result<List<ChapterSummary>>> summaries) {
         this.builder = Objects.requireNonNull(builder, "builder");
         this.frame = Objects.requireNonNull(frame, "frame");
         this.profile = Objects.requireNonNull(profile, "profile");
         this.contextSize = Objects.requireNonNull(contextSize, "contextSize");
         this.units = List.copyOf(Objects.requireNonNull(units, "units"));
+        this.summaries = Objects.requireNonNull(summaries, "summaries");
     }
 
     /** The run's fixed frame. */
@@ -84,6 +91,33 @@ public final class TranslatePlanner {
     }
 
     /**
+     * The earlier chapters' summaries a call over {@code focus} carries in block 8, read from the store now. A store
+     * that cannot be read gives none, since a draft is better made without the story so far than not made.
+     *
+     * @param focus the non-null items, in reading order; the first one's chapter decides
+     * @return never null; oldest first, empty for a focus with no item, in the first chapter or with the switch off
+     */
+    public List<EarlierSummary> earlierChapters(final Focus focus) {
+        Objects.requireNonNull(focus, "focus");
+        if (focus.items().isEmpty() || !frame.brief().summariesOn()) {
+            log.debug(
+                    "Earlier chapters not read items={} switchOn={}",
+                    focus.items().size(),
+                    frame.brief().summariesOn());
+            return List.of();
+        }
+        final Result<List<ChapterSummary>> stored = summaries.get();
+        final List<ChapterSummary> read = stored.data();
+        if (read == null) {
+            log.warn(
+                    "Earlier chapters unreadable code={}; the call carries none",
+                    Objects.requireNonNull(stored.error(), "error").code());
+            return List.of();
+        }
+        return EarlierChapters.forFocus(read, frame, focus.items().getFirst().segmentId());
+    }
+
+    /**
      * The context of a segment drafted with no neighbours and an empty map, for a draft step given no window.
      *
      * @param segmentId the non-null segment id
@@ -98,6 +132,7 @@ public final class TranslatePlanner {
                 BookMap.of(List.of(), List.of(), frame.brief()),
                 List.of(),
                 Map.of(segmentId, mask),
+                List.of(),
                 List.of());
     }
 
@@ -117,10 +152,11 @@ public final class TranslatePlanner {
         final List<String> keyTerms = kind == CallKind.DRAFT ? context.keyTerms() : List.of();
         final int size = contextSize.getAsInt();
         log.debug(
-                "Planning {} for {} items keyTerms={} contextSize={}",
+                "Planning {} for {} items keyTerms={} summaries={} contextSize={}",
                 kind,
                 focus.items().size(),
                 keyTerms.size(),
+                context.summaries().size(),
                 size);
         return builder.planFitted(
                 kind,
@@ -128,7 +164,13 @@ public final class TranslatePlanner {
                 context.map(),
                 frame,
                 profile,
-                new CallInputs(context.masksOf(focus.segmentIds()), size, context.memory(), keyTerms, extra));
+                new CallInputs(
+                        context.masksOf(focus.segmentIds()),
+                        size,
+                        context.memory(),
+                        keyTerms,
+                        extra,
+                        context.summaries()));
     }
 
     /**

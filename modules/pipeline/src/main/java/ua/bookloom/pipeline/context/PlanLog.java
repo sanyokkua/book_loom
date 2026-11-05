@@ -13,11 +13,12 @@ final class PlanLog {
 
     static void planning(final CallKind kind, final FrameKind frameKind, final Window window, final CallInputs inputs) {
         log.debug(
-                "Planning {} ({} frame) items={} previous={} contextSize={}",
+                "Planning {} ({} frame) items={} previous={} summaries={} contextSize={}",
                 kind,
                 frameKind,
                 window.focus().items().size(),
                 window.previous().size(),
+                inputs.summaries().size(),
                 inputs.contextSize());
     }
 

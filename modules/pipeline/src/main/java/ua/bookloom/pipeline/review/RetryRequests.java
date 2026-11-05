@@ -103,10 +103,15 @@ final class RetryRequests {
                         List.of(new PromptRequests.BatchSlot(segment, mask, NO_MEMORY)),
                         stored(settings.projectId()),
                         List.of())
-                .flatMap(context -> requests.sentSections(segment, context, mask, KindExtra.note(note.text()))
-                        .flatMap(sections -> decided(segment, context, mask, note, settings, calls)
+                .flatMap(context -> requests.sentPlan(segment, context, mask, KindExtra.note(note.text()))
+                        .flatMap(sent -> decided(segment, context, mask, note, settings, calls)
                                 .map(outcome -> new Retried(
-                                        outcome, new ContextSnapshot(frameHash, sections, List.of(), true)))));
+                                        outcome,
+                                        new ContextSnapshot(
+                                                frameHash,
+                                                PromptRequests.userSections(sent.sections()),
+                                                sent.chapterSummaryKeys(),
+                                                true)))));
     }
 
     // The run drafts a segment above its tier's current-part budget in sentence-aligned pieces; a retry cuts at the

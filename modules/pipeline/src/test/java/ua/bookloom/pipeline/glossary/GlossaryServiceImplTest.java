@@ -34,6 +34,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -345,7 +346,8 @@ class GlossaryServiceImplTest {
                 injector.getInstance(DeferralRepository.class),
                 injector.getInstance(ProjectRepository.class),
                 openProjects,
-                injector.getInstance(GlossaryModelScans.class));
+                injector.getInstance(GlossaryModelScans.class),
+                injector.getInstance(SummaryRepository.class));
 
         final Result<List<GlossaryEntry>> failed = broken.entries(PROJECT);
 

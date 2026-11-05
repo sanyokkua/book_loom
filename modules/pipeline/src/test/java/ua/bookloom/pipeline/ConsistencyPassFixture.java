@@ -53,6 +53,7 @@ final class ConsistencyPassFixture {
                 project.stores().lexicon(),
                 project.stores().promptFrames(),
                 project.stores().runs(),
+                project.stores().summaries(),
                 templates,
                 new ObjectMapper(),
                 Guice.createInjector().getInstance(QualityLoop.class),

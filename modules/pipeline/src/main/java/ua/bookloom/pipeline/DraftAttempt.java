@@ -64,13 +64,14 @@ record DraftAttempt(
                         translate.map(),
                         translate.memory(),
                         Map.of(piece.id(), ProtectedMask.none(piece.masked())),
-                        List.of());
+                        List.of(),
+                        translate.summaries());
         return new DraftAttempt(piece, pieceContext, piece.masked(), note, null, List.of(), lower);
     }
 
     /**
-     * The same draft with no previous pair, next source or memory line around it: an unsplittable segment is drafted
-     * with as much room as its source can have.
+     * The same draft with no previous pair, next source, memory line or earlier summary around it: an unsplittable
+     * segment is drafted with as much room as its source can have.
      */
     DraftAttempt alone() {
         final @Nullable TranslateContext bare = translate == null
@@ -80,6 +81,7 @@ record DraftAttempt(
                         translate.map(),
                         List.of(),
                         translate.masks(),
+                        List.of(),
                         List.of());
         return new DraftAttempt(
                 segment, bare, shownText, extraInstruction, pieceRedraft, lockedRenderings, lowerTemperature);

@@ -26,15 +26,12 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * The one recipe every model call's context comes from (design D8): the run frame's fixed system blocks first, then
  * one last user message with the call's own blocks, the reminder last. A block with nothing to say is left out, so no
  * call carries filler. Every translate-family plan is fitted to the model tier's budgets and capped at its output
- * reserve; block 8 holds the recently-present card. The run's drafts, batches, format re-asks and repairs are all
+ * reserve; block 8 holds the earlier chapters' summaries and the recently-present card. The run's drafts, batches, format re-asks and repairs are all
  * planned here, sized for the window the run latched, the person's own override included.
  */
 @Slf4j
 public final class ContextBuilder {
 
-    // The block wording is English; the style sheet, the language rules, the examples and the map are in the target,
-    // and the window and the items are the book's text.
-    private static final String INSTRUCTIONS_LANGUAGE = "en";
     private static final int REPLY_SHARE_DIVISOR = 2;
     private static final String FRAME = "frame";
 
@@ -241,14 +238,18 @@ public final class ContextBuilder {
                 contextSize,
                 frame.brief().sourceLanguage(),
                 frame.brief().targetLanguage());
-        // The earlier chapters' summaries reach block 8 in group 12; until then a call has none.
+        final List<EarlierSummary> earlier = call.inputs().summaries();
+        final List<String> summaryLines = earlier.stream()
+                .map(summary -> EarlierChapters.line(summary, words))
+                .toList();
         final WindowBudgets.Fitted fitted =
-                WindowBudgets.fit(budget, call.window(), List.of(), new PlanSizer(kind, call, frame, profile));
+                WindowBudgets.fit(budget, call.window(), summaryLines, new PlanSizer(kind, call, frame, profile));
         final PromptPlan plan = new PromptPlan(
-                translateBlocks(kind, new Planned(fitted.window(), call, fitted.lines()), frame),
+                translateBlocks(kind, new Planned(fitted.window(), call, fitted.lines(), fitted.summaries()), frame),
                 fitted.promptTokens(),
                 fitted.reserve(),
-                contextSize);
+                contextSize,
+                EarlierChapters.keptKeys(earlier, fitted.summaries().size()));
         PlanLog.plan(kind, fitted.window().focus(), plan);
         return new FittedPlan(plan, fitted.keptItems());
     }
@@ -268,9 +269,10 @@ public final class ContextBuilder {
                 : profile.context().outputMax();
         final PromptPlan plan = new PromptPlan(
                 blocks,
-                promptTokens(blocks, frame, profile),
+                PlanTokens.of(blocks, frame, profile),
                 Math.min(cap, contextSize / REPLY_SHARE_DIVISOR),
-                contextSize);
+                contextSize,
+                List.of());
         PlanLog.plan(kind, focus, plan);
         return new FittedPlan(plan, focus.items().size());
     }
@@ -304,8 +306,8 @@ public final class ContextBuilder {
 
         @Override
         public int promptTokens(final Window window, final MapLines lines, final List<String> summaries) {
-            return ContextBuilder.promptTokens(
-                    translateBlocks(kind, new Planned(window, call, lines), frame), frame, profile);
+            return PlanTokens.of(
+                    translateBlocks(kind, new Planned(window, call, lines, summaries), frame), frame, profile);
         }
 
         @Override
@@ -329,14 +331,16 @@ public final class ContextBuilder {
         return masks.size() > items ? masks.subList(0, items) : masks;
     }
 
-    /** A window as it is rendered: the window, the call it belongs to, and its chosen map lines. */
-    private record Planned(Window window, CallWindow call, MapLines lines) {}
+    /**
+     * A window as it is rendered: the window, the call it belongs to, its chosen map lines and the earlier chapters'
+     * summary lines it keeps.
+     */
+    private record Planned(Window window, CallWindow call, MapLines lines, List<String> summaries) {}
 
-    // The card is drawn from the window as fitted, so a dropped previous pair moves where the scene starts.
     private List<Block> translateBlocks(final CallKind kind, final Planned planned, final RunFrame frame) {
         final List<Block> blocks = new ArrayList<>(frame.system());
         final CallInputs inputs = planned.call().inputs();
-        addIfAny(blocks, BlockSlots.SCENE, RecentlyPresentCard.of(planned.call().map(), planned.window(), frame));
+        addIfAny(blocks, BlockSlots.SCENE, scene(planned, frame));
         addIfAny(blocks, BlockSlots.MAP, WindowBlocks.map(planned.lines(), words));
         addIfAny(blocks, BlockSlots.WINDOW, WindowBlocks.window(planned.window(), inputs.memory(), words));
         addIfAny(
@@ -354,27 +358,12 @@ public final class ContextBuilder {
         return blocks;
     }
 
-    // Every block at its own language's rate: instructions in English, the rules, the map and a repair's attempt in the
-    // target, the book's text in the source, the previous pairs at the mixed rate; the template's overhead once.
-    private static int promptTokens(final List<Block> blocks, final RunFrame frame, final ModelProfile profile) {
-        final List<TokenEstimator.Message> messages = blocks.stream()
-                .map(block -> new TokenEstimator.Message(block.text(), languageOf(block, frame)))
-                .toList();
-        return TokenEstimator.estimateCall(messages, profile.templateOverhead());
-    }
-
-    private static @Nullable String languageOf(final Block block, final RunFrame frame) {
-        return switch (block.slot()) {
-            case BlockSlots.STYLE_SHEET,
-                    BlockSlots.LANGUAGE_RULES,
-                    BlockSlots.EXAMPLES,
-                    BlockSlots.MAP,
-                    BlockSlots.KIND_EXTRA -> frame.brief().targetLanguage();
-            case BlockSlots.ITEMS, BlockSlots.SCENE -> frame.brief().sourceLanguage();
-            // The previous pairs hold the source and its kept translation, so the cautious mixed-script rate.
-            case BlockSlots.WINDOW -> null;
-            default -> INSTRUCTIONS_LANGUAGE;
-        };
+    // Block 8: the earlier chapters' summaries, then the card after a blank line. The card is drawn from the window as
+    // fitted, so a dropped previous pair moves where the scene starts.
+    private String scene(final Planned planned, final RunFrame frame) {
+        final String earlier = EarlierChapters.block(planned.summaries(), words);
+        final String card = RecentlyPresentCard.of(planned.call().map(), planned.window(), frame);
+        return earlier.isEmpty() || card.isEmpty() ? earlier + card : earlier + "\n\n" + card;
     }
 
     private static void addIfAny(final List<Block> blocks, final String slot, final String text) {

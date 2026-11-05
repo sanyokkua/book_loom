@@ -191,7 +191,8 @@ public final class SequenceJobs {
                         prepared.project.deferrals(),
                         stores.projects(),
                         stores.openProjects(),
-                        scans),
+                        scans,
+                        stores.summaries()),
                 new LexiconServiceImpl(
                         stores.lexicon(), stores.glossary(), stores.projects(), stores.openProjects(), scans));
     }

@@ -16,16 +16,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ChapterSummary;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
@@ -48,6 +53,7 @@ class ChapterSummaryAcceptanceTest {
     private static final String CARD = "[Recently present";
     private static final String CHAPTER_2 = "Lamp Room";
     private static final String ITEM_MARK = "<s id=";
+    private static final String ITEMS_OPEN = "<Items>";
     private static final String ABSENT_NAME = "Tobin Reed";
     private static final Pattern ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
 
@@ -64,10 +70,17 @@ class ChapterSummaryAcceptanceTest {
                 .hasSize(1);
         final String message = userMessage(firstChapter2Draft(bodies));
         assertThat(message).contains(EARLIER, "S1.");
-        assertThat(message.indexOf("S1."))
-                .as("the summary stands before the recent-names card")
-                .isLessThan(message.indexOf(CARD))
-                .isGreaterThan(message.indexOf(EARLIER));
+        final int summary = message.indexOf("S1.");
+        assertThat(summary)
+                .as("the summary stands under its heading, before the items")
+                .isGreaterThan(message.indexOf(EARLIER))
+                .isLessThan(message.indexOf(ITEMS_OPEN));
+        // Block 8 holds the summaries first, then the card; the card is left out at a chapter start, as here.
+        assertThat(message.indexOf(CARD))
+                .as("the recent-names card, when present, follows the summary")
+                .satisfiesAnyOf(
+                        card -> assertThat(card).isNegative(),
+                        card -> assertThat(card).isGreaterThan(summary));
     }
 
     @ParameterizedTest
@@ -113,6 +126,65 @@ class ChapterSummaryAcceptanceTest {
         assertThat(run.bodies().stream().filter(ChapterSummaryAcceptanceTest::isDraft))
                 .as("no draft carries an earlier-chapters block")
                 .noneMatch(body -> userMessage(body).contains(EARLIER));
+    }
+
+    // The keys are what the snapshot keeps of block 8, for a run's draft and for a desk retry that rebuilt it.
+    @Test
+    void snapshot_storesSummaryKeys() {
+        final MiniBook book = MiniBook.load(MiniBook.MINI_EN);
+        final MiniRunner runner = new MiniRunner(book, QualityDial.BALANCED, NamePolicy.TRANSLITERATE, null);
+        try (WireMockProvider provider = new WireMockProvider(ProviderKind.OLLAMA)) {
+            provider.stubResponder(ChapterSummaryAcceptanceTest::replyTo);
+            final Prepared prepared = SequenceJobs.importBook(book.writeEpub(directory), runner.brief());
+            final ChatModel model = provider.model(REQUEST_TIMEOUT, ignored -> {});
+            SequenceJobs.run(prepared, model, ReviewMode.UNATTENDED, null, e -> {});
+            final List<String> chapter1 = keptKeys(prepared);
+            final String heading = chapter2Heading(prepared);
+            final List<SegmentRecord> records = records(prepared);
+
+            assertThat(chapter1).as("chapter 1's summary was kept").hasSize(1);
+            assertThat(records.stream().map(SegmentRecord::context).filter(Objects::nonNull))
+                    .extracting(ContextSnapshot::chapterSummaryKeys)
+                    .containsOnly(List.of(), chapter1)
+                    .contains(List.of(), chapter1);
+            assertThat(contextOf(records, heading).chapterSummaryKeys()).isEqualTo(chapter1);
+            final SegmentRecord retried = SequenceJobs.retryDraft(prepared)
+                    .retry(prepared.projectId(), heading, null, false, model)
+                    .data();
+            assertThat(Objects.requireNonNull(retried).context())
+                    .extracting(ContextSnapshot::chapterSummaryKeys, ContextSnapshot::retry)
+                    .containsExactly(chapter1, true);
+        }
+    }
+
+    private static List<String> keptKeys(final Prepared prepared) {
+        return Objects.requireNonNull(
+                        prepared.stores().summaries().list(prepared.projectId()).data(), "summaries")
+                .stream()
+                .map(ChapterSummary::chapterKey)
+                .toList();
+    }
+
+    private static String chapter2Heading(final Prepared prepared) {
+        return prepared.story().stream()
+                .filter(segment -> segment.masked().contains(CHAPTER_2))
+                .findFirst()
+                .orElseThrow()
+                .id();
+    }
+
+    private static List<SegmentRecord> records(final Prepared prepared) {
+        return Objects.requireNonNull(
+                prepared.stores().segments().all(prepared.projectId()).data(), "records");
+    }
+
+    private static ContextSnapshot contextOf(final List<SegmentRecord> records, final String segmentId) {
+        return records.stream()
+                .filter(record -> record.segmentId().equals(segmentId))
+                .map(SegmentRecord::context)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseThrow();
     }
 
     private RunSeen bodiesOfRun(

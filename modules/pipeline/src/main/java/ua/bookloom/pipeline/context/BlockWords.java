@@ -45,6 +45,8 @@ final class BlockWords {
     static final String WINDOW_TARGET = "window.target";
     static final String WINDOW_NEXT = "window.next";
     static final String LABEL = "label.";
+    static final String EARLIER_HEADING = "earlier.heading";
+    static final String EARLIER_LINE = "earlier.line";
     static final String CARD_HEADING = "card.heading";
     static final String CARD_SCENE = "card.scene";
     static final String CARD_PRESENT = "card.present";
@@ -85,6 +87,8 @@ final class BlockWords {
             LABEL + "numbers",
             LABEL + "agreement",
             LABEL + "inflect",
+            EARLIER_HEADING,
+            EARLIER_LINE,
             CARD_HEADING,
             CARD_SCENE,
             CARD_PRESENT,

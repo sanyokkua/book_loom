@@ -11,14 +11,18 @@ import ua.bookloom.api.pipeline.PromptSection;
  * @param promptTokens the estimated tokens of every block together; zero or more
  * @param maxOutputTokens the most tokens the reply may take; positive
  * @param contextSize the window the call is sized for; positive
+ * @param chapterSummaryKeys the keys of the earlier chapters' summaries block 8 carries, oldest first; copied, empty
+ *     for none
  */
-public record PromptPlan(List<Block> blocks, int promptTokens, int maxOutputTokens, int contextSize) {
+public record PromptPlan(
+        List<Block> blocks, int promptTokens, int maxOutputTokens, int contextSize, List<String> chapterSummaryKeys) {
 
     private static final String BLOCK_SEPARATOR = "\n\n";
 
     /** Copies the blocks. */
     public PromptPlan {
         blocks = List.copyOf(Objects.requireNonNull(blocks, "blocks"));
+        chapterSummaryKeys = List.copyOf(Objects.requireNonNull(chapterSummaryKeys, "chapterSummaryKeys"));
     }
 
     /**

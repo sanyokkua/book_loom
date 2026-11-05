@@ -61,7 +61,7 @@ public record AnalysisFrame(List<Block> blocks) {
                                 block.text(), block.role() == Block.Role.SYSTEM ? INSTRUCTIONS_LANGUAGE : null))
                         .toList(),
                 ModelProfile.defaults().templateOverhead());
-        return new PromptPlan(all, tokens, cap, ModelWindow.DEFAULT_WINDOW);
+        return new PromptPlan(all, tokens, cap, ModelWindow.DEFAULT_WINDOW, List.of());
     }
 
     private static Block system(final String slot, final String text) {

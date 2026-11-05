@@ -107,7 +107,8 @@ final class RunWiring {
                 runFrame,
                 model.profile(),
                 runWindow::current,
-                run.document().units());
+                run.document().units(),
+                () -> stores.summaries().list(request.projectId()));
         return new StageRunner(
                 chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner),
                 revision,

@@ -30,6 +30,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -87,6 +88,7 @@ public final class RetryDraft {
     private final LexiconRepository lexicon;
     private final PromptFrameRepository frames;
     private final RunRepository runs;
+    private final SummaryRepository summaries;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final QualityLoop qualityLoop;
@@ -301,7 +303,8 @@ public final class RetryDraft {
                 plan.runFrame(),
                 plan.target().profile(),
                 () -> window,
-                plan.document().units());
+                plan.document().units(),
+                () -> summaries.list(plan.record().projectId()));
     }
 
     private RunSettings settingsOf(final RetryPlan plan) {

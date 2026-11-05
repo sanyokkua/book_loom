@@ -92,7 +92,7 @@ class TranslatePromptGoldenTest {
                     Map.of());
             final Window window =
                     Objects.requireNonNull(planner.window(focus, accepted).data(), "window");
-            return new TranslateContext(window, map, List.of(), Map.of(), List.of());
+            return new TranslateContext(window, map, List.of(), Map.of(), List.of(), List.of());
         }
 
         DraftRequests requests() {

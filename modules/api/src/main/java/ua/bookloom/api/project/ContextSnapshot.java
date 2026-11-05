@@ -13,8 +13,8 @@ import ua.bookloom.api.pipeline.PromptSection;
  *     made for the segment (a memory reuse or a shortcut that needed none)
  * @param sections the call's own parts as sent, the user message's blocks in order (masked, as sent); empty when no
  *     call was made
- * @param chapterSummaryKeys the keys of the chapter summaries the call carried, oldest first; always empty until
- *     chapter summaries exist (group 12)
+ * @param chapterSummaryKeys the keys of the earlier chapters' summaries the call carried in block 8, oldest first, the
+ *     text itself left out; empty when it carried none
  * @param retry {@code true} when the sections are the context a review retry rebuilt and sent, so the desk can label
  *     them as such after a restart; {@code false} for a run's own call
  */

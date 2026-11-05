@@ -22,6 +22,7 @@ import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.AcceptedTargets;
 import ua.bookloom.pipeline.context.BookMap;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.Focus;
 import ua.bookloom.pipeline.context.FocusItem;
 import ua.bookloom.pipeline.context.KindExtra;
@@ -211,38 +212,29 @@ public final class PromptRequests {
                 .toList();
         log.debug("Translate context slots={} memoryLines={} allowance={}", slots.size(), memory.size(), allowance);
         return planner.window(focus, accepted)
-                .map(window -> new TranslateContext(window, map(), memory, masks, keyTerms));
+                .map(window ->
+                        new TranslateContext(window, map(), memory, masks, keyTerms, planner.earlierChapters(focus)));
     }
 
     /**
-     * The user message's sections of a segment's first draft over {@code window}, planned the way the draft step plans
-     * it; the planning is deterministic, so they are the sections the draft was sent. A segment drafted in pieces is
-     * described by the plan of its whole text.
+     * The plan of a segment's first draft over {@code window}, planned the way the draft step plans it; the planning is
+     * deterministic, so its user sections and summary keys are the ones the draft was sent. A segment drafted in pieces
+     * is described by the plan of its whole text.
      *
      * @param segment the non-null segment drafted alone
-     * @param window the non-null window, map and memory the draft was shown
+     * @param window the non-null window, map, memory and summaries the draft was shown
      * @param mask the non-null spans hidden in the segment
-     * @return the sections in the order sent, the system message's left out, or the builder's error
+     * @param extra the non-null block 11 the draft is sent with: none, or a review retry's note
+     * @return the plan, or the builder's error
      */
-    public Result<List<PromptSection>> sentSections(
-            final Segment segment, final TranslateContext window, final ProtectedMask mask) {
-        return sentSections(segment, window, mask, KindExtra.NONE);
-    }
-
-    /**
-     * As {@link #sentSections(Segment, TranslateContext, ProtectedMask)}, for a draft that carries block 11: a review
-     * retry's note.
-     *
-     * @param extra the non-null block 11 the draft is sent with
-     */
-    public Result<List<PromptSection>> sentSections(
+    public Result<PromptPlan> sentPlan(
             final Segment segment, final TranslateContext window, final ProtectedMask mask, final KindExtra extra) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(window, "window");
         Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(extra, "extra");
         return planner.plan(CallKind.DRAFT, window, TranslatePlanner.focusOf(segment.id(), mask.maskedText()), extra)
-                .map(fitted -> userSections(fitted.plan().sections()));
+                .map(ContextBuilder.FittedPlan::plan);
     }
 
     /**
@@ -251,7 +243,7 @@ public final class PromptRequests {
      * @param sections the non-null sections of one call
      * @return never null; the user-origin ones, in order
      */
-    static List<PromptSection> userSections(final List<PromptSection> sections) {
+    public static List<PromptSection> userSections(final List<PromptSection> sections) {
         return sections.stream()
                 .filter(section -> section.origin() == PromptSection.Origin.USER)
                 .toList();

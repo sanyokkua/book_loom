@@ -131,8 +131,7 @@ reserve is never above half the window.
 (500) must be at most the model's window. When a call is over either limit, optional context is dropped in this
 order: the next source, the oldest earlier summaries, the oldest previous pairs, the map lines with the fewest
 occurrences in the window, then the last summary, the last pair, and only then batch items. **Never dropped:** the
-focus's first item, pinned and locked names, and a character's stated gender. Earlier chapters' summaries reach the
-scene card only from redesign group 12; until then block 8 holds the recently-present card alone.
+focus's first item, pinned and locked names, and a character's stated gender.
 
 | ID          | Requirement                                                                                                                                                                          |
 |-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -157,7 +156,7 @@ the **last user message**, with the load-bearing task and items at the end.
 | 5     | The target's and the pair's language rules (leaving out what block 3 already states).               |
 | 6     | The pair's examples, or the target's illustration (`12_PROMPT_CATALOG.md#few-shot-examples`).       |
 | 7     | The reply's JSON shape.                                                                             |
-| 8     | The scene card: the recently-present card; later, earlier chapters' summaries (group 12).           |
+| 8     | The scene card: the earlier chapters' summaries, then the recently-present card.                    |
 | 9     | Map lines: glossary and recurring-term entries whose forms occur in the window's source; locked names by token. |
 | 10    | The window: the previous accepted pairs and the next source; TM exact and fuzzy hints.              |
 | 11    | What only this kind of call adds (a repair's defects). Block 11b, key terms, stays until 12.9.      |
@@ -176,6 +175,16 @@ are listed, never the whole dictionary; a locked name is listed by its token.
 a formatting mark, `dialogue` and `address` when the dialogue share is at least 0.05, `numbers` when the story holds a
 digit, `agreement` for a gendered cast and a target with a gendered past tense, `inflect` when the target declines
 names. Block 5 omits the dialogue, address, numbers and agreement rules that block 3 states.
+
+**Earlier chapters** (block 8, first). Under `[Earlier chapters]`, one line `Chapter n: text` for each kept summary of
+a finished chapter before the segment's chapter, oldest first and ordered by the chapter's place in the book; a
+summary whose chapter the book no longer has is passed over. They are fitted to the tier's summary share, dropping the
+oldest first, so the most recent always stay; none in the first chapter or with the brief's switch off. The summaries
+are read from the store at each draft, so a summary kept mid-run reaches the next chapter's first draft; a repair or
+format re-ask carries what its draft carried; a desk retry reads today's. The snapshot stores the keys of the
+summaries the call carried. When the person renames a pinned or locked target (an edit or a CSV row), the old target
+is replaced in the kept summaries by code: the whole word for a locked one, each generated form for a pinned one;
+a suggestion changes nothing.
 
 **Recently-present card** (block 8). Up to five characters or places seen in the previous 12 story paragraphs of the
 same chapter but not in the window, most recent first; a likely gender is told as likely. It is left out at a chapter

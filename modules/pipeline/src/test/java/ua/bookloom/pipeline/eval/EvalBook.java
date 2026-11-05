@@ -105,6 +105,12 @@ record EvalBook(List<Segment> chunk, AcceptedTargets accepted, TranslatePlanner 
                                 profile)
                         .data(),
                 "run frame");
-        return new TranslatePlanner(new ContextBuilder(templates), frame, profile, () -> window, document.units());
+        return new TranslatePlanner(
+                new ContextBuilder(templates),
+                frame,
+                profile,
+                () -> window,
+                document.units(),
+                () -> Result.ok(List.of()));
     }
 }

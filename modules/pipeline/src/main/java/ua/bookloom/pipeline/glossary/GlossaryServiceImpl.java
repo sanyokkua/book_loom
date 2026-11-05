@@ -26,6 +26,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.AcceptReport;
 import ua.bookloom.api.pipeline.EntryChanges;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
@@ -36,7 +37,6 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.TargetIssue;
 import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
@@ -45,7 +45,6 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * The one port Names &amp; style edits the glossary through. Every way in — the table, the Add term dialog and a CSV
@@ -64,6 +63,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
     private final ProjectRepository projects;
     private final OpenProjects openProjects;
     private final GlossaryModelScans modelScans;
+    private final SummaryRepository summaries;
 
     @Override
     public Result<List<GlossaryEntry>> entries(final String projectId) {
@@ -321,14 +321,13 @@ public final class GlossaryServiceImpl implements GlossaryService {
         if (decided.isErr()) {
             return Result.err(Objects.requireNonNull(decided.error(), ERROR));
         }
-        for (final Deferral deferral :
-                DeferralRegister.termChanged(before, after, Objects.requireNonNull(decided.data(), "decided"))) {
-            final Result<Deferral> added = deferrals.add(deferral);
-            if (added.isErr()) {
-                return Result.err(Objects.requireNonNull(added.error(), ERROR));
-            }
-        }
-        return Result.ok(after);
+        return TermChanges.record(
+                        new TermChanges.Stores(deferrals, summaries),
+                        before,
+                        after,
+                        Objects.requireNonNull(decided.data(), "decided"),
+                        TargetText.targetLanguageOf(projects, after.projectId()))
+                .map(added -> after);
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {
@@ -358,7 +357,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         final Document document = openProjects.get(projectId);
         final String language = document == null ? null : languageOf(briefOf(projectId), document);
         return new GlossaryRowsImport(
-                glossary, segments, deferrals, language, TargetText.targetLanguageOf(projects, projectId));
+                glossary, segments, deferrals, summaries, language, TargetText.targetLanguageOf(projects, projectId));
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {

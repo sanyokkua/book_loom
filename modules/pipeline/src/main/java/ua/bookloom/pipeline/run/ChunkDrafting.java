@@ -11,9 +11,10 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SegmentLocator;
+import ua.bookloom.pipeline.context.KindExtra;
+import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
@@ -150,14 +151,14 @@ final class ChunkDrafting {
         if (batchEnd.isPresent()) {
             return new Step.Stopped<>(batchEnd.get());
         }
-        final List<PromptSection> batchSections = current.batches().takeSent(segment.id());
+        final PromptPlan batchPlan = current.batches().takeSent(segment.id());
         final DraftOutcome batched = current.batches().take(segment.id());
         final Result<TranslateContext> shown = shownTo(current, ready, batched != null);
         final TranslateContext window = shown.data();
         if (window == null) {
             return new Step.Stopped<>(RoutedCalls.failedBy(Objects.requireNonNull(shown.error(), ERROR)));
         }
-        final ContextSnapshot snapshot = snapshotOf(current, ready, window, batchSections);
+        final ContextSnapshot snapshot = snapshotOf(current, ready, window, batchPlan);
         events.contextAssembled(segment.id(), snapshot);
         final Step<DraftOutcome> drafted =
                 batched != null ? new Step.Done<>(batched) : draftAlone(current, ready, window);
@@ -171,30 +172,44 @@ final class ChunkDrafting {
         return drafted;
     }
 
-    // What the segment's record keeps of its call: the key to the run's fixed frame, stored once at run start, and the
-    // user message's sections — the batch's as it sent them, or a single draft's as its plan has them.
+    // What the segment's record keeps of its call: the key to the run's fixed frame, stored once at run start, the user
+    // message's sections and the keys of the summaries block 8 carried — the batch's as it sent them, or a single
+    // draft's as its plan has them.
     private ContextSnapshot snapshotOf(
             final Current current,
             final Ready ready,
             final TranslateContext window,
-            @Nullable final List<PromptSection> batchSections) {
+            @Nullable final PromptPlan batchPlan) {
         final Segment segment = ready.item().segment();
         final String frameHash = steps.planner().frame().frameHash();
-        if (batchSections != null) {
-            log.debug("Snapshot of a batch draft segmentId={} sections={}", segment.id(), batchSections.size());
-            return new ContextSnapshot(frameHash, PromptRequests.userSections(batchSections), List.of(), false);
+        if (batchPlan != null) {
+            log.debug(
+                    "Snapshot of a batch draft segmentId={} blocks={} summaryKeys={}",
+                    segment.id(),
+                    batchPlan.blocks().size(),
+                    batchPlan.chapterSummaryKeys());
+            return snapshot(frameHash, batchPlan);
         }
-        final Result<List<PromptSection>> planned = current.requests().sentSections(segment, window, ready.mask());
-        final List<PromptSection> sections = planned.data();
-        if (sections == null) {
+        final Result<PromptPlan> planned = current.requests().sentPlan(segment, window, ready.mask(), KindExtra.NONE);
+        final PromptPlan plan = planned.data();
+        if (plan == null) {
             log.warn(
                     "Sections of a single draft could not be planned segmentId={} code={}; stored without them",
                     segment.id(),
                     Objects.requireNonNull(planned.error(), ERROR).code());
             return new ContextSnapshot(frameHash, List.of(), List.of(), false);
         }
-        log.debug("Snapshot of a single draft segmentId={} sections={}", segment.id(), sections.size());
-        return new ContextSnapshot(frameHash, sections, List.of(), false);
+        log.debug(
+                "Snapshot of a single draft segmentId={} blocks={} summaryKeys={}",
+                segment.id(),
+                plan.blocks().size(),
+                plan.chapterSummaryKeys());
+        return snapshot(frameHash, plan);
+    }
+
+    private static ContextSnapshot snapshot(final String frameHash, final PromptPlan plan) {
+        return new ContextSnapshot(
+                frameHash, PromptRequests.userSections(plan.sections()), plan.chapterSummaryKeys(), false);
     }
 
     // A segment no batch answered is drafted on its own; after a batch answer that copied an example, that draft is the

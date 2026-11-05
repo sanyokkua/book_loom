@@ -68,7 +68,8 @@ class BatchPromptTest {
                 BookMap.of(glossary, terms, brief),
                 memory,
                 Map.of(),
-                keyTerms);
+                keyTerms,
+                List.of());
     }
 
     private static TranslateContext empty() {

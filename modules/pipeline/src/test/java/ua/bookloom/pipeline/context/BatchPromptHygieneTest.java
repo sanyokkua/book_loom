@@ -33,17 +33,7 @@ class BatchPromptHygieneTest {
     void plan_fullContext_passesTheLint() {
         final TranslatePlanner planner =
                 TestPlanners.planner(BRIEF, IndexTestBooks.oneUnit("He left."), ModelProfile.defaults());
-        final TranslateContext context = new TranslateContext(
-                new Window(
-                        List.of(
-                                new WindowPair("x:0", "He left.", "Він пішов."),
-                                new WindowPair("x:1", "It was late.", null)),
-                        new Focus(List.of(), Map.of()),
-                        "She smiled."),
-                BookMap.of(List.of(HALE), List.of(), BRIEF),
-                List.of("He left. → Він пішов.", "He left. → Він пішов."),
-                Map.of(),
-                List.of());
+        final TranslateContext context = context();
         final BatchPromptBuilder builder = new BatchPromptBuilder(planner);
         final PromptPlan plan = Objects.requireNonNull(builder.plan(context, ITEMS, List.of("x:2", "x:3", "x:4"))
                         .data())
@@ -61,5 +51,21 @@ class BatchPromptHygieneTest {
                         new Facts(chunk, List.of(), List.of())))
                 .isEmpty();
         assertThat(plan.userText()).containsOnlyOnce("He left. → Він пішов.\n");
+    }
+
+    // Two previous pairs (one not accepted), a next source, a glossary name and a repeated memory line.
+    private static TranslateContext context() {
+        return new TranslateContext(
+                new Window(
+                        List.of(
+                                new WindowPair("x:0", "He left.", "Він пішов."),
+                                new WindowPair("x:1", "It was late.", null)),
+                        new Focus(List.of(), Map.of()),
+                        "She smiled."),
+                BookMap.of(List.of(HALE), List.of(), BRIEF),
+                List.of("He left. → Він пішов.", "He left. → Він пішов."),
+                Map.of(),
+                List.of(),
+                List.of());
     }
 }

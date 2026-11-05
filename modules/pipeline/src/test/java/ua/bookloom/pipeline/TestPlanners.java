@@ -6,6 +6,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelWindow;
@@ -52,7 +53,13 @@ public final class TestPlanners {
             final ModelProfile profile) {
         final RunFrame frame = frame(templates, brief, document, profile);
         final int window = ModelWindow.of(profile.context(), null);
-        return new TranslatePlanner(new ContextBuilder(templates), frame, profile, () -> window, document.units());
+        return new TranslatePlanner(
+                new ContextBuilder(templates),
+                frame,
+                profile,
+                () -> window,
+                document.units(),
+                () -> Result.ok(List.of()));
     }
 
     /** A context with no neighbours, an empty map and no memory, for a batch built with nothing around its items. */
@@ -62,6 +69,7 @@ public final class TestPlanners {
                 BookMap.of(List.of(), List.of(), planner.frame().brief()),
                 List.of(),
                 Map.of(),
+                List.of(),
                 List.of());
     }
 

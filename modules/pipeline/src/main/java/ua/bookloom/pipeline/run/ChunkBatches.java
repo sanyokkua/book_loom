@@ -2,12 +2,11 @@ package ua.bookloom.pipeline.run;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 
@@ -22,7 +21,7 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 final class ChunkBatches {
 
     private final Map<String, DraftOutcome> ready = new HashMap<>();
-    private final Map<String, List<PromptSection>> sent = new HashMap<>();
+    private final Map<String, PromptPlan> sent = new HashMap<>();
     private final Set<String> tried = new HashSet<>();
     private final Map<String, TranslateContext> contexts = new HashMap<>();
     private final Set<String> echoed = new HashSet<>();
@@ -67,17 +66,21 @@ final class ChunkBatches {
         return echoed.contains(segmentId);
     }
 
-    /** Keeps the sections the segment's batch sent; null when the batch's answer is not one the sections describe. */
-    void sent(final String segmentId, @Nullable final List<PromptSection> sections) {
-        if (sections != null) {
-            sent.put(segmentId, sections);
-            log.debug("Sent sections kept segmentId={} sections={}", segmentId, sections.size());
+    /** Keeps the plan the segment's batch sent; null when the batch's answer is not one the plan describes. */
+    void sent(final String segmentId, @Nullable final PromptPlan plan) {
+        if (plan != null) {
+            sent.put(segmentId, plan);
+            log.debug(
+                    "Sent plan kept segmentId={} blocks={} summaryKeys={}",
+                    segmentId,
+                    plan.blocks().size(),
+                    plan.chapterSummaryKeys().size());
         }
     }
 
-    /** The sections the segment's batch sent, handed over once; null when it was drafted on its own. */
+    /** The plan the segment's batch sent, handed over once; null when it was drafted on its own. */
     @Nullable
-    List<PromptSection> takeSent(final String segmentId) {
+    PromptPlan takeSent(final String segmentId) {
         return sent.remove(segmentId);
     }
 }

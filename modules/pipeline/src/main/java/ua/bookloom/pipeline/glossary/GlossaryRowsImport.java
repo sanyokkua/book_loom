@@ -11,10 +11,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -26,6 +25,7 @@ import ua.bookloom.util.text.GlossaryKeys;
  * @param glossary where the entries are stored
  * @param segments the decided segments a changed target is checked against
  * @param deferrals where a segment a changed target touches is deferred
+ * @param summaries the kept chapter summaries a changed pinned or locked target is written into
  * @param languageTag the source language's tag for the name clusters, or null when it is not known
  * @param targetLanguage the project's target language, whose file says whether a row's stress marks are removed; null
  *     when none is chosen
@@ -35,6 +35,7 @@ record GlossaryRowsImport(
         GlossaryRepository glossary,
         SegmentRepository segments,
         DeferralRepository deferrals,
+        SummaryRepository summaries,
         @Nullable String languageTag,
         @Nullable String targetLanguage) {
 
@@ -42,6 +43,7 @@ record GlossaryRowsImport(
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(deferrals, "deferrals");
+        Objects.requireNonNull(summaries, "summaries");
     }
 
     /**
@@ -126,16 +128,15 @@ record GlossaryRowsImport(
     }
 
     private Result<Integer> deferAll(final List<EntryChange> retargeted, final List<SegmentRecord> decided) {
+        final TermChanges.Stores stores = new TermChanges.Stores(deferrals, summaries);
         int added = 0;
         for (final EntryChange change : retargeted) {
-            for (final Deferral deferral : DeferralRegister.termChanged(
-                    Objects.requireNonNull(change.before(), "before"), change.after(), decided)) {
-                final Result<Deferral> stored = deferrals.add(deferral);
-                if (stored.isErr()) {
-                    return Result.err(Objects.requireNonNull(stored.error(), "error"));
-                }
-                added++;
+            final Result<Integer> recorded = TermChanges.record(
+                    stores, Objects.requireNonNull(change.before(), "before"), change.after(), decided, targetLanguage);
+            if (recorded.isErr()) {
+                return recorded;
             }
+            added += Objects.requireNonNull(recorded.data(), "recorded");
         }
         return Result.ok(added);
     }

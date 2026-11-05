@@ -12,7 +12,6 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ChunkPosition;
-import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
@@ -22,6 +21,7 @@ import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.EchoGate;
 import ua.bookloom.pipeline.context.ExampleChoice;
+import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
@@ -203,7 +203,7 @@ final class BatchStage {
         return switch (step) {
             case Step.Stopped<BatchAttempt>(final RunEnd end) -> Optional.of(end);
             case Step.Done<BatchAttempt>(final BatchAttempt attempt) -> {
-                settle(current, batch, prepared.context(), sentSections(attempt, prepared), attempt);
+                settle(current, batch, prepared.context(), sentPlan(attempt, prepared), attempt);
                 yield Optional.empty();
             }
         };
@@ -241,7 +241,7 @@ final class BatchStage {
             final Current current,
             final List<Candidate> batch,
             final TranslateContext context,
-            @Nullable final List<PromptSection> sections,
+            @Nullable final PromptPlan plan,
             final BatchAttempt attempt) {
         if (attempt.kind() == BatchAttempt.Kind.SKIPPED) {
             skipFirst(current, batch.getFirst(), Objects.requireNonNull(attempt.skip(), "skip"));
@@ -251,7 +251,7 @@ final class BatchStage {
         int adopted = 0;
         for (int i = 0; i < batch.size(); i++) {
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
-            adopted += settleOne(current, batch.get(i), outcome, new Sent(context, sections)) ? 1 : 0;
+            adopted += settleOne(current, batch.get(i), outcome, new Sent(context, plan)) ? 1 : 0;
         }
         if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
             drafter.record(attempt.first());
@@ -280,11 +280,10 @@ final class BatchStage {
     }
 
     // Stored as sent (masked), like the previous pairs; the review desk converts them for display. A re-asked id
-    // keeps the first call's sections, since that is the call whose reply the batch adopted from.
+    // keeps the first call's plan, since that is the call whose reply the batch adopted from.
     @Nullable
-    private static List<PromptSection> sentSections(
-            final BatchAttempt attempt, final PromptRequests.PreparedBatch prepared) {
-        return attempt.kind() == BatchAttempt.Kind.ANSWERED ? prepared.plan().sections() : null;
+    private static PromptPlan sentPlan(final BatchAttempt attempt, final PromptRequests.PreparedBatch prepared) {
+        return attempt.kind() == BatchAttempt.Kind.ANSWERED ? prepared.plan() : null;
     }
 
     // An answer that copies a shown example is not taken: the segment's own draft is its one re-ask.
@@ -335,7 +334,7 @@ final class BatchStage {
     }
 
     /** What the batch an adopted item came from showed it: the context its repair is planned over, and the parts. */
-    private record Sent(TranslateContext context, @Nullable List<PromptSection> sections) {}
+    private record Sent(TranslateContext context, @Nullable PromptPlan plan) {}
 
     private static boolean adopt(
             final Current current, final Candidate candidate, final ItemOutcome outcome, final Sent sent) {
@@ -344,7 +343,7 @@ final class BatchStage {
         drafted.ifPresent(found -> {
             final String id = candidate.segment().id();
             current.batches().ready(id, found);
-            current.batches().sent(id, sent.sections());
+            current.batches().sent(id, sent.plan());
             current.batches().shown(id, sent.context());
         });
         return drafted.isPresent();
