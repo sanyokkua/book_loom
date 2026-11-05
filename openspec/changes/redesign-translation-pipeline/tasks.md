@@ -1240,7 +1240,7 @@ finishes, beside the recently-present card that group 11 built; the book-wide ro
 design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8. A per-book switch, suggested from the story shape, turns the summaries off. `ChapterSummary` replaces
 `RollingSummary` and the brief gains two fields, so the database is set aside.
 
-- [ ] 12.1 Write the group's acceptance test and record it red. It proves when a summary is written, where it goes and what the code gate drops. → :pipeline
+- [x] 12.1 Write the group's acceptance test and record it red. It proves when a summary is written, where it goes and what the code gate drops. → :pipeline
   - **Satisfies:** enabling work for design D10
   - **Depends on:** group 11; group 1 (`mini-en` with two chapters)
   - **Read:** design.md D10; `modules/pipeline/src/test/resources/eval/datasets/mini-en/` (group 1; `Tobin Reed` is named only in chapter 2)

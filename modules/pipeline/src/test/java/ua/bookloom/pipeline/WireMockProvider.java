@@ -17,7 +17,10 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.client.ScenarioMappingBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.extension.ResponseTransformerV2;
+import com.github.tomakehurst.wiremock.http.Response;
 import com.github.tomakehurst.wiremock.stubbing.Scenario;
+import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -30,7 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -68,8 +73,12 @@ public final class WireMockProvider implements AutoCloseable {
     private final ModelSelection selection;
     // Bound to loopback, not the wildcard: on macOS a wildcard bind succeeds on a port where another program (an IDE's
     // built-in server) already listens on 127.0.0.1, and a client then reaches that program instead of this stub.
-    private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
+    private static final String RESPONDER = "bookloom-responder";
+    private final AtomicReference<Function<String, String>> responder = new AtomicReference<>();
+    private final WireMockServer server = new WireMockServer(WireMockConfiguration.options()
+            .dynamicPort()
+            .bindAddress("127.0.0.1")
+            .extensions(new Responder()));
 
     public WireMockProvider(final ProviderKind kind) {
         this(kind, MODEL_ID);
@@ -245,6 +254,16 @@ public final class WireMockProvider implements AutoCloseable {
         }
     }
 
+    /**
+     * Answers every chat request with the content {@code bodyToContent} makes from the request body, wrapped in this
+     * dialect's envelope; the function sees what the client really sent.
+     */
+    public void stubResponder(final Function<String, String> bodyToContent) {
+        responder.set(Objects.requireNonNull(bodyToContent, "bodyToContent"));
+        server.stubFor(post(urlEqualTo(chatPath()))
+                .willReturn(aResponse().withStatus(200).withTransformers(RESPONDER)));
+    }
+
     void stubAlways(final ResponseDefinitionBuilder reply) {
         server.stubFor(post(urlEqualTo(chatPath())).willReturn(reply));
     }
@@ -277,6 +296,28 @@ public final class WireMockProvider implements AutoCloseable {
     @Override
     public void close() {
         server.stop();
+    }
+
+    private final class Responder implements ResponseTransformerV2 {
+        @Override
+        public Response transform(final Response response, final ServeEvent event) {
+            final Function<String, String> make = responder.get();
+            return make == null
+                    ? response
+                    : Response.Builder.like(response)
+                            .body(envelope(make.apply(event.getRequest().getBodyAsString())))
+                            .build();
+        }
+
+        @Override
+        public boolean applyGlobally() {
+            return false;
+        }
+
+        @Override
+        public String getName() {
+            return RESPONDER;
+        }
     }
 
     private String envelope(final String content) {
