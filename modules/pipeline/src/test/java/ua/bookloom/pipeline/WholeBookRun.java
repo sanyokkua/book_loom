@@ -74,9 +74,10 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class WholeBookRun {
 
-    // The four filler paragraphs weigh about 370 estimated tokens each and the ninth about 500, so the 2000-token chunk
-    // closes after the eighth paragraph and the ninth opens the next chunk: only the token budget closes a chunk.
-    private static final int FILLER_SENTENCES = 24;
+    // The four filler paragraphs weigh about 190 estimated tokens each and the ninth about 500, so the chunk, which the
+    // large tier's current part of 1,000 tokens closes, ends after the eighth paragraph and the ninth opens the next
+    // one: only the token budget closes a chunk.
+    private static final int FILLER_SENTENCES = 12;
     private static final int LAST_SENTENCES = 32;
 
     static final String DRAFT_0 = "Двері відчинив Гейл пізно вночі.";

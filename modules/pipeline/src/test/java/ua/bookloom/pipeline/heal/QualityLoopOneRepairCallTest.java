@@ -152,9 +152,7 @@ class QualityLoopOneRepairCallTest {
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(model.requests()).hasSize(1);
-        assertThat(model.requests().stream()
-                        .map(request -> ScriptedChatModel.callName(request))
-                        .toList())
+        assertThat(model.requests().stream().map(ScriptedChatModel::callName).toList())
                 .containsExactly("repair");
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
         assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.FLAGGED);

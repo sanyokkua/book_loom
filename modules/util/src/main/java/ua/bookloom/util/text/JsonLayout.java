@@ -44,8 +44,8 @@ public final class JsonLayout {
             final char c = json.charAt(at);
             if (inString) {
                 out.append(c);
+                inString = !(c == '"' && !escaped);
                 escaped = !escaped && c == '\\';
-                inString = escaped || c != '"';
             } else {
                 inString = c == '"';
                 depth = outside(out, json, at, depth);

@@ -45,7 +45,7 @@ final class ReviewMoreMenu {
 
     /** The word of a Try again item and the line under it while it is offered. */
     private enum Words {
-        /** Try again with the same context. */
+        /** Try again with the context built again from today's glossary and settings. */
         RETRY(MessageKey.REVIEW_MORE_RETRY, MessageKey.REVIEW_MORE_RETRY_SUB),
         /** Try again with a note that tells the model what to fix. */
         NOTE(MessageKey.REVIEW_MORE_RETRY_NOTE, MessageKey.REVIEW_MORE_RETRY_NOTE_SUB);

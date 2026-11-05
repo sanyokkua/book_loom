@@ -17,10 +17,11 @@ final class BatchNotes {
 
     static SegmentOutcomeNote of(
             final String segmentId, final ItemOutcome outcome, final boolean isAdopted, final boolean copied) {
-        return isAdopted
-                ? new SegmentOutcomeNote(segmentId, SegmentOutcomeNote.Kind.ADOPTED, "")
-                : new SegmentOutcomeNote(
-                        segmentId, SegmentOutcomeNote.Kind.FELL_BACK, copied ? ECHO : fallbackReason(outcome));
+        if (isAdopted) {
+            return new SegmentOutcomeNote(segmentId, SegmentOutcomeNote.Kind.ADOPTED, "");
+        }
+        final String reason = copied ? ECHO : fallbackReason(outcome);
+        return new SegmentOutcomeNote(segmentId, SegmentOutcomeNote.Kind.FELL_BACK, reason);
     }
 
     // The id's own status when the reply got the id wrong, else the checks that failed, else the gate's refusal.

@@ -23,7 +23,9 @@ import ua.bookloom.pipeline.setup.BookFacts;
  * @param outputRatio the pair's output tokens per source token, which sizes a translate call's output reserve; positive
  * @param system blocks 1–7 of the TRANSLATE frame, in order; copied
  * @param analysis blocks 1, 2 and 7 of the ANALYSIS frame, in order; copied
- * @param frameHash the SHA-256 of {@code system}, lower-case hex, which names the frame a stored prompt was sent with
+ * @param frameHash the SHA-256, lower-case hex, of {@code system}'s blocks, each written as its slot, a line break and
+ *     its text, joined by a NUL character, so two frames whose texts match but whose slots differ get different
+ *     hashes; it names the frame a stored prompt was sent with
  * @param firstPersonUnits the body units whose own narration is told in the first person, read once at run start so a
  *     call's card never reads its chapter again; copied, empty when the brief names the narrator or none is
  */
@@ -52,7 +54,7 @@ public record RunFrame(
         Objects.requireNonNull(examples, "examples");
         Objects.requireNonNull(reminders, "reminders");
         Objects.requireNonNull(frameHash, "frameHash");
-        if (!(outputRatio > 0)) {
+        if (outputRatio <= 0 || Double.isNaN(outputRatio)) {
             throw new IllegalArgumentException("outputRatio must be positive: " + outputRatio);
         }
         rules = List.copyOf(Objects.requireNonNull(rules, "rules"));

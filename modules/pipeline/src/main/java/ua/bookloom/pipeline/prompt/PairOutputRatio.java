@@ -42,7 +42,7 @@ public final class PairOutputRatio {
                 log.debug("Pair {}->{} output ratio {}", sourceTag, targetTag, ratio);
                 return OptionalDouble.of(ratio);
             }
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException _) {
             // Named in the WARN below with the value.
         }
         log.warn("Pair {}->{} has an output ratio that is not a positive number: {}", sourceTag, targetTag, value);

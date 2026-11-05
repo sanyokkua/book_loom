@@ -36,6 +36,7 @@ public final class ContextBuilder {
     // and the window and the items are the book's text.
     private static final String INSTRUCTIONS_LANGUAGE = "en";
     private static final int REPLY_SHARE_DIVISOR = 2;
+    private static final String FRAME = "frame";
 
     private final BlockWords words = BlockWords.bundled();
     private final PromptTemplates templates;
@@ -66,7 +67,7 @@ public final class ContextBuilder {
     public Result<PromptPlan> planAnalysis(
             final CallKind kind, final AnalysisFrame frame, final String task, final OutputLimit limit) {
         Objects.requireNonNull(kind, "kind");
-        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(frame, FRAME);
         Objects.requireNonNull(task, "task");
         Objects.requireNonNull(limit, "limit");
         log.debug("Planning {} (ANALYSIS frame) taskChars={} cap={}", kind, task.length(), limit.capTokens());
@@ -95,7 +96,7 @@ public final class ContextBuilder {
     public ChatRequest analysisRequest(
             final PromptName name, final CallFrame frame, final Map<String, String> values, final OutputLimit limit) {
         Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(frame, FRAME);
         final String task = templates.renderTask(name, frame, Objects.requireNonNull(values, "values"));
         final Result<PromptPlan> plan =
                 planAnalysis(name.callKind(), AnalysisFrame.of(frame.sourceLanguage()), task, limit);
@@ -209,7 +210,7 @@ public final class ContextBuilder {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(window, "window");
         Objects.requireNonNull(map, "map");
-        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(frame, FRAME);
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(inputs, "inputs");
         final Focus focus = window.focus();

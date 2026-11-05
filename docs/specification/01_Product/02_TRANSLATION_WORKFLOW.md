@@ -121,8 +121,8 @@ sets τ, the minimum deterministic confidence for automatic acceptance (DD-45):
   no verified reviewer blocker is left (15d.6: there is no confidence threshold and no judge score).
 - A segment that misses the accept rule gets the one repair (Fast: a marks-only re-draft); if a BLOCK finding is still left, it is FLAGGED.
 - The three review modes are named positions of this dial (τ 0.60 / 0.75 / 0.85), and the dial is the **exclusive
-  owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — preceding-target count,
-  the fixing call, reviewer passes, and whether backward revision runs (the batch size is the model profile's) — and never sets τ (FR-ALGO-11). A manual Settings
+  owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — the fixing call,
+  reviewer passes, and whether backward revision runs (the batch size is the model profile's) — and never sets τ (FR-ALGO-11). A manual Settings
   override of τ is not offered.
 
 The dial is the only quality/automation knob the user must understand; all other tuning lives in Settings → Generation

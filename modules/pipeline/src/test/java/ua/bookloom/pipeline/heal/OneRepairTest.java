@@ -122,7 +122,7 @@ class OneRepairTest {
         final SegmentOutcome decided = decide(drafted(segment, draft), "ru", model, reviewed);
 
         assertThat(model.requests())
-                .extracting(request -> ScriptedChatModel.callName(request))
+                .extracting(ScriptedChatModel::callName)
                 .containsExactly("reviewer", "directed-fix");
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.machineTarget()).isEqualTo(draft);

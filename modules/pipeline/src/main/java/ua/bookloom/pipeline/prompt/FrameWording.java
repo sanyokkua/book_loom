@@ -21,6 +21,8 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FrameWording {
 
+    private static final String TARGET_TAG = "targetTag";
+
     /** The keys the generic file must state for the frame; checked when the map loads, as its own keys are. */
     static final List<String> GENERIC_KEYS = List.of(
             "rule.marks",
@@ -47,7 +49,7 @@ public final class FrameWording {
      * @return the wording, or empty when no file states the rule; never null
      */
     public static String bookRule(final LanguageRules rules, final String targetTag, final String key) {
-        Objects.requireNonNull(targetTag, "targetTag");
+        Objects.requireNonNull(targetTag, TARGET_TAG);
         Objects.requireNonNull(key, "key");
         final List<LanguageFile> order =
                 rules.genericOnly ? List.of(rules.generic) : List.of(rules.languageFile(targetTag), rules.generic);
@@ -73,7 +75,7 @@ public final class FrameWording {
      * @return the wording, or empty when neither file states it; never null
      */
     public static String wording(final LanguageRules rules, final String targetTag, final String key) {
-        Objects.requireNonNull(targetTag, "targetTag");
+        Objects.requireNonNull(targetTag, TARGET_TAG);
         Objects.requireNonNull(key, "key");
         final String own = rules.genericOnly ? null : rules.targetValue(targetTag, key);
         return own != null ? own : Objects.requireNonNullElse(rules.generic.get(key), "");
@@ -91,7 +93,7 @@ public final class FrameWording {
      */
     public static String pairExamples(
             final LanguageRules rules, @Nullable final String sourceTag, final String targetTag) {
-        Objects.requireNonNull(targetTag, "targetTag");
+        Objects.requireNonNull(targetTag, TARGET_TAG);
         if (sourceTag == null || rules.genericOnly) {
             return "";
         }
@@ -108,7 +110,7 @@ public final class FrameWording {
      * @return the illustration, or empty when the language has none; never null
      */
     public static String illustration(final LanguageRules rules, final String targetTag) {
-        Objects.requireNonNull(targetTag, "targetTag");
+        Objects.requireNonNull(targetTag, TARGET_TAG);
         final String value = rules.genericOnly ? null : rules.targetValue(targetTag, "illustration");
         return value == null ? "" : value;
     }

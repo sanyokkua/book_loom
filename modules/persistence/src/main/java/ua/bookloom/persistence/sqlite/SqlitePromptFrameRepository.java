@@ -18,12 +18,14 @@ import ua.bookloom.api.project.PromptFrame;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SqlitePromptFrameRepository implements PromptFrameRepository {
 
+    private static final String PROJECT_ID = "projectId";
+
     private final SqliteDatabase db;
     private final JsonCodec codec;
 
     @Override
     public Result<PromptFrame> save(final String projectId, final PromptFrame frame) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(frame, "frame");
         log.debug(
                 "Prompt frame save projectId={} hash={} sections={}",
@@ -39,7 +41,7 @@ public final class SqlitePromptFrameRepository implements PromptFrameRepository 
 
     @Override
     public Result<Optional<PromptFrame>> find(final String projectId, final String hash) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(hash, "hash");
         log.debug("Prompt frame find projectId={} hash={}", projectId, hash);
         return db.read(
@@ -49,7 +51,7 @@ public final class SqlitePromptFrameRepository implements PromptFrameRepository 
 
     @Override
     public Result<List<PromptFrame>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         log.debug("Prompt frame all projectId={}", projectId);
         return db.read(
                 "prompt frame all",

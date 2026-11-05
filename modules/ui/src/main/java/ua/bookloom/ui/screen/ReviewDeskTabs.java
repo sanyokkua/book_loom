@@ -122,8 +122,8 @@ final class ReviewDeskTabs extends TabPane {
                 .toList();
     }
 
-    // The stored frame and the call's own sections together are the prompt as it was sent; a segment no call was made
-    // for (a memory reuse, a shortcut) says so instead of showing an empty prompt.
+    // The stored frame and the call's own sections together are the prompt as it was sent. A segment that no call was
+    // made for, such as a memory reuse or a shortcut, says so instead of showing an empty prompt.
     private void showContext(final SegmentView view) {
         final ContextSnapshot snapshot = view.context();
         final List<PromptSection> own = snapshot == null ? List.of() : snapshot.sections();

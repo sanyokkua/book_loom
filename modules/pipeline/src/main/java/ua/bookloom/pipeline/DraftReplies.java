@@ -11,6 +11,8 @@ import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -104,7 +106,19 @@ final class DraftReplies {
         if (trimmed.isEmpty()) {
             return DraftOutcomes.unfinished(attempt, response);
         }
+        shownOnTheCall(attempt, parsed);
         return prompts.copiesExample(trimmed, attempt) ? echoed(attempt, response, sent) : restore(attempt, trimmed);
+    }
+
+    // The reply's one item goes on the call that was answered, as a batch call's items do, so a person reading the call
+    // sees the translation it brought back instead of being told the reply holds none.
+    private void shownOnTheCall(final DraftAttempt attempt, final ParsedReply parsed) {
+        final String segmentId = attempt.segment().id();
+        log.debug("Showing the read item on the draft call segmentId={} kind={}", segmentId, parsed.kind());
+        calls.parsed(
+                List.of(segmentId),
+                List.of(new CallItem(
+                        TranslateDraftPrompts.ONE, segmentId, parsed.translation(), CallItemStatus.OK, List.of())));
     }
 
     // The format re-ask fixes the envelope, not the translation, so it never uses up the segment's one repair.

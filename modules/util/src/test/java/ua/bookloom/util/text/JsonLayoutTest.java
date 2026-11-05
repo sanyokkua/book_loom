@@ -32,4 +32,11 @@ class JsonLayoutTest {
     void pretty_textThatIsNotJson_comesBackUnchanged() {
         assertThat(JsonLayout.pretty("plain text, not {json}")).isEqualTo("plain text, not {json}");
     }
+
+    @Test
+    void pretty_escapedQuotesAroundSpacedText_keepsEverySpaceAndNoLineBreak() {
+        final String json = "{\"m\":\"He sailed, then \\\"she said: go {on}\\\" and left\\n\",\"n\":1}";
+        assertThat(JsonLayout.pretty(json))
+                .isEqualTo("{\n  \"m\": \"He sailed, then \\\"she said: go {on}\\\" and left\\n\",\n  \"n\": 1\n}");
+    }
 }

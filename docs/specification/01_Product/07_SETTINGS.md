@@ -195,15 +195,17 @@ temperature for this retry" (DD-36).
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
 user-editable per knob:
 
-| Dial     | Preceding targets | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision | Model-written summary |
-|----------|-------------------|----------------------------|--------------------------|-------------------|-----------------------|
-| Fast     | 1                 | marks-only re-draft        | 0 (no reviewer)          | off               | off                   |
-| Balanced | 2                 | one repair                 | 1                        | off               | off                   |
-| Max      | 3                 | one repair                 | 2                        | on                | on                    |
+| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision | Model-written summary |
+|----------|----------------------------|--------------------------|-------------------|-----------------------|
+| Fast     | marks-only re-draft        | 0 (no reviewer)          | off               | off                   |
+| Balanced | one repair                 | 1                        | off               | off                   |
+| Max      | one repair                 | 2                        | on                | on                    |
 
-The dial sets no segment cap on a chunk, and Manual review mode does not either: a chunk closes on the token ceiling
-`TokenBudget.MAX_CHUNK_TOKENS` = **2000** source tokens (`05_TRANSLATION_ALGORITHM.md#token-budget`), and the drafting
-batch size is the model profile's (Settings › Models).
+The dial no longer sets a preceding count: the window's 2 or 3 previous pairs follow the model's tier.
+
+The dial sets no segment cap on a chunk, and Manual review mode does not either: a chunk closes on the current-part
+budget of the model profile's tier, **600** source tokens on a small model and **1,000** on a large one
+(`05_TRANSLATION_ALGORITHM.md#token-budget`), and the drafting batch size is the model profile's (Settings › Models).
 
 **τ ownership (DD-45).** The **trust threshold τ is owned by the review-mode dial** (Unattended 0.60 / Assisted 0.75 /
 Manual 0.85), not the quality dial. **No manual τ or τ_judge override is offered**, now or in the planned Generation

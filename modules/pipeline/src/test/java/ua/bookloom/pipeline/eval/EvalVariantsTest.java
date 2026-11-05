@@ -26,7 +26,9 @@ class EvalVariantsTest {
 
     @Test
     void fromEnvironment_unknownField_isRefused() {
-        assertThatThrownBy(() -> EvalVariants.fromEnvironment(Map.of(EvalVariants.ENV, "rulesLayout=TODAY")))
+        final Map<String, String> environment = Map.of(EvalVariants.ENV, "rulesLayout=TODAY");
+
+        assertThatThrownBy(() -> EvalVariants.fromEnvironment(environment))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

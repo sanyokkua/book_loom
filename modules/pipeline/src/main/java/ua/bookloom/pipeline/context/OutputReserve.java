@@ -9,7 +9,8 @@ import ua.bookloom.api.llm.ReasoningControl;
 /**
  * The output a translate-family call reserves for its reply (design D8, "Output reserve"): what its items' sources
  * need in the pair's ratio plus each item's id and wrapper, so a model that loops is stopped and a full batch is not.
- * A model that always reasons spends much of its output on thinking, so it is given far more room. The reply never
+ * A model that always reasons spends much of its output on thinking, so it is given far more room: the window fit keeps
+ * that room, and the model's client adds it to the answer's cap when it sends the call (design D20). The reply never
  * gets more than half of the run's window, which the prompt shares.
  */
 @Slf4j

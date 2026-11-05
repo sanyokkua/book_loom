@@ -20,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -37,12 +38,15 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 /** A segment a run drafts in pieces is retried in the same pieces, each carrying the person's note. */
 class RetryDraftPiecesTest {
 
+    // A piece draft: the draft prompt at the lower temperature.
+    private static final Tuple PIECE = tuple(DRAFT, 0.1);
+
     @TempDir
     private Path tempDir;
 
     @Test
     void retry_segmentTheRunDraftsInPieces_draftsEachPieceWithTheNoteAndJoinsThem() {
-        // 400 sentences are above the run's 2,000-token chunk budget: two piece drafts,
+        // 400 sentences are above the small tier's current part of 600 tokens: six piece drafts,
         // each at the lower temperature with the note, joined into one target that the reviewer then lets stand
         final String source = IntStream.range(100, 500)
                 .mapToObj(number -> "The night number " + number + " was calm.")
@@ -58,11 +62,11 @@ class RetryDraftPiecesTest {
 
         assertThat(model.requests)
                 .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
-                .containsExactly(tuple(DRAFT, 0.1), tuple(DRAFT, 0.1), tuple("reviewer", 0.0));
-        assertThat(model.requests.subList(0, 2))
+                .containsExactly(PIECE, PIECE, PIECE, PIECE, PIECE, PIECE, tuple("reviewer", 0.0));
+        assertThat(model.requests.subList(0, 6))
                 .allSatisfy(draft -> assertThat(userMessage(draft)).contains("[Extra instruction]\n" + NOTE));
         assertThat(userMessage(model.requests.getFirst())).contains("The night number 100 was calm.");
-        assertThat(userMessage(model.requests.get(1))).contains("The night number 499 was calm.");
+        assertThat(userMessage(model.requests.get(5))).contains("The night number 499 was calm.");
         assertThat(record)
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::reviewed)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, true);

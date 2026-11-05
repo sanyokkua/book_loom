@@ -102,6 +102,27 @@ final class BlockWords {
 
     private static final class Holder {
         static final BlockWords INSTANCE = load();
+
+        private static BlockWords load() {
+            final Properties properties = new Properties();
+            try (InputStream stream = BlockWords.class.getResourceAsStream(FILE)) {
+                if (stream == null) {
+                    throw new IllegalStateException(FILE + " is missing");
+                }
+                try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                    properties.load(reader);
+                }
+            } catch (IOException cause) {
+                throw new IllegalStateException(FILE + " could not be read", cause);
+            }
+            for (final String key : REQUIRED) {
+                if (properties.getProperty(key) == null) {
+                    throw new IllegalStateException(FILE + " lacks key '" + key + "'");
+                }
+            }
+            log.debug("Loaded {} with {} keys", FILE, properties.size());
+            return new BlockWords(properties);
+        }
     }
 
     private final Properties properties;
@@ -122,26 +143,5 @@ final class BlockWords {
      */
     String get(final String key) {
         return Objects.requireNonNull(properties.getProperty(key), key);
-    }
-
-    private static BlockWords load() {
-        final Properties properties = new Properties();
-        try (InputStream stream = BlockWords.class.getResourceAsStream(FILE)) {
-            if (stream == null) {
-                throw new IllegalStateException(FILE + " is missing");
-            }
-            try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-                properties.load(reader);
-            }
-        } catch (IOException cause) {
-            throw new IllegalStateException(FILE + " could not be read", cause);
-        }
-        for (final String key : REQUIRED) {
-            if (properties.getProperty(key) == null) {
-                throw new IllegalStateException(FILE + " lacks key '" + key + "'");
-            }
-        }
-        log.debug("Loaded {} with {} keys", FILE, properties.size());
-        return new BlockWords(properties);
     }
 }

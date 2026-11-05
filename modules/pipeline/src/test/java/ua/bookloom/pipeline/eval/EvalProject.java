@@ -202,9 +202,7 @@ public final class EvalProject {
                 settings,
                 new Chunk(UNIT, chunk, false),
                 documentGate,
-                translator,
-                drafter,
-                planner);
+                new PromptRequests.Steps(translator, drafter, planner));
         return Objects.requireNonNull(read.data(), () -> "chunk context: " + read.error());
     }
 

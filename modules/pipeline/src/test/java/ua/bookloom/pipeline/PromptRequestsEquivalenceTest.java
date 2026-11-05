@@ -206,24 +206,25 @@ class PromptRequestsEquivalenceTest {
     @SuppressWarnings("ImmutableEnumChecker")
     private enum Kind {
         BATCH(test -> test.runBatchedJob(true), 0, recording -> {
-            final EvalProject eval = eval(0, 4, recording);
-            return eval.batchRequest(eval.batch(0, 4).orElseThrow());
+            final EvalProject project = eval(0, 4, recording);
+            return project.batchRequest(project.batch(0, 4).orElseThrow());
         }),
         LATER_BATCH(test -> test.runBatchedJob(true), 1, recording -> {
-            final EvalProject eval = eval(4, PARAGRAPHS, recording);
-            return eval.batchRequest(eval.batch(0, 4).orElseThrow());
+            final EvalProject project = eval(4, PARAGRAPHS, recording);
+            return project.batchRequest(project.batch(0, 4).orElseThrow());
         }),
         DRAFT(
                 PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment,
                 3,
                 recording -> eval(3, 4, recording).draftRequest(0)),
         FORMAT_REASK(PromptRequestsEquivalenceTest::runSingleDraftJobWithAProseFirstReply, 1, recording -> {
-            final EvalProject eval = eval(0, 1, recording);
-            return eval.requests().formatReaskRequest(eval.segment(0), eval.translateContext(0), eval.mask(0), PROSE);
+            final EvalProject project = eval(0, 1, recording);
+            return project.requests()
+                    .formatReaskRequest(project.segment(0), project.translateContext(0), project.mask(0), PROSE);
         }),
         REPAIR(PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment, PARAGRAPHS + 1, recording -> {
-            final EvalProject eval = eval(PARAGRAPHS - 1, PARAGRAPHS, recording);
-            return repairOfTheEcho(eval);
+            final EvalProject project = eval(PARAGRAPHS - 1, PARAGRAPHS, recording);
+            return repairOfTheEcho(project);
         });
 
         private final Function<PromptRequestsEquivalenceTest, ScriptedChatModel> job;

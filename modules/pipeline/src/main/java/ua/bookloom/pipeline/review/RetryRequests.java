@@ -10,7 +10,6 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.pipeline.context.AcceptedTargets;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.KindExtra;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.ChunkDecider;
@@ -21,7 +20,6 @@ import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.PromptRequests;
 import ua.bookloom.pipeline.run.RunSettings;
 
@@ -111,8 +109,8 @@ final class RetryRequests {
                                         outcome, new ContextSnapshot(frameHash, sections, List.of(), true)))));
     }
 
-    // The run drafts a segment alone above its chunk budget in sentence-aligned pieces; a retry computes that budget
-    // the same way, so the longest paragraphs still fit.
+    // The run drafts a segment above its tier's current-part budget in sentence-aligned pieces; a retry cuts at the
+    // same budget, so it drafts in the pieces the run would.
     private Result<SegmentOutcome> decided(
             final Segment segment,
             final TranslateContext context,
@@ -120,15 +118,15 @@ final class RetryRequests {
             final Note note,
             final RunSettings settings,
             final ModelCalls calls) {
-        final ContextBudget budget = ChunkBudget.budget(settings.frame(), settings.window());
+        final int budget = requests.currentPart();
         log.debug(
-                "retry: segment={} budget={} previousPairs={} {}",
+                "retry: segment={} budget={} previousPairs={} window={}",
                 segment.id(),
-                budget.chunkTokens(),
+                budget,
                 context.window().previous().size(),
-                budget.describe());
+                settings.window());
         return requests.translator()
-                .translateSplit(segment, context, mask, splitter, budget.chunkTokens(), note.text(), note.lower())
+                .translateSplit(segment, context, mask, splitter, budget, note.text(), note.lower())
                 .flatMap(drafted -> decide(segment, drafted, settings, calls));
     }
 

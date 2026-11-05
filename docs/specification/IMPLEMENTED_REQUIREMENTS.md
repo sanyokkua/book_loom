@@ -124,12 +124,12 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-ALGO-01 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-02 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-03 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
-| FR-ALGO-04 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-04 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 11: one context builder plans every call as thirteen blocks. |
 | FR-ALGO-06 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `translation-pipeline`. |
 | FR-ALGO-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
-| FR-ALGO-08 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
+| FR-ALGO-08 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in group 11: a window of the last 2 or 3 pairs across chapters, no chapter-start reset. |
 | FR-ALGO-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. |
-| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 10: the dial now maps preceding targets, the one repair (Fast: marks-only re-draft), reviewer passes and backward revision; batch size is the model profile's. |
+| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 10: the dial now maps the one repair (Fast: marks-only re-draft), reviewer passes and backward revision; batch size is the model profile's. Group 11: the dial sets no preceding count (the window follows the model's tier). |
 | FR-ALGO-12 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-B2 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-C10 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |

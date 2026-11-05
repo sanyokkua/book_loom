@@ -126,21 +126,30 @@ public final class WindowMap {
         for (final GlossaryEntry entry : map.entries()) {
             if (entry.locked() && hasTarget(entry)) {
                 glossary.locked().addAll(lockedLines(entry, masks));
-                continue;
+            } else {
+                place(glossary, entry, map, window, texts);
             }
-            final int at = firstAt(entry, texts);
-            if (at < 0) {
-                log.trace("Window map left out {}: not named in the window", entry.term());
-                continue;
-            }
-            final boolean gloss = glossesHere(entry, map, window);
-            final int occurrences = Math.max(1, TermMatch.namedCount(entry.names(), texts.sources()));
-            // A pinned name, and a character whose gender the line states, are never dropped to fit the window.
-            final boolean kept = !entry.isSuggested() || statesGender(entry);
-            (entry.isSuggested() ? glossary.suggested() : glossary.lines())
-                    .add(new Placed(at, lineOf(entry, gloss), gloss, occurrences, kept));
         }
         return glossary;
+    }
+
+    private static void place(
+            final Glossary glossary,
+            final GlossaryEntry entry,
+            final BookMap map,
+            final Window window,
+            final Texts texts) {
+        final int at = firstAt(entry, texts);
+        if (at < 0) {
+            log.trace("Window map left out {}: not named in the window", entry.term());
+            return;
+        }
+        final boolean gloss = glossesHere(entry, map, window);
+        final int occurrences = Math.max(1, TermMatch.namedCount(entry.names(), texts.sources()));
+        // A pinned name, and a character whose gender the line states, are never dropped to fit the window.
+        final boolean kept = !entry.isSuggested() || statesGender(entry);
+        (entry.isSuggested() ? glossary.suggested() : glossary.lines())
+                .add(new Placed(at, lineOf(entry, gloss), gloss, occurrences, kept));
     }
 
     // Tokens are numbered per segment, so in a batch two items' ⟦g0⟧ differ: a line is prefixed with its item's id.
@@ -220,21 +229,28 @@ public final class WindowMap {
         return MapLines.line(entry.term(), entry.target(), gloss ? facts + GLOSS + entry.meaning() : facts);
     }
 
+    private static boolean isShown(final LexiconEntry entry, final int at, final BookMap map) {
+        if (at < 0) {
+            log.trace("Window map left out term {}: not named in the window", entry.term());
+            return false;
+        }
+        if (heldByGlossary(entry, map.entries())) {
+            log.trace("Window map left out term {}: the glossary holds it", entry.term());
+            return false;
+        }
+        return true;
+    }
+
     private static List<Placed> lexicon(final BookMap map, final String sources, final LexiconFilter filter) {
         final List<Placed> placed = new ArrayList<>();
         for (final LexiconEntry entry : map.terms()) {
             final List<String> forms = formsOf(entry);
             final int at = earliest(forms, sources);
-            if (at < 0) {
-                log.trace("Window map left out term {}: not named in the window", entry.term());
-                continue;
+            if (isShown(entry, at, map)) {
+                final int occurrences = Math.max(1, TermMatch.namedCount(forms, sources));
+                renderingOf(entry, filter)
+                        .ifPresent(line -> placed.add(new Placed(at, line, false, occurrences, false)));
             }
-            if (heldByGlossary(entry, map.entries())) {
-                log.trace("Window map left out term {}: the glossary holds it", entry.term());
-                continue;
-            }
-            final int occurrences = Math.max(1, TermMatch.namedCount(forms, sources));
-            renderingOf(entry, filter).ifPresent(line -> placed.add(new Placed(at, line, false, occurrences, false)));
         }
         return placed;
     }

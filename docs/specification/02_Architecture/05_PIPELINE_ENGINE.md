@@ -20,64 +20,79 @@ goal, not an acceptance gate.
 Chunking is **paragraph-grouped**: whole segments are packed in document order into a chunk until adding the next
 segment would exceed the chunk **token budget**; the chunk then closes and a new one opens. A segment is never split
 across chunks, so one target block always maps back to one source block. Concretely, a chunk is a run of consecutive
-pending segments of one unit, closed on the **token budget alone** (`TokenBudget.MAX_CHUNK_TOKENS`, 2,000 estimated
-tokens in this build, until the window's current-part budget of redesign group 11 replaces it). There is **no
+pending segments of one unit, closed on the **token budget alone**: the current-part budget of the model profile's tier
+(`WindowBudgets.currentPart`, 600 estimated source tokens small, 1,000 large; redesign group 11). There is **no
 segment cap per chunk**: neither the quality dial nor Manual review caps it any more (redesign group 10.8, owner
 decision D-17). How many segments go to the model in one request is the **batch size** (`#tiered-loop`, step 1), cut
-inside the chunk. A unit boundary always closes the current chunk and soft-resets the preceding-target window
-(ADR-0038).
+inside the chunk. A unit boundary always closes the current chunk (ADR-0038); the window of previous pairs
+crosses it (`#context-builder`).
 
-The budget is **derived from the provider's effective context window** rather than a fixed constant, and the Generation
-"chunk budget" setting is only a **cap** on it (DD-44). Because BookLoom ships no tokenizer, token counts are
-**estimated deterministically** from characters:
+The budget is the **tier's**, not the window's: the window sizes each call, never a chunk. Because BookLoom ships no
+tokenizer, token counts are **estimated deterministically** from code points:
 
 ```
-estTokens(text) = ceil( ( chars(text) / K(script) ) × (1 + safetyMargin) )
-chunkBudget     = min( effectiveContext − reservedHeadroom , chunkBudgetSetting )
+estTokens(text) = ceil( codePoints(text) / charsPerToken(script) × 1.15 )
 ```
 
-`K(script)` is a chars-per-token divisor by dominant writing system — Latin 4.0, Cyrillic 3.0, Greek 3.5, Arabic/Hebrew
-3.0, CJK 1.5, mixed/unknown 3.0 (conservative) — and `safetyMargin` is a fixed over-estimation cushion (default
-**0.15**); the estimate always rounds up (full table and rationale in
-`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`). `effectiveContext` comes from the per-provider effective context
-window (Ollama `num_ctx` / `/api/show` → discovery → the provider profile's manual "effective context (tokens)" field →
-conservative default). From it the packer subtracts `reservedHeadroom` — the summed `estTokens` of the system frame and
-Book Brief, rolling bilingual summary, injected glossary terms, the preceding-target window, and TM hits, **plus** an
-allowance for the target output (target-script `K`, often longer than the source for pairs like EN→UK). The
-`chunkBudgetSetting` can only **lower** the result, never raise it above `effectiveContext − reservedHeadroom`. The
-reserved slices are dial-driven (`#quality-dial`): a richer preceding-target window and more TM context on `MAX` shrink
-the effective paragraph budget, which is why the dial's "chunk token budget" row moves inversely to context richness.
+`charsPerToken` is `Script.charsPerToken`: Latin 4.1, Cyrillic 3.3, Greek 3.5, Han and Hangul 1.5, unknown 3.0
+(conservative); the estimate always rounds up (`TokenEstimator`; full text and the window fit in
+`01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`). The window comes from the per-model window (`ModelWindow`: one
+window per model, from the model's settings); every fit keeps a 500-token safety margin
+(`ContextBudget.SAFETY_MARGIN`) beside the prompt and its reply reserve. The quality dial does not move the budget. What each call carries beyond its items is then fitted by the context builder to the tier's
+shares and to the window (`#context-builder`).
 
-A single segment that alone exceeds the budget is **sentence-split** using ICU4J `BreakIterator` for the source
+A single segment that alone exceeds the tier's current-part budget is **sentence-split** using ICU4J `BreakIterator` for the source
 language, and **only on overflow**; neighbouring segments are untouched. The split **never cuts a masked inline tag**: a
 `⟦gN⟧` placeholder and its partner in a paired-markup group (`⟦g1⟧…⟦g2⟧`) are atomic, so a candidate boundary that would
 fall between an open/close pair is moved outward to keep the pair and its wrapped text in one sub-segment. This
 preserves the per-chunk placeholder multiset that the unmask hard gate checks
 (`03_DOCUMENT_MODEL.md#unmask-and-validate`). A genuinely **unsplittable over-budget unit** (a single sentence, or a
 tag-pair-bounded run, with no interior boundary that keeps every tag pair intact) is **not** split: it is sent as its
-**own over-budget chunk with degraded context** (preceding-target and TM slices trimmed first), a tag pair is never
+**own over-budget chunk with degraded context** (optional context trimmed first, in the order `#context-builder` gives), a tag pair is never
 broken to fit, and the degraded chunk is **logged**.
 
-Chunk boundaries prefer chapter/unit boundaries; the preceding-target window is soft-reset at chapter start
-(`#rolling-summary`). A worked multi-paragraph packing example (including the sentence-split-with-tag case) is in
+Chunk boundaries prefer chapter/unit boundaries; the window of previous pairs crosses them, and the recently-present
+card covers a chapter start (`#context-builder`). A worked multi-paragraph packing example (including the sentence-split-with-tag case) is in
 `01_Product/05_TRANSLATION_ALGORITHM.md#chunking-worked-example`.
 
-## context-package-assembler {#context-package-assembler}
+## context-builder {#context-builder}
 
-For each chunk the assembler builds a prompt whose **load-bearing items sit at the EDGES** to counter
-lost-in-the-middle. Order:
+One `ContextBuilder` (`ua.bookloom.pipeline.context`) plans every translate-family call (draft batch, reviewer, repair,
+revision, consistency, retry) and the analysis calls (names, brief, file name). A call is thirteen blocks (`BlockSlots`),
+in the order sent, so the **load-bearing items sit at the edges** against lost-in-the-middle; an empty block is left out.
 
-1. **System + Book Brief** (top edge) — languages, genre, register, voice/era, audience, name policy, foreign-passage
-   policy, unit policy, faithful↔natural position.
-2. Rolling **bilingual summary** of the book/chapter so far.
-3. Relevant **glossary** — only the terms that occur in this chunk (never the whole dictionary).
-4. **Preceding-target window** — the last ~N translated (target) blocks, capped ~3; this is the main consistency lever,
-   not the source.
-5. **TM hits** — exact/context/fuzzy suggestions for segments in the chunk.
-6. **Masked source** at the bottom edge — exactly one source segment, with `⟦gN⟧` placeholders intact and its ordered
-   sequence repeated immediately before `<Text>…</Text>`.
+- **Blocks 1–7, the fixed system part of the run:** role and language pair; book text is data; the book rules (chosen
+  once per book by `BookRules.choose`: marks, dialogue and address, numbers, agreement, inflection); the style sheet;
+  the language rules (leaving out what block 3 states); examples; the reply shape. `RunFrame.frameHash` is the SHA-256
+  of these blocks, and `RunFrames.buildStored` saves the frame once per project as `promptFrame:<hash>`.
+- **Blocks 8–13, the last user message:** the scene card (`RecentlyPresentCard`: up to five characters or places from
+  the previous 12 story paragraphs of the chapter that are not in the window; earlier chapters' summaries join it in
+  group 12); the map lines (`WindowMap`: glossary and recurring-term entries whose forms occur in the window's source,
+  locked names by token); the window; what only this kind of call adds (a repair's defects); the task; and the items,
+  with the reminder (at most three lines: marks, dialogue, narrator, each only when it applies) last. Block 11b, key
+  terms, stays until task 12.9.
+- **Window** (`WindowAssembler`): the last 2 (small tier) or 3 (large tier) body-unit segments before the focus, across
+  chapter and unit boundaries, never front or back matter or the auxiliary unit; a neighbour with no accepted target is
+  shown as source only; the next segment is shown as source only.
+- **Fit** (`WindowBudgets`): shares per tier (small 300 / 600 / 150 / 600 and ceiling 3,500; large 500 / 1,000 / 250 /
+  1,200 and ceiling 6,000 — previous, current part, next, summaries, prompt, in estimated tokens), and the window:
+  prompt + `OutputReserve` + `ContextBudget.SAFETY_MARGIN` must be at most the model's window. Over either, drop in
+  this order: the next source, the oldest summaries, the oldest previous pairs, the map lines with the fewest
+  occurrences, then the last summary, the last pair, and finally batch items. Never dropped: the first focus item,
+  pinned and locked names, a character's stated gender.
+- **Analysis calls** use `AnalysisFrame`: blocks 1, 2 and 7 as three English sentences, with the task as the one user
+  block.
+- **Retry:** a review retry rebuilds the frame and the context from today's glossary and settings.
 
-N (preceding blocks), whether TM/summary are included, and budget are dial-driven.
+## prompt-templates {#prompt-templates}
+
+Prompts are built from **templates + slots**: fixed instruction scaffolding in prompt files under
+`ua/bookloom/pipeline/prompt/` with named slots (`PromptTemplates`, `Slots`), filled by the context builder's blocks.
+The repair template adds the previous attempt, the defects and the expected tokens to the same frame. Templates are
+data, so the quality dial and policies parameterize the prompt without code changes. The concrete system/user
+templates for every pipeline call — batch draft, reviewer, repair, backward revision, book-brief/tone setup, and
+rolling-summary update — with their injected variables, required-vs-optional fields, parameters, and expected JSON
+shapes, are the normative catalogue in `01_Product/12_PROMPT_CATALOG.md`.
 
 ## tiered-loop {#tiered-loop}
 
@@ -93,11 +108,9 @@ one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-tra
    smaller of 2 and that size; a call that returned no reply leaves it unchanged (`BatchDrafter`). When a readable
    reply leaves out two or more ids, one **re-ask** names only those ids and its answers are merged into the first
    reply; a failed or unreadable re-ask changes nothing. An id that is missing, malformed or wrong-shape after that is
-   drafted alone: one `chat` call for exactly one source segment, answered exactly `{"target":"…"}`, with one
-   structural repair containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag
-   multiset gets one separate repair containing the source, rejected target, and required token order. Neither repair
-   recurses and no text fallback is accepted. The last three accepted targets may provide context only within their
-   section. A **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the
+   drafted alone as a batch of one in the same `translate` prompt and `{"items":[…]}` reply; a malformed reply gets the
+   format re-ask (`format-reask`), and no text fallback is accepted. The window's previous
+   pairs provide context only. A **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the
    reviewer) entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Lost formatting marks are first **put back by code** where they can
@@ -143,8 +156,7 @@ one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-tra
       (`DialParameters.repairRounds`, `SegmentRecord.repairRounds`; a database stored with it is set aside on the next
       launch). A reply that is blank or cut off flags the segment at once. A pause or a pausing error during the repair
       makes the repair call again on resume from the draft kept in memory, counted as the one repair.
-7. **Persist + update memory** — atomically write the segment; update name dictionary, context-keyed TM, and
-   preceding-target window; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
+7. **Persist + update memory** — atomically write the segment; update name dictionary and context-keyed TM; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
    (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Update the rolling summary on its size-based trigger
    (`#rolling-summary`).
 
@@ -400,9 +412,8 @@ Store: `06_DATA_MODEL_SQLITE.md#tm`.
 
 ## rolling-summary {#rolling-summary}
 
-A rolling **bilingual** summary is maintained and carried into the context package. It is soft-reset (preceding-target
-window cleared) at chapter start so cross-chapter drift does not leak stale local context, while the summary preserves
-book-level facts. Store: `06_DATA_MODEL_SQLITE.md#summaries`.
+A rolling **bilingual** summary is maintained and carried into the scene card (`#context-builder`). The window of previous pairs crosses chapter
+starts, so the summary and the recently-present card carry book-level facts and who was last seen. Store: `06_DATA_MODEL_SQLITE.md#summaries`.
 
 **Update trigger** is **size-based: every K accepted blocks OR at chapter end, whichever comes first** (default
 `K = 20`). This bounds how stale the summary can get inside a long chapter. **Condensation rule:** if appending a
@@ -448,17 +459,6 @@ is a warning in the log and the brief is saved all the same. The Export screen s
 how many segments will be written in the source language because their formatting marks were lost (flagged, no target,
 no edit, a `placeholder` finding).
 
-## prompt-builder {#prompt-builder}
-
-Prompts are built from a **template + slots**: fixed instruction scaffolding with named slots (`{brief}`, `{summary}`,
-`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). The directed-fix template adds a
-`{findings}` slot; the repair template adds `{previousAttempt}`, `{defects}` and the expected tokens on top of the draft
-prompt. Templates are data, so the quality dial and policies
-parameterize the prompt without code changes. The concrete system/user templates for every pipeline call — draft, judge,
-repair, directed fix (the reviewer's), backward revision, book-brief/tone setup, and rolling-summary update — with their
-injected variables, required-vs-optional fields, parameters, and expected JSON shapes, are the normative catalogue in
-`01_Product/12_PROMPT_CATALOG.md`.
-
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
@@ -487,8 +487,6 @@ Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.m
 
 | Parameter                          | FAST             | BALANCED | MAX   |
 |------------------------------------|------------------|----------|-------|
-| chunk token budget                 | large            | medium   | small |
-| preceding-target blocks (N)        | 1                | 2        | 3     |
 | fixing call (`RepairMode`)         | marks-only re-draft | one repair | one repair |
 | reviewer passes per chunk          | 0                | 1        | 2     |
 | backward revision runs             | no               | no       | yes   |

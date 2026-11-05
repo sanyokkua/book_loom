@@ -207,10 +207,14 @@ class MiniScorerTest {
     @Test
     void windowInjection_blockEightNamesAPersonTheBookHasNotSaidYet_fails() {
         // The summary mentions Dorrin, who first appears in the second block, after the window's end.
-        final CaseRecord.Exchange call = new CaseRecord.Exchange(
-                "[system] x\n[user] [Book so far — context only]\nDorrin arrived at the gate.\n\n<Items>\n"
-                        + "<s id=\"1\">Ilsabet locked the door.</s>\n</Items>",
-                "{}");
+        final CaseRecord.Exchange call = new CaseRecord.Exchange("""
+                [system] x
+                [user] [Book so far — context only]
+                Dorrin arrived at the gate.
+
+                <Items>
+                <s id="1">Ilsabet locked the door.</s>
+                </Items>""", "{}");
 
         final MiniScorer.Verdict verdict = MiniGraders.windowInjection(
                 List.of(call), List.of("Ilsabet locked the door.", "Dorrin knocked."), GOLD);

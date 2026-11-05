@@ -97,7 +97,8 @@ public final class TranslatingController {
                 tools.confirm(),
                 parts.modals(),
                 messages,
-                parts.activities());
+                parts.activities(),
+                parts.technical());
         this.desk = reviewAccess.desk();
         this.sections = tools.sections();
         this.runs = run.runs();

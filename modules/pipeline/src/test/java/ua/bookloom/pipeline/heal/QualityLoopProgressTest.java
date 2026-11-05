@@ -64,9 +64,7 @@ class QualityLoopProgressTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(decided.machineTarget()).isEqualTo(GOOD_TARGET);
-        assertThat(model.requests())
-                .extracting(request -> ScriptedChatModel.callName(request))
-                .containsExactly("repair", "repair");
+        assertThat(model.requests()).extracting(ScriptedChatModel::callName).containsExactly("repair", "repair");
     }
 
     // A repaired target is decided by the checks alone: no reviewer call follows the repair.

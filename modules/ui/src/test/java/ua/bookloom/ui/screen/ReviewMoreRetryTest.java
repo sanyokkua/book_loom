@@ -56,6 +56,6 @@ class ReviewMoreRetryTest extends ReviewDeskTestBase {
         openDeskWith(List.of(ReviewFixtures.lowScore()), List.of());
 
         assertThat(fx(() -> moreItem("review-more-retry").isDisable())).isFalse();
-        assertThat(subLine("review-more-retry")).isEqualTo("Ask the model again, same context");
+        assertThat(subLine("review-more-retry")).isEqualTo("Ask the model again with today's glossary and settings");
     }
 }

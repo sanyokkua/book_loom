@@ -83,12 +83,15 @@ class BatchItemsJobTest {
                         tuple("4", IDS.get(3), T3, CallItemStatus.OK));
     }
 
-    // The single-segment redraft is a different call and shows no batch items.
+    // The single-segment redraft is a different call: it shows none of the batch's items, only the one its own reply
+    // was read as.
     @Test
-    void run_replyMissingOneId_theAloneDraftCallShowsNoItems() {
+    void run_replyMissingOneId_theAloneDraftCallShowsOnlyItsOwnItem() {
         run(replies(T1).answerTo(BATCH, batchReply(items(entry("1", T0), entry("3", T2), entry("4", T3)))));
 
-        assertThat(lastOf(2L).items()).isEmpty();
+        assertThat(lastOf(2L).items())
+                .extracting(CallItem::id, CallItem::segmentId, CallItem::target, CallItem::status)
+                .containsExactly(tuple("1", IDS.get(1), T1, CallItemStatus.OK));
     }
 
     // Each call shows its own items: the first keeps four with two missing, the re-ask shows its two.

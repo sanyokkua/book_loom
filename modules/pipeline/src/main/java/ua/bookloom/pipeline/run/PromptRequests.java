@@ -28,6 +28,7 @@ import ua.bookloom.pipeline.context.KindExtra;
 import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.context.WindowBudgets;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.memory.ProtectedMask;
@@ -108,9 +109,7 @@ public final class PromptRequests {
      * @param settings the non-null run settings
      * @param chunk the non-null chunk about to be drafted
      * @param documentGate the non-null gate that checks the document's own markup once the spans are back
-     * @param translator the non-null draft step of the run; it is gated through this chunk's spans here
-     * @param drafter the non-null batch drafter
-     * @param planner the non-null planner of the run's translate-family calls
+     * @param steps the non-null draft steps of the run; the translator is gated through this chunk's spans here
      * @return the chunk's prompts, or the glossary's error
      */
     public static Result<PromptRequests> read(
@@ -119,14 +118,28 @@ public final class PromptRequests {
             final RunSettings settings,
             final Chunk chunk,
             final GateFunction documentGate,
-            final SegmentTranslator translator,
-            final BatchDrafter drafter,
-            final TranslatePlanner planner) {
-        Objects.requireNonNull(translator, "translator");
-        Objects.requireNonNull(drafter, "drafter");
-        Objects.requireNonNull(planner, "planner");
+            final Steps steps) {
+        Objects.requireNonNull(steps, "steps");
         return ChunkInputs.read(glossary, lexicon, settings, chunk, documentGate)
-                .map(read -> new PromptRequests(read, settings, translator.gatedBy(read.gate()), drafter, planner));
+                .map(read -> new PromptRequests(
+                        read, settings, steps.translator().gatedBy(read.gate()), steps.drafter(), steps.planner()));
+    }
+
+    /**
+     * The run's calls that draft a chunk.
+     *
+     * @param translator the draft step of the run
+     * @param drafter the batch drafter
+     * @param planner the planner of the run's translate-family calls
+     */
+    public record Steps(SegmentTranslator translator, BatchDrafter drafter, TranslatePlanner planner) {
+
+        /** Rejects a missing step. */
+        public Steps {
+            Objects.requireNonNull(translator, "translator");
+            Objects.requireNonNull(drafter, "drafter");
+            Objects.requireNonNull(planner, "planner");
+        }
     }
 
     /** The chunk's inputs, which the job reads its masks, gate and glossary from. */
@@ -137,6 +150,15 @@ public final class PromptRequests {
     /** The run's draft step, gated through this chunk's protected spans. */
     public SegmentTranslator translator() {
         return translator;
+    }
+
+    /**
+     * The current-part budget of the run model's tier, above which one segment is drafted in sentence-aligned pieces.
+     *
+     * @return the budget in source tokens
+     */
+    public int currentPart() {
+        return WindowBudgets.currentPart(planner.profile().tier());
     }
 
     /**
@@ -276,8 +298,11 @@ public final class PromptRequests {
     public Result<Optional<PreparedBatch>> batch(final List<BatchSlot> slots, final AcceptedTargets accepted) {
         log.debug("Preparing a batch slots={}", slots.size());
         final Result<Optional<PreparedBatch>> whole = prepared(slots, accepted);
-        final Optional<PreparedBatch> batch = whole.data();
-        if (batch == null || batch.isEmpty() || batch.get().shown().size() == slots.size()) {
+        if (whole.isErr()) {
+            return whole;
+        }
+        final Optional<PreparedBatch> batch = Objects.requireNonNull(whole.data());
+        if (batch.isEmpty() || batch.get().shown().size() == slots.size()) {
             return whole;
         }
         // The window kept fewer items, so the next source is the first one left out: the shown prefix is planned again.

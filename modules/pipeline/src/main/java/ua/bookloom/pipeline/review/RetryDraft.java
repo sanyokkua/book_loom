@@ -281,9 +281,10 @@ public final class RetryDraft {
                         settings,
                         new Chunk(plan.record().unitId(), List.of(plan.segment()), false),
                         documentGate,
-                        new SegmentTranslator(documentGate, calls, format, planner, mapper),
-                        drafterOf(planner, plan.callFrame(), calls),
-                        planner)
+                        new PromptRequests.Steps(
+                                new SegmentTranslator(documentGate, calls, format, planner, mapper),
+                                drafterOf(planner, plan.callFrame(), calls),
+                                planner))
                 .flatMap(requests -> new RetryRequests(requests, segments, splitter, qualityLoop)
                         .draft(plan.segment(), plan.runFrame().frameHash(), note, settings, calls));
     }

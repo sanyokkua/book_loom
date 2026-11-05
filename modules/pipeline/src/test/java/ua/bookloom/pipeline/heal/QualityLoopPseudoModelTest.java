@@ -78,9 +78,7 @@ class QualityLoopPseudoModelTest {
     }
 
     private static List<String> responseFormatNames(final List<ChatRequest> requests) {
-        return requests.stream()
-                .map(request -> ScriptedChatModel.callName(request))
-                .toList();
+        return requests.stream().map(ScriptedChatModel::callName).toList();
     }
 
     private static ModelCalls recordingPseudoCalls(final List<ChatRequest> requests) {

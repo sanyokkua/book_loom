@@ -18,11 +18,13 @@ import ua.bookloom.api.project.PromptFrame;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class InMemoryPromptFrameRepository implements PromptFrameRepository {
 
+    private static final String PROJECT_ID = "projectId";
+
     private final InMemoryStore store;
 
     @Override
     public Result<PromptFrame> save(final String projectId, final PromptFrame frame) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(frame, "frame");
         try {
             final PromptFrame held = store.frames(projectId).putIfAbsent(frame.hash(), frame);
@@ -35,7 +37,7 @@ public final class InMemoryPromptFrameRepository implements PromptFrameRepositor
 
     @Override
     public Result<Optional<PromptFrame>> find(final String projectId, final String hash) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(hash, "hash");
         try {
             log.debug("Prompt frame find projectId={} hash={}", projectId, hash);
@@ -47,7 +49,7 @@ public final class InMemoryPromptFrameRepository implements PromptFrameRepositor
 
     @Override
     public Result<List<PromptFrame>> all(final String projectId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         try {
             log.debug("Prompt frame all projectId={}", projectId);
             return Result.ok(store.frames(projectId).values().stream()

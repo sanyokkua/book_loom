@@ -503,9 +503,10 @@ wording is replaced by canonical-equal; the golden gate compares canonical forms
 table + a 0.15 safety margin). A run's effective context is the model's detected window limited to 16384 tokens, or
 16384 when none is known, **unless the person set a context window for that model in Settings > Models, which replaces
 it** (and may be larger than the cap). It is sent to Ollama as `num_ctx`; an OpenAI-compatible server receives no
-context-size field. The override is read again each time a chunk is entered: the chunk running keeps the window it was
-packed for, and the segments not yet packed are packed again for the new one. The Generation chunk-budget setting is a
-**cap**: `chunkBudget = min(window − reservedHeadroom, chunkBudgetSetting)`. **Why:** The user's model tokenizer is
+context-size field. The override is read again each time a chunk is entered: the chunk running keeps the window it
+started with, and the next chunk's calls are sized at the new one. A chunk is packed to the current-part budget of the
+model profile's tier (600 or 1,000 estimated source tokens, redesign group 11), never to the window, so a saved window
+changes no packing. **Why:** The user's model tokenizer is
 unknown and OpenAI-compatible servers don't expose a context size; a bounded default is deterministic and offline, and
 the per-model override lets a person who knows their model's window use it. **Consequences:** K table + margin +
 rolling-summary K are fixed constants, not settings; a window saved mid-run changes the next chunk, never the one in

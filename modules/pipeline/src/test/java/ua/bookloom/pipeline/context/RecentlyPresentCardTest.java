@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.project.BookBrief;
@@ -39,9 +40,8 @@ class RecentlyPresentCardTest {
 
     // The window starts at the given paragraph of chapter 2 (0-based): two previous pairs, then the focus.
     private static Window windowAt(final Document document, final int start) {
-        final List<String> texts = document.units().get(1).segments().stream()
-                .map(segment -> segment.masked())
-                .toList();
+        final List<String> texts =
+                document.units().get(1).segments().stream().map(Segment::masked).toList();
         final List<WindowPair> previous = new ArrayList<>();
         previous.add(new WindowPair("ch2:" + start, texts.get(start), null));
         previous.add(new WindowPair("ch2:" + (start + 1), texts.get(start + 1), null));

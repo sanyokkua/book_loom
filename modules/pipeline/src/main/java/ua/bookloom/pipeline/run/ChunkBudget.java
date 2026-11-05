@@ -8,10 +8,8 @@ import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallFrame;
 
 /**
- * Divides a unit's calls' window with {@link ContextBudget}: the static prefix (the system message and the style sheet)
- * and the dynamic context's whole allowance come off the window, and the rest is shared by a chunk's source and its
- * reply. The run packs a unit against the budget this gives, and a review retry cuts an oversized
- * segment against the same one, so a retry drafts in the pieces the run would.
+ * The static prefix of a run's calls (the system message and the style sheet) and the allowance {@link ContextBudget}
+ * leaves beside it for the memory lines and the character sheet.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -46,22 +44,5 @@ public final class ChunkBudget {
      */
     public static int dynamicAllowance(final CallFrame frame, final int window) {
         return ContextBudget.dynamicAllowance(window, staticPrefix(frame));
-    }
-
-    /**
-     * The budget a unit's calls are sized by. The whole dynamic allowance is reserved, not what the unit's glossary and
-     * summary happen to take: the fit also fills it with memory, recurring terms and characters, so a smaller
-     * reservation lets the prompt and its reply outgrow the window.
-     *
-     * @param frame the non-null call frame, whose style sheet and languages are reserved for
-     * @param window the usable window in tokens
-     * @return the budget; its {@link ContextBudget#chunkTokens()} is what one chunk may hold
-     */
-    public static ContextBudget budget(final CallFrame frame, final int window) {
-        return new ContextBudget(
-                window,
-                staticPrefix(frame),
-                dynamicAllowance(frame, window),
-                TokenEstimator.outputRatio(frame.sourceLanguage(), frame.targetLanguage()));
     }
 }

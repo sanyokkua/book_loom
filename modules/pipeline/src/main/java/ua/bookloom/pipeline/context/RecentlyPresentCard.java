@@ -126,15 +126,22 @@ final class RecentlyPresentCard {
                 .orElse(focus);
     }
 
+    private static boolean isCandidate(final GlossaryEntry entry, final String windowText) {
+        if (entry.type() != TermType.CHARACTER && entry.type() != TermType.PLACE) {
+            return false;
+        }
+        if (isNamed(entry, windowText)) {
+            log.trace("Recently-present card left out {}: named in the window", entry.term());
+            return false;
+        }
+        return true;
+    }
+
     private static List<Seen> present(final BookMap map, final List<String> reach, final String windowText) {
         final List<Seen> seen = new ArrayList<>();
         for (int order = 0; order < map.entries().size(); order++) {
             final GlossaryEntry entry = map.entries().get(order);
-            if (entry.type() != TermType.CHARACTER && entry.type() != TermType.PLACE) {
-                continue;
-            }
-            if (isNamed(entry, windowText)) {
-                log.trace("Recently-present card left out {}: named in the window", entry.term());
+            if (!isCandidate(entry, windowText)) {
                 continue;
             }
             final int last = IntStream.range(0, reach.size())

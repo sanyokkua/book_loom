@@ -60,18 +60,26 @@ public final class WireMockProvider implements AutoCloseable {
      */
     static final String MODEL_ID = "mistral-small3.2:24b";
 
-    private static final ModelSelection SELECTION = new ModelSelection(PROVIDER_ID, MODEL_ID);
     private static final long WAIT_SECONDS = 5;
     private static final long POLL_MILLIS = 5;
 
     private final ProviderKind kind;
+    private final String modelId;
+    private final ModelSelection selection;
     // Bound to loopback, not the wildcard: on macOS a wildcard bind succeeds on a port where another program (an IDE's
     // built-in server) already listens on 127.0.0.1, and a client then reaches that program instead of this stub.
     private final WireMockServer server =
             new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     public WireMockProvider(final ProviderKind kind) {
+        this(kind, MODEL_ID);
+    }
+
+    /** A stand-in serving {@code modelId}, whose built-in row decides the profile the run reads. */
+    WireMockProvider(final ProviderKind kind, final String modelId) {
         this.kind = Objects.requireNonNull(kind, "kind");
+        this.modelId = Objects.requireNonNull(modelId, "modelId");
+        this.selection = new ModelSelection(PROVIDER_ID, modelId);
         server.start();
     }
 
@@ -104,8 +112,8 @@ public final class WireMockProvider implements AutoCloseable {
     Measured measured() {
         final Injector injector = injector(Duration.ofSeconds(WAIT_SECONDS), ignored -> {});
         final ChatModel model = Objects.requireNonNull(
-                injector.getInstance(ChatModelFactory.class).create(SELECTION).data(), "chat model");
-        return new Measured(model, injector.getInstance(ModelCapabilities.class), SELECTION);
+                injector.getInstance(ChatModelFactory.class).create(selection).data(), "chat model");
+        return new Measured(model, injector.getInstance(ModelCapabilities.class), selection);
     }
 
     /** Answers {@code POST path} with the JSON body. */
@@ -123,7 +131,7 @@ public final class WireMockProvider implements AutoCloseable {
         final ChatModelFactory factory = injector(requestTimeout, sleeper).getInstance(ChatModelFactory.class);
         return IntStream.range(0, count)
                 .mapToObj(index ->
-                        Objects.requireNonNull(factory.create(SELECTION).data(), "chat model"))
+                        Objects.requireNonNull(factory.create(selection).data(), "chat model"))
                 .toList();
     }
 
@@ -145,7 +153,7 @@ public final class WireMockProvider implements AutoCloseable {
     ProviderProbe probe() {
         return ProviderProbe.of(
                 injector(Duration.ofSeconds(WAIT_SECONDS), ignored -> {}).getInstance(ProviderVerifier.class),
-                SELECTION);
+                selection);
     }
 
     /** Answers the n-th GET of {@code path} (counting from one) with the n-th reply; the last answers every later one. */
@@ -281,14 +289,14 @@ public final class WireMockProvider implements AutoCloseable {
                     kind == ProviderKind.OLLAMA
                             ? Map.of(
                                     "model",
-                                    MODEL_ID,
+                                    modelId,
                                     "message",
                                     Map.of("role", "assistant", "content", content),
                                     "done_reason",
                                     finish)
                             : Map.of(
                                     "model",
-                                    MODEL_ID,
+                                    modelId,
                                     "choices",
                                     List.of(Map.of(
                                             "message",

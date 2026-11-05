@@ -68,7 +68,8 @@ public final class ChunkRunner {
             final Document document) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.planner = new ChunkPlanner(settings, window);
+        this.planner =
+                new ChunkPlanner(settings, window, steps.planner().profile().tier());
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         final ChunkDrafting.Collaborators shared =
@@ -144,9 +145,7 @@ public final class ChunkRunner {
                 planner.settings(),
                 chunk,
                 steps.gate(),
-                steps.translator(),
-                steps.batch(),
-                steps.planner());
+                new PromptRequests.Steps(steps.translator(), steps.batch(), steps.planner()));
         if (read.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), ERROR)));
         }

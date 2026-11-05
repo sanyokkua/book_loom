@@ -21,6 +21,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
@@ -32,6 +34,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.SegmentPath;
@@ -79,12 +82,11 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Two sentence-aligned pieces, both echoed: the English paragraph is a blocking text finding, so no reviewer is
-    // asked
-    // about it; the round repairs by drafting each piece again, naming the echo finding in the piece's own request,
-    // and never sends the whole oversized segment to a directed fix.
+    // Six sentence-aligned pieces at the small tier's current part of 600 tokens, all echoed: the English paragraph is
+    // a blocking text finding, so no reviewer is asked about it; the round repairs by drafting each piece again, naming
+    // the echo finding in the piece's own request, and never sends the whole oversized segment to a directed fix.
     @Test
-    void run_oversizedBalancedSegmentFailingEcho_redraftsBothPiecesWithFindings() {
+    void run_oversizedBalancedSegmentFailingEcho_redraftsEveryPieceWithFindings() {
         final String text = IntStream.range(100, 500)
                 .mapToObj(number -> "The night number " + number + " was calm.")
                 .collect(Collectors.joining(" "));
@@ -96,16 +98,59 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.report(
                 TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(model.formats()).containsExactly("draft", "draft", "draft", "draft");
-        assertThat(model.userMessages().subList(0, 2))
+        assertThat(model.formats()).hasSize(12).containsOnly("draft");
+        assertThat(model.userMessages().subList(0, 6))
                 .allSatisfy(user -> assertThat(user).doesNotContain("[Extra instruction]"));
-        assertThat(model.userMessages().subList(2, 4))
+        assertThat(model.userMessages().subList(6, 12))
                 .allSatisfy(user -> assertThat(user)
                         .contains("[Extra instruction]\n")
                         .contains("echo similarity 1.0 at or above 0.9\n\nTranslate every item"));
         assertThat(TranslationJobTestSupport.stored(project, "Book.md:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path)
                 .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.REPAIRED);
+    }
+
+    // A paragraph of about 2,000 tokens is above either tier's current part, so a run cuts it at sentence ends into
+    // pieces that each fit the tier's budget (600 small, 1,000 large) and decides it once over the joined target.
+    @ParameterizedTest
+    @CsvSource({"SMALL, 600", "LARGE, 1000"})
+    void run_twoThousandTokenParagraph_isDraftedInPiecesWithinTheTiersCurrentPart(
+            final ModelProfile.Tier tier, final int currentPart) {
+        final String text = IntStream.range(100, 330)
+                .mapToObj(number -> "The night number " + number + " was calm.")
+                .collect(Collectors.joining(" "));
+        final TestProject project = TranslationJobTestSupport.project(
+                TestBooks.markdown(tempDir.resolve("Book.md"), text),
+                TranslationJobTestSupport.brief("en", "uk", QualityDial.BALANCED));
+        final NightModel model = new NightModel(tiered(tier));
+
+        TranslationJobTestSupport.report(
+                TranslationJobTestSupport.job(project, model).run());
+
+        assertThat(TokenEstimator.estimate(text, "en")).isBetween(1900, 2100);
+        assertThat(model.draftBodies())
+                .hasSizeGreaterThan(1)
+                .allSatisfy(
+                        body -> assertThat(TokenEstimator.estimate(body, "en")).isLessThanOrEqualTo(currentPart));
+        assertThat(String.join("", model.draftBodies())).isEqualTo(text);
+        assertThat(TranslationJobTestSupport.stored(project, "Book.md:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::path)
+                .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
+    }
+
+    private static ModelProfile tiered(final ModelProfile.Tier tier) {
+        final ModelProfile base = ModelProfile.defaults();
+        return new ModelProfile(
+                base.reasoning(),
+                base.markupFilters(),
+                base.systemRole(),
+                base.quirks(),
+                base.sampling(),
+                base.thinking(),
+                base.context(),
+                base.templateOverhead(),
+                base.batchSize(),
+                tier);
     }
 
     @Test
@@ -259,6 +304,46 @@ class OversizedSegmentTest {
 
         private static String user(final ChatRequest request) {
             return request.messages().get(1).content();
+        }
+    }
+
+    /** Translates every night sentence a draft shows it, accepts whatever the reviewer is shown, on a given profile. */
+    private static final class NightModel implements ChatModel {
+
+        private static final Pattern TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
+        private static final Pattern NIGHT = Pattern.compile("The night number (\\d+) was calm\\.");
+        private final List<ChatRequest> drafts = new ArrayList<>();
+        private final ModelProfile profile;
+
+        NightModel(final ModelProfile profile) {
+            this.profile = profile;
+        }
+
+        @Override
+        public ModelProfile profile() {
+            return profile;
+        }
+
+        @Override
+        public Result<ChatResponse> chat(final ChatRequest request) {
+            if ("reviewer".equals(ScriptedChatModel.callName(request))) {
+                return Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP));
+            }
+            drafts.add(request);
+            final String body = bodyOf(request);
+            return Result.ok(new ChatResponse(
+                    TranslationJobTestSupport.targetReply(
+                            NIGHT.matcher(body).replaceAll("Ніч номер $1 була дуже тихою.")),
+                    FinishReason.STOP));
+        }
+
+        List<String> draftBodies() {
+            return drafts.stream().map(NightModel::bodyOf).toList();
+        }
+
+        private static String bodyOf(final ChatRequest request) {
+            final var matcher = TEXT.matcher(request.messages().get(1).content());
+            return matcher.find() ? matcher.group(1) : "";
         }
     }
 

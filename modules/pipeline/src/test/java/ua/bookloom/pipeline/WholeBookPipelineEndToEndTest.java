@@ -143,16 +143,16 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // The batch of eight paragraphs (four of them long) is capped at the reserve the context builder computes, the
-    // pair's output ratio times the items' source tokens plus 16 per item, 2500, well inside the items' runaway guard
-    // (OutputLimit.forBatch, 5508); the reviewer of eight pairs by its pairs (OutputLimit.forReview): 128 + 8 x (70 +
-    // 120) per pair + the drafts' estimated tokens 12 + 13 + 16 + 509 + 510 + 512 + 509 + 10 = 2091, so 3739.
+    // pair's output ratio times the items' 826 source tokens plus 16 per item, 1.5 x 826 + 128 = 1367, inside the
+    // items' runaway guard (OutputLimit.forBatch); the reviewer of eight pairs by its pairs (OutputLimit.forReview):
+    // 128 + 8 x (70 + 120) per pair + the drafts' 1088 estimated tokens, so 2736.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":2500");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":3739");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":1367");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":2736");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft shows it among its previous

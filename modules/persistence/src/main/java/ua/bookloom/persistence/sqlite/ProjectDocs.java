@@ -11,6 +11,8 @@ import org.jdbi.v3.core.Handle;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ProjectDocs {
 
+    private static final String PROJECT = "project";
+
     private static final String SELECT = "SELECT json FROM project_docs WHERE project_id = :project AND kind = :kind";
     private static final String SELECT_PREFIXED =
             "SELECT json FROM project_docs WHERE project_id = :project AND kind >= :from AND kind < :to ORDER BY kind";
@@ -32,7 +34,7 @@ final class ProjectDocs {
             final DocKind kind,
             final Class<T> type) {
         return handle.createQuery(SELECT)
-                .bind("project", projectId)
+                .bind(PROJECT, projectId)
                 .bind("kind", kind.key())
                 .mapTo(String.class)
                 .findOne()
@@ -52,7 +54,7 @@ final class ProjectDocs {
             final String suffix,
             final Class<T> type) {
         return handle.createQuery(SELECT)
-                .bind("project", projectId)
+                .bind(PROJECT, projectId)
                 .bind("kind", keyOf(kind, suffix))
                 .mapTo(String.class)
                 .findOne()
@@ -72,7 +74,7 @@ final class ProjectDocs {
             final Class<T> type) {
         // Every "<kind>:" row sorts at or after "<kind>:" and before "<kind>;", the next character after the colon.
         return handle.createQuery(SELECT_PREFIXED)
-                .bind("project", projectId)
+                .bind(PROJECT, projectId)
                 .bind("from", kind.key() + SUFFIX_SEPARATOR)
                 .bind("to", kind.key() + (char) (SUFFIX_SEPARATOR + 1))
                 .mapTo(String.class)
@@ -104,7 +106,7 @@ final class ProjectDocs {
     private static void upsert(
             final Handle handle, final JsonCodec codec, final String projectId, final String kind, final Object value) {
         handle.createUpdate(UPSERT)
-                .bind("project", projectId)
+                .bind(PROJECT, projectId)
                 .bind("kind", kind)
                 .bind("json", codec.write(value))
                 .execute();

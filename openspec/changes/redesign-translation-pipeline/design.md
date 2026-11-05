@@ -408,7 +408,10 @@ task edits the delta requirement and this file's line; the result is written int
 - **Output reserve.** `maxOutputTokens = outputRatio·S + OUTPUT_PER_ITEM·n` (`outputRatio` from the pair file, default
   `DEFAULT_OUTPUT_RATIO` 1.5, measured on en→uk; `OUTPUT_PER_ITEM` 16); for a profile whose reasoning is ALWAYS or
   UNSWITCHABLE, `max(REASONING_RESERVE_MIN 2048, 4·S + 35·n)`; the hard cap ≈ 3.6·S stays as a runaway guard; ANALYSIS
-  kinds keep their own caps (chapter summary 200).
+  kinds keep their own caps (chapter summary 200). For a reasoning profile the window fit keeps that larger reserve and
+  the request's answer cap stays at the guard; `:llm` adds the same reasoning room (`ReasoningReserve`, D20) on top of
+  the answer cap when it applies the profile, so the wire carries at least the reserve
+  (`ReasoningReserveWireMockTest`).
 - **Snapshot.** `ContextSnapshot(frameHash, sections, chapterSummaryKeys, retry)` holds only blocks 8–13 that went out
   (`retry` marks the context a desk retry rebuilt and sent, so "as it was sent for this retry" is still shown after a
   restart; `frameHash` is empty for a segment no call was made for); blocks

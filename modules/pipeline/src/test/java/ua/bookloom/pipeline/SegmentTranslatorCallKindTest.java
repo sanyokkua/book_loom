@@ -1,12 +1,14 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,11 +16,16 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /** Each call the translator makes for a segment goes through the run's seam under its own kind. */
 class SegmentTranslatorCallKindTest {
@@ -61,6 +68,37 @@ class SegmentTranslatorCallKindTest {
                 .isInstanceOfSatisfying(
                         DraftOutcome.Drafted.class,
                         draft -> assertThat(draft.restoredTarget()).isNotNull());
+    }
+
+    // IF a single draft's call carried no item, THEN "All calls" would say its reply holds no translated text, though
+    // the reply holds the segment's translation, as a batch call's items do.
+    @Test
+    void translate_singleDraftAnswered_putsTheTargetItReadOnItsCall() {
+        final ScriptedChatModel model = TranslationJobTestSupport.replies(ACCEPTED);
+        final List<List<String>> parsedFor = new CopyOnWriteArrayList<>();
+        final List<CallItem> read = new CopyOnWriteArrayList<>();
+        final ModelCalls seam = new ModelCalls() {
+            @Override
+            public Result<ChatResponse> call(
+                    final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+                return model.chat(request);
+            }
+
+            @Override
+            public void parsed(final List<String> segmentIds, final List<CallItem> items) {
+                parsedFor.add(segmentIds);
+                read.addAll(items);
+            }
+        };
+
+        DraftStepFixtures.segmentTranslator(
+                        GateFunction.of(documents, BookFormat.MARKDOWN), seam, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment());
+
+        assertThat(parsedFor).containsExactly(List.of("Book.md:0"));
+        assertThat(read)
+                .extracting(CallItem::id, CallItem::segmentId, CallItem::target, CallItem::status)
+                .containsExactly(tuple("1", "Book.md:0", ACCEPTED, CallItemStatus.OK));
     }
 
     private SegmentTranslator translator(final ScriptedChatModel model) {

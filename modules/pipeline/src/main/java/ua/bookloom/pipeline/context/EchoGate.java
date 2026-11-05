@@ -32,7 +32,7 @@ public final class EchoGate {
     private static final Pattern WORD = Pattern.compile("⟦[^⟧]*⟧|\\p{L}[\\p{L}\\p{N}’'-]*|\\p{N}+");
     private static final String MARK = "⟦";
     // A pair file's examples hold each reply as a JSON item, whose target is the example's target side.
-    private static final Pattern EXAMPLE_TARGET = Pattern.compile("\"target\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+    private static final Pattern EXAMPLE_TARGET = Pattern.compile("\"target\"\\s*:\\s*\"");
 
     /**
      * Whether a translation copies one of the run's examples.
@@ -68,14 +68,33 @@ public final class EchoGate {
     }
 
     private static List<String[]> exampleGrams(final ExampleChoice examples) {
-        final Matcher matcher = EXAMPLE_TARGET.matcher(examples.text());
-        final List<String> targets =
-                matcher.results().map(found -> found.group(1)).toList();
+        final List<String> targets = targetValues(examples.text());
         return (targets.isEmpty() ? List.of(examples.text()) : targets)
                 .stream()
                         .flatMap(text -> grams(text).stream())
                         .filter(gram -> realWords(gram) >= REAL_WORDS_MIN)
                         .toList();
+    }
+
+    // The raw text of each quoted "target" value; scanned by hand because a regex for a quoted string with escapes
+    // recurses once per character and overflows the stack on a long value.
+    private static List<String> targetValues(final String text) {
+        final List<String> values = new ArrayList<>();
+        final Matcher matcher = EXAMPLE_TARGET.matcher(text);
+        int from = 0;
+        while (matcher.find(from)) {
+            final int start = matcher.end();
+            int end = start;
+            while (end < text.length() && text.charAt(end) != '"') {
+                end += text.charAt(end) == '\\' ? 2 : 1;
+            }
+            if (end >= text.length()) {
+                break;
+            }
+            values.add(text.substring(start, end));
+            from = end + 1;
+        }
+        return values;
     }
 
     // A mark becomes a null that matches any word.

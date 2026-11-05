@@ -55,6 +55,7 @@ class TranslationJobEventsTest {
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
+            "CallSnapshotUpdated",
             "SegmentDrafted",
             "StepChanged",
             "SegmentDecided",
@@ -264,7 +265,8 @@ class TranslationJobEventsTest {
         return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
-    // The shown call waits, is answered, and is shown once more with the decision noted on it.
+    // The shown call waits, is answered, is shown with the item its reply was read as, and once more with the decision
+    // noted on it.
     private static List<String> acceptedOnFirstCall(final String segmentId, final long callId, final int pendingAfter) {
         return List.of(
                 "SegmentStarted " + segmentId,
@@ -273,6 +275,7 @@ class TranslationJobEventsTest {
                 "ModelCallStarted DRAFT " + segmentId,
                 "CallSnapshotUpdated " + callId + " WAITING outcomes=0",
                 "ModelCallFinished DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "SegmentDrafted " + segmentId,
                 "StepChanged",

@@ -8,10 +8,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 /** Which answers copy an example: a run of four words of an example's target, a mark standing for any one word. */
 class EchoGateRunTest {
 
-    private static final ExampleChoice PAIR = new ExampleChoice(
-            ExampleChoice.Kind.PAIR,
-            "<Items>\n<s id=\"1\">— Погоди, ⟦g0⟧! — крикнула она.</s>\n</Items>\n"
-                    + "Reply: {\"items\":[{\"id\":\"1\",\"target\":\"— Стривай, ⟦g0⟧! — гукнула вона.\"}]}");
+    private static final ExampleChoice PAIR = new ExampleChoice(ExampleChoice.Kind.PAIR, """
+            <Items>
+            <s id="1">— Погоди, ⟦g0⟧! — крикнула она.</s>
+            </Items>
+            Reply: {"items":[{"id":"1","target":"— Стривай, ⟦g0⟧! — гукнула вона."}]}""");
     private static final ExampleChoice ILLUSTRATION =
             new ExampleChoice(ExampleChoice.Kind.TARGET, "Вечір тихо спускався на старе місто над рікою.");
 

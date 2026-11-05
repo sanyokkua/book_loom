@@ -29,6 +29,7 @@ class TranslationJobModelCallEventTest {
             "CallSnapshotUpdated",
             "ModelCallFinished",
             "CallSnapshotUpdated",
+            "CallSnapshotUpdated",
             "SegmentDrafted",
             "StepChanged",
             "SegmentDecided",

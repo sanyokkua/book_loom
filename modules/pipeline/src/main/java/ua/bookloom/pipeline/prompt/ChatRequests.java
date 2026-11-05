@@ -77,7 +77,10 @@ public final class ChatRequests {
      * Builds the request of a call the context builder planned: its system blocks as one system message and its user
      * blocks as one last user message, sized for the plan's window and capped at the plan's output reserve, never above
      * the runaway guard of {@code limit} and never below the short-source floor, since a one-word reply once came back
-     * empty when the JSON envelope shared a smaller cap with it.
+     * empty when the JSON envelope shared a smaller cap with it. The cap here is the answer's: for a model that always
+     * reasons the plan's larger reserve is the room its thinking needs, which the model's own client adds on top of
+     * this cap by the same formula when it applies the profile (design D20), so the wire carries at least that reserve
+     * and the window the plan was fitted to keeps room for it.
      *
      * @param name the call's template name; never null
      * @param plan the call's plan; never null
@@ -89,8 +92,11 @@ public final class ChatRequests {
             final PromptName name, final PromptPlan plan, final OutputLimit limit, final boolean lowerTemperature) {
         Objects.requireNonNull(limit, "limit");
         final List<ChatMessage> messages = messagesOf(plan);
-        final int cap =
-                Math.min(limit.capTokens(), Math.max(plan.maxOutputTokens(), OutputLimit.SHORT_SOURCE_CAP_FLOOR));
+        // The floor yields to a smaller limit, so the lower bound never passes the upper one.
+        final int cap = Math.clamp(
+                plan.maxOutputTokens(),
+                Math.min(OutputLimit.SHORT_SOURCE_CAP_FLOOR, limit.capTokens()),
+                limit.capTokens());
         final OutputLimit capped =
                 new OutputLimit(Math.min(limit.expectedTokens(), cap), limit.capTokens(), limit.source());
         final ChatRequest built = build(name, messages, capped, lowerTemperature);
