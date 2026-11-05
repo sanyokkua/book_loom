@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,11 +12,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.CallRecord;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.project.Gender;
@@ -168,6 +171,9 @@ final class SequenceMeasure {
                 .callsPerSegment(count == 0 ? 0 : (double) run.calls().size() / count)
                 .secondsPerSegment(count == 0 ? 0 : seconds / count)
                 .elapsedSeconds(seconds)
+                .promptReadSecondsPerSegment(count == 0 ? 0 : promptReadSeconds(run.calls()) / count)
+                .promptTokens(usageSum(run.calls(), TokenUsage::prompt))
+                .cachedPromptTokens(usageSum(run.calls(), TokenUsage::cachedPrompt))
                 .batchedItems(batched)
                 .batchFallbacks(fallbacks)
                 .batchFallbackRate(batched == 0 ? 0 : (double) fallbacks / batched)
@@ -178,6 +184,27 @@ final class SequenceMeasure {
                 .callsByKind(callsByKind(run.calls()))
                 .wastedCallRate(wastedRate(run.calls()))
                 .costByKind(costByKind(run.calls()));
+    }
+
+    private static double promptReadSeconds(final List<ModelCallFinished> calls) {
+        return calls.stream()
+                        .map(ModelCallFinished::usage)
+                        .filter(Objects::nonNull)
+                        .map(TokenUsage::promptEval)
+                        .filter(Objects::nonNull)
+                        .mapToLong(Duration::toMillis)
+                        .sum()
+                / 1000.0;
+    }
+
+    private static long usageSum(final List<ModelCallFinished> calls, final Function<TokenUsage, Integer> field) {
+        return calls.stream()
+                .map(ModelCallFinished::usage)
+                .filter(Objects::nonNull)
+                .map(field)
+                .filter(Objects::nonNull)
+                .mapToLong(Integer::longValue)
+                .sum();
     }
 
     private static double wastedRate(final List<ModelCallFinished> calls) {

@@ -163,6 +163,16 @@ class PairedDiffTest(unittest.TestCase):
             self.assertIn("real effect: yes", text)
             self.assertIn("screen: pass", text)
 
+    def test_diff_paired_printsEachSidesPromptCostWithoutWeighingIt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            costed = case("x", True)
+            costed.update({"time": {"promptRead": 2000}, "tokens": {"prompt": 300, "cached": 120}})
+            a = write_run(tmp, "a", 2, [case("x", True)])
+            b = write_run(tmp, "b", 2, [costed])
+            text = run_main(["diff", "--paired", a, b])
+            self.assertIn("cost A: promptRead 0.0 s, prompt tokens 0, cached 0", text)
+            self.assertIn("cost B: promptRead 2.0 s, prompt tokens 300, cached 120", text)
+
     def test_diff_repeatsAreAveragedBeforePairing(self):
         with tempfile.TemporaryDirectory() as tmp:
             a = write_run(tmp, "a", 2, [case("x", True, 0), case("x", False, 1), case("y", False, 0), case("y", False, 1)])

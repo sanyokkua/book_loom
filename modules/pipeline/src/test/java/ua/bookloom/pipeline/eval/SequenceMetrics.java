@@ -46,6 +46,10 @@ import lombok.Builder;
  * @param callsPerSegment {@code calls / segments}
  * @param secondsPerSegment wall seconds of the run per segment
  * @param elapsedSeconds wall seconds of the run
+ * @param promptReadSecondsPerSegment seconds the provider spent reading prompts (time to first token) per segment,
+ *     for the calls that reported it; reported, never weighed
+ * @param promptTokens prompt tokens the provider reported over all calls
+ * @param cachedPromptTokens how many of those it served from its cache
  * @param batchedItems segments drafted inside a multi-item batch call
  * @param batchFallbacks batch items that fell back to their own draft
  * @param batchFallbackRate {@code batchFallbacks / batchedItems}
@@ -93,6 +97,9 @@ record SequenceMetrics(
         double callsPerSegment,
         double secondsPerSegment,
         double elapsedSeconds,
+        double promptReadSecondsPerSegment,
+        long promptTokens,
+        long cachedPromptTokens,
         int batchedItems,
         int batchFallbacks,
         double batchFallbackRate,

@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -115,6 +116,11 @@ final class StageProbe implements ChatModel {
                 .findFirst()
                 .filter(call -> !call.failed())
                 .map(Call::reply);
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return model.profile();
     }
 
     @Override

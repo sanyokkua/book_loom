@@ -8,6 +8,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
@@ -25,6 +26,11 @@ final class SequenceFinishRecorder implements ChatModel {
 
     int reviewerTruncated() {
         return reviewerTruncated.get();
+    }
+
+    @Override
+    public ModelProfile profile() {
+        return model.profile();
     }
 
     @Override

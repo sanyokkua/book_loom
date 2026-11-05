@@ -126,6 +126,13 @@ record SequenceReport(SequenceMetrics metrics) {
                         "elapsedSec",
                         f2(m.elapsedSeconds())),
                 row(
+                        "promptRead sec/seg",
+                        f2(m.promptReadSecondsPerSegment()),
+                        "promptTokens",
+                        m.promptTokens(),
+                        "cached",
+                        m.cachedPromptTokens()),
+                row(
                         "batchFallbacks",
                         m.batchFallbacks() + "/" + m.batchedItems(),
                         "rate",

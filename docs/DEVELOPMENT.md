@@ -1121,6 +1121,30 @@ single-flight, paired by seed (`eval-score.py diff --paired`).
   `rulesLayout` field of `PromptVariants` were deleted. The generic `--variants` plumbing stays for arm 5c.
 - *Runs* (`.temporary_context/eval-history/20261105-*arm5a*`).
 
+**Arm 5c: rules per book or per window (task 11.9).** Default: the book rules chosen once at run start from the whole story,
+in the fixed system part (block 3). Alternative: the rules chosen for each call from its own items and map lines, sent as the
+first block of the user message. Translators `gemma4:e4b-mlx` (Balanced, K = 3, seeds 1000-1002; eval jobs start batches at 8)
+and `gemma4:26b-mlx` (once, K = 1), Ollama, single-flight, paired by seed.
+
+- *Mini books.* e4b `mini-en` 34 cases and `mini-ru` (ru-uk) 18: paired sign test, no real effect; only `dialogue-quote-form`
+  moved on en-uk (book 1 : window 0 discordant, p = 1.0). 26b once, en-uk and ru-uk: 0 discordant cases, no real effect.
+- *`sequence` (328 segments, e4b, K = 1).* Per book against per window: gender slips 9 against 4, first-round hard-gate
+  failures 13 against 11, flagged 10 against 11, batch fallbacks 6 against 7, LTCR-1 0.9265 against 0.9300, renderings per term
+  2.2 against 2.0, name variants 1 against 0, 3.765 against 3.81 s per segment, prompt tokens 2.914e5 against 2.784e5, cached
+  prompt tokens 1.408e5 against 1.259e5, prompt read 0.6864 against 0.6863 s per segment. One run a side, so no significance
+  test: the gender-slip drop is a hint, not a win.
+- *Batch size.* The `sequence` pair started batches at the model profile's 4 (`RunPacing.FROM_PROFILE`), the mini pairs at 8;
+  the `sequence` figures are therefore not comparable with arm 5a's (batch 8).
+- *Reading of the design.* "Per window" was built as my reading of the design's "the window's items": marks, digits and
+  dialogue chosen from the focus items; agreement and inflection from the window's map lines, gated by the book-level facts.
+  The owner may read it differently.
+- *Decision rule.* Per window only on a quality win (sign test p < 0.05, or a screen confirmed on `sequence`) with no hard
+  grader worse; a tie keeps per book (owner decisions D-9, D-28). Neither happened, so **per book stays**; the `rulesScope`
+  field of `PromptVariants`, `RulesScope`, `WindowRules` and `RuleFacts.ofWindow` were deleted. The gender-slip drop (9 against
+  4) is a hint for the owner, not a result. The eval-side prompt and cached-token sums, the profile forwarding in
+  `StageProbe`/`SequenceFinishRecorder` and `RunPacing.FROM_PROFILE` stay.
+- *Runs* (`.temporary_context/eval-history/20261105-*arm5c-*`).
+
 **Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
 `6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
 every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.

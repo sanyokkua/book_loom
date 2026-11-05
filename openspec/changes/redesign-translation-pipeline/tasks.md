@@ -1205,7 +1205,7 @@ snapshot changes shape, so the database is set aside.
   - **Test first:** the arm's paired report; after the deletion `PromptRequestsEquivalenceTest` and the golden prompt tests stay green.
   - **Done when:** the arm line is recorded; no hit for `ContextPackageAssembler` or `InjectedCharacters` remains; `grep -rn 'precedingTargets()' modules` prints nothing; `scripts/ci-linux-ui.sh` passes for the Generation table.
 
-- [ ] 11.9 Run arm 5c (rules per book or per window) and keep the winner. The rules stay in the fixed system part unless choosing them per window measurably improves the translation. → :pipeline, docs
+- [x] 11.9 Run arm 5c (rules per book or per window) and keep the winner. The rules stay in the fixed system part unless choosing them per window measurably improves the translation. → :pipeline, docs
   - **Satisfies:** "Choose the writing rules once per book" (translation-pipeline; the arm's outcome)
   - **Depends on:** 11.8
   - **Excludes:** arm 5b (key-term asks), which runs at the end of group 12 (12.9) because the chapter summaries' map lines bear on term consistency, its graded outcome.

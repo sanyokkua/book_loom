@@ -338,6 +338,16 @@ def dataset_diff(pa, pb):
     return ["  dataset.%-9s %s -> %s" % (k, da.get(k), db.get(k)) for k in DATASET_KEYS if da.get(k) != db.get(k)]
 
 
+def cost_line(side, report):
+    """Prompt-reading seconds, prompt tokens and cached prompt tokens summed over a side's cases (reported, not weighed)."""
+    read = prompt = cached = 0
+    for record in report.get("cases", []):
+        read += (record.get("time") or {}).get("promptRead") or 0
+        prompt += (record.get("tokens") or {}).get("prompt") or 0
+        cached += (record.get("tokens") or {}).get("cached") or 0
+    return "cost %s: promptRead %.1f s, prompt tokens %d, cached %d" % (side, read / 1000.0, prompt, cached)
+
+
 def paired_report(ra, rb):
     """The lines of `diff --paired` for two version-2 reports."""
     a, b = per_case(ra), per_case(rb)
@@ -656,6 +666,9 @@ def selftest():
     assert sign_test(6, 0) == 0.03125 and sign_test(5, 0) == 0.0625 and sign_test(15, 4) < 0.05
     assert abs(noise_band([0.7, 0.85, 0.8]) - 0.15) < 1e-9 and noise_band([1]) is None
     assert abs(wilson_lower(9, 10) - 0.5958) < 1e-3
+    costed = {"cases": [{"time": {"promptRead": 1500}, "tokens": {"prompt": 100, "cached": 40}},
+                        {"time": {"promptRead": None}, "tokens": {"prompt": 50, "cached": None}}]}
+    assert cost_line("A", costed) == "cost A: promptRead 1.5 s, prompt tokens 150, cached 40", cost_line("A", costed)
     print("selftest ok")
 
 

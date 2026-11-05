@@ -34,13 +34,16 @@ final class BatchedJobs {
         return batchedJob(project, model, request, firstBatchSize, new PromptTemplates());
     }
 
-    /** A job that drafts in batches from the production first size with the templates an eval's variants built. */
+    /**
+     * A job that drafts in batches with the templates an eval's variants built, starting at the run model's profile
+     * size as the app does (a small model starts smaller than a large one).
+     */
     static TranslationJobImpl batchedJob(
             final TestProject project,
             final ChatModel model,
             final RunRequest request,
             final PromptTemplates templates) {
-        return batchedJob(project, model, request, BatchDrafter.DEFAULT_INITIAL_SIZE, templates);
+        return batchedJob(project, model, request, RunPacing.FROM_PROFILE, templates);
     }
 
     private static TranslationJobImpl batchedJob(

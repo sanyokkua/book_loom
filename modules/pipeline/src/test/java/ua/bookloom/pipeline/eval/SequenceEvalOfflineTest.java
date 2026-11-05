@@ -14,6 +14,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -159,20 +160,25 @@ class SequenceEvalOfflineTest {
                 decided(6, NarratorPerson.THIRD, "The imp waited.", null, SegmentStatus.FLAGGED));
     }
 
+    private static List<ModelCallFinished> handWrittenCalls() {
+        final TokenUsage first = new TokenUsage(100, 10, Duration.ofSeconds(1), Duration.ofMillis(400), 60);
+        final TokenUsage second = new TokenUsage(50, 5, null, Duration.ofMillis(250), null);
+        return List.of(
+                new ModelCallFinished(
+                        null, CallKind.DRAFT, Duration.ofSeconds(2), first, 0, false, List.of("a", "b", "c"), 1, null),
+                new ModelCallFinished("d", CallKind.DRAFT, Duration.ofSeconds(1), second, 0, false),
+                new ModelCallFinished("e", CallKind.REVIEW, Duration.ofSeconds(1), null, 0, false));
+    }
+
     private static SequenceMetrics measureHandWrittenRun() {
         final LexiconEntry master = LexiconEntry.of("p", "master")
                 .seen("господар")
                 .seen("учитель")
                 .withLearned(new LexiconEntry.Learned("господар", 3, 4));
-        final List<ModelCallFinished> calls = List.of(
-                new ModelCallFinished(
-                        null, CallKind.DRAFT, Duration.ofSeconds(2), null, 0, false, List.of("a", "b", "c"), 1, null),
-                new ModelCallFinished("d", CallKind.DRAFT, Duration.ofSeconds(1), null, 0, false),
-                new ModelCallFinished("e", CallKind.REVIEW, Duration.ofSeconds(1), null, 0, false));
         final SequenceRun run = new SequenceRun(
                 new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 7, 6, 1, List.of(), null),
                 Duration.ofSeconds(14),
-                calls,
+                handWrittenCalls(),
                 handWrittenSegments(),
                 List.of(master),
                 Map.of("OK/[ECHO]", 1),
@@ -208,6 +214,9 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.calls()).isEqualTo(3);
         assertThat(metrics.callsPerSegment()).isCloseTo(3.0 / 7, within(0.0001));
         assertThat(metrics.secondsPerSegment()).isCloseTo(2.0, within(0.0001));
+        assertThat(metrics.promptReadSecondsPerSegment()).isCloseTo(0.65 / 7, within(0.0001));
+        assertThat(metrics.promptTokens()).isEqualTo(150);
+        assertThat(metrics.cachedPromptTokens()).isEqualTo(60);
         assertThat(metrics.batchedItems()).isEqualTo(3);
         assertThat(metrics.batchFallbackRate()).isCloseTo(1.0 / 3, within(0.0001));
         assertThat(metrics.editsRefused()).isEqualTo(2);
