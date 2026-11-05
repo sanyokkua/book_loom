@@ -12,7 +12,7 @@ import ua.bookloom.api.document.StructureNode;
 
 /**
  * Builds a Markdown book's structure tree from its heading segments and their commonmark levels (task 4.4): text
- * before the first heading is an untitled leading node, and each heading's own node counts every segment from
+ * before the first heading is an untitled, unlisted leading node, and each heading's own node counts every segment from
  * itself to the next heading of the same or a shallower level. The book is one unit, so each node names that unit and
  * the position of its first segment, which is how a picked chapter lists its own segments only.
  */
@@ -41,7 +41,7 @@ final class MarkdownStructure {
         final int firstHeadingIndex =
                 boundaries.isEmpty() ? segments.size() : boundaries.get(0).segmentIndex();
         if (firstHeadingIndex > 0) {
-            topLevel.add(new StructureNode("", unitId, firstHeadingIndex, List.of(), 0));
+            topLevel.add(new StructureNode("", unitId, firstHeadingIndex, List.of(), 0, false));
         }
         topLevel.addAll(nest(unitId, boundaries, countsOf(boundaries, segments.size()), 0, boundaries.size()));
         log.debug(

@@ -138,6 +138,7 @@ final class RunWiring {
                         brief,
                         run.document(),
                         run.index(),
+                        run.chapters(),
                         model.profile());
     }
 

@@ -24,8 +24,11 @@ pending segments of one unit, closed on the **token budget alone**: the current-
 (`WindowBudgets.currentPart`, 600 estimated source tokens small, 1,000 large; redesign group 11). There is **no
 segment cap per chunk**: neither the quality dial nor Manual review caps it any more (redesign group 10.8, owner
 decision D-17). How many segments go to the model in one request is the **batch size** (`#tiered-loop`, step 1), cut
-inside the chunk. A unit boundary always closes the current chunk (ADR-0038); the window of previous pairs
-crosses it (`#context-builder`).
+inside the chunk. A unit boundary always closes the current chunk (ADR-0038), and so does a chapter boundary
+(`ChapterBoundaries`, redesign 12.2: the chapter level is the shallowest level of listed body-structure nodes holding at
+least two, a chapter under 300 source tokens joins the next and a short last one the one before, and a book with no
+such level is cut into pseudo-chapters of at most 3,000 tokens at paragraph ends), so no batch holds two chapters; the
+window of previous pairs crosses both (`#context-builder`).
 
 The budget is the **tier's**, not the window's: the window sizes each call, never a chunk. Because BookLoom ships no
 tokenizer, token counts are **estimated deterministically** from code points:

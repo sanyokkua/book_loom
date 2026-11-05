@@ -22,7 +22,7 @@ import ua.bookloom.document.epub.NavigationParser.NavEntry;
 /**
  * Maps an EPUB's navigation entries onto its spine units (task 4.4): each spine unit is counted once, under the
  * first entry that reaches it, with every later entry into the same unit carrying no count of its own; a spine
- * unit no entry reaches becomes a top-level node at its own spine position.
+ * unit no entry reaches becomes an unlisted top-level node at its own spine position.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
@@ -144,7 +144,7 @@ final class EpubStructureBuilder {
 
     private static StructureNode fallbackNode(Unit unit) {
         final String title = firstHeadingText(unit).orElseGet(() -> fileNameOf(unit.href()));
-        return new StructureNode(title, unit.id(), unit.segments().size(), List.of());
+        return new StructureNode(title, unit.id(), unit.segments().size(), List.of(), null, false);
     }
 
     private static java.util.Optional<String> firstHeadingText(Unit unit) {

@@ -8,12 +8,14 @@ import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.context.WindowBudgets;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 
 /**
  * Packs a unit's pending segments into chunks of at most the current-part budget of the run model's tier (design D8),
- * the one token limit a chunk, a batch and an oversized segment's pieces are held to. The window is latched again as
- * each chunk is entered (a window the person saved while the run went); it sizes the calls, not the chunks, so the
- * packing stands. Used from the job thread only.
+ * the one token limit a chunk, a batch and an oversized segment's pieces are held to. A chunk also ends where a
+ * chapter ends, so no batch, which never leaves its chunk, holds two chapters (design D10). The window is latched
+ * again as each chunk is entered (a window the person saved while the run went); it sizes the calls, not the chunks,
+ * so the packing stands. Used from the job thread only.
  */
 @Slf4j
 final class ChunkPlanner {
@@ -28,11 +30,17 @@ final class ChunkPlanner {
 
     private final RunWindow window;
     private final int budget;
+    private final ChapterBoundaries chapters;
     private RunSettings settings;
 
-    ChunkPlanner(final RunSettings settings, final RunWindow window, final ModelProfile.Tier tier) {
+    ChunkPlanner(
+            final RunSettings settings,
+            final RunWindow window,
+            final ModelProfile.Tier tier,
+            final ChapterBoundaries chapters) {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.window = Objects.requireNonNull(window, "window");
+        this.chapters = Objects.requireNonNull(chapters, "chapters");
         this.budget = WindowBudgets.currentPart(Objects.requireNonNull(tier, "tier"));
         log.debug("Chunk budget tier={} currentPart={}", tier, budget);
     }
@@ -109,12 +117,16 @@ final class ChunkPlanner {
 
     private Plan plan(final List<WorkItem> items) {
         final List<Segment> segments = items.stream().map(WorkItem::segment).toList();
-        final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget);
+        final List<List<Segment>> parts = chapters.split(segments);
+        final List<Chunk> chunks = parts.stream()
+                .flatMap(part -> ChunkPacker.pack(part, settings.frame().sourceLanguage(), budget).stream())
+                .toList();
         log.debug(
-                "Packed unit unitId={} budget={} window={} chunkSizes={}",
+                "Packed unit unitId={} budget={} window={} chapterParts={} chunkSizes={}",
                 segments.getFirst().unit(),
                 budget,
                 settings.window(),
+                parts.size(),
                 chunks.stream().map(chunk -> chunk.segments().size()).toList());
         return new Plan(chunks, budget);
     }

@@ -58,6 +58,12 @@ class TranslatePromptGoldenTest {
     private static final String MASKED = "He opened the ⟦g0⟧old⟦g1⟧ door.";
     private static final String RESIDUE_DRAFT = "Унизу сказали, что ключ залишить ⟦g0⟧Івар⟦g1⟧, коли повернеться.";
     private static final String FILLER = "Туман лежал над рекой, и лодки стояли у берега.";
+    private static final int CHAPTER_FILLERS = 20;
+
+    // Twenty fillers are 340 tokens, over the 300 a chapter needs before it stands alone (ChapterBoundaries).
+    private static String[] chapterOfFillers() {
+        return IntStream.range(0, CHAPTER_FILLERS).mapToObj(index -> FILLER).toArray(String[]::new);
+    }
 
     private static BookBrief brief(final String source, final String target) {
         return BookBrief.defaults(source).withLanguages(source, target);
@@ -175,6 +181,7 @@ class TranslatePromptGoldenTest {
                 .isEqualTo(reask.messages().getLast().content());
     }
 
+    // Both units are short, so they make one chapter and the card names the two paragraphs before the window.
     private static Book ivarBook() {
         return book(
                 brief("ru", "uk"),
@@ -227,7 +234,7 @@ class TranslatePromptGoldenTest {
         final Book book = book(
                 brief("ru", "uk"),
                 IndexTestBooks.document(
-                        IndexTestBooks.unit("ch1", UnitRole.BODY, FILLER, FILLER),
+                        IndexTestBooks.unit("ch1", UnitRole.BODY, chapterOfFillers()),
                         IndexTestBooks.unit("ch2", UnitRole.BODY, chapterTwo)),
                 List.of(character("Глафира", "Глафіра", Gender.FEMALE)),
                 List.of());

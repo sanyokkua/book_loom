@@ -428,6 +428,11 @@ The system SHALL take a book's chapters from its body structure, a chapter being
 - **WHEN** an FB2 section holds only an epigraph of about 40 source tokens before the section that follows it
 - **THEN** it joins that next chapter
 
+#### Scenario: A very short last chapter joins the one before it
+
+- **WHEN** an EPUB's last navigation entry is an afterword of about 90 source tokens, after a chapter of 2,000
+- **THEN** the afterword belongs to that chapter, which ends with the book
+
 #### Scenario: A plain text book gets pseudo-chapters
 
 - **WHEN** a TXT book has no structure at all

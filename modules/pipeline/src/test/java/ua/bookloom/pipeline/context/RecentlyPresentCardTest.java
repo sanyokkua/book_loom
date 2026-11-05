@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.context;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.project.BookBrief;
@@ -23,19 +25,27 @@ class RecentlyPresentCardTest {
     private static final String HEADING = "[Recently present — context only; do NOT translate]";
     private static final String FILLER = "Туман лежал над рекой, и лодки стояли у берега.";
     private static final BookBrief BRIEF = FrameFixtures.brief("ru", "uk");
+    private static final int CHAPTER_PARAGRAPHS = 20;
 
     private static GlossaryEntry character(final String term, final String target, final Gender gender) {
         return GlossaryEntry.of("p1:" + term, "p1", term, target, TermType.CHARACTER, gender, false);
     }
 
-    // Chapter 1 has two paragraphs; chapter 2 has twenty, each the filler unless a name is put in it.
+    // Twenty fillers are 340 tokens, so each chapter is over the 300-token minimum and none joins another.
+    private static String[] fillers() {
+        return IntStream.range(0, CHAPTER_PARAGRAPHS).mapToObj(index -> FILLER).toArray(String[]::new);
+    }
+
+    // Chapters 1 and 3 hold fillers only; chapter 2 has twenty paragraphs, each the filler unless a name is put in it.
+    // A chapter 2 that names many falls under the minimum and joins chapter 3, which keeps its number and paragraphs.
     private static Document book(final Map<Integer, String> chapterTwo) {
-        final String[] paragraphs = IntStream.range(0, 20)
+        final String[] paragraphs = IntStream.range(0, CHAPTER_PARAGRAPHS)
                 .mapToObj(index -> chapterTwo.getOrDefault(index, FILLER))
                 .toArray(String[]::new);
         return IndexTestBooks.document(
-                IndexTestBooks.unit("ch1", UnitRole.BODY, FILLER, FILLER),
-                IndexTestBooks.unit("ch2", UnitRole.BODY, paragraphs));
+                IndexTestBooks.unit("ch1", UnitRole.BODY, fillers()),
+                IndexTestBooks.unit("ch2", UnitRole.BODY, paragraphs),
+                IndexTestBooks.unit("ch3", UnitRole.BODY, fillers()));
     }
 
     // The window starts at the given paragraph of chapter 2 (0-based): two previous pairs, then the focus.
@@ -50,7 +60,15 @@ class RecentlyPresentCardTest {
     }
 
     private static String card(final Document document, final Window window, final List<GlossaryEntry> entries) {
-        final RunFrame frame = FrameFixtures.frame(document, BRIEF, ModelProfile.defaults());
+        return card(document, IndexTestBooks.navigation(document), window, entries);
+    }
+
+    private static String card(
+            final Document document,
+            final List<StructureNode> structure,
+            final Window window,
+            final List<GlossaryEntry> entries) {
+        final RunFrame frame = FrameFixtures.frame(document, structure, BRIEF, ModelProfile.defaults());
         return RecentlyPresentCard.of(BookMap.of(entries, List.of(), BRIEF), window, frame);
     }
 
@@ -126,11 +144,8 @@ class RecentlyPresentCardTest {
     @Test
     void card_chapterStart_empty() {
         final Document document = book(Map.of(5, "Глафира вошла."));
-        final List<String> chapterOne = List.of(FILLER, FILLER);
         final Window window = new Window(
-                List.of(
-                        new WindowPair("ch1:0", chapterOne.get(0), null),
-                        new WindowPair("ch1:1", chapterOne.get(1), null)),
+                List.of(new WindowPair("ch1:18", FILLER, null), new WindowPair("ch1:19", FILLER, null)),
                 new Focus(List.of(new FocusItem("ch2:0", FILLER)), Map.of()),
                 FILLER);
 
@@ -184,5 +199,31 @@ class RecentlyPresentCardTest {
 
         assertThat(card(document, windowAt(document, 12), List.of()))
                 .isEqualTo(HEADING + "\nScene so far: Chapter 2, after paragraph 12.");
+    }
+
+    @Test
+    void card_epubContinuationFile_staysInTheChapter() {
+        // ch2a is a spine file the navigation does not list, so it continues chapter 2, where Глафира sat at 8.
+        final String[] chapterTwo = IntStream.range(0, 10)
+                .mapToObj(index -> index == 7 ? "Глафира села у окна." : FILLER)
+                .toArray(String[]::new);
+        final Document document = IndexTestBooks.document(
+                IndexTestBooks.unit("ch1", UnitRole.BODY, fillers()),
+                IndexTestBooks.unit("ch2", UnitRole.BODY, chapterTwo),
+                IndexTestBooks.unit("ch2a", UnitRole.BODY, Arrays.copyOf(fillers(), 10)));
+        final List<StructureNode> structure = List.of(
+                new StructureNode("One", "ch1", CHAPTER_PARAGRAPHS, List.of()),
+                new StructureNode("Two", "ch2", 10, List.of()),
+                new StructureNode("ch2a.xhtml", "ch2a", 10, List.of(), null, false));
+        final Window window = new Window(
+                List.of(new WindowPair("ch2a:0", FILLER, null), new WindowPair("ch2a:1", FILLER, null)),
+                new Focus(List.of(new FocusItem("ch2a:2", FILLER)), Map.of()),
+                null);
+
+        final String card = card(document, structure, window, List.of(character("Глафира", "Глафіра", Gender.FEMALE)));
+
+        assertThat(card)
+                .isEqualTo(HEADING + "\nScene so far: Chapter 2, after paragraph 10. Recently present, not in this"
+                        + " passage: Глафира → Глафіра (female).");
     }
 }

@@ -27,6 +27,7 @@ import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.FrameWording;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PairOutputRatio;
@@ -93,6 +94,7 @@ public final class RunFrames {
      * @param brief the non-null Book Brief now
      * @param document the non-null opened book
      * @param index the non-null index of the book
+     * @param chapters the non-null chapters of the book
      * @param profile the non-null profile of the model the calls go to
      * @return the stored frame, or the error {@link #build} or a store answered
      */
@@ -102,6 +104,7 @@ public final class RunFrames {
             final BookBrief brief,
             final Document document,
             final BookIndex index,
+            final ChapterBoundaries chapters,
             final ModelProfile profile) {
         Objects.requireNonNull(stores, "stores");
         Objects.requireNonNull(projectId, "projectId");
@@ -111,7 +114,12 @@ public final class RunFrames {
                 .flatMap(entries -> stores.lexicon()
                         .all(projectId)
                         .flatMap(terms -> build(
-                                brief, document, index, BookMap.of(entries, terms, brief, document.units()), profile)))
+                                brief,
+                                document,
+                                index,
+                                chapters,
+                                BookMap.of(entries, terms, brief, document.units()),
+                                profile)))
                 .flatMap(frame -> stored(stores.frames(), projectId, frame));
     }
 
@@ -132,6 +140,7 @@ public final class RunFrames {
      * @param brief the non-null Book Brief the run starts with
      * @param document the non-null opened book
      * @param index the non-null index of the book
+     * @param chapters the non-null chapters of the book
      * @param map the non-null book map at run start
      * @param profile the non-null profile of the run's model
      * @return the frame, or {@link ErrorCode#validation} when the brief has no target language, or
@@ -141,11 +150,13 @@ public final class RunFrames {
             final BookBrief brief,
             final Document document,
             final BookIndex index,
+            final ChapterBoundaries chapters,
             final BookMap map,
             final ModelProfile profile) {
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(chapters, "chapters");
         Objects.requireNonNull(map, "map");
         Objects.requireNonNull(profile, "profile");
         final String target = brief.targetLanguage();
@@ -155,7 +166,7 @@ public final class RunFrames {
                     ErrorCode.validation, "No target language", "Choose the language to translate the book into."));
         }
         try {
-            return Result.ok(frame(brief, target, document, index, map, profile));
+            return Result.ok(frame(brief, target, document, index, chapters, map, profile));
         } catch (RuntimeException cause) {
             log.error("Run frame of {} could not be built", document.id(), cause);
             return Result.err(AppError.of(
@@ -172,6 +183,7 @@ public final class RunFrames {
             final String target,
             final Document document,
             final BookIndex index,
+            final ChapterBoundaries chapters,
             final BookMap map,
             final ModelProfile profile) {
         final RuleFacts facts = RuleFacts.of(index, document, brief, map, rules);
@@ -183,6 +195,7 @@ public final class RunFrames {
                 brief,
                 BookFacts.of(document),
                 index,
+                chapters,
                 facts,
                 sheet,
                 lines,

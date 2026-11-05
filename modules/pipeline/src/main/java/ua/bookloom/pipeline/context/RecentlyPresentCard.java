@@ -20,12 +20,14 @@ import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.lexicon.TermMatch;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 
 /**
  * Block 8's recently-present card (design D10): the map characters and places named shortly before the window in the
  * same chapter but not in the window, most recent first, so a pronoun in the passage can be read against who was just
- * on stage, at no model call. Until group 12 brings the chapter rule, a chapter is the body unit the focus sits in.
- * Left out at a chapter start, where nothing of the chapter precedes the window.
+ * on stage, at no model call. The chapter is the one {@link ChapterBoundaries} finds for the focus, so a spine file the
+ * navigation does not list reads on from the chapter before it. Left out at a chapter start, where nothing of the
+ * chapter precedes the window.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -43,7 +45,10 @@ final class RecentlyPresentCard {
     private static final String ENTRY_SEPARATOR = ", ";
     private static final String LIKELY = "LIKELY_";
 
-    /** Where the window sits in its chapter. */
+    /**
+     * Where the window sits in its chapter: the focus's unit, which the narrator line is read for, the chapter's
+     * number and the chapter's story paragraphs before the window.
+     */
     private record Place(String unitId, int chapter, List<Integer> before) {}
 
     /** One candidate with the last paragraph naming it and its place on the map, for the order. */
@@ -54,7 +59,7 @@ final class RecentlyPresentCard {
      *
      * @param map the non-null book map whose characters and places the card may name
      * @param window the non-null window of the call
-     * @param frame the non-null run frame, whose index places the window and whose brief says who narrates
+     * @param frame the non-null run frame, whose chapters and index place the window and whose brief says who narrates
      * @return the card's text; empty at a chapter start or when the focus is not in the story
      */
     static String of(final BookMap map, final Window window, final RunFrame frame) {
@@ -62,7 +67,7 @@ final class RecentlyPresentCard {
         Objects.requireNonNull(window, "window");
         Objects.requireNonNull(frame, "frame");
         final BlockWords words = BlockWords.bundled();
-        final Optional<Place> place = placeOf(frame.index(), window);
+        final Optional<Place> place = placeOf(frame.index(), frame.chapters(), window);
         if (place.isEmpty()) {
             return "";
         }
@@ -89,30 +94,34 @@ final class RecentlyPresentCard {
     }
 
     // The chapter the focus sits in and the story paragraphs of it before the window's first segment.
-    private static Optional<Place> placeOf(final BookIndex index, final Window window) {
-        final OptionalInt focus = window.focus().segmentIds().isEmpty()
-                ? OptionalInt.empty()
-                : index.ordinalOf(window.focus().segmentIds().getFirst());
-        final List<Integer> story = index.story();
-        if (focus.isEmpty() || !story.contains(focus.getAsInt())) {
+    private static Optional<Place> placeOf(
+            final BookIndex index, final ChapterBoundaries chapters, final Window window) {
+        final String focusId = window.focus().segmentIds().isEmpty()
+                ? null
+                : window.focus().segmentIds().getFirst();
+        final Optional<ChapterBoundaries.Chapter> chapter =
+                focusId == null ? Optional.empty() : chapters.chapterOf(focusId);
+        final OptionalInt focus = focusId == null ? OptionalInt.empty() : index.ordinalOf(focusId);
+        if (chapter.isEmpty() || focus.isEmpty()) {
             log.debug("Recently-present card left out: the focus is not in the story");
             return Optional.empty();
         }
         final int start = windowStart(index, window, focus.getAsInt());
-        final String unitId = index.segment(focus.getAsInt()).unitId();
-        final List<Integer> before = story.stream()
-                .filter(ordinal ->
-                        ordinal < start && index.segment(ordinal).unitId().equals(unitId))
+        final List<Integer> before = chapter.get().segmentIds().stream()
+                .map(index::ordinalOf)
+                .filter(OptionalInt::isPresent)
+                .mapToInt(OptionalInt::getAsInt)
+                .filter(ordinal -> ordinal < start)
+                .boxed()
                 .toList();
         if (before.isEmpty()) {
-            log.debug("Recently-present card left out: the window starts chapter {}", unitId);
+            log.debug(
+                    "Recently-present card left out: the window starts chapter {}",
+                    chapter.get().key());
             return Optional.empty();
         }
-        final List<String> units = story.stream()
-                .map(ordinal -> index.segment(ordinal).unitId())
-                .distinct()
-                .toList();
-        return Optional.of(new Place(unitId, units.indexOf(unitId) + 1, before));
+        final String unitId = index.segment(focus.getAsInt()).unitId();
+        return Optional.of(new Place(unitId, chapter.get().number(), before));
     }
 
     // The earliest segment the window shows, previous pairs included.

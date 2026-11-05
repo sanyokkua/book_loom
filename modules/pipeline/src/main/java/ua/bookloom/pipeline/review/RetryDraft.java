@@ -53,6 +53,7 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -243,13 +244,16 @@ public final class RetryDraft {
                 .map(runFrame -> new RetryPlan(record, brief, document, segment.get(), callFrame, runFrame, target));
     }
 
-    // The frame a run would start with now, over today's glossary, recurring terms and brief, stored like a run's.
+    // The frame a run would start with now, over today's glossary, recurring terms and brief, stored like a run's; the
+    // chapters are found by the run's own rule, so the retry's card reads the same chapter as the run's did.
     private Result<RunFrame> runFrameOf(
             final String projectId,
             final BookBrief brief,
             final Document document,
             final BookIndex index,
             final ModelProfile profile) {
+        final ChapterBoundaries chapters =
+                Objects.requireNonNull(openProjects.chapters(projectId, brief), "chapters of an open book");
         return new RunFrames(templates, new BookRules(templates.languageRules()))
                 .buildStored(
                         new RunFrames.FrameStores(glossary, lexicon, frames),
@@ -257,6 +261,7 @@ public final class RetryDraft {
                         brief,
                         document,
                         index,
+                        chapters,
                         profile);
     }
 

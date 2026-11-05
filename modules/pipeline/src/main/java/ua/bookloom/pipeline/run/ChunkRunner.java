@@ -68,8 +68,11 @@ public final class ChunkRunner {
             final Document document) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.planner =
-                new ChunkPlanner(settings, window, steps.planner().profile().tier());
+        this.planner = new ChunkPlanner(
+                settings,
+                window,
+                steps.planner().profile().tier(),
+                steps.planner().frame().chapters());
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         final ChunkDrafting.Collaborators shared =

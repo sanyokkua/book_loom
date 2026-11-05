@@ -261,6 +261,7 @@ class BookInspectorServiceStructureTest {
         assertThat(nodes)
                 .extracting(StructureNode::title)
                 .containsExactly("Chapter 1", "Chapter 2", "Chapter 3", "c04.xhtml");
+        assertThat(nodes).extracting(StructureNode::listed).containsExactly(true, true, true, false);
         assertThat(sumOfTopLevelCounts(nodes)).isEqualTo(totalSegments(document));
     }
 
@@ -300,6 +301,7 @@ class BookInspectorServiceStructureTest {
 
         assertThat(nodes).extracting(StructureNode::title).containsExactly("", "Chapter 1");
         assertThat(nodes).extracting(StructureNode::segmentCount).containsExactly(1, 2);
+        assertThat(nodes).extracting(StructureNode::listed).containsExactly(false, true);
         assertThat(sumOfTopLevelCounts(nodes)).isEqualTo(3);
     }
 
@@ -334,6 +336,7 @@ class BookInspectorServiceStructureTest {
 
         assertThat(nodes).extracting(StructureNode::title).containsExactly("", "Chapter 1", "notes");
         assertThat(nodes).extracting(StructureNode::segmentCount).containsExactly(1, 5, 2);
+        assertThat(nodes).extracting(StructureNode::listed).containsExactly(false, true, true);
         assertThat(sumOfTopLevelCounts(nodes)).isEqualTo(8);
     }
 
@@ -383,6 +386,7 @@ class BookInspectorServiceStructureTest {
 
         assertThat(nodes).hasSize(1);
         assertThat(nodes.get(0).segmentCount()).isEqualTo(totalSegments(document));
+        assertThat(nodes.get(0).listed()).isFalse();
     }
 
     private static Path write(Path destination, String content) {

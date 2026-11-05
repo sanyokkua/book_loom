@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Set;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.setup.BookFacts;
 
@@ -14,7 +15,8 @@ import ua.bookloom.pipeline.setup.BookFacts;
  *
  * @param brief the Book Brief the run started with
  * @param bookFacts what the book says about itself
- * @param index the book's index, which the recently-present card reads its chapter and paragraphs from
+ * @param index the book's index, which the recently-present card reads its paragraphs from
+ * @param chapters the book's chapters, which place the card's window and end every chunk and batch
  * @param ruleFacts what the book holds that chooses the book rules
  * @param styleSheet the style sheet derived from the brief
  * @param rules the book rules of block 3, in order; copied
@@ -33,6 +35,7 @@ public record RunFrame(
         BookBrief brief,
         BookFacts bookFacts,
         BookIndex index,
+        ChapterBoundaries chapters,
         RuleFacts ruleFacts,
         StyleSheet styleSheet,
         List<RuleLine> rules,
@@ -49,6 +52,7 @@ public record RunFrame(
         Objects.requireNonNull(brief, "brief");
         Objects.requireNonNull(bookFacts, "bookFacts");
         Objects.requireNonNull(index, "index");
+        Objects.requireNonNull(chapters, "chapters");
         Objects.requireNonNull(ruleFacts, "ruleFacts");
         Objects.requireNonNull(styleSheet, "styleSheet");
         Objects.requireNonNull(examples, "examples");

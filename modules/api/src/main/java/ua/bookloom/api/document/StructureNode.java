@@ -18,13 +18,17 @@ import org.jspecify.annotations.Nullable;
  * @param firstSegment the position in {@code unitId}'s segments of the first segment this node accounts for, or
  *     {@code null} when the node stands for its unit whole; a single-unit format (Markdown, FB2) cuts its one unit into
  *     chapters this way, each node's segments running from here for {@code segmentCount}, its descendants included
+ * @param listed {@code true} if the book's own navigation names this node, {@code false} if the structure added it so
+ *     every segment is shown (an EPUB spine file no entry reaches, the text before a Markdown book's first heading or
+ *     outside an FB2 book's sections, a plain-text book's one unit); the chapter rule cuts only at listed nodes
  */
 public record StructureNode(
         String title,
         @Nullable String unitId,
         @Nullable Integer segmentCount,
         List<StructureNode> children,
-        @Nullable Integer firstSegment) {
+        @Nullable Integer firstSegment,
+        boolean listed) {
 
     /**
      * Validates the non-nullable components and defensively copies {@code children} so a caller-held mutable list
@@ -36,12 +40,22 @@ public record StructureNode(
         children = List.copyOf(children);
     }
 
-    /** A node that stands for its unit whole, or for none. */
+    /** A listed node that starts at a given segment of its unit. */
+    public StructureNode(
+            final String title,
+            final @Nullable String unitId,
+            final @Nullable Integer segmentCount,
+            final List<StructureNode> children,
+            final @Nullable Integer firstSegment) {
+        this(title, unitId, segmentCount, children, firstSegment, true);
+    }
+
+    /** A listed node that stands for its unit whole, or for none. */
     public StructureNode(
             final String title,
             final @Nullable String unitId,
             final @Nullable Integer segmentCount,
             final List<StructureNode> children) {
-        this(title, unitId, segmentCount, children, null);
+        this(title, unitId, segmentCount, children, null, true);
     }
 }

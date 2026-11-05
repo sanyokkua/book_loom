@@ -9,12 +9,14 @@ import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ReasoningControl;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
 
@@ -45,8 +47,17 @@ final class FrameFixtures {
     }
 
     static RunFrame frame(final Document document, final BookBrief brief, final ModelProfile profile) {
+        return frame(document, IndexTestBooks.navigation(document), brief, profile);
+    }
+
+    static RunFrame frame(
+            final Document document,
+            final List<StructureNode> structure,
+            final BookBrief brief,
+            final ModelProfile profile) {
+        final ChapterBoundaries chapters = ChapterBoundaries.of(document, structure, brief.sourceLanguage());
         return Objects.requireNonNull(RUN_FRAMES
-                .build(brief, document, BookIndex.of(document), emptyMap(brief), profile)
+                .build(brief, document, BookIndex.of(document), chapters, emptyMap(brief), profile)
                 .data());
     }
 

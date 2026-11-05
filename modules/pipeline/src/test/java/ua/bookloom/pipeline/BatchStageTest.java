@@ -3,6 +3,8 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.BatchDraftingJobTest.BATCH;
 import static ua.bookloom.pipeline.BatchDraftingJobTest.batchReply;
+import static ua.bookloom.pipeline.BatchDraftingJobTest.entry;
+import static ua.bookloom.pipeline.BatchDraftingJobTest.items;
 import static ua.bookloom.pipeline.BatchDraftingJobTest.numbered;
 import static ua.bookloom.pipeline.BatchedJobs.batchedJob;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
@@ -48,6 +50,8 @@ class BatchStageTest {
 
     private static final int PROFILE_SIZE = 4;
     private static final int SEGMENTS = 10;
+    private static final int SHORT_REPEATS = 7;
+    private static final int LONG_REPEATS = 14;
     private static final Pattern ITEM_ID = Pattern.compile("<s id=\"(\\d+)\">");
 
     @TempDir
@@ -148,6 +152,33 @@ class BatchStageTest {
         report(translation.run());
 
         assertThat(batchSizes(model)).first().isEqualTo(PROFILE_SIZE);
+    }
+
+    @Test
+    void batch_threeAndTwoSegmentChapters_twoBatches() {
+        // Chapter 1 is a heading and two paragraphs (321 tokens), chapter 2 a heading and one paragraph (321 tokens):
+        // the 600-token chunk alone would close after the second heading and send batches of four and one.
+        final String sentence = "The miller rose before dawn and walked to the river to watch the old wheel turn. ";
+        final String book = "# The Mill\n\n" + sentence.repeat(SHORT_REPEATS).strip() + "\n\n"
+                + sentence.repeat(SHORT_REPEATS).strip() + "\n\n# The Bridge\n\n"
+                + sentence.repeat(LONG_REPEATS).strip() + "\n";
+        final TestProject project =
+                project(TestBooks.markdown(tempDir.resolve("Book.md"), book), brief("en", "uk", QualityDial.FAST));
+        final String translated = "Мірошник встав до світанку й пішов до річки дивитися, як обертається старе колесо. ";
+        final String shortTarget = translated.repeat(SHORT_REPEATS).strip();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .withBatchSize(PROFILE_SIZE)
+                .answerTo(
+                        BATCH, batchReply(items(entry("1", "Млин"), entry("2", shortTarget), entry("3", shortTarget))))
+                .answerTo(
+                        BATCH,
+                        batchReply(items(
+                                entry("1", "Міст"),
+                                entry("2", translated.repeat(LONG_REPEATS).strip()))));
+
+        report(profiledJob(project, model, ReviewMode.UNATTENDED).run());
+
+        assertThat(batchSizes(model)).containsExactly(3, 2);
     }
 
     private static TranslationJobImpl profiledJob(

@@ -32,7 +32,8 @@ import ua.bookloom.pipeline.heal.VerbatimRule;
  * can never disagree on which segments are translated or where a chunk ends. It is the run's packing as far as it can
  * be known before a model is chosen: the run packs a chunk up to the current-part budget of its model's tier
  * ({@link WindowBudgets#currentPart}), and this packs at the tier of {@link ModelProfile#defaults()}, so a model of
- * another tier packs other chunks and the screen calls these "planned".
+ * another tier packs other chunks and the screen calls these "planned". Like the run's, a chunk ends where a chapter
+ * ends ({@link ChapterBoundaries}).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -44,17 +45,18 @@ final class UnitChunks {
      *
      * @param unit the unit to pack
      * @param brief the brief whose kept kinds and source language decide the packing
+     * @param chapters the book's chapters, where a chunk also ends
      * @return the chunks in order; empty when the unit has nothing to translate
      */
-    static List<Chunk> pack(final Unit unit, final BookBrief brief) {
+    static List<Chunk> pack(final Unit unit, final BookBrief brief, final ChapterBoundaries chapters) {
         final Set<SegmentKind> kept = brief.alsoTranslate().keptKinds();
         final List<Segment> translated = unit.segments().stream()
                 .filter(segment -> !isKeptAsSource(unit, segment, kept))
                 .toList();
-        return ChunkPacker.pack(
-                translated,
-                brief.sourceLanguage(),
-                WindowBudgets.currentPart(ModelProfile.defaults().tier()));
+        final int budget = WindowBudgets.currentPart(ModelProfile.defaults().tier());
+        return chapters.split(translated).stream()
+                .flatMap(part -> ChunkPacker.pack(part, brief.sourceLanguage(), budget).stream())
+                .toList();
     }
 
     /**
@@ -63,13 +65,17 @@ final class UnitChunks {
      * @param unit the unit to describe
      * @param brief the brief the packing follows
      * @param locators the book's segment locators
+     * @param chapters the book's chapters, where a chunk also ends
      * @return one preview per segment, in document order
      */
     static List<SegmentPreview> previews(
-            final Unit unit, final BookBrief brief, final Map<String, SegmentLocator> locators) {
+            final Unit unit,
+            final BookBrief brief,
+            final Map<String, SegmentLocator> locators,
+            final ChapterBoundaries chapters) {
         Objects.requireNonNull(locators, "locators");
         final Set<SegmentKind> kept = brief.alsoTranslate().keptKinds();
-        final List<Chunk> chunks = pack(unit, brief);
+        final List<Chunk> chunks = pack(unit, brief, chapters);
         final Map<String, Chunk> chunkOf = new HashMap<>();
         final Map<String, Integer> indexOf = new HashMap<>();
         for (int index = 0; index < chunks.size(); index++) {
@@ -126,11 +132,12 @@ final class UnitChunks {
         return unit.isAuxiliary() && kept.contains(segment.kind());
     }
 
-    static BookPlan plan(final String projectId, final Document document, final BookBrief brief) {
+    static BookPlan plan(
+            final String projectId, final Document document, final BookBrief brief, final ChapterBoundaries chapters) {
         final Map<String, Integer> perUnit = new LinkedHashMap<>();
         final List<String> oversized = new ArrayList<>();
         for (final Unit unit : document.units()) {
-            final List<Chunk> chunks = UnitChunks.pack(unit, brief);
+            final List<Chunk> chunks = UnitChunks.pack(unit, brief, chapters);
             perUnit.put(unit.id(), chunks.size());
             chunks.stream()
                     .filter(Chunk::oversized)

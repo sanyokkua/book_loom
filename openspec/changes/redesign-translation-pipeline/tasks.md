@@ -1252,11 +1252,11 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Test first:** all three run red today.
   - **Done when:** the red output is pasted in the commit.
 
-- [ ] 12.2 Take chapters from the book's body structure by one rule for every format, and end a batch at a chapter boundary. The summary key and Continue depend on chapters being found the same way every time. → :pipeline
+- [x] 12.2 Take chapters from the book's body structure by one rule for every format, and end a batch at a chapter boundary. The summary key and Continue depend on chapters being found the same way every time. → :pipeline
   - **Satisfies:** "Define a chapter by one rule for every format" (translation-pipeline), "End a batch at a chapter boundary" (translation-pipeline)
   - **Depends on:** 12.1
   - **Read:** design.md D10 (Chapters); `api: document/StructureNode`, `pipeline: project/UnitChunks`, `run/BatchStage`
-  - **Change:** new `project/ChapterBoundaries` over `UnitRole.BODY` units: the chapter level is the shallowest depth with at least two nodes (a single top node is looked through); a chapter is one node with everything under it; body text before the first node joins the first chapter; an EPUB spine file with no navigation entry continues the chapter before it; a chapter under `CHAPTER_MIN_TOKENS` 300 joins the next; a book with no such level is cut into pseudo-chapters of `PSEUDO_CHAPTER_TOKENS` 3,000 at paragraph ends. Key = `unitId` plus the first segment's position. `UnitChunks` and `BatchStage` never put two chapters in one batch. `RecentlyPresentCard` (11.5) takes its chapter, position and chapter-start rule from `ChapterBoundaries` instead of the body unit.
+  - **Change:** new `project/ChapterBoundaries` over `UnitRole.BODY` units: the chapter level is the shallowest depth with at least two nodes (a single top node is looked through); a chapter is one node with everything under it; body text before the first node joins the first chapter; an EPUB spine file with no navigation entry continues the chapter before it; a chapter under `CHAPTER_MIN_TOKENS` 300 joins the next, and a short last chapter joins the one before it; a book with no such level is cut into pseudo-chapters of `PSEUDO_CHAPTER_TOKENS` 3,000 at paragraph ends. Key = `unitId` plus the first segment's position. `UnitChunks` and `BatchStage` never put two chapters in one batch. `RecentlyPresentCard` (11.5) takes its chapter, position and chapter-start rule from `ChapterBoundaries` instead of the body unit.
   - **Test first:** `ChapterBoundariesTest` on invented books: `chapters_nestedMarkdownH1H2_subHeadingStaysInside`; `chapters_nestedFb2Sections_topLevelChapters`; `chapters_epubContinuationFile_joinsPreviousChapter`; `chapters_shortChapter_joinsNext`; `chapters_plainTxt_pseudoChaptersAtParagraphEnds`; `BatchStageTest.batch_threeAndTwoSegmentChapters_twoBatches`; `RecentlyPresentCardTest.card_epubContinuationFile_staysInTheChapter`.
   - **Done when:** the tests are green.
 
@@ -1325,6 +1325,7 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Depends on:** 12.1–12.9
   - **Read:** design.md D1 "Done per group"; the group's acceptance test from 12.1; `docs/DEVELOPMENT.md#quality-gate`
   - **Change:**
+    - Note from 12.2: `mini-ru`'s two chapters hold about 170 and 190 source tokens, under `CHAPTER_MIN_TOKENS`, so the chapter rule makes it one chapter and it has no earlier-chapter summary to send; arms 6 and 5b read the summaries on `mini-en` (guarded by `MiniBookChaptersTest`) and `sequence`, unless `mini-ru` is extended first.
     - Arm 6 (reported, not gating): summaries on versus off, `mini-en` + `mini-ru` K = 3 and `sequence` (8 chapters) on `gemma4:e4b-mlx`, 26b once; meaning and referent errors and LTCR-1 graded; calls and time reported. If "on" is worse beyond noise, the owner is told and the code gate is tightened; the switch and its suggestion stay. Also reported: the share of sentences the gate drops on the mini books (falsifier above 20 %). Result in `docs/DEVELOPMENT.md#redesign-arms` and design.md D24.
     - 12.1 green; `./gradlew clean build check spotlessCheck`, tail pasted.
   - **Test first:** none new; the acceptance test from 12.1 and the whole gate are the evidence

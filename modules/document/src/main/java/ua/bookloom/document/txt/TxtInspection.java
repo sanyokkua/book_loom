@@ -58,7 +58,7 @@ public final class TxtInspection implements FormatInspection {
         return Optional.empty();
     }
 
-    /** Plain text is one unit (task 4.4): a single node carrying that unit's whole segment count. */
+    /** Plain text is one unit (task 4.4): a single unlisted node carrying that unit's whole segment count. */
     @Override
     public List<StructureNode> structure(Document document) {
         Objects.requireNonNull(document, DOCUMENT);
@@ -67,7 +67,7 @@ public final class TxtInspection implements FormatInspection {
                 "TXT structure documentId={} segmentCount={}",
                 document.id(),
                 unit.segments().size());
-        return List.of(new StructureNode("", unit.id(), unit.segments().size(), List.of()));
+        return List.of(new StructureNode("", unit.id(), unit.segments().size(), List.of(), null, false));
     }
 
     /**

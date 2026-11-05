@@ -221,7 +221,8 @@ public final class ProjectServiceImpl implements ProjectService {
             if (document == null) {
                 return Result.err(ProjectErrors.unknownProject(projectId));
             }
-            return findProject(projectId).map(project -> UnitChunks.plan(projectId, document, project.brief()));
+            return findProject(projectId)
+                    .map(project -> UnitChunks.plan(projectId, document, project.brief(), chaptersOf(project)));
         } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("plan the book", cause));
         }
@@ -245,7 +246,8 @@ public final class ProjectServiceImpl implements ProjectService {
                 return Result.err(ProjectErrors.unknownUnit(unitId));
             }
             return findProject(projectId)
-                    .map(project -> UnitChunks.previews(unit, project.brief(), SegmentLocators.of(document)));
+                    .map(project -> UnitChunks.previews(
+                            unit, project.brief(), SegmentLocators.of(document), chaptersOf(project)));
         } catch (Exception cause) {
             return Result.err(ProjectErrors.internalError("list the segments", cause));
         }
@@ -343,7 +345,7 @@ public final class ProjectServiceImpl implements ProjectService {
         final BookIndex index = buildIndex(id, document);
         final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
                 .orElse(null);
-        openProjects.put(id, document, index);
+        openProjects.put(id, document, index, profile.structure());
         log.info(
                 "book imported path={} format={} units={} segments={} project={}",
                 source,
@@ -364,6 +366,11 @@ public final class ProjectServiceImpl implements ProjectService {
                 index.distinctWords(),
                 index.buildMillis());
         return index;
+    }
+
+    // Found by the run's own rule, so the planned chunks end where the run's will.
+    private ChapterBoundaries chaptersOf(final Project project) {
+        return Objects.requireNonNull(openProjects.chapters(project.id(), project.brief()), "chapters of an open book");
     }
 
     private Result<Project> findProject(final String projectId) {

@@ -455,9 +455,13 @@ task edits the delta requirement and this file's line; the result is written int
 - **Chapters (`project/ChapterBoundaries`, new, group 12).** From `StructureNode` over `UnitRole.BODY` units: the
   chapter level is the shallowest depth with at least two nodes (a single top node is looked through); a chapter is one
   node with all descendants; body text before the first node joins the first chapter; an EPUB spine file with no
-  navigation entry continues the chapter before it; a chapter under `CHAPTER_MIN_TOKENS` (300) joins the next; a book
-  with no such level is cut into pseudo-chapters of `PSEUDO_CHAPTER_TOKENS` (3,000) at paragraph ends. Key = `unitId`
-  plus the first segment's position. `project/UnitChunks` ends a batch at a chapter boundary.
+  navigation entry continues the chapter before it; a chapter under `CHAPTER_MIN_TOKENS` (300) joins the next, and a
+  short last chapter joins the one before it; a book with no such level is cut into pseudo-chapters of
+  `PSEUDO_CHAPTER_TOKENS` (3,000) at paragraph ends, never right after a heading. Key = `unitId` plus the first
+  segment's position. Only nodes the book's navigation lists cut (`StructureNode.listed`; the structure's own fill-in
+  nodes — an unlisted spine file, the text before the first heading, a plain-text unit — do not). The run's chunks
+  (`run/ChunkPlanner`) and the planned ones (`project/UnitChunks`) end at a chapter boundary, so no batch holds two
+  chapters. `mini-ru` (about 170 and 190 tokens per chapter) is one chapter under this rule; `mini-en` is two.
 - **Call.** `memory/SummaryModelCall` grows into `memory/ChapterSummaryCall`: `PromptName.CHAPTER_SUMMARY`,
   `CallKind.CHAPTER_SUMMARY` (replaces `SUMMARY`), `chapter-summary.{system,user}.prompt` rewritten from `summary.*`,
   ANALYSIS frame; the finished chapter's source in, 2–3 sentences in the target language out, with the chapter's map
@@ -479,7 +483,8 @@ task edits the delta requirement and this file's line; the result is written int
 - **Card (group 11, D8).** `context/RecentlyPresentCard` (code, every dial, no model call): up to `CARD_ENTRIES` (5) entries seen in the last
   `CARD_PARAGRAPHS` (12) paragraphs of the current chapter before the window and absent from it, most recent first, plus
   the narrator line for a first-person chapter. Replaces `RollingSummaryKeeper`'s code who-is-who. Until group 12's
-  chapter rule (`ChapterBoundaries`), the card's chapter is the body unit the focus sits in, the rolling summary's own reach.
+  chapter rule (`ChapterBoundaries`), the card's chapter was the body unit the focus sits in; since 12.2 it is the
+  chapter `ChapterBoundaries` finds for the focus, numbered by it.
 - **Switch.** `BookBrief.chapterSummaries` (D6); off means no call and no summaries in block 8; the same at every dial.
 - **Visible.** The Translating screen lists each summary as a row; `ui: state/LogKind.SUMMARY` (tag `sum`) now means a
   chapter summary was kept, and group 13 adds `PROOFREAD` (tag `proof`), so the activity log's seven kinds become

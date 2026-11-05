@@ -121,8 +121,10 @@ class LiveTextEventsTest {
                 .containsExactly(3, 2, 1);
     }
 
+    // The book has no navigation, so its 264 paragraphs of 129 tokens are cut into pseudo-chapters of 23 paragraphs,
+    // each closing its last chunk early: 69 chunks of up to four paragraphs, :160 in the 42nd.
     @Test
-    void run_decisionInChunkFortyOneOfSixtySix_carriesSectionSevenOfElevenAndChunkFortyOneOfSixtySix() {
+    void run_decisionInChunkFortyTwoOfSixtyNine_carriesSectionSevenOfElevenAndChunkFortyTwoOfSixtyNine() {
         final List<String> paragraphs = IntStream.range(0, 264)
                 .mapToObj(index -> "Line " + index + ". " + FILLER)
                 .toList();
@@ -135,7 +137,7 @@ class LiveTextEventsTest {
 
         assertThat(decided(events, "ch07.xhtml:160").progress())
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::chunk, JobProgress::chunks)
-                .containsExactly(7, 11, 41, 66);
+                .containsExactly(7, 11, 42, 69);
     }
 
     // A repair is its own call, and both belong to the segment before its decision.

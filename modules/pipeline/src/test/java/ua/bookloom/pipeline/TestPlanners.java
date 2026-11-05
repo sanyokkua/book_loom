@@ -21,6 +21,7 @@ import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.context.Window;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** The planner of a run's translate-family calls, built as a run builds it, for tests of the draft step alone. */
@@ -76,6 +77,8 @@ public final class TestPlanners {
                                 brief,
                                 document,
                                 BookIndex.of(document),
+                                ChapterBoundaries.of(
+                                        document, IndexTestBooks.navigation(document), brief.sourceLanguage()),
                                 BookMap.of(List.of(), List.of(), brief),
                                 profile)
                         .data(),

@@ -28,6 +28,8 @@ import ua.bookloom.pipeline.context.RunFrame;
 import ua.bookloom.pipeline.context.RunFrames;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.index.BookIndex;
+import ua.bookloom.pipeline.index.IndexTestBooks;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
@@ -97,6 +99,8 @@ record EvalBook(List<Segment> chunk, AcceptedTargets accepted, TranslatePlanner 
                                 brief,
                                 document,
                                 BookIndex.of(document),
+                                ChapterBoundaries.of(
+                                        document, IndexTestBooks.navigation(document), brief.sourceLanguage()),
                                 BookMap.of(entries, terms, brief, document.units()),
                                 profile)
                         .data(),
