@@ -16,7 +16,7 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.ExpectedTokens;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -83,7 +83,7 @@ public final class SelfHealCalls {
         return Tokens.inOrder(Objects.requireNonNull(maskedSource, "maskedSource"))
                         .isEmpty()
                 ? ""
-                : DraftPromptBuilder.expectedTokenSequence(maskedSource);
+                : ExpectedTokens.sequence(maskedSource);
     }
 
     /**

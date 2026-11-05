@@ -219,8 +219,8 @@ public final class WorkList {
     }
 
     /**
-     * Returns every segment of an item's unit, decided ones included, in document order — the segments a draft's
-     * preceding targets are taken from.
+     * Returns every segment of an item's unit, decided ones included, in document order — the segments the memory
+     * reads a segment's neighbours from.
      *
      * @param item the non-null item whose unit is asked for
      * @return never null; holds the item's own segment

@@ -19,9 +19,9 @@ import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.AcceptedTargets;
 import ua.bookloom.pipeline.context.BookMap;
-import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.Focus;
 import ua.bookloom.pipeline.context.FocusItem;
 import ua.bookloom.pipeline.context.KindExtra;
@@ -34,10 +34,10 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TmLookup;
 
 /**
- * The prompts of one chunk, built the one way a run builds them: the context each draft is shown, the batch that
- * fits the window, the requests of a draft, its format re-ask and its repair, and the inputs of the chunk's reviewer.
+ * The prompts of one chunk, built the one way a run builds them: the window and map each draft is shown, the batch
+ * that fits the window, the requests of a draft, its format re-ask and its repair, and the inputs of the chunk's reviewer.
  * Every translate-family request is planned by the run's context builder over the window the book's reading order
- * gives and the book map as it stands. The job takes its chunk's context, its batches and its loop
+ * gives and the book map as it stands. The job takes its chunk's inputs, its batches and its loop
  * settings from here, and the prompt evals build their requests through the same methods, so what an eval measures is
  * what a run sends — a hand-made context is how an eval drifts from the app.
  *
@@ -49,19 +49,19 @@ import ua.bookloom.pipeline.memory.TmLookup;
 @Slf4j
 public final class PromptRequests {
 
-    private final ChunkContext context;
+    private final ChunkInputs inputs;
     private final RunSettings settings;
     private final SegmentTranslator translator;
     private final BatchDrafter drafter;
     private final TranslatePlanner planner;
 
     private PromptRequests(
-            final ChunkContext context,
+            final ChunkInputs inputs,
             final RunSettings settings,
             final SegmentTranslator translator,
             final BatchDrafter drafter,
             final TranslatePlanner planner) {
-        this.context = context;
+        this.inputs = inputs;
         this.settings = settings;
         this.translator = translator;
         this.drafter = drafter;
@@ -125,13 +125,13 @@ public final class PromptRequests {
         Objects.requireNonNull(translator, "translator");
         Objects.requireNonNull(drafter, "drafter");
         Objects.requireNonNull(planner, "planner");
-        return ChunkContext.read(glossary, lexicon, settings, chunk, documentGate)
+        return ChunkInputs.read(glossary, lexicon, settings, chunk, documentGate)
                 .map(read -> new PromptRequests(read, settings, translator.gatedBy(read.gate()), drafter, planner));
     }
 
-    /** The chunk's context, which the job reads its masks, gate and glossary from. */
-    ChunkContext context() {
-        return context;
+    /** The chunk's inputs, which the job reads its masks, gate and glossary from. */
+    ChunkInputs inputs() {
+        return inputs;
     }
 
     /** The run's draft step, gated through this chunk's protected spans. */
@@ -144,7 +144,7 @@ public final class PromptRequests {
      * a batch of this chunk may have established a rendering a later draft must keep.
      */
     public BookMap map() {
-        final BookMap map = planner.map(context.glossary(), context.lexicon().entries(settings.projectId()));
+        final BookMap map = planner.map(inputs.glossary(), inputs.lexicon().entries(settings.projectId()));
         log.debug(
                 "Book map entries={} terms={} glossed={}",
                 map.entries().size(),
@@ -155,26 +155,12 @@ public final class PromptRequests {
 
     /** The segment's text with its protected spans hidden, as the model is shown it. */
     public ProtectedMask mask(final Segment segment) {
-        return context.mask(segment);
+        return inputs.mask(segment);
     }
 
     /** The gate that puts a candidate's protected spans back, then checks the document's own markup. */
     public GateFunction gate() {
-        return context.gate();
-    }
-
-    /**
-     * Assembles what the old assembler gives one draft besides its source; a run reads only the memory's lines of it.
-     * The rolling summary no longer reaches a draft: the recently-present card says who is who (design D10).
-     *
-     * @param segment the segment about to be drafted
-     * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
-     * @param memory what the translation memory offers the segment
-     * @return the draft's context and the items it was built from
-     */
-    public ContextPackage contextFor(
-            final Segment segment, final List<String> earlierMaskedTargets, final TmLookup memory) {
-        return context.contextFor(segment, earlierMaskedTargets, memory, null);
+        return inputs.gate();
     }
 
     /**
@@ -196,10 +182,12 @@ public final class PromptRequests {
                 Map.of());
         final Map<String, ProtectedMask> masks = new LinkedHashMap<>();
         slots.forEach(slot -> masks.put(slot.segment().id(), slot.mask()));
+        // The builder never drops a memory line, so each slot's are cut to the dynamic allowance here, from the first.
+        final int allowance = ChunkBudget.dynamicAllowance(settings.frame(), settings.window());
         final List<String> memory = slots.stream()
-                .flatMap(slot ->
-                        contextFor(slot.segment(), List.of(), slot.memory()).draftContext().memoryLines().stream())
+                .flatMap(slot -> TokenEstimator.leadingWithin(slot.memory().promptLines(), allowance).stream())
                 .toList();
+        log.debug("Translate context slots={} memoryLines={} allowance={}", slots.size(), memory.size(), allowance);
         return planner.window(focus, accepted)
                 .map(window -> new TranslateContext(window, map(), memory, masks, keyTerms));
     }
@@ -302,7 +290,7 @@ public final class PromptRequests {
 
     private Result<Optional<PreparedBatch>> prepared(final List<BatchSlot> slots, final AcceptedTargets accepted) {
         final List<String> keyTerms = drafter.keyTermAsks().isAsking()
-                ? context.keyTermsIn(slots.stream().map(BatchSlot::segment).toList())
+                ? inputs.keyTermsIn(slots.stream().map(BatchSlot::segment).toList())
                 : List.of();
         final Result<TranslateContext> read = translateContext(slots, accepted, keyTerms);
         final TranslateContext shown = read.data();
@@ -334,12 +322,12 @@ public final class PromptRequests {
                         settings.dial(),
                         settings.frame(),
                         settings.names(),
-                        context.terms(),
-                        context.termPairs(),
-                        context.characterLines(),
-                        context.reviewerSheets())
-                .withPinnedTargets(context.pinnedTargets())
-                .withNames(context.names());
+                        inputs.terms(),
+                        inputs.termPairs(),
+                        inputs.characterLines(),
+                        inputs.reviewerSheets())
+                .withPinnedTargets(inputs.pinnedTargets())
+                .withNames(inputs.names());
     }
 
     private static List<BatchItem> itemsOf(final List<BatchSlot> shown) {

@@ -19,7 +19,6 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * The silent loss of a name from the gemma4:e4b run on the earth-gravity fixture: a paragraph with no token came back
@@ -87,7 +86,7 @@ class InventedTokenRecoveryTest {
                 ProtectedSpans.gate(Map.of(segment.id(), mask), GateFunction.of(documents, BookFormat.EPUB));
         final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         gate, (kind, segmentId, request) -> model.chat(request), BookFormat.EPUB, "uk", "en")
-                .translate(segment, DraftContext.empty(), mask);
+                .translate(segment, null, mask);
         return DraftStepFixtures.drafted(result);
     }
 

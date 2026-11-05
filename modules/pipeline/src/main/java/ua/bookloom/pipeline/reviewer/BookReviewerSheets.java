@@ -8,7 +8,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.context.InjectedCharacters;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -59,8 +60,8 @@ public record BookReviewerSheets(
                 .toList();
         final ReviewerCall.Terms terms =
                 new ReviewerCall.Terms(linesOf(rendered, false), usualRenderings(texts), linesOf(rendered, true));
-        final List<String> characters = InjectedCharacters.within(
-                InjectedCharacters.selectIn(withRenderedTerms(texts, named), glossary, analysisLanguage),
+        final List<String> characters = TokenEstimator.leadingWithin(
+                CharacterSheet.selectIn(withRenderedTerms(texts, named), glossary, analysisLanguage),
                 characterAllowance);
         log.debug(
                 "Reviewer sheet for pairs={} named={} glossary={} suggested={} usual={} characters={}",

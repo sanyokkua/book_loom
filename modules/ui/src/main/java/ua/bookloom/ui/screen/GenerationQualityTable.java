@@ -68,10 +68,6 @@ final class GenerationQualityTable {
     private static List<Row> rows(final Messages messages) {
         return List.of(
                 new Row(
-                        "preceding",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_PRECEDING,
-                        profile -> Integer.toString(profile.precedingTargets())),
-                new Row(
                         "repair",
                         MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR,
                         profile -> messages.get(

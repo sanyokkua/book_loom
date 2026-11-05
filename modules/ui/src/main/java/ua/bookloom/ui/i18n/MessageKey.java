@@ -1200,8 +1200,6 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_SUB("settings.generation.quality.sub"),
     /** Line under the quality table: the dial means the same for every model. */
     SETTINGS_GENERATION_QUALITY_SAME("settings.generation.quality.same"),
-    /** Row of the quality table: earlier translated segments sent with a draft. */
-    SETTINGS_GENERATION_QUALITY_PRECEDING("settings.generation.quality.preceding"),
     /** Row of the quality table: what a segment that fails a check is given. */
     SETTINGS_GENERATION_QUALITY_REPAIR("settings.generation.quality.repair"),
     /** Cell of the repair row: one repair call. */

@@ -31,14 +31,32 @@ final class BatchedJobs {
     /** A job that drafts in batches that start at {@code firstBatchSize} items. */
     static TranslationJobImpl batchedJob(
             final TestProject project, final ChatModel model, final RunRequest request, final int firstBatchSize) {
+        return batchedJob(project, model, request, firstBatchSize, new PromptTemplates());
+    }
+
+    /** A job that drafts in batches from the production first size with the templates an eval's variants built. */
+    static TranslationJobImpl batchedJob(
+            final TestProject project,
+            final ChatModel model,
+            final RunRequest request,
+            final PromptTemplates templates) {
+        return batchedJob(project, model, request, BatchDrafter.DEFAULT_INITIAL_SIZE, templates);
+    }
+
+    private static TranslationJobImpl batchedJob(
+            final TestProject project,
+            final ChatModel model,
+            final RunRequest request,
+            final int firstBatchSize,
+            final PromptTemplates templates) {
         return new TranslationJobImpl(
                 request,
-                new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
+                new JobTools(project.documents(), model, new ObjectMapper(), templates),
                 project.stores(),
                 new RunChecks(
                         TranslationJobTestSupport.qualityLoop(),
                         TranslationJobTestSupport.SPLITTER,
-                        ConsistencyPassFixture.over(project),
+                        ConsistencyPassFixture.over(project, templates),
                         WordValidator.none()),
                 new RunPacing(
                         Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL, RunTicks.DAEMON, firstBatchSize),

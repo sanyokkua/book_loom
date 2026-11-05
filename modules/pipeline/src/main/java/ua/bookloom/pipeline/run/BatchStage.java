@@ -46,7 +46,7 @@ final class BatchStage {
     private final BatchDrafter drafter;
     private final RunSettings settings;
     private final MemoryReuse memory;
-    private final PrecedingTargets preceding;
+    private final KeptTargets kept;
     private final RoutedCalls calls;
     private final ExampleChoice examples;
     private final ModelCalls notes;
@@ -57,7 +57,7 @@ final class BatchStage {
      * @param drafter the non-null drafter, whose size adapts over the run
      * @param settings the non-null run settings
      * @param memory the non-null memory side of the run, whose lookups decide which segments a reuse takes
-     * @param preceding the non-null reader of the chapter's earlier targets
+     * @param kept the non-null reader of the targets the earlier segments kept
      * @param calls the non-null router a batch call goes through
      * @param examples the non-null examples the run's calls show, which an answer must not copy
      * @param notes the non-null seam a batch item's adoption or fallback is noted on, so the shown call says it
@@ -66,14 +66,14 @@ final class BatchStage {
             final BatchDrafter drafter,
             final RunSettings settings,
             final MemoryReuse memory,
-            final PrecedingTargets preceding,
+            final KeptTargets kept,
             final RoutedCalls calls,
             final ExampleChoice examples,
             final ModelCalls notes) {
         this.drafter = Objects.requireNonNull(drafter, "drafter");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.memory = Objects.requireNonNull(memory, "memory");
-        this.preceding = Objects.requireNonNull(preceding, "preceding");
+        this.kept = Objects.requireNonNull(kept, "kept");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.examples = Objects.requireNonNull(examples, "examples");
         this.notes = Objects.requireNonNull(notes, "notes");
@@ -158,12 +158,12 @@ final class BatchStage {
         if (current.batches().hasTried(segment.id()) || Unit.AUXILIARY_ID.equals(segment.unit())) {
             return null;
         }
-        final ProtectedMask mask = current.context().mask(segment);
+        final ProtectedMask mask = current.inputs().mask(segment);
         if (VerbatimCheck.check(
                         segment,
                         mask.maskedText(),
                         mask.presentLocked(),
-                        current.context().gate())
+                        current.inputs().gate())
                 != null) {
             return null;
         }
@@ -171,7 +171,7 @@ final class BatchStage {
                 segment,
                 current.work().unitSegments(item),
                 mask,
-                current.context().gate(),
+                current.inputs().gate(),
                 current.loop());
         return offer.reused() == null ? new Candidate(item, mask, offer) : null;
     }
@@ -279,7 +279,7 @@ final class BatchStage {
         return isAdopted;
     }
 
-    // Stored as sent (masked), like the preceding targets; the review desk converts them for display. A re-asked id
+    // Stored as sent (masked), like the previous pairs; the review desk converts them for display. A re-asked id
     // keeps the first call's sections, since that is the call whose reply the batch adopted from.
     @Nullable
     private static List<PromptSection> sentSections(
@@ -370,7 +370,7 @@ final class BatchStage {
                 outcome.terms().size(),
                 verified.size(),
                 candidate.segment().id());
-        current.context().lexicon().record(settings.projectId(), verified);
+        current.inputs().lexicon().record(settings.projectId(), verified);
     }
 
     // The batch is fitted to the model tier's budgets: what helps least goes first, and only then batch items, the rest
@@ -380,6 +380,6 @@ final class BatchStage {
                 .map(candidate -> new PromptRequests.BatchSlot(
                         candidate.segment(), candidate.mask(), candidate.offer().lookup()))
                 .toList();
-        return current.requests().batch(slots, preceding.accepted(current.drafts()));
+        return current.requests().batch(slots, kept.accepted(current.drafts()));
     }
 }

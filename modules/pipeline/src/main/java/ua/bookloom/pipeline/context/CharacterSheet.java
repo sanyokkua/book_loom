@@ -17,16 +17,14 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.checks.CharacterNames;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.glossary.NameClusters;
 import ua.bookloom.pipeline.glossary.PronounGender;
 
 /**
- * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
- * names whose gender the person set or the book proved, so a model never has to guess a pronoun or a verb ending from a
- * name alone; a character whose gender only a rule or the model's guess gave is listed by its name alone. A character
+ * The character gender sheet the reviewer, the check against the neighbours and the name checks read: one
+ * {@code name — gender} line for each glossary character the text names whose gender the person set or the book
+ * proved, so a model never has to guess a pronoun or a verb ending from a name alone; a character whose gender only a rule or the model's guess gave is listed by its name alone. A character
  * the segment does not name is never listed, so the sheet stays as short as the scene. A short name that is part of a
  * character's full name ("Danny" of "Danny Vosk", by {@link NameClusters}), and has no gender of its own or the same
  * one, shares that character's line (15i.N2), and the pronouns the scene shows are listed only when they agree with the
@@ -35,7 +33,7 @@ import ua.bookloom.pipeline.glossary.PronounGender;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class InjectedCharacters {
+public final class CharacterSheet {
 
     /**
      * The sheet for some segments.
@@ -98,20 +96,6 @@ public final class InjectedCharacters {
         return select(segments, glossary, null);
     }
 
-    /**
-     * The sheet for some segments without a line for a gender that was only suggested, for a prompt that asks a model to
-     * change a text and so must not hand it a guess.
-     *
-     * @param segments the segments whose text decides who is present
-     * @param glossary every glossary entry as the run read it
-     * @return the {@link #select(List, List)} lines whose gender is the person's or verified; never null
-     */
-    public static List<String> selectConfirmed(final List<Segment> segments, final List<GlossaryEntry> glossary) {
-        return select(segments, glossary).stream()
-                .filter(line -> !CharacterNames.isLikely(line))
-                .toList();
-    }
-
     // The line a present name is listed on: its cluster's full name when that has a gender and this name has none or
     // the same one, else the name itself; nothing when the line's gender is not known.
     private static Optional<GlossaryEntry> headOf(final GlossaryEntry entry, final NameClusters clusters) {
@@ -159,26 +143,6 @@ public final class InjectedCharacters {
     private static boolean isStated(final GlossaryEntry entry) {
         final Origin origin = entry.genderOrigin();
         return origin != null && origin.isEnforced();
-    }
-
-    /**
-     * The lines that fit a token allowance, from the first, so a long cast is cut at the end and never half-shown.
-     *
-     * @param lines the sheet's lines
-     * @param allowance the tokens the sheet may take, from {@link ContextBudget#characterAllowance(int)}
-     * @return the leading lines whose estimated size stays within {@code allowance}
-     */
-    public static List<String> within(final List<String> lines, final int allowance) {
-        final List<String> kept = new ArrayList<>();
-        int tokens = 0;
-        for (final String line : lines) {
-            tokens += TokenEstimator.estimate(line, null);
-            if (tokens > allowance) {
-                break;
-            }
-            kept.add(line);
-        }
-        return kept;
     }
 
     // The lemma or any form the book writes names the character (a window naming only Велемира names Велемир).

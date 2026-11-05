@@ -13,7 +13,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.checks.CharacterNames;
-import ua.bookloom.pipeline.context.InjectedCharacters;
+import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.memory.TermFacts;
 
 /**
@@ -59,7 +59,7 @@ class NamesPassKnowledgeTest extends NamesPassTestBase {
                 .containsExactly(Gender.FEMALE, Origin.RULE, tamsin);
         assertThat(tamsin.disagreesWithRule(Gender.FEMALE, Origin.RULE)).isTrue();
         assertThat(model.kinds()).contains(CallKind.NAME_KNOWLEDGE);
-        final List<String> sheet = InjectedCharacters.selectIn(List.of(SCENE), fixture.glossaryNow(), "en");
+        final List<String> sheet = CharacterSheet.selectIn(List.of(SCENE), fixture.glossaryNow(), "en");
         assertThat(sheet).containsExactlyInAnyOrder("Ivar", "Tamsin");
         assertThat(CharacterNames.of(sheet, List.of("Ivar → Івар", "Tamsin → Тамсін")))
                 .isEmpty();

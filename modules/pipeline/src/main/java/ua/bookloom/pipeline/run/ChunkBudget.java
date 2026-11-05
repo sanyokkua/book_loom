@@ -42,7 +42,7 @@ public final class ChunkBudget {
      *
      * @param frame the non-null call frame
      * @param window the usable window in tokens
-     * @return the allowance for glossary, memory, preceding text and summary
+     * @return the allowance the reviewer's character sheet takes its share of
      */
     public static int dynamicAllowance(final CallFrame frame, final int window) {
         return ContextBudget.dynamicAllowance(window, staticPrefix(frame));

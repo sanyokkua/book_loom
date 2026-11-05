@@ -88,52 +88,43 @@ class PromptSectionsTest {
     }
 
     @Test
-    void userSectionsOf_singleDraft_listsCharactersBeforeMemoryAndTheTextLast() {
+    void userSectionsOf_revision_listsFactsBeforeTheSourceTokensAndTheTextLast() {
         final Map<String, String> values = new HashMap<>();
-        values.put("source", "English");
-        values.put("target", "Ukrainian");
+        values.put("source", "⟦g0⟧He⟦g1⟧ left.");
         values.put("tokens", "⟦g0⟧ ⟦g1⟧");
-        values.put("text", "⟦g0⟧He⟦g1⟧ left.");
-        values.put("summary", "A boy summons a djinni.");
-        values.put("characters", "Edwin — male");
-        values.put("memoryHint", "He left. → Він пішов.");
-        values.put("precedingTargets", "");
+        values.put("text", "⟦g0⟧Він⟦g1⟧ пішов.");
+        values.put("resolvedFacts", "He is a djinni.");
 
-        final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.DRAFT, values);
+        final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.REVISION, values);
 
         assertThat(sections)
                 .extracting(PromptSection::slot, PromptSection::heading)
                 .containsExactly(
-                        tuple("summary", "[Book so far — context only; do NOT re-translate it]"),
-                        tuple("characters", "[Characters in this text — keep their gender and agreement]"),
-                        tuple("memoryHint", "[Earlier decisions — keep consistent]"),
-                        tuple("tokens", "[Immutable tokens for this text]"),
-                        tuple("text", "<Text>"));
+                        tuple("resolvedFacts", "[Resolved facts revealed later in the book]"),
+                        tuple("source", "<Source>"),
+                        tuple("tokens", "[Immutable tokens]"),
+                        tuple("text", "<Translation>"));
     }
 
     // The token line is a sentence with the slot inside it; the section holds the line as the model read it.
     @Test
     void userSectionsOf_slotInsideAHeadedLine_holdsTheWholeRenderedLine() {
-        final Map<String, String> values =
-                Map.of("source", "English", "target", "Ukrainian", "tokens", "⟦g0⟧", "text", "⟦g0⟧Hi");
+        final Map<String, String> values = Map.of("source", "⟦g0⟧Hi", "tokens", "⟦g0⟧", "text", "⟦g0⟧Привіт");
 
-        assertThat(TEMPLATES.userSectionsOf(PromptName.DRAFT, values))
+        assertThat(TEMPLATES.userSectionsOf(PromptName.REVISION, values))
                 .filteredOn(section -> section.slot().equals("tokens"))
                 .singleElement()
                 .extracting(PromptSection::lines)
-                .isEqualTo(List.of(
-                        "Copy this exact ordered sequence unchanged: ⟦g0⟧",
-                        "Do not add, reorder, split, translate, or omit these tokens."));
+                .isEqualTo(List.of("Copy this exact ordered sequence unchanged: ⟦g0⟧"));
     }
 
     @Test
     void userSectionsOf_undeclaredSlot_isRejectedAsRenderingIs() {
-        final Map<String, String> values =
-                new HashMap<>(Map.of("source", "English", "target", "Ukrainian", "text", "Hi"));
+        final Map<String, String> values = new HashMap<>(Map.of("source", "English", "text", "Hi"));
         values.put("nope", "x");
 
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> TEMPLATES.userSectionsOf(PromptName.DRAFT, values))
+                .isThrownBy(() -> TEMPLATES.userSectionsOf(PromptName.REVISION, values))
                 .withMessageContaining("nope");
     }
 }

@@ -14,13 +14,13 @@ record Current(
         List<WorkItem> items,
         ChunkDrafts drafts,
         ChunkBatches batches,
-        ChunkContext context,
+        ChunkInputs inputs,
         PromptRequests requests,
         LoopSettings loop,
         SegmentTranslator translator,
         int budget) {
 
-    /** The chunk's start: nothing drafted or batched yet, the context, loop and draft step the prompts hold. */
+    /** The chunk's start: nothing drafted or batched yet, the inputs, loop and draft step the prompts hold. */
     static Current of(
             final WorkList work, final List<WorkItem> items, final PromptRequests requests, final int budget) {
         return new Current(
@@ -28,7 +28,7 @@ record Current(
                 items,
                 new ChunkDrafts(),
                 new ChunkBatches(),
-                requests.context(),
+                requests.inputs(),
                 requests,
                 requests.loopSettings()
                         .withUnitRole(work.roleOfSection(items.getFirst().section())),

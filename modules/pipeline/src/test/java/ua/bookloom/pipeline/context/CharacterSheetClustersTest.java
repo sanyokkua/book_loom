@@ -12,9 +12,9 @@ import ua.bookloom.api.project.TermType;
 /**
  * The character sheet folds a short name into a full name by the same clusters the glossary uses (15i.N2): a one-word
  * name that is the first or last word of exactly one full character name. The sheet's other behaviour is covered by
- * {@code ContextPackageCharactersTest}.
+ * {@link CharacterSheetTest}.
  */
-class InjectedCharactersClustersTest {
+class CharacterSheetClustersTest {
 
     // IF the first full name holding the word took the short name, THEN two brothers' surname would be folded into
     // whichever came first in the glossary, and the sheet would name a brother who is not in the scene.
@@ -89,7 +89,7 @@ class InjectedCharactersClustersTest {
 
     private static List<String> select(final String text, final List<GlossaryEntry> glossary) {
         final Segment segment = ContextFixtures.segment(0, text);
-        return InjectedCharacters.select(List.of(segment), glossary);
+        return CharacterSheet.select(List.of(segment), glossary);
     }
 
     private static GlossaryEntry character(final String term, final Gender gender) {

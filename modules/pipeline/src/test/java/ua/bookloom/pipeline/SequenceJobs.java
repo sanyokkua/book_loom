@@ -129,7 +129,7 @@ public final class SequenceJobs {
 
     /** The consistency pass over the prepared book's own stores (the eval's stage runners reach it from here). */
     public static ConsistencyPass consistencyPass(final Prepared prepared) {
-        return ConsistencyPassFixture.over(prepared.project);
+        return ConsistencyPassFixture.over(prepared.project, EvalVariants.templates());
     }
 
     /** The production export service over the prepared book's own stores, as the Export screen reaches it. */
@@ -158,7 +158,7 @@ public final class SequenceJobs {
 
     /** The review desk's retry over the prepared book's own stores. */
     public static RetryDraft retryDraft(final Prepared prepared) {
-        return ConsistencyPassFixture.retryDraft(prepared.project);
+        return ConsistencyPassFixture.retryDraft(prepared.project, EvalVariants.templates());
     }
 
     /**
@@ -231,8 +231,9 @@ public final class SequenceJobs {
             final ReviewMode mode,
             @Nullable final Integer window,
             final JobListener listener) {
-        final TranslationJobImpl job =
-                BatchedJobs.batchedJob(prepared.project, model, new RunRequest(prepared.project.id(), mode, window));
+        // The eval's variants reach the run frame and the context builder through the job's templates.
+        final TranslationJobImpl job = BatchedJobs.batchedJob(
+                prepared.project, model, new RunRequest(prepared.project.id(), mode, window), EvalVariants.templates());
         job.subscribe(listener);
         return job.run();
     }

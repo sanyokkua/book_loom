@@ -38,7 +38,7 @@ public final class EvalVariants {
                 .map(String::strip)
                 .filter(text -> !text.isEmpty())
                 .toList()) {
-            variants = with(part);
+            variants = with(variants, part);
         }
         log.debug("Eval variants asked={} bound={}", asked, variants);
         return variants;
@@ -51,7 +51,9 @@ public final class EvalVariants {
                 .getInstance(PromptTemplates.class);
     }
 
-    private static PromptVariants with(final String field) {
+    // The combining shape stays for arm 5c's second field; today one field leaves `current` unread.
+    @SuppressWarnings("UnusedVariable")
+    private static PromptVariants with(final PromptVariants current, final String field) {
         final String[] pair = field.split("=", 2);
         if (pair.length != 2) {
             throw new IllegalArgumentException(ENV + " wants field=VALUE, not " + field);

@@ -38,7 +38,8 @@ class ChatRequestsReasoningTest {
 
     @Test
     void build_noLimit_statesNoSource() {
-        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false).source())
+        assertThat(ChatRequests.build(PromptName.TRANSLATE, MESSAGES, null, false)
+                        .source())
                 .isNull();
     }
 }

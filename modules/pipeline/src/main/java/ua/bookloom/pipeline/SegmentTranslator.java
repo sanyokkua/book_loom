@@ -28,9 +28,6 @@ import ua.bookloom.pipeline.heal.RepairReplies;
 import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.ChatRequests;
-import ua.bookloom.pipeline.prompt.DraftContext;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftStep;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
@@ -56,19 +53,6 @@ public final class SegmentTranslator {
     private final DraftPrompts prompts;
     private final DraftRequests requests;
     private final DraftReplies replies;
-
-    /**
-     * Creates a draft step over the old single-draft prompts, which only their tests still build (task 11.8 removes
-     * it); a run and a review retry use the planner's constructor.
-     */
-    public SegmentTranslator(
-            final GateFunction gate,
-            final ModelCalls calls,
-            final BookFormat format,
-            final DraftPromptBuilder promptBuilder,
-            final DraftReplyParser replyParser) {
-        this(gate, calls, format, new SingleDraftPrompts(promptBuilder, replyParser));
-    }
 
     /**
      * Creates the draft step of one run, whose drafts are planned by the run's context builder as batches of one.
@@ -99,7 +83,29 @@ public final class SegmentTranslator {
     }
 
     Result<DraftOutcome> translate(final Segment segment) {
-        return translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()));
+        return translate(segment, null, ProtectedMask.none(segment.masked()));
+    }
+
+    /**
+     * A draft carrying the person's note, as a review retry sends it, optionally at the draft call's lower temperature.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the window, map and memory the draft is shown, or null to plan it with none
+     * @param mask the non-null spans hidden in the segment
+     * @param extraInstruction the non-null note shown in the draft; empty for none
+     * @param lowerTemperature whether the draft call asks for its lower temperature
+     * @return the draft's outcome, or the error a call answered
+     */
+    Result<DraftOutcome> translate(
+            final Segment segment,
+            @Nullable final TranslateContext context,
+            final ProtectedMask mask,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
+        Objects.requireNonNull(segment, SEGMENT);
+        Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
+        return draft(DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature));
     }
 
     /**
@@ -126,37 +132,6 @@ public final class SegmentTranslator {
      */
     public SegmentTranslator gatedBy(final GateFunction chunkGate) {
         return new SegmentTranslator(Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, prompts);
-    }
-
-    /** The run's draft of one segment: no extra instruction, at the draft's own temperature. */
-    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
-        return translate(segment, context, mask, "", false);
-    }
-
-    /**
-     * Drafts one segment showing the model its mask's text — the segment's masked text with its protected spans
-     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text. A review retry
-     * passes the person's note, which the draft and its repairs carry, and may ask the draft call alone for its lower
-     * temperature.
-     *
-     * @param segment the non-null segment to draft
-     * @param context the non-null context the draft is shown
-     * @param mask the non-null spans hidden in the segment; its text carries every token the reply must return
-     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
-     * @param lowerTemperature whether the draft call asks for its lower temperature
-     * @return the draft's outcome, or the error a call answered, which the run routes
-     */
-    public Result<DraftOutcome> translate(
-            final Segment segment,
-            final DraftContext context,
-            final ProtectedMask mask,
-            final String extraInstruction,
-            final boolean lowerTemperature) {
-        Objects.requireNonNull(segment, SEGMENT);
-        Objects.requireNonNull(context, CONTEXT);
-        Objects.requireNonNull(mask, "mask");
-        Objects.requireNonNull(extraInstruction, "extraInstruction");
-        return draft(DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature));
     }
 
     private Result<DraftOutcome> draft(final DraftAttempt attempt) {
@@ -343,12 +318,12 @@ public final class SegmentTranslator {
         };
     }
 
-    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without preceding
-    // targets or memory hits to leave it room, keeping the note and temperature the draft was asked with.
+    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without previous
+    // pairs, next source or memory lines to leave it room, keeping the note and temperature the draft was asked with.
     private Result<DraftOutcome> unsplittable(final DraftAttempt attempt, final int estimate, final int budgetTokens) {
         log.warn(
                 "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
-                        + " preceding targets or memory hits",
+                        + " previous pairs, next source or memory lines",
                 attempt.segment().id(),
                 estimate,
                 budgetTokens);

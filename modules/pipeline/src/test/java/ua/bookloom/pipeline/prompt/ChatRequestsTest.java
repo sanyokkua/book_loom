@@ -21,18 +21,18 @@ class ChatRequestsTest {
     @Test
     void build_draft_carriesContextWindowOutputAllowanceAndDraftSettings() {
         final ChatRequest request =
-                ChatRequests.build(PromptName.DRAFT, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false);
+                ChatRequests.build(PromptName.TRANSLATE, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false);
 
         assertThat(request.contextWindow()).isEqualTo(16_384);
         assertThat(request.expectedOutputTokens()).isEqualTo(15);
         assertThat(request.temperature()).isEqualTo(0.2);
         assertThat(request.reasoningEnabled()).isEqualTo(ReasoningLevel.OFF);
-        assertThat(request.responseFormat()).extracting(ResponseFormat::name).isEqualTo("draft");
+        assertThat(request.responseFormat()).extracting(ResponseFormat::name).isEqualTo(BatchSchema.FORMAT_NAME);
     }
 
     @Test
     void build_lowerTemperature_carriesTheLowerOne() {
-        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(16, 64), true)
+        assertThat(ChatRequests.build(PromptName.TRANSLATE, MESSAGES, new OutputLimit(16, 64), true)
                         .temperature())
                 .isEqualTo(0.1);
     }
@@ -40,17 +40,15 @@ class ChatRequestsTest {
     @Test
     void build_structuralRepairOfThatDraft_statesTheDraftsAllowance() {
         assertThat(ChatRequests.build(
-                                PromptName.STRUCTURAL_REPAIR,
-                                MESSAGES,
-                                OutputLimit.forSource(SOURCE, "en", "uk"),
-                                false)
+                                PromptName.FORMAT_REASK, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false)
                         .expectedOutputTokens())
                 .isEqualTo(15);
     }
 
     @Test
     void build_limit_carriesExpectedAndCap() {
-        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(414, 661), false);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.TRANSLATE, MESSAGES, new OutputLimit(414, 661), false);
 
         assertThat(request.expectedOutputTokens()).isEqualTo(414);
         assertThat(request.maxOutputTokens()).isEqualTo(661);
@@ -58,7 +56,7 @@ class ChatRequestsTest {
 
     @Test
     void build_noLimit_carriesNeither() {
-        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false);
+        final ChatRequest request = ChatRequests.build(PromptName.TRANSLATE, MESSAGES, null, false);
 
         assertThat(request.expectedOutputTokens()).isNull();
         assertThat(request.maxOutputTokens()).isNull();

@@ -1,4 +1,4 @@
-/** The quality dial's parameter table: how many repairs, preceding targets and segments per chunk each dial setting means. */
+/** The quality dial's parameter table: the repair mode, reviewer passes, backward revision and summary each dial setting means. */
 @NullMarked
 package ua.bookloom.pipeline.dial;
 

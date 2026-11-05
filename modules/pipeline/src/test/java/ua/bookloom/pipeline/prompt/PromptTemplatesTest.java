@@ -28,22 +28,22 @@ class PromptTemplatesTest {
     // A typo would otherwise send the model a literal {{sumary}}.
     @Test
     void load_undeclaredSlot_namesFileAndSlot() {
-        final var loader = bundledExcept("draft.user.prompt", "{{sumary}} {{source}} {{target}} {{tokens}} {{text}}");
+        final var loader = bundledExcept("revision.user.prompt", "{{sumary}} {{source}} {{text}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("draft.user.prompt")
+                .hasMessageContaining("revision.user.prompt")
                 .hasMessageContaining("sumary");
     }
 
     // A file that forgot a required slot would silently drop the segment text.
     @Test
     void load_requiredSlotMissing_namesFileAndSlot() {
-        final var loader = bundledExcept("draft.user.prompt", "{{source}} {{target}} {{tokens}}");
+        final var loader = bundledExcept("revision.user.prompt", "{{source}} {{tokens}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("draft.user.prompt")
+                .hasMessageContaining("revision.user.prompt")
                 .hasMessageContaining("text");
     }
 
@@ -54,50 +54,25 @@ class PromptTemplatesTest {
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("draft.system.prompt");
+                .hasMessageContaining("translate.system.prompt");
     }
 
     @Test
-    void renderUser_emptyOptionalSummary_removesWholeBlock() {
+    void renderUser_emptyOptionalFacts_removesWholeBlock() {
         final String user = new PromptTemplates()
                 .renderUser(
-                        PromptName.DRAFT,
-                        Map.of(
-                                "source",
-                                "English (en)",
-                                "target",
-                                "Ukrainian (uk)",
-                                "tokens",
-                                "(none)",
-                                "text",
-                                "Hi.",
-                                "summary",
-                                ""));
+                        PromptName.REVISION, Map.of("source", "A", "text", "Hi.", "tokens", "", "resolvedFacts", ""));
 
-        assertThat(user)
-                .startsWith("Translate from English (en) to Ukrainian (uk).\n")
-                .doesNotContain("Book so far");
+        assertThat(user).startsWith("<Source>\nA\n</Source>").doesNotContain("Resolved facts", "{{");
     }
 
     @Test
-    void renderUser_filledOptionalSummary_keepsBodyWithoutMarkers() {
+    void renderUser_filledOptionalFacts_keepsBodyWithoutMarkers() {
         final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DRAFT,
-                        Map.of(
-                                "source",
-                                "A",
-                                "target",
-                                "B",
-                                "tokens",
-                                "(none)",
-                                "text",
-                                "Hi.",
-                                "summary",
-                                "It began."));
+                .renderUser(PromptName.REVISION, Map.of("source", "A", "text", "Hi.", "resolvedFacts", "It began."));
 
         assertThat(user)
-                .startsWith("[Book so far — context only; do NOT re-translate it]\nIt began.\n\nTranslate from A to B.")
+                .startsWith("[Resolved facts revealed later in the book]\nIt began.\n\n<Source>")
                 .doesNotContain("{{");
     }
 
@@ -105,18 +80,16 @@ class PromptTemplatesTest {
     @Test
     void renderUser_valueLooksLikeSlotOrReplacement_isInsertedLiterally() {
         final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DRAFT,
-                        Map.of("source", "A", "target", "B", "tokens", "(none)", "text", "{{source}} $1 \\"));
+                .renderUser(PromptName.REVISION, Map.of("source", "A", "text", "{{source}} $1 \\"));
 
-        assertThat(user).contains("<Text>\n{{source}} $1 \\\n</Text>");
+        assertThat(user).contains("<Translation>\n{{source}} $1 \\\n</Translation>");
     }
 
     @Test
     void renderUser_undeclaredValue_isRejected() {
         final var templates = new PromptTemplates();
         final var values = Map.of("nope", "x");
-        assertThatThrownBy(() -> templates.renderUser(PromptName.STRUCTURAL_REPAIR, values))
+        assertThatThrownBy(() -> templates.renderUser(PromptName.FORMAT_REASK, values))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("nope");
     }
@@ -125,7 +98,7 @@ class PromptTemplatesTest {
     void renderSystem_callWithoutSystemTemplate_isRejected() {
         final var templates = new PromptTemplates();
         final Map<String, String> values = Map.of();
-        assertThatThrownBy(() -> templates.renderSystem(PromptName.STRUCTURAL_REPAIR, values))
+        assertThatThrownBy(() -> templates.renderSystem(PromptName.FORMAT_REASK, values))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -225,7 +198,7 @@ class PromptTemplatesTest {
                 StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
                 ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
 
-        assertThat(templates.renderSystem(PromptName.DRAFT, frame))
+        assertThat(templates.renderSystem(PromptName.REVIEWER, frame))
                 .contains(
                         "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
                 .doesNotContain("«…» for speech", "russisms");
@@ -242,7 +215,7 @@ class PromptTemplatesTest {
                 StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
                 ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
 
-        assertThat(templates.renderSystem(PromptName.DRAFT, frame))
+        assertThat(templates.renderSystem(PromptName.REVIEWER, frame))
                 .contains(
                         "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
                 .doesNotContain("«…» for speech", "russisms");

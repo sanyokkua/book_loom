@@ -39,7 +39,7 @@ class QualityLoopReplyRetryTest {
                 .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив старі двері.\"}]}"));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, RepairMode.ONE, 0, false, false),
+                new DialParameters(RepairMode.ONE, 0, false, false),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

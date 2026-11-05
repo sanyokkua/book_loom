@@ -21,7 +21,6 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** A segment flagged at once names the reason its call failed in its WARN line, never the segment's text. */
 class DraftOutcomesLogTest {
@@ -53,10 +52,7 @@ class DraftOutcomesLogTest {
                 null);
 
         DraftOutcomes.flaggedAtOnce(
-                DraftAttempt.of(segment(), DraftContext.empty(), ProtectedMask.none(SOURCE)),
-                error,
-                "model-error",
-                "[]");
+                DraftAttempt.of(segment(), null, ProtectedMask.none(SOURCE), "", false), error, "model-error", "[]");
 
         assertThat(warnings())
                 .filteredOn(line -> line.startsWith("Flagged segment id=ch01.xhtml:3"))

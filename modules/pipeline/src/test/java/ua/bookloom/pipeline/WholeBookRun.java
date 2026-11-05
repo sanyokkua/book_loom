@@ -321,7 +321,7 @@ final class WholeBookRun {
     }
 
     /** The window's previous pairs section of a draft prompt, up to the blank line that ends it, or empty. */
-    static String precedingTargets(final String body) {
+    static String previousPairs(final String body) {
         final String message = userMessage(body);
         final int start = message.indexOf("[Previous pairs");
         final int end = start < 0 ? -1 : message.indexOf("\n\n", start);

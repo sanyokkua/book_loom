@@ -1,6 +1,6 @@
 /**
- * Assembles what one draft is shown besides its source — the book so far, the glossary terms in play, earlier
- * decisions and the neighbouring translated text — and records it as a snapshot a retry can rebuild exactly.
+ * The one context builder (design D8): the run's fixed frame, the window of previous pairs, focus and next source, the
+ * map lines the window names, the recently-present card and the budgets that fit them into one model's window.
  */
 @NullMarked
 package ua.bookloom.pipeline.context;

@@ -7,13 +7,6 @@ package ua.bookloom.api.pipeline;
 public interface DialProfile {
 
     /**
-     * How many accepted preceding targets accompany a draft.
-     *
-     * @return the count, zero or more
-     */
-    int precedingTargets();
-
-    /**
      * What a segment whose draft fails a check is given.
      *
      * @return the dial's repair mode

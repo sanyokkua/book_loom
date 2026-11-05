@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -14,11 +13,9 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.context.ContextInputs;
-import ua.bookloom.pipeline.context.ContextPackage;
-import ua.bookloom.pipeline.context.ContextPackageAssembler;
-import ua.bookloom.pipeline.context.InjectedCharacters;
 import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -26,20 +23,20 @@ import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
-import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.reviewer.BookReviewerSheets;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
- * One chunk's glossary as it stood when the chunk started, and what each of its segments is shown from it: the spans
- * hidden behind tokens, the gate that puts them back, and the context package. Reading the glossary once per chunk is
- * what makes an edit saved during a pause inside the chunk wait for the next chunk.
+ * One chunk's glossary as it stood when the chunk started, and what the run reads of it besides the context builder:
+ * the spans each segment hides behind tokens, the gate that puts them back, and the names, terms and sheets the checks
+ * and the reviewer hold the chunk to. Reading the glossary once per chunk is what makes an edit saved during a pause
+ * inside the chunk wait for the next chunk.
  *
  * <p>Used from the job thread only.
  */
 @Slf4j
-final class ChunkContext {
+final class ChunkInputs {
 
     private final Chunk chunk;
     private final RunSettings settings;
@@ -49,7 +46,7 @@ final class ChunkContext {
     private final Lexicon lexicon;
     private final LexiconFilter lexiconFilter;
 
-    private ChunkContext(
+    private ChunkInputs(
             final Chunk chunk,
             final RunSettings settings,
             final List<GlossaryEntry> glossary,
@@ -74,9 +71,9 @@ final class ChunkContext {
      * @param settings the non-null run settings, whose languages and foreign-passage policy decide what is hidden
      * @param chunk the non-null chunk about to be drafted
      * @param documentGate the non-null gate that checks the document's own markup once the spans are back
-     * @return the chunk's context, or the glossary's error
+     * @return the chunk's inputs, or the glossary's error
      */
-    static Result<ChunkContext> read(
+    static Result<ChunkInputs> read(
             final GlossaryRepository glossary,
             final LexiconRepository lexicon,
             final RunSettings settings,
@@ -90,7 +87,7 @@ final class ChunkContext {
                     ProtectedSpans.gate(masks, documentGate),
                     settings.frame().targetLanguage(),
                     settings.frame().typography());
-            return new ChunkContext(chunk, settings, entries, masks, gate, new Lexicon(lexicon));
+            return new ChunkInputs(chunk, settings, entries, masks, gate, new Lexicon(lexicon));
         });
     }
 
@@ -163,8 +160,8 @@ final class ChunkContext {
      * The character gender sheet of the chunk, cut to the sheet's own share of the dynamic allowance, for the reviewer.
      */
     List<String> characterLines() {
-        final List<String> lines = InjectedCharacters.within(
-                InjectedCharacters.select(
+        final List<String> lines = TokenEstimator.leadingWithin(
+                CharacterSheet.select(
                         chunk.segments(), glossary, settings.frame().analysisLanguage()),
                 ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window())));
         log.debug("Reviewer character sheet lines={}", lines.size());
@@ -184,34 +181,6 @@ final class ChunkContext {
 
     private static List<String> textsOf(final List<Segment> segments) {
         return Tokens.visibleTexts(segments);
-    }
-
-    /**
-     * Assembles what one draft is shown besides its source, and the snapshot of it its record stores — a memory
-     * reuse's too, though no draft is made for it.
-     *
-     * @param segment the segment about to be drafted
-     * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
-     * @param memory what the translation memory offers the segment
-     * @param summary the latest rolling summary's text, or {@code null} while there is none
-     * @return the draft's context and its snapshot
-     */
-    ContextPackage contextFor(
-            final Segment segment,
-            final List<String> earlierMaskedTargets,
-            final TmLookup memory,
-            @Nullable final String summary) {
-        final ContextInputs inputs = new ContextInputs(
-                settings.frame().styleSheet(),
-                summary,
-                settings.dial().precedingTargets(),
-                glossary,
-                earlierMaskedTargets,
-                ChunkBudget.dynamicAllowance(settings.frame(), settings.window()),
-                lexicon.entries(settings.projectId()),
-                lexiconFilter,
-                settings.frame().analysisLanguage());
-        return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 
     private static ProtectedMask maskOf(

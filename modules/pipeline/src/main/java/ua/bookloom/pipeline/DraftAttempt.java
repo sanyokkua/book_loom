@@ -10,7 +10,6 @@ import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.context.Window;
 import ua.bookloom.pipeline.heal.PieceRedraft;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
@@ -19,8 +18,6 @@ import ua.bookloom.pipeline.qa.LockedRendering;
  * allowance follow it rather than the segment's own text.
  *
  * @param segment the segment being drafted
- * @param context the old single-segment context only the old prompt's tests still draft with; empty for a run's draft
- *     and a review retry's
  * @param translate the window, map and memory a run's or a review retry's draft is planned with, which its re-ask and
  *     repair share; null for a draft step given no window, which is planned with none
  * @param shownText the text the model translates; carries the tokens the reply must return
@@ -32,7 +29,6 @@ import ua.bookloom.pipeline.qa.LockedRendering;
  */
 record DraftAttempt(
         Segment segment,
-        DraftContext context,
         @Nullable TranslateContext translate,
         String shownText,
         String extraInstruction,
@@ -42,31 +38,9 @@ record DraftAttempt(
 
     DraftAttempt {
         Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
         Objects.requireNonNull(shownText, "shownText");
         Objects.requireNonNull(extraInstruction, "extraInstruction");
         lockedRenderings = List.copyOf(Objects.requireNonNull(lockedRenderings, "lockedRenderings"));
-    }
-
-    static DraftAttempt of(final Segment segment, final DraftContext context, final ProtectedMask mask) {
-        return of(segment, context, mask, "", false);
-    }
-
-    static DraftAttempt of(
-            final Segment segment,
-            final DraftContext context,
-            final ProtectedMask mask,
-            final String extraInstruction,
-            final boolean lowerTemperature) {
-        return new DraftAttempt(
-                segment,
-                context,
-                null,
-                mask.maskedText(),
-                extraInstruction,
-                null,
-                mask.presentLocked(),
-                lowerTemperature);
     }
 
     static DraftAttempt of(
@@ -76,14 +50,7 @@ record DraftAttempt(
             final String extraInstruction,
             final boolean lowerTemperature) {
         return new DraftAttempt(
-                segment,
-                DraftContext.empty(),
-                translate,
-                mask.maskedText(),
-                extraInstruction,
-                null,
-                mask.presentLocked(),
-                lowerTemperature);
+                segment, translate, mask.maskedText(), extraInstruction, null, mask.presentLocked(), lowerTemperature);
     }
 
     /**
@@ -98,7 +65,7 @@ record DraftAttempt(
                         translate.memory(),
                         Map.of(piece.id(), ProtectedMask.none(piece.masked())),
                         List.of());
-        return new DraftAttempt(piece, context, pieceContext, piece.masked(), note, null, List.of(), lower);
+        return new DraftAttempt(piece, pieceContext, piece.masked(), note, null, List.of(), lower);
     }
 
     /**
@@ -115,19 +82,11 @@ record DraftAttempt(
                         translate.masks(),
                         List.of());
         return new DraftAttempt(
-                segment,
-                new DraftContext(
-                        List.of(), context.summary(), context.glossaryLines(), List.of(), context.suggestedLines()),
-                bare,
-                shownText,
-                extraInstruction,
-                pieceRedraft,
-                lockedRenderings,
-                lowerTemperature);
+                segment, bare, shownText, extraInstruction, pieceRedraft, lockedRenderings, lowerTemperature);
     }
 
     DraftAttempt redraftedBy(final PieceRedraft redraft) {
         return new DraftAttempt(
-                segment, context, translate, shownText, extraInstruction, redraft, lockedRenderings, lowerTemperature);
+                segment, translate, shownText, extraInstruction, redraft, lockedRenderings, lowerTemperature);
     }
 }

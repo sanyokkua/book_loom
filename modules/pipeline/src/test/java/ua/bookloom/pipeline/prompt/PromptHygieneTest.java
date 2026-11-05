@@ -40,17 +40,6 @@ class PromptHygieneTest {
         assertThat(PromptHygiene.cleanText("The book so far.")).isEqualTo("The book so far.");
     }
 
-    @Test
-    void draftContext_fillerEverywhere_leavesNoSection() {
-        final DraftContext context =
-                new DraftContext(List.of("(none)", "Один.", "Один."), "(none)", List.of("-"), List.of(""), List.of());
-
-        assertThat(context.precedingTargets()).containsExactly("Один.");
-        assertThat(context.summary()).isNull();
-        assertThat(context.glossaryLines()).isEmpty();
-        assertThat(context.memoryLines()).isEmpty();
-    }
-
     private static final Path PROMPTS = Path.of("src/main/resources/ua/bookloom/pipeline/prompt");
     // A template-tag, block, JSON or finished-sentence line may be followed by anything.
     private static final Pattern SKIPPED_LINE =

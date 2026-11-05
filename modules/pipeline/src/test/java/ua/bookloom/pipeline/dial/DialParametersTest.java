@@ -11,15 +11,13 @@ import ua.bookloom.api.pipeline.RepairMode;
 class DialParametersTest {
 
     @ParameterizedTest
-    @CsvSource({"FAST,1,MARKS_ONLY,0,false,false", "BALANCED,2,ONE,1,false,false", "MAX,3,ONE,2,true,true"})
+    @CsvSource({"FAST,MARKS_ONLY,0,false,false", "BALANCED,ONE,1,false,false", "MAX,ONE,2,true,true"})
     void of_eachDial_holdsItsRow(
             final QualityDial dial,
-            final int preceding,
             final RepairMode repairs,
             final int reviewPasses,
             final boolean backward,
             final boolean summary) {
-        assertThat(DialParameters.of(dial))
-                .isEqualTo(new DialParameters(preceding, repairs, reviewPasses, backward, summary));
+        assertThat(DialParameters.of(dial)).isEqualTo(new DialParameters(repairs, reviewPasses, backward, summary));
     }
 }

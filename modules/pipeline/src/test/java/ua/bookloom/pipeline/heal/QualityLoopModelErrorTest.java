@@ -48,7 +48,7 @@ class QualityLoopModelErrorTest {
                 .answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, RepairMode.ONE, 0, false, false),
+                new DialParameters(RepairMode.ONE, 0, false, false),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -77,7 +77,7 @@ class QualityLoopModelErrorTest {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, RepairMode.ONE, 0, false, false),
+                new DialParameters(RepairMode.ONE, 0, false, false),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

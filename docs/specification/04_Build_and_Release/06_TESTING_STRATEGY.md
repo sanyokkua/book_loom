@@ -250,7 +250,7 @@ matrix rather than extrapolating these observations.
 — dialogue with a locked name, a heading, number-, symbol- and Roman-numeral-only paragraphs, a drop cap, nested
 emphasis, a footnote reference, a kept foreign run, glossary names, a long sentence, a link pair, two instruction-like
 texts that must be translated rather than obeyed, and directed fixes (echo, missing token, omission, refusal) — through
-`DraftPromptBuilder` and `DirectedFix` to a real Ollama model via the production client. It measures, before any
+`PromptRequests` and `DirectedFix` to a real Ollama model via the production client. It measures, before any
 repair: the reply parses as its schema, the token sequence is intact with every pair still around words (gate), the
 target script, and a per-case marker (a glossary rendering, a correct drop cap, a translated instruction). It writes a
 table to `modules/pipeline/build/reports/promptEval/<model>.txt` and fails below parse 95% or gate 90%. Run it with

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.BookBrief;
@@ -207,5 +209,92 @@ class WindowMapTest {
         assertThat(map.glossFirstUse()).containsExactly(Map.entry("Brightwater", "ch1:0"));
         assertThat(atFirst.glossary()).containsExactly("Brightwater → Брайтвотер (place; gloss once: bright water)");
         assertThat(afterIt.glossary()).containsExactly("Brightwater → Брайтвотер (place)");
+    }
+
+    @ParameterizedTest(name = "[{index}] {0} in «{1}» -> {2}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Mura|He flew to Kito-Mura at dawn.|false",
+                "Kito-Mura|He flew to Kito-Mura at dawn.|true",
+                "Mura|He flew to Mura at dawn.|true",
+                "Corvin|Corvin's hat blew off.|true",
+                "Corvin|Both Corvins laughed.|true",
+                "Corvin|Corvinian wine.|false",
+                "Copper Kettle|The Copper  Kettle smiled.|true",
+                "Case|He opened the case.|false",
+                "Case|Case opened the door.|true",
+                "Hale|The whale sang.|false",
+                "Майлз|Майлза не було вдома.|true",
+                "Майлз|Майлзові було байдуже.|false"
+            })
+    void inject_occurrence_followsTheOneMatcher(final String term, final String text, final boolean expected) {
+        final List<GlossaryEntry> glossary = List.of(entry(term, "x", TermType.PLACE, Gender.UNKNOWN));
+
+        final MapLines lines = select(window(List.of(), null, text), glossary, "en", "uk");
+
+        assertThat(lines.glossary()).hasSize(expected ? 1 : 0);
+    }
+
+    // A locked entry with no target has no rendering to hide behind a token, so it is listed by its name.
+    @Test
+    void inject_entriesWithNoTarget_areListedByTheirNameAndFacts() {
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Moreau", null, TermType.CHARACTER, Gender.MALE),
+                GlossaryEntry.of("quill", PROJECT, "Quill", null, TermType.CHARACTER, Gender.MALE, true));
+
+        final MapLines lines = select(window(List.of(), null, "Moreau laughed at Quill."), glossary, "en", "uk");
+
+        assertThat(lines.glossary()).containsExactly("Moreau (character, male)", "Quill (character, male)");
+        assertThat(lines.locked()).isEmpty();
+    }
+
+    @Test
+    void inject_termNextToAFootnoteMarker_isStillFound() {
+        final List<GlossaryEntry> glossary = List.of(entry("Hale", "Гейл", TermType.CHARACTER, Gender.MALE));
+
+        final MapLines lines = select(window(List.of(), null, "Hale⟦g0⟧1⟦g1⟧ opened the door."), glossary, "en", "uk");
+
+        assertThat(lines.glossary()).containsExactly("Hale → Гейл (character, male)");
+    }
+
+    // A function word of the source and a one-word rendering in an oblique case are no renderings to keep.
+    @ParameterizedTest(name = "[{index}] {0} -> {1}")
+    @CsvSource({
+        "like,подобатися,false",
+        "just,просто,false",
+        "program,програму,false",
+        "program,програма,true",
+        "console,консоль,true",
+        "programs,програми,true"
+    })
+    void inject_recurringTerm_leavesOutFunctionWordsAndDeclinedForms(
+            final String term, final String rendering, final boolean shown) {
+        final List<LexiconEntry> terms = List.of(LexiconEntry.of(PROJECT, term).seen(rendering));
+
+        final MapLines lines = select(
+                window(List.of(), null, "The " + term + " was like that, just so."),
+                List.of(),
+                terms,
+                "en",
+                "uk",
+                List.of());
+
+        assertThat(lines.lexicon()).hasSize(shown ? 1 : 0);
+    }
+
+    @Test
+    void lexiconLines_textsAndFormsOfTheTerm_listTheRenderingsTheGlossaryDoesNotHold() {
+        final List<LexiconEntry> terms = List.of(
+                new LexiconEntry(PROJECT, "warden", List.of(), "наглядач", null, null, null, List.of("wardens")),
+                LexiconEntry.of(PROJECT, "lantern").withChosen("ліхтар"),
+                LexiconEntry.of(PROJECT, "black").withChosen("чорний"),
+                LexiconEntry.of(PROJECT, "bell"));
+        final List<GlossaryEntry> glossary = List.of(entry("lantern", "Ліхтар", TermType.TERM, Gender.UNKNOWN));
+
+        final List<String> lines = WindowMap.lexiconLines(
+                List.of("Two wardens lit a lantern.", "A jet-black bell rang."), terms, glossary, LexiconFilter.NONE);
+
+        assertThat(lines).containsExactly("warden → наглядач");
     }
 }

@@ -10,7 +10,6 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * Turns the target a batch reply gave for one item into the segment's draft: its whitespace restored and its protected
@@ -33,9 +32,9 @@ final class BatchAdoption {
         }
         if (gate.restore(segment, restoredWhitespace) instanceof GateResult.Restored restored) {
             log.debug("Adopted a batch target segmentId={} targetLength={}", segment.id(), maskedTarget.length());
-            return Optional.ofNullable(DraftOutcomes.drafted(
-                            DraftAttempt.of(segment, DraftContext.empty(), mask), restoredWhitespace, restored)
-                    .data());
+            return Optional.ofNullable(
+                    DraftOutcomes.drafted(DraftAttempt.of(segment, null, mask, "", false), restoredWhitespace, restored)
+                            .data());
         }
         log.debug("A batch target was refused by the gate segmentId={}; it is drafted on its own", segment.id());
         return Optional.empty();

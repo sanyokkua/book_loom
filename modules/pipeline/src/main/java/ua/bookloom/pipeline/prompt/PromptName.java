@@ -35,34 +35,6 @@ import ua.bookloom.pipeline.setup.BriefSynthesisSchema;
 public enum PromptName {
 
     /**
-     * The old single draft, one {@code {"target"}} object, which only the old prompt's tests still build (task 11.8
-     * removes it); a run and a review retry draft through {@link #TRANSLATE}.
-     */
-    DRAFT(
-            "draft",
-            CallKind.DRAFT,
-            "draft",
-            DraftSchema.SCHEMA,
-            new Temperatures(0.2, 0.1),
-            new Slots(
-                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
-                    Set.of(EXAMPLES, LANGUAGE_RULES, "tokenRules", "noTokenRules")),
-            new Slots(
-                    Set.of(SOURCE, "target", "text"),
-                    Set.of(
-                            TOKENS,
-                            SUMMARY_SLOT,
-                            "glossaryTerms",
-                            "lockedNames",
-                            "suggestedTerms",
-                            "memoryHint",
-                            "lexiconTerms",
-                            CHARACTERS,
-                            "precedingTargets",
-                            "followingTarget",
-                            "extraInstruction"))),
-
-    /**
      * The one translate prompt of a run (design D8): every draft, a single one a batch of one item. Its files hold
      * blocks 1 and 12; the context builder plans the rest. The answer schema keeps the batch draft's name, so a setting
      * a model refused for it stays refused.
@@ -82,16 +54,6 @@ public enum PromptName {
             CallKind.STRUCTURAL_REPAIR,
             BatchSchema.FORMAT_NAME,
             BatchSchema.SCHEMA,
-            new Temperatures(0.2, null),
-            null,
-            new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),
-
-    /** A review retry's correction of a reply that is not the {@code {"target"}} object, until task 11.7. */
-    STRUCTURAL_REPAIR(
-            "structural-repair",
-            CallKind.STRUCTURAL_REPAIR,
-            "structural-repair",
-            DraftSchema.SCHEMA,
             new Temperatures(0.2, null),
             null,
             new Slots(Set.of("rejectedReply", "diagnostic"), Set.of())),

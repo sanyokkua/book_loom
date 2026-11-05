@@ -211,10 +211,10 @@ public final class ChunkRunner {
                 segmentId,
                 new RoutedCalls.StepName("review", items.getFirst().segment().id()),
                 () -> steps.loop()
-                        .start(outcomes, current.loop(), current.context().gate(), steps.calls()),
+                        .start(outcomes, current.loop(), current.inputs().gate(), steps.calls()),
                 error -> steps.loop()
                         .startWithoutReviewer(
-                                outcomes, current.loop(), current.context().gate(), steps.calls(), error));
+                                outcomes, current.loop(), current.inputs().gate(), steps.calls(), error));
         return switch (decider) {
             case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
             case Step.Done<ChunkDecider>(final ChunkDecider started) -> deciding.decideEach(current, items, started);

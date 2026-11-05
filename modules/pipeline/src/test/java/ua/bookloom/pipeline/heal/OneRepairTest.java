@@ -42,7 +42,7 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 class OneRepairTest {
 
     // A dial with the one repair and no reviewer, so every request a test sees is the draft's repair.
-    private static final DialParameters ONE_NO_REVIEWER = new DialParameters(2, RepairMode.ONE, 0, false, false);
+    private static final DialParameters ONE_NO_REVIEWER = new DialParameters(RepairMode.ONE, 0, false, false);
 
     @TempDir
     private Path tempDir;
@@ -114,7 +114,7 @@ class OneRepairTest {
                 .answer(readable(itemReply("Він відчинив старі двері, що вели в сад.")));
         final LoopSettings reviewed = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(2, RepairMode.ONE, 1, false, false),
+                new DialParameters(RepairMode.ONE, 1, false, false),
                 frame("ru"),
                 NamePolicy.TRANSLITERATE,
                 List.of());

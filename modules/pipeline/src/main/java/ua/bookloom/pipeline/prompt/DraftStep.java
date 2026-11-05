@@ -3,31 +3,24 @@ package ua.bookloom.pipeline.prompt;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
- * The three calls of a segment's draft, each one prompt of the catalogue. It is narrower than {@link PromptName} so the
- * translator's exhaustive switch over it never grows when another prompt (pre-scan, summary, revision) is added.
+ * The three calls of a segment's draft, each one call kind. It is narrower than {@link CallKind} so the
+ * translator's exhaustive switch over it never grows when another call (pre-scan, summary, revision) is added.
  */
 public enum DraftStep {
 
     /** The first translation attempt. */
-    DRAFT(PromptName.DRAFT, CallKind.DRAFT),
+    DRAFT(CallKind.DRAFT),
 
     /** The correction after a reply is not the required JSON object. */
-    STRUCTURAL_REPAIR(PromptName.STRUCTURAL_REPAIR, CallKind.STRUCTURAL_REPAIR),
+    STRUCTURAL_REPAIR(CallKind.STRUCTURAL_REPAIR),
 
     /** The one repair of a draft that kept a blocking or repair-level finding, its defects named. */
-    REPAIR(PromptName.REPAIR, CallKind.REPAIR);
+    REPAIR(CallKind.REPAIR);
 
-    private final PromptName promptName;
     private final CallKind callKind;
 
-    DraftStep(final PromptName promptName, final CallKind callKind) {
-        this.promptName = promptName;
+    DraftStep(final CallKind callKind) {
         this.callKind = callKind;
-    }
-
-    /** The catalogue prompt this step renders. */
-    public PromptName promptName() {
-        return promptName;
     }
 
     /** The kind a model call for this step is announced and routed under. */

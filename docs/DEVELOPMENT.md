@@ -1105,6 +1105,22 @@ suite (`mini-en` v2 root `febe1374fd3a…`, `mini-ru` v2 root `852efa31cc1e…`)
   character in `mini-en`) and the pilots are in `.temporary_context/arm4/void-runs/` and are not counted. `MiniReport` now writes
   every repeat's stored targets and characters (`repeats`), which these counts were read from.
 
+**Arm 5a: the rules layout of the translate frame (task 11.8).** Default: the context builder's blocks 3-5 (book rules chosen by
+the book's facts, the style sheet with the foreign-passage line, the language-rules section without the rules a book rule
+states). Alternative: the batch prompt's numbered rules, bare style sheet and whole language-rules section as they read before
+task 11.5. Translators `gemma4:e4b-mlx` (Balanced, K = 3, seeds 1000-1002) and `gemma4:26b-mlx` (once, K = 1), Ollama,
+single-flight, paired by seed (`eval-score.py diff --paired`).
+
+- *Mini books.* e4b `mini-en` 37 cases and `mini-ru` 26 graders: 0 discordant on every grader, no real effect (p = 1.0), noise
+  band 0.0175 on `mini-en` and 0 on `mini-ru`. 26b `mini-en` 34 cases and `mini-ru` 18: 0 discordant, no real effect.
+- *`sequence` (328 segments, e4b, summary lines only).* Builder against today: first-round hard-gate failures 14 against 15,
+  LTCR-1 93.2 % against 92.8 % (today -0.4, under the 1.5 threshold), flagged 3.4 % on both, fallbacks 2.8 % against 2.4 %,
+  3.27 against 3.46 s per segment (reported, not weighed).
+- *Decision rule.* The builder is kept unless token fidelity, fallbacks or first-round hard gates are worse beyond noise, or
+  LTCR-1 falls 1.5 points. None happened, so **the builder stays**; `TodayRules`, `today-rules.properties` and the
+  `rulesLayout` field of `PromptVariants` were deleted. The generic `--variants` plumbing stays for arm 5c.
+- *Runs* (`.temporary_context/eval-history/20261105-*arm5a*`).
+
 **Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
 `6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
 every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.

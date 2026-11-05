@@ -21,8 +21,8 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.ExpectedTokens;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -141,7 +141,7 @@ public final class DirectedFix {
         userValues.put("text", block);
         userValues.put("findings", renderFindings(findings));
         if (includeExpectedTokens) {
-            userValues.put("expectedTokens", DraftPromptBuilder.expectedTokenSequence(maskedSource));
+            userValues.put("expectedTokens", ExpectedTokens.sequence(maskedSource));
         }
         return userValues;
     }

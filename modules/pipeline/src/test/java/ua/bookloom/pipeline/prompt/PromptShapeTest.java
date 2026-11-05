@@ -295,8 +295,7 @@ class PromptShapeTest {
     // The draft system is sent with every segment of a book; a small model must still read its last rule.
     @Test
     void render_draftSystemWithExamples_staysWithinSevenHundredTokens() {
-        final String system = system(PromptName.DRAFT);
-
+        final String system = system(PromptName.TRANSLATE);
         assertThat(system).contains("Examples (");
         assertThat(TokenEstimator.estimate(system, "en")).isLessThanOrEqualTo(DRAFT_SYSTEM_BUDGET);
     }
@@ -304,7 +303,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"DRAFT", "REVIEWER", "SUMMARY", "SUGGEST_TARGETS"})
+            names = {"TRANSLATE", "REVIEWER", "SUMMARY", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
         assertThat(prompt(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
@@ -315,7 +314,7 @@ class PromptShapeTest {
     @Test
     void render_reviewer_addsTheReviewerChecksTheDraftDoesNotCarry() {
         assertThat(system(PromptName.REVIEWER)).contains("Check: Quotes are «…» and balanced");
-        assertThat(system(PromptName.DRAFT)).doesNotContain("Check: ");
+        assertThat(system(PromptName.TRANSLATE)).doesNotContain("Check: ");
     }
 
     @ParameterizedTest
@@ -348,8 +347,9 @@ class PromptShapeTest {
         if (PlannedPrompts.ANALYSIS.contains(name)) {
             return PlannedPrompts.filledAnalysisText(name, FRAME, MASKED, ChatRole.SYSTEM);
         }
-        final PromptName owner = name.systemSlots().isPresent() ? name : PromptName.DRAFT;
-        return TEMPLATES.renderSystem(owner, FRAME);
+        return name.systemSlots().isPresent()
+                ? TEMPLATES.renderSystem(name, FRAME)
+                : PlannedPrompts.plan(PromptName.TRANSLATE, MASKED).systemText();
     }
 
     /** The user message with every slot the template declares filled, tokens included where it lists them. */

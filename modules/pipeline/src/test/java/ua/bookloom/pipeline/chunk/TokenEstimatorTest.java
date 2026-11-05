@@ -17,6 +17,14 @@ class TokenEstimatorTest {
         assertThat(TokenEstimator.estimate("a".repeat(length), tag)).isEqualTo(expected);
     }
 
+    @Test
+    void leadingWithin_allowanceForOneLine_keepsTheFirstAndNeverHalfALine() {
+        final int oneLine = TokenEstimator.estimate("Lyra — female", null);
+
+        assertThat(TokenEstimator.leadingWithin(List.of("Lyra — female", "Hale — male"), oneLine))
+                .containsExactly("Lyra — female");
+    }
+
     @ParameterizedTest
     @CsvSource({"He opened the old door.,en,uk,15", "He opened the old door.,en,pl,11"})
     void outputAllowance_shortSource_scalesByTheBandUpperBound(

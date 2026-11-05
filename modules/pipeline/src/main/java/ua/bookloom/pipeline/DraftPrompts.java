@@ -8,8 +8,7 @@ import ua.bookloom.pipeline.prompt.DraftStep;
 
 /**
  * How a draft step's requests are made and its replies read. A run plans them through the context builder as a batch
- * of one ({@link TranslateDraftPrompts}), and so does a review retry; the old single-draft prompt
- * ({@link SingleDraftPrompts}) is left for its tests until task 11.8 removes it.
+ * of one ({@link TranslateDraftPrompts}), and so does a review retry.
  */
 interface DraftPrompts {
 

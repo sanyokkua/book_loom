@@ -13,7 +13,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateResult;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.ExpectedTokens;
 
 /**
  * The outcomes the draft step answers with, each written with its one log line, so {@link SegmentTranslator} holds
@@ -106,7 +106,7 @@ final class DraftOutcomes {
         final String segmentId = attempt.segment().id();
         final int placeholderCount = Tokens.inOrder(attempt.shownText()).size();
         log.debug("Collected expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
-        return DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
+        return ExpectedTokens.sequence(attempt.shownText());
     }
 
     static String observedTokens(final String text) {

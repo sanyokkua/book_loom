@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.chunk;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
@@ -24,6 +25,27 @@ public final class TokenEstimator {
     private static final int CAP_ALLOWANCE_DENOMINATOR = 2;
     private static final int CAP_FIXED_HEADROOM = 16;
     private static final int CAP_TOKENS_PER_PLACEHOLDER = 6;
+
+    /**
+     * The lines that fit a token allowance, from the first, so a long list is cut at the end and never half-shown.
+     *
+     * @param lines the non-null lines, most important first
+     * @param allowance the tokens the lines may take together
+     * @return never null; the leading lines whose estimated size, in the generic rate, stays within {@code allowance}
+     */
+    public static List<String> leadingWithin(final List<String> lines, final int allowance) {
+        Objects.requireNonNull(lines, "lines");
+        final List<String> kept = new ArrayList<>();
+        int tokens = 0;
+        for (final String line : lines) {
+            tokens += estimate(line, null);
+            if (tokens > allowance) {
+                break;
+            }
+            kept.add(line);
+        }
+        return kept;
+    }
 
     /**
      * Estimates the tokens of a text.

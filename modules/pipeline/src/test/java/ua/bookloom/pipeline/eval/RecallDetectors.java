@@ -21,7 +21,7 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.audit.AuditFindings;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.context.InjectedCharacters;
+import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.qa.QaEvaluator;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.qa.SoftCheckInput;
@@ -96,7 +96,7 @@ final class RecallDetectors {
                 List.of(),
                 book.narrator(),
                 pairs(glossary),
-                InjectedCharacters.select(List.of(source), glossary, book.sourceLanguage()));
+                CharacterSheet.select(List.of(source), glossary, book.sourceLanguage()));
         final QaResult result = QaEvaluator.evaluate(List.of(), input, WordValidator.none());
         final List<String> fired =
                 result.findings().stream().map(QaFinding::raisedBy).distinct().toList();

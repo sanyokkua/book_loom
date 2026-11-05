@@ -83,7 +83,7 @@ final class ChunkDeciding {
         if (record.path() == SegmentPath.TM_REUSE) {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }
-        return followUp.decided(current.work(), item, record, current.context().glossary())
+        return followUp.decided(current.work(), item, record, current.inputs().glossary())
                 .or(() -> sinks.boundaries()
                         .afterDecision(RunBoundaries.Decision.of(current.work(), item, record), progress));
     }

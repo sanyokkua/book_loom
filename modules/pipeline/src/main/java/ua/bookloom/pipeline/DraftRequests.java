@@ -15,7 +15,6 @@ import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ChatRequests;
-import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftStep;
 
 /**
@@ -44,19 +43,6 @@ public final class DraftRequests {
      */
     public ChatRequest draft(final Segment segment, final TranslateContext context, final ProtectedMask mask) {
         return build(DraftAttempt.of(segment, context, mask, "", false), DraftStep.DRAFT, "", "");
-    }
-
-    /**
-     * The request of a draft over the old single-segment context, which only the old prompt's tests still build
-     * (task 11.8 removes it).
-     *
-     * @param segment the non-null segment to draft
-     * @param context the non-null old single-segment context
-     * @param mask the non-null spans hidden in the segment
-     * @return the draft's request
-     */
-    public ChatRequest draft(final Segment segment, final DraftContext context, final ProtectedMask mask) {
-        return build(DraftAttempt.of(segment, context, mask), DraftStep.DRAFT, "", "");
     }
 
     /**

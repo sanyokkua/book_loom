@@ -155,7 +155,8 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.bodies().get(1)).contains(capField(kind) + ":3739");
     }
 
-    // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.
+    // The edit saved during the pause is the person's text, and the next chunk's draft shows it among its previous
+    // pairs.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void resume_afterTheEditOfTheFlaggedSegment_feedsItToTheNextChunkAndCompletes(final ProviderKind kind) {
@@ -164,7 +165,7 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.edited())
                 .extracting(SegmentView::status, SegmentView::userTarget)
                 .containsExactly(SegmentStatus.REVISED, WholeBookRun.EDIT);
-        assertThat(WholeBookRun.precedingTargets(run.bodies().get(4))).contains(WholeBookRun.EDIT);
+        assertThat(WholeBookRun.previousPairs(run.bodies().get(4))).contains(WholeBookRun.EDIT);
         assertThat(run.bodies()).hasSize(6);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
         assertThat(run.runState()).isEqualTo(JobState.COMPLETED);

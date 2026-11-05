@@ -20,7 +20,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 
 /** Which earlier segment a window may show with its target: only what was accepted, kept or edited by the person. */
-class PrecedingTargetsTest {
+class KeptTargetsTest {
 
     private static final String PROJECT = "p1";
     private static final String TARGET = "Він сказав, что прийде.";
@@ -28,7 +28,7 @@ class PrecedingTargetsTest {
     private final Injector injector = Guice.createInjector(new InMemoryPersistenceModule());
     private final SegmentRepository segments = injector.getInstance(SegmentRepository.class);
     private final PendingCommit pending = new PendingCommit(injector.getInstance(CheckpointPort.class), PROJECT);
-    private final PrecedingTargets preceding = new PrecedingTargets(segments, PROJECT, pending);
+    private final KeptTargets kept = new KeptTargets(segments, PROJECT, pending);
 
     private static SegmentRecord record(final SegmentStatus status, final SegmentPath path) {
         return new SegmentRecord(
@@ -64,8 +64,7 @@ class PrecedingTargetsTest {
             final SegmentStatus status, final SegmentPath path, final String expected) {
         segments.saveAll(PROJECT, List.of(record(status, path)));
 
-        final Result<Optional<String>> target =
-                preceding.accepted(new ChunkDrafts()).acceptedTarget("ch03:11");
+        final Result<Optional<String>> target = kept.accepted(new ChunkDrafts()).acceptedTarget("ch03:11");
 
         assertThat(target.isOk()).isTrue();
         assertThat(Objects.requireNonNull(target.data()).orElse("")).isEqualTo(expected);
@@ -76,18 +75,14 @@ class PrecedingTargetsTest {
         segments.saveAll(PROJECT, List.of(record(SegmentStatus.PENDING, SegmentPath.DRAFT)));
         pending.decided(record(SegmentStatus.ACCEPTED, SegmentPath.DRAFT), null);
 
-        final Result<Optional<String>> target =
-                preceding.accepted(new ChunkDrafts()).acceptedTarget("ch03:11");
+        final Result<Optional<String>> target = kept.accepted(new ChunkDrafts()).acceptedTarget("ch03:11");
 
         assertThat(target.data()).contains(TARGET);
     }
 
     @Test
     void accepted_unknownSegment_sourceOnly() {
-        assertThat(preceding
-                        .accepted(new ChunkDrafts())
-                        .acceptedTarget("ch09:0")
-                        .data())
+        assertThat(kept.accepted(new ChunkDrafts()).acceptedTarget("ch09:0").data())
                 .isEmpty();
     }
 }

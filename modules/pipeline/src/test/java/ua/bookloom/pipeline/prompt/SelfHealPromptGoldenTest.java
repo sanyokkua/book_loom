@@ -6,11 +6,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.ByteSpanAnchor;
+import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -28,6 +33,7 @@ import ua.bookloom.pipeline.reviewer.ReviewerCall;
 /** Pins the reviewer and directed-fix messages, so a prompt change is always a deliberate edit of a golden file. */
 class SelfHealPromptGoldenTest {
 
+    private static final String SOURCE = "He opened the ⟦g0⟧old⟦g1⟧ door.";
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
@@ -53,9 +59,9 @@ class SelfHealPromptGoldenTest {
             case "directed-fix-en-uk" ->
                 new DirectedFix(TEMPLATES, new DraftReplyParser(new ObjectMapper()))
                         .fix(
-                                GoldenCases.segment(GoldenCases.SOURCE),
+                                segment(),
                                 FRAME,
-                                GoldenCases.SOURCE,
+                                SOURCE,
                                 "Він відчинив ⟦g0⟧старі двері.",
                                 List.of(new QaFinding("markup", Severity.HIGH, "missing ⟦g1⟧", "placeholder")),
                                 calls);
@@ -68,7 +74,7 @@ class SelfHealPromptGoldenTest {
         new ReviewerCall(TEMPLATES, new ReviewReplyParser(new ObjectMapper()))
                 .review(
                         List.of(
-                                new ReviewedPair("Book.md:0", GoldenCases.SOURCE, "Він відчинив ⟦g0⟧старі⟦g1⟧ двері."),
+                                new ReviewedPair("Book.md:0", SOURCE, "Він відчинив ⟦g0⟧старі⟦g1⟧ двері."),
                                 new ReviewedPair("Book.md:1", "Hale smiled.", "Гейл усміхнувся.")),
                         FRAME,
                         List.of("Hale → Гейл"),
@@ -80,5 +86,23 @@ class SelfHealPromptGoldenTest {
         try (var stream = SelfHealPromptGoldenTest.class.getResourceAsStream("golden/" + file)) {
             return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    private static Segment segment() {
+        return new Segment(
+                "Book.md:0",
+                "Book.md",
+                0,
+                SegmentKind.PARAGRAPH,
+                SOURCE,
+                SOURCE,
+                Map.of(),
+                "hash",
+                null,
+                null,
+                new ByteSpanAnchor(0, SOURCE.length()),
+                null,
+                SegmentStatus.PENDING,
+                0.0);
     }
 }

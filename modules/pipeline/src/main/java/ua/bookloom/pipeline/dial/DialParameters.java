@@ -8,15 +8,13 @@ import ua.bookloom.api.pipeline.RepairMode;
 /**
  * What one quality-dial setting means for a run's mechanics.
  *
- * @param precedingTargets how many accepted preceding targets accompany a draft
  * @param repair what a segment whose draft fails a check is given
  * @param reviewPasses how many times the reviewer reads each chunk: none for Fast, one for Balanced, two for Max, the
  *     second with a narrower checklist
  * @param backwardRevision whether the backward-revision pass runs after the last segment of the book
  * @param llmSummary whether the rolling summary is written by the model
  */
-public record DialParameters(
-        int precedingTargets, RepairMode repair, int reviewPasses, boolean backwardRevision, boolean llmSummary)
+public record DialParameters(RepairMode repair, int reviewPasses, boolean backwardRevision, boolean llmSummary)
         implements DialProfile {
 
     /** Rejects a missing repair mode. */
@@ -32,9 +30,9 @@ public record DialParameters(
      */
     public static DialParameters of(final QualityDial dial) {
         return switch (Objects.requireNonNull(dial, "dial")) {
-            case FAST -> new DialParameters(1, RepairMode.MARKS_ONLY, 0, false, false);
-            case BALANCED -> new DialParameters(2, RepairMode.ONE, 1, false, false);
-            case MAX -> new DialParameters(3, RepairMode.ONE, 2, true, true);
+            case FAST -> new DialParameters(RepairMode.MARKS_ONLY, 0, false, false);
+            case BALANCED -> new DialParameters(RepairMode.ONE, 1, false, false);
+            case MAX -> new DialParameters(RepairMode.ONE, 2, true, true);
         };
     }
 

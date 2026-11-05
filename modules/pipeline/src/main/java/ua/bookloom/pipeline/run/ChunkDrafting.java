@@ -30,7 +30,7 @@ import ua.bookloom.pipeline.project.SegmentLocators;
 final class ChunkDrafting {
 
     private final RunSteps steps;
-    private final PrecedingTargets preceding;
+    private final KeptTargets kept;
     private final MemoryReuse memory;
     private final RoutedCalls calls;
     private final SegmentEvents events;
@@ -40,7 +40,7 @@ final class ChunkDrafting {
 
     ChunkDrafting(final RunSteps steps, final Collaborators collaborators) {
         this.steps = steps;
-        this.preceding = collaborators.preceding();
+        this.kept = collaborators.kept();
         this.memory = collaborators.memory();
         this.calls = collaborators.calls();
         this.events = collaborators.events();
@@ -51,7 +51,7 @@ final class ChunkDrafting {
 
     /** The collaborators a chunk's drafting and deciding share. */
     record Collaborators(
-            PrecedingTargets preceding,
+            KeptTargets kept,
             MemoryReuse memory,
             RoutedCalls calls,
             DecisionFollowUp followUp,
@@ -64,13 +64,13 @@ final class ChunkDrafting {
                 final RunSteps steps,
                 final RunSettings settings,
                 final MemoryReuse memory,
-                final PrecedingTargets preceding,
+                final KeptTargets kept,
                 final RoutedCalls calls) {
             return new BatchStage(
                     steps.batch(),
                     settings,
                     memory,
-                    preceding,
+                    kept,
                     calls,
                     steps.planner().frame().examples(),
                     steps.calls());
@@ -85,8 +85,7 @@ final class ChunkDrafting {
                 final BookIndex index,
                 final Document document) {
             final Map<String, SegmentLocator> locators = SegmentLocators.of(document);
-            final PrecedingTargets preceding =
-                    new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
+            final KeptTargets kept = new KeptTargets(stores.segments(), settings.projectId(), sinks.pending());
             final MemoryReuse memory =
                     new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
             final RoutedCalls calls = new RoutedCalls(sinks.boundaries());
@@ -100,13 +99,13 @@ final class ChunkDrafting {
                     calls,
                     announced);
             return new Collaborators(
-                    preceding,
+                    kept,
                     memory,
                     calls,
                     followUp,
                     new SegmentEvents(sinks.emit(), locators, steps.calls()),
                     DraftShortcuts.forFrame(settings.frame()),
-                    batchStageOf(steps, settings, memory, preceding, calls),
+                    batchStageOf(steps, settings, memory, kept, calls),
                     announced);
         }
     }
@@ -119,9 +118,9 @@ final class ChunkDrafting {
     Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
         begun(current, item);
-        final ProtectedMask mask = current.context().mask(segment);
+        final ProtectedMask mask = current.inputs().mask(segment);
         final DraftOutcome shortcut =
-                shortcuts.take(segment, mask, current.context().gate(), current.loop(), current.drafts());
+                shortcuts.take(segment, mask, current.inputs().gate(), current.loop(), current.drafts());
         if (shortcut != null) {
             events.drafted(shortcut, current.loop());
             announced.drafted(segment.id());
@@ -129,7 +128,7 @@ final class ChunkDrafting {
         }
         final List<Segment> unitSegments = current.work().unitSegments(item);
         final MemoryReuse.Offer offer =
-                memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
+                memory.offer(segment, unitSegments, mask, current.inputs().gate(), current.loop());
         final DraftOutcome.Reused reused = offer.reused();
         if (reused != null) {
             current.drafts().drafted(reused, ContextSnapshot.noCall());
@@ -232,7 +231,7 @@ final class ChunkDrafting {
                 .translateContext(
                         List.of(new PromptRequests.BatchSlot(
                                 segment, ready.mask(), ready.offer().lookup())),
-                        preceding.accepted(current.drafts()),
+                        kept.accepted(current.drafts()),
                         List.of());
     }
 

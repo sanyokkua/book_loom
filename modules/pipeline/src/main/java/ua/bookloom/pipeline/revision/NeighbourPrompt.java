@@ -19,8 +19,10 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.context.InjectedCharacters;
-import ua.bookloom.pipeline.context.InjectedLexicon;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.CharacterSheet;
+import ua.bookloom.pipeline.context.LexiconFilter;
+import ua.bookloom.pipeline.context.WindowMap;
 import ua.bookloom.pipeline.heal.SelfHealCalls;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 
@@ -85,7 +87,7 @@ final class NeighbourPrompt {
         final Map<String, String> user = new HashMap<>();
         user.put("resolvedFacts", facts(inputs, present));
         user.put("lexiconTerms", lexicon(inputs, present));
-        user.put("characters", lines(InjectedCharacters.selectConfirmed(present, inputs.glossary()), CHARACTER_TOKENS));
+        user.put("characters", lines(CharacterSheet.select(present, inputs.glossary()), CHARACTER_TOKENS));
         user.put("summary", Objects.requireNonNullElse(inputs.context().summary(), ""));
         return user;
     }
@@ -112,15 +114,13 @@ final class NeighbourPrompt {
     }
 
     private static String lexicon(final PassInputs inputs, final List<Segment> present) {
-        final List<String> found =
-                InjectedLexicon.select(present, inputs.context().lexicon(), inputs.glossary()).stream()
-                        .map(InjectedLexicon::line)
-                        .toList();
+        final List<String> found = WindowMap.lexiconLines(
+                Tokens.visibleTexts(present), inputs.context().lexicon(), inputs.glossary(), LexiconFilter.NONE);
         return lines(found, LEXICON_TOKENS);
     }
 
     private static String lines(final List<String> lines, final int allowance) {
-        return String.join("\n", InjectedCharacters.within(lines, allowance));
+        return String.join("\n", TokenEstimator.leadingWithin(lines, allowance));
     }
 
     private static String fact(final GlossaryEntry entry) {

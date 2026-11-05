@@ -17,14 +17,15 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Origin;
-import ua.bookloom.api.project.SnapshotRendering;
-import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.NameForms;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.TermFacts;
+import ua.bookloom.pipeline.qa.CheckName;
+import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
  * Chooses the map lines of one call from its window alone (design D8): an entry is sent only when its base form, a
@@ -123,9 +124,8 @@ public final class WindowMap {
             final Window window, final BookMap map, final List<ProtectedMask> masks, final Texts texts) {
         final Glossary glossary = new Glossary(new ArrayList<>(), new LinkedHashSet<>(), new ArrayList<>());
         for (final GlossaryEntry entry : map.entries()) {
-            final SnapshotTerm term = InjectedTerms.snapshotOf(entry);
-            if (entry.locked() && InjectedTerms.hasTarget(term)) {
-                glossary.locked().addAll(lockedLines(term, masks));
+            if (entry.locked() && hasTarget(entry)) {
+                glossary.locked().addAll(lockedLines(entry, masks));
                 continue;
             }
             final int at = firstAt(entry, texts);
@@ -144,24 +144,44 @@ public final class WindowMap {
     }
 
     // Tokens are numbered per segment, so in a batch two items' ⟦g0⟧ differ: a line is prefixed with its item's id.
-    private static List<String> lockedLines(final SnapshotTerm term, final List<ProtectedMask> masks) {
+    private static List<String> lockedLines(final GlossaryEntry entry, final List<ProtectedMask> masks) {
         final boolean batch = masks.size() > 1;
+        final String target = Objects.requireNonNull(entry.target(), "target");
+        final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
         final List<String> lines = IntStream.range(0, masks.size())
                 .boxed()
-                .flatMap(index -> InjectedTerms.lines(term, masks.get(index)).stream()
+                .flatMap(index -> hiddenTokens(entry.term(), target, masks.get(index)).stream()
+                        .map(token -> token + " → " + target + ", " + facts)
                         .map(line -> batch ? (index + 1) + ": " + line : line))
                 .distinct()
                 .toList();
         if (lines.isEmpty()) {
-            log.trace("Window map left out locked {}: its token is not in the window", term.term());
+            log.trace("Window map left out locked {}: its token is not in the window", entry.term());
         }
         return lines;
+    }
+
+    // A locked entry is listed by each token it hides behind in the mask, none when the mask does not hide it.
+    private static List<String> hiddenTokens(final String term, final String target, final ProtectedMask mask) {
+        if (!mask.presentLocked().contains(new LockedRendering(term, target))) {
+            return List.of();
+        }
+        return mask.spans().stream()
+                .filter(span ->
+                        span.check() == CheckName.LOCKED_TERM && span.restored().equals(target))
+                .map(ProtectedSpan::token)
+                .toList();
+    }
+
+    private static boolean hasTarget(final GlossaryEntry entry) {
+        final String target = entry.target();
+        return target != null && !target.isBlank();
     }
 
     // The source side by the entry's names; a proofread's target side by the forms its target generates.
     private static int firstAt(final GlossaryEntry entry, final Texts texts) {
         final int inSource = earliest(entry.names(), texts.sources());
-        if (inSource >= 0 || texts.targets().isEmpty() || !InjectedTerms.hasTarget(InjectedTerms.snapshotOf(entry))) {
+        if (inSource >= 0 || texts.targets().isEmpty() || !hasTarget(entry)) {
             return inSource;
         }
         final String target = Objects.requireNonNull(entry.target(), "target");
@@ -197,29 +217,77 @@ public final class WindowMap {
 
     private static String lineOf(final GlossaryEntry entry, final boolean gloss) {
         final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
-        return InjectedTerms.line(entry.term(), entry.target(), gloss ? facts + GLOSS + entry.meaning() : facts);
+        return MapLines.line(entry.term(), entry.target(), gloss ? facts + GLOSS + entry.meaning() : facts);
     }
 
     private static List<Placed> lexicon(final BookMap map, final String sources, final LexiconFilter filter) {
         final List<Placed> placed = new ArrayList<>();
         for (final LexiconEntry entry : map.terms()) {
-            final List<String> forms = Stream.concat(Stream.of(entry.term()), entry.forms().stream())
-                    .toList();
+            final List<String> forms = formsOf(entry);
             final int at = earliest(forms, sources);
             if (at < 0) {
                 log.trace("Window map left out term {}: not named in the window", entry.term());
                 continue;
             }
-            if (InjectedLexicon.heldByGlossary(entry, map.entries())) {
+            if (heldByGlossary(entry, map.entries())) {
                 log.trace("Window map left out term {}: the glossary holds it", entry.term());
                 continue;
             }
-            final Optional<SnapshotRendering> rendering = InjectedLexicon.renderingOf(entry, filter);
             final int occurrences = Math.max(1, TermMatch.namedCount(forms, sources));
-            rendering.ifPresent(
-                    found -> placed.add(new Placed(at, InjectedLexicon.line(found), false, occurrences, false)));
+            renderingOf(entry, filter).ifPresent(line -> placed.add(new Placed(at, line, false, occurrences, false)));
         }
         return placed;
+    }
+
+    /**
+     * The established renderings of the recurring terms some texts name, for a call that reads no window (the check
+     * against the neighbours): the same rule as a window's recurring-term lines, in lexicon order.
+     *
+     * @param texts the non-null texts, tokens already removed, whose words decide which terms are present
+     * @param terms the non-null lexicon entries
+     * @param glossary the non-null glossary entries, whose terms the lexicon never overrides
+     * @param filter the non-null filter that keeps function words and declined forms out
+     * @return the {@code term → rendering} lines; never null, empty when the texts name none
+     */
+    public static List<String> lexiconLines(
+            final List<String> texts,
+            final List<LexiconEntry> terms,
+            final List<GlossaryEntry> glossary,
+            final LexiconFilter filter) {
+        Objects.requireNonNull(texts, "texts");
+        Objects.requireNonNull(terms, "terms");
+        Objects.requireNonNull(glossary, "glossary");
+        Objects.requireNonNull(filter, "filter");
+        final List<String> lines = terms.stream()
+                .filter(entry -> texts.stream().anyMatch(text -> earliest(formsOf(entry), text) >= 0))
+                .filter(entry -> !heldByGlossary(entry, glossary))
+                .flatMap(entry -> renderingOf(entry, filter).stream())
+                .toList();
+        log.debug("Recurring-term lines texts={} terms={} lines={}", texts.size(), terms.size(), lines.size());
+        return lines;
+    }
+
+    private static List<String> formsOf(final LexiconEntry entry) {
+        return Stream.concat(Stream.of(entry.term()), entry.forms().stream()).toList();
+    }
+
+    // A glossary entry is the person's word; the lexicon only keeps the book consistent where nobody chose.
+    private static boolean heldByGlossary(final LexiconEntry entry, final List<GlossaryEntry> glossary) {
+        final String key = LexiconEntry.keyOf(entry.term());
+        return glossary.stream()
+                .anyMatch(held -> LexiconEntry.keyOf(held.term()).equals(key));
+    }
+
+    private static Optional<String> renderingOf(final LexiconEntry entry, final LexiconFilter filter) {
+        final Optional<String> rendering = entry.established();
+        if (rendering.isPresent() && !filter.admits(entry.term(), rendering.get())) {
+            log.trace(
+                    "Lexicon entry {} -> {} is a function word or a declined form; left out",
+                    entry.term(),
+                    rendering.get());
+            return Optional.empty();
+        }
+        return rendering.map(text -> entry.term() + " → " + text);
     }
 
     private static List<MapEntry> ordered(final MapEntry.Section section, final List<Placed> placed) {

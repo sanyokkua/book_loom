@@ -172,7 +172,7 @@ class OversizedSegmentTest {
     }
 
     @Test
-    void translateSplit_singleHugeSentence_isDraftedWholeWithoutPrecedingTargetsAndWarnsOnce() {
+    void translateSplit_singleHugeSentence_isDraftedWholeWithoutPreviousPairsAndWarnsOnce() {
         final List<Segment> segments = segments("First short paragraph.\n\n" + "word ".repeat(1200));
         final Segment huge = segments.get(1);
         final UppercasingModel model = new UppercasingModel();

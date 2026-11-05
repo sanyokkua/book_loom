@@ -46,9 +46,6 @@ public final class PromptTemplates {
     private static final String EXAMPLES = "examples";
     private static final String EXAMPLE_REPLY = "exampleReply";
     private static final String LANGUAGE_RULES = "languageRules";
-    private static final String TOKEN_RULES = "tokenRules";
-    private static final String NO_TOKEN_RULES = "noTokenRules";
-    private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
@@ -142,25 +139,6 @@ public final class PromptTemplates {
     }
 
     /**
-     * The system slots that choose the token rules of a draft or batch call: a call whose text holds no
-     * {@code ⟦gN⟧} token is sent the rules without the token paragraphs, so a small model is not taught a markup it
-     * has nothing to copy. A call that names neither slot gets the token rules.
-     *
-     * @param hasTokens whether any text the call translates holds a token
-     * @return never null; the slot values to pass as {@code extra}
-     */
-    public static Map<String, String> tokenGate(final boolean hasTokens) {
-        return hasTokens
-                ? Map.of(TOKEN_RULES, GATE_OPEN, NO_TOKEN_RULES, "")
-                : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
-    }
-
-    /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
-    static boolean isRuleGate(final String slot) {
-        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot);
-    }
-
-    /**
      * As {@link #sectionsOf(PromptName, CallFrame, Map, Map)} with the system message's default slots.
      *
      * @param name the non-null call
@@ -236,9 +214,6 @@ public final class PromptTemplates {
             }
         });
         values.putAll(extra);
-        if (slots.declares(TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
-            values.putAll(tokenGate(true));
-        }
         final String kind = PreparationSlots.kindOf(name);
         if (kind != null) {
             final PreparationExample example = preparations.of(frame.sourceLanguage(), kind);

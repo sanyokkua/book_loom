@@ -221,7 +221,7 @@ public final class RunFrames {
         return first;
     }
 
-    private static void logFrame(final RunFrame frame) {
+    private void logFrame(final RunFrame frame) {
         log.info(
                 "run frame hash={} rules={} examples={} outputRatio={}",
                 frame.frameHash(),
@@ -246,19 +246,9 @@ public final class RunFrames {
                         .renderSystem(PromptName.TRANSLATE, languageSlots(brief.sourceLanguage(), target))
                         .strip()));
         blocks.add(system(BlockSlots.DATA, words.get(BlockWords.DATA)));
-        if (!lines.isEmpty()) {
-            blocks.add(system(BlockSlots.BOOK_RULES, words.get(BlockWords.RULES_HEADING) + "\n" + bullets(lines)));
-        }
-        // The foreign-passage choice of the brief is a style line too, so every call of the run carries it.
         final String foreign = StyleSheet.foreignPassageRule(
                 brief.foreignPassages(), PromptLanguages.describe(brief.sourceLanguage()));
-        blocks.add(system(
-                BlockSlots.STYLE_SHEET, words.get(BlockWords.STYLE_HEADING) + "\n" + sheet.text() + "\n" + foreign));
-        final String section =
-                FrameWording.section(rules, brief.sourceLanguage(), target, BookRules.sectionExclusions());
-        if (!section.isBlank()) {
-            blocks.add(system(BlockSlots.LANGUAGE_RULES, section));
-        }
+        blocks.addAll(builderRules(brief, target, lines, sheet, foreign));
         switch (examples.kind()) {
             case PAIR ->
                 blocks.add(system(BlockSlots.EXAMPLES, words.get(BlockWords.EXAMPLES_PAIR) + "\n" + examples.text()));
@@ -267,6 +257,27 @@ public final class RunFrames {
         }
         blocks.add(system(BlockSlots.REPLY, words.get(BlockWords.REPLY)));
         return List.copyOf(blocks);
+    }
+
+    private List<Block> builderRules(
+            final BookBrief brief,
+            final String target,
+            final List<RuleLine> lines,
+            final StyleSheet sheet,
+            final String foreign) {
+        final List<Block> blocks = new ArrayList<>();
+        if (!lines.isEmpty()) {
+            blocks.add(system(BlockSlots.BOOK_RULES, words.get(BlockWords.RULES_HEADING) + "\n" + bullets(lines)));
+        }
+        // The foreign-passage choice of the brief is a style line too, so every call of the run carries it.
+        blocks.add(system(
+                BlockSlots.STYLE_SHEET, words.get(BlockWords.STYLE_HEADING) + "\n" + sheet.text() + "\n" + foreign));
+        final String section =
+                FrameWording.section(rules, brief.sourceLanguage(), target, BookRules.sectionExclusions());
+        if (!section.isBlank()) {
+            blocks.add(system(BlockSlots.LANGUAGE_RULES, section));
+        }
+        return blocks;
     }
 
     // A likely gender is a guess nobody confirmed and orders no form (15i.T5), so only a stated one is reminded.

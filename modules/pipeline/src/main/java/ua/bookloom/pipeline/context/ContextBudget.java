@@ -22,7 +22,6 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     public static final int DYNAMIC_CEILING = 2000;
 
     private static final double DYNAMIC_SHARE = 0.4;
-    private static final double LEXICON_SHARE = 0.2;
     private static final double CHARACTER_SHARE = 0.1;
 
     /** Rejects a window that is not positive, a negative reservation or a ratio that is not positive. */
@@ -47,19 +46,8 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     }
 
     /**
-     * What the recurring-term renderings may take of the dynamic allowance: a fifth, so a long lexicon never starves the
-     * glossary, the memory or the preceding text, and a short one leaves its room to them.
-     *
-     * @param allowance the dynamic context's allowance in tokens
-     * @return the lexicon's share, never above the allowance
-     */
-    public static int lexiconAllowance(final int allowance) {
-        return (int) Math.min(allowance, Math.ceil(allowance * LEXICON_SHARE));
-    }
-
-    /**
      * What the character gender sheet may take of the dynamic allowance: a tenth, since a line is a name and a word, so
-     * the sheet can never crowd out the glossary, the memory or the preceding text.
+     * the reviewer's sheet stays short however large the cast.
      *
      * @param allowance the dynamic context's allowance in tokens
      * @return the sheet's share, never above the allowance

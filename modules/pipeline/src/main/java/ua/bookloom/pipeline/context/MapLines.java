@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.context;
 
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The map lines one call carries in block 9 (design D8), each list in the order the window first names its entries.
@@ -44,6 +45,20 @@ public record MapLines(List<String> glossary, List<String> locked, List<String> 
                 .filter(entry -> entry.section() == section)
                 .map(MapEntry::line)
                 .toList();
+    }
+
+    /**
+     * One map line of an entry the model sees as written.
+     *
+     * @param term the non-null base form
+     * @param target the rendering, or null or blank when the entry has none yet
+     * @param facts the non-null facts in brackets: type, gender, a gloss
+     * @return {@code term → target (facts)}, or {@code term (facts)} with no target
+     */
+    public static String line(final String term, @Nullable final String target, final String facts) {
+        return target == null || target.isBlank()
+                ? term + " (" + facts + ")"
+                : term + " → " + target + " (" + facts + ")";
     }
 
     /** {@return whether the window names nothing on the map, so block 9 is left out} */

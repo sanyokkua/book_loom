@@ -20,7 +20,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.ExpectedTokens;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
@@ -110,7 +110,7 @@ class ProtectedSpansTest {
         final ProtectedMask mask = mask("He met ⟦g0⟧old Hale⟦g1⟧ today.", HALE);
 
         assertThat(mask.maskedText()).isEqualTo("He met ⟦g0⟧old ⟦g2⟧⟦g1⟧ today.");
-        assertThat(DraftPromptBuilder.expectedTokenSequence(mask.maskedText())).isEqualTo("⟦g0⟧ ⟦g2⟧ ⟦g1⟧");
+        assertThat(ExpectedTokens.sequence(mask.maskedText())).isEqualTo("⟦g0⟧ ⟦g2⟧ ⟦g1⟧");
     }
 
     @Test

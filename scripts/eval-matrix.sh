@@ -15,9 +15,12 @@
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
 #                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
-#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA]
+#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]]
 # Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
 # in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
+# --variants FIELD=VALUE[,...] binds further PromptVariants fields in the eval's test injector (an arm's alternative,
+# e.g. languageRules=GENERIC_ONLY); it is joined with the --rules choice, and without it an outer BOOKLOOM_EVAL_VARIANTS
+# is kept. Set BOOKLOOM_EVAL_LABEL to name the arm's side in the run's history folder.
 # --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
 # read only by the eval test classes; reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
@@ -137,6 +140,7 @@ MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | head -n 1 | entries)
 QUICK=0
 BOOK_FILE=""
 OUT_DIR=""
+EXTRA_VARIANTS=${BOOKLOOM_EVAL_VARIANTS:-}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -167,13 +171,15 @@ while [ $# -gt 0 ]; do
       case "$2" in en-uk|ru-uk) PAIR=$2 ;; *) echo "--pair takes en-uk or ru-uk, not $2" >&2; exit 2 ;; esac
       shift 2 ;;
     --baseline-of) BASELINE_OF=$2; shift 2 ;;
+    --variants) EXTRA_VARIANTS=$2; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
 
 # The rules choice reaches the eval's test injector as a PromptVariants field; the application never reads it.
-VARIANTS=""
-[ "$RULES" = generic ] && VARIANTS="languageRules=GENERIC_ONLY"
+VARIANTS=$EXTRA_VARIANTS
+if [ "$RULES" = generic ]; then VARIANTS="languageRules=GENERIC_ONLY${VARIANTS:+,$VARIANTS}"; fi
+[ -n "$VARIANTS" ] && echo "-- prompt variants: BOOKLOOM_EVAL_VARIANTS=$VARIANTS"
 
 if [ "$QUICK" = 1 ]; then
   export BOOKLOOM_EVAL_QUICK=1

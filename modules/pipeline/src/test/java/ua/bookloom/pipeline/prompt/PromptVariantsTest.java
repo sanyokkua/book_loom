@@ -21,7 +21,7 @@ import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
 class PromptVariantsTest {
 
     @Test
-    void defaults_productionInjector_areBundledRules() {
+    void defaults_productionInjector_areBundledRulesAndBuilderLayout() {
         final Injector injector = Guice.createInjector(
                 new PipelineModule(),
                 new ReviewModeTestModule(),

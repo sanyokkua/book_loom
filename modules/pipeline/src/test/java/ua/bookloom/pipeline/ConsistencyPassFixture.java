@@ -20,6 +20,11 @@ import ua.bookloom.pipeline.revision.ConsistencyPass;
 final class ConsistencyPassFixture {
 
     static ConsistencyPass over(final TestProject project) {
+        return over(project, new PromptTemplates());
+    }
+
+    /** The pass built on {@code templates}, so an eval's variants reach its re-drafts too. */
+    static ConsistencyPass over(final TestProject project, final PromptTemplates templates) {
         return new ConsistencyPass(
                 project.documents(),
                 project.stores().openProjects(),
@@ -27,15 +32,19 @@ final class ConsistencyPassFixture {
                 project.stores().segments(),
                 project.deferrals(),
                 project.stores().glossary(),
-                new PromptTemplates(),
+                templates,
                 new ObjectMapper(),
-                retryDraft(project),
+                retryDraft(project, templates),
                 project.stores().lexicon(),
                 project.stores().summaries(),
                 new CheckedParagraphs());
     }
 
     static RetryDraft retryDraft(final TestProject project) {
+        return retryDraft(project, new PromptTemplates());
+    }
+
+    static RetryDraft retryDraft(final TestProject project, final PromptTemplates templates) {
         return new RetryDraft(
                 project.documents(),
                 project.stores().openProjects(),
@@ -45,7 +54,7 @@ final class ConsistencyPassFixture {
                 project.stores().lexicon(),
                 project.stores().promptFrames(),
                 project.stores().runs(),
-                new PromptTemplates(),
+                templates,
                 new ObjectMapper(),
                 Guice.createInjector().getInstance(QualityLoop.class),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),

@@ -153,7 +153,7 @@ class QualityLoopRepairKeepTest {
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, RepairMode.ONE, 0, false, false),
+                new DialParameters(RepairMode.ONE, 0, false, false),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

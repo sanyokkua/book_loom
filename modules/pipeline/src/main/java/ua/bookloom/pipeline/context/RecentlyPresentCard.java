@@ -184,7 +184,7 @@ final class RecentlyPresentCard {
                     ? words.get(BlockWords.CARD_LIKELY).replace("{gender}", gender)
                     : gender;
         }
-        return InjectedTerms.line(entry.term(), entry.target(), facts);
+        return MapLines.line(entry.term(), entry.target(), facts);
     }
 
     // The style sheet states a narrator the brief names; the card names one only the chapter's own text shows.

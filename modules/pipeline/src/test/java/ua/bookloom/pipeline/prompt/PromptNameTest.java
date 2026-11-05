@@ -23,8 +23,6 @@ class PromptNameTest {
 
     @ParameterizedTest
     @CsvSource({
-        "DRAFT,draft,DRAFT,draft,0.2",
-        "STRUCTURAL_REPAIR,structural-repair,STRUCTURAL_REPAIR,structural-repair,0.2",
         "REPAIR,repair,REPAIR,draft-batch-json,0.1",
         "TRANSLATE,translate,DRAFT,draft-batch-json,0.2",
         "FORMAT_REASK,format-reask,STRUCTURAL_REPAIR,draft-batch-json,0.2",
@@ -65,14 +63,13 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"DRAFT", "TRANSLATE"})
+    @CsvSource({"TRANSLATE"})
     void temperature_draftLower_isPointOne(final PromptName name) {
         assertThat(name.temperature(true)).isEqualTo(0.1);
     }
 
     @ParameterizedTest
     @CsvSource({
-        "STRUCTURAL_REPAIR",
         "FORMAT_REASK",
         "REPAIR",
         "REVIEWER",
@@ -94,7 +91,7 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"DRAFT", "STRUCTURAL_REPAIR"})
+    @CsvSource({"REVISION", "DIRECTED_FIX"})
     void pseudoModel_everyResponseFormatName_answersTargetObject(final PromptName name) {
         final ChatRequest request = new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),
