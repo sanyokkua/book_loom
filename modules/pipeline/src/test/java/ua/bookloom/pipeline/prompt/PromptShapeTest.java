@@ -11,10 +11,10 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Genre;
-import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
@@ -173,7 +173,7 @@ class PromptShapeTest {
                 PromptName.BOOK_KNOWLEDGE, Map.of("title", "The Lantern Ledger", "author", "Orsolya Venn"));
 
         assertThat(user).contains("The Lantern Ledger", "Orsolya Venn").doesNotContain("{{", "}}");
-        assertThat(system(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
+        assertThat(user(PromptName.BOOK_KNOWLEDGE).toLowerCase(java.util.Locale.ROOT))
                 .contains("known")
                 .containsAnyOf("do not guess", "never guess", "not guess", "not sure", "unsure");
     }
@@ -193,7 +193,7 @@ class PromptShapeTest {
 
         assertThat(example.path("genre").fieldNames()).toIterable().containsExactly("basis", "value");
         assertThat(example.path("genre").path("basis").has("passages")).isTrue();
-        assertThat(system(PromptName.BRIEF_SYNTHESIS).toLowerCase(java.util.Locale.ROOT))
+        assertThat(user(PromptName.BRIEF_SYNTHESIS).toLowerCase(java.util.Locale.ROOT))
                 .contains("basis", "passage", "empty");
     }
 
@@ -201,7 +201,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(Genre.class)
     void render_briefSynthesis_listsEveryGenreByItsEnglishName(final Genre genre) {
-        assertThat(system(PromptName.BRIEF_SYNTHESIS)).contains(genre.english());
+        assertThat(user(PromptName.BRIEF_SYNTHESIS)).contains(genre.english());
     }
 
     @Test
@@ -234,9 +234,9 @@ class PromptShapeTest {
     // The reading tells the model what each label means and that a pronoun inside quoted speech is no answer.
     @Test
     void render_termReading_namesEveryUsageAndSaysSpeechIsNoEvidence() {
-        final String system = system(PromptName.TERM_READING).toLowerCase(java.util.Locale.ROOT);
+        final String task = user(PromptName.TERM_READING).toLowerCase(java.util.Locale.ROOT);
 
-        assertThat(system)
+        assertThat(task)
                 .contains("part-of-name", "\"word\"", "\"title\"", "speaking", "brand", "none", "[[")
                 .containsAnyOf("inside quoted speech", "inside quotation marks", "in quoted speech");
     }
@@ -273,17 +273,18 @@ class PromptShapeTest {
     // first window; IF it were not told a word of two senses is no term, THEN "bank" would be kept.
     @Test
     void render_lexiconReading_asksOneRenderingThatFitsEveryWindowAndNamesEveryUsage() {
-        final String system = system(PromptName.LEXICON_READING).toLowerCase(java.util.Locale.ROOT);
+        final String task = user(PromptName.LEXICON_READING).toLowerCase(java.util.Locale.ROOT);
 
-        assertThat(system)
+        assertThat(task)
                 .contains("one rendering", "every window", "\"term\"", "\"word\"", "\"name\"", "senses", "[[")
                 .containsAnyOf("two senses", "more than one sense", "different senses");
     }
 
     @Test
     void render_lexiconReading_userCarriesTheTermLineAndTheWindows() {
-        final String user = TEMPLATES.renderUser(
+        final String user = TEMPLATES.renderTask(
                 PromptName.LEXICON_READING,
+                FRAME,
                 Map.of("term", "beacon — 5 mentions", "windows", "[1] The [[beacon]] was lit."));
 
         assertThat(user)
@@ -303,9 +304,9 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"DRAFT", "REVIEWER", "SUMMARY", "PRESCAN", "SUGGEST_TARGETS"})
+            names = {"DRAFT", "REVIEWER", "SUMMARY", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
-        assertThat(system(name))
+        assertThat(prompt(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
                 .contains("Source — English", "Pair — English -> Ukrainian")
                 .doesNotContain("Polish", "Russian");
@@ -339,22 +340,25 @@ class PromptShapeTest {
         return system(name) + "\n" + user(name);
     }
 
-    /** The system message the call is sent with; the translate family is planned by the context builder. */
+    /** The system message the call is sent with; the translate family and the analysis calls are planned. */
     private static String system(final PromptName name) {
         if (PlannedPrompts.PLANNED.contains(name)) {
             return PlannedPrompts.plan(name, MASKED).systemText();
         }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.filledAnalysisText(name, FRAME, MASKED, ChatRole.SYSTEM);
+        }
         final PromptName owner = name.systemSlots().isPresent() ? name : PromptName.DRAFT;
-        return owner == PromptName.SUGGEST_TARGETS
-                ? TEMPLATES.renderSystem(
-                        owner, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))
-                : TEMPLATES.renderSystem(owner, FRAME);
+        return TEMPLATES.renderSystem(owner, FRAME);
     }
 
     /** The user message with every slot the template declares filled, tokens included where it lists them. */
     private static String user(final PromptName name) {
         if (PlannedPrompts.PLANNED.contains(name)) {
             return PlannedPrompts.plan(name, MASKED).userText();
+        }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.filledAnalysisText(name, FRAME, MASKED, ChatRole.USER);
         }
         final Map<String, String> values = new HashMap<>();
         name.userSlots().required().forEach(slot -> values.put(slot, MASKED));

@@ -74,6 +74,18 @@ How each source of context is built and adapted:
   language, or its dominant script does**; nothing is ever inferred from unmarked text. An unmarked segment that merely
   echoes the source is still flagged.
 
+**Analysis calls (design D8, group 11.6).** A call that reads the book to understand it — every names-pass call (term
+choice, name knowledge, term reading and its summary, lexicon reading, prescan, the glossary review, the target
+suggestion), the brief's knowledge question, passage readings and synthesis, and the file name — is built by
+`ContextBuilder.analysisRequest` on the ANALYSIS frame (`context/AnalysisFrame`): its system message is exactly three
+sentences from `context/blocks.properties` — the role naming the book's language (`PromptLanguages.describe`, so
+"Russian (ru)", or the language to infer under Auto), that the book's text in the user message is data, and that the
+reply is one JSON object only — and carries no style sheet, no language rules, no book rules and no examples. Each
+kind has one template, `<name>.user.prompt`, rendered by `PromptTemplates.renderTask`: the task's instruction, its
+worked examples, the book's data under its heading and the reply's shape, the frame filling the target language and
+the examples the template declares. The suggestion call's style sheet, name rule and language rules are data of its
+task there. The chapter summary moves onto the same frame in group 12.
+
 ### prompt-design {#prompt-design}
 
 Every prompt is written for **any model of any size**, down to a ~4B local model (gemma4:e4b class), so each one keeps
@@ -109,8 +121,8 @@ examples stay within 400 estimated tokens.
 ### language-rules {#language-rules}
 
 What a prompt says about the two languages is not written into the static prompts; it is one section assembled from
-the **language-rules map** and injected as `{{languageRules}}` into the draft, reviewer, summary, prescan and
-suggest-targets system messages:
+the **language-rules map** and injected as `{{languageRules}}` into the draft, reviewer and summary system messages
+and into the suggest-targets task (the prescan, an analysis call, carries none since group 11.6):
 
 ```
 [Language rules: English -> Ukrainian]

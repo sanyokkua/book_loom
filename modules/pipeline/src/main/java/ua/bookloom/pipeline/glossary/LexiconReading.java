@@ -10,20 +10,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 import ua.bookloom.pipeline.index.Case;
 import ua.bookloom.pipeline.index.Mention;
@@ -31,7 +29,6 @@ import ua.bookloom.pipeline.index.Window;
 import ua.bookloom.pipeline.index.WindowPlan;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -45,7 +42,6 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * and leave what cannot be read undecided. Nothing is written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class LexiconReading {
 
     /** What the code decided for one term. */
@@ -93,9 +89,23 @@ public final class LexiconReading {
     // Twice the expected reply: a full answer is never cut, a reply that loops is.
     private static final int CAP_FACTOR = 2;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
     private final TermChoice termChoice;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     * @param termChoice the non-null term choice
+     */
+    @Inject
+    public LexiconReading(final PromptTemplates templates, final ObjectMapper mapper, final TermChoice termChoice) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.termChoice = Objects.requireNonNull(termChoice, "termChoice");
+    }
 
     /**
      * How many of a model scan's most frequent candidates the dial reads one by one before the batch choice narrows the
@@ -373,26 +383,13 @@ public final class LexiconReading {
 
     private ChatRequest request(
             final String term, final int mentions, final List<Window> windows, final CallFrame frame) {
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(
-                        ChatRole.SYSTEM,
-                        templates
-                                .renderSystem(PromptName.LEXICON_READING, frame)
-                                .strip()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(
-                                        PromptName.LEXICON_READING,
-                                        Map.of(
-                                                "term",
-                                                term + " — " + mentions + " mentions",
-                                                "windows",
-                                                TermReading.numbered(windows)))
-                                .strip()));
-        log.trace("Lexicon reading messages {}", messages);
         final int expected = BASE_TOKENS + TOKENS_PER_WINDOW * windows.size();
-        return ChatRequests.build(
-                PromptName.LEXICON_READING, messages, new OutputLimit(expected, expected * CAP_FACTOR), false);
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.LEXICON_READING,
+                frame,
+                Map.of("term", term + " — " + mentions + " mentions", "windows", TermReading.numbered(windows)),
+                new OutputLimit(expected, expected * CAP_FACTOR));
+        log.trace("Lexicon reading messages {}", request.messages());
+        return request;
     }
 }

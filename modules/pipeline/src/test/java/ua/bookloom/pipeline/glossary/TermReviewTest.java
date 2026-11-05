@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -35,6 +34,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -370,7 +370,7 @@ class TermReviewTest {
     private static List<String> blockLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- ") || line.startsWith("  ["))
                 .toList();
@@ -379,7 +379,7 @@ class TermReviewTest {
     private static List<String> termLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- "))
                 .toList();

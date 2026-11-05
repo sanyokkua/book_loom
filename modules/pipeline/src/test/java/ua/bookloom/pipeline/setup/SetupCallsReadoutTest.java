@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -61,7 +62,7 @@ class SetupCallsReadoutTest {
         user.put("title", "The Lantern Ledger");
         user.put("notes", "");
 
-        new SetupCalls(new PromptTemplates(), new ObjectMapper())
+        new SetupCalls(new ContextBuilder(new PromptTemplates()), new ObjectMapper())
                 .send(REQUEST, PromptName.BRIEF_SYNTHESIS, calls, SetupCalls.askedOf(user));
 
         assertThat(snapshots().getFirst().items())
@@ -81,7 +82,7 @@ class SetupCallsReadoutTest {
         final CallFrame frame =
                 new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
-        new BookKnowledge(new PromptTemplates(), new ObjectMapper())
+        new BookKnowledge(new ContextBuilder(new PromptTemplates()), new ObjectMapper())
                 .ask(
                         new BookFacts("The Lantern Ledger", "Orsolya Venn", 2014, null, null),
                         "o_venn-the_lantern_ledger-2014",

@@ -18,6 +18,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -39,11 +40,7 @@ class SuggestTargetsRulesTest {
     private final SuggestTargets suggest = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
 
     private static List<String> termLines(final ScriptedChatModel model) {
-        return model.requests()
-                .getFirst()
-                .messages()
-                .get(1)
-                .content()
+        return AnalysisData.of(model.requests().getFirst().messages().get(1).content())
                 .lines()
                 .filter(line -> line.startsWith("- "))
                 .toList();

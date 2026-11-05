@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.eval.StageCases.SetupCase;
 import ua.bookloom.pipeline.prompt.PromptName;
 
@@ -50,7 +51,7 @@ final class SetupScriptedModel implements ChatModel {
     public Result<ChatResponse> chat(final ChatRequest request) {
         final String format =
                 request.responseFormat() == null ? "" : request.responseFormat().name();
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         if (format.equals(PromptName.FILE_NAME.responseFormatName())) {
             return ok("{\"target\":\"Книга. Автор. 2000\"}");
         }

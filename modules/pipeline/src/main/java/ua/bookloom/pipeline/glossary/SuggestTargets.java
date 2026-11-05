@@ -14,25 +14,22 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Refusal;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Replies;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.NameRules;
 import ua.bookloom.pipeline.prompt.OutputLimit;
@@ -48,14 +45,27 @@ import ua.bookloom.util.text.GlossaryKeys;
  * call, and only a common noun is asked about. Nothing is written here; the caller writes once every batch has answered.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SuggestTargets {
 
     /** How many entries one call carries, small enough for a small model to answer every one. */
     static final int SUGGEST_BATCH = 20;
 
     private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public SuggestTargets(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.builder = new ContextBuilder(this.templates);
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /**
      * The entries with the targets the model suggests for them written in, for entries the glossary does not hold yet —
@@ -192,7 +202,7 @@ public final class SuggestTargets {
                 groups.batches());
     }
 
-    // Each group under its own policy, so its system message states that policy and shows that policy's example.
+    // Each group under its own policy, so its task states that policy and shows that policy's example.
     private Result<List<Suggestion>> askAll(final SuggestionGroups groups, final Setting base) {
         final List<Suggestion> answered = new ArrayList<>();
         for (final Map.Entry<NamePolicy, List<GlossaryEntry>> group :
@@ -240,7 +250,7 @@ public final class SuggestTargets {
     /** What one run asks and checks with, built once for all its batches. */
     private record Run(
             Setting setting,
-            String system,
+            Map<String, String> task,
             Map<String, Evidence> evidence,
             @Nullable Script refused,
             @Nullable Script required,
@@ -270,21 +280,17 @@ public final class SuggestTargets {
 
     private Run runOf(final List<GlossaryEntry> asked, final Setting setting) {
         final CallFrame frame = setting.frame();
-        final String system = templates
-                .renderSystem(
-                        PromptName.SUGGEST_TARGETS,
-                        frame,
-                        Map.of(
-                                "nameRule",
-                                NameRules.bundled().rule(setting.policy(), frame.targetLanguage()),
-                                "examples",
-                                templates.nameExamples(frame, setting.policy())))
-                .strip();
+        // The style sheet is data the renderings are chosen against, so the task carries it, never the system part.
+        final Map<String, String> task = Map.of(
+                "nameRule",
+                NameRules.bundled().rule(setting.policy(), frame.targetLanguage()),
+                "examples",
+                templates.nameExamples(frame, setting.policy()));
         final List<GlossaryEntry> glossary = setting.context().heldWith(asked);
         final NameClusters clusters = NameClusters.of(glossary, setting.story().index(), frame.analysisLanguage());
         return new Run(
                 setting,
-                system,
+                task,
                 evidenceOf(setting.story(), asked),
                 SuggestionScripts.refused(frame, setting.policy()),
                 SuggestionScripts.required(frame),
@@ -383,15 +389,11 @@ public final class SuggestTargets {
                         refused.get(entry.id()),
                         setting.context().commonWordsOf(entry)))
                 .collect(Collectors.joining("\n"));
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(ChatRole.SYSTEM, run.system()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(PromptName.SUGGEST_TARGETS, Map.of("terms", lines))
-                                .strip()));
-        log.trace("Glossary suggestion batch {} messages {}", index, messages);
-        return ChatRequests.build(
-                PromptName.SUGGEST_TARGETS, messages, OutputLimit.forSuggestions(batch.size()), false);
+        final Map<String, String> values = new HashMap<>(run.task());
+        values.put("terms", lines);
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.SUGGEST_TARGETS, setting.frame(), values, OutputLimit.forSuggestions(batch.size()));
+        log.trace("Glossary suggestion batch {} messages {}", index, request.messages());
+        return request;
     }
 }

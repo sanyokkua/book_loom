@@ -10,23 +10,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NameKnowledge;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -40,7 +37,6 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class NameKnowledgeCalls {
 
     /** The most bare names one call carries. */
@@ -51,8 +47,20 @@ public final class NameKnowledgeCalls {
     private static final int TOKENS_PER_ITEM = 40;
     private static final int EXPECTED_SHARE_DIVISOR = 2;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public NameKnowledgeCalls(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /** A name waiting to be asked, and whether it was already asked once without an answer. */
     private record Waiting(GlossaryEntry entry, boolean retried) {}
@@ -97,14 +105,12 @@ public final class NameKnowledgeCalls {
         entries.forEach(entry -> waiting.addLast(new Waiting(entry, false)));
         final int planned = Math.ceilDiv(entries.size(), NAME_KNOWLEDGE_BATCH);
         log.info("Name knowledge started names={} batches={}", entries.size(), planned);
-        final String system =
-                templates.renderSystem(PromptName.NAME_KNOWLEDGE, frame).strip();
         int batch = 0;
         while (!waiting.isEmpty()) {
             batch++;
             final List<Waiting> asked = take(waiting);
             calls.announce(new BatchStarted(CallKind.NAME_KNOWLEDGE, batch, Math.max(batch, planned)));
-            final Result<Map<String, NameKnowledge>> answered = askBatch(batch, asked, system, calls);
+            final Result<Map<String, NameKnowledge>> answered = askBatch(batch, asked, frame, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -163,12 +169,12 @@ public final class NameKnowledgeCalls {
     }
 
     private Result<Map<String, NameKnowledge>> askBatch(
-            final int batch, final List<Waiting> asked, final String system, final ModelCalls calls) {
+            final int batch, final List<Waiting> asked, final CallFrame frame, final ModelCalls calls) {
         final List<GlossaryEntry> entries = asked.stream().map(Waiting::entry).toList();
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.NAME_KNOWLEDGE,
                 List.of(),
-                requestFor(batch, entries, system),
+                requestFor(batch, entries, frame),
                 CallDescriptor.asking(
                         PromptName.NAME_KNOWLEDGE,
                         entries.stream().map(GlossaryEntry::term).toList()));
@@ -195,18 +201,15 @@ public final class NameKnowledgeCalls {
     }
 
     // One line per bare name, and a cap sized to the batch.
-    private ChatRequest requestFor(final int batch, final List<GlossaryEntry> entries, final String system) {
+    private ChatRequest requestFor(final int batch, final List<GlossaryEntry> entries, final CallFrame frame) {
         final String names = entries.stream().map(entry -> "- " + entry.term()).collect(Collectors.joining("\n"));
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(ChatRole.SYSTEM, system),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(PromptName.NAME_KNOWLEDGE, Map.of("names", names))
-                                .strip()));
-        log.trace("Name knowledge batch {} messages {}", batch, messages);
         final int cap = BASE_TOKENS + TOKENS_PER_ITEM * entries.size();
-        return ChatRequests.build(
-                PromptName.NAME_KNOWLEDGE, messages, new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap), false);
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.NAME_KNOWLEDGE,
+                frame,
+                Map.of("names", names),
+                new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap));
+        log.trace("Name knowledge batch {} messages {}", batch, request.messages());
+        return request;
     }
 }

@@ -220,11 +220,23 @@ public final class PromptTemplates {
 
     private Map<String, String> systemValues(
             final PromptName name, final CallFrame frame, final Map<String, String> extra) {
+        return frameValues(name, name.systemSlots().orElse(Slots.NONE), frame, extra);
+    }
+
+    // The frame's values a template declares, the call's own values over them, then the examples and the language
+    // rules the template asks for, from the frame's language pair.
+    private Map<String, String> frameValues(
+            final PromptName name, final Slots slots, final CallFrame frame, final Map<String, String> extra) {
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(extra, "extra");
-        final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
+        final Map<String, String> values = new HashMap<>();
+        frame.systemSlotValues().forEach((slot, value) -> {
+            if (slots.declares(slot)) {
+                values.put(slot, value);
+            }
+        });
         values.putAll(extra);
-        if (declares(name, TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
+        if (slots.declares(TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
             values.putAll(tokenGate(true));
         }
         final String kind = PreparationSlots.kindOf(name);
@@ -232,10 +244,10 @@ public final class PromptTemplates {
             final PreparationExample example = preparations.of(frame.sourceLanguage(), kind);
             values.put(EXAMPLES, example.examples());
             values.put(EXAMPLE_REPLY, example.reply());
-        } else if (declares(name, EXAMPLES) && !extra.containsKey(EXAMPLES)) {
+        } else if (slots.declares(EXAMPLES) && !extra.containsKey(EXAMPLES)) {
             values.put(EXAMPLES, examplesFor(name, frame));
         }
-        if (declares(name, LANGUAGE_RULES)) {
+        if (slots.declares(LANGUAGE_RULES)) {
             values.put(
                     LANGUAGE_RULES,
                     rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
@@ -266,16 +278,25 @@ public final class PromptTemplates {
         return rules.nameExamples(frame.sourceLanguage(), frame.targetLanguage(), policy);
     }
 
-    private static boolean declares(final PromptName name, final String slot) {
-        return Objects.requireNonNull(name, "name")
-                .systemSlots()
-                .map(slots -> slots.declares(slot))
-                .orElse(false);
-    }
-
     /** Renders the user template of {@code name}; the map holds every required slot and only declared ones. */
     public String renderUser(final PromptName name, final Map<String, String> values) {
         return render(Objects.requireNonNull(users.get(Objects.requireNonNull(name, "name"))), values);
+    }
+
+    /**
+     * Renders the task of an analysis call (design D8): its user template, with the frame's languages, the examples
+     * and the language rules the template declares filled in from the frame, so the system part stays the ANALYSIS
+     * frame's three sentences.
+     *
+     * @param name the non-null call
+     * @param frame the non-null call frame
+     * @param values the non-null values of the template's own slots, each declared by it
+     * @return the rendered task, stripped
+     */
+    public String renderTask(final PromptName name, final CallFrame frame, final Map<String, String> values) {
+        Objects.requireNonNull(name, "name");
+        return renderUser(name, frameValues(name, name.userSlots(), frame, values))
+                .strip();
     }
 
     private static Template load(

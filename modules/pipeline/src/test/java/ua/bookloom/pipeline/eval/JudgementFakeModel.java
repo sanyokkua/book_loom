@@ -19,6 +19,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
@@ -50,7 +51,7 @@ final class JudgementFakeModel implements ChatModel {
     public Result<ChatResponse> chat(final ChatRequest request) {
         final String format =
                 request.responseFormat() == null ? "" : request.responseFormat().name();
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         final boolean wrong = request.seed() != null && wrongSeeds.contains(request.seed());
         return Result.ok(new ChatResponse(answer(format, user, wrong), FinishReason.STOP));
     }

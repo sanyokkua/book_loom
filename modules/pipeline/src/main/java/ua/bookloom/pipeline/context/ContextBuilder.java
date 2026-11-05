@@ -3,18 +3,23 @@ package ua.bookloom.pipeline.context;
 import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelWindow;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.OutputLimit;
+import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
@@ -33,6 +38,7 @@ public final class ContextBuilder {
     private static final int REPLY_SHARE_DIVISOR = 2;
 
     private final BlockWords words = BlockWords.bundled();
+    private final PromptTemplates templates;
     private final CallBlocks calls;
 
     /**
@@ -42,14 +48,63 @@ public final class ContextBuilder {
      */
     @Inject
     public ContextBuilder(final PromptTemplates templates) {
-        this.calls = new CallBlocks(Objects.requireNonNull(templates, "templates"), words);
+        this.templates = Objects.requireNonNull(templates, "templates");
+        this.calls = new CallBlocks(templates, words);
     }
 
-    /** Which fixed part a kind of call sends. */
-    private enum FrameKind {
-        TRANSLATE,
-        ANALYSIS,
-        NONE
+    /**
+     * Plans one analysis call: the ANALYSIS frame's three system blocks and the task as the one user block. A names,
+     * brief or file-name call has no run frame, so it is planned from the frame alone; its context size is the default
+     * window, since the model-call seam sizes every call to the window the model was latched at (task 6.9).
+     *
+     * @param kind the non-null kind of call; an analysis kind
+     * @param frame the non-null analysis frame
+     * @param task the non-null task text: the instruction, the book's text it reads and the reply's shape
+     * @param limit the non-null expected reply length and its cap, which caps the plan's reply
+     * @return the plan, or {@link ErrorCode#validation} for a kind that is no analysis call or an empty task
+     */
+    public Result<PromptPlan> planAnalysis(
+            final CallKind kind, final AnalysisFrame frame, final String task, final OutputLimit limit) {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(task, "task");
+        Objects.requireNonNull(limit, "limit");
+        log.debug("Planning {} (ANALYSIS frame) taskChars={} cap={}", kind, task.length(), limit.capTokens());
+        if (FrameKind.of(kind) != FrameKind.ANALYSIS) {
+            return invalid(kind, "This kind of call is not an analysis call.");
+        }
+        if (task.isBlank()) {
+            return invalid(kind, "An analysis call needs a task.");
+        }
+        final PromptPlan plan = frame.plan(user(BlockSlots.TASK, task.strip()), limit.capTokens());
+        PlanLog.plan(kind, new Focus(List.of(), Map.of()), plan);
+        return Result.ok(plan);
+    }
+
+    /**
+     * The request of one analysis call of {@code name}: its task template rendered in the call's frame, planned on the
+     * ANALYSIS frame of the frame's source language, as one system and one user message with reasoning off.
+     *
+     * @param name the non-null prompt of an analysis call
+     * @param frame the non-null call frame, whose source language the role names
+     * @param values the non-null values of the task template's own slots
+     * @param limit the non-null expected reply length and its cap
+     * @return the request; never null
+     * @throws IllegalArgumentException if {@code name} is not an analysis call, a mistake in the code
+     */
+    public ChatRequest analysisRequest(
+            final PromptName name, final CallFrame frame, final Map<String, String> values, final OutputLimit limit) {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(frame, "frame");
+        final String task = templates.renderTask(name, frame, Objects.requireNonNull(values, "values"));
+        final Result<PromptPlan> plan =
+                planAnalysis(name.callKind(), AnalysisFrame.of(frame.sourceLanguage()), task, limit);
+        if (plan.isErr()) {
+            throw new IllegalArgumentException(
+                    Objects.requireNonNull(plan.error(), "error").message());
+        }
+        return ChatRequests.build(
+                name, ChatRequests.messagesOf(Objects.requireNonNull(plan.data(), "plan")), limit, false);
     }
 
     /**
@@ -158,9 +213,9 @@ public final class ContextBuilder {
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(inputs, "inputs");
         final Focus focus = window.focus();
-        final FrameKind frameKind = frameOf(kind);
-        logPlanning(kind, frameKind, window, inputs);
-        final @Nullable String refusal = refusalOf(frameKind, focus);
+        final FrameKind frameKind = FrameKind.of(kind);
+        PlanLog.planning(kind, frameKind, window, inputs);
+        final @Nullable String refusal = frameKind.refusal(focus);
         if (refusal != null) {
             return invalid(kind, refusal);
         }
@@ -193,7 +248,7 @@ public final class ContextBuilder {
                 fitted.promptTokens(),
                 fitted.reserve(),
                 contextSize);
-        logPlan(kind, fitted.window().focus(), plan);
+        PlanLog.plan(kind, fitted.window().focus(), plan);
         return new FittedPlan(plan, fitted.keptItems());
     }
 
@@ -215,7 +270,7 @@ public final class ContextBuilder {
                 promptTokens(blocks, frame, profile),
                 Math.min(cap, contextSize / REPLY_SHARE_DIVISOR),
                 contextSize);
-        logPlan(kind, focus, plan);
+        PlanLog.plan(kind, focus, plan);
         return new FittedPlan(plan, focus.items().size());
     }
 
@@ -327,33 +382,6 @@ public final class ContextBuilder {
         }
     }
 
-    private static FrameKind frameOf(final CallKind kind) {
-        return switch (kind) {
-            case DRAFT, REPAIR, STRUCTURAL_REPAIR -> FrameKind.TRANSLATE;
-            case PRESCAN,
-                    REVIEW_TERMS,
-                    SUGGEST_TARGETS,
-                    SUMMARY,
-                    FILE_NAME,
-                    BRIEF_SUGGESTION,
-                    BOOK_KNOWLEDGE,
-                    BRIEF_SYNTHESIS,
-                    TERM_READING,
-                    TERM_CHOICE,
-                    NAME_KNOWLEDGE -> FrameKind.ANALYSIS;
-            case REVIEW, DIRECTED_FIX, REVISION -> FrameKind.NONE;
-        };
-    }
-
-    private static @Nullable String refusalOf(final FrameKind frameKind, final Focus focus) {
-        if (frameKind == FrameKind.NONE) {
-            return "This kind of call is not built by the context builder.";
-        }
-        return frameKind == FrameKind.TRANSLATE && focus.items().isEmpty()
-                ? "A translation call needs at least one item."
-                : null;
-    }
-
     private static <T> Result<T> invalid(final CallKind kind, final String message) {
         log.debug("Plan {} refused: {}", kind, message);
         return Result.err(AppError.of(ErrorCode.validation, "Prompt not planned", message));
@@ -367,32 +395,5 @@ public final class ContextBuilder {
                     default -> Block.Stability.CALL;
                 };
         return new Block(slot, Block.Role.USER, stability, text);
-    }
-
-    private static void logPlanning(
-            final CallKind kind, final FrameKind frameKind, final Window window, final CallInputs inputs) {
-        log.debug(
-                "Planning {} ({} frame) items={} previous={} contextSize={}",
-                kind,
-                frameKind,
-                window.focus().items().size(),
-                window.previous().size(),
-                inputs.contextSize());
-    }
-
-    private static void logPlan(final CallKind kind, final Focus focus, final PromptPlan plan) {
-        log.debug(
-                "Plan {} items={} blocks={} promptTokens={} maxOutputTokens={} contextSize={}",
-                kind,
-                focus.items().size(),
-                plan.blocks().stream()
-                        .map(block -> block.slot() + ":" + block.text().length())
-                        .toList(),
-                plan.promptTokens(),
-                plan.maxOutputTokens(),
-                plan.contextSize());
-        if (log.isTraceEnabled()) {
-            plan.blocks().forEach(block -> log.trace("Plan {} block {}: {}", kind, block.slot(), block.text()));
-        }
     }
 }

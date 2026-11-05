@@ -165,7 +165,7 @@ public enum PromptName {
             "term-choice",
             TermChoiceSchema.SCHEMA,
             new Temperatures(0.1, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            null,
             new Slots(Set.of(TERMS), Set.of())),
 
     /**
@@ -178,7 +178,7 @@ public enum PromptName {
             "name-knowledge",
             NameKnowledgeSchema.SCHEMA,
             new Temperatures(0.0, null),
-            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            null,
             new Slots(Set.of("names"), Set.of())),
 
     /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
@@ -188,8 +188,10 @@ public enum PromptName {
             "file-name",
             DraftSchema.SCHEMA,
             new Temperatures(0.2, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
-            new Slots(Set.of("fileName"), Set.of(TITLE, AUTHOR, "titleTarget", "authorTarget", "correction"))),
+            null,
+            new Slots(
+                    Set.of("fileName", TARGET_LANGUAGE),
+                    Set.of(TITLE, AUTHOR, "titleTarget", "authorTarget", "correction"))),
 
     /** The proposal of the Book Brief's tone and style from one passage of the book; one small call per passage. */
     BRIEF_SUGGESTION(
@@ -198,8 +200,8 @@ public enum PromptName {
             "brief-suggestion",
             BriefSuggestionSchema.SCHEMA,
             new Temperatures(0.1, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
-            new Slots(Set.of("sample", "dialogueShare"), Set.of(TITLE, AUTHOR, "askLanguage"))),
+            null,
+            new Slots(Set.of("sample", "dialogueShare", TARGET_LANGUAGE), Set.of(TITLE, AUTHOR, "askLanguage"))),
 
     /** The question what the model knows of the book by its title and author; one small call, checked against the metadata. */
     BOOK_KNOWLEDGE(
@@ -208,7 +210,7 @@ public enum PromptName {
             "book-knowledge",
             BookKnowledgeSchema.SCHEMA,
             new Temperatures(0.0, null),
-            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            null,
             new Slots(Set.of(TITLE), Set.of(AUTHOR))),
 
     /**
@@ -221,17 +223,17 @@ public enum PromptName {
             "brief-synthesis",
             BriefSynthesisSchema.SCHEMA,
             new Temperatures(0.0, null),
-            new Slots(Set.of(), Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
+            null,
             new Slots(Set.of("reports"), Set.of(TITLE, AUTHOR, "year", "publisher", "description", "knowledge"))),
 
     /** The reading of one glossary term in numbered windows from across the book (15i.N4); one term per call. */
-    TERM_READING(PreparationSlots.READING, "term-reading", TermReadingSchema.SCHEMA, "windows"),
+    TERM_READING(PreparationSlots.reading("windows"), "term-reading", TermReadingSchema.SCHEMA),
 
     /** The reading of one recurring term in numbered windows from across the book (15i.N7); one term per call. */
-    LEXICON_READING(PreparationSlots.READING, "lexicon-reading", LexiconReadingSchema.SCHEMA, "windows"),
+    LEXICON_READING(PreparationSlots.LEXICON, "lexicon-reading", LexiconReadingSchema.SCHEMA),
 
     /** At Max, one term's disagreeing reading calls summed up in one call (15i.N5). */
-    TERM_SUMMARY(PreparationSlots.SUMMARY, "term-summary", TermReadingSchema.SUMMARY, "calls"),
+    TERM_SUMMARY(new Slots(Set.of("term", "calls"), Set.of()), "term-summary", TermReadingSchema.SUMMARY),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
@@ -240,8 +242,8 @@ public enum PromptName {
             "prescan",
             PrescanSchema.SCHEMA,
             new Temperatures(0.2, null),
-            PreparationSlots.PRESCAN,
-            new Slots(Set.of("candidates"), Set.of("existingTerms"))),
+            null,
+            PreparationSlots.PRESCAN),
 
     /**
      * The glossary review the person asks for: a batch of held terms, each with how often the book uses it and where,
@@ -253,8 +255,8 @@ public enum PromptName {
             "review-terms",
             ReviewTermsSchema.SCHEMA,
             new Temperatures(0.1, null),
-            PreparationSlots.READING,
-            new Slots(Set.of(TERMS), Set.of())),
+            null,
+            PreparationSlots.REVIEW),
 
     /**
      * The glossary's target suggestions, run after the review's or the name scan's verdicts: a batch of held names and
@@ -266,10 +268,8 @@ public enum PromptName {
             "suggest-targets",
             SuggestTargetsSchema.SCHEMA,
             new Temperatures(0.1, null),
-            new Slots(
-                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, "nameRule"),
-                    Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, EXAMPLES, LANGUAGE_RULES)),
-            new Slots(Set.of(TERMS), Set.of())),
+            null,
+            new Slots(Set.of(TERMS, TARGET_LANGUAGE, "nameRule"), Set.of(STYLE_SHEET, EXAMPLES, LANGUAGE_RULES))),
 
     /** The optional garbled-word check: finished target texts answered with the words that are not real words. */
     SUSPICIOUS_WORDS(
@@ -310,16 +310,10 @@ public enum PromptName {
     private final @Nullable Slots systemSlots;
     private final Slots userSlots;
 
-    // A reading of one glossary term (15i.N4, 15i.N5): a term reading at temperature 0, the term and one text slot.
-    PromptName(final Slots system, final String name, final String responseSchema, final String textSlot) {
-        this(
-                name,
-                CallKind.TERM_READING,
-                name,
-                responseSchema,
-                new Temperatures(0.0, null),
-                system,
-                new Slots(Set.of("term", textSlot), Set.of()));
+    // A reading of one glossary term (15i.N4, 15i.N5): a term reading at temperature 0, its task the user message
+    // alone.
+    PromptName(final Slots user, final String name, final String responseSchema) {
+        this(name, CallKind.TERM_READING, name, responseSchema, new Temperatures(0.0, null), null, user);
     }
 
     PromptName(

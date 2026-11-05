@@ -6,22 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.index.Window;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -35,7 +32,6 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * written here.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermReading {
 
     // Per window a quote of a few words and three short labels; the term's two flags and the braces besides.
@@ -48,8 +44,20 @@ public final class TermReading {
     private static final String MARK_OPEN = "[[";
     private static final String MARK_CLOSE = "]]";
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    @Inject
+    public TermReading(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     /** How a window uses the term. */
     public enum Usage {
@@ -276,21 +284,14 @@ public final class TermReading {
     }
 
     private ChatRequest request(final Subject subject, final List<Window> windows, final CallFrame frame) {
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(
-                        ChatRole.SYSTEM,
-                        templates.renderSystem(PromptName.TERM_READING, frame).strip()),
-                new ChatMessage(
-                        ChatRole.USER,
-                        templates
-                                .renderUser(
-                                        PromptName.TERM_READING,
-                                        Map.of("term", termLine(subject), "windows", numbered(windows)))
-                                .strip()));
-        log.trace("Term reading messages {}", messages);
         final int expected = BASE_TOKENS + TOKENS_PER_WINDOW * windows.size();
-        return ChatRequests.build(
-                PromptName.TERM_READING, messages, new OutputLimit(expected, expected * CAP_FACTOR), false);
+        final ChatRequest request = builder.analysisRequest(
+                PromptName.TERM_READING,
+                frame,
+                Map.of("term", termLine(subject), "windows", numbered(windows)),
+                new OutputLimit(expected, expected * CAP_FACTOR));
+        log.trace("Term reading messages {}", request.messages());
+        return request;
     }
 
     // What the code knows, on the term's own line: the count, the tally when there is one, the other spellings.

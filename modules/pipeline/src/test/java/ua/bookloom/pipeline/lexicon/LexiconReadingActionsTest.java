@@ -33,6 +33,7 @@ import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RenderingOrigin;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.LexiconReading;
 import ua.bookloom.pipeline.glossary.PreScan;
@@ -111,7 +112,7 @@ class LexiconReadingActionsTest {
      */
     private final ChatModel model = request -> {
         requests.add(request);
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         if (formatOf(request).equals(TERM_CHOICE)) {
             return reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}");
         }
@@ -200,7 +201,8 @@ class LexiconReadingActionsTest {
 
         assertThat(service.review(desk.projectId(), model, event -> {}).isOk()).isTrue();
         assertThat(requests)
-                .noneMatch(request -> request.messages().getLast().content().contains("[[pentacle]]"));
+                .noneMatch(request ->
+                        AnalysisData.of(request.messages().getLast().content()).contains("[[pentacle]]"));
 
         assertThat(service.promote(desk.projectId(), "pentacle").isOk()).isTrue();
         assertThat(lexicon.all(desk.projectId()).data()).isEmpty();
@@ -359,7 +361,8 @@ class LexiconReadingActionsTest {
         service.review(desk.projectId(), model, event -> {});
 
         assertThat(requests)
-                .extracting(request -> request.messages().getLast().content())
+                .extracting(
+                        request -> AnalysisData.of(request.messages().getLast().content()))
                 .noneMatch(user -> user.contains("[[pentacle]]"));
         assertThat(lexicon.all(desk.projectId()).data())
                 .extracting(LexiconEntry::term, LexiconEntry::chosen)

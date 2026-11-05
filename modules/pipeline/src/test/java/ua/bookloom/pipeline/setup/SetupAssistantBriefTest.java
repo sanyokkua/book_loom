@@ -228,19 +228,19 @@ class SetupAssistantBriefTest extends SetupAssistantBriefTestBase {
     // IF the window prompt invited the model's memory of the book, THEN a famous title would outweigh what the text
     // shows; what the model knows is asked apart, and checked.
     @Test
-    void suggestBrief_windowSystemMessage_asksOnlyFromThePassageAndFixesNoGenderInItsExample() {
+    void suggestBrief_windowTask_asksOnlyFromThePassageAndFixesNoGenderInItsExample() {
         knowledgeAnswers(KNOWN);
         everyWindowAnswers(window("crime story", "casual"));
         synthesisAnswers(SYNTHESIS);
 
         suggested();
 
-        final String system = requestsOf(CallKind.BRIEF_SUGGESTION)
+        final String task = requestsOf(CallKind.BRIEF_SUGGESTION)
                 .getFirst()
                 .messages()
-                .getFirst()
+                .getLast()
                 .content();
-        assertThat(system)
+        assertThat(task)
                 .doesNotContain("what you know of this book", "\"narratorGender\":\"male\"")
                 .contains("\"narratorGender\":{\"evidence\"");
     }

@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.glossary.TermReading.Subject;
@@ -86,7 +87,7 @@ class TermReadingTest {
     private static String user(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .findFirst()
                 .orElseThrow();
     }

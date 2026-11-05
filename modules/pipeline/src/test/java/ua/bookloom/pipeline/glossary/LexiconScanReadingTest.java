@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
 import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -61,7 +62,8 @@ class LexiconScanReadingTest {
             if (kind == CallKind.TERM_CHOICE) {
                 return Result.ok(new ChatResponse(CHOICE, FinishReason.STOP));
             }
-            final String term = termOf(request.messages().getLast().content());
+            final String term =
+                    termOf(AnalysisData.of(request.messages().getLast().content()));
             readTerms.add(term);
             return Result.ok(new ChatResponse(reading(term, "term", 1, "маяк"), FinishReason.STOP));
         };

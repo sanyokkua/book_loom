@@ -7,26 +7,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -39,14 +36,24 @@ import ua.bookloom.util.text.GlossaryKeys;
  * entry whose pronouns decide its gender on their own is decided by the code and not sent.
  */
 @Slf4j
-@RequiredArgsConstructor
 final class ReviewBatches {
 
     private static final int TOKENS_PER_VERDICT = 40;
     private static final int CAP_TOKENS = 2048;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
+
+    /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     */
+    ReviewBatches(final PromptTemplates templates, final ObjectMapper mapper) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     Result<List<Verdict>> ask(
             final List<GlossaryEntry> open,
@@ -56,9 +63,7 @@ final class ReviewBatches {
         final List<Verdict> verdicts = new ArrayList<>();
         final List<GlossaryEntry> asked = new ArrayList<>();
         open.forEach(entry -> decidedByCode(entry, evidence).ifPresentOrElse(verdicts::add, () -> asked.add(entry)));
-        final String system =
-                templates.renderSystem(PromptName.REVIEW_TERMS, frame).strip();
-        final List<List<GlossaryEntry>> batches = batches(asked, evidence, system, frame.sourceLanguage());
+        final List<List<GlossaryEntry>> batches = batches(asked, evidence, fixedTokens(frame), frame.sourceLanguage());
         log.info(
                 "Glossary review asks the model about {} of {} terms in {} batches; {} decided by their pronouns",
                 asked.size(),
@@ -66,7 +71,7 @@ final class ReviewBatches {
                 batches.size(),
                 verdicts.size());
         for (int index = 0; index < batches.size(); index++) {
-            final Result<List<Verdict>> answered = runBatch(index, batches.get(index), evidence, system, calls);
+            final Result<List<Verdict>> answered = runBatch(index, batches.get(index), evidence, frame, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -100,9 +105,9 @@ final class ReviewBatches {
     private static List<List<GlossaryEntry>> batches(
             final List<GlossaryEntry> asked,
             final Map<String, Evidence> evidence,
-            final String system,
+            final int fixedTokens,
             @Nullable final String sourceLanguage) {
-        final int room = TermReview.INPUT_BUDGET_TOKENS - TokenEstimator.estimate(system, null);
+        final int room = TermReview.INPUT_BUDGET_TOKENS - fixedTokens;
         final List<List<GlossaryEntry>> batches = new ArrayList<>();
         List<GlossaryEntry> batch = new ArrayList<>();
         int used = 0;
@@ -126,16 +131,11 @@ final class ReviewBatches {
             final int index,
             final List<GlossaryEntry> batch,
             final Map<String, Evidence> evidence,
-            final String system,
+            final CallFrame frame,
             final ModelCalls calls) {
-        final List<ChatMessage> messages = messagesFor(batch, evidence, system);
-        final ChatRequest request = ChatRequests.build(
-                PromptName.REVIEW_TERMS,
-                messages,
-                new OutputLimit(batch.size() * TOKENS_PER_VERDICT, CAP_TOKENS),
-                false);
+        final ChatRequest request = requestFor(batch, evidence, frame);
         log.debug("Glossary review batch {} asks about {} terms", index, batch.size());
-        log.trace("Glossary review batch {} messages {}", index, messages);
+        log.trace("Glossary review batch {} messages {}", index, request.messages());
         final Result<ChatResponse> reply =
                 calls.callAbout(CallKind.REVIEW_TERMS, List.of(), request, TermReviewReplies.asking(batch));
         if (reply.isErr()) {
@@ -158,14 +158,27 @@ final class ReviewBatches {
         return Result.ok(verdicts);
     }
 
-    private List<ChatMessage> messagesFor(
-            final List<GlossaryEntry> batch, final Map<String, Evidence> evidence, final String system) {
+    private ChatRequest requestFor(
+            final List<GlossaryEntry> batch, final Map<String, Evidence> evidence, final CallFrame frame) {
         final String blocks = String.join(
                 "\n", batch.stream().map(entry -> block(entry, evidence)).toList());
-        final String user = templates
-                .renderUser(PromptName.REVIEW_TERMS, Map.of("terms", blocks))
-                .strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return builder.analysisRequest(
+                PromptName.REVIEW_TERMS,
+                frame,
+                Map.of("terms", blocks),
+                new OutputLimit(batch.size() * TOKENS_PER_VERDICT, CAP_TOKENS));
+    }
+
+    // What every batch sends besides its terms: the frame's sentences and the task, measured once with no term.
+    private int fixedTokens(final CallFrame frame) {
+        final int tokens = builder
+                .analysisRequest(PromptName.REVIEW_TERMS, frame, Map.of("terms", ""), new OutputLimit(1, CAP_TOKENS))
+                .messages()
+                .stream()
+                .mapToInt(message -> TokenEstimator.estimate(message.content(), null))
+                .sum();
+        log.debug("Glossary review fixed part tokens={}", tokens);
+        return tokens;
     }
 
     // One term: its count and the code's pronoun tally on the line, then its numbered windows.

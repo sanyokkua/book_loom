@@ -17,6 +17,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.index.Speech;
 import ua.bookloom.pipeline.prompt.PromptName;
 
@@ -60,7 +61,7 @@ final class NamesFakeModel implements ChatModel {
     public Result<ChatResponse> chat(final ChatRequest request) {
         final String format =
                 request.responseFormat() == null ? "" : request.responseFormat().name();
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         return Result.ok(new ChatResponse(answer(format, user), FinishReason.STOP));
     }
 

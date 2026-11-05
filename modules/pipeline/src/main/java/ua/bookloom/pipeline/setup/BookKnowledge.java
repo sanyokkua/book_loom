@@ -18,14 +18,12 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.pipeline.heal.SelfHealCalls;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.setup.Knowledge.Reason;
 
 /**
@@ -42,7 +40,7 @@ public final class BookKnowledge {
     private static final int EXPECTED_TOKENS = 160;
     private static final int CAP_TOKENS = 320;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
 
     /**
@@ -101,11 +99,8 @@ public final class BookKnowledge {
             user.put(AUTHOR, facts.author());
         }
         final PromptName name = PromptName.BOOK_KNOWLEDGE;
-        final ChatRequest request = ChatRequests.build(
-                name,
-                SelfHealCalls.messagesFor(templates, name, frame, user),
-                new OutputLimit(EXPECTED_TOKENS, CAP_TOKENS),
-                false);
+        final ChatRequest request =
+                builder.analysisRequest(name, frame, user, new OutputLimit(EXPECTED_TOKENS, CAP_TOKENS));
         log.debug("Book knowledge asked: author given={}", facts.author() != null);
         final List<String> asked = SetupCalls.askedOf(user);
         final Result<ChatResponse> reply =

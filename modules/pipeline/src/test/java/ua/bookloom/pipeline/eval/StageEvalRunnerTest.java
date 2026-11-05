@@ -19,9 +19,10 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.pipeline.context.AnalysisFrame;
+import ua.bookloom.pipeline.context.Block;
 import ua.bookloom.pipeline.eval.StageCases.RetryBook;
 import ua.bookloom.pipeline.prompt.PromptName;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * The stage suites proven offline: each runner against a fake model that answers like a good one, then a silent one,
@@ -38,6 +39,10 @@ class StageEvalRunnerTest {
                 .findFirst()
                 .orElseThrow();
     }
+
+    // What the production sends as an analysis call's system part for an English book: the ANALYSIS frame alone.
+    private static final String ANALYSIS_SYSTEM = String.join(
+            "\n\n", AnalysisFrame.of("en").blocks().stream().map(Block::text).toList());
 
     private static String system(final ChatRequest request) {
         return request.messages().getFirst().content();
@@ -91,10 +96,7 @@ class StageEvalRunnerTest {
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
         final ChatRequest sent = firstOf(runner.probe(), CallKind.PRESCAN);
         assertThat(sent.responseFormat().name()).isEqualTo(PromptName.PRESCAN.responseFormatName());
-        assertThat(system(sent))
-                .isEqualTo(new PromptTemplates()
-                        .renderSystem(PromptName.PRESCAN, StageFrames.frame(StageFrames.brief("en", "uk"), "en", "uk"))
-                        .strip());
+        assertThat(system(sent)).isEqualTo(ANALYSIS_SYSTEM);
         assertThat(rows.getFirst().calls()).isGreaterThanOrEqualTo(2);
     }
 
@@ -116,11 +118,7 @@ class StageEvalRunnerTest {
                 .extracting(StageRow::id)
                 .contains("terms-en-uk-everyday-vs-jargon:choice", "terms-en-uk-everyday-vs-jargon:review");
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
-        assertThat(system(firstOf(runner.probe(), CallKind.TERM_CHOICE)))
-                .isEqualTo(new PromptTemplates()
-                        .renderSystem(
-                                PromptName.TERM_CHOICE, StageFrames.frame(StageFrames.brief("en", "uk"), "en", "uk"))
-                        .strip());
+        assertThat(system(firstOf(runner.probe(), CallKind.TERM_CHOICE))).isEqualTo(ANALYSIS_SYSTEM);
     }
 
     @Test

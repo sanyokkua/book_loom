@@ -17,7 +17,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -33,6 +32,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -336,8 +336,7 @@ class PreScanTest {
     }
 
     private static String userMessage(final ChatRequest request) {
-        final List<ChatMessage> messages = request.messages();
-        return messages.getLast().content();
+        return AnalysisData.of(request.messages().getLast().content());
     }
 
     private static BookSlice ninetyFiveNames() {

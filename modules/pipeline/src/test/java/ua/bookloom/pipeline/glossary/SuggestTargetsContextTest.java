@@ -27,6 +27,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
@@ -140,7 +141,7 @@ class SuggestTargetsContextTest {
     }
 
     @Test
-    void suggest_namePolicy_isStatedInTheSystemMessageOfTheContextCall() {
+    void suggest_namePolicy_isStatedInTheTaskOfTheContextCall() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(NOTHING));
 
         suggest.suggest(
@@ -151,7 +152,7 @@ class SuggestTargetsContextTest {
                 calls(model),
                 new TargetContext(List.of(VENN), Map.of()));
 
-        assertThat(model.requests().getFirst().messages().getFirst().content())
+        assertThat(model.requests().getFirst().messages().getLast().content())
                 .contains("practical transcription of foreign names");
     }
 
@@ -315,7 +316,10 @@ class SuggestTargetsContextTest {
     }
 
     private static List<String> termLines(final ChatRequest request) {
-        return userText(request).lines().filter(line -> line.startsWith("- ")).toList();
+        return AnalysisData.of(userText(request))
+                .lines()
+                .filter(line -> line.startsWith("- "))
+                .toList();
     }
 
     /** The line of the given term; the term is followed by a space, so "Venn" never matches "Venn Street". */

@@ -10,16 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.pipeline.heal.SelfHealCalls;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** How every setup call is built, sent and read: one request shape, one announcement, one lenient JSON read. */
 @Slf4j
@@ -29,22 +26,22 @@ final class SetupCalls {
     // A line shown for what a call asked is cut here so one long passage does not fill the dialog.
     private static final int ASKED_CHARS = 160;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
 
     /**
-     * The request of one setup call, in the book's frame, with reasoning off.
+     * The request of one setup call, on the ANALYSIS frame of the book's language, with reasoning off.
      *
      * @param book the book the call is about
      * @param name the call's prompt
-     * @param user the user template's values
+     * @param user the task template's own values
      * @param limit the reply's expected size and cap
      * @return the request; never null
      */
     ChatRequest requestOf(
             final SetupBook book, final PromptName name, final Map<String, String> user, final OutputLimit limit) {
-        final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, book.frame(), user);
-        return ChatRequests.build(name, messages, limit, false);
+        log.debug("Setup call {} built values={}", name, user.keySet());
+        return builder.analysisRequest(name, book.frame(), user, limit);
     }
 
     /**

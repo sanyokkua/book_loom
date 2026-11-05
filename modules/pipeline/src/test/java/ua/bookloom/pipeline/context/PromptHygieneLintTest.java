@@ -8,8 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -266,6 +268,9 @@ class PromptHygieneLintTest {
         if (PlannedPrompts.PLANNED.contains(name)) {
             return PlannedPrompts.messages(name, SOURCE + " ⟦g0⟧ ⟦g1⟧");
         }
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return PlannedPrompts.analysisMessages(name, FRAME, taskValues(name, withOptional));
+        }
         final List<ChatMessage> messages = new ArrayList<>();
         if (name.systemSlots().isPresent()) {
             messages.add(new ChatMessage(ChatRole.SYSTEM, system(name).strip()));
@@ -278,10 +283,22 @@ class PromptHygieneLintTest {
         if (PlannedPrompts.PLANNED.contains(name)) {
             return PlannedPrompts.plan(name, SOURCE).systemText();
         }
-        return name == PromptName.SUGGEST_TARGETS
-                ? TEMPLATES.renderSystem(
-                        name, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))
-                : TEMPLATES.renderSystem(name, FRAME);
+        if (PlannedPrompts.ANALYSIS.contains(name)) {
+            return messages(name, true).getFirst().content();
+        }
+        return TEMPLATES.renderSystem(name, FRAME);
+    }
+
+    // An analysis task's own slots; the frame fills its languages and examples.
+    private static Map<String, String> taskValues(final PromptName name, final boolean withOptional) {
+        final Set<String> slots = new HashSet<>(name.userSlots().required());
+        if (withOptional) {
+            slots.addAll(name.userSlots().optional());
+        }
+        slots.removeAll(PlannedPrompts.FRAME_SLOTS);
+        final Map<String, String> values = new HashMap<>();
+        slots.forEach(slot -> values.put(slot, sample(name, slot)));
+        return values;
     }
 
     private static String user(final PromptName name, final boolean withOptional) {
@@ -294,6 +311,9 @@ class PromptHygieneLintTest {
     }
 
     private static String sample(final PromptName name, final String slot) {
+        if ("nameRule".equals(slot)) {
+            return NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk");
+        }
         if ("text".equals(slot)) {
             return name == PromptName.DRAFT ? SOURCE : TARGET;
         }

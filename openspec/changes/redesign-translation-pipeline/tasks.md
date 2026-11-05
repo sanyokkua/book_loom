@@ -1177,7 +1177,7 @@ snapshot changes shape, so the database is set aside.
   - **Test first:** the tests named in each sub-step's *Done when*, each seen red before its sub-step.
   - **Done when:** both sub-steps are done; no draft, batch or repair request is built without block 8's card when the window is not at a chapter start.
 
-- [ ] 11.6 Move the names readings, the brief suggestion and the file-name call onto the ANALYSIS frame. A preparation call needs the role, the data sentence and the reply sentence, not the translation rules, style sheet or examples. → :pipeline
+- [x] 11.6 Move the names readings, the brief suggestion and the file-name call onto the ANALYSIS frame. A preparation call needs the role, the data sentence and the reply sentence, not the translation rules, style sheet or examples. → :pipeline
   - **Satisfies:** "Give an analysis call only the role, the data sentence and the reply sentence" (translation-pipeline)
   - **Depends on:** 11.5
   - **Excludes:** the one context size of every call, which group 6 (task 6.9) already applies

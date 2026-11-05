@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.AnalysisData;
 
 /**
  * A hand-written model for the names pass tests: it answers each call by the response format the request names, from
@@ -121,7 +122,7 @@ final class NamesPassModel implements ChatModel {
         if (isNth || isFirstOfFormat) {
             return Result.err(Objects.requireNonNull(failure, "failure"));
         }
-        final String user = request.messages().getLast().content();
+        final String user = AnalysisData.of(request.messages().getLast().content());
         return Result.ok(new ChatResponse(replyTo(format, user), FinishReason.STOP));
     }
 

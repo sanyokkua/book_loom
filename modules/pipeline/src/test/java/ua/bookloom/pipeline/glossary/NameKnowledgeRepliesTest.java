@@ -28,6 +28,7 @@ import ua.bookloom.api.project.NameKnowledge;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.PlaceKind;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -69,7 +70,8 @@ class NameKnowledgeRepliesTest {
                 final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
             assertThat(kind).isEqualTo(CallKind.NAME_KNOWLEDGE);
             final List<String> names = new ArrayList<>();
-            final Matcher matcher = LINE.matcher(request.messages().getLast().content());
+            final Matcher matcher =
+                    LINE.matcher(AnalysisData.of(request.messages().getLast().content()));
             while (matcher.find()) {
                 names.add(matcher.group(1).strip());
             }
@@ -140,10 +142,10 @@ class NameKnowledgeRepliesTest {
 
     @Test
     void prompt_offersMaleFemaleNeuterAndNoUnknown() {
-        final String system =
-                new PromptTemplates().renderSystem(ua.bookloom.pipeline.prompt.PromptName.NAME_KNOWLEDGE, FRAME);
+        final String task = new PromptTemplates()
+                .renderTask(ua.bookloom.pipeline.prompt.PromptName.NAME_KNOWLEDGE, FRAME, Map.of("names", "- Aldo"));
 
-        assertThat(system).contains("male", "female", "neuter").doesNotContain("unknown");
+        assertThat(task).contains("male", "female", "neuter").doesNotContain("unknown");
     }
 
     @Test

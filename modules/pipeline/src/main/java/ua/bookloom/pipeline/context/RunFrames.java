@@ -40,7 +40,6 @@ import ua.bookloom.util.hash.HashUtil;
 @Slf4j
 public final class RunFrames {
 
-    private static final String SOURCE = "{source}";
     private static final String BULLET = "- ";
     private static final String SLOT_END = "\n";
     private static final String BLOCK_SEPARATOR = "\u0000";
@@ -127,7 +126,7 @@ public final class RunFrames {
                 reminders(brief.narrator(), target),
                 PairOutputRatio.of(rules, brief.sourceLanguage(), target).orElse(OutputReserve.DEFAULT_OUTPUT_RATIO),
                 system,
-                analysisBlocks(brief),
+                AnalysisFrame.of(brief.sourceLanguage()).blocks(),
                 hashOf(system),
                 firstPersonUnits(brief, index));
         logFrame(frame);
@@ -204,14 +203,6 @@ public final class RunFrames {
         }
         blocks.add(system(BlockSlots.REPLY, words.get(BlockWords.REPLY)));
         return List.copyOf(blocks);
-    }
-
-    private List<Block> analysisBlocks(final BookBrief brief) {
-        final String role = words.get(BlockWords.ANALYSIS_ROLE).replace(SOURCE, nameOf(brief.sourceLanguage()));
-        return List.of(
-                system(BlockSlots.ROLE, role),
-                system(BlockSlots.DATA, words.get(BlockWords.ANALYSIS_DATA)),
-                system(BlockSlots.REPLY, words.get(BlockWords.ANALYSIS_REPLY)));
     }
 
     // A likely gender is a guess nobody confirmed and orders no form (15i.T5), so only a stated one is reminded.

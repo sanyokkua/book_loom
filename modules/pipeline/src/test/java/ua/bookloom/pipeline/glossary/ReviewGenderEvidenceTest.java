@@ -15,7 +15,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -32,6 +31,7 @@ import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -255,7 +255,7 @@ class ReviewGenderEvidenceTest {
     private static List<String> termLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- "))
                 .toList();

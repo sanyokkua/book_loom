@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
@@ -57,7 +58,8 @@ class BookKnowledgeTest {
 
     private final ScriptedChatModel model = new ScriptedChatModel();
     private final List<JobEvent> events = new ArrayList<>();
-    private final BookKnowledge knowledge = new BookKnowledge(new PromptTemplates(), new ObjectMapper());
+    private final BookKnowledge knowledge =
+            new BookKnowledge(new ContextBuilder(new PromptTemplates()), new ObjectMapper());
     private final CallFrame frame =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
     private JobModelCalls calls;

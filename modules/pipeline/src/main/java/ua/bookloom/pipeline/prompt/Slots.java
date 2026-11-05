@@ -11,6 +11,9 @@ import java.util.Set;
  */
 public record Slots(Set<String> required, Set<String> optional) {
 
+    /** No slot at all, for a call with no system template. */
+    static final Slots NONE = new Slots(Set.of(), Set.of());
+
     /** Copies both sets so a declaration can never change after construction. */
     public Slots {
         required = Set.copyOf(Objects.requireNonNull(required, "required"));

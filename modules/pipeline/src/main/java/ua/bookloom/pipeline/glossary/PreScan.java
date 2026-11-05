@@ -13,17 +13,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.ToIntFunction;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.EntryChanges;
@@ -33,12 +30,12 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -53,24 +50,46 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * person already has.
  */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class PreScan {
 
     /** How many candidates one call carries, so a long book stays inside the model's context. */
     static final int BATCH_SIZE = 40;
 
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
     private final TermReview verdicts;
     private final SuggestTargets suggestions;
 
     /**
+     * Builds its requests on the ANALYSIS frame (design D8) from the catalogue's task templates.
+     *
+     * @param templates the non-null prompt catalogue
+     * @param mapper the non-null object mapper
+     * @param glossary the non-null glossary repository
+     * @param verdicts the non-null term review
+     * @param suggestions the non-null suggest targets
+     */
+    @Inject
+    public PreScan(
+            final PromptTemplates templates,
+            final ObjectMapper mapper,
+            final GlossaryRepository glossary,
+            final TermReview verdicts,
+            final SuggestTargets suggestions) {
+        this.builder = new ContextBuilder(Objects.requireNonNull(templates, "templates"));
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.verdicts = Objects.requireNonNull(verdicts, "verdicts");
+        this.suggestions = Objects.requireNonNull(suggestions, "suggestions");
+    }
+
+    /**
      * Asks the model about the book's candidate names and adds what it proposes to the glossary.
      *
      * @param projectId the project whose glossary receives the entries; never null
      * @param story the segments whose capitalised words are the candidates; never null, may be empty
-     * @param frame the run's language pair and style, for the system message
+     * @param frame the run's language pair, whose source the role of the call names
      * @param policy the Book Brief's name policy, which the suggested targets follow
      * @param calls the seam every model call goes through
      * @return the changes: the entries added, unlocked, each with a suggested target where the model gave one — a term the glossary
@@ -252,10 +271,8 @@ public final class PreScan {
             final String existing,
             final CallFrame frame,
             final ModelCalls calls) {
-        final List<ChatMessage> messages = messagesFor(batch, existing, frame);
-        final ChatRequest request =
-                ChatRequests.build(PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false);
-        log.trace("Pre-scan batch {} messages {}", index, messages);
+        final ChatRequest request = requestFor(batch, existing, frame);
+        log.trace("Pre-scan batch {} messages {}", index, request.messages());
         final CallDescriptor asked = CallDescriptor.asking(
                 PromptName.PRESCAN, batch.stream().map(NameCandidate::term).toList());
         final Result<ChatResponse> reply = calls.callAbout(CallKind.PRESCAN, List.of(), request, asked);
@@ -279,18 +296,17 @@ public final class PreScan {
         return Result.ok(proposals);
     }
 
-    private List<ChatMessage> messagesFor(
-            final List<NameCandidate> batch, final String existing, final CallFrame frame) {
+    private ChatRequest requestFor(final List<NameCandidate> batch, final String existing, final CallFrame frame) {
         final String lines = String.join(
                 "\n",
                 batch.stream()
                         .map(candidate -> candidate.term() + " — " + candidate.firstSentence())
                         .toList());
-        final String system = templates.renderSystem(PromptName.PRESCAN, frame).strip();
-        final String user = templates
-                .renderUser(PromptName.PRESCAN, Map.of("candidates", lines, "existingTerms", existing))
-                .strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return builder.analysisRequest(
+                PromptName.PRESCAN,
+                frame,
+                Map.of("candidates", lines, "existingTerms", existing),
+                OutputLimit.forPrescan(batch.size()));
     }
 
     /** The proposals as entries, leaving out a term the glossary holds or the person removed. */

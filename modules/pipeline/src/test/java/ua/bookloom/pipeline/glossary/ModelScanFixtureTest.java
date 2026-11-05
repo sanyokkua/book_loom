@@ -36,6 +36,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -159,9 +160,7 @@ class ModelScanFixtureTest {
     }
 
     private static List<String> lines(final ChatRequest request) {
-        return request.messages()
-                .getLast()
-                .content()
+        return AnalysisData.of(request.messages().getLast().content())
                 .lines()
                 .filter(line -> line.startsWith("- "))
                 .toList();
@@ -215,6 +214,6 @@ class ModelScanFixtureTest {
     }
 
     private static String userMessage(final ChatRequest request) {
-        return request.messages().getLast().content();
+        return AnalysisData.of(request.messages().getLast().content());
     }
 }

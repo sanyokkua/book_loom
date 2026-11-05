@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.glossary.LexiconReading.Decision;
 import ua.bookloom.pipeline.glossary.LexiconReading.Verdict;
 import ua.bookloom.pipeline.index.WindowPlan;
@@ -91,7 +92,7 @@ class LexiconReadingTest {
     /** A model that answers a reading by the term the prompt marks and a batch choice with {@code choice}. */
     private ModelCalls model(final Function<String, String> readingFor, final String choice) {
         return (kind, segmentId, request) -> {
-            final String user = request.messages().getLast().content();
+            final String user = AnalysisData.of(request.messages().getLast().content());
             kinds.add(kind);
             formats.add(formatOf(request));
             users.add(user);

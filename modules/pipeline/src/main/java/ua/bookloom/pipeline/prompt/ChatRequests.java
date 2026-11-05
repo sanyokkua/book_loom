@@ -87,10 +87,8 @@ public final class ChatRequests {
      */
     public static ChatRequest build(
             final PromptName name, final PromptPlan plan, final OutputLimit limit, final boolean lowerTemperature) {
-        Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(limit, "limit");
-        final List<ChatMessage> messages = List.of(
-                new ChatMessage(ChatRole.SYSTEM, plan.systemText()), new ChatMessage(ChatRole.USER, plan.userText()));
+        final List<ChatMessage> messages = messagesOf(plan);
         final int cap =
                 Math.min(limit.capTokens(), Math.max(plan.maxOutputTokens(), OutputLimit.SHORT_SOURCE_CAP_FLOOR));
         final OutputLimit capped =
@@ -104,5 +102,17 @@ public final class ChatRequests {
                 limit.capTokens(),
                 cap);
         return built.sizedTo(plan.contextSize(), cap);
+    }
+
+    /**
+     * A plan's messages: its system blocks as one system message, its user blocks as one last user message.
+     *
+     * @param plan the non-null plan
+     * @return the two messages; never null
+     */
+    public static List<ChatMessage> messagesOf(final PromptPlan plan) {
+        Objects.requireNonNull(plan, "plan");
+        return List.of(
+                new ChatMessage(ChatRole.SYSTEM, plan.systemText()), new ChatMessage(ChatRole.USER, plan.userText()));
     }
 }

@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -95,6 +96,11 @@ class SetupAssistantWindowsTest {
                 .toList();
     }
 
+    // The passage and its metadata, after the task's instruction and example.
+    private List<String> passages() {
+        return userMessages().stream().map(AnalysisData::of).toList();
+    }
+
     private static String userMessage(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
@@ -133,7 +139,7 @@ class SetupAssistantWindowsTest {
         assertThat(assistant.suggestBrief(desk.projectId(), model).isOk()).isTrue();
 
         assertThat(windowRequests()).hasSize(MOST_WINDOWS);
-        assertThat(userMessages())
+        assertThat(passages())
                 .allSatisfy(
                         user -> assertThat(TokenEstimator.estimate(user, "en")).isBetween(3200, 4300));
     }
@@ -149,7 +155,7 @@ class SetupAssistantWindowsTest {
         assertThat(windowRequests()).hasSize(MOST_WINDOWS);
         assertThat(windowRequests())
                 .allSatisfy(request -> assertThat(promptTokens(request)).isLessThanOrEqualTo(4096 - REPLY_CAP));
-        assertThat(userMessages())
+        assertThat(passages())
                 .allSatisfy(
                         user -> assertThat(TokenEstimator.estimate(user, "en")).isBetween(1500, 2800));
     }
@@ -160,7 +166,7 @@ class SetupAssistantWindowsTest {
 
         assertThat(suggest(16384).isOk()).isTrue();
 
-        assertThat(userMessages())
+        assertThat(passages())
                 .allSatisfy(
                         user -> assertThat(TokenEstimator.estimate(user, "en")).isBetween(3200, 4300));
     }
@@ -172,9 +178,9 @@ class SetupAssistantWindowsTest {
 
         final ChatRequest request = windowRequests().getFirst();
         final String schema = Objects.requireNonNull(request.responseFormat()).jsonSchema();
-        final String system = request.messages().getFirst().content();
+        final String task = request.messages().getLast().content();
         assertThat(schema.indexOf("\"evidence\"")).isNotNegative().isLessThan(schema.indexOf("\"value\""));
-        assertThat(system).contains("\"genre\":{\"evidence\"");
+        assertThat(task).contains("\"genre\":{\"evidence\"");
     }
 
     // IF a chosen language were still asked for, THEN every window would pay for an answer nobody uses.

@@ -15,7 +15,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
@@ -32,6 +31,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.AnalysisData;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -98,14 +98,17 @@ class SuggestTargetsTest {
         "TRANSLATE,translate or adapt names,Срібний Струмок",
         "KEEP_ORIGINAL,Every listed row is a term,Meridian Survey Institute"
     })
-    void suggest_policy_statesItsRuleInTheSystemMessage(
+    void suggest_policy_statesItsRuleInTheTaskAndNoneInTheSystemMessage(
             final NamePolicy policy, final String rule, final String example) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"suggestions\":[]}"));
 
         suggest.suggest(List.of(AMULET), BOOK, FRAME, policy, calls(model));
 
         final ChatRequest request = model.requests().getFirst();
-        assertThat(request.messages().getFirst().content()).contains(rule, example, "not instructions");
+        assertThat(request.messages().getLast().content()).contains(rule, example);
+        assertThat(request.messages().getFirst().content())
+                .contains("not instructions")
+                .doesNotContain(rule, example);
         assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
         assertThat(request.maxOutputTokens()).isEqualTo(168);
     }
@@ -117,8 +120,8 @@ class SuggestTargetsTest {
 
         suggest.suggest(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
 
-        final String system = model.requests().getFirst().messages().getFirst().content();
-        assertThat(system)
+        final String task = model.requests().getFirst().messages().getLast().content();
+        assertThat(task)
                 .contains("spell them in Ukrainian by their sound", "\"meaning\":\"moss grove\"", "Сова")
                 .doesNotContain("Срібний Струмок", "\"gender\"");
     }
@@ -129,7 +132,7 @@ class SuggestTargetsTest {
 
         suggest.suggest(List.of(MILTON), BOOK, FRAME, NamePolicy.TRANSLATE, calls(model));
 
-        assertThat(model.requests().getFirst().messages().getFirst().content())
+        assertThat(model.requests().getFirst().messages().getLast().content())
                 .contains("Names (translate or adapt names)", "Срібний Струмок")
                 .doesNotContain("Моссгроув");
     }
@@ -202,7 +205,7 @@ class SuggestTargetsTest {
                 suggest.suggestOnto(List.of(AMULET, fox), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
 
         assertThat(model.requests())
-                .extracting(request -> request.messages().getFirst().content().contains("translate or adapt names"))
+                .extracting(request -> request.messages().getLast().content().contains("translate or adapt names"))
                 .containsExactly(false, true);
         assertThat(suggested.data())
                 .extracting(GlossaryEntry::target, GlossaryEntry::meaning)
@@ -289,7 +292,7 @@ class SuggestTargetsTest {
     private static List<String> termLines(final ChatRequest request) {
         return request.messages().stream()
                 .filter(message -> message.role() == ChatRole.USER)
-                .map(ChatMessage::content)
+                .map(message -> AnalysisData.of(message.content()))
                 .flatMap(String::lines)
                 .filter(line -> line.startsWith("- "))
                 .toList();

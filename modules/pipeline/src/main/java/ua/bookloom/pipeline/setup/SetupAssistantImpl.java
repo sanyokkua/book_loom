@@ -37,6 +37,7 @@ import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.CallKindTotals;
 import ua.bookloom.pipeline.PrepSummary;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -70,7 +71,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final SegmentRepository segments;
     private final GlossaryRepository glossary;
     private final OpenProjects openProjects;
-    private final PromptTemplates templates;
+    private final ContextBuilder builder;
     private final ObjectMapper mapper;
     private final Clock clock;
     private final CallLedger ledger;
@@ -86,7 +87,15 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final PromptTemplates templates,
             final ObjectMapper mapper,
             final Clock clock) {
-        this(projects, segments, glossary, openProjects, templates, mapper, clock, CallLedger.none());
+        this(
+                projects,
+                segments,
+                glossary,
+                openProjects,
+                new ContextBuilder(templates),
+                mapper,
+                clock,
+                CallLedger.none());
     }
 
     @Override
@@ -127,7 +136,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         try {
             final int window = ModelWindows.of(model, detectedContext);
             return opened(projectId)
-                    .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(templates, mapper), glossary)
+                    .flatMap(book -> new BriefSuggester(setup(), new BookKnowledge(builder, mapper), glossary)
                             .suggest(book, window, calls(model, progress, book, window)));
         } catch (Exception cause) {
             return failed("brief suggestion", cause);
@@ -275,7 +284,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     }
 
     private SetupCalls setup() {
-        return new SetupCalls(templates, mapper);
+        return new SetupCalls(builder, mapper);
     }
 
     private String fileNameFrom(final String reply) {

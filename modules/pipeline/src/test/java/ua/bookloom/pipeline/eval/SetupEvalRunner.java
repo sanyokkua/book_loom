@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
+import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.eval.StageCases.SetupCase;
 import ua.bookloom.pipeline.setup.BookFacts;
 import ua.bookloom.pipeline.setup.BookKnowledge;
@@ -118,7 +119,7 @@ final class SetupEvalRunner {
     private KnowledgeOutcome knowledge(final SetupCase setupCase, final Prepared prepared, final int mark) {
         final Document document = Objects.requireNonNull(
                 prepared.stores().openProjects().get(prepared.projectId()), "the imported book is open");
-        final Knowledge verdict = new BookKnowledge(EvalVariants.templates(), new ObjectMapper())
+        final Knowledge verdict = new BookKnowledge(new ContextBuilder(EvalVariants.templates()), new ObjectMapper())
                 .judge(
                         BookFacts.of(document),
                         setupCase.fileStem(),

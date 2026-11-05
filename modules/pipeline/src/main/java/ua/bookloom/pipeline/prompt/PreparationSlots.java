@@ -1,10 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
 import static ua.bookloom.pipeline.prompt.SlotNames.EXAMPLES;
-import static ua.bookloom.pipeline.prompt.SlotNames.FOREIGN_PASSAGE_RULE;
-import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
-import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE_LANGUAGE;
-import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
 import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
 
 import java.util.Set;
@@ -13,25 +9,34 @@ import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The system slots of the names-pass prompts, whose worked examples come from the book's language file
+ * The task slots of the names-pass prompts, whose worked examples come from the book's language file
  * ({@link PreparationExamples}), kept out of {@link PromptName} so the enum body stays readable.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class PreparationSlots {
 
-    private static final Set<String> LANGUAGES = Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE);
+    private static final Set<String> SHOWN = Set.of(EXAMPLES, "exampleReply");
 
-    /** A reading of one term and the glossary review: the frame's slots and the examples. */
-    static final Slots READING =
-            new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, EXAMPLES, "exampleReply"));
+    /** The recurring-term reading, which names the target its rendering is written in. */
+    static final Slots LEXICON = new Slots(Set.of("term", "windows", TARGET_LANGUAGE), SHOWN);
 
-    /** The summary of one term's readings at Max, which shows no examples. */
-    static final Slots SUMMARY = new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE));
-
-    /** The name proposal: the frame's slots, the language rules and the examples. */
+    /** The name proposal. */
     static final Slots PRESCAN =
-            new Slots(LANGUAGES, Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE, LANGUAGE_RULES, EXAMPLES, "exampleReply"));
+            new Slots(Set.of("candidates", TARGET_LANGUAGE), Set.of("existingTerms", EXAMPLES, "exampleReply"));
+
+    /** The glossary review. */
+    static final Slots REVIEW = new Slots(Set.of("terms", TARGET_LANGUAGE), SHOWN);
+
+    /**
+     * A reading of one glossary term: the term, its numbered text and the examples.
+     *
+     * @param textSlot the slot of the numbered text
+     * @return the task template's slots
+     */
+    static Slots reading(final String textSlot) {
+        return new Slots(Set.of("term", textSlot), SHOWN);
+    }
 
     /**
      * The key of the worked examples a names-pass prompt takes from the book's language file.
