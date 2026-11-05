@@ -246,19 +246,19 @@ class DiagnosticsTranslationJobTest {
         final CheckpointPort throwing = commit -> {
             throw failure;
         };
-        final RunStores stores = project.stores();
         return new TestProject(
                 project.id(),
                 new RunStores(
-                        stores.projects(),
-                        stores.segments(),
+                        project.stores().projects(),
+                        project.stores().segments(),
                         throwing,
-                        stores.openProjects(),
-                        stores.runs(),
-                        stores.glossary(),
-                        stores.tm(),
-                        stores.summaries(),
-                        stores.lexicon()),
+                        project.stores().openProjects(),
+                        project.stores().runs(),
+                        project.stores().glossary(),
+                        project.stores().tm(),
+                        project.stores().summaries(),
+                        project.stores().lexicon(),
+                        project.stores().promptFrames()),
                 project.documents(),
                 project.deferrals());
     }

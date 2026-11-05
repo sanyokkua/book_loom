@@ -77,10 +77,10 @@ testable.
   (`:api`), so a retry after a timeout is announced as attempt 2 with its own clock; a chunk's judge call names every
   segment it judges in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
   count the client estimated rather than one the provider reported.
-- `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with besides its
-  source (preceding translations, rolling summary, glossary names, memory hits, recurring terms, character sheet);
-  the review desk shows it collapsed, in prompt order (style sheet, summary, glossary names, locked names, suggested
-  renderings, recurring terms, memory hits, characters, preceding translations).
+- `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with: the key to
+  the run's fixed frame (stored once per project as a `PromptFrame`) and the call's own user-message sections. The
+  review desk's "What the model saw" shows the stored frame joined back in front of the segment's own sections, in the
+  order they were sent.
 - `CallSnapshotUpdated(CallSnapshot)` announces one model call as a person inspects it, under one `callId` per call:
   `WAITING` when its first attempt goes out (and again for a later attempt), then `ANSWERED` with the reply and usage,
   or `FAILED`/`CANCELLED`; each `SegmentOutcomeNote` noted afterwards (a batch item `ADOPTED` or `FELL_BACK` with its

@@ -17,10 +17,14 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.llm.ModelProfile;
+import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.FrameWording;
@@ -60,6 +64,66 @@ public final class RunFrames {
         this.templates = Objects.requireNonNull(templates, "templates");
         this.rules = templates.languageRules();
         this.bookRules = Objects.requireNonNull(bookRules, "bookRules");
+    }
+
+    /**
+     * The stores a frame's book map is read from and the frame is kept in.
+     *
+     * @param glossary the glossary store
+     * @param lexicon the recurring terms' store
+     * @param frames the store that keeps each distinct frame once per project
+     */
+    public record FrameStores(GlossaryRepository glossary, LexiconRepository lexicon, PromptFrameRepository frames) {
+
+        /** Rejects a missing store. */
+        public FrameStores {
+            Objects.requireNonNull(glossary, "glossary");
+            Objects.requireNonNull(lexicon, "lexicon");
+            Objects.requireNonNull(frames, "frames");
+        }
+    }
+
+    /**
+     * Builds the frame over the project's glossary and recurring terms as they stand now and keeps it once per project
+     * for its hash, so a stored snapshot holds only the key and its call's own sections and a restarted desk joins the
+     * two again. A run builds its frame here at Start, and a review retry at the moment it is asked.
+     *
+     * @param stores the non-null stores
+     * @param projectId the non-null project id
+     * @param brief the non-null Book Brief now
+     * @param document the non-null opened book
+     * @param index the non-null index of the book
+     * @param profile the non-null profile of the model the calls go to
+     * @return the stored frame, or the error {@link #build} or a store answered
+     */
+    public Result<RunFrame> buildStored(
+            final FrameStores stores,
+            final String projectId,
+            final BookBrief brief,
+            final Document document,
+            final BookIndex index,
+            final ModelProfile profile) {
+        Objects.requireNonNull(stores, "stores");
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(document, "document");
+        return stores.glossary()
+                .all(projectId)
+                .flatMap(entries -> stores.lexicon()
+                        .all(projectId)
+                        .flatMap(terms -> build(
+                                brief, document, index, BookMap.of(entries, terms, brief, document.units()), profile)))
+                .flatMap(frame -> stored(stores.frames(), projectId, frame));
+    }
+
+    private static Result<RunFrame> stored(
+            final PromptFrameRepository frames, final String projectId, final RunFrame frame) {
+        log.debug(
+                "Storing the run frame project={} hash={} blocks={}",
+                projectId,
+                frame.frameHash(),
+                frame.system().size());
+        return frames.save(projectId, new PromptFrame(frame.frameHash(), PromptPlan.sectionsOf(frame.system())))
+                .map(saved -> frame);
     }
 
     /**

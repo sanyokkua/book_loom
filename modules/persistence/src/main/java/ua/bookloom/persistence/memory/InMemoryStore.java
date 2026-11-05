@@ -20,6 +20,7 @@ import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
@@ -54,6 +55,7 @@ final class InMemoryStore {
     private final Map<String, RunRecord> latestRunByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> lexiconRemovedByProject = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, PromptFrame>> framesByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
@@ -140,6 +142,11 @@ final class InMemoryStore {
         return lexiconRemovedByProject.computeIfAbsent(projectId, id -> ConcurrentHashMap.newKeySet());
     }
 
+    /** Returns a project's prompt frames keyed by hash, creating an empty table on first use. */
+    Map<String, PromptFrame> frames(final String projectId) {
+        return framesByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    }
+
     /**
      * Forgets everything kept under a project id, as the SQLite schema's cascade does when a project is deleted. The
      * caller holds the write lock.
@@ -154,6 +161,7 @@ final class InMemoryStore {
         latestRunByProject.remove(projectId);
         lexiconByProject.remove(projectId);
         lexiconRemovedByProject.remove(projectId);
+        framesByProject.remove(projectId);
     }
 
     /**

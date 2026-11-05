@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
@@ -57,6 +58,7 @@ final class StoredShapes {
             RunRecord.class,
             TmEntry.class,
             ExportRecord.class,
+            PromptFrame.class,
             ProviderConfig.class,
             ModelSettings.class);
 

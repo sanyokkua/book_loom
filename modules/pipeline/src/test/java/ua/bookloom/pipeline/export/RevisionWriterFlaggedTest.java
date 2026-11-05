@@ -150,8 +150,8 @@ class RevisionWriterFlaggedTest {
     }
 
     private List<String> flaggedQueue() {
-        final ReviewQueries queries =
-                new ReviewQueries(fixture.openProjects(), fixture.projects(), fixture.segments(), fixture.deferrals());
+        final ReviewQueries queries = new ReviewQueries(
+                fixture.openProjects(), fixture.projects(), fixture.segments(), fixture.deferrals(), fixture.frames());
         return ok(queries.queue(projectId, ReviewFilter.ALL_FLAGGED)).stream()
                 .map(SegmentView::segmentId)
                 .toList();

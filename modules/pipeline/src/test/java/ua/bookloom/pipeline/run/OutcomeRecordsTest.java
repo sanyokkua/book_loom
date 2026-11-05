@@ -8,25 +8,22 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 
 /** What a segment's outcome becomes in storage, and what a stored flag reads back as. */
 class OutcomeRecordsTest {
 
     private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
-            List.of("Він пішов."),
-            List.of(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true, false, null)),
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
             List.of(),
-            null,
-            "Neutral, faithful literary prose.");
+            false);
 
     // A retry replays what the draft saw, so the record keeps the snapshot of the draft that decided it.
     @Test

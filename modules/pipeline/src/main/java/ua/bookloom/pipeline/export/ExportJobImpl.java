@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.llm.CallLedger;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
@@ -50,6 +51,7 @@ final class ExportJobImpl implements ExportJob {
     private final @Nullable ExportCalls calls;
     private final ExportProgressListener progress;
     private final CallLedger ledger;
+    private final ModelProfile profile;
     private final AtomicBoolean cancelled = new AtomicBoolean();
     private final AtomicBoolean stopEarly = new AtomicBoolean();
     private final AtomicBoolean writing = new AtomicBoolean();
@@ -59,8 +61,10 @@ final class ExportJobImpl implements ExportJob {
             final ExportParts parts,
             @Nullable final ModelCalls calls,
             final ExportProgressListener progress,
-            final CallLedger ledger) {
+            final CallLedger ledger,
+            final ModelProfile profile) {
         this.request = Objects.requireNonNull(request, "request");
+        this.profile = Objects.requireNonNull(profile, "profile");
         this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.parts = Objects.requireNonNull(parts, "parts");
         this.progress = Objects.requireNonNull(progress, "progress");
@@ -155,7 +159,7 @@ final class ExportJobImpl implements ExportJob {
             return Result.ok(Optional.empty());
         }
         return parts.consistencyPass()
-                .run(project.id(), calls, new PassOptions(true, everySegment))
+                .run(project.id(), calls, new PassOptions(true, everySegment, profile))
                 .map(Optional::of);
     }
 

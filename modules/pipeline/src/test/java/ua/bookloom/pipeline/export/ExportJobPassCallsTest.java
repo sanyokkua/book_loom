@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.TestReplies;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 
 /**
@@ -37,7 +38,11 @@ class ExportJobPassCallsTest {
 
     private static final String FIRST = "ch01.xhtml:0";
     private static final String SECOND = "ch01.xhtml:1";
-    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(List.of(), List.of(), List.of(), null, "");
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
+            List.of(),
+            false);
 
     @TempDir
     private Path tempDir;
@@ -100,7 +105,7 @@ class ExportJobPassCallsTest {
         fixture.flag(projectId, FIRST, "Один.");
         fixture.decide(projectId, FIRST, record -> ReviewFixtures.withContext(record, SNAPSHOT));
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo("draft", reply("Один."))
+                .answerTo("draft", Result.ok(new ChatResponse(TestReplies.targetReply("Один."), FinishReason.STOP)))
                 .answerTo("reviewer", Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP)))
                 .answerTo("consistency", reply("Один."));
 

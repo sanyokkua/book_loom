@@ -11,7 +11,7 @@ import ua.bookloom.pipeline.heal.SegmentOutcome;
  *
  * @param segment the opened book's segment that was drafted again
  * @param outcome the quality loop's decision on the new draft; ACCEPTED or FLAGGED
- * @param snapshot the context the first draft saw, which the retry replayed and a stored record keeps
+ * @param snapshot the context the retry rebuilt and sent, marked as a retry's, which a stored record keeps
  */
 public record RetryCandidate(Segment segment, SegmentOutcome outcome, ContextSnapshot snapshot) {
 

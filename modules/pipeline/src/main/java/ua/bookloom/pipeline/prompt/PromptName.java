@@ -34,7 +34,10 @@ import ua.bookloom.pipeline.setup.BriefSynthesisSchema;
 @SuppressWarnings("ImmutableEnumChecker")
 public enum PromptName {
 
-    /** A review retry's single draft, one {@code {"target"}} object; a run drafts through {@link #TRANSLATE}. */
+    /**
+     * The old single draft, one {@code {"target"}} object, which only the old prompt's tests still build (task 11.8
+     * removes it); a run and a review retry draft through {@link #TRANSLATE}.
+     */
     DRAFT(
             "draft",
             CallKind.DRAFT,

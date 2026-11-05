@@ -81,7 +81,7 @@ public final class ChunkRunner {
                 settings.projectId(),
                 settings.frame().analysisLanguage(),
                 settings.frame().targetLanguage());
-        this.drafting = new ChunkDrafting(steps, settings, shared);
+        this.drafting = new ChunkDrafting(steps, shared);
         this.deciding = new ChunkDeciding(sinks, learning, shared);
     }
 

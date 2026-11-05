@@ -16,9 +16,9 @@ import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
- * A review retry's prompts: the old single-segment draft and its format correction, answered as one {@code {"target"}}
- * object and replayed from the stored snapshot. A retry sends no repair, so this draft step has none; it is gone once
- * the retry is planned by the context builder (task 11.7).
+ * The old single-segment draft and its format correction, answered as one {@code {"target"}} object. No production
+ * draft step uses it since the review retry is planned by the context builder (task 11.7); only the old prompt's tests
+ * build it, and it goes with {@code DraftContext} (task 11.8). It sends no repair, so it has none.
  */
 @Slf4j
 final class SingleDraftPrompts implements DraftPrompts {

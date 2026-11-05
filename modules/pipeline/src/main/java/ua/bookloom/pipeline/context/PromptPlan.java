@@ -46,6 +46,16 @@ public record PromptPlan(List<Block> blocks, int promptTokens, int maxOutputToke
      * @return never null; one part per block, in the order sent
      */
     public List<PromptSection> sections() {
+        return sectionsOf(blocks);
+    }
+
+    /**
+     * Blocks as the parts a person reads, as {@link #sections()} words them; the run's fixed frame is stored this way.
+     *
+     * @param blocks the non-null blocks, in the order sent
+     * @return never null; one part per block
+     */
+    public static List<PromptSection> sectionsOf(final List<Block> blocks) {
         return blocks.stream().map(PromptPlan::section).toList();
     }
 

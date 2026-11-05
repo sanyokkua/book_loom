@@ -17,6 +17,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
@@ -27,8 +28,11 @@ import ua.bookloom.pipeline.review.ReviewFixtures;
 class ConsistencyPassPolicyTest {
 
     private static final PassOptions EXPORT = new PassOptions(true, false);
-    private static final ContextSnapshot SNAPSHOT =
-            new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
+            List.of(),
+            false);
     private static final String OLD = "Сем зустрів давнього друга.";
     private static final String REWRITTEN = "Самуїл побачив старого приятеля.";
     private static final String GOOD = "Денні зайшов, потім сів.";

@@ -409,7 +409,9 @@ task edits the delta requirement and this file's line; the result is written int
   `DEFAULT_OUTPUT_RATIO` 1.5, measured on en→uk; `OUTPUT_PER_ITEM` 16); for a profile whose reasoning is ALWAYS or
   UNSWITCHABLE, `max(REASONING_RESERVE_MIN 2048, 4·S + 35·n)`; the hard cap ≈ 3.6·S stays as a runaway guard; ANALYSIS
   kinds keep their own caps (chapter summary 200).
-- **Snapshot.** `ContextSnapshot(frameHash, sections, chapterSummaryKeys)` holds only blocks 8–13 that went out; blocks
+- **Snapshot.** `ContextSnapshot(frameHash, sections, chapterSummaryKeys, retry)` holds only blocks 8–13 that went out
+  (`retry` marks the context a desk retry rebuilt and sent, so "as it was sent for this retry" is still shown after a
+  restart; `frameHash` is empty for a segment no call was made for); blocks
   1–7 are stored once per project for each distinct frame, as a project document `promptFrame:<hash>` (new `DocKind`,
   read through `persistence: sqlite/ProjectDocs`). Retry and Proofread rebuild from the current map and stored targets,
   never replay (owner decision D-19); `review/RetryDraft` and `SnapshotTerms` stop reading the stored glossary; the
@@ -1093,7 +1095,7 @@ The command line keeps the in-memory adapters and is unaffected.
 | 7 | `GlossaryEntry` reshaped (D3); `LexiconEntry` + `forms`; `Origin`, `TargetState`, `PlaceKind` new; `TargetOrigin`, `GenderOrigin` deleted; `TermType` + 3 constants; `BookBrief` + `apostrophe`, `quoteStyle`, `defaultAddress`, `conventions`, `likely`; `ModelSettings` + `secondsPerCall` − `measuredSecondsPerSegment`, `measuredFrom` (from here `CallKind` is a stored enum, a map key, so the later `CallKind` edits of groups 10, 12, 13 and 14 change the fingerprint too; those groups reset anyway) | yes |
 | 8, 9 | none (`OPENROUTER` exists since 5; advice is derived) | no |
 | 10 | `SegmentRecord` − `repairRounds` (stored findings keep `QaFinding.kind` as a string, so the new `FindingKind` and `CheckName` constants change no fingerprint) | yes |
-| 11 | `ContextSnapshot` → `(frameHash, sections, chapterSummaryKeys)`; new `promptFrame` document root | yes |
+| 11 | `ContextSnapshot` → `(frameHash, sections, chapterSummaryKeys, retry)`; new `promptFrame` document root (`PromptFrame`) | yes |
 | 12 | `RollingSummary` → `ChapterSummary` (root replaced); `BookBrief` + `storyShape`, `chapterSummaries` | yes |
 | 13 | `SegmentRecord` + `proofread: ProofreadVerdict` (with `ProofreadOutcome`); `DeferralReason` + `GENDER_CHANGED` | yes |
 | 14 | `ExportRecord.verifiedSegments` → `proofreadSegments` (`ProofreadSummary` replaces `ExportReport.consistency`, which is not stored); settings key `automation.lastCheck` gone | yes |

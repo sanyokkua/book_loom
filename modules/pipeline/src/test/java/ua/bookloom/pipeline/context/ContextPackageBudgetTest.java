@@ -62,7 +62,7 @@ class ContextPackageBudgetTest {
         assertThat(assembled.draftContext().glossaryLines()).isEmpty();
         assertThat(assembled.draftContext().precedingTargets()).isEmpty();
         assertThat(assembled.draftContext().summary()).isNull();
-        assertThat(assembled.snapshot().glossary()).isEmpty();
+        assertThat(assembled.injected().glossary()).isEmpty();
     }
 
     @Test
@@ -78,7 +78,7 @@ class ContextPackageBudgetTest {
     void assemble_cutContext_snapshotRecordsExactlyWhatWasShown() {
         final ContextPackage assembled = assemble(14);
 
-        assertThat(assembled.snapshot().precedingTargets()).containsExactly("Два.");
-        assertThat(assembled.snapshot().summary()).isNull();
+        assertThat(assembled.injected().precedingTargets()).containsExactly("Два.");
+        assertThat(assembled.injected().summary()).isNull();
     }
 }

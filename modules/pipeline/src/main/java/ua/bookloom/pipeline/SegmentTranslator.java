@@ -38,8 +38,8 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * The draft step: one draft call, with at most one format re-ask, whose reply is read by design D3's reply
  * precedence; marks the reply lost are put back by code, and a reply that copies a shown example is asked once more
  * and then flagged. It decides nothing — a reply it can use goes to the quality loop, which accepts, repairs or flags it
- * — so the chunk runner and a review retry share one draft step. A run's draft is a batch of one planned by the context
- * builder; a review retry still replays its stored single-draft prompt (task 11.7 moves it).
+ * — so the chunk runner and a review retry share one draft step. A run's draft and a review retry's alike are a batch of
+ * one planned by the context builder.
  */
 @Slf4j
 public final class SegmentTranslator {
@@ -58,8 +58,8 @@ public final class SegmentTranslator {
     private final DraftReplies replies;
 
     /**
-     * Creates a review retry's draft step over its placeholder gate, call seam, format, single-draft prompts and reply
-     * reader.
+     * Creates a draft step over the old single-draft prompts, which only their tests still build (task 11.8 removes
+     * it); a run and a review retry use the planner's constructor.
      */
     public SegmentTranslator(
             final GateFunction gate,
@@ -296,23 +296,23 @@ public final class SegmentTranslator {
     }
 
     /**
-     * Drafts a segment, in sentence-aligned pieces when the text it is shown is alone above the budget. The pieces are
-     * joined and gated once as that one segment, because the translation goes back into the node it came from. A
-     * review retry passes the person's note and its temperature choice, so every piece's draft carries them as the
-     * whole segment's draft would.
+     * A review retry's draft of one segment, planned over the window and map it is shown now and in pieces when it is
+     * alone above the budget, as a run's draft is. The pieces are joined and gated once as that one segment, because the
+     * translation goes back into the node it came from; every piece's draft carries the person's note and temperature
+     * choice as the whole segment's draft would.
      *
      * @param segment the non-null segment to draft
-     * @param context the non-null replayed context each piece is shown
+     * @param context the non-null window, map and memory the draft is shown
      * @param mask the non-null spans hidden in the segment; the pieces are cut from its text
      * @param splitter the non-null sentence splitter of the source language
      * @param budgetTokens the chunk budget a piece must fit
      * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
      * @param lowerTemperature whether each draft call asks for its lower temperature
-     * @return the draft's outcome, or the error a call answered, which the run routes
+     * @return the draft's outcome, or the error a call answered
      */
     public Result<DraftOutcome> translateSplit(
             final Segment segment,
-            final DraftContext context,
+            final TranslateContext context,
             final ProtectedMask mask,
             final SentenceSplitter splitter,
             final int budgetTokens,

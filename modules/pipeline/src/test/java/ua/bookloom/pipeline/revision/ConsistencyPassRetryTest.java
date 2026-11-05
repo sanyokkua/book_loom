@@ -6,6 +6,7 @@ import static ua.bookloom.pipeline.revision.RevisionBook.DANNY;
 import static ua.bookloom.pipeline.revision.RevisionBook.OLD_MAN;
 import static ua.bookloom.pipeline.revision.RevisionBook.OLD_MAN_SOURCE;
 import static ua.bookloom.pipeline.revision.RevisionBook.RUN_DANNY;
+import static ua.bookloom.pipeline.revision.RevisionBook.draftReply;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
 
@@ -24,6 +25,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
@@ -41,8 +43,11 @@ import ua.bookloom.pipeline.review.ReviewFixtures;
 class ConsistencyPassRetryTest {
 
     private static final PassOptions EXPORT = new PassOptions(true, false);
-    private static final ContextSnapshot SNAPSHOT =
-            new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
+            List.of(),
+            false);
     private static final String DRAFT = "draft";
     private static final String DROPPED = "Денні зайшов.";
     private static final String WHOLE = "Денні зайшов. Він сів.";
@@ -78,7 +83,7 @@ class ConsistencyPassRetryTest {
     @Test
     void run_flaggedSegmentWithADroppedSentence_isDraftedAgainAndTheBetterTextStored() {
         flagged(DANNY, DROPPED);
-        book.model().answerTo(DRAFT, reply(WHOLE));
+        book.model().answerTo(DRAFT, draftReply(WHOLE));
         neighbourKeeps(WHOLE);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -96,7 +101,7 @@ class ConsistencyPassRetryTest {
     void run_flaggedEchoOfTheSource_isDraftedAgainAndTheTranslationStored() {
         final String translated = "Старий подивився на море й усміхнувся.";
         flagged(OLD_MAN, OLD_MAN_SOURCE);
-        book.model().answerTo(DRAFT, reply(translated));
+        book.model().answerTo(DRAFT, draftReply(translated));
         neighbourKeeps(translated);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -111,7 +116,7 @@ class ConsistencyPassRetryTest {
     @Test
     void run_retryThatLosesTheQuoteMarks_keepsTheOldText() {
         flagged(RUN_DANNY, QUOTED);
-        book.model().answerTo(DRAFT, reply("Біжи, Денні, сказав я. Він побіг."));
+        book.model().answerTo(DRAFT, draftReply("Біжи, Денні, сказав я. Він побіг."));
         neighbourKeeps(QUOTED);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -123,17 +128,18 @@ class ConsistencyPassRetryTest {
         assertThat(report.checks().refused()).containsExactly(entry(RevisionGuards.QUOTES, 1));
     }
 
-    // IF a retry that drops the name the source calls out were kept, THEN "Danny" would vanish from the book.
+    // IF a retry that drops the name the source calls out were kept, THEN "Danny" would vanish from the book. The retry
+    // is checked against today's glossary, which holds Danny, so its own acceptance rule already refuses it.
     @Test
     void run_retryThatDropsTheCalledOutName_keepsTheOldText() {
         flagged(RUN_DANNY, QUOTED);
-        book.model().answerTo(DRAFT, reply("«Біжи», — сказав я. Він побіг."));
+        book.model().answerTo(DRAFT, draftReply("«Біжи», — сказав я. Він побіг."));
         neighbourKeeps(QUOTED);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
 
         assertThat(book.stored(RUN_DANNY).machineTarget()).isEqualTo(QUOTED);
-        assertThat(report.checks().refused()).containsExactly(entry(PassChecks.CHECKS, 1));
+        assertThat(report.checks().refused()).containsExactly(entry(RetryPass.NOT_ACCEPTED, 1));
     }
 
     // IF an audit-doubted accepted segment were left out, THEN only the run's own flags would ever be retried.
@@ -141,7 +147,7 @@ class ConsistencyPassRetryTest {
     void run_acceptedSegmentTheAuditDoubts_isDraftedAgainAndImproved() {
         book.decide(DANNY, "Денні зайшов зайшов. Він сів.", "Денні зайшов зайшов. Він сів.");
         ReviewFixtures.withContext(book.desk(), DANNY, SNAPSHOT);
-        book.model().answerTo(DRAFT, reply(WHOLE));
+        book.model().answerTo(DRAFT, draftReply(WHOLE));
         neighbourKeeps(WHOLE);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -195,7 +201,7 @@ class ConsistencyPassRetryTest {
     void run_cancelledDuringTheSecondDraft_endsCancelledAndKeepsTheFirstImprovement() {
         flagged(DANNY, DROPPED);
         flagged(RUN_DANNY, QUOTED);
-        book.model().answerTo(DRAFT, reply(WHOLE));
+        book.model().answerTo(DRAFT, draftReply(WHOLE));
         book.model().answerTo(DRAFT, Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Stopped.")));
 
         final Result<ConsistencyReport> ran = book.runExport(EXPORT);
@@ -210,7 +216,7 @@ class ConsistencyPassRetryTest {
     void run_twoDoubtedSegments_announcesTwoUnitsAndEachOneDone() {
         flagged(DANNY, DROPPED);
         flagged(RUN_DANNY, QUOTED);
-        book.model().answerTo(DRAFT, reply(WHOLE)).answerTo(DRAFT, reply(QUOTED));
+        book.model().answerTo(DRAFT, draftReply(WHOLE)).answerTo(DRAFT, draftReply(QUOTED));
         neighbourKeeps(WHOLE);
         neighbourKeeps(QUOTED);
         final List<String> announced = new ArrayList<>();

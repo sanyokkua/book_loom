@@ -2291,37 +2291,6 @@ public enum MessageKey {
     /** Source pane of a segment that has no visible text. */
     LIVE_EMPTY_SOURCE("live.emptySource"),
 
-    /** Heading of the collapsed section that shows what a draft was sent with. */
-    LIVE_CONTEXT_TITLE("live.context.title"),
-    /** Counts beside {@link #LIVE_CONTEXT_TITLE}; arguments: 0 preceding translations, 1 {@code yes} when a summary was sent else {@code no}, 2 names, 3 memory hits. */
-    LIVE_CONTEXT_COUNTS("live.context.counts"),
-    /** Hover explanation of the context section. */
-    LIVE_CONTEXT_TIP("live.context.title.tip"),
-    /** Context-section heading of the preceding translations. */
-    LIVE_CONTEXT_PRECEDING("live.context.preceding"),
-    /** Context-section heading of the rolling summary. */
-    LIVE_CONTEXT_SUMMARY("live.context.summary"),
-    /** Context-section line under {@link #LIVE_CONTEXT_SUMMARY} while the model has written no summary yet. */
-    LIVE_CONTEXT_NO_SUMMARY("live.context.noSummary"),
-    /** Context-section heading of the glossary names. */
-    LIVE_CONTEXT_NAMES("live.context.names"),
-    /** Context-section heading of the translation-memory hits. */
-    LIVE_CONTEXT_MEMORY("live.context.memory"),
-    /** Context-section line of one glossary name; arguments: 0 the term, 1 its rendering or {@code none}, 2 {@code locked} or {@code free}; all Strings. */
-    LIVE_CONTEXT_TERM("live.context.term"),
-    /** Context-section line of one memory hit; arguments: 0 the source, 1 the target; both Strings. */
-    LIVE_CONTEXT_HIT("live.context.hit"),
-    /** Context-section body when the draft was sent nothing besides its source and the style sheet. */
-    LIVE_CONTEXT_EMPTY("live.context.empty"),
-    /** Button in the context section that copies what the model was given. */
-    LIVE_CONTEXT_COPY("live.context.copy"),
-    /** Hover explanation of the control labelled by {@link #LIVE_CONTEXT_COPY}. */
-    LIVE_CONTEXT_COPY_TIP("live.context.copy.tip"),
-    /** The target column of a glossary name the model was given with no rendering. */
-    LIVE_CONTEXT_NO_RENDERING("live.context.noRendering"),
-    /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
-    LIVE_CONTEXT_LOCKED("live.context.locked"),
-
     /** Text of the live panel before the run has made a model call. */
     LIVE_CALL_NONE("live.call.none"),
 
@@ -2410,16 +2379,6 @@ public enum MessageKey {
 
     /** Words for one reason in an outcome chip, and for a rule a consistency answer broke; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
     LIVE_CALL_DETAIL("live.call.detail"),
-    /** Context-section heading of the style sheet. */
-    LIVE_CONTEXT_STYLE("live.context.style"),
-    /** Context-section heading of the locked glossary names. */
-    LIVE_CONTEXT_LOCKED_NAMES("live.context.lockedNames"),
-    /** Context-section heading of the glossary renderings the person has not confirmed. */
-    LIVE_CONTEXT_SUGGESTED("live.context.suggested"),
-    /** Context-section heading of the renderings the run keeps for recurring terms. */
-    LIVE_CONTEXT_LEXICON("live.context.lexicon"),
-    /** Context-section heading of the characters a segment names. */
-    LIVE_CONTEXT_CHARACTERS("live.context.characters"),
 
     /** Heading of the source pane when no source language is set. */
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
@@ -3952,10 +3911,12 @@ public enum MessageKey {
     REVIEW_TAB_CONTEXT("review.tab.context"),
     /** Detail tab; argument 0 is the number of suggestions. */
     REVIEW_TAB_SUGGESTION("review.tab.suggestion"),
-    /** Line over the context of a segment drafted alone. */
+    /** Line over the prompt a segment's call was sent: the run's fixed frame and the call's own sections. */
     REVIEW_CONTEXT_INTRO("review.context.intro"),
-    /** Line over the context of a segment drafted in a batch. */
-    REVIEW_CONTEXT_BATCH("review.context.batch"),
+    /** Line over the prompt of a segment Try again drafted again: the context rebuilt and sent for that retry. */
+    REVIEW_CONTEXT_RETRY("review.context.retry"),
+    /** Line in place of the prompt of a segment no model call was made for (a memory reuse or a shortcut). */
+    REVIEW_CONTEXT_NONE("review.context.none"),
     /** What may be wrong with a name finding. */
     REVIEW_WHY_NAME("review.why.name"),
     /** What may be wrong with a language finding. */

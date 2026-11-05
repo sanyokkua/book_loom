@@ -28,10 +28,12 @@ import ua.bookloom.api.project.SegmentPath;
  * @param path how this segment reached its current target
  * @param reviewed true once a person accepted, saved, reverted, applied a proposal or retried this segment
  *     successfully
- * @param context the context snapshot a retry replays, or null when none was recorded
+ * @param context what the segment's call was sent besides the run's fixed frame, or null when none was recorded
  * @param proposal a pending backward-revision proposal for this segment's edit, or null when none is pending
  * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, or
  *     null — review shows it labelled as no usable translation rather than the source
+ * @param frame the fixed frame {@code context} names, joined from the project's stored frames; empty when the segment
+ *     has no snapshot, no call was made for it or the frame is not stored
  */
 public record SegmentView(
         String segmentId,
@@ -49,7 +51,8 @@ public record SegmentView(
         boolean reviewed,
         @Nullable ContextSnapshot context,
         @Nullable String proposal,
-        @Nullable String rejectedTarget) {
+        @Nullable String rejectedTarget,
+        List<PromptSection> frame) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings}.
@@ -64,6 +67,45 @@ public record SegmentView(
         Objects.requireNonNull(findings, "findings");
         Objects.requireNonNull(path, "path");
         findings = List.copyOf(findings);
+        frame = List.copyOf(Objects.requireNonNull(frame, "frame"));
+    }
+
+    /** A segment view whose snapshot's frame was not joined. */
+    public SegmentView(
+            final String segmentId,
+            final String locator,
+            final SegmentKind kind,
+            final SegmentStatus status,
+            final String maskedSource,
+            final String displaySource,
+            @Nullable final String maskedMachineTarget,
+            @Nullable final String userTarget,
+            @Nullable final String maskedUserTarget,
+            final List<QaFinding> findings,
+            @Nullable final Double judgeScore,
+            final SegmentPath path,
+            final boolean reviewed,
+            @Nullable final ContextSnapshot context,
+            @Nullable final String proposal,
+            @Nullable final String rejectedTarget) {
+        this(
+                segmentId,
+                locator,
+                kind,
+                status,
+                maskedSource,
+                displaySource,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                findings,
+                judgeScore,
+                path,
+                reviewed,
+                context,
+                proposal,
+                rejectedTarget,
+                List.of());
     }
 
     /** A segment view with no refused reply kept. */
@@ -99,6 +141,7 @@ public record SegmentView(
                 reviewed,
                 context,
                 proposal,
-                null);
+                null,
+                List.of());
     }
 }

@@ -2,92 +2,38 @@ package ua.bookloom.api.project;
 
 import java.util.List;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.PromptSection;
 
 /**
- * The texts a draft's context saw, held so a retry replays exactly with no repository lookup — even after the
- * glossary, translation memory or rolling summary have since changed.
+ * What one segment's call was sent besides the run's fixed frame (design D8): the frame is stored once per project as a
+ * {@link PromptFrame} under {@code frameHash}, so a segment keeps only the key to it and the sections of its own call.
+ * The review desk's "What the model saw" joins the two back together, after a restart too.
  *
- * @param precedingTargets the preceding segments' target texts the draft saw, in order
- * @param glossary the glossary terms the draft saw
- * @param tmHits the translation-memory hits the draft saw
- * @param summary the rolling summary text the draft saw, or null when none existed yet
- * @param styleSheet the style sheet text the draft saw
- * @param lexicon the established recurring-term renderings the draft was asked to keep consistent
- * @param characters the character gender sheet the draft saw, one line per character present
- * @param sentSections the prompt parts a batch draft was really sent, or null when the segment was drafted alone
+ * @param frameHash the {@link PromptFrame#hash()} of the fixed frame the call was sent with, or empty when no call was
+ *     made for the segment (a memory reuse or a shortcut that needed none)
+ * @param sections the call's own parts as sent, the user message's blocks in order (masked, as sent); empty when no
+ *     call was made
+ * @param chapterSummaryKeys the keys of the chapter summaries the call carried, oldest first; always empty until
+ *     chapter summaries exist (group 12)
+ * @param retry {@code true} when the sections are the context a review retry rebuilt and sent, so the desk can label
+ *     them as such after a restart; {@code false} for a run's own call
  */
 public record ContextSnapshot(
-        List<String> precedingTargets,
-        List<SnapshotTerm> glossary,
-        List<SnapshotTmHit> tmHits,
-        @Nullable String summary,
-        String styleSheet,
-        List<SnapshotRendering> lexicon,
-        List<String> characters,
-        @Nullable List<PromptSection> sentSections) {
+        String frameHash, List<PromptSection> sections, List<String> chapterSummaryKeys, boolean retry) {
 
-    /**
-     * Validates the invariants a caller is entitled to assume and defensively copies the lists, so a caller-held
-     * mutable list cannot corrupt this record after construction.
-     */
+    /** Rejects a missing part and copies the lists, so a caller-held list cannot change the record. */
     public ContextSnapshot {
-        Objects.requireNonNull(precedingTargets, "precedingTargets");
-        Objects.requireNonNull(glossary, "glossary");
-        Objects.requireNonNull(tmHits, "tmHits");
-        Objects.requireNonNull(styleSheet, "styleSheet");
-        Objects.requireNonNull(lexicon, "lexicon");
-        Objects.requireNonNull(characters, "characters");
-        precedingTargets = List.copyOf(precedingTargets);
-        glossary = List.copyOf(glossary);
-        tmHits = List.copyOf(tmHits);
-        lexicon = List.copyOf(lexicon);
-        characters = List.copyOf(characters);
-        sentSections = sentSections == null ? null : List.copyOf(sentSections);
-    }
-
-    /** A snapshot of a draft that was sent no batch prompt of its own. */
-    public ContextSnapshot(
-            final List<String> precedingTargets,
-            final List<SnapshotTerm> glossary,
-            final List<SnapshotTmHit> tmHits,
-            @Nullable final String summary,
-            final String styleSheet,
-            final List<SnapshotRendering> lexicon,
-            final List<String> characters) {
-        this(precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, characters, null);
-    }
-
-    /** A snapshot of a draft that was shown no character sheet. */
-    public ContextSnapshot(
-            final List<String> precedingTargets,
-            final List<SnapshotTerm> glossary,
-            final List<SnapshotTmHit> tmHits,
-            @Nullable final String summary,
-            final String styleSheet,
-            final List<SnapshotRendering> lexicon) {
-        this(precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, List.of());
-    }
-
-    /** A snapshot of a draft that was shown no recurring-term renderings. */
-    public ContextSnapshot(
-            final List<String> precedingTargets,
-            final List<SnapshotTerm> glossary,
-            final List<SnapshotTmHit> tmHits,
-            @Nullable final String summary,
-            final String styleSheet) {
-        this(precedingTargets, glossary, tmHits, summary, styleSheet, List.of());
+        Objects.requireNonNull(frameHash, "frameHash");
+        sections = List.copyOf(Objects.requireNonNull(sections, "sections"));
+        chapterSummaryKeys = List.copyOf(Objects.requireNonNull(chapterSummaryKeys, "chapterSummaryKeys"));
     }
 
     /**
-     * Returns this snapshot with the prompt parts a batch really sent, every other component unchanged.
+     * The snapshot of a segment no call was made for.
      *
-     * @param sections the parts the batch call sent, or null for a segment drafted alone
-     * @return a copy holding {@code sections}
+     * @return a snapshot with no frame, no sections and no summary keys
      */
-    public ContextSnapshot withSent(@Nullable final List<PromptSection> sections) {
-        return new ContextSnapshot(
-                precedingTargets, glossary, tmHits, summary, styleSheet, lexicon, characters, sections);
+    public static ContextSnapshot noCall() {
+        return new ContextSnapshot("", List.of(), List.of(), false);
     }
 }

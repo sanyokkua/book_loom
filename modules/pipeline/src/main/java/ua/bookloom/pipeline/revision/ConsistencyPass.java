@@ -189,7 +189,7 @@ public final class ConsistencyPass {
         return new GenderRevision(glossary, segments, deferrals, writer, call)
                 .revise(inputs, open, calls, tally)
                 .flatMap(revised -> doubted(inputs, options))
-                .flatMap(doubted -> retryDoubted(inputs, doubted, calls, tally)
+                .flatMap(doubted -> retryDoubted(inputs, doubted, calls, options, tally)
                         .flatMap(retried -> new NeighbourRevision(segments, writer, call, checked)
                                 .revise(
                                         inputs,
@@ -224,10 +224,11 @@ public final class ConsistencyPass {
             final PassInputs inputs,
             final Map<String, List<QaFinding>> doubted,
             final ModelCalls calls,
+            final PassOptions options,
             final PassTally tally) {
         return doubted.isEmpty()
                 ? Result.ok(false)
-                : new RetryPass(segments, retryDraft, checked).retry(inputs, doubted, calls, tally);
+                : new RetryPass(segments, retryDraft, checked, options.profile()).retry(inputs, doubted, calls, tally);
     }
 
     private Result<List<SegmentRecord>> inOrder(final PassInputs inputs) {

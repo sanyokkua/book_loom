@@ -33,7 +33,7 @@ class ContextPackageMemoryTest {
         assertThat(pack.draftContext().memoryLines())
                 .containsExactly(
                         "He left the room. → Він вийшов із кімнати.", "He left the house. → Він покинув будинок.");
-        assertThat(pack.snapshot().tmHits())
+        assertThat(pack.injected().tmHits())
                 .containsExactly(
                         new SnapshotTmHit(TmHitKind.EXACT, "He left the room.", "Він вийшов із кімнати."),
                         new SnapshotTmHit(TmHitKind.FUZZY, "He left the house.", "Він покинув будинок."));
@@ -47,7 +47,7 @@ class ContextPackageMemoryTest {
         final ContextPackage pack = assemble(memory);
 
         assertThat(pack.draftContext().memoryLines()).isEmpty();
-        assertThat(pack.snapshot().tmHits())
+        assertThat(pack.injected().tmHits())
                 .containsExactly(new SnapshotTmHit(TmHitKind.CONTEXT, "He left the room.", "Він вийшов з кімнати."));
     }
 
@@ -56,7 +56,7 @@ class ContextPackageMemoryTest {
         final ContextPackage pack = assemble(ContextFixtures.NO_MEMORY);
 
         assertThat(pack.draftContext().memoryLines()).isEmpty();
-        assertThat(pack.snapshot().tmHits()).isEmpty();
+        assertThat(pack.injected().tmHits()).isEmpty();
     }
 
     @Test

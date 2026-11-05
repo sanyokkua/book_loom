@@ -216,7 +216,7 @@ class StageEvalRunnerTest {
         assertThat(rows).hasSize(8);
         assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
         final ChatRequest sent = firstOf(runner.probe(), CallKind.DRAFT);
-        assertThat(sent.responseFormat().name()).isEqualTo(PromptName.DRAFT.responseFormatName());
+        assertThat(sent.responseFormat().name()).isEqualTo(PromptName.TRANSLATE.responseFormatName());
     }
 
     @ParameterizedTest

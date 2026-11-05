@@ -6,6 +6,7 @@ import static ua.bookloom.pipeline.revision.RevisionBook.DOOR_PLAIN;
 import static ua.bookloom.pipeline.revision.RevisionBook.RUN_DANNY;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_DOOR;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_MET_HALE;
+import static ua.bookloom.pipeline.revision.RevisionBook.draftReply;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
 
@@ -18,6 +19,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
@@ -33,8 +35,11 @@ import ua.bookloom.pipeline.review.ReviewFixtures;
 class ConsistencyPassRepairGuardsTest {
 
     private static final PassOptions EXPORT = new PassOptions(true, false);
-    private static final ContextSnapshot SNAPSHOT =
-            new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
+            List.of(),
+            false);
     private static final String BEFORE = "«Сем зустрів Хейла.»";
     // The "o" after "п" is a Latin letter: one word written in two alphabets, as the model drafts it.
     private static final String MIXED_TWO_DASHES = "— Біжи, Денні, — сказав я. Він пoбіг.";
@@ -139,7 +144,7 @@ class ConsistencyPassRepairGuardsTest {
     @Test
     void run_retryThatMendsAMixedScriptWordAndDropsOneDash_keepsTheNewText() {
         flagged(RUN_DANNY, MIXED_TWO_DASHES);
-        book.model().answerTo(DRAFT, reply(MENDED_ONE_DASH));
+        book.model().answerTo(DRAFT, draftReply(MENDED_ONE_DASH));
         book.model().answerTo(NEIGHBOUR_ASKED_FOR, reply(MENDED_ONE_DASH));
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -154,7 +159,7 @@ class ConsistencyPassRepairGuardsTest {
     @Test
     void run_retryThatMendsARussianLetterAndDropsOneDash_keepsTheNewText() {
         flagged(RUN_DANNY, RUSSIAN_TWO_DASHES);
-        book.model().answerTo(DRAFT, reply(RUSSIAN_MENDED_ONE_DASH));
+        book.model().answerTo(DRAFT, draftReply(RUSSIAN_MENDED_ONE_DASH));
         book.model().answerTo(NEIGHBOUR_ASKED_FOR, reply(RUSSIAN_MENDED_ONE_DASH));
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -168,7 +173,7 @@ class ConsistencyPassRepairGuardsTest {
     @Test
     void run_retryThatOnlyDropsADash_keepsTheOldText() {
         flagged(RUN_DANNY, CLEAN_TWO_DASHES);
-        book.model().answerTo(DRAFT, reply(MENDED_ONE_DASH));
+        book.model().answerTo(DRAFT, draftReply(MENDED_ONE_DASH));
         book.model().answerTo(NEIGHBOUR_ASKED_FOR, reply(CLEAN_TWO_DASHES));
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
@@ -183,7 +188,7 @@ class ConsistencyPassRepairGuardsTest {
     void run_retryThatMendsTheMixedWordButBringsARussianLetterAndDropsOneDash_keepsTheOldText() {
         final String mendedWithRussianLetter = "— Біжи, Денні, сказав я. Він побіг стары.";
         flagged(RUN_DANNY, MIXED_TWO_DASHES);
-        book.model().answerTo(DRAFT, reply(mendedWithRussianLetter));
+        book.model().answerTo(DRAFT, draftReply(mendedWithRussianLetter));
         book.model().answerTo(NEIGHBOUR_ASKED_FOR, reply(MIXED_TWO_DASHES));
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));

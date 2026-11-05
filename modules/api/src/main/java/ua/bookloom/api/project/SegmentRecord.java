@@ -33,7 +33,7 @@ import ua.bookloom.api.document.Unit;
  * @param path how this segment reached its current target: {@link SegmentPath#REPAIRED} when the one repair's text
  *     stays or a flagged segment was given it
  * @param reviewed true once a person accepted, saved, reverted, applied a proposal or retried this segment successfully
- * @param context the context snapshot a retry replays, or null when none was recorded
+ * @param context what the segment's call was sent besides the run's fixed frame, or null when none was recorded
  * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, so
  *     review shows the model's words labelled as unusable instead of the source; null otherwise
  */

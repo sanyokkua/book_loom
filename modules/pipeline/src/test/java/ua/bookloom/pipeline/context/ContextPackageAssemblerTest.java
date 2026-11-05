@@ -125,25 +125,9 @@ class ContextPackageAssemblerTest {
 
         assertThat(context.draftContext().glossaryLines()).containsExactly("Milton → Мілтон (place)");
         assertThat(context.draftContext().suggestedLines()).containsExactly("Hale → Гейл (character, male)");
-        assertThat(context.snapshot().glossary())
+        assertThat(context.injected().glossary())
                 .extracting(SnapshotTerm::suggested)
                 .containsExactly(true, false);
-    }
-
-    @Test
-    void replay_snapshotWithASuggestedTerm_listsItApartAgain() {
-        final Chunk chunk = ContextFixtures.chunk("Hale opened the door.");
-        final List<GlossaryEntry> glossary = List.of(HALE.withSuggestedTarget("Гейл"));
-        final ContextPackage first =
-                assemble(chunk, 0, ContextFixtures.inputs(null, 0, glossary, List.of()), ContextFixtures.NO_MEMORY);
-
-        final var replayed = ContextPackageAssembler.replay(
-                first.snapshot(),
-                ContextFixtures.mask(chunk.segments().getFirst(), glossary),
-                chunk.segments().getFirst());
-
-        assertThat(replayed.glossaryLines()).isEmpty();
-        assertThat(replayed.suggestedLines()).containsExactly("Hale → Гейл (character, male)");
     }
 
     @Test
@@ -186,7 +170,7 @@ class ContextPackageAssemblerTest {
         final ContextPackage pack = assemble(ContextFixtures.chunk("He left."), 0, inputs, ContextFixtures.NO_MEMORY);
 
         assertThat(pack.draftContext().precedingTargets()).containsExactlyElementsOf(expected);
-        assertThat(pack.snapshot().precedingTargets()).containsExactlyElementsOf(expected);
+        assertThat(pack.injected().precedingTargets()).containsExactlyElementsOf(expected);
     }
 
     private static Stream<Arguments> precedingCases() {
@@ -216,10 +200,10 @@ class ContextPackageAssemblerTest {
         final ContextPackage pack =
                 assemble(ContextFixtures.chunk("Hale opened it."), 0, inputs, ContextFixtures.NO_MEMORY);
 
-        assertThat(pack.snapshot().glossary())
+        assertThat(pack.injected().glossary())
                 .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false, false, null));
-        assertThat(pack.snapshot().summary()).isEqualTo("Hale is a detective.");
-        assertThat(pack.snapshot().styleSheet()).isEqualTo("Neutral register.");
+        assertThat(pack.injected().summary()).isEqualTo("Hale is a detective.");
+        assertThat(pack.injected().styleSheet()).isEqualTo("Neutral register.");
         assertThat(pack.draftContext().summary()).isEqualTo("Hale is a detective.");
     }
 
@@ -239,7 +223,7 @@ class ContextPackageAssemblerTest {
                 ContextFixtures.inputs(null, 0, List.of(suggested, verified, person), List.of()),
                 ContextFixtures.NO_MEMORY);
 
-        assertThat(pack.snapshot().glossary())
+        assertThat(pack.injected().glossary())
                 .extracting(SnapshotTerm::term, SnapshotTerm::genderOrigin)
                 .containsExactly(tuple("Hale", Origin.LIKELY), tuple("Lyra", Origin.BOOK), tuple("Sam", Origin.USER));
     }
@@ -255,7 +239,7 @@ class ContextPackageAssemblerTest {
 
         glossary.set(0, ContextFixtures.entry("Hale", "Хейл", TermType.CHARACTER, Gender.MALE, false));
 
-        assertThat(pack.snapshot().glossary()).extracting(SnapshotTerm::target).containsExactly("Гейл");
+        assertThat(pack.injected().glossary()).extracting(SnapshotTerm::target).containsExactly("Гейл");
     }
 
     @Test
@@ -267,6 +251,6 @@ class ContextPackageAssemblerTest {
                 ContextFixtures.NO_MEMORY);
 
         assertThat(pack.draftContext().summary()).isNull();
-        assertThat(pack.snapshot().summary()).isNull();
+        assertThat(pack.injected().summary()).isNull();
     }
 }

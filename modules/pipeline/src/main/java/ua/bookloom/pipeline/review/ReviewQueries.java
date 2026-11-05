@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -19,12 +21,16 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
@@ -52,6 +58,7 @@ public final class ReviewQueries {
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
+    private final PromptFrameRepository frames;
 
     /**
      * Lists the segments behind a filter chip.
@@ -105,14 +112,40 @@ public final class ReviewQueries {
         if (records.isErr() || open.isErr()) {
             return Result.err(Objects.requireNonNull(records.isErr() ? records.error() : open.error()));
         }
+        final List<SegmentRecord> stored = Objects.requireNonNull(records.data());
+        final Result<Map<String, List<PromptSection>>> joined = framesOf(projectId, stored);
+        if (joined.isErr()) {
+            return Result.err(Objects.requireNonNull(joined.error()));
+        }
         final BookIndex index = openProjects.index(projectId);
         return Result.ok(new Reading(
                 found.get().brief(),
-                Objects.requireNonNull(records.data()),
+                stored,
                 Objects.requireNonNull(open.data()),
                 sourcesOf(document),
                 SegmentLocators.of(document),
-                index == null ? null : index.majorityScript().orElse(null)));
+                index == null ? null : index.majorityScript().orElse(null),
+                Objects.requireNonNull(joined.data())));
+    }
+
+    // A project holds a frame per run that changed it, so the few distinct frames the records name are read once each;
+    // a frame that is not stored is left out, and its segments show their own sections alone.
+    private Result<Map<String, List<PromptSection>>> framesOf(
+            final String projectId, final List<SegmentRecord> stored) {
+        final Map<String, List<PromptSection>> byHash = new HashMap<>();
+        final Set<String> hashes = stored.stream()
+                .map(SegmentRecord::context)
+                .flatMap(context -> context == null ? Stream.empty() : Stream.of(context.frameHash()))
+                .filter(hash -> !hash.isEmpty())
+                .collect(Collectors.toSet());
+        for (final String hash : hashes) {
+            final Result<Optional<PromptFrame>> frame = frames.find(projectId, hash);
+            if (frame.isErr()) {
+                return Result.err(Objects.requireNonNull(frame.error()));
+            }
+            Objects.requireNonNull(frame.data()).ifPresent(found -> byHash.put(hash, found.sections()));
+        }
+        return Result.ok(byHash);
     }
 
     private static Map<String, Segment> sourcesOf(final Document document) {
@@ -127,14 +160,18 @@ public final class ReviewQueries {
         return AppError.of(ErrorCode.validation, "Nothing to review", message);
     }
 
-    /** What one read sees: the stored records, the opened book they came from and the brief's current switches. */
+    /**
+     * What one read sees: the stored records, the opened book they came from, the brief's current switches and the
+     * stored frames the records name, by hash.
+     */
     private record Reading(
             BookBrief brief,
             List<SegmentRecord> records,
             List<Deferral> open,
             Map<String, Segment> sources,
             Map<String, SegmentLocator> locators,
-            Character.@Nullable UnicodeScript bookScript) {
+            Character.@Nullable UnicodeScript bookScript,
+            Map<String, List<PromptSection>> frames) {
 
         private static final String MISSING = "The stored segment is not in the opened book: ";
 
@@ -174,7 +211,13 @@ public final class ReviewQueries {
                     Proposals.waitingOn(open, record.segmentId())
                             .map(Deferral::proposal)
                             .orElse(null),
-                    record.rejectedTarget());
+                    record.rejectedTarget(),
+                    frameOf(record));
+        }
+
+        private List<PromptSection> frameOf(final SegmentRecord record) {
+            final ContextSnapshot context = record.context();
+            return context == null ? List.of() : frames.getOrDefault(context.frameHash(), List.of());
         }
 
         private boolean holdsForeignText(final SegmentRecord record) {

@@ -53,7 +53,7 @@ class RetryDraftLogTest {
     }
 
     @Test
-    void retry_passing_logsTheOutcomeAtInfoAndTheReplayedContextAndRunStateAtDebug() {
+    void retry_passing_logsTheOutcomeAtInfoAndTheRebuiltContextAndRunStateAtDebug() {
         // INFO: segment id, resulting status, reviewed; DEBUG: the rebuilt context's counts and the run state read
         bookloom.setLevel(Level.DEBUG);
         final Desk desk = flagged(JobState.PAUSED);
@@ -66,8 +66,11 @@ class RetryDraftLogTest {
                 .contains(
                         "retry project=" + desk.projectId()
                                 + " segment=ch05.xhtml:11 hasNote=true lowerTemperature=true part=RetryDraft",
-                        "retry segment=ch05.xhtml:11 latestRun=PAUSED",
-                        "retry context segment=ch05.xhtml:11 preceding=1 terms=1 memoryHits=2 summary=true");
+                        "retry segment=ch05.xhtml:11 latestRun=PAUSED")
+                .anyMatch(line -> line.startsWith(
+                        "retry: drafting segment=ch05.xhtml:11 window=16384 dial=BALANCED mode=ASSISTED"))
+                .anyMatch(line ->
+                        line.startsWith("retry: segment=ch05.xhtml:11 budget=") && line.contains(" previousPairs=2 "));
     }
 
     @Test

@@ -14,6 +14,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
@@ -103,15 +104,18 @@ class ConsistencyPassMemoTest {
     }
 
     private static final PassOptions EXPORT = new PassOptions(true, false);
-    private static final ContextSnapshot SNAPSHOT =
-            new ContextSnapshot(List.of("Ранок."), List.of(), List.of(), null, "Keep the narrator's voice.");
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            "f00d",
+            List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("Ранок."))),
+            List.of(),
+            false);
     private static final String QUOTED = "«Біжи, Денні», — сказав я. Він побіг.";
     private static final String UNCHANGED = "{\"unchanged\":true}";
 
     private void scriptFirstExport(final String draft) {
         book.model()
                 .answerTo("reviewer", answer("{\"results\":[]}"))
-                .answerTo("draft", RevisionBook.reply(draft))
+                .answerTo("draft", RevisionBook.draftReply(draft))
                 .answerTo(CONSISTENCY, answer(UNCHANGED))
                 .answerTo(CONSISTENCY, answer(UNCHANGED));
     }

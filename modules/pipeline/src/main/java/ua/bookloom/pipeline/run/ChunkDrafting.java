@@ -7,13 +7,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SegmentLocator;
-import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
@@ -30,7 +30,6 @@ import ua.bookloom.pipeline.project.SegmentLocators;
 final class ChunkDrafting {
 
     private final RunSteps steps;
-    private final RunSettings settings;
     private final PrecedingTargets preceding;
     private final MemoryReuse memory;
     private final RoutedCalls calls;
@@ -39,9 +38,8 @@ final class ChunkDrafting {
     private final BatchStage batches;
     private final ChunkSteps announced;
 
-    ChunkDrafting(final RunSteps steps, final RunSettings settings, final Collaborators collaborators) {
+    ChunkDrafting(final RunSteps steps, final Collaborators collaborators) {
         this.steps = steps;
-        this.settings = settings;
         this.preceding = collaborators.preceding();
         this.memory = collaborators.memory();
         this.calls = collaborators.calls();
@@ -114,7 +112,7 @@ final class ChunkDrafting {
     }
 
     /**
-     * Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk —
+     * Drafts one segment behind its protected spans, keeping the draft and the snapshot of its call in the chunk —
      * unless a shortcut decides it without a call (nothing to translate, or an identical auxiliary text), or a
      * context-matched memory target passes its checks, which stands in for the draft.
      */
@@ -130,23 +128,15 @@ final class ChunkDrafting {
             return new Step.Done<>(shortcut);
         }
         final List<Segment> unitSegments = current.work().unitSegments(item);
-        final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
-                unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
-        if (earlierMaskedTargets.isErr()) {
-            return new Step.Stopped<>(
-                    RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), ERROR)));
-        }
         final MemoryReuse.Offer offer =
                 memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
-        final ContextPackage context =
-                contextOf(current, segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"), offer);
         final DraftOutcome.Reused reused = offer.reused();
         if (reused != null) {
-            current.drafts().drafted(reused, context.snapshot());
+            current.drafts().drafted(reused, ContextSnapshot.noCall());
             announced.drafted(segment.id());
             return new Step.Done<>(reused);
         }
-        return drafted(current, new Ready(item, mask, offer), context);
+        return drafted(current, new Ready(item, mask, offer));
     }
 
     private void begun(final Current current, final WorkItem item) {
@@ -157,22 +147,22 @@ final class ChunkDrafting {
     /** A segment that needs a call, with the mask it is shown and what the memory offered it. */
     private record Ready(WorkItem item, ProtectedMask mask, MemoryReuse.Offer offer) {}
 
-    private Step<DraftOutcome> drafted(final Current current, final Ready ready, final ContextPackage context) {
+    private Step<DraftOutcome> drafted(final Current current, final Ready ready) {
         final Segment segment = ready.item().segment();
         final ProtectedMask mask = ready.mask();
         final Optional<RunEnd> batchEnd = batches.ensure(current, ready.item(), mask, ready.offer());
         if (batchEnd.isPresent()) {
             return new Step.Stopped<>(batchEnd.get());
         }
-        final List<PromptSection> sections = current.batches().takeSent(segment.id());
-        final ContextSnapshot snapshot = context.snapshot().withSent(sections);
-        events.contextAssembled(segment.id(), snapshot);
+        final List<PromptSection> batchSections = current.batches().takeSent(segment.id());
         final DraftOutcome batched = current.batches().take(segment.id());
         final Result<TranslateContext> shown = shownTo(current, ready, batched != null);
         final TranslateContext window = shown.data();
         if (window == null) {
             return new Step.Stopped<>(RoutedCalls.failedBy(Objects.requireNonNull(shown.error(), ERROR)));
         }
+        final ContextSnapshot snapshot = snapshotOf(current, ready, window, batchSections);
+        events.contextAssembled(segment.id(), snapshot);
         final Step<DraftOutcome> drafted =
                 batched != null ? new Step.Done<>(batched) : draftAlone(current, ready, window);
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome done)) {
@@ -183,6 +173,32 @@ final class ChunkDrafting {
             return new Step.Done<>(outcome);
         }
         return drafted;
+    }
+
+    // What the segment's record keeps of its call: the key to the run's fixed frame, stored once at run start, and the
+    // user message's sections — the batch's as it sent them, or a single draft's as its plan has them.
+    private ContextSnapshot snapshotOf(
+            final Current current,
+            final Ready ready,
+            final TranslateContext window,
+            @Nullable final List<PromptSection> batchSections) {
+        final Segment segment = ready.item().segment();
+        final String frameHash = steps.planner().frame().frameHash();
+        if (batchSections != null) {
+            log.debug("Snapshot of a batch draft segmentId={} sections={}", segment.id(), batchSections.size());
+            return new ContextSnapshot(frameHash, PromptRequests.userSections(batchSections), List.of(), false);
+        }
+        final Result<List<PromptSection>> planned = current.requests().sentSections(segment, window, ready.mask());
+        final List<PromptSection> sections = planned.data();
+        if (sections == null) {
+            log.warn(
+                    "Sections of a single draft could not be planned segmentId={} code={}; stored without them",
+                    segment.id(),
+                    Objects.requireNonNull(planned.error(), ERROR).code());
+            return new ContextSnapshot(frameHash, List.of(), List.of(), false);
+        }
+        log.debug("Snapshot of a single draft segmentId={} sections={}", segment.id(), sections.size());
+        return new ContextSnapshot(frameHash, sections, List.of(), false);
     }
 
     // A segment no batch answered is drafted on its own; after a batch answer that copied an example, that draft is the
@@ -232,17 +248,5 @@ final class ChunkDrafting {
             return drafted.withRepair(current.translator().repairCall(drafted.segment(), context, mask));
         }
         return outcome;
-    }
-
-    private ContextPackage contextOf(
-            final Current current, final Segment segment, final List<String> targets, final MemoryReuse.Offer offer) {
-        final ContextPackage context = current.requests().contextFor(segment, targets, offer.lookup());
-        if (log.isTraceEnabled()) {
-            log.trace(
-                    "Preceding targets segmentId={} targets={}",
-                    segment.id(),
-                    context.draftContext().precedingTargets());
-        }
-        return context;
     }
 }

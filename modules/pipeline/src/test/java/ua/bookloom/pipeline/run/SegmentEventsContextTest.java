@@ -10,10 +10,9 @@ import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
-/** The context a draft is announced with is the whole context it saw, in display text. */
+/** The context a draft is announced with is the key to its frame and its call's own sections, in display text. */
 class SegmentEventsContextTest {
 
     private static final ModelCalls NO_CALLS = (kind, segmentId, request) -> {
@@ -23,41 +22,19 @@ class SegmentEventsContextTest {
     private final List<JobEvent> emitted = new ArrayList<>();
     private final SegmentEvents events = new SegmentEvents(emitted::add, Map.of(), NO_CALLS);
 
-    // The old rebuild dropped the recurring terms and the character sheet, so the screen showed less than the model
-    // got.
     @Test
-    void contextAssembled_snapshotWithLexiconAndCharacters_announcesBoth() {
-        final ContextSnapshot snapshot = new ContextSnapshot(
-                List.of("⟦g0⟧Він⟦g1⟧ пішов."),
-                List.of(),
-                List.of(),
-                "A boy summons a djinni.",
-                "Plain prose.",
-                List.of(new SnapshotRendering("magician", "чарівник")),
-                List.of("Edwin — male"));
+    void contextAssembled_sections_areForwardedInDisplayTextWithTheFrameKey() {
+        final PromptSection items =
+                new PromptSection("items", "Items:", PromptSection.Origin.USER, List.of("1: ⟦g0⟧Він⟦g1⟧ пішов."));
+        final ContextSnapshot snapshot = new ContextSnapshot("f00d", List.of(items), List.of("ch1:0"), false);
 
         events.contextAssembled("Book.md:0", snapshot);
 
         assertThat(emitted).singleElement().isInstanceOfSatisfying(ContextAssembled.class, assembled -> {
             final ContextSnapshot shown = assembled.context();
-            assertThat(shown.lexicon()).containsExactly(new SnapshotRendering("magician", "чарівник"));
-            assertThat(shown.characters()).containsExactly("Edwin — male");
-            assertThat(shown.precedingTargets()).containsExactly("Він пішов.");
-            assertThat(shown.styleSheet()).isEqualTo("Plain prose.");
-        });
-    }
-
-    @Test
-    void contextAssembled_sentSections_areForwardedInDisplayText() {
-        final PromptSection items =
-                new PromptSection("items", "Items:", PromptSection.Origin.USER, List.of("1: ⟦g0⟧Він⟦g1⟧ пішов."));
-        final ContextSnapshot snapshot =
-                new ContextSnapshot(List.of(), List.of(), List.of(), null, "s", List.of(), List.of(), List.of(items));
-
-        events.contextAssembled("Book.md:0", snapshot);
-
-        assertThat(emitted).singleElement().isInstanceOfSatisfying(ContextAssembled.class, assembled -> {
-            assertThat(assembled.context().sentSections()).singleElement().satisfies(section -> {
+            assertThat(shown.frameHash()).isEqualTo("f00d");
+            assertThat(shown.chapterSummaryKeys()).containsExactly("ch1:0");
+            assertThat(shown.sections()).singleElement().satisfies(section -> {
                 assertThat(section.slot()).isEqualTo("items");
                 assertThat(section.lines()).containsExactly("1: Він пішов.");
             });
@@ -65,14 +42,13 @@ class SegmentEventsContextTest {
     }
 
     @Test
-    void contextAssembled_noSentSections_staysNull() {
-        events.contextAssembled("Book.md:0", new ContextSnapshot(List.of(), List.of(), List.of(), null, "s"));
+    void contextAssembled_noCall_announcesNoSections() {
+        events.contextAssembled("Book.md:0", ContextSnapshot.noCall());
 
         assertThat(emitted)
                 .singleElement()
                 .isInstanceOfSatisfying(
                         ContextAssembled.class,
-                        assembled ->
-                                assertThat(assembled.context().sentSections()).isNull());
+                        assembled -> assertThat(assembled.context()).isEqualTo(ContextSnapshot.noCall()));
     }
 }

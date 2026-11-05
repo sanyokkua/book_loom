@@ -324,7 +324,8 @@ class TranslationJobUnattendedRecoveryTest extends UnattendedRecoveryHarness {
                         broken,
                         stores.tm(),
                         stores.summaries(),
-                        stores.lexicon()),
+                        stores.lexicon(),
+                        stores.promptFrames()),
                 project.documents(),
                 project.deferrals());
     }

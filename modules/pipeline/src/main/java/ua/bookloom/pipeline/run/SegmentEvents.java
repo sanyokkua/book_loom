@@ -26,7 +26,6 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -86,38 +85,25 @@ final class SegmentEvents {
      * the model was given.
      *
      * @param segmentId the segment the draft is for
-     * @param snapshot the context as the draft sees it, with the document's placeholders still in place
+     * @param snapshot the key to the run's frame and the call's own sections, with the document's placeholders still
+     *     in place
      */
     void contextAssembled(final String segmentId, final ContextSnapshot snapshot) {
         final ContextSnapshot shown = new ContextSnapshot(
-                snapshot.precedingTargets().stream().map(DisplayText::of).toList(),
-                snapshot.glossary(),
-                snapshot.tmHits().stream()
-                        .map(hit -> new SnapshotTmHit(
-                                hit.kind(), DisplayText.of(hit.source()), DisplayText.of(hit.target())))
-                        .toList(),
-                snapshot.summary(),
-                snapshot.styleSheet(),
-                snapshot.lexicon(),
-                snapshot.characters(),
-                displaySections(snapshot.sentSections()));
+                snapshot.frameHash(),
+                displaySections(snapshot.sections()),
+                snapshot.chapterSummaryKeys(),
+                snapshot.retry());
         log.debug(
-                "Sending ContextAssembled segmentId={} preceding={} summary={} names={} tmHits={} lexicon={}"
-                        + " characters={}",
+                "Sending ContextAssembled segmentId={} frame={} sections={} summaries={}",
                 segmentId,
-                shown.precedingTargets().size(),
-                shown.summary() != null,
-                shown.glossary().size(),
-                shown.tmHits().size(),
-                shown.lexicon().size(),
-                shown.characters().size());
+                shown.frameHash(),
+                shown.sections().stream().map(PromptSection::slot).toList(),
+                shown.chapterSummaryKeys().size());
         emit.accept(new ContextAssembled(segmentId, shown));
     }
 
-    private static @Nullable List<PromptSection> displaySections(@Nullable final List<PromptSection> sections) {
-        if (sections == null) {
-            return null;
-        }
+    private static List<PromptSection> displaySections(final List<PromptSection> sections) {
         return sections.stream()
                 .map(section -> new PromptSection(
                         section.slot(),

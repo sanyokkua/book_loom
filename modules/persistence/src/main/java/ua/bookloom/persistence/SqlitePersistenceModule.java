@@ -15,6 +15,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
@@ -28,6 +29,7 @@ import ua.bookloom.persistence.sqlite.SqliteGlossaryRepository;
 import ua.bookloom.persistence.sqlite.SqliteLexiconRepository;
 import ua.bookloom.persistence.sqlite.SqliteModelSettingsRepository;
 import ua.bookloom.persistence.sqlite.SqliteProjectRepository;
+import ua.bookloom.persistence.sqlite.SqlitePromptFrameRepository;
 import ua.bookloom.persistence.sqlite.SqliteProviderConfigs;
 import ua.bookloom.persistence.sqlite.SqliteRunRepository;
 import ua.bookloom.persistence.sqlite.SqliteSegmentRepository;
@@ -76,6 +78,7 @@ public final class SqlitePersistenceModule extends AbstractModule {
         bind(SettingsRepository.class).to(SqliteSettingsRepository.class).in(Singleton.class);
         bind(StorageInfo.class).to(SqliteStorageInfo.class).in(Singleton.class);
         bind(SummaryRepository.class).to(SqliteSummaryRepository.class).in(Singleton.class);
+        bind(PromptFrameRepository.class).to(SqlitePromptFrameRepository.class).in(Singleton.class);
         bind(TmRepository.class).to(SqliteTmRepository.class).in(Singleton.class);
     }
 

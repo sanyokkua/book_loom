@@ -39,7 +39,7 @@ class ContextPackageLexiconTest {
         final ContextPackage assembled = assemble("The master left.", List.of(), List.of(MASTER), 1000);
 
         assertThat(assembled.draftContext().lexiconLines()).containsExactly("master → господар");
-        assertThat(assembled.snapshot().lexicon()).containsExactly(new SnapshotRendering("master", "господар"));
+        assertThat(assembled.injected().lexicon()).containsExactly(new SnapshotRendering("master", "господар"));
     }
 
     @Test
@@ -47,7 +47,7 @@ class ContextPackageLexiconTest {
         final ContextPackage assembled = assemble("The imp left.", List.of(), List.of(MASTER), 1000);
 
         assertThat(assembled.draftContext().lexiconLines()).isEmpty();
-        assertThat(assembled.snapshot().lexicon()).isEmpty();
+        assertThat(assembled.injected().lexicon()).isEmpty();
     }
 
     @Test
@@ -91,17 +91,5 @@ class ContextPackageLexiconTest {
 
         assertThat(assembled.draftContext().glossaryLines()).hasSize(1);
         assertThat(assembled.draftContext().lexiconLines()).isEmpty();
-    }
-
-    @Test
-    void replay_snapshotWithRenderings_rebuildsTheSameLexiconLines() {
-        final ContextPackage assembled = assemble("The master left.", List.of(), List.of(MASTER), 1000);
-        final Segment segment = ContextFixtures.segment(0, "The master left.");
-
-        final DraftContext replayed =
-                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
-
-        assertThat(replayed).isEqualTo(assembled.draftContext());
-        assertThat(replayed.lexiconLines()).containsExactly("master → господар");
     }
 }

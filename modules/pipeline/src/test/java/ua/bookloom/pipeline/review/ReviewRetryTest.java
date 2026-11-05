@@ -42,7 +42,7 @@ class ReviewRetryTest {
     @EnumSource(ProviderKind.class)
     void retry_draftWithResidue_isDecidedWithoutARepairCall(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
-            provider.stubSequence(List.of(provider.singleTarget(RetryDraftTest.TOO_SHORT, Duration.ZERO)));
+            provider.stubSequence(List.of(provider.target(RetryDraftTest.TOO_SHORT, Duration.ZERO)));
             final Desk desk = ReviewFixtures.epub(tempDir);
             latestRun(desk, JobState.PAUSED);
             flag(desk, FLAGGED_ID, "Чудовисько зустріло мене.");

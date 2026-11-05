@@ -83,8 +83,10 @@ class TranslationJobObservabilityTest {
                 .map(ContextAssembled.class::cast)
                 .extracting(
                         ContextAssembled::segmentId,
-                        assembled -> assembled.context().precedingTargets())
-                .startsWith(tuple("Book.txt:0", List.of()), tuple("Book.txt:1", List.of("ONE.")));
+                        assembled -> assembled.context().sections().stream()
+                                .flatMap(section -> section.lines().stream())
+                                .anyMatch(line -> line.contains("ONE.")))
+                .startsWith(tuple("Book.txt:0", false), tuple("Book.txt:1", true));
     }
 
     // A segment whose reviewer edit the code refused enters round 1 of the dial's budget, naming the finding it

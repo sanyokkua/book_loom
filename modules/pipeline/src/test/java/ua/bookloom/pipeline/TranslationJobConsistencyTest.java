@@ -50,9 +50,9 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
@@ -100,8 +100,7 @@ class TranslationJobConsistencyTest {
         assertThat(userMessage(model.requests().getFirst()))
                 .contains("Hale", "Гейл", "character", "male")
                 .doesNotContain("Baker Street");
-        assertThat(snapshotOf(project, "Book.txt:0").glossary())
-                .containsExactly(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false, false, null));
+        assertThat(sentText(project, "Book.txt:0")).contains("Hale → Гейл").doesNotContain("Baker Street");
     }
 
     @Test
@@ -179,10 +178,18 @@ class TranslationJobConsistencyTest {
                 .extracting(id -> stored(project, id).status())
                 .containsExactly(
                         SegmentStatus.ACCEPTED, SegmentStatus.FLAGGED, SegmentStatus.ACCEPTED, SegmentStatus.ACCEPTED);
+        final PromptFrame frame = Objects.requireNonNull(
+                        project.stores().promptFrames().all(project.id()).data())
+                .getFirst();
         assertThat(List.of("Book.md:0", "Book.md:1", "Book.md:2", "Book.md:3"))
-                .extracting(id -> snapshotOf(project, id).precedingTargets())
-                .containsExactly(List.of(), List.of(T0), List.of(T0), List.of(T2));
-        assertThat(snapshotOf(project, "Book.md:3").styleSheet()).contains("faithful literary prose");
+                .extracting(id -> snapshotOf(project, id).frameHash())
+                .containsOnly(frame.hash());
+        assertThat(sentText(project, "Book.md:0")).doesNotContain(T0);
+        assertThat(sentText(project, "Book.md:1")).contains(T0);
+        assertThat(sentText(project, "Book.md:3")).contains(T2);
+        assertThat(frame.sections())
+                .anySatisfy(section ->
+                        assertThat(String.join("\n", section.lines())).contains("faithful literary prose"));
     }
 
     @Test
@@ -346,6 +353,15 @@ class TranslationJobConsistencyTest {
 
     private static ContextSnapshot snapshotOf(final TestProject project, final String segmentId) {
         return Objects.requireNonNull(stored(project, segmentId).context(), "context snapshot of " + segmentId);
+    }
+
+    // The lines of a record's own sections, as the user message carried them.
+    private static String sentText(final TestProject project, final String segmentId) {
+        return String.join(
+                "\n",
+                snapshotOf(project, segmentId).sections().stream()
+                        .flatMap(section -> section.lines().stream())
+                        .toList());
     }
 
     private static void addTerm(

@@ -331,7 +331,7 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 | `{{text}}`                         | Required  | The one masked source segment, rendered verbatim inside `<Text>`.                                                                                                                                        |
 | `{{tokens}}`                       | Required  | This segment's exact source-order placeholder sequence, or the no-token statement `(none — write no ⟦gN⟧ token at all; write every name as plain text)`: a small model otherwise invents a token for a name. |
 | `{{precedingTargets}}`             | Optional  | The targets just before the segment in the current unit (dial-capped); the entire block is omitted when absent and reset at a section boundary.                                                          |
-| `{{followingTarget}}`              | Optional  | The next segment's target in display text — sent only by a review retry, whose first draft (often in a batch) saw what came next; a run drafts ahead of the next segment and never sends it. |
+| `{{followingTarget}}`              | Optional  | The next segment's target in display text — sent by no call since a review retry is planned by the context builder (task 11.7); the old single-draft template goes in task 11.8. |
 | `{{summary}}`, `{{glossaryTerms}}`, `{{lockedNames}}`, `{{suggestedTerms}}`, `{{lexiconTerms}}`, `{{memoryHint}}`, `{{extraInstruction}}` | Optional | The rolling summary, the glossary lines of the terms in the chunk whose target is the person's, under a header saying each name is written out as plain text; `{{lockedNames}}`, the locked terms the segment hides behind tokens, as `⟦gN⟧ → rendering` under a header saying the token is kept and the name never written — a block present only when the segment holds such a token, so a text with none never sees a token explained beside a name; the lines of the terms whose target the model suggested and nobody confirmed (`#glossary-target-suggestions`; a hint the draft may inflect, never a token), the established renderings of the recurring terms the chunk names (`#recurring-terms`), translation-memory hints, and a retry's note; each block is omitted when empty. |
 
 **Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning off; non-streaming.
@@ -405,8 +405,9 @@ making them glossary entries. Four prompt-facing parts:
   lexicon terms the chunk names, under `[Established renderings of recurring terms — keep consistent]` and the line `Write
   each term as shown, inflected as the sentence needs, unless the glossary says otherwise.` The block is a soft hint: a
   term the glossary holds is never in it. It has its own share of the dynamic context (`ContextSection.LEXICON`: a fifth of
-  what the glossary leaves, taken before the memory, the preceding text and the summary), and the lines shown are recorded
-  in `ContextSnapshot.lexicon`, so a retry shows the same.
+  what the glossary leaves, taken before the memory, the preceding text and the summary); the lines a call sent are kept
+  with the segment as part of its stored sections (`ContextSnapshot.sections`), and a retry builds them anew from the
+  terms as they stand.
 - **Which rendering is established** (`LexiconEntry.established`, the conflict policy): the person's rendering; else the
   rendering learned by co-occurrence (below); else the most used verified rendering, the one first seen when two are used
   equally often; else the model's suggestion from the suggestion call; else none and no line.
@@ -677,7 +678,7 @@ The narrator and the gender sheet (15d.10) keep who-is-who out of the model's gu
   segment names; in a batch the lines of all the
   items, once each, under `[Characters in these items — context only; keep their gender and agreement]`; in the reviewer
   `[Characters in these pairs — who they are]` for the call's own pairs (source and candidate). A tenth of the dynamic allowance (`ContextSection.CHARACTERS`),
-  taken before the lexicon; recorded in `ContextSnapshot.characters`.
+  taken before the lexicon; kept with the segment as part of its stored sections (`ContextSnapshot.sections`).
 - **Gender finding** (repair, no new template). A `gender` finding, such as `The narrator is male, but this
   past-tense word after «я» is feminine. Use the masculine (-в) form of that word and change nothing else.`, is repeated in
   the repair's defect list with the quoted word. The reviewer's `gender` criterion is unchanged.

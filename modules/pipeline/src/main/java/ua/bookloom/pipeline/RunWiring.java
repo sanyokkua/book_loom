@@ -10,7 +10,6 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.BookRules;
 import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.RunFrame;
@@ -132,22 +131,14 @@ final class RunWiring {
 
     // The frame reads the map as it stands at Start; a later glossary change reaches the map of the next chunk.
     private Result<RunFrame> frameOf(final RunStart.Started run, final BookBrief brief) {
-        final String projectId = request.projectId();
-        return stores.glossary()
-                .all(projectId)
-                .flatMap(entries -> stores.lexicon()
-                        .all(projectId)
-                        .flatMap(terms -> new RunFrames(templates, new BookRules(templates.languageRules()))
-                                .build(
-                                        brief,
-                                        run.document(),
-                                        run.index(),
-                                        BookMap.of(
-                                                entries,
-                                                terms,
-                                                brief,
-                                                run.document().units()),
-                                        model.profile())));
+        return new RunFrames(templates, new BookRules(templates.languageRules()))
+                .buildStored(
+                        new RunFrames.FrameStores(stores.glossary(), stores.lexicon(), stores.promptFrames()),
+                        request.projectId(),
+                        brief,
+                        run.document(),
+                        run.index(),
+                        model.profile());
     }
 
     private int startBatchSize() {

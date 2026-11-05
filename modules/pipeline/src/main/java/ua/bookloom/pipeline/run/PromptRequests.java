@@ -12,6 +12,8 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.batch.BatchDrafter;
@@ -22,6 +24,7 @@ import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.Focus;
 import ua.bookloom.pipeline.context.FocusItem;
+import ua.bookloom.pipeline.context.KindExtra;
 import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.context.TranslatePlanner;
@@ -161,13 +164,13 @@ public final class PromptRequests {
     }
 
     /**
-     * Assembles the snapshot of what one draft is shown besides its source, and the memory's lines for it. The rolling
-     * summary no longer reaches a draft: the recently-present card says who is who (design D10).
+     * Assembles what the old assembler gives one draft besides its source; a run reads only the memory's lines of it.
+     * The rolling summary no longer reaches a draft: the recently-present card says who is who (design D10).
      *
      * @param segment the segment about to be drafted
      * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
      * @param memory what the translation memory offers the segment
-     * @return the draft's context and its snapshot
+     * @return the draft's context and the items it was built from
      */
     public ContextPackage contextFor(
             final Segment segment, final List<String> earlierMaskedTargets, final TmLookup memory) {
@@ -199,6 +202,49 @@ public final class PromptRequests {
                 .toList();
         return planner.window(focus, accepted)
                 .map(window -> new TranslateContext(window, map(), memory, masks, keyTerms));
+    }
+
+    /**
+     * The user message's sections of a segment's first draft over {@code window}, planned the way the draft step plans
+     * it; the planning is deterministic, so they are the sections the draft was sent. A segment drafted in pieces is
+     * described by the plan of its whole text.
+     *
+     * @param segment the non-null segment drafted alone
+     * @param window the non-null window, map and memory the draft was shown
+     * @param mask the non-null spans hidden in the segment
+     * @return the sections in the order sent, the system message's left out, or the builder's error
+     */
+    public Result<List<PromptSection>> sentSections(
+            final Segment segment, final TranslateContext window, final ProtectedMask mask) {
+        return sentSections(segment, window, mask, KindExtra.NONE);
+    }
+
+    /**
+     * As {@link #sentSections(Segment, TranslateContext, ProtectedMask)}, for a draft that carries block 11: a review
+     * retry's note.
+     *
+     * @param extra the non-null block 11 the draft is sent with
+     */
+    public Result<List<PromptSection>> sentSections(
+            final Segment segment, final TranslateContext window, final ProtectedMask mask, final KindExtra extra) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(window, "window");
+        Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(extra, "extra");
+        return planner.plan(CallKind.DRAFT, window, TranslatePlanner.focusOf(segment.id(), mask.maskedText()), extra)
+                .map(fitted -> userSections(fitted.plan().sections()));
+    }
+
+    /**
+     * The sections of the user message alone: the system message's are the run's fixed frame, stored once.
+     *
+     * @param sections the non-null sections of one call
+     * @return never null; the user-origin ones, in order
+     */
+    static List<PromptSection> userSections(final List<PromptSection> sections) {
+        return sections.stream()
+                .filter(section -> section.origin() == PromptSection.Origin.USER)
+                .toList();
     }
 
     /** The request of a segment's first draft, as the draft step sends it. */

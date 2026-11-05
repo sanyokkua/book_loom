@@ -8,12 +8,9 @@ import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
 
 /** The review desk's lists: six segments to review, three worth a second look, and the kept-as-source ones. */
 public final class ReviewDeskFixtures {
@@ -35,20 +32,21 @@ public final class ReviewDeskFixtures {
 
     /** A segment drafted alone: its context has no batch prompt of its own. */
     public static SegmentView draftedAlone() {
-        return ReviewFixtures.view(
-                "ch03.xhtml:1", "ch3 · p01", SegmentStatus.FLAGGED, List.of(), 0.5, ReviewFixtures.fullContext());
+        return ReviewFixtures.withFrame(
+                ReviewFixtures.view(
+                        "ch03.xhtml:1",
+                        "ch3 · p01",
+                        SegmentStatus.FLAGGED,
+                        List.of(),
+                        0.5,
+                        ReviewFixtures.fullContext()),
+                ReviewFixtures.FRAME);
     }
 
     /** A segment adopted from a batch reply: its context holds the sections that batch request really sent. */
     public static SegmentView batchAdopted() {
         final ContextSnapshot context = new ContextSnapshot(
-                List.of("Перший раніший рядок.", "Другий раніший рядок."),
-                List.of(new SnapshotTerm("Velk", "Велк", TermType.CHARACTER, Gender.MALE, true, false, null)),
-                List.of(),
-                null,
-                "",
-                List.of(),
-                List.of(),
+                "f00d",
                 List.of(
                         new PromptSection(
                                 "glossaryTerms", "[Glossary]", PromptSection.Origin.USER, List.of("Velk → Велк")),
@@ -56,8 +54,25 @@ public final class ReviewDeskFixtures {
                                 "precedingPairs",
                                 "[Earlier]",
                                 PromptSection.Origin.USER,
-                                List.of("one line → перший раніший рядок", "two lines → другий раніший рядок"))));
+                                List.of("one line → перший раніший рядок", "two lines → другий раніший рядок"))),
+                List.of(),
+                false);
         return ReviewFixtures.view("ch02.xhtml:6", "ch2 · p06", SegmentStatus.FLAGGED, List.of(), null, context);
+    }
+
+    /**
+     * A segment Try again drafted again after the glossary changed: its snapshot holds the context rebuilt and sent for
+     * that retry, with the frame it was sent with.
+     */
+    public static SegmentView retried() {
+        final ContextSnapshot context = new ContextSnapshot(
+                "f00d",
+                List.of(new PromptSection("mapItems", "[Names]", PromptSection.Origin.USER, List.of("Hale → Гейл"))),
+                List.of(),
+                true);
+        return ReviewFixtures.withFrame(
+                ReviewFixtures.view("ch05.xhtml:11", "ch5 · p12", SegmentStatus.FLAGGED, List.of(), null, context),
+                ReviewFixtures.FRAME);
     }
 
     /** Six flagged segments in document order, the first being {@link #firstToReview()}. */

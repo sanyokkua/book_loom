@@ -5,6 +5,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
@@ -27,6 +28,7 @@ class InMemoryRepositoryContractTest extends ProjectStorageContractTest {
     private final InMemoryRunRepository runRepository = new InMemoryRunRepository(store);
     private final InMemoryLexiconRepository lexiconRepository = new InMemoryLexiconRepository(store);
     private final InMemoryCheckpoint checkpointPort = new InMemoryCheckpoint(store);
+    private final InMemoryPromptFrameRepository promptFrameRepository = new InMemoryPromptFrameRepository(store);
 
     @Override
     protected ProjectRepository projectRepository() {
@@ -71,5 +73,10 @@ class InMemoryRepositoryContractTest extends ProjectStorageContractTest {
     @Override
     protected LexiconRepository lexiconRepository() {
         return lexiconRepository;
+    }
+
+    @Override
+    protected PromptFrameRepository promptFrameRepository() {
+        return promptFrameRepository;
     }
 }

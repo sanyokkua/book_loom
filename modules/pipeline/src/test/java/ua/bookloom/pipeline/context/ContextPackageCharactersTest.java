@@ -48,7 +48,7 @@ class ContextPackageCharactersTest {
         final ContextPackage assembled = assemble("Lyra walked to Oxford with Quill.", 1000);
 
         assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra — female");
-        assertThat(assembled.snapshot().characters()).containsExactly("Lyra — female");
+        assertThat(assembled.injected().characters()).containsExactly("Lyra — female");
     }
 
     @Test
@@ -99,17 +99,6 @@ class ContextPackageCharactersTest {
         assertThat(context.characterLines()).isEmpty();
     }
 
-    @Test
-    void replay_snapshotWithASheet_rebuildsTheSameLines() {
-        final ContextPackage assembled = assemble("Hale met Lyra.", 1000);
-        final Segment segment = ContextFixtures.segment(0, "Hale met Lyra.");
-
-        final DraftContext replayed =
-                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
-
-        assertThat(replayed.characterLines()).containsExactly("Lyra — female", "Hale — male");
-    }
-
     // IF a guessed gender were listed, THEN the model and every check after it would treat a guess as the person's
     // word; the character is listed by name alone (design D5).
     @Test
@@ -117,7 +106,7 @@ class ContextPackageCharactersTest {
         final ContextPackage assembled = assemble("Lyra walked to Oxford.", 1000, List.of(LYRA_SUGGESTED, PLACE));
 
         assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra");
-        assertThat(assembled.snapshot().characters()).containsExactly("Lyra");
+        assertThat(assembled.injected().characters()).containsExactly("Lyra");
     }
 
     @Test
@@ -143,17 +132,5 @@ class ContextPackageCharactersTest {
         final ContextPackage assembled = assemble("Lyra walked home.", 1000, List.of(LYRA_SUGGESTED));
 
         assertThat(assembled.draftContext().glossaryLines()).containsExactly("Lyra → Ліра (character)");
-    }
-
-    @Test
-    void replay_snapshotWithALikelySheet_rebuildsTheNameOnlyLine() {
-        final ContextPackage assembled = assemble("Lyra walked home.", 1000, List.of(LYRA_SUGGESTED));
-        final Segment segment = ContextFixtures.segment(0, "Lyra walked home.");
-
-        final DraftContext replayed =
-                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
-
-        assertThat(replayed.characterLines()).containsExactly("Lyra");
-        assertThat(replayed.glossaryLines()).containsExactly("Lyra → Ліра (character)");
     }
 }

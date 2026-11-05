@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.LexiconEntry;
@@ -149,8 +150,8 @@ class LexiconConsistencyJobTest {
 
         final SegmentRecord third = TranslationJobTestSupport.stored(project, "Book.md:3");
         assertThat(third.context()).isNotNull();
-        assertThat(Objects.requireNonNull(third.context()).lexicon())
-                .extracting(rendering -> rendering.term() + " → " + rendering.rendering())
-                .containsExactly(ESTABLISHED_LINE);
+        assertThat(Objects.requireNonNull(third.context()).sections())
+                .flatExtracting(PromptSection::lines)
+                .anySatisfy(line -> assertThat(line).contains(ESTABLISHED_LINE));
     }
 }

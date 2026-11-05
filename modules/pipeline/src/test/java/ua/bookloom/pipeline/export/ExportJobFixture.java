@@ -27,6 +27,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
@@ -80,6 +81,10 @@ final class ExportJobFixture {
 
     DeferralRepository deferrals() {
         return injector.getInstance(DeferralRepository.class);
+    }
+
+    PromptFrameRepository frames() {
+        return injector.getInstance(PromptFrameRepository.class);
     }
 
     RunRepository runs() {

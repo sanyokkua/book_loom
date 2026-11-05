@@ -215,6 +215,11 @@ public final class SequenceJobs {
                 Clock.systemUTC());
     }
 
+    /** Runs the unattended job that drafts every segment alone over the prepared book to its end. */
+    public static Result<JobReport> runAlone(final Prepared prepared, final ChatModel model) {
+        return TranslationJobTestSupport.job(prepared.project, model).run();
+    }
+
     /**
      * Runs the batched job over the prepared book to its end.
      *

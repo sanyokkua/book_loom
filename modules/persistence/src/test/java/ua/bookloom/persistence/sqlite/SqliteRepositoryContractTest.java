@@ -22,6 +22,7 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
@@ -62,7 +63,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
             SqliteDeferralRepository deferrals,
             SqliteRunRepository runs,
             SqliteLexiconRepository lexicon,
-            SqliteCheckpoint checkpoint) {
+            SqliteCheckpoint checkpoint,
+            SqlitePromptFrameRepository frames) {
 
         static Adapters over(final SqliteDatabase db, final JsonCodec codec) {
             return new Adapters(
@@ -74,7 +76,8 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
                     new SqliteDeferralRepository(db, codec),
                     new SqliteRunRepository(db, codec),
                     new SqliteLexiconRepository(db, codec),
-                    new SqliteCheckpoint(db, codec));
+                    new SqliteCheckpoint(db, codec),
+                    new SqlitePromptFrameRepository(db, codec));
         }
     }
 
@@ -153,6 +156,11 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
     @Override
     protected LexiconRepository lexiconRepository() {
         return adapters.lexicon();
+    }
+
+    @Override
+    protected PromptFrameRepository promptFrameRepository() {
+        return adapters.frames();
     }
 
     @Test

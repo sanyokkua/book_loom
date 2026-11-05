@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -13,13 +14,11 @@ import javafx.scene.control.TabPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.PromptView;
 import ua.bookloom.ui.control.ScrollHost;
 import ua.bookloom.ui.control.Tips;
@@ -31,7 +30,8 @@ import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
  * The review desk's three tabs under the compare: What may be wrong (one label per finding), What the model saw (the
- * sections a batch request really sent, or the context of a segment drafted alone), and Suggestion (a backward
+ * run's fixed frame the segment's call was sent with, joined from its stored copy, then the call's own sections — a
+ * batch's as that request sent them, a retry's as Try again rebuilt and sent them, labelled so), and Suggestion (a backward
  * revision's proposal, applied only on "Use the suggestion"). It owns no state; the detail calls {@link #show}.
  */
 @Slf4j
@@ -44,7 +44,7 @@ final class ReviewDeskTabs extends TabPane {
     private final VBox findings = new VBox(SPACING);
     private final Label intro = muted("review-context-intro");
     private final PromptView sent;
-    private final ContextSection context;
+    private final Label noCall = muted("review-context-none");
     private final Label now = new Label();
     private final Label proposal = new Label();
     private final VBox proposalBox = new VBox(SPACING / 2);
@@ -56,7 +56,6 @@ final class ReviewDeskTabs extends TabPane {
         Objects.requireNonNull(viewModel, "viewModel");
         rows = new FindingRows(messages);
         sent = new PromptView("review-sent", messages);
-        context = new ContextSection("review-context", messages);
         findings.setId("review-findings");
         setId("review-tabs");
         getStyleClass().add("review-tabs");
@@ -65,7 +64,7 @@ final class ReviewDeskTabs extends TabPane {
         getTabs()
                 .setAll(
                         tab(MessageKey.REVIEW_TAB_WHY, findings),
-                        tab(MessageKey.REVIEW_TAB_CONTEXT, new VBox(SPACING, intro, sent, context)),
+                        tab(MessageKey.REVIEW_TAB_CONTEXT, new VBox(SPACING, intro, noCall, sent)),
                         suggestionTab);
     }
 
@@ -77,7 +76,7 @@ final class ReviewDeskTabs extends TabPane {
      */
     void show(final SegmentView view, final boolean technical) {
         showFindings(view, technical);
-        showContext(view.context());
+        showContext(view);
         final String proposed = view.proposal();
         now.setText(Objects.requireNonNullElse(
                 view.maskedUserTarget(), Objects.requireNonNullElse(view.maskedMachineTarget(), "")));
@@ -123,17 +122,27 @@ final class ReviewDeskTabs extends TabPane {
                 .toList();
     }
 
-    // A batch draft shows what its one request sent; a draft made alone shows the context it was given.
-    private void showContext(final @Nullable ContextSnapshot snapshot) {
-        final List<PromptSection> sections = snapshot == null ? null : snapshot.sentSections();
-        final List<PromptSection> batch = sections == null ? List.of() : sections;
-        final boolean inBatch = !batch.isEmpty();
-        log.debug("what the model saw: {}", inBatch ? "the batch request's sections" : "the segment's own context");
-        sent.show(batch);
+    // The stored frame and the call's own sections together are the prompt as it was sent; a segment no call was made
+    // for (a memory reuse, a shortcut) says so instead of showing an empty prompt.
+    private void showContext(final SegmentView view) {
+        final ContextSnapshot snapshot = view.context();
+        final List<PromptSection> own = snapshot == null ? List.of() : snapshot.sections();
+        final List<PromptSection> parts = new ArrayList<>(view.frame());
+        parts.addAll(own);
+        final boolean called = !parts.isEmpty();
+        final boolean retried = snapshot != null && snapshot.retry();
+        log.debug(
+                "what the model saw: segment={} frameSections={} ownSections={} retry={}",
+                view.segmentId(),
+                view.frame().size(),
+                own.size(),
+                retried);
+        sent.show(List.copyOf(parts));
         sent.setExpanded(true);
-        context.show(inBatch ? null : snapshot);
-        context.setExpanded(true);
-        intro.setText(messages.get(inBatch ? MessageKey.REVIEW_CONTEXT_BATCH : MessageKey.REVIEW_CONTEXT_INTRO));
+        intro.setText(messages.get(retried ? MessageKey.REVIEW_CONTEXT_RETRY : MessageKey.REVIEW_CONTEXT_INTRO));
+        noCall.setText(messages.get(MessageKey.REVIEW_CONTEXT_NONE));
+        Visibility.show(intro, called);
+        Visibility.show(noCall, !called);
     }
 
     private Node suggestion(final ReviewViewModel viewModel) {

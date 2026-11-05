@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
@@ -12,12 +13,17 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.ChunkCommit;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 
@@ -28,6 +34,92 @@ import ua.bookloom.api.project.TmEntry;
  * {@link LexiconContractTest} in its own file by the project's class-length limit.
  */
 public abstract class ProjectStorageContractTest extends GlossaryIndexTest {
+
+    private static final String FRAME_HASH = "a1" + "0".repeat(62);
+
+    protected abstract PromptFrameRepository promptFrameRepository();
+
+    // Two segments of one run name the same frame; the run stores it once per segment it drafts, and one copy is kept.
+    @Test
+    void promptFrame_twoSegmentsOneRun_oneStoredFrame() {
+        givenProjects("p1");
+        final PromptFrame frame = frame(FRAME_HASH);
+        segmentRepository()
+                .saveAll(
+                        "p1",
+                        List.of(
+                                withFrame(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)),
+                                withFrame(pending("p1", "ch1:1", "ch1", 1, SegmentKind.PARAGRAPH))));
+
+        promptFrameRepository().save("p1", frame);
+        promptFrameRepository().save("p1", frame);
+
+        assertThat(promptFrameRepository().all("p1").data()).containsExactly(frame);
+        assertThat(segmentRepository().all("p1").data())
+                .allSatisfy(record -> assertThat(promptFrameRepository()
+                                .find("p1", record.context().frameHash())
+                                .data())
+                        .contains(frame));
+    }
+
+    @Test
+    void promptFrame_removeProject_frameGone() {
+        final ProjectRepository repository = projectRepository();
+        repository.save(project("p1", "h1", "One", "en", "uk"));
+        repository.save(project("p2", "h1", "Two", "en", "de"));
+        promptFrameRepository().save("p1", frame(FRAME_HASH));
+        promptFrameRepository().save("p2", frame(FRAME_HASH));
+
+        repository.delete("p1");
+
+        assertThat(promptFrameRepository().find("p1", FRAME_HASH).data()).isEmpty();
+        assertThat(promptFrameRepository().all("p1").data()).isEmpty();
+        assertThat(promptFrameRepository().find("p2", FRAME_HASH).data()).isPresent();
+    }
+
+    @Test
+    void promptFrame_unknownHash_answersOkAndEmpty() {
+        givenProjects("p1");
+
+        final Result<Optional<PromptFrame>> found = promptFrameRepository().find("p1", FRAME_HASH);
+
+        assertThat(found.isOk()).isTrue();
+        assertThat(found.data()).isEmpty();
+    }
+
+    private static PromptFrame frame(final String hash) {
+        return new PromptFrame(
+                hash,
+                List.of(
+                        new PromptSection(
+                                "role", "", PromptSection.Origin.SYSTEM, List.of("Translate into Ukrainian.")),
+                        new PromptSection("styleSheet", "[Style]", PromptSection.Origin.SYSTEM, List.of("Formal."))));
+    }
+
+    private static SegmentRecord withFrame(final SegmentRecord record) {
+        return new SegmentRecord(
+                record.projectId(),
+                record.segmentId(),
+                record.unitId(),
+                record.ord(),
+                record.kind(),
+                record.status(),
+                null,
+                null,
+                null,
+                null,
+                0.0,
+                null,
+                List.of(),
+                record.path(),
+                false,
+                new ContextSnapshot(
+                        FRAME_HASH,
+                        List.of(new PromptSection(
+                                "items", "[Items]", PromptSection.Origin.USER, List.of(record.segmentId()))),
+                        List.of(),
+                        false));
+    }
 
     @Test
     void save_cyrillicNameDifferingByCaseInOneBook_answersValidationAndStoresNothing() {

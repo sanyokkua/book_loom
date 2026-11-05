@@ -9,6 +9,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
@@ -21,6 +22,7 @@ import ua.bookloom.persistence.memory.InMemoryGlossaryRepository;
 import ua.bookloom.persistence.memory.InMemoryLexiconRepository;
 import ua.bookloom.persistence.memory.InMemoryModelSettingsRepository;
 import ua.bookloom.persistence.memory.InMemoryProjectRepository;
+import ua.bookloom.persistence.memory.InMemoryPromptFrameRepository;
 import ua.bookloom.persistence.memory.InMemoryProviderConfigs;
 import ua.bookloom.persistence.memory.InMemoryRunRepository;
 import ua.bookloom.persistence.memory.InMemorySegmentRepository;
@@ -49,6 +51,9 @@ public final class InMemoryPersistenceModule extends AbstractModule {
         bind(GlossaryRepository.class).to(InMemoryGlossaryRepository.class).in(Singleton.class);
         bind(TmRepository.class).to(InMemoryTmRepository.class).in(Singleton.class);
         bind(SummaryRepository.class).to(InMemorySummaryRepository.class).in(Singleton.class);
+        bind(PromptFrameRepository.class)
+                .to(InMemoryPromptFrameRepository.class)
+                .in(Singleton.class);
         bind(DeferralRepository.class).to(InMemoryDeferralRepository.class).in(Singleton.class);
         bind(LexiconRepository.class).to(InMemoryLexiconRepository.class).in(Singleton.class);
         bind(RunRepository.class).to(InMemoryRunRepository.class).in(Singleton.class);

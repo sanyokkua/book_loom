@@ -19,9 +19,10 @@ import ua.bookloom.pipeline.qa.LockedRendering;
  * allowance follow it rather than the segment's own text.
  *
  * @param segment the segment being drafted
- * @param context the stored context a review retry replays; empty for a run's draft
- * @param translate the window, map and memory a run's draft is planned with, which its re-ask and repair share; null
- *     for a review retry, or for a draft step given no window, which is planned with none
+ * @param context the old single-segment context only the old prompt's tests still draft with; empty for a run's draft
+ *     and a review retry's
+ * @param translate the window, map and memory a run's or a review retry's draft is planned with, which its re-ask and
+ *     repair share; null for a draft step given no window, which is planned with none
  * @param shownText the text the model translates; carries the tokens the reply must return
  * @param extraInstruction what a repair asks of the draft, or empty for a plain draft
  * @param pieceRedraft how the segment's pieces are drafted again, or null when it is not drafted in pieces

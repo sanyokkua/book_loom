@@ -20,6 +20,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.TestReplies;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -196,6 +197,11 @@ final class RevisionBook {
 
     static Result<ChatResponse> reply(final String target) {
         return Result.ok(new ChatResponse("{\"target\":\"" + target + "\"}", FinishReason.STOP));
+    }
+
+    /** A retried draft's reply: a batch of one, as the run's draft step reads it. */
+    static Result<ChatResponse> draftReply(final String target) {
+        return Result.ok(new ChatResponse(TestReplies.targetReply(target), FinishReason.STOP));
     }
 
     static <T> T ok(final Result<T> result) {

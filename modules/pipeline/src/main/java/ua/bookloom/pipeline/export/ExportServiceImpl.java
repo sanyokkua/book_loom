@@ -13,6 +13,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgressListener;
@@ -120,7 +121,8 @@ public final class ExportServiceImpl implements ExportService {
                 consistencyPass,
                 stores.glossary(),
                 stores.runs());
-        return Result.ok(new ExportJobImpl(request, parts, calls, progress, ledger));
+        return Result.ok(new ExportJobImpl(
+                request, parts, calls, progress, ledger, model == null ? ModelProfile.defaults() : model.profile()));
     }
 
     // The pass's calls are timed and shown as a run's are: each described call reaches the listener as a snapshot.

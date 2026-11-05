@@ -47,10 +47,11 @@ public final class DraftRequests {
     }
 
     /**
-     * The request of a review retry's first draft, replaying the stored context.
+     * The request of a draft over the old single-segment context, which only the old prompt's tests still build
+     * (task 11.8 removes it).
      *
      * @param segment the non-null segment to draft
-     * @param context the non-null replayed context
+     * @param context the non-null old single-segment context
      * @param mask the non-null spans hidden in the segment
      * @return the draft's request
      */

@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -16,7 +15,6 @@ import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** A prompt lists only what the text being translated names: not the chunk's names, not the book's. */
 class ContextScopeTest {
@@ -52,7 +50,7 @@ class ContextScopeTest {
 
         final ContextPackage assembled = assemble(chunk, 1, SIX);
 
-        assertThat(assembled.snapshot().glossary())
+        assertThat(assembled.injected().glossary())
                 .extracting(SnapshotTerm::term)
                 .containsExactly("Harrow");
         assertThat(assembled.draftContext().glossaryLines()).containsExactly("Harrow → Герроу (place)");
@@ -79,7 +77,7 @@ class ContextScopeTest {
 
         final ContextPackage assembled = assemble(chunk, 0, List.of(name(term, "x")));
 
-        assertThat(assembled.snapshot().glossary()).hasSize(expected ? 1 : 0);
+        assertThat(assembled.injected().glossary()).hasSize(expected ? 1 : 0);
     }
 
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
@@ -115,32 +113,6 @@ class ContextScopeTest {
     }
 
     @Test
-    void replay_overWideSnapshot_shrinksToTheTextBeingTranslated() {
-        final List<SnapshotTerm> wide = SIX.stream()
-                .map(entry -> new SnapshotTerm(
-                        entry.term(), entry.target(), entry.type(), entry.gender(), false, false, null))
-                .toList();
-        final ContextSnapshot snapshot = new ContextSnapshot(
-                List.of("Раніше."),
-                wide,
-                List.of(),
-                "A summary.",
-                "Style.",
-                List.of(new SnapshotRendering("master", "господар"), new SnapshotRendering("imp", "біс")),
-                List.of("Lyra — female", "Hale — male"));
-        final Segment segment = ContextFixtures.segment(0, "Harrow's master and Lyra left.");
-
-        final DraftContext replayed =
-                ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, SIX), segment);
-
-        assertThat(replayed.glossaryLines()).containsExactly("Harrow → Герроу (place)");
-        assertThat(replayed.lexiconLines()).containsExactly("master → господар");
-        assertThat(replayed.characterLines()).containsExactly("Lyra — female");
-        assertThat(replayed.precedingTargets()).containsExactly("Раніше.");
-        assertThat(replayed.summary()).isEqualTo("A summary.");
-    }
-
-    @Test
     void assemble_tightAllowance_scopedGlossaryLeavesRoomForTheCharacterSheetAndTheSummary() {
         final GlossaryEntry lyra = ContextFixtures.entry("Lyra", "Ліра", TermType.CHARACTER, Gender.FEMALE, false);
         final List<GlossaryEntry> glossary = new ArrayList<>(SIX);
@@ -154,10 +126,10 @@ class ContextScopeTest {
         final ContextPackage assembled = ContextPackageAssembler.assemble(
                 chunk, segment, ContextFixtures.mask(segment, glossary), ContextFixtures.NO_MEMORY, inputs);
 
-        assertThat(assembled.snapshot().glossary())
+        assertThat(assembled.injected().glossary())
                 .extracting(SnapshotTerm::term)
                 .containsExactlyInAnyOrder("Harrow", "Lyra");
-        assertThat(assembled.snapshot().characters()).containsExactly("Lyra — female");
-        assertThat(assembled.snapshot().summary()).isEqualTo("Short.");
+        assertThat(assembled.injected().characters()).containsExactly("Lyra — female");
+        assertThat(assembled.injected().summary()).isEqualTo("Short.");
     }
 }

@@ -40,6 +40,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.MemoryKind;
 import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
@@ -79,8 +80,9 @@ class TranslationJobSummaryTest {
         assertThat(formats(model)).hasSize(21).containsOnly(DRAFT);
         assertThat(userMessage(model.requests().get(20))).doesNotContain(SUMMARY_BLOCK);
         assertThat(Objects.requireNonNull(stored(project, "Book.md:20").context(), "snapshot")
-                        .summary())
-                .isNull();
+                        .sections())
+                .flatExtracting(PromptSection::lines)
+                .noneMatch(line -> line.contains(MODEL_SUMMARY));
         assertThat(latestSummary(project)).hasValueSatisfying(summary -> {
             assertThat(summary.version()).isEqualTo(2);
             assertThat(summary.target()).isEmpty();
@@ -104,8 +106,9 @@ class TranslationJobSummaryTest {
         assertThat(userMessage(model.requests().getFirst()))
                 .doesNotContain(SUMMARY_BLOCK, MODEL_SUMMARY, GLOSSARY_LINES);
         assertThat(Objects.requireNonNull(stored(project, "Book.txt:0").context(), "snapshot")
-                        .summary())
-                .isNull();
+                        .sections())
+                .flatExtracting(PromptSection::lines)
+                .noneMatch(line -> line.contains(MODEL_SUMMARY));
     }
 
     @Test
@@ -119,8 +122,9 @@ class TranslationJobSummaryTest {
 
         assertThat(userMessage(model.requests().getFirst())).doesNotContain(SUMMARY_BLOCK);
         assertThat(Objects.requireNonNull(stored(project, "Book.txt:0").context(), "snapshot")
-                        .summary())
-                .isNull();
+                        .sections())
+                .flatExtracting(PromptSection::lines)
+                .noneMatch(line -> line.contains(MODEL_SUMMARY));
     }
 
     @Test

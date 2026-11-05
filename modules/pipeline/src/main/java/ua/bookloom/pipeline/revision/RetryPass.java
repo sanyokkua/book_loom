@@ -19,6 +19,7 @@ import ua.bookloom.api.FailureReason;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
@@ -33,7 +34,8 @@ import ua.bookloom.pipeline.run.OutcomeRecords;
 
 /**
  * The pass's first model step: every flagged segment, and every accepted one the audit doubts, is drafted again as the
- * review desk's Retry drafts it — the context its first draft saw, the run's checks, reviewer and acceptance rule —
+ * review desk's Retry drafts it — a context rebuilt from the project as it stands, the run's checks, reviewer and
+ * acceptance rule —
  * and the new text replaces the old only when the acceptance rule takes it, it breaks none of {@link PassChecks}'s
  * rules against the old text, and it is better: the old text was flagged or failed a check, or the new one fails fewer
  * checks or fewer audit checks. Segments with a blocking finding are drafted first. Only a machine-owned target is touched; the person's own text never is.
@@ -54,6 +56,7 @@ final class RetryPass {
     private final SegmentRepository segments;
     private final RetryDraft retryDraft;
     private final CheckedParagraphs checked;
+    private final ModelProfile profile;
 
     /** How one retry ended: a new text stored, the segment left as it read, or the call failed. */
     private enum Attempt {
@@ -152,7 +155,7 @@ final class RetryPass {
 
     /**
      * The fingerprint of everything the retry of one segment depends on: its source, its machine text and status, the
-     * run's and the audit's findings on it, the context its first draft saw, both neighbours' texts and the glossary.
+     * run's and the audit's findings on it, its stored snapshot, both neighbours' texts and the glossary.
      */
     private static String fingerprint(
             final PassInputs inputs,
@@ -184,8 +187,9 @@ final class RetryPass {
                 : String.valueOf(neighbour.effectiveTarget().orElse(""));
     }
 
-    // A retry replays the context the first draft saw, so a record with none cannot be retried; a kept-verbatim
-    // segment was never translated.
+    // Only a segment a run decided carries a snapshot, so one with none was never drafted by a run and is left to the
+    // person; a kept-verbatim segment was never translated. The retry itself rebuilds its context and reads no
+    // snapshot.
     private static boolean isRetryable(final SegmentRecord record) {
         final boolean retryable = record.userTarget() == null
                 && record.context() != null
@@ -205,7 +209,7 @@ final class RetryPass {
     private Result<Attempt> retryOne(
             final PassInputs inputs, final SegmentRecord record, final ModelCalls calls, final PassTally tally) {
         final String id = record.segmentId();
-        final Result<RetryCandidate> drafted = retryDraft.candidate(record, calls);
+        final Result<RetryCandidate> drafted = retryDraft.candidate(record, calls, profile);
         if (drafted.isErr()) {
             final AppError error = Objects.requireNonNull(drafted.error(), ERROR);
             if (error.code() == ErrorCode.cancelled) {

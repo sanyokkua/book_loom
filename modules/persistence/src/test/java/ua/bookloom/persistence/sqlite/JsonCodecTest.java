@@ -53,6 +53,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Origin;
+import ua.bookloom.api.project.PromptFrame;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
@@ -62,9 +63,6 @@ import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.api.project.SnapshotRendering;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.api.project.TargetState;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
@@ -88,6 +86,7 @@ class JsonCodecTest {
                 new LexiconDocument(List.of(lexicon()), List.of("master")),
                 segment(true),
                 segment(false),
+                frame(),
                 glossary(),
                 lexicon(),
                 new RollingSummary("p1", "u1", "Source " + UK, "Target " + UK, 3, "seg-9", 120),
@@ -133,18 +132,30 @@ class JsonCodecTest {
 
     private static ContextSnapshot context(final boolean full) {
         return new ContextSnapshot(
-                List.of("prev " + UK, "prev2"),
-                List.of(new SnapshotTerm("Nia", "Нія", TermType.CHARACTER, Gender.FEMALE, true, false, null)),
-                List.of(new SnapshotTmHit(SnapshotTmHit.TmHitKind.FUZZY, "src", "tgt")),
-                "summary " + UK,
-                "style sheet",
-                List.of(new SnapshotRendering("magic", "магія")),
-                List.of("Nia"),
-                full
-                        ? List.of(
-                                new PromptSection("rules", "Rules", PromptSection.Origin.SYSTEM, List.of("a", UK)),
-                                new PromptSection("src", "Source", PromptSection.Origin.USER, List.of("b")))
-                        : null);
+                "9f2c" + "0".repeat(60),
+                List.of(new PromptSection("previousPairs", "[Previous]", PromptSection.Origin.USER, List.of("a", UK))),
+                full ? List.of("ch1:0") : List.of(),
+                full);
+    }
+
+    private static PromptFrame frame() {
+        return new PromptFrame(
+                "9f2c" + "0".repeat(60),
+                List.of(
+                        new PromptSection("role", "", PromptSection.Origin.SYSTEM, List.of("Translate " + UK)),
+                        new PromptSection("styleSheet", "[Style]", PromptSection.Origin.SYSTEM, List.of("b"))));
+    }
+
+    // The snapshot keeps the frame's key, the call's own sections, the summary keys and the retry mark, and nothing
+    // of the frame itself.
+    @Test
+    void roundTrip_contextSnapshot() {
+        final ContextSnapshot snapshot = context(true);
+
+        final String json = codec.write(snapshot);
+
+        assertThat(codec.read(json, ContextSnapshot.class)).isEqualTo(snapshot);
+        assertThat(json).contains("\"frameHash\":\"9f2c", "\"retry\":true").doesNotContain("Translate");
     }
 
     private static SegmentRecord segment(final boolean full) {
