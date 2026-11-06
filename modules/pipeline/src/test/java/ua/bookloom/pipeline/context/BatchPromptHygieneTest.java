@@ -65,7 +65,6 @@ class BatchPromptHygieneTest {
                 BookMap.of(List.of(HALE), List.of(), BRIEF),
                 List.of("He left. → Він пішов.", "He left. → Він пішов."),
                 Map.of(),
-                List.of(),
                 List.of());
     }
 }

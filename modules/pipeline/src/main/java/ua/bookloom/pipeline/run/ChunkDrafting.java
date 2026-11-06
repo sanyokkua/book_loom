@@ -243,8 +243,7 @@ final class ChunkDrafting {
                 .translateContext(
                         List.of(new PromptRequests.BatchSlot(
                                 segment, ready.mask(), ready.offer().lookup())),
-                        kept.accepted(current.drafts()),
-                        List.of());
+                        kept.accepted(current.drafts()));
     }
 
     // A batch-adopted draft and a single one alike carry the call that repairs them with the context and mask they

@@ -13,7 +13,6 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
@@ -25,7 +24,6 @@ import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
-import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
@@ -255,7 +253,6 @@ final class BatchStage {
         }
         if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
             drafter.record(attempt.first());
-            noteKeyTerms(context, attempt.first());
         }
         logSettled(batch.size(), adopted, attempt.kind());
     }
@@ -267,9 +264,7 @@ final class BatchStage {
         final boolean copied = outcome.isAccepted() && copiesExample(current, candidate, outcome);
         final boolean isAdopted = outcome.isAccepted() && !copied && adopt(current, candidate, outcome, sent);
         notes.noted(BatchNotes.of(candidate.segment().id(), outcome, isAdopted, copied));
-        if (isAdopted) {
-            recordTerms(current, candidate, outcome, sent.context().keyTerms());
-        } else {
+        if (!isAdopted) {
             log.warn(
                     "Batch item falls back to its own draft segmentId={} status={} problems={}",
                     candidate.segment().id(),
@@ -297,13 +292,6 @@ final class BatchStage {
             current.batches().echoed(candidate.segment().id());
         }
         return copied;
-    }
-
-    // An unreadable reply says nothing of whether the model uses the key-term block.
-    private void noteKeyTerms(final TranslateContext context, final BatchReply first) {
-        if (first.readable()) {
-            drafter.keyTermAsks().record(!context.keyTerms().isEmpty(), first.hasTerms());
-        }
     }
 
     /** What the shown batch call names besides its request. */
@@ -347,29 +335,6 @@ final class BatchStage {
             current.batches().shown(id, sent.context());
         });
         return drafted.isPresent();
-    }
-
-    // What the model says it used for a key term counts only once the text proves it; the lexicon then holds one more
-    // use.
-    private void recordTerms(
-            final Current current, final Candidate candidate, final ItemOutcome outcome, final List<String> keyTerms) {
-        if (outcome.terms().isEmpty()) {
-            return;
-        }
-        final List<TermMappingVerifier.Pair> verified = TermMappingVerifier.verify(
-                outcome.terms(),
-                keyTerms,
-                Tokens.replace(candidate.mask().maskedText(), " "),
-                Tokens.replace(outcome.target(), " "),
-                List.of(),
-                settings.frame().sourceLanguage(),
-                settings.frame().targetLanguage());
-        log.debug(
-                "Batch item reported {} terms, {} verified segmentId={}",
-                outcome.terms().size(),
-                verified.size(),
-                candidate.segment().id());
-        current.inputs().lexicon().record(settings.projectId(), verified);
     }
 
     // The batch is fitted to the model tier's budgets: what helps least goes first, and only then batch items, the rest

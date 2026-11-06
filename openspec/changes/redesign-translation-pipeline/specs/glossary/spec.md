@@ -2002,6 +2002,6 @@ The application SHALL learn a lexicon term's rendering from the decided segments
 
 ### Requirement: Record the renderings a draft used and keep them consistent
 
-**Reason**: The batch reply no longer carries a `terms` object and the model is no longer asked to report the renderings it used, so there is nothing to verify or count; the decided segments are read instead (the default; a paired test named in design.md can bring the report back).
+**Reason**: The batch reply no longer carries a `terms` object and the model is no longer asked to report the renderings it used, so there is nothing to verify or count; the decided segments are read instead (arm 5b, task 12.9, kept this default: the asks kept terms no more consistent, `docs/DEVELOPMENT.md#redesign-arms`).
 
 **Migration**: "Learn a recurring term's rendering from the decided segments" (modified: it stands alone) and "Keep one established rendering for each recurring term" (added: the order that picks the rendering and its display in later calls)

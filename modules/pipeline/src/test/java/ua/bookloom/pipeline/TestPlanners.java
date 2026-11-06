@@ -69,7 +69,6 @@ public final class TestPlanners {
                 BookMap.of(List.of(), List.of(), planner.frame().brief()),
                 List.of(),
                 Map.of(),
-                List.of(),
                 List.of());
     }
 

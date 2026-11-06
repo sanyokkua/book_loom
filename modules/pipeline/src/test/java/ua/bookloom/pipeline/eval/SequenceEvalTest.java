@@ -52,10 +52,13 @@ class SequenceEvalTest {
                         PromptEvalTest.chatModel(model),
                         seeded -> new SequenceEval(fixture, dial, window, narrator, detected).run(seeded, repeatDir()),
                         run -> 1 - measure(fixture, model, dial, run).flaggedRate());
-        final SequenceRun run = runs.results().get(0);
-        final SequenceReport report = new SequenceReport(measure(fixture, model, dial, run));
+        final List<SequenceMetrics> repeats = runs.results().stream()
+                .map(each -> measure(fixture, model, dial, each))
+                .toList();
+        final SequenceRun run = runs.results().getFirst();
+        final SequenceReport report = new SequenceReport(repeats.getFirst());
 
-        write(model, dial, narrator, report, run, runs.aggregates());
+        write(model, dial, narrator, report, new Repeats(run, runs.seeds(), repeats, runs.aggregates()));
         assertThat(run.segments()).as(report.table()).isNotEmpty();
     }
 
@@ -77,16 +80,20 @@ class SequenceEvalTest {
             final QualityDial dial,
             final SequenceNarratorMode narrator,
             final SequenceReport report,
-            final SequenceRun run,
-            final List<Double> aggregates)
+            final Repeats repeats)
             throws IOException {
         final String label = "en-uk-" + dial.name().toLowerCase(Locale.ROOT) + "-" + narrator.label();
         final String name = model.replaceAll("[^A-Za-z0-9._-]", "_") + "-sequence-" + label;
         EvalOutput.write(
-                EvalProvenance.capture("sequence", model, label).withAggregates(aggregates),
+                EvalProvenance.capture("sequence", model, label).withAggregates(repeats.aggregates()),
                 name,
-                report.table(),
-                report.json(run));
-        log.info("Sequence eval report {}\n{}", name, report.table());
+                report.table() + "\n" + SequenceReport.repeatLines(repeats.metrics()),
+                report.json(repeats.first(), repeats.seeds(), repeats.metrics()));
+        log.info(
+                "Sequence eval report {}\n{}\n{}", name, report.table(), SequenceReport.repeatLines(repeats.metrics()));
     }
+
+    /** Every repeat's run-level figures; the first run's targets are the ones the report keeps. */
+    private record Repeats(
+            SequenceRun first, List<Integer> seeds, List<SequenceMetrics> metrics, List<Double> aggregates) {}
 }

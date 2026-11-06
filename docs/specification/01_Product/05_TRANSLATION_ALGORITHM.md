@@ -159,7 +159,7 @@ the **last user message**, with the load-bearing task and items at the end.
 | 8     | The scene card: the earlier chapters' summaries, then the recently-present card.                    |
 | 9     | Map lines: glossary and recurring-term entries whose forms occur in the window's source; locked names by token. |
 | 10    | The window: the previous accepted pairs and the next source; TM exact and fuzzy hints.              |
-| 11    | What only this kind of call adds (a repair's defects). Block 11b, key terms, stays until 12.9.      |
+| 11    | What only this kind of call adds (a repair's defects).                                              |
 | 12    | The task and the schema line.                                                                       |
 | 13    | The items, with the reminder last.                                                                  |
 

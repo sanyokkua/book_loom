@@ -45,9 +45,6 @@ public final class BlockSlots {
     /** 11: what only this kind of call adds, such as a repair's defects. */
     public static final String KIND_EXTRA = "kindExtra";
 
-    /** 11b: the recurring key terms the model is asked to report renderings for, while a run asks (until 12.9). */
-    public static final String KEY_TERMS = "keyTerms";
-
     /** 12: the task and the schema line. */
     public static final String TASK = "task";
 
@@ -67,7 +64,6 @@ public final class BlockSlots {
             MAP,
             WINDOW,
             KIND_EXTRA,
-            KEY_TERMS,
             TASK,
             ITEMS);
 }

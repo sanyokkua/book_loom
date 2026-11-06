@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** One scenario table: what each failure of a batch reply is named, per id. */
 class BatchReplyParserTest {
@@ -308,41 +310,24 @@ class BatchReplyParserTest {
         assertThat(PARSER.parse(reply, items, "en", "uk").acceptedIds()).containsExactly("1", "2");
     }
 
-    @Test
-    void parse_termsObjectOnAnItem_isKeptOnThatOutcomeAsWritten() {
-        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
-                + "\",\"terms\":{\"door\":\"двері\"}},{\"id\":\"2\",\"target\":\"" + T2 + "\"}]}";
+    // The flat schema asks for no terms (arm 5b); a model that still writes them, in any shape, loses nothing.
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "{\"door\":\"двері\"}",
+                "[{\"source\":\"door\",\"target\":\"двері\"}]",
+                "{\"door\":7,\"\":\"x\"}",
+                "\"door\""
+            })
+    void parse_replyWithExtraTermsField_ignored(final String terms) {
+        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1 + "\",\"terms\":" + terms
+                + "},{\"id\":\"2\",\"target\":\"" + T2 + "\"}]}";
 
         final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 2), "en", "uk");
 
+        assertThat(parsed.isClean()).isTrue();
         assertThat(parsed.outcome("1"))
-                .hasValueSatisfying(o -> assertThat(o.terms()).containsExactly(Map.entry("door", "двері")));
-        assertThat(parsed.outcome("2"))
-                .hasValueSatisfying(o -> assertThat(o.terms()).isEmpty());
-        assertThat(parsed.acceptedIds()).containsExactly("1", "2");
-    }
-
-    @Test
-    void parse_termsListOfPairs_isReadLikeTheObject() {
-        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
-                + "\",\"terms\":[{\"source\":\"door\",\"target\":\"двері\"}]}]}";
-
-        final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 1), "en", "uk");
-
-        assertThat(parsed.outcome("1"))
-                .hasValueSatisfying(o -> assertThat(o.terms()).containsExactly(Map.entry("door", "двері")));
-    }
-
-    @Test
-    void parse_termsThatAreNotText_areIgnoredAndTheItemStillCounts() {
-        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
-                + "\",\"terms\":{\"door\":7,\"\":\"x\",\"lock\":\" \"}}]}";
-
-        final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 1), "en", "uk");
-
-        assertThat(parsed.outcome("1"))
-                .hasValueSatisfying(o -> assertThat(o.terms()).isEmpty());
-        assertThat(parsed.acceptedIds()).containsExactly("1");
+                .hasValueSatisfying(o -> assertThat(o.target()).isEqualTo(T1));
     }
 
     @Test

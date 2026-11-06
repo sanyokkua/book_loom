@@ -15,7 +15,6 @@ import ua.bookloom.pipeline.prompt.PromptHygiene;
  * @param map the book map as it stood when the draft was made
  * @param memory the translation memory's lines for the items; copied, blank, placeholder and repeated lines left out
  * @param masks the mask of each item by segment id; copied
- * @param keyTerms the recurring key terms the draft asked renderings for; copied, empty when not asked
  * @param summaries the earlier chapters' summaries read when the draft was made, oldest first, so its repair and
  *     re-ask carry the same; copied, empty for none
  */
@@ -24,7 +23,6 @@ public record TranslateContext(
         BookMap map,
         List<String> memory,
         Map<String, ProtectedMask> masks,
-        List<String> keyTerms,
         List<EarlierSummary> summaries) {
 
     /** Copies the parts. */
@@ -33,7 +31,6 @@ public record TranslateContext(
         Objects.requireNonNull(map, "map");
         memory = PromptHygiene.clean(Objects.requireNonNull(memory, "memory"));
         masks = Map.copyOf(Objects.requireNonNull(masks, "masks"));
-        keyTerms = List.copyOf(Objects.requireNonNull(keyTerms, "keyTerms"));
         summaries = List.copyOf(Objects.requireNonNull(summaries, "summaries"));
     }
 

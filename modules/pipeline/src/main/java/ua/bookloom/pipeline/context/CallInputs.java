@@ -11,7 +11,6 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
  *     empty when nothing is hidden
  * @param contextSize the window the call is sized for, the person's own override included; positive
  * @param memory the translation memory's lines for the focus, shown with the window; copied, empty for none
- * @param keyTerms the recurring key terms the model is asked to report renderings for; copied, empty when not asked
  * @param extra what only this kind of call adds
  * @param summaries the earlier chapters' summaries the call may carry in block 8, oldest first; copied, empty for none
  */
@@ -19,7 +18,6 @@ public record CallInputs(
         List<ProtectedMask> masks,
         int contextSize,
         List<String> memory,
-        List<String> keyTerms,
         KindExtra extra,
         List<EarlierSummary> summaries) {
 
@@ -27,7 +25,6 @@ public record CallInputs(
     public CallInputs {
         masks = List.copyOf(Objects.requireNonNull(masks, "masks"));
         memory = List.copyOf(Objects.requireNonNull(memory, "memory"));
-        keyTerms = List.copyOf(Objects.requireNonNull(keyTerms, "keyTerms"));
         Objects.requireNonNull(extra, "extra");
         summaries = List.copyOf(Objects.requireNonNull(summaries, "summaries"));
         if (contextSize <= 0) {
@@ -43,6 +40,6 @@ public record CallInputs(
      * @return the inputs; never null
      */
     public static CallInputs of(final List<ProtectedMask> masks, final int contextSize) {
-        return new CallInputs(masks, contextSize, List.of(), List.of(), KindExtra.NONE, List.of());
+        return new CallInputs(masks, contextSize, List.of(), KindExtra.NONE, List.of());
     }
 }

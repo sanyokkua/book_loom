@@ -254,15 +254,15 @@ summaries, oldest first, then the recently-present card: who narrates and who wa
 the glossary or the book knows), the map lines of the glossary
 entries and recurring terms whose forms occur in the window (block 9, `lemma → nominative target (type, gender)`, a
 locked name as its token), the window (block 10: the last two previous accepted pairs on a small model, three on a large
-one, a flagged neighbour as its source only, the translation-memory lines, and the next segment's source), the key terms
-to report while a run still asks for them (block 11b, until arm 5b), the task line with the schema (block 12) and the
+one, a flagged neighbour as its source only, the translation-memory lines, and the next segment's source), the task line
+with the schema (block 12) and the
 items as `<s id="1">…</s>`, the ids being 1…n within the batch, with at most three reminder lines last (block 13). Book
 text is data: an invented imperative item translated and not obeyed was tried as the English → Ukrainian example and
 reverted (15i.T6, failed gate: injection obeyed 1 of 2 on 26b before and after).
 
-The reply is the JSON object `{"items":[{"id":"1","target":"…","terms":{"master":"господар"}}]}`, requested with the flat
-`BatchSchema` (no `maxItems`/`maxLength`; `terms` is declared as a bare object, its values checked by the app, see
-`#recurring-terms`). Decision (2026-10-05, the
+The reply is the JSON object `{"items":[{"id":"1","target":"…"}]}`, requested with the flat `BatchSchema` (an id and a
+target per item; no `maxItems`/`maxLength`, no `terms`: arm 5b, task 12.9, retired the key-term asks, and a `terms` field
+a model still writes is ignored, see `#recurring-terms`). Decision (2026-10-05, the
 A/B on the e4b and 26b classes at 4, 8, 12 and 16 items): JSON answered every id exactly once and kept every token at every
 size on both models, while tagged blocks (`<t id="1">…</t>`) were never better and e4b fell to 92% of ids at 8 items, so
 the tagged protocol, its prompts and its parsing were removed.
@@ -293,12 +293,10 @@ file and its `glossary/titles/<language>.txt` (ru and uk have one), so a Russian
 (`Она`, `Но`, `Тогда`) are never proposed as names.
 
 The lexicon (15d.9) keeps a book's recurring common words and titles (`master`, `imp`, `Mr`) to one rendering each, without
-making them glossary entries. Four prompt-facing parts:
+making them glossary entries. The model is never asked which rendering it used: the key-term asks (a closed list of the
+batch's lexicon terms and an optional `terms` object per reply item) were measured by arm 5b and deleted by task 12.9,
+since they kept terms no more consistent than the learner alone (`docs/DEVELOPMENT.md#redesign-arms`). Three parts:
 
-- **Key terms to report** (batch draft only). When the batch's items name terms of the project's lexicon that the glossary
-  does not hold, the user message ends its context with
-  `[Key terms — a closed list. For each item that contains one of these words, add "terms":{"<key term>":"<your rendering, base form>"} to that item's entry; omit "terms" for an item with none of them]`
-  and the list, comma-separated. The system message is not touched, so its bytes stay identical across the run.
 - **Established renderings** (draft, batch draft). The block above the earlier decisions, `term → rendering` lines for the
   lexicon terms the chunk names, under `[Established renderings of recurring terms — keep consistent]` and the line `Write
   each term as shown, inflected as the sentence needs, unless the glossary says otherwise.` The block is a soft hint: a
@@ -309,8 +307,8 @@ making them glossary entries. Four prompt-facing parts:
 - **Which rendering is established** (`LexiconEntry.established`, the conflict policy): the person's rendering; else the
   rendering learned by co-occurrence (below); else the most used verified rendering, the one first seen when two are used
   equally often; else the model's suggestion from the suggestion call; else none and no line.
-- **Learning by co-occurrence** (`CooccurrenceLearner`, `TermLearning`, no prompt, no model call, so it works for a model
-  that ignores the optional `terms` field). Once a chunk's records are stored, each decided pair (an accepted draft, repaired
+- **Learning by co-occurrence** (`CooccurrenceLearner`, `TermLearning`, no prompt, no model call, so it works with any
+  model). Once a chunk's records are stored, each decided pair (an accepted draft, repaired
   or not; never a flagged segment, a verbatim one, a memory reuse or the person's edit) is counted: for every target word of
   three letters or more (a name — capitalised away from a sentence start — is skipped) its stem, the first four letters, is
   counted once per segment, and for every lexicon term the source names (a whole word, English plural or possessive
@@ -339,13 +337,13 @@ making them glossary entries. Four prompt-facing parts:
   spelling is stored as the entry's **suggested** target (never over the person's or the model's: only an empty target is
   filled), is shown in the Names & style table with the suggested badge, and reaches the draft under `[Suggested
   renderings]`.
-- **Verification** (`TermMappingVerifier`, no prompt): a reported pair counts only when the term is on the closed list and
-  occurs as a whole word in the item's source (an English plural or possessive tolerated), and every significant word of
+- **Verification** (`TermMappingVerifier`, no prompt; the name checks ask it through `AlternationGuard`): a claimed
+  pair holds only when the term is on the closed list and occurs as a whole word in the item's source (an English plural or possessive tolerated), and every significant word of
   the rendering (three letters or more; all words when none is that long) has its stem in the target. A stem is a prefix:
   a word of eight letters or more may lose its last three, of six or seven the last two, of four or five the last one, and
   the target word may be at most three letters longer. An inflected rendering (`господар` for `господаря`) passes, a
   multi-word rendering needs all its words, a rendering whose stem changes inside the word (`кінь`, `коня`) is dropped and
-  only costs a count. Only the pairs of an item adopted from the batch are counted.
+  only costs a count.
 
 The reviewer is given the established renderings of the recurring terms its own pairs name beside the glossary's pairs
 (`[Glossary the translation had to use: source → target]`), so its `terminology` criterion — "a glossary rendering unused,

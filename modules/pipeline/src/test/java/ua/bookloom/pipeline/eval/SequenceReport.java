@@ -40,6 +40,73 @@ record SequenceReport(SequenceMetrics metrics) {
         }
     }
 
+    /**
+     * The first repeat's report with every repeat's own figures beside it, so a K-repeat arm decides on all of them:
+     * {@code ltcr1PerRepeat} and a {@code perRepeat} entry per repeat (its seed, LTCR-1, first-round hard-gate failures,
+     * flagged, batch fallbacks, calls, seconds per segment, prompt and cached tokens, and the key-term asks stopping).
+     *
+     * @param run the first repeat's run, whose targets the report keeps
+     * @param seeds the repeats' seeds, in repeat order
+     * @param repeats every repeat's metrics, in repeat order, the first being this report's
+     */
+    String json(final SequenceRun run, final List<Integer> seeds, final List<SequenceMetrics> repeats) {
+        try {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ObjectNode root = (ObjectNode) mapper.readTree(json(run));
+            repeats.forEach(repeat -> root.withArray("ltcr1PerRepeat").add(repeat.ltcr1()));
+            for (int k = 0; k < repeats.size(); k++) {
+                root.withArray("perRepeat").add(repeatNode(mapper, k, seeds.get(k), repeats.get(k)));
+            }
+            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static ObjectNode repeatNode(
+            final ObjectMapper mapper, final int repeat, final int seed, final SequenceMetrics m) {
+        final ObjectNode node = mapper.createObjectNode()
+                .put("repeat", repeat)
+                .put("seed", seed)
+                .put("ltcr1", m.ltcr1())
+                .put("hardGateFailuresRound0", m.hardGateFailuresRound0())
+                .put("flagged", m.flagged())
+                .put("segments", m.segments())
+                .put("batchFallbacks", m.batchFallbacks())
+                .put("batchedItems", m.batchedItems())
+                .put("calls", m.calls())
+                .put("callsPerSegment", m.callsPerSegment())
+                .put("secondsPerSegment", m.secondsPerSegment())
+                .put("promptTokens", m.promptTokens())
+                .put("cachedPromptTokens", m.cachedPromptTokens());
+        node.set("hardGateKinds", mapper.valueToTree(m.hardGateKinds()));
+        return node;
+    }
+
+    /** One line per repeat with the figures a K-repeat arm compares. */
+    static String repeatLines(final List<SequenceMetrics> repeats) {
+        final List<String> lines = new ArrayList<>();
+        for (int k = 0; k < repeats.size(); k++) {
+            final SequenceMetrics m = repeats.get(k);
+            lines.add(row(
+                    "repeat",
+                    k,
+                    "LTCR-1",
+                    ltcr(m.ltcr1()),
+                    "hardGateRound0",
+                    m.hardGateFailuresRound0(),
+                    "flagged",
+                    m.flagged(),
+                    "fallbacks",
+                    m.batchFallbacks(),
+                    "calls",
+                    m.calls(),
+                    "sec/seg",
+                    f2(m.secondsPerSegment())));
+        }
+        return String.join("\n", lines);
+    }
+
     String table() {
         final List<String> lines = new ArrayList<>();
         lines.add("promptEval sequence model=" + metrics.model() + " dial=" + metrics.dial() + " narrator="

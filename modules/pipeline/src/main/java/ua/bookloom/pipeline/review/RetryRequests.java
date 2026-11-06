@@ -100,9 +100,7 @@ final class RetryRequests {
             final ModelCalls calls) {
         final ProtectedMask mask = requests.mask(segment);
         return requests.translateContext(
-                        List.of(new PromptRequests.BatchSlot(segment, mask, NO_MEMORY)),
-                        stored(settings.projectId()),
-                        List.of())
+                        List.of(new PromptRequests.BatchSlot(segment, mask, NO_MEMORY)), stored(settings.projectId()))
                 .flatMap(context -> requests.sentPlan(segment, context, mask, KindExtra.note(note.text()))
                         .flatMap(sent -> decided(segment, context, mask, note, settings, calls)
                                 .map(outcome -> new Retried(

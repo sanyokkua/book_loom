@@ -380,16 +380,6 @@ class SequenceEvalOfflineTest {
     }
 
     @Test
-    void report_runWithNoRepeatedTerm_tablePrintsLtcr1AsNotApplicable() {
-        final List<Decided> segments = List.of(
-                decided(0, NarratorPerson.THIRD, "The master came.", "Господар прийшов.", SegmentStatus.ACCEPTED));
-
-        final SequenceReport report = new SequenceReport(measureOf(segments, List.of()));
-
-        assertThat(report.table()).contains("LTCR-1 n/a");
-    }
-
-    @Test
     void json_withRun_keepsEverySegmentsTargetByIdBesideTheMetrics() throws java.io.IOException {
         final com.fasterxml.jackson.databind.JsonNode json = new com.fasterxml.jackson.databind.ObjectMapper()
                 .readTree(new SequenceReport(scripted).json(scriptedRun));

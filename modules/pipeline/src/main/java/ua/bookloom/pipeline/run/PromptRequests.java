@@ -191,11 +191,9 @@ public final class PromptRequests {
      *
      * @param slots the non-null segments, in reading order, with their masks and memory offers
      * @param accepted the non-null reader of the earlier segments' kept targets
-     * @param keyTerms the non-null recurring key terms the call asks renderings for; empty when it asks none
      * @return the context, or the reader's error
      */
-    public Result<TranslateContext> translateContext(
-            final List<BatchSlot> slots, final AcceptedTargets accepted, final List<String> keyTerms) {
+    public Result<TranslateContext> translateContext(final List<BatchSlot> slots, final AcceptedTargets accepted) {
         Objects.requireNonNull(slots, "slots");
         final Focus focus = new Focus(
                 slots.stream()
@@ -212,8 +210,7 @@ public final class PromptRequests {
                 .toList();
         log.debug("Translate context slots={} memoryLines={} allowance={}", slots.size(), memory.size(), allowance);
         return planner.window(focus, accepted)
-                .map(window ->
-                        new TranslateContext(window, map(), memory, masks, keyTerms, planner.earlierChapters(focus)));
+                .map(window -> new TranslateContext(window, map(), memory, masks, planner.earlierChapters(focus)));
     }
 
     /**
@@ -306,10 +303,7 @@ public final class PromptRequests {
     }
 
     private Result<Optional<PreparedBatch>> prepared(final List<BatchSlot> slots, final AcceptedTargets accepted) {
-        final List<String> keyTerms = drafter.keyTermAsks().isAsking()
-                ? inputs.keyTermsIn(slots.stream().map(BatchSlot::segment).toList())
-                : List.of();
-        final Result<TranslateContext> read = translateContext(slots, accepted, keyTerms);
+        final Result<TranslateContext> read = translateContext(slots, accepted);
         final TranslateContext shown = read.data();
         if (shown == null) {
             return Result.err(Objects.requireNonNull(read.error(), "error"));

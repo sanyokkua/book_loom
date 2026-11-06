@@ -132,7 +132,6 @@ public final class TranslatePlanner {
                 BookMap.of(List.of(), List.of(), frame.brief()),
                 List.of(),
                 Map.of(segmentId, mask),
-                List.of(),
                 List.of());
     }
 
@@ -149,13 +148,11 @@ public final class TranslatePlanner {
             final CallKind kind, final TranslateContext context, final Focus focus, final KindExtra extra) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(focus, "focus");
-        final List<String> keyTerms = kind == CallKind.DRAFT ? context.keyTerms() : List.of();
         final int size = contextSize.getAsInt();
         log.debug(
-                "Planning {} for {} items keyTerms={} summaries={} contextSize={}",
+                "Planning {} for {} items summaries={} contextSize={}",
                 kind,
                 focus.items().size(),
-                keyTerms.size(),
                 context.summaries().size(),
                 size);
         return builder.planFitted(
@@ -165,12 +162,7 @@ public final class TranslatePlanner {
                 frame,
                 profile,
                 new CallInputs(
-                        context.masksOf(focus.segmentIds()),
-                        size,
-                        context.memory(),
-                        keyTerms,
-                        extra,
-                        context.summaries()));
+                        context.masksOf(focus.segmentIds()), size, context.memory(), extra, context.summaries()));
     }
 
     /**

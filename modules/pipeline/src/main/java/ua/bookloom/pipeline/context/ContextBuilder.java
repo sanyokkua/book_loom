@@ -193,7 +193,7 @@ public final class ContextBuilder {
      * @param map the non-null book map
      * @param frame the non-null run frame
      * @param profile the non-null profile of the model the call goes to
-     * @param inputs the non-null masks, window size, memory lines, key terms and kind extra of the call
+     * @param inputs the non-null masks, window size, memory lines and kind extra of the call
      * @return the fitted plan, or the errors {@link #plan(CallKind, Window, BookMap, RunFrame, ModelProfile, List)}
      *     names
      */
@@ -347,7 +347,6 @@ public final class ContextBuilder {
                 blocks,
                 BlockSlots.KIND_EXTRA,
                 calls.kindExtra(kind, planned.window().focus(), inputs.extra()));
-        addIfAny(blocks, BlockSlots.KEY_TERMS, WindowBlocks.keyTerms(inputs.keyTerms(), words));
         final String target = Objects.requireNonNull(frame.brief().targetLanguage(), "targetLanguage");
         blocks.add(user(BlockSlots.TASK, calls.task(frame.brief().sourceLanguage(), target)));
         blocks.add(user(

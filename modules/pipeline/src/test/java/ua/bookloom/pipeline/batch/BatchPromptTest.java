@@ -61,19 +61,17 @@ class BatchPromptTest {
             @Nullable final String next,
             final List<GlossaryEntry> glossary,
             final List<LexiconEntry> terms,
-            final List<String> memory,
-            final List<String> keyTerms) {
+            final List<String> memory) {
         return new TranslateContext(
                 new Window(previous, new Focus(List.of(), Map.of()), next),
                 BookMap.of(glossary, terms, brief),
                 memory,
                 Map.of(),
-                keyTerms,
                 List.of());
     }
 
     private static TranslateContext empty() {
-        return context(brief("en", "uk"), List.of(), null, List.of(), List.of(), List.of(), List.of());
+        return context(brief("en", "uk"), List.of(), null, List.of(), List.of(), List.of());
     }
 
     private static TranslateContext full() {
@@ -83,8 +81,7 @@ class BatchPromptTest {
                 "She smiled.",
                 List.of(HALE),
                 List.of(),
-                List.of("He left. → Він пішов."),
-                List.of());
+                List.of("He left. → Він пішов."));
     }
 
     private static PromptPlan plan(
@@ -124,20 +121,19 @@ class BatchPromptTest {
     }
 
     @Test
-    void plan_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
-        final TranslateContext context = context(
-                brief("en", "uk"), List.of(), null, List.of(), List.of(MASTER), List.of(), List.of("master", "imp"));
+    void plan_lexicon_carriesTheRenderingsAndNoKeyTermsBlock() {
+        final TranslateContext context =
+                context(brief("en", "uk"), List.of(), null, List.of(), List.of(MASTER), List.of());
 
         final String user = plan(context, ITEMS).userText();
 
         assertThat(user)
                 .contains("[Established renderings of recurring terms", "master → господар")
-                .contains("[Key terms", "master, imp")
-                .doesNotContain("{{", "}}");
+                .doesNotContain("[Key terms", "\"terms\"", "{{", "}}");
     }
 
     @Test
-    void plan_noLexiconAndNoKeyTerms_leavesBothBlocksOut() {
+    void plan_noLexicon_leavesTheRenderingsBlockOut() {
         assertThat(plan(empty(), ITEMS).userText()).doesNotContain("[Established renderings", "[Key terms");
     }
 
@@ -180,9 +176,7 @@ class BatchPromptTest {
         final TranslatePlanner german = planner("en", "de");
 
         final String system = plan(
-                        german,
-                        context(brief("en", "de"), List.of(), null, List.of(), List.of(), List.of(), List.of()),
-                        ITEMS)
+                        german, context(brief("en", "de"), List.of(), null, List.of(), List.of(), List.of()), ITEMS)
                 .systemText();
 
         assertThat(system).doesNotContain(ITEMS_OPEN);

@@ -51,7 +51,8 @@ public final class EvalVariants {
                 .getInstance(PromptTemplates.class);
     }
 
-    // The combining shape stays for arm 5c's second field; today one field leaves `current` unread.
+    // The combining shape stays for a later arm's second field (arms 7a and 7c); today one field leaves `current`
+    // unread.
     @SuppressWarnings("UnusedVariable")
     private static PromptVariants with(final PromptVariants current, final String field) {
         final String[] pair = field.split("=", 2);

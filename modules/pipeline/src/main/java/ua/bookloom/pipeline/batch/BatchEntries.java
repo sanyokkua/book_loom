@@ -4,9 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +17,7 @@ import ua.bookloom.pipeline.prompt.JsonReplies;
  * make of them is the parser's decision. Tolerant of what small models wrap around the payload — prose, a code fence,
  * a bare array instead of the object, a number for an id — and of a reply cut off in its
  * last entry, which simply never closes and so is never read. A field it does not know, such as a {@code notes}
- * string a model wrote before its target, is never an entry's text.
+ * string a model wrote before its target or a {@code terms} object an older prompt asked for, is ignored.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -27,13 +25,8 @@ final class BatchEntries {
 
     private static final String TARGET = "target";
 
-    /** One entry of a reply, with the term renderings the model reported for it, if any. */
-    record Entry(String id, String text, Map<String, String> terms) {
-
-        Entry(final String id, final String text) {
-            this(id, text, Map.of());
-        }
-    }
+    /** One entry of a reply. */
+    record Entry(String id, String text) {}
 
     private final ObjectMapper mapper;
 
@@ -96,28 +89,7 @@ final class BatchEntries {
     private static void entry(final JsonNode node, final List<Entry> entries) {
         entries.add(new Entry(
                 node.path("id").asText().strip(),
-                ControlCharacters.stripSpacing(node.path(TARGET).textValue()),
-                termsOf(node.path("terms"))));
-    }
-
-    /**
-     * The renderings a model reported, from the object it was asked for ({@code {"master":"господар"}}) or the list of
-     * pairs a small model sometimes writes instead; anything else is read as none.
-     */
-    private static Map<String, String> termsOf(final JsonNode node) {
-        final Map<String, String> terms = new LinkedHashMap<>();
-        if (node.isObject()) {
-            node.properties().forEach(field -> put(terms, field.getKey(), field.getValue()));
-        } else if (node.isArray()) {
-            node.forEach(pair -> put(terms, pair.path("source").asText(""), pair.path(TARGET)));
-        }
-        return terms;
-    }
-
-    private static void put(final Map<String, String> terms, final String term, final JsonNode rendering) {
-        if (!term.isBlank() && rendering.isTextual() && !rendering.textValue().isBlank()) {
-            terms.putIfAbsent(term.strip(), rendering.textValue().strip());
-        }
+                ControlCharacters.stripSpacing(node.path(TARGET).textValue())));
     }
 
     private static int firstOf(final String text, final char first, final char second) {

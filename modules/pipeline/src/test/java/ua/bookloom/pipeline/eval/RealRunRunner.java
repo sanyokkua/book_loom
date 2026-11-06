@@ -300,9 +300,6 @@ final class RealRunRunner {
         final int leaked = (int) parsed.outcomes().stream()
                 .filter(outcome -> outcome.status() == ItemStatus.OK && ProtocolLeak.leaks(outcome.target()))
                 .count();
-        final long reported = parsed.outcomes().stream()
-                .filter(outcome -> !outcome.terms().isEmpty())
-                .count();
         final boolean passed = parsed.readable() && parsed.failingIds().isEmpty() && leaked == 0;
         return RealRunRow.batch(
                 batchCase.id(),
@@ -311,8 +308,8 @@ final class RealRunRunner {
                 items,
                 tooShort,
                 leaked,
-                "accepted=" + parsed.acceptedIds().size() + "/" + items + " tooShort=" + tooShort + " leaked=" + leaked
-                        + " termsReported=" + reported);
+                "accepted=" + parsed.acceptedIds().size() + "/" + items + " tooShort=" + tooShort + " leaked="
+                        + leaked);
     }
 
     RealRunRow repair(final RepairCase repairCase) {

@@ -246,7 +246,6 @@ class OversizedSegmentTest {
                 BookMap.of(List.of(), List.of(), BookBrief.defaults("en").withLanguages("en", "uk")),
                 List.of(),
                 Map.of(),
-                List.of(),
                 List.of());
     }
 

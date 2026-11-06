@@ -338,8 +338,8 @@ public final class EvalProject {
     /** The window, map and memory a single draft of the segment at {@code index} is shown. */
     public TranslateContext translateContext(final int index) {
         final Segment segment = chunk.get(index);
-        final Result<TranslateContext> read = requests.translateContext(
-                List.of(new BatchSlot(segment, requests.mask(segment), NO_MEMORY)), accepted, List.of());
+        final Result<TranslateContext> read =
+                requests.translateContext(List.of(new BatchSlot(segment, requests.mask(segment), NO_MEMORY)), accepted);
         return Objects.requireNonNull(read.data(), () -> "window: " + read.error());
     }
 

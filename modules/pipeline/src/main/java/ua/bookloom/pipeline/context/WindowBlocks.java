@@ -56,11 +56,6 @@ final class WindowBlocks {
         return String.join("\n\n", sections);
     }
 
-    /** Block 11b; empty when the call asks for no key term. */
-    static String keyTerms(final List<String> keyTerms, final BlockWords words) {
-        return keyTerms.isEmpty() ? "" : words.get(BlockWords.KEY_TERMS_HEADING) + "\n" + String.join(", ", keyTerms);
-    }
-
     private static void section(final List<String> sections, final String heading, final List<String> lines) {
         if (!lines.isEmpty()) {
             sections.add(heading + "\n" + String.join("\n", lines));

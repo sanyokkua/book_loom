@@ -42,7 +42,7 @@ public final class BatchPromptBuilder {
     /**
      * Plans one batch, its items numbered {@code 1…n} in order.
      *
-     * @param context the non-null window, map, memory and key terms the batch is shown
+     * @param context the non-null window, map, memory and summaries the batch is shown
      * @param items the non-null items, at least one, numbered {@code 1…n}
      * @param segmentIds the non-null segments the items stand for, in the items' order
      * @return the fitted plan, saying how many items it kept, or the builder's error
@@ -63,12 +63,11 @@ public final class BatchPromptBuilder {
                         .toList(),
                 Map.of());
         log.debug(
-                "Planning a batch name={} items={} previous={} next={} keyTerms={}",
+                "Planning a batch name={} items={} previous={} next={}",
                 PromptName.TRANSLATE,
                 items.size(),
                 context.window().previous().size(),
-                context.window().nextSource() != null,
-                context.keyTerms().size());
+                context.window().nextSource() != null);
         return planner.plan(CallKind.DRAFT, context, focus, KindExtra.NONE);
     }
 

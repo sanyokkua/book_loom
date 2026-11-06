@@ -146,17 +146,6 @@ final class ChunkInputs {
     }
 
     /**
-     * The recurring key terms the given segments name and the glossary does not decide: the closed list a batch asks
-     * the model to report renderings for.
-     */
-    List<String> keyTermsIn(final List<Segment> segments) {
-        final List<LexiconEntry> open = lexicon.entries(settings.projectId()).stream()
-                .filter(entry -> !heldByGlossary(entry))
-                .toList();
-        return Lexicon.termsIn(open, textsOf(segments));
-    }
-
-    /**
      * The character gender sheet of the chunk, cut to the sheet's own share of the dynamic allowance, for the reviewer.
      */
     List<String> characterLines() {
@@ -168,15 +157,9 @@ final class ChunkInputs {
         return lines;
     }
 
-    /** The run's lexicon, to which a verified pair is recorded. */
+    /** The run's lexicon, whose entries the book map reads as they stand. */
     Lexicon lexicon() {
         return lexicon;
-    }
-
-    private boolean heldByGlossary(final LexiconEntry entry) {
-        final String key = LexiconEntry.keyOf(entry.term());
-        return glossary.stream()
-                .anyMatch(held -> LexiconEntry.keyOf(held.term()).equals(key));
     }
 
     private static List<String> textsOf(final List<Segment> segments) {

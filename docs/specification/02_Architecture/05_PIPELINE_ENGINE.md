@@ -72,8 +72,8 @@ in the order sent, so the **load-bearing items sit at the edges** against lost-i
   the previous 12 story paragraphs of the chapter that are not in the window; earlier chapters' summaries join it in
   group 12); the map lines (`WindowMap`: glossary and recurring-term entries whose forms occur in the window's source,
   locked names by token); the window; what only this kind of call adds (a repair's defects); the task; and the items,
-  with the reminder (at most three lines: marks, dialogue, narrator, each only when it applies) last. Block 11b, key
-  terms, stays until task 12.9.
+  with the reminder (at most three lines: marks, dialogue, narrator, each only when it applies) last. The key-term block
+  (11b) was deleted by task 12.9 (arm 5b).
 - **Window** (`WindowAssembler`): the last 2 (small tier) or 3 (large tier) body-unit segments before the focus, across
   chapter and unit boundaries, never front or back matter or the auxiliary unit; a neighbour with no accepted target is
   shown as source only; the next segment is shown as source only.

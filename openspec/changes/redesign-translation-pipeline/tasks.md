@@ -1310,7 +1310,7 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Test first:** TestFX `LiveCardSummaryRowTest.summaryKept_rowShowsText`; `switchOff_noRow`; `ActivityLogTest.summaryKept_kindSumNamesChapter`; `MessageBundleParityTest`, `VocabularyTest`.
   - **Done when:** the tests are green; `scripts/ci-linux-ui.sh` passes.
 
-- [ ] 12.9 Run arm 5b (key-term asks) with the chapter summaries in block 8, and keep the winner. The batch schema becomes flat unless the asks prove they keep terms consistent on the pipeline that ships. → :pipeline, docs
+- [x] 12.9 Run arm 5b (key-term asks) with the chapter summaries in block 8, and keep the winner. The batch schema becomes flat unless the asks prove they keep terms consistent on the pipeline that ships. → :pipeline, docs
   - **Satisfies:** "Record the renderings a draft used and keep them consistent" (glossary, REMOVED), "Learn a recurring term's rendering from the decided segments" (glossary), "Draft consecutive segments in token-budgeted batches" (translation-pipeline; the flat schema)
   - **Depends on:** 12.5 (summaries in block 8), 12.8
   - **Read:** design.md D11 (`terms`), D24 (arm 5b), D25 (group 12 row); `pipeline: batch/KeyTermAsks`, `batch/BatchDrafter`, `lexicon` co-occurrence learner

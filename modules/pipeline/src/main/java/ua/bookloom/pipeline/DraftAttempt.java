@@ -64,7 +64,6 @@ record DraftAttempt(
                         translate.map(),
                         translate.memory(),
                         Map.of(piece.id(), ProtectedMask.none(piece.masked())),
-                        List.of(),
                         translate.summaries());
         return new DraftAttempt(piece, pieceContext, piece.masked(), note, null, List.of(), lower);
     }
@@ -81,7 +80,6 @@ record DraftAttempt(
                         translate.map(),
                         List.of(),
                         translate.masks(),
-                        List.of(),
                         List.of());
         return new DraftAttempt(
                 segment, bare, shownText, extraInstruction, pieceRedraft, lockedRenderings, lowerTemperature);

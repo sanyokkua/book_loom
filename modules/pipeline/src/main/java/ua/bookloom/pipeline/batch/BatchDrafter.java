@@ -63,7 +63,6 @@ public final class BatchDrafter {
     private final String targetLanguage;
     private final BatchSizeController size;
     private final int startSize;
-    private final KeyTermAsks keyTermAsks = new KeyTermAsks();
     private int stallStreak;
 
     /**
@@ -92,11 +91,6 @@ public final class BatchDrafter {
         final int min = initialSize < MIN_BATCHING_SIZE ? NO_BATCHING : MIN_BATCHING_SIZE;
         this.size = new BatchSizeController(min, initialSize, initialSize, CLEAN_STREAK_TO_GROW);
         this.startSize = initialSize;
-    }
-
-    /** The run's memory of whether its model answers the key-term block, which decides if the next prompt asks. */
-    public KeyTermAsks keyTermAsks() {
-        return keyTermAsks;
     }
 
     /** The size the run started at, which is also the most a batch may carry: halving may lower the size, growth stops here. */

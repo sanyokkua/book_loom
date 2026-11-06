@@ -65,12 +65,7 @@ class EarlierChaptersTest {
                 () -> Result.ok(stored));
         final Focus focus = TranslatePlanner.focusOf(segmentId, FILLER);
         final TranslateContext context = new TranslateContext(
-                Window.of(focus),
-                FrameFixtures.emptyMap(brief),
-                List.of(),
-                Map.of(),
-                List.of(),
-                planner.earlierChapters(focus));
+                Window.of(focus), FrameFixtures.emptyMap(brief), List.of(), Map.of(), planner.earlierChapters(focus));
         return Objects.requireNonNull(planner.plan(CallKind.DRAFT, context, focus, KindExtra.NONE)
                         .data())
                 .plan();

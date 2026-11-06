@@ -30,6 +30,22 @@ class ChatRequestsTest {
         assertThat(request.responseFormat()).extracting(ResponseFormat::name).isEqualTo(BatchSchema.FORMAT_NAME);
     }
 
+    // Arm 5b kept the flat schema: every translate-family call asks for an id and a target per item, nothing more.
+    @ParameterizedTest
+    @EnumSource(
+            value = PromptName.class,
+            names = {"TRANSLATE", "FORMAT_REASK", "REPAIR"})
+    void build_translateFamily_schemaHasOnlyIdAndTarget(final PromptName name) {
+        final ChatRequest request = ChatRequests.build(name, MESSAGES, new OutputLimit(16, 64), false);
+
+        assertThat(request.responseFormat())
+                .extracting(ResponseFormat::jsonSchema)
+                .isEqualTo("{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":"
+                        + "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"},"
+                        + "\"target\":{\"type\":\"string\"}},\"required\":[\"id\",\"target\"]}}},"
+                        + "\"required\":[\"items\"]}");
+    }
+
     @Test
     void build_lowerTemperature_carriesTheLowerOne() {
         assertThat(ChatRequests.build(PromptName.TRANSLATE, MESSAGES, new OutputLimit(16, 64), true)

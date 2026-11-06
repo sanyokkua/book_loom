@@ -31,7 +31,6 @@ final class BlockWords {
     static final String REPAIR_LINE_ONE = "repair.lineOne";
     static final String NOTE_HEADING = "note.heading";
     static final String MEMORY_HEADING = "memory.heading";
-    static final String KEY_TERMS_HEADING = "keyTerms.heading";
     static final String ITEMS_OPEN = "items.open";
     static final String ITEMS_CLOSE = "items.close";
     static final String ITEM = "item";
@@ -68,7 +67,6 @@ final class BlockWords {
             REPAIR_LINE_ONE,
             NOTE_HEADING,
             MEMORY_HEADING,
-            KEY_TERMS_HEADING,
             ITEMS_OPEN,
             ITEMS_CLOSE,
             ITEM,

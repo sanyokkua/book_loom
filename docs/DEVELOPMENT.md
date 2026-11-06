@@ -611,7 +611,7 @@ from 2 to 0-1 on 26b. Terms the model renders one way first (`master`, `Mr`, `Mr
 1-2 did; round 3 stopped it), and a title before a recurring surname is never that name's spelling (`Lovelace → Міс`, found in round 4).
 What did not move: terms the model splits from the first occurrence (`magician` маг/чарівник 47-64 %, `pentacle`
 пентакл/пентаграма 52-67 %) never reach three matching segments before the rival does, so there is nothing to keep; the
-only ways left are the model's own `terms` report (e4b does not give it) or choosing a winner with no evidence, which
+only ways left were the model's own `terms` report (e4b does not give it; retired by arm 5b, task 12.9) or choosing a winner with no evidence, which
 would also pick a sense of a word with two meanings.
 
 Rejected: moving the term blocks next to the text (round 4). On e4b it cut batch fallbacks from 1.5-2.4 % to 0.6 % in
@@ -1145,6 +1145,39 @@ and `gemma4:26b-mlx` (once, K = 1), Ollama, single-flight, paired by seed.
   `StageProbe`/`SequenceFinishRecorder` and `RunPacing.FROM_PROFILE` stay.
 - *Runs* (`.temporary_context/eval-history/20261105-*arm5c-*`).
 
+**Arm 5b: key-term asks (task 12.9).** Default: the flat batch schema `{"items":[{"id","target"}]}`, no key-terms block, the
+co-occurrence learner alone keeping recurring terms consistent. Alternative: the `terms` object in the schema, the `[Key terms`
+block (block 11b) and `KeyTermAsks`, which stops asking after five asking batches that report no rendering. Both sides carry the
+recently-present card and the earlier chapters' summaries in block 8, at Balanced, on `sequence` (328 segments, 8 chapters,
+en-uk), batches starting at the model profile's size. `gemma4:e4b-mlx` K = 3 (seeds 1000-1002) and `gemma4:26b-mlx` once on
+Ollama; then, once each, `gpt-oss:20b` on Ollama and `mamaylm-gemma-3-12b-it-v2.0` and `mistralai/ministral-3-14b-reasoning` on LM
+Studio. Graded by LTCR-1, the share of a term's later occurrences that keep its first rendering.
+
+| Model | Repeat | LTCR-1 flat / asks | Flagged | Batch fallbacks | First-round hard gates | s per segment |
+|---|---|---|---|---|---|---|
+| e4b | 1 | 92.6 / 94.3 | 11 / 11 | 7 / 6 | 14 / 13 | 3.93 / 4.07 |
+| e4b | 2 | 94.6 / 93.9 | 11 / 12 | 7 / 8 | 16 / 13 | 3.95 / 4.12 |
+| e4b | 3 | 95.4 / 91.8 | 11 / 12 | 10 / 8 | 13 / 15 | 3.87 / 4.13 |
+| e4b | mean | 94.2 / 93.3 | | | | |
+| 26b | 1 | 93.2 / 95.1 | 15 / 14 | 16 / 32 | 22 / 24 | 6.24 / 6.93 |
+| gpt-oss 20b | 1 | 85.7 / 83.0 | 15 / 14 | 21 / 29 | 39 / 26 | 20.9 / 17.0 |
+| mamaylm 12b | 1 | 88.3 / 92.6 | 25 / 26 | 30 / 33 | 21 / 18 | 15.3 / 16.7 |
+| ministral 14b | 1 | 90.5 / 88.9 | 31 / 47 | 36 / 145 | 20 / 23 | 20.3 / 25.4 |
+
+- *Reading.* On e4b, the target model, the asks stopped themselves in every repeat (the model reported no rendering in its
+  first five asking batches, `keyTermAsksStopped` 1), so most of that run was flat too; the other models kept being asked. The
+  asks were ahead on 26b (+1.9) and mamaylm (+4.3) and behind on e4b (-0.9 on the mean), gpt-oss (-2.7) and ministral (-1.6),
+  a mean difference of about zero; ministral paid for them with 145 against 36 fallbacks and 25.4 against 20.3 s per segment.
+  Every figure outside e4b is a single run, so the evidence is "no consistent gain", not "the asks are harmful".
+- *Decision rule.* The asks return only if LTCR-1 falls 1.5 points or more without them on the target model e4b. It rose 0.9,
+  so **the flat schema stays**. Deleted: `KeyTermAsks` and its tests, the `terms` object of `BatchSchema`, `ItemOutcome.terms`,
+  `BatchReply.hasTerms`, the parser's terms reading (an extra `terms` field is still ignored), the batch stage's recording of
+  verified reported pairs (`Lexicon.record`), the key-term list (`ChunkInputs.keyTermsIn`, `Lexicon.termsIn`) and its path
+  through `TranslateContext`, `CallInputs`, the context builder and `WindowBlocks`, the `keyTerms` block slot and its
+  `keyTerms.heading` words, and the `keyTermAsks` field of `PromptVariants` with its eval and report plumbing.
+  `TermMappingVerifier` stays: the name checks use it through `AlternationGuard`.
+- *Runs* (`.temporary_context/eval-history/20261106-*arm5b-{flat,asks}*`, logs `.temporary_context/arm5b-*.log`).
+
 **Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
 `6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
 every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.
@@ -1309,7 +1342,7 @@ or a defect threshold.
 (test side): its glossary entries and recurring terms go into the in-memory stores, its segments form one unit with the
 earlier pairs, summary and narrator the case states (`EvalContext`; a case that states none gets none), and the request
 is built by the run's own `PromptRequests` (`ua.bookloom.pipeline.run`) — the same code the job calls for a chunk's
-context, a batch's fit and previous pairs, the `terms` request, the draft and its two repairs, and the reviewer's
+context, a batch's fit and previous pairs, the draft and its two repairs, and the reviewer's
 term pairs and character sheet. A locked name is written out in the case text and hidden behind the run's token by
 the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
 exactly as in a run; the window is the context length the provider reports for the model, limited to 16,384 tokens as a run limits it (16,384 when it reports none), and `BOOKLOOM_EVAL_WINDOW` overrides it; the chosen window is logged at INFO (`Eval window …`) and in the report line. The brief the requests carry is the defaults unless `BOOKLOOM_EVAL_PRESET` (`burning-chrome`: formal literary register, names translated, Balanced, cyberpunk genre — one model's frozen answer, kept so earlier reports can be measured again), `BOOKLOOM_EVAL_GOLD` (the owner's gold file for the book, [judgement evals](#judgement-evals): its brief's register, names, genre, voice, audience and narrator — prefer it for a new measurement), `BOOKLOOM_EVAL_BRIEF` (a JSON file with `register`, `names`, `genre`, `voiceEra`, `audience`, `dial`, `balance`) or `BOOKLOOM_EVAL_REGISTER` / `_NAMES` (`translate`, `transliterate`, `keep`) / `_GENRE` / `_DIAL` say otherwise The equality of the
@@ -1360,12 +1393,12 @@ scripts/eval-matrix.sh --suite realrun --models "ollama:gemma4:e4b-mlx ollama:ge
 | File | Kind (report group) | What it holds |
 |---|---|---|
 | `text.json` | `quotes` (10), `mixed-script` (6), `invented-word` (3), `russian-letters` (5), `narrator` (6), `short-line` (6) | one source with a clean and a defective Ukrainian candidate (`good`, `bad`), the production check that decides it (`QUOTES`, `SCRIPT`, `GENDER`, `LENGTH`, `NONE`), a glossary and the context (earlier pairs, summary, lexicon, narrator) |
-| `batch.json` | `batch-terms`, `batch-context` | a batch whose lexicon makes it ask for `terms`, with scripted replies of the shapes the run produced: correct, the `terms` JSON leaked into a target (`«terms»: {…}}, {`), a code fence in a target, a far-too-short target |
+| `batch.json` | `batch-terms`, `batch-context` | a batch over recurring lexicon terms (it asked for `terms` until arm 5b; the parser now ignores the field), with scripted replies of the shapes the run produced: correct, the `terms` JSON leaked into a target (`«terms»: {…}}, {`), a code fence in a target, a far-too-short target |
 | `reviewer.json` | `reviewer-batch` (6, 5 and 8 pairs with glossary, lexicon, characters and the narrator), `reviewer-long` (12 long paragraphs) | one defect among clean pairs; each pair labelled |
 | `repair.json` | `repair-placeholder`, `repair-structural` | a Markdown source the real parser masks, the reply a run refuses and two scripted answers for the production document gate |
 | `scan.json` | offline only | the key-term and name scans on synthetic lines (titles, `Great Hall`, `Old Bailey`) |
 
-Every request of a model run is the run's own (draft, batch with its `terms` request, reviewer over a whole chunk with
+Every request of a model run is the run's own (draft, batch, reviewer over a whole chunk with
 the term pairs and character sheet, repairs). Each label of a deterministic case is held to the production code by plain
 offline tests (`RealRunCorpusTest`, `RealRunRunnerTest`; no model, part of `check`): the text checks, `GenderChecks`, the
 draft evaluation's length check, `BatchReplyParser` with `ItemValidator`, the real document gate, `KeyTermScan`.

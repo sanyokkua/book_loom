@@ -17,11 +17,10 @@ import ua.bookloom.pipeline.glossary.IdentityRule;
 import ua.bookloom.pipeline.glossary.IdentityRule.Kept;
 
 /**
- * Checks the {@code terms} a model reported for one translated item, so only what the text proves is counted. A pair
- * holds when its source term is on the closed key-term list, occurs in the source, and every significant word of its
- * rendering has its stem in the target — an inflected rendering ({@code господаря} for {@code господар}) passes, a
- * word the model never wrote does not. A model that names a rendering it did not use, or a term the item lacks, adds
- * nothing to the lexicon.
+ * Checks claimed renderings of terms against one translated text, so only what the text proves holds (the name checks
+ * ask it through {@link AlternationGuard}). A pair holds when its source term is on the closed list, occurs in the
+ * source, and every significant word of its rendering has its stem in the target — an inflected rendering
+ * ({@code господаря} for {@code господар}) passes, a word the text never holds does not.
  *
  * <p>The stem is a prefix, since the target language is open and no morphology is bundled: a long word may lose its
  * last three letters, a short one fewer, and the target word may be at most three letters longer than the rendering's.
@@ -66,7 +65,7 @@ public final class TermMappingVerifier {
      * Keeps the pairs a text proves.
      *
      * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
+     * @param keyTerms the non-null closed list of terms a claim may name
      * @param source the non-null item's source text, tokens removed
      * @param target the non-null item's translated text, tokens removed
      * @return the verified pairs, each named by the spelling of the key-term list; never null, empty when none holds
@@ -80,7 +79,7 @@ public final class TermMappingVerifier {
      * Keeps the pairs a text proves, for a target language whose names decline and derive adjectives.
      *
      * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
+     * @param keyTerms the non-null closed list of terms a claim may name
      * @param source the non-null item's source text, tokens removed
      * @param target the non-null item's translated text, tokens removed
      * @param alternations the non-null groups of letters a stem's last letter swaps among before a suffix (such as
@@ -101,7 +100,7 @@ public final class TermMappingVerifier {
      * across the two languages' scripts, is a leftover and no rendering to learn.
      *
      * @param claimed the non-null terms the model reported for the item, each with the rendering it says it wrote
-     * @param keyTerms the non-null closed list the model was asked about
+     * @param keyTerms the non-null closed list of terms a claim may name
      * @param source the non-null item's source text, tokens removed
      * @param target the non-null item's translated text, tokens removed
      * @param alternations the non-null groups of letters a stem's last letter swaps among before a suffix; empty for a

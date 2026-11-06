@@ -77,10 +77,22 @@ class TermLearningJobTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    /** Never reports terms; drifts to «учитель» in the fourth chapter unless its prompt names «господар». */
+    /**
+     * Drifts to «учитель» in the fourth chapter unless its prompt names «господар»; reports no terms unless built to
+     * add a {@code terms} object to every batch entry, as the retired key-term asks had it do.
+     */
     private static final class DriftingModel implements ChatModel {
 
         private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
+        private final String termsField;
+
+        DriftingModel() {
+            this("");
+        }
+
+        DriftingModel(final String termsField) {
+            this.termsField = termsField;
+        }
 
         @Override
         public Result<ChatResponse> chat(final ChatRequest request) {
@@ -92,8 +104,8 @@ class TermLearningJobTest {
             final Matcher items = ITEM.matcher(user);
             final List<String> entries = new ArrayList<>();
             while (items.find()) {
-                entries.add(
-                        "{\"id\":\"" + items.group(1) + "\",\"target\":\"" + target(items.group(2), rendering) + "\"}");
+                entries.add("{\"id\":\"" + items.group(1) + "\",\"target\":\"" + target(items.group(2), rendering)
+                        + "\"" + termsField + "}");
             }
             final String reply = !entries.isEmpty()
                     ? "{\"items\":[" + String.join(",", entries) + "]}"
@@ -177,6 +189,21 @@ class TermLearningJobTest {
         final RenderingConsistency metric = RenderingConsistency.of(List.of(master(project)));
         assertThat(metric.distinctPerTerm()).isEqualTo(1.0);
         assertThat(metric.learnedCoverage()).isEqualTo(1.0);
+    }
+
+    // Arm 5b retired the key-term asks: a reply that still reports a rendering adds nothing; the decided pairs teach
+    // it.
+    @Test
+    void run_batchedModelReportsTerms_learnsOnlyFromTheDecidedPairs() {
+        final DriftingModel model = new DriftingModel(",\"terms\":{\"master\":\"господар\"}");
+        final TestProject project = book();
+
+        report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED))
+                .run());
+
+        assertLearnedAfterThreeChapters(model, project);
+        assertThat(master(project).renderings()).isEmpty();
+        assertThat(master(project).learned()).isEqualTo(new LexiconEntry.Learned("господар", 4, 4));
     }
 
     @Test

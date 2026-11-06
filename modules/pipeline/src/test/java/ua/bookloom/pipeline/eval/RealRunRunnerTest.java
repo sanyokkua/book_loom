@@ -211,7 +211,7 @@ class RealRunRunnerTest {
         assertThat(row.items()).isEqualTo(4);
         assertThat(row.tooShort()).isZero();
         assertThat(row.leaked()).isZero();
-        assertThat(row.detail()).contains("termsReported=2");
+        assertThat(row.detail()).isEqualTo("accepted=4/4 tooShort=0 leaked=0");
     }
 
     @Test

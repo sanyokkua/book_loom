@@ -203,7 +203,6 @@ class RealRunCorpusTest {
         final String user = user(project.batchRequest(prepared));
 
         assertThat(prepared.items()).hasSize(batchCase.chunk().size());
-        assertThat(prepared.context().keyTerms()).isNotEmpty().contains("master");
         assertThat(user)
                 .contains("master", "master → господар", "Нелл")
                 .contains("Source: "
@@ -240,16 +239,6 @@ class RealRunCorpusTest {
                                 .as(batchCase.id() + "/" + reply.shape() + " now reads right: drop knownFailure (task "
                                         + reply.fixedBy() + ")")
                                 .isNotEqualTo(reply.expectAccepted())));
-    }
-
-    @Test
-    void batchReply_correctShape_reportsTheTermsTheChunkAskedFor() {
-        final BatchCase batchCase = RunCorpus.batches().getFirst();
-        final BatchCase.Reply correct = batchCase.replies().getFirst();
-
-        assertThat(parse(batchCase, correct).outcome("1").orElseThrow().terms())
-                .containsEntry("master", "господар")
-                .containsEntry("imp", "імп");
     }
 
     @Test
