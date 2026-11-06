@@ -33,6 +33,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.document.DocumentModule;
@@ -175,7 +176,8 @@ class RoundTripCheckTest {
                         injector.getInstance(SegmentRepository.class),
                         new UuidIdSource()),
                 injector.getInstance(SettingsRepository.class),
-                new BriefKeyRecheck(injector.getInstance(SegmentRepository.class), new OpenProjects()));
+                new BriefKeyRecheck(injector.getInstance(SegmentRepository.class), new OpenProjects()),
+                injector.getInstance(SummaryRepository.class));
     }
 
     private Path book(@Nullable final String language) {

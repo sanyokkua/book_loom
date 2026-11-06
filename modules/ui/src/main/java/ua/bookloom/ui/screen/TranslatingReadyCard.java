@@ -31,8 +31,9 @@ import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The card a Translating screen shows before any run exists: the book, the model, the review mode, the quality dial
- * and how many segments are still to translate, so that a person sees what Start will do before pressing it.
+ * The card a Translating screen shows before any run exists: the book, the model, the review mode, the quality dial,
+ * how many segments are still to translate and the Chapter summaries switch, so that a person sees what Start will do
+ * before pressing it.
  *
  * <p>Every value is bound to what it reads, so a brief or a model changed on another screen shows here on return
  * without the card being rebuilt. The card logs nothing: its labels only follow their sources.
@@ -53,7 +54,8 @@ final class TranslatingReadyCard {
             final CurrentProject current,
             final ReadOnlyObjectProperty<RunStateView> runs,
             final Messages messages,
-            final Label languageLine) {
+            final Label languageLine,
+            final ChapterSummariesSwitch summaries) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(runs, "runs");
         final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
@@ -76,8 +78,22 @@ final class TranslatingReadyCard {
                 row("review", MessageKey.TRANSLATING_READY_REVIEW, fixed("translating-ready-review", review), messages),
                 row("dial", MessageKey.TRANSLATING_READY_DIAL, dialLabel(current, messages), messages),
                 row("pending", MessageKey.TRANSLATING_READY_PENDING, pendingLabel(viewModel, grouping), messages),
+                summariesRow(summaries, messages),
                 modelHint(viewModel, messages),
                 readyLine(runs, messages));
+    }
+
+    // The Book Brief's own switch, so Start runs with what the Brief shows; its lines wrap in the value cell.
+    private static Node summariesRow(final ChapterSummariesSwitch summaries, final Messages messages) {
+        final Label caption = new Label(messages.get(MessageKey.BRIEF_SUMMARIES));
+        caption.getStyleClass().add("kv-key");
+        final Node value = summaries.node();
+        HBox.setHgrow(value, Priority.ALWAYS);
+        final HBox row = new HBox(caption, value);
+        row.setId("translating-ready-row-summaries");
+        row.setAlignment(Pos.TOP_LEFT);
+        row.getStyleClass().add("kv");
+        return row;
     }
 
     private static Label pendingLabel(final TranslatingViewModel viewModel, final NumberFormat grouping) {

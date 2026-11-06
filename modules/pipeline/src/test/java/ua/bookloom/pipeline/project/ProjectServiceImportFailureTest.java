@@ -25,6 +25,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
@@ -98,6 +99,14 @@ class ProjectServiceImportFailureTest {
                 });
     }
 
+    private static ProjectCopies copies(final Injector injector) {
+        return new ProjectCopies(
+                injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(SegmentRepository.class),
+                new UuidIdSource());
+    }
+
     private static BriefKeyRecheck rechecks(final Injector injector) {
         return new BriefKeyRecheck(
                 injector.getInstance(SegmentRepository.class), injector.getInstance(OpenProjects.class));
@@ -113,13 +122,10 @@ class ProjectServiceImportFailureTest {
                 Clock.systemUTC(),
                 new UuidIdSource(),
                 injector.getInstance(RunRepository.class),
-                new ProjectCopies(
-                        injector.getInstance(GlossaryRepository.class),
-                        injector.getInstance(LexiconRepository.class),
-                        injector.getInstance(SegmentRepository.class),
-                        new UuidIdSource()),
+                copies(injector),
                 injector.getInstance(SettingsRepository.class),
-                rechecks(injector));
+                rechecks(injector),
+                injector.getInstance(SummaryRepository.class));
     }
 
     // Records each closed document and each saved project id; the segment store throws when asked to save.
@@ -146,13 +152,10 @@ class ProjectServiceImportFailureTest {
                 Clock.systemUTC(),
                 new UuidIdSource(),
                 injector.getInstance(RunRepository.class),
-                new ProjectCopies(
-                        injector.getInstance(GlossaryRepository.class),
-                        injector.getInstance(LexiconRepository.class),
-                        injector.getInstance(SegmentRepository.class),
-                        new UuidIdSource()),
+                copies(injector),
                 injector.getInstance(SettingsRepository.class),
-                rechecks(injector));
+                rechecks(injector),
+                injector.getInstance(SummaryRepository.class));
     }
 
     private interface Spy {

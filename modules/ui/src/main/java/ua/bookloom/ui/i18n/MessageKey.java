@@ -1441,6 +1441,8 @@ public enum MessageKey {
     BRIEF_DECIDES_NARRATOR("brief.decides.narrator"),
     /** Row of the decided fields: the readers and the voice. */
     BRIEF_DECIDES_READERS("brief.decides.readers"),
+    /** Row of the decided fields: whether the chapters tell one story or separate ones. */
+    BRIEF_DECIDES_STORY_SHAPE("brief.decides.storyShape"),
     /** How many of the samples read gave the decided value: agreeing, samples. */
     BRIEF_DECIDES_AGREE("brief.decides.agree"),
     /** Mark on a tally shown before the last step has decided. */
@@ -1564,6 +1566,24 @@ public enum MessageKey {
     BRIEF_TONE_NARRATOR_GENDER("brief.tone.narrator.gender"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TONE_NARRATOR_GENDER}. */
     BRIEF_TONE_NARRATOR_GENDER_TIP("brief.tone.narrator.gender.tip"),
+    /** Label of the tone card's story-shape choice. */
+    BRIEF_TONE_STORY_SHAPE("brief.tone.storyShape"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_STORY_SHAPE}. */
+    BRIEF_TONE_STORY_SHAPE_TIP("brief.tone.storyShape.tip"),
+    /** Story shape: the chapters continue one story. */
+    BRIEF_STORY_SHAPE_ONE("brief.storyShape.one"),
+    /** Story shape: the chapters are separate stories. */
+    BRIEF_STORY_SHAPE_SEPARATE("brief.storyShape.separate"),
+    /** Label of the Chapter summaries switch on the Book Brief and the ready card. */
+    BRIEF_SUMMARIES("brief.summaries"),
+    /** Hover explanation of the switch labelled by {@link #BRIEF_SUMMARIES}. */
+    BRIEF_SUMMARIES_TIP("brief.summaries.tip"),
+    /** Line under the switch: one story suggests it on. */
+    BRIEF_SUMMARIES_SUGGESTED_ON("brief.summaries.suggested.on"),
+    /** Line under the switch: separate stories suggest it off. */
+    BRIEF_SUMMARIES_SUGGESTED_OFF("brief.summaries.suggested.off"),
+    /** How many finished chapters are summarised before the next passage once the switch is on: count. */
+    BRIEF_SUMMARIES_PENDING("brief.summaries.pending"),
     /** Notice on the tone card: the source is told in the first person and the narrator's gender is not chosen. */
     BRIEF_NARRATOR_NOTICE("brief.narrator.notice"),
     /** Hover explanation of the notice labelled by {@link #BRIEF_NARRATOR_NOTICE}. */

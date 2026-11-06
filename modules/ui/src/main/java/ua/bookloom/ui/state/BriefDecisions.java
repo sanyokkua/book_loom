@@ -19,27 +19,30 @@ import ua.bookloom.api.pipeline.SampleAnswer;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /**
  * The rows of "What it decides", worked out for display only: while the samples are read, a tally of what they
  * answered, and once the answer has arrived, the pipeline's own decision with its evidence. The tally never decides
  * anything the pipeline decides; it counts only an answer that quotes the book, as the pipeline does.
  *
- * <p>The four rows are the mockup's: genre, register, who tells the story, and who reads it with the voice.
+ * <p>The five rows are the dialog's: genre, register, who tells the story, who reads it with the voice, and the story
+ * shape. The story shape is decided by the last step alone, from one quote in each of two windows, so while the samples
+ * are read it has no value, and once answered its lines are those two quotes.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class BriefDecisions {
 
-    private static final List<BriefField> ROWS =
-            List.of(BriefField.GENRE, BriefField.REGISTER, BriefField.NARRATOR, BriefField.AUDIENCE);
+    private static final List<BriefField> ROWS = List.of(
+            BriefField.GENRE, BriefField.REGISTER, BriefField.NARRATOR, BriefField.AUDIENCE, BriefField.STORY_SHAPE);
 
     /**
      * The tally of the samples read so far.
      *
      * @param reads what each sample answered, in reading order
-     * @return the four rows; empty when no sample has been read
+     * @return the five rows; empty when no sample has been read
      */
     static List<DecisionRow> running(final List<BriefSampleRead> reads) {
         Objects.requireNonNull(reads, "reads");
@@ -55,7 +58,7 @@ final class BriefDecisions {
      *
      * @param answer what the pipeline decided, with its evidence
      * @param reads what each sample answered, for the per-sample lines
-     * @return the four rows, in the mockup's order
+     * @return the five rows, in the dialog's order
      */
     static List<DecisionRow> answered(final BriefSuggestion answer, final List<BriefSampleRead> reads) {
         Objects.requireNonNull(answer, "answer");
@@ -80,7 +83,7 @@ final class BriefDecisions {
         final String value = best.map(entry -> shown.get(entry.getKey())).orElse("");
         log.trace("tally of {}: '{}' {} of {}", group, value, agreeing, reads.size());
         final boolean split = !value.isEmpty() && agreeing * 2 <= reads.size();
-        return new DecisionRow(group, value, agreeing, reads.size(), split, linesOf(fieldsOf(group), reads));
+        return new DecisionRow(group, value, agreeing, reads.size(), split, false, linesOf(fieldsOf(group), reads));
     }
 
     private static DecisionRow decided(
@@ -90,7 +93,35 @@ final class BriefDecisions {
         final int samples = proof.map(FieldEvidence::samples).orElse(reads.size());
         final int agreeing = proof.map(FieldEvidence::agreeing).orElse(0);
         final boolean uncertain = proof.map(found -> !found.isKept()).orElse(false);
-        return new DecisionRow(group, value, agreeing, samples, uncertain, linesOf(fieldsOf(group), reads));
+        final boolean likely = proof.map(FieldEvidence::isLikely).orElse(false);
+        final List<SampleLine> lines =
+                group == BriefField.STORY_SHAPE ? shapeLines(answer, value, reads) : linesOf(fieldsOf(group), reads);
+        log.trace(
+                "decided {}: '{}' {} of {}, uncertain {}, likely {}",
+                group,
+                value,
+                agreeing,
+                samples,
+                uncertain,
+                likely);
+        return new DecisionRow(group, value, agreeing, samples, uncertain, likely, lines);
+    }
+
+    // The story shape's quotes come from the last step, each placed where the window it names was read.
+    private static List<SampleLine> shapeLines(
+            final BriefSuggestion answer, final String value, final List<BriefSampleRead> reads) {
+        return answer.storyShapeQuotes().stream()
+                .map(quote ->
+                        new SampleLine(quote.sample(), locationOf(quote.sample(), reads), value, quote.quote(), true))
+                .toList();
+    }
+
+    private static String locationOf(final int sample, final List<BriefSampleRead> reads) {
+        return reads.stream()
+                .filter(read -> read.sample() == sample)
+                .map(BriefSampleRead::location)
+                .findFirst()
+                .orElse("");
     }
 
     private static String valueOf(final BriefField group, final BriefSuggestion answer) {
@@ -99,7 +130,20 @@ final class BriefDecisions {
             case REGISTER -> registerWord(answer.register());
             case NARRATOR -> narratorWord(answer.narrator(), answer.narratorGender());
             case AUDIENCE -> readers(answer);
+            case STORY_SHAPE -> shapeWord(answer.storyShape());
+            // Shown inside the narrator's and the readers' rows, never as rows of their own.
             case VOICE, NARRATOR_GENDER -> "";
+        };
+    }
+
+    // In English like the register's word; the dialog words it in the interface language.
+    private static String shapeWord(final @Nullable StoryShape shape) {
+        if (shape == null) {
+            return "";
+        }
+        return switch (shape) {
+            case ONE_STORY -> "One story";
+            case SEPARATE_STORIES -> "Separate stories";
         };
     }
 

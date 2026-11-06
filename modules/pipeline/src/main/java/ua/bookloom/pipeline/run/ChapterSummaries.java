@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.run;
 
-import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,8 +29,9 @@ import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.memory.ChapterSummaryCall;
 import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.ChapterBoundaries.Chapter;
+import ua.bookloom.pipeline.project.ChapterStandings;
+import ua.bookloom.pipeline.project.ChapterStandings.Standing;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
-import ua.bookloom.util.hash.HashUtil;
 
 /**
  * Writes the chapters' summaries (design D10) on the job thread, so each call is single-flight with every other and the
@@ -48,23 +48,7 @@ import ua.bookloom.util.hash.HashUtil;
 @Slf4j
 final class ChapterSummaries {
 
-    // Masked sources are joined by a character no source holds, so two different chapters never hash the same.
-    private static final String HASH_JOIN = "\u0000";
     private static final String STEP_LABEL = "summary";
-
-    /** Where a chapter stands when a run starts, for its summary. */
-    private enum Standing {
-        /** Some of its segments are still pending; it is summarised when its last chunk commits. */
-        OPEN,
-        /** The book's last chapter, which no later window reads. */
-        LAST,
-        /** Its stored summary was written from the source it holds now. */
-        STORED,
-        /** Its stored summary was written from other source text. */
-        STALE,
-        /** It has no stored summary. */
-        MISSING
-    }
 
     private final ChapterSummaryCall call;
     private final TranslatePlanner planner;
@@ -177,16 +161,8 @@ final class ChapterSummaries {
     }
 
     private Standing standing(final WorkList work, final Chapter chapter, @Nullable final ChapterSummary stored) {
-        if (isOpen(work, chapter)) {
-            return Standing.OPEN;
-        }
-        if (isLast(planner.frame().chapters(), chapter)) {
-            return Standing.LAST;
-        }
-        if (stored == null) {
-            return Standing.MISSING;
-        }
-        return stored.sourceHash().equals(sourceHash(held(chapter))) ? Standing.STORED : Standing.STALE;
+        return ChapterStandings.standing(
+                isOpen(work, chapter), planner.frame().chapters(), chapter, stored, held(chapter));
     }
 
     /**
@@ -216,7 +192,7 @@ final class ChapterSummaries {
         if (isOpen(work, chapter)) {
             return Optional.empty();
         }
-        if (isLast(chapters, chapter)) {
+        if (ChapterStandings.isLast(chapters, chapter)) {
             settled(chapter);
             return Optional.empty();
         }
@@ -230,16 +206,6 @@ final class ChapterSummaries {
                 .count();
         log.debug("Chapter {} key={} openSegments={}", chapter.number(), chapter.key(), open);
         return open > 0;
-    }
-
-    private static boolean isLast(final ChapterBoundaries chapters, final Chapter chapter) {
-        final boolean last = chapter.number() == chapters.chapters().size();
-        if (last) {
-            log.debug(
-                    "No chapter summary for chapter {}: it is the book's last, which no later window reads",
-                    chapter.number());
-        }
-        return last;
     }
 
     // A chapter that needs no call: its step is done at once, once per run.
@@ -296,21 +262,8 @@ final class ChapterSummaries {
         return chapter.segmentIds().getFirst();
     }
 
-    /**
-     * The hash of a chapter's source, which a stored summary keeps so a changed book is told from the one it was
-     * written from.
-     *
-     * @param held the non-null segments of the chapter, in reading order
-     * @return the hex SHA-256 of their masked texts joined by a character no source holds
-     */
-    static String sourceHash(final List<Segment> held) {
-        return HashUtil.sha256Hex(
-                String.join(HASH_JOIN, held.stream().map(Segment::masked).toList())
-                        .getBytes(StandardCharsets.UTF_8));
-    }
-
     private boolean store(final Chapter chapter, final List<Segment> held, final ChapterSummaryCall.Kept kept) {
-        final String sourceHash = sourceHash(held);
+        final String sourceHash = ChapterStandings.sourceHash(held);
         final Result<ChapterSummary> saved = stores.summaries()
                 .save(new ChapterSummary(
                         projectId,

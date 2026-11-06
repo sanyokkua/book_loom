@@ -12,7 +12,9 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.BriefEstimate;
+import ua.bookloom.ui.state.BriefLock;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
@@ -103,7 +105,13 @@ public final class TranslatingController {
         this.sections = tools.sections();
         this.runs = run.runs();
         this.reads = new TranslatingView.Reads(
-                parts.estimate(), parts.summary(), parts.sleep(), parts.technical(), parts.advice());
+                parts.estimate(),
+                parts.summary(),
+                parts.sleep(),
+                parts.technical(),
+                parts.advice(),
+                parts.brief(),
+                parts.lock());
     }
 
     /**
@@ -117,6 +125,8 @@ public final class TranslatingController {
      * @param advice the language advice shown under the model row
      * @param modals where "All calls…" opens
      * @param activities whose clock the calls dialog reads
+     * @param brief the brief whose Chapter summaries switch the ready card shows, the same one the Book Brief shows
+     * @param lock what makes that switch read-only while a translation is at work
      */
     public record Parts(
             BriefEstimate estimate,
@@ -125,7 +135,9 @@ public final class TranslatingController {
             TechnicalDetails technical,
             StartAdvice advice,
             ModalHost modals,
-            ActivityTracker activities) {
+            ActivityTracker activities,
+            BookBriefViewModel brief,
+            BriefLock lock) {
 
         /** Receives the parts from the injector. */
         @Inject
@@ -137,6 +149,8 @@ public final class TranslatingController {
             Objects.requireNonNull(advice, "advice");
             Objects.requireNonNull(modals, "modals");
             Objects.requireNonNull(activities, "activities");
+            Objects.requireNonNull(brief, "brief");
+            Objects.requireNonNull(lock, "lock");
         }
     }
 

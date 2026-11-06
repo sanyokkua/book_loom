@@ -24,8 +24,10 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.BookRelocation;
+import ua.bookloom.api.pipeline.ChapterTally;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectChange;
 import ua.bookloom.api.pipeline.ProjectOpening;
@@ -62,6 +64,7 @@ public final class ProjectServiceImpl implements ProjectService {
     private final ProjectCopies copies;
     private final SettingsRepository settings;
     private final BriefKeyRecheck rechecks;
+    private final SummaryRepository summaries;
 
     @Override
     public Result<ImportedBook> create(final Path source) {
@@ -229,6 +232,17 @@ public final class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    public Result<ChapterTally> chapterTally(final String projectId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        try {
+            log.debug("chapterTally project={}", projectId);
+            return findProject(projectId).flatMap(new ChapterTallies(segments, summaries, openProjects)::tally);
+        } catch (Exception cause) {
+            return Result.err(ProjectErrors.internalError("count the finished chapters", cause));
+        }
+    }
+
+    @Override
     public Result<List<SegmentPreview>> segments(final String projectId, final String unitId) {
         Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(unitId, "unitId");
@@ -342,7 +356,7 @@ public final class ProjectServiceImpl implements ProjectService {
             final BookBrief brief,
             final Document document,
             final int segmentCount) {
-        final BookIndex index = buildIndex(id, document);
+        final BookIndex index = StoredBooks.index(id, document);
         final NarratorHint hint = NarratorDetector.detect(document, SourceLanguage.forAnalysis(brief, document))
                 .orElse(null);
         openProjects.put(id, document, index, profile.structure());
@@ -354,18 +368,6 @@ public final class ProjectServiceImpl implements ProjectService {
                 segmentCount,
                 id);
         return new ImportedBook(id, inspection, profile, brief, hint);
-    }
-
-    // Built, like the narrator hint, before the book is registered, so a failure leaves nothing open.
-    private static BookIndex buildIndex(final String projectId, final Document document) {
-        final BookIndex index = BookIndex.of(document);
-        log.info(
-                "book index built project={} segments={} words={} millis={}",
-                projectId,
-                index.size(),
-                index.distinctWords(),
-                index.buildMillis());
-        return index;
     }
 
     // Found by the run's own rule, so the planned chunks end where the run's will.

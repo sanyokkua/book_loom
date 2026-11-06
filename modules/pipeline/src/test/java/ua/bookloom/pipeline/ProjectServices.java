@@ -14,6 +14,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SettingsRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectOpening;
 import ua.bookloom.api.pipeline.ProjectService;
@@ -87,6 +88,7 @@ public final class ProjectServices {
                         segments,
                         new UuidIdSource()),
                 settings,
-                new BriefKeyRecheck(segments, openProjects));
+                new BriefKeyRecheck(segments, openProjects),
+                injector.getInstance(SummaryRepository.class));
     }
 }

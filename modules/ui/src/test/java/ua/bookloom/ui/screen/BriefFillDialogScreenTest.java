@@ -90,7 +90,7 @@ class BriefFillDialogScreenTest extends BriefRunScreenTestBase {
                         "Read sample 2 · ch1 · p15–p27",
                         "Read sample 3 · ch2 · p03–p12",
                         "Read sample 4 · ch3 · p01–p20",
-                        "Decide genre, readers and voice");
+                        "Decide genre, readers, voice and story shape");
     }
 
     // The title is only the file name, so the model is not asked and the dialog lists no such step.

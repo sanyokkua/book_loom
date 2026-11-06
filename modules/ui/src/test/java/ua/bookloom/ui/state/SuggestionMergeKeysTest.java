@@ -13,6 +13,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /** A suggestion is written into the brief without dropping its policy keys, and the fields that stand on a guess are marked likely. */
 class SuggestionMergeKeysTest {
@@ -63,5 +64,51 @@ class SuggestionMergeKeysTest {
 
         assertThat(merged.register()).isEqualTo(Register.FORMAL_LITERARY);
         assertThat(merged.likely()).contains(ua.bookloom.api.project.BriefField.REGISTER);
+    }
+
+    private static BriefSuggestion shaped(final StoryShape shape) {
+        return new BriefSuggestion(
+                null,
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.UNSPECIFIED,
+                Gender.UNKNOWN,
+                Map.of(),
+                null,
+                shape,
+                List.of());
+    }
+
+    // IF the shape were not written, THEN the suggested switch would never follow the analysis.
+    @Test
+    void withSuggestion_storyShape_isWrittenAndMarkedLikely() {
+        final BookBrief merged =
+                SuggestionMerge.withSuggestion(BookBrief.defaults("en"), shaped(StoryShape.SEPARATE_STORIES));
+
+        assertThat(merged.storyShape()).isEqualTo(StoryShape.SEPARATE_STORIES);
+        assertThat(merged.likely()).contains(ua.bookloom.api.project.BriefField.STORY_SHAPE);
+        assertThat(merged.summariesOn()).isFalse();
+    }
+
+    // IF a later suggestion reset a forced switch, THEN the person's decision would be undone.
+    @Test
+    void withSuggestion_forcedSwitch_isKept() {
+        final BookBrief forced = BookBrief.defaults("en").withChapterSummaries(true);
+
+        final BookBrief merged = SuggestionMerge.withSuggestion(forced, shaped(StoryShape.SEPARATE_STORIES));
+
+        assertThat(merged.chapterSummaries()).isTrue();
+        assertThat(merged.summariesOn()).isTrue();
+    }
+
+    // A suggestion with no shape leaves the shape the brief had.
+    @Test
+    void withSuggestion_noShape_keepsTheBriefsShape() {
+        final BookBrief held = BookBrief.defaults("en").withStoryShape(StoryShape.ONE_STORY);
+
+        final BookBrief merged = SuggestionMerge.withSuggestion(held, suggestion(Map.of()));
+
+        assertThat(merged.storyShape()).isEqualTo(StoryShape.ONE_STORY);
     }
 }

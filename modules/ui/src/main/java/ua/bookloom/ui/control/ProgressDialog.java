@@ -304,7 +304,9 @@ public final class ProgressDialog extends ModalCard {
         footnote.setId("progress-footnote");
         footnote.getStyleClass().add("progress-footnote");
         if (kind == ActivityKind.SUGGEST_STYLE) {
-            // Its Ukrainian sentence is long: held to a width the buttons beside it leave, at the smallest window.
+            // Its Ukrainian sentence is long: held to a width the buttons beside it leave, at the smallest window, and
+            // wrapped onto a second line where the platform's font draws it wider than that.
+            Wrapped.wholeLines(footnote);
             footnote.setMinWidth(FOOTNOTE_WIDTH);
             footnote.setPrefWidth(FOOTNOTE_WIDTH);
             footnote.setMaxWidth(FOOTNOTE_WIDTH);

@@ -73,6 +73,10 @@ final class BriefReplies {
         Objects.requireNonNull(narratorGender, "narratorGender");
         final Map<BriefField, Answer> answers = new EnumMap<>(BriefField.class);
         for (final BriefField field : BriefField.values()) {
+            // A window reads one passage, so it cannot compare two for the story shape; only the synthesis answers it.
+            if (field == BriefField.STORY_SHAPE) {
+                continue;
+            }
             final JsonNode node = reply.get(wireName(field));
             if (node == null || node.isNull()) {
                 log.debug("Brief reply has no {}", field);
@@ -203,6 +207,7 @@ final class BriefReplies {
             case AUDIENCE -> "audience";
             case NARRATOR -> "narrator";
             case NARRATOR_GENDER -> "narratorGender";
+            case STORY_SHAPE -> "storyShape";
         };
     }
 
@@ -219,6 +224,7 @@ final class BriefReplies {
                 };
             case NARRATOR -> "first".equals(word) || "third".equals(word) ? word : "unspecified";
             case NARRATOR_GENDER -> "male".equals(word) || "female".equals(word) ? word : UNKNOWN_WORD;
+            case STORY_SHAPE -> throw new IllegalArgumentException("a window does not answer the story shape");
         };
     }
 }

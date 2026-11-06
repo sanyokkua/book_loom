@@ -10,6 +10,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /**
  * The fields a suggestion fills with only the model's most probable value (book-brief "Mark a suggested field likely
@@ -62,5 +63,37 @@ class BriefSuggestionLikelyTest {
         assertThat(GUESS.describe()).isEqualTo("the model's best guess: 0 of 4 passages agree");
         assertThat(GUESS.isKept()).isTrue();
         assertThat(GUESS.isLikely()).isTrue();
+    }
+
+    // A story shape on two windows is still stored likely until the person confirms it (design D6).
+    @Test
+    void likelyFields_storyShapeOnTwoPassages_isLikely() {
+        final BriefSuggestion suggestion = shaped();
+
+        assertThat(suggestion.likelyFields()).containsExactly(ua.bookloom.api.project.BriefField.STORY_SHAPE);
+    }
+
+    @Test
+    void alignedTo_setNarrator_keepsTheStoryShapeAndItsQuotes() {
+        final BriefSuggestion aligned = shaped().alignedTo(new Narrator(NarratorPerson.THIRD, Gender.UNKNOWN));
+
+        assertThat(aligned.storyShape()).isEqualTo(StoryShape.SEPARATE_STORIES);
+        assertThat(aligned.storyShapeQuotes())
+                .containsExactly(new BriefSuggestion.ShapeQuote(1, "q1"), new BriefSuggestion.ShapeQuote(2, "q2"));
+        assertThat(aligned.evidenceOf(BriefField.STORY_SHAPE)).isPresent();
+    }
+
+    private static BriefSuggestion shaped() {
+        return new BriefSuggestion(
+                null,
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.UNSPECIFIED,
+                Gender.UNKNOWN,
+                Map.of(BriefField.STORY_SHAPE, new FieldEvidence(Basis.PASSAGES, List.of("q1", "q2"), 2, 2)),
+                null,
+                StoryShape.SEPARATE_STORIES,
+                List.of(new BriefSuggestion.ShapeQuote(1, "q1"), new BriefSuggestion.ShapeQuote(2, "q2")));
     }
 }

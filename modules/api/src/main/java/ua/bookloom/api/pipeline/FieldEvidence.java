@@ -16,7 +16,8 @@ import java.util.Objects;
  *     are pending evidence: they name the narrator by a name the glossary does not know yet (15i.T5)
  * @param agreeing how many passages support the value, or for an uncertain field the most that supported any one
  *     value; from zero to {@code samples}
- * @param samples how many passages were read; at least one
+ * @param samples how many passages were read; at least one. The story shape compares two windows, so its count is over
+ *     those two (at most the number read): "2 of 2" when two different windows each hold one of its quotes
  */
 public record FieldEvidence(Basis basis, List<String> quotes, int agreeing, int samples) {
 

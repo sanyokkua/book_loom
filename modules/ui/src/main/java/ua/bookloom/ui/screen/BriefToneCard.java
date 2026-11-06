@@ -43,8 +43,8 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 
 /**
  * The Tone &amp; style card: a genre box that suggests the forty predefined genres and also takes free text, the
- * register, the free-text narrative voice and audience, and who narrates (the person and, for a first-person narrator, the
- * gender). Under each field the model suggested, its evidence: the book's words it quoted and how many passages agree,
+ * register, the free-text narrative voice and audience, who narrates (the person and, for a first-person narrator, the
+ * gender), and the story shape with the Chapter summaries switch it suggests ({@link BriefStoryShapeField}). Under each field the model suggested, its evidence: the book's words it quoted and how many passages agree,
  * or an "uncertain" chip.
  *
  * <p>The person sees a predefined genre in the interface language while the brief holds its English name, because the
@@ -78,14 +78,16 @@ final class BriefToneCard {
     private boolean applying;
 
     BriefToneCard(
-            final BookBriefViewModel viewModel, final Messages messages, final ObservableValue<RunStateView> runRow) {
+            final BookBriefViewModel viewModel,
+            final Messages messages,
+            final ObservableValue<RunStateView> runRow,
+            final Node storyShape) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.evidence = evidenceRows(messages);
         this.genderOrigin = new NarratorGenderOrigin(messages);
         this.genre = genreBox(viewModel);
         this.register = registerChoice(viewModel, messages);
-        Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
         this.narrator = narratorChoice(viewModel, messages);
         this.narratorGender = narratorGenderChoice(viewModel, messages);
         configureInputs(viewModel);
@@ -101,7 +103,8 @@ final class BriefToneCard {
                 field(MessageKey.BRIEF_TONE_AUDIENCE, audience, BriefField.AUDIENCE),
                 field(MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp(), BriefField.NARRATOR),
                 genderField(),
-                notice);
+                notice,
+                Objects.requireNonNull(storyShape, "storyShape"));
         viewModel
                 .styleSuggestion()
                 .evidence()
@@ -148,6 +151,7 @@ final class BriefToneCard {
             case AUDIENCE -> ua.bookloom.api.project.BriefField.AUDIENCE;
             case NARRATOR -> ua.bookloom.api.project.BriefField.NARRATOR;
             case NARRATOR_GENDER -> null;
+            case STORY_SHAPE -> ua.bookloom.api.project.BriefField.STORY_SHAPE;
         };
     }
 
@@ -170,7 +174,7 @@ final class BriefToneCard {
     }
 
     private static BriefChoice<Register> registerChoice(final BookBriefViewModel viewModel, final Messages messages) {
-        return new BriefChoice<>(
+        final BriefChoice<Register> choice = new BriefChoice<>(
                 "brief-tone-register",
                 messages,
                 List.of(
@@ -187,6 +191,8 @@ final class BriefToneCard {
                                 MessageKey.BRIEF_REGISTER_CASUAL,
                                 MessageKey.BRIEF_HELP_REGISTER_CASUAL)),
                 viewModel::setRegister);
+        Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
+        return choice;
     }
 
     // The model reads the opening of the book and fills these fields; the person reviews them before going on.

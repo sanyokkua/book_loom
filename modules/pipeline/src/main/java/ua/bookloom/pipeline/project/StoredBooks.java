@@ -20,6 +20,7 @@ import ua.bookloom.api.project.NameOrigin;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.index.BookIndex;
 
 /** What the project service reads off a stored project and its segments: pending records, change and decided counts. */
 @Slf4j
@@ -27,6 +28,18 @@ import ua.bookloom.api.project.SegmentRecord;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class StoredBooks {
+
+    // Built, like the narrator hint, before the book is registered, so a failure leaves nothing open.
+    static BookIndex index(final String projectId, final Document document) {
+        final BookIndex index = BookIndex.of(document);
+        log.info(
+                "book index built project={} segments={} words={} millis={}",
+                projectId,
+                index.size(),
+                index.distinctWords(),
+                index.buildMillis());
+        return index;
+    }
 
     // The content hash is the document's own (a zipped FictionBook hashes its unzipped member, not the archive), so the
     // file is compared by the hash the reader would store for it now.

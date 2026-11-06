@@ -140,6 +140,7 @@ public final class StyleSuggestion {
             case AUDIENCE -> brief.audience();
             case NARRATOR -> brief.narrator().person();
             case NARRATOR_GENDER -> brief.narrator().gender();
+            case STORY_SHAPE -> brief.storyShape();
         };
     }
 

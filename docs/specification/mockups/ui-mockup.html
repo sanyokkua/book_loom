@@ -1124,6 +1124,8 @@ ${ro ? `<div class="banner banner-warn" style="margin-bottom:12px"><span class="
         <div class="field" style="margin:0"><label class="fld">Who tells the story</label>${seg(['Unknown', '“I”', '“He / she”'], 2, 'title="Unknown · told by “I” (first person) · told about “he” or “she” (third person)"')}</div>
         <div class="field" style="margin:0"><label class="fld">Narrator's gender</label>${seg(['Unknown', 'Female', 'Male'], 2, 'title="Only for a story told in the first person"')}<div class="hint" title="The model's most probable answer: nothing in the book BookLoom can check confirms it. The translation takes it only as a hint; choose a gender to confirm or change it.">Male (likely)</div><div class="hint">Asked at Start when the story is told in the first person and this is not known. Found in the book it reads “Male, from the book” with the quote.</div></div>
       </div>
+      <div class="field"><label class="fld">Story shape ${likely()}</label>${seg(['One story', 'Separate stories'], 0, 'title="What the passages read suggest: chapters that continue one story, or separate stories. It decides whether Chapter summaries are suggested on. Choose it to confirm or change it."')}</div>
+      <div class="field"><label class="gap4" title="After each chapter is finished, the model writes two or three sentences about it, and later passages are translated knowing the story so far. Off for a collection of unrelated stories. A change applies from the next Continue translation.">${sw(true)} Chapter summaries</label><div class="hint">Suggested: on — the chapters tell one story (likely)</div></div>
     </div></div>
   </div>
   <div class="col stack">
@@ -1293,7 +1295,7 @@ S.translating = () => {
 ${demo(runDemo())}
 <div class="page">
 <h2 class="page-h">Translating</h2>${HELP_SLEEP()}${strip()}
-<div class="card pad mt3"><b>${r === 'cannot' ? 'Cannot start yet' : 'Ready to translate'}</b><div class="small muted">${D.total} segments · ${D.dial} · ${D.provider} · ${D.model}. Translation runs by itself; you can pause, stop and continue at any time. Use ▶ Start translation at the top right.</div><div class="hint" id="readyLanguageLine" style="color:var(--warn-fg)">Gemma 3 does not list Russian and Ukrainian among its languages. Translation may have problems.</div></div></div>`;
+<div class="card pad mt3"><b>${r === 'cannot' ? 'Cannot start yet' : 'Ready to translate'}</b><div class="small muted">${D.total} segments · ${D.dial} · ${D.provider} · ${D.model}. Translation runs by itself; you can pause, stop and continue at any time. Use ▶ Start translation at the top right.</div><div class="hint" id="readyLanguageLine" style="color:var(--warn-fg)">Gemma 3 does not list Russian and Ukrainian among its languages. Translation may have problems.</div><div class="kv"><span class="k">Chapter summaries</span><span><label class="gap4" title="The Book Brief's own switch: turning it here turns it there. A change applies from the next Continue translation.">${sw(true)}</label><span class="hint">Suggested: on — the chapters tell one story (likely)</span></span></div></div></div>`;
     return `
 ${demo(runDemo())}
 <div class="page full" style="display:flex;flex-direction:column;flex:1;min-height:0">
@@ -1553,11 +1555,12 @@ const BRIEF_STEPS = [
     {group: 'What it decides', name: 'Register', state: mk('ok', 'so far'), res: 'Neutral — 3 of 4 samples agree', f: true},
     {group: 'What it decides', name: 'Who tells the story', state: mk('ok', 'so far'), res: 'Third person — 1 of 2 samples', f: true},
     {group: 'What it decides', name: 'Who reads it · voice', state: mk('wait'), res: 'Decided by the last step', f: true},
+    {group: 'What it decides', name: 'Story shape', state: mk('wait'), res: 'Decided by the last step', f: true},
     {group: 'Steps', name: '1 · Read sample 1 of 4 · ch1', state: mk('done', 'answered'), res: 'popular science · neutral · third person', s: 'done', at: 'ch1 · p02–p14', text: 'Gravity is the force by which a planet or other body draws objects toward its centre… (12 paragraphs)'},
     {group: 'Steps', name: '2 · Read sample 2 of 4 · ch2', state: mk('done', 'answered'), res: 'popular science · neutral', s: 'done', at: 'ch2 · p03–p17', text: 'An orbit is the curved path an object follows around a planet or a star… (15 paragraphs)'},
     {group: 'Steps', name: '3 · Read sample 3 of 4 · ch3', state: mk('run', 'reading…'), res: 'The model is answering', s: 'run', at: 'ch3 · p01–p12', text: 'Tides rise and fall twice a day. The Moon pulls the ocean on the near side of the Earth a little more than the Earth itself… (12 paragraphs)'},
     {group: 'Steps', name: '4 · Read sample 4 of 4 · ch4', state: mk('wait'), res: '', s: 'wait'},
-    {group: 'Steps', name: '5 · Decide genre, readers and voice', state: mk('wait'), res: 'One request over every sample’s answers', s: 'wait'},
+    {group: 'Steps', name: '5 · Decide genre, readers, voice and story shape', state: mk('wait'), res: 'One request over every sample’s answers', s: 'wait'},
 ];
 function briefDetail(s, mode) {
     const h = `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}${mode === 'detailed' && !s.f ? `<span class="badge b-neutral mono">${s.name.includes('knows') ? 'book-knowledge' : s.name.includes('Decide') ? 'brief-synthesis' : 'brief-suggestion'}</span>` : ''}</div>`;

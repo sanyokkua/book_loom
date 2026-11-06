@@ -54,6 +54,7 @@ public final class BookBriefViewModel {
     private final NarratorNotice narratorNotice;
     private final StyleSuggestion style;
     private final BriefPolicyKeys policyKeys;
+    private final BriefSummaries summaries;
 
     /**
      * Follows the open book's brief.
@@ -81,6 +82,7 @@ public final class BookBriefViewModel {
                 Objects.requireNonNull(executor, "executor"),
                 Objects.requireNonNull(outcomes, "outcomes"));
         this.policyKeys = new BriefPolicyKeys(languages, this::change);
+        this.summaries = new BriefSummaries(project, projects, executor, this::change);
         project.brief().addListener((observed, was, now) -> derive(now));
         project.book().addListener((observed, was, now) -> saver.clearRechecked());
         derive(project.brief().get());
@@ -375,6 +377,11 @@ public final class BookBriefViewModel {
     private void derive(final @Nullable BookBrief brief) {
         flags.derive(brief);
         policyKeys.derive(brief);
+    }
+
+    /** {@return the story shape and the Chapter summaries switch, with what turning the switch on costs} */
+    public BriefSummaries summaries() {
+        return summaries;
     }
 
     /** The apostrophe, quotation-mark, address and convention choices the target offers, and their setters. */

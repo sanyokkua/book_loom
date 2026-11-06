@@ -27,7 +27,7 @@ public final class BriefPolicyKeys {
     /** Hands an edit to the view model, which applies it, clears the field from the likely set and saves it. */
     @FunctionalInterface
     interface Edit {
-        void apply(String field, String value, BriefField edited, UnaryOperator<BookBrief> edit);
+        void apply(String field, String value, @Nullable BriefField edited, UnaryOperator<BookBrief> edit);
     }
 
     private final LanguageSupport languages;

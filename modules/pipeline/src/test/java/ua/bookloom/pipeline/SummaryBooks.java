@@ -3,11 +3,14 @@ package ua.bookloom.pipeline;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
@@ -21,6 +24,8 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.document.DocumentModule;
+import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
@@ -46,14 +51,35 @@ final class SummaryBooks {
             + " the narrow bridge, the quiet market and the long grey wall of the town, and the people who lived there"
             + " watched the water rise a little with every hour of the long and cloudy afternoon, saying nothing at"
             + " all about the rain that was coming down from the hills or about the ferry that had not crossed since";
-    private static final List<String> NUMBERS = List.of("One", "Two", "Three", "Four");
+    private static final List<String> NUMBERS = List.of(
+            "One",
+            "Two",
+            "Three",
+            "Four",
+            "Five",
+            "Six",
+            "Seven",
+            "Eight",
+            "Nine",
+            "Ten",
+            "Eleven",
+            "Twelve",
+            "Thirteen");
 
-    /** Writes a book of {@code chapters} chapters (at most four) and imports it with the given switch. */
+    /** Writes a book of {@code chapters} chapters (at most thirteen) and imports it with the given switch. */
     static TestProject book(final Path dir, final int chapters, final boolean summaries) {
+        return book(
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule()), dir, chapters, summaries);
+    }
+
+    /** The same book imported through the given injector, so a test can reach other services over its stores. */
+    static TestProject book(final Injector injector, final Path dir, final int chapters, final boolean summaries) {
         final String content = IntStream.rangeClosed(1, chapters)
                 .mapToObj(SummaryBooks::chapter)
                 .collect(Collectors.joining("\n\n"));
         return project(
+                injector,
+                UnaryOperator.identity(),
                 TestBooks.markdown(dir.resolve("Book.md"), content),
                 brief("en", "uk").withChapterSummaries(summaries));
     }

@@ -19,5 +19,6 @@ public enum BriefField {
     APOSTROPHE,
     QUOTE_STYLE,
     DEFAULT_ADDRESS,
-    CONVENTIONS
+    CONVENTIONS,
+    STORY_SHAPE
 }

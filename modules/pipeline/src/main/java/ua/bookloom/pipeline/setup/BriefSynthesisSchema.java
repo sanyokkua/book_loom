@@ -22,6 +22,17 @@ public final class BriefSynthesisSchema {
             "quote":{"type":"string"},"name":{"type":"string"}},\
             "required":["gender","quote","name"],"additionalProperties":false}""";
 
+    /** The two story shapes the synthesis chooses from, in its words: one story first, then a collection. */
+    static final List<String> STORY_SHAPES = List.of("one story", "separate stories");
+
+    // The story shape with its quotes before its value: each quote names the passage it was copied from, which the
+    // code checks, so the shape stands on two windows compared with each other (design D6).
+    private static final String STORY_SHAPE = """
+            {"type":"object","properties":{"quotes":{"type":"array","items":{"type":"object","properties":{\
+            "passage":{"type":"integer"},"quote":{"type":"string"}},\
+            "required":["passage","quote"],"additionalProperties":false}},"value":%s},\
+            "required":["quotes","value"],"additionalProperties":false}""".formatted(choice(STORY_SHAPES.stream()));
+
     /** The three registers the synthesis chooses from, in the brief suggestion's words. */
     static final List<String> REGISTERS = List.of("formal", "neutral", "casual");
 
@@ -30,7 +41,8 @@ public final class BriefSynthesisSchema {
      * stands on before it decides it, and the narrator's most probable gender with the quote and the name that show
      * it. The genre is one of the forty {@link Genre} names, the audience one of {@link #AUDIENCES} and the register one
      * of {@link #REGISTERS}, with no empty value, so the model always gives its most probable one (owner decision
-     * D-11) and a structured-output server can return nothing the brief cannot hold.
+     * D-11) and a structured-output server can return nothing the brief cannot hold. The story shape is one of
+     * {@link #STORY_SHAPES}, its quotes written first.
      */
     public static final String SCHEMA = """
             {"type":"object","properties":{\
@@ -38,14 +50,16 @@ public final class BriefSynthesisSchema {
             "audience":%s,\
             "voice":%s,\
             "register":%s,\
-            "narrator":%s},\
-            "required":["genre","audience","voice","register","narrator"],\
+            "narrator":%s,\
+            "storyShape":%s},\
+            "required":["genre","audience","voice","register","narrator","storyShape"],\
             "additionalProperties":false}""".formatted(
                     field(choice(Arrays.stream(Genre.values()).map(Genre::english))),
                     field(choice(AUDIENCES.stream())),
                     field("{\"type\":\"string\"}"),
                     field(choice(REGISTERS.stream())),
-                    NARRATOR);
+                    NARRATOR,
+                    STORY_SHAPE);
 
     private static String choice(final Stream<String> names) {
         final String listed = names.map(name -> "\"" + name + "\"").collect(Collectors.joining(","));

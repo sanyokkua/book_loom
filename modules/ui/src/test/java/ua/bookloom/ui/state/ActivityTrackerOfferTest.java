@@ -149,7 +149,7 @@ class ActivityTrackerOfferTest extends FxTestBase {
     // The rows of "What it decides" travel on the activity next to the steps.
     @Test
     void decisions_set_areReadFromTheActivityOutcome() {
-        final DecisionRow register = new DecisionRow(BriefField.REGISTER, "Formal", 3, 4, false, List.of());
+        final DecisionRow register = new DecisionRow(BriefField.REGISTER, "Formal", 3, 4, false, false, List.of());
 
         onFx(() -> {
             handle.decisions(List.of(register));

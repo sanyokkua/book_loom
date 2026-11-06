@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSampleRead;
@@ -13,6 +14,7 @@ import ua.bookloom.api.pipeline.SampleAnswer;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /**
  * "What it decides": the rows the dialog shows while the samples are read (a tally, display only) and once the answer
@@ -63,10 +65,7 @@ class BriefDecisionsTest {
         assertThat(register.agreeing()).isEqualTo(2);
         assertThat(register.samplesRead())
                 .extracting(SampleLine::sample, SampleLine::verified)
-                .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(1, true),
-                        org.assertj.core.groups.Tuple.tuple(2, false),
-                        org.assertj.core.groups.Tuple.tuple(3, true));
+                .containsExactly(Tuple.tuple(1, true), Tuple.tuple(2, false), Tuple.tuple(3, true));
     }
 
     @Test
@@ -88,9 +87,9 @@ class BriefDecisionsTest {
         assertThat(BriefDecisions.running(List.of())).isEmpty();
     }
 
-    // The four rows are in the order the mockup shows them: genre, register, who tells the story, who reads it.
+    // The five rows are in the dialog's order: genre, register, who tells the story, who reads it, the story shape.
     @Test
-    void answered_anyAnswer_hasFourRowsInTheMockupOrder() {
+    void answered_anyAnswer_hasFiveRowsInTheDialogOrder() {
         final BriefSuggestion answer = new BriefSuggestion(
                 "crime", Register.FORMAL_LITERARY, "terse", "adults", NarratorPerson.THIRD, Gender.UNKNOWN, Map.of());
 
@@ -98,7 +97,12 @@ class BriefDecisionsTest {
 
         assertThat(rows)
                 .extracting(DecisionRow::group)
-                .containsExactly(BriefField.GENRE, BriefField.REGISTER, BriefField.NARRATOR, BriefField.AUDIENCE);
+                .containsExactly(
+                        BriefField.GENRE,
+                        BriefField.REGISTER,
+                        BriefField.NARRATOR,
+                        BriefField.AUDIENCE,
+                        BriefField.STORY_SHAPE);
     }
 
     // The final row is the pipeline's decision: its value, and how many samples agreed of how many were read.
@@ -139,5 +143,64 @@ class BriefDecisionsTest {
         assertThat(register.agreeing()).isEqualTo(2);
         assertThat(register.samples()).isEqualTo(4);
         assertThat(register.isUncertain()).isTrue();
+    }
+
+    // The story shape stands on the synthesis's two quotes, each placed where its sample was read.
+    @Test
+    void answered_storyShapeFromSamplesOneAndThree_listsBothQuotesAtTheirPlaces() {
+        final BriefSuggestion answer = new BriefSuggestion(
+                null,
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.UNSPECIFIED,
+                Gender.UNKNOWN,
+                Map.of(
+                        BriefField.STORY_SHAPE,
+                        new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of(QUOTE, "Later."), 2, 2)),
+                null,
+                StoryShape.ONE_STORY,
+                List.of(new BriefSuggestion.ShapeQuote(1, QUOTE), new BriefSuggestion.ShapeQuote(3, "Later.")));
+        final List<BriefSampleRead> reads =
+                List.of(read(1, "formal", QUOTE), read(2, "formal", QUOTE), read(3, "formal", QUOTE));
+
+        final DecisionRow shape = row(BriefDecisions.answered(answer, reads), BriefField.STORY_SHAPE);
+
+        assertThat(shape.value()).isEqualTo("One story");
+        assertThat(shape.agreeing()).isEqualTo(2);
+        assertThat(shape.samples()).isEqualTo(2);
+        assertThat(shape.isLikely()).isFalse();
+        assertThat(shape.samplesRead())
+                .extracting(SampleLine::sample, SampleLine::location, SampleLine::quote)
+                .containsExactly(Tuple.tuple(1, "ch1 · p02–p14", QUOTE), Tuple.tuple(3, "ch3 · p02–p14", "Later."));
+    }
+
+    // IF a value without support were dropped, THEN the person would not see what the brief now holds.
+    @Test
+    void answered_genreWithoutSupport_isLikely() {
+        final BriefSuggestion answer = new BriefSuggestion(
+                "fantasy",
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.UNSPECIFIED,
+                Gender.UNKNOWN,
+                Map.of(BriefField.GENRE, new FieldEvidence(FieldEvidence.Basis.LIKELY, List.of(), 1, 4)));
+
+        final DecisionRow genre = row(BriefDecisions.answered(answer, List.of()), BriefField.GENRE);
+
+        assertThat(genre.value()).isEqualTo("fantasy");
+        assertThat(genre.isLikely()).isTrue();
+        assertThat(genre.isUncertain()).isFalse();
+    }
+
+    // While the samples are read, the story shape waits for the last step.
+    @Test
+    void running_storyShape_hasNoValueYet() {
+        final DecisionRow shape =
+                row(BriefDecisions.running(List.of(read(1, "formal", QUOTE))), BriefField.STORY_SHAPE);
+
+        assertThat(shape.value()).isEmpty();
+        assertThat(shape.samplesRead()).isEmpty();
     }
 }

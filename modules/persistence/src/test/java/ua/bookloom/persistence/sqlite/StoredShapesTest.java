@@ -134,4 +134,10 @@ class StoredShapesTest {
                         "chapterSummaries:java.lang.Boolean")
                 .doesNotContain("lastSummarizedKey");
     }
+
+    // The brief's likely fields can name the story shape (task 12.7), so a database from before it is set aside.
+    @Test
+    void describe_afterStoryShapeLikely_listsItAmongTheBriefFields() {
+        assertThat(StoredShapes.describe(StoredShapes.ROOTS)).contains("SOURCE_LANGUAGE,STORY_SHAPE,TARGET_LANGUAGE");
+    }
 }

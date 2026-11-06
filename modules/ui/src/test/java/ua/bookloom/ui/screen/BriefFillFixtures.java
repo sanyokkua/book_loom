@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.StepsPlanned;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.StoryShape;
 
 /** The events a brief suggestion announces to its dialog: the steps of a Balanced run and what each sample answered. */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -43,6 +44,30 @@ final class BriefFillFixtures {
                             FieldEvidence.Basis.PASSAGES, List.of("He left before the lamps were lit."), 3, 4)));
 
     static final String QUOTE = "He left before the lamps were lit.";
+    static final String LATER_QUOTE = "The same lamps burned when he came home a year later.";
+
+    /**
+     * The answer of a book whose chapters tell one story, read from sample 1 and sample 3, and whose genre no window
+     * and no knowledge supports, so it is only the model's most probable value.
+     */
+    static final BriefSuggestion ONE_STORY_ANSWER = new BriefSuggestion(
+            "fantasy",
+            Register.CASUAL,
+            null,
+            null,
+            NarratorPerson.THIRD,
+            Gender.UNKNOWN,
+            Map.of(
+                    BriefField.GENRE,
+                    new FieldEvidence(FieldEvidence.Basis.LIKELY, List.of(), 1, 4),
+                    BriefField.REGISTER,
+                    new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of(QUOTE), 3, 4),
+                    BriefField.STORY_SHAPE,
+                    new FieldEvidence(FieldEvidence.Basis.PASSAGES, List.of(QUOTE, LATER_QUOTE), 2, 2)),
+            null,
+            StoryShape.ONE_STORY,
+            List.of(new BriefSuggestion.ShapeQuote(1, QUOTE), new BriefSuggestion.ShapeQuote(3, LATER_QUOTE)));
+
     static final List<String> LOCATIONS = List.of("ch1 · p02–p14", "ch1 · p15–p27", "ch2 · p03–p12", "ch3 · p01–p20");
 
     private static StepChanged started(final String label, final int index, final @Nullable String place) {

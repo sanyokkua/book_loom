@@ -18,16 +18,17 @@ import ua.bookloom.ui.state.ProgressDialogModel;
 /**
  * The "What it decides" group of the fill-in dialog above its "Steps" group: one row per field the suggestion decides,
  * with the value, how many samples agree and a mark while the last step has not decided or when the samples did not
- * agree. The group shows only once there is a row. Selecting a row hands it to the dialog, which lists each sample's
+ * agree; a value that stands on nothing the code could check is marked likely instead of counted. The group shows only once there is a row. Selecting a row hands it to the dialog, which lists each sample's
  * answer beside its quote. Nothing here logs: the rows change up to ten times a second.
  *
- * <p>A row's text is on its cell, so a screen reader and a test read it as one line of text.
+ * <p>A row's text is on its cell, so a screen reader and a test read it as one line of text; a row cut short by a
+ * narrow window carries its whole text as a tooltip.
  */
 final class DecisionPane extends VBox {
 
     private static final double SPACING = 6;
     private static final double ROW_HEIGHT = 50;
-    private static final int ROWS = 4;
+    private static final int ROWS = 5;
     private static final String PART_JOIN = " · ";
     private static final String NO_VALUE = "—";
 
@@ -100,6 +101,11 @@ final class DecisionPane extends VBox {
     /** One row: the field's name and value, then its agreement and mark. */
     private final class RowCell extends ListCell<DecisionRow> {
 
+        // A narrow window or a wide font ends the value line in an ellipsis; the whole row is then its tooltip.
+        RowCell() {
+            Overrun.install(this);
+        }
+
         @Override
         protected void updateItem(final @Nullable DecisionRow item, final boolean empty) {
             super.updateItem(item, empty);
@@ -123,8 +129,12 @@ final class DecisionPane extends VBox {
             return DecisionWords.value(messages, row);
         }
 
-        // The value and, once a sample has answered, how many agree: "Casual — 3 of 4 samples agree · so far".
+        // The value and, once a sample has answered, how many agree: "Casual — 3 of 4 samples agree · so far". A value
+        // nothing supports is only likely, and a count beside it would read like a reading of the book.
         private String valueLine(final DecisionRow row) {
+            if (row.isLikely() && !row.value().isEmpty()) {
+                return valueOf(row) + " " + messages.get(MessageKey.BRIEF_LIKELY);
+            }
             final String agreement = agreementOf(row);
             return agreement.isEmpty() ? valueOf(row) : valueOf(row) + " — " + agreement;
         }

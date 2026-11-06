@@ -51,6 +51,7 @@ final class BriefView {
     private final WorkflowProgress progress;
     private final BriefLanguagesCard languages;
     private final BriefToneCard tone;
+    private final BriefStoryShapeField storyShape;
     private final BriefPoliciesCard policies;
     private final BriefAlsoCard also;
     private final BriefQualityCard quality;
@@ -67,7 +68,8 @@ final class BriefView {
         this.parts = parts;
         log.debug("building the brief");
         this.languages = new BriefLanguagesCard(parts);
-        this.tone = new BriefToneCard(viewModel, messages, parts.runs().view());
+        this.storyShape = new BriefStoryShapeField(viewModel, parts.lock(), messages);
+        this.tone = new BriefToneCard(viewModel, messages, parts.runs().view(), storyShape.node());
         this.policies = new BriefPoliciesCard(viewModel, messages);
         this.also = new BriefAlsoCard(viewModel, messages);
         this.quality = new BriefQualityCard(parts);
@@ -168,6 +170,7 @@ final class BriefView {
         }
         languages.show(brief);
         tone.show(brief);
+        storyShape.show(brief);
         policies.show(brief);
         also.show(brief);
         quality.show(brief);

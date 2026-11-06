@@ -51,8 +51,9 @@ final class BriefSuggester {
 
     // Six fields, each a quote of up to fifteen words, a value and a confidence, the narrator's name and the language.
     private static final int WINDOW_TOKENS = 512;
-    // Four fields of a basis and a value, the longest a voice of twelve words, and the narrator with a quote.
-    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(240, 480);
+    // Four fields of a basis and a value, the longest a voice of twelve words, the narrator with a quote, and the
+    // story shape with two quotes.
+    private static final OutputLimit SYNTHESIS_LIMIT = new OutputLimit(300, 560);
     private static final List<BriefField> SYNTHESIZED =
             List.of(BriefField.GENRE, BriefField.AUDIENCE, BriefField.VOICE);
     // The prompt's own text is English whatever the book's language.
@@ -147,7 +148,7 @@ final class BriefSuggester {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
         }
-        final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), calls, steps);
+        final Result<Synthesis> synthesis = synthesize(book, known, read.answers(), windows, calls, steps);
         if (synthesis.isErr()) {
             return Result.err(Objects.requireNonNull(synthesis.error(), ERROR));
         }
@@ -240,14 +241,16 @@ final class BriefSuggester {
             final SetupBook book,
             final Knowledge known,
             final List<@Nullable Map<BriefField, Answer>> answers,
+            final List<BookSample> windows,
             final ModelCalls calls,
             final BriefSteps steps) {
         if (!known.isKnown() && !readSynthesizedField(answers)) {
-            log.debug("Brief synthesis skipped: the book is unknown and no window read genre, audience or voice");
+            log.debug("Brief synthesis skipped: the book is unknown and no window read genre, audience or voice;"
+                    + " the story shape stays unread");
             steps.synthesisSkipped();
             return Result.ok(new Synthesis(null));
         }
-        final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers);
+        final Map<String, String> user = BriefSynthesisInput.of(BookFacts.of(book.document()), known, answers, windows);
         final ChatRequest request = setup.requestOf(book, PromptName.BRIEF_SYNTHESIS, user, SYNTHESIS_LIMIT);
         steps.synthesisStarted();
         final Result<String> reply = setup.send(request, PromptName.BRIEF_SYNTHESIS, calls, SetupCalls.askedOf(user));
@@ -305,8 +308,13 @@ final class BriefSuggester {
         final Decided<Gender> gender = person.value() == NarratorPerson.THIRD
                 ? answered
                 : NarratorGenderOrder.of(book, answered, synthesis, synthesized.windows(), synthesized.genders());
-        final BriefSuggestion suggestion =
-                suggestion(BriefDecision.register(answers, synthesis), person, gender, fields, language);
+        final BriefSuggestion suggestion = suggestion(
+                BriefDecision.register(answers, synthesis),
+                person,
+                gender,
+                fields,
+                language,
+                StoryShapeDecision.of(synthesis, synthesized.windows()));
         return aligned(book, suggestion, answers.size());
     }
 
@@ -315,7 +323,8 @@ final class BriefSuggester {
             final Decided<NarratorPerson> person,
             final Decided<Gender> gender,
             final Map<BriefField, Text> synthesized,
-            final @Nullable String language) {
+            final @Nullable String language,
+            final StoryShapeDecision.Shape shape) {
         final Map<BriefField, FieldEvidence> evidence = new EnumMap<>(BriefField.class);
         synthesized.forEach((field, decided) -> evidence.put(field, decided.evidence()));
         evidence.put(BriefField.REGISTER, register.evidence());
@@ -323,6 +332,10 @@ final class BriefSuggester {
         // A gender belongs to a first-person narrator; a third-person book has no narrator character to give one.
         if (person.value() != NarratorPerson.THIRD) {
             evidence.put(BriefField.NARRATOR_GENDER, gender.evidence());
+        }
+        final FieldEvidence shapeEvidence = shape.evidence();
+        if (shapeEvidence != null) {
+            evidence.put(BriefField.STORY_SHAPE, shapeEvidence);
         }
         return new BriefSuggestion(
                 valueOf(synthesized, BriefField.GENRE),
@@ -332,7 +345,9 @@ final class BriefSuggester {
                 person.value(),
                 gender.value(),
                 evidence,
-                language);
+                language,
+                shape.value(),
+                shape.quotes());
     }
 
     private static @Nullable String valueOf(final Map<BriefField, Text> synthesized, final BriefField field) {

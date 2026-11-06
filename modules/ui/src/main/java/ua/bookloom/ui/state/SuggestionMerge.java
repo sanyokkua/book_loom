@@ -23,6 +23,8 @@ final class SuggestionMerge {
 
     // The fields the model filled replace the brief's; one it left empty keeps what the person wrote, and the policies,
     // dial and languages are not its business. The policy keys and the likely marks the suggestion does not touch stay.
+    // The story shape is the model's to write, but the summaries switch is the person's: a forced value is never
+    // changed by a later suggestion, and an unforced one follows the new shape by itself (BookBrief#summariesOn).
     static BookBrief withSuggestion(final BookBrief brief, final BriefSuggestion guess) {
         final BriefSuggestion suggestion = guess.alignedTo(brief.narrator());
         final BookBrief merged = new BookBrief(
@@ -40,7 +42,8 @@ final class SuggestionMerge {
                         brief.alsoTranslate(),
                         brief.dial(),
                         narratorFor(brief, suggestion))
-                .withKeysOf(brief);
+                .withKeysOf(brief)
+                .withStoryShape(suggestion.storyShape() != null ? suggestion.storyShape() : brief.storyShape());
         return merged.withLikely(likelyAfter(brief, merged, suggestion));
     }
 
@@ -64,6 +67,9 @@ final class SuggestionMerge {
         }
         if (!before.narrator().equals(merged.narrator())) {
             likely.remove(BriefField.NARRATOR);
+        }
+        if (before.storyShape() != merged.storyShape()) {
+            likely.remove(BriefField.STORY_SHAPE);
         }
         likely.addAll(suggestion.likelyFields());
         return likely;

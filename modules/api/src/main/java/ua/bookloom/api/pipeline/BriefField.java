@@ -19,5 +19,8 @@ public enum BriefField {
     NARRATOR,
 
     /** The first-person narrator's gender. */
-    NARRATOR_GENDER
+    NARRATOR_GENDER,
+
+    /** Whether the chapters tell one story or separate ones, from one quote in each of two windows. */
+    STORY_SHAPE
 }

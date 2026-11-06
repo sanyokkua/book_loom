@@ -68,6 +68,15 @@ public interface ProjectService {
     Result<BookPlan> plan(String projectId);
 
     /**
+     * Counts the open book's chapters and how many finished ones the next Continue would summarise first, by the rule
+     * the run itself follows, whatever the brief's chapter-summaries switch says now.
+     *
+     * @param projectId the non-null id of an open project
+     * @return the tally; a {@code validation} error when no such project is stored or its book is not open
+     */
+    Result<ChapterTally> chapterTally(String projectId);
+
+    /**
      * Lists one unit's source segments with the chunk a run would pack each into, from the current brief; it makes no
      * model call and works before any run.
      *

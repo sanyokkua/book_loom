@@ -267,7 +267,7 @@ final class BriefDecision {
                         yield BriefSynthesisSchema.AUDIENCES.contains(audience) ? audience : null;
                     }
                     case VOICE -> value.isEmpty() || value.split("\\s+").length > MAX_VOICE_WORDS ? null : value;
-                    case REGISTER, NARRATOR, NARRATOR_GENDER ->
+                    case REGISTER, NARRATOR, NARRATOR_GENDER, STORY_SHAPE ->
                         throw new IllegalArgumentException("not a synthesized field: " + field);
                 };
         log.debug("Synthesis {} value valid: {}", field, kept != null);

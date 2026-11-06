@@ -158,7 +158,9 @@ changed the fingerprint once, so a database from before them was set aside on it
 lemma glossary entry (`forms`, `lemmaInferred`, `targetState`, the origins, `placeKind`, `meaning`, `meaningChoice`, `knowledge`, `unsureMentions`) and the lexicon's
 `forms` changed it once more (group 7 of `redesign-translation-pipeline`), so a database from before them is set aside.
 Group 12 replaced the rolling summary's root with `ChapterSummary` and gave the brief `storyShape` and
-`chapterSummaries`, so a database from before group 12 is set aside too.
+`chapterSummaries`, so a database from before group 12 is set aside too; the brief's `likely` set can name
+`STORY_SHAPE` since task 12.7 (a new `BriefField` constant changes the fingerprint), so a database from before it is set
+aside once more.
 
 ## resume-support {#resume-support}
 

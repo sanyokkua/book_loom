@@ -525,20 +525,22 @@ language more than once, for example with another model, quality or thinking set
 | Purpose line | "We filled this in from the book. Check the two languages — everything else is optional and can be changed later." | `BriefView` |
 | While translating | Read-only, with the banner "Pause the translation to change the brief." [Pause] (I) | new |
 | Languages | **Translate from** (Find out from the text (the model reads a sample) · a language · Other) with "The book's details say English. “Find out from the text” lets the model name it while filling in the brief." — the language comes from the file's marks or from the model (ADR-0042), never from a local detector · **Translate into** · **Project name** line ("automatic — follows the languages", Rename…). A used pair opens Same language pair. Locked once translating has started | `BriefLanguagesCard` |
-| Tone & style | Genre and Who reads it (each with "Suggested from the book · why ›", which opens the brief dialog), Register, Voice and period notes, Who tells the story (Unknown · “I” · “He / she”, short so a `SegmentedButton` fits in `uk`), Narrator's gender (asked at Start for a first-person story); **✦ Fill in from the book** | `BriefToneCard`, `BriefEvidenceRow`, `NarratorNotice`, `StyleSuggestion` |
+| Tone & style | Genre and Who reads it (each with "Suggested from the book · why ›", which opens the brief dialog), Register, Voice and period notes, Who tells the story (Unknown · “I” · “He / she”, short so a `SegmentedButton` fits in `uk`), Narrator's gender (asked at Start for a first-person story); Story shape (One story · Separate stories, `(likely)` until picked, hidden with no analysis) with the **Chapter summaries** switch under it ("Suggested: on — the chapters tell one story" / "Suggested: off — separate stories"; "{n} finished chapters will be summarised before the next passage." after turning it on); the ready card holds the same switch; **✦ Fill in from the book** | `BriefToneCard`, `BriefEvidenceRow`, `NarratorNotice`, `StyleSuggestion`, `BriefStoryShapeField`, `ChapterSummariesSwitch` |
 | How to translate | Names of people and places (Translate · Spell in the target alphabet · Keep as written), Text in other languages, Footnotes, Units, Close to the original ↔ natural | `BriefPoliciesCard` |
 | Also translate | Table of contents and chapter titles · Picture descriptions · The book's title and author · Copyright and edition notes (off) | `BriefAlsoCard` |
 | Quality and speed | Fast · Balanced · Max quality; one line on what the choice does and its relative cost; "For this book on this computer: about 2 h 21 min, measured on this model", or a range such as "about 2–3 h, estimate from the model test"; no line when nothing was measured (G10.5); the AI-model line with "change" | `BriefQualityCard` |
 
 ### Dialog · Fill in the brief from the book (G4, short) — B1–B3
 - **Header.** "50 % · 3 of 6 steps · Left about 30 s".
-- **Group "What it decides".** Genre, Register, Who tells the story, Who reads it · voice. Each shows its value so far
-  and its agreement ("3 of 4 samples agree"). Selecting one shows each sample's answer with its **verified quote**; a
-  value without a quote is not used.
+- **Group "What it decides".** Five rows: Genre, Register, Who tells the story, Who reads it · voice, Story shape. Each
+  shows its value so far and its agreement ("3 of 4 samples agree"); the story shape is decided by the last step, over
+  the two windows it compares ("One story — 2 of 2 samples agree"). A value nothing supports reads "Fantasy (likely)"
+  with no count. Selecting one shows each sample's answer with its **verified quote**; a value without a quote is not
+  used.
 - **Group "Steps".**
   1. What the model knows about the book — not listed when the title is the file name.
   2. Read sample 1…K (K = 3 / 4 / 5 for Fast / Balanced / Max), with the location range.
-  3. Decide genre, readers and voice.
+  3. Decide genre, readers, voice and story shape.
 - **Detail.**
   - Simple: a plain sentence, then Sent (the sample) \| Answer (a Field \| Value \| Quote grid).
   - Detailed: the info grid, the code (`book-knowledge`, `brief-suggestion` or `brief-synthesis`) and the parsed
