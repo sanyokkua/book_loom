@@ -178,6 +178,7 @@ inside stays open — it is never ended `FAILED` — because the next run plans 
 | `REPAIR` | one added when the one repair (or Fast's marks-only re-draft) or the reviewer's directed fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
 | `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
 | `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
+| `SUMMARY` | one per chapter, planned at the start of translation while the brief's chapter-summary switch is on | the chapter's first segment id | `DONE`; `NO_CALL` for a stored summary or the book's last chapter; `FAILED` when not kept or not stored |
 | `REVISION` | one forecast (`estimated`) at the start of a run whose dial revises backwards | none | `DONE` or `FAILED` |
 
 Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair`, `redraft`,
@@ -425,8 +426,22 @@ written follows the brief: `BookBrief.chapterSummaries` when the person forced i
 **When.** `run/ChapterSummaries` runs on the job thread right after the chunk commit that decides a chapter's last
 story segment (a FLAGGED one counts), before the next chunk is drafted, so the call is single-flight through the same
 gate as every other. Nothing is called when the switch is off, when a segment of the chapter is still pending, for the
-book's last chapter (no later window reads it), or for a chapter already tried in this run. A pause or a stop during
-the call is a plain failure in 12.4 (task 12.6 resends it on resume).
+book's last chapter (no later window reads it), or for a chapter already tried in this run.
+
+Before a run's first draft — so on every Continue, and with nothing pending too — the same class plans one `SUMMARY`
+step per chapter and, in reading order, writes the summary of every finished chapter (every story segment decided)
+whose summary is missing or whose stored `sourceHash` differs from the one its current source gives: a stop, a failed
+call, the switch turned on mid-book or a changed book all leave such a gap. An open chapter is left for its commit, the
+book's last chapter and a chapter with a current summary end their step `NO_CALL`, and a stored summary whose chapter
+key the current boundaries no longer produce is ignored. A store that cannot be read skips this pass with one WARN. A
+chapter is tried at most once per run, so a failed one is tried again on the next Continue; a stale summary whose
+rewrite fails stays stored and still reaches block 8, since the port has no remove. One INFO line counts the pass:
+`chapter summaries before drafts missing=… stale=… stored=…`.
+
+A pause or a stop aborts the call without waiting for the provider: its `cancelled` answer is not a failure (no WARN)
+but is routed like a draft's (`RoutedCalls`): a pause waits, then the whole call is made again from part 1 on resume
+(an aborted re-ask never falls back to the first answer); a stop ends the run with nothing of the summary kept and its
+step left open.
 
 **The call** (`memory/ChapterSummaryCall`, `12_PROMPT_CATALOG.md#rolling-summary-update`). It reads the chapter's
 masked source (tokens removed) with the map lines of the entries the chapter names, on the ANALYSIS frame, and asks

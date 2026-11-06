@@ -61,7 +61,11 @@ class TranslationJobEventsTest {
             "SegmentDecided",
             "CallSnapshotUpdated");
 
-    private static final List<String> OPENING = List.of("StageStarted", "StageStarted", "StepsPlanned");
+    // The chapter-summary steps (one per chapter) are planned before the chunk's drafts.
+    private static final List<String> OPENING = List.of("StageStarted", "StageStarted", "StepsPlanned", "StepsPlanned");
+
+    // A one-chapter book's chapter is its last: its summary step starts and ends with no call once it is decided.
+    private static final List<String> LAST_CHAPTER = List.of("StepChanged", "StepChanged");
 
     @TempDir
     private Path tempDir;
@@ -87,10 +91,11 @@ class TranslationJobEventsTest {
         assertThat(events)
                 .extracting(JobEventLabels::label)
                 .containsExactlyElementsOf(concat(List.of(
-                        List.of("StageStarted PREP", "StageStarted TRANSLATE", "StepsPlanned"),
+                        List.of("StageStarted PREP", "StageStarted TRANSLATE", "StepsPlanned", "StepsPlanned"),
                         acceptedOnFirstCall("Book.txt:0", 1, 2),
                         acceptedOnFirstCall("Book.txt:1", 2, 1),
                         acceptedOnFirstCall("Book.txt:2", 3, 0),
+                        LAST_CHAPTER,
                         List.of("Finished COMPLETED"))));
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
@@ -163,7 +168,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(2 + 1 + ACCEPTED_ON_FIRST_CALL.size() + 1);
+        assertThat(healthy).hasSize(OPENING.size() + ACCEPTED_ON_FIRST_CALL.size() + LAST_CHAPTER.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -200,7 +205,8 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactlyElementsOf(concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
+                .containsExactlyElementsOf(
+                        concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, LAST_CHAPTER, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -226,6 +232,7 @@ class TranslationJobEventsTest {
                         ACCEPTED_ON_FIRST_CALL,
                         List.of("Paused", "Resumed"),
                         ACCEPTED_ON_FIRST_CALL,
+                        LAST_CHAPTER,
                         List.of("Finished"))));
         shutdown(workers);
     }

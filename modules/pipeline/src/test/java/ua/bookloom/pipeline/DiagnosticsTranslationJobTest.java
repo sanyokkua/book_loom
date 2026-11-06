@@ -311,7 +311,7 @@ class DiagnosticsTranslationJobTest {
                                 .map(event -> event.getClass().getSimpleName())
                                 .filter(name -> !name.equals("CallSnapshotUpdated"))
                                 .toList()))
-                .isEqualTo("StageStarted StageStarted StepsPlanned " + call
+                .isEqualTo("StageStarted StageStarted StepsPlanned StepsPlanned " + call
                         + " SegmentDrafted StepChanged SegmentDecided " + call
                         + " StepChanged SegmentDecided " + call + " Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);

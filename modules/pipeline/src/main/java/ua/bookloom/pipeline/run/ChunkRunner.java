@@ -22,8 +22,9 @@ import ua.bookloom.pipeline.index.BookIndex;
  * whole chunk; with it off each segment is drafted and decided before the next is drafted. The reviewer on or off is
  * this one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
  * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
- * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary. A chunk whose commit
- * finishes a chapter is followed by that chapter's summary call ({@link ChapterSummaries}) before the next chunk.
+ * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary. Before the first draft
+ * every finished chapter that lacks a current summary gets one, and a chunk whose commit finishes a chapter is followed
+ * by that chapter's summary call ({@link ChapterSummaries}) before the next chunk.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
@@ -87,8 +88,25 @@ public final class ChunkRunner {
                 settings.frame().targetLanguage());
         this.drafting = new ChunkDrafting(steps, shared);
         this.deciding = new ChunkDeciding(sinks, learning, shared);
-        this.summaries =
-                new ChapterSummaries(steps.summary(), steps.planner(), stores, settings, sinks.emit(), document);
+        this.summaries = summaries(steps, settings, stores, sinks, document, shared.calls());
+    }
+
+    private static ChapterSummaries summaries(
+            final RunSteps steps,
+            final RunSettings settings,
+            final RunStores stores,
+            final RunSinks sinks,
+            final Document document,
+            final RoutedCalls calls) {
+        return new ChapterSummaries(
+                steps.summary(),
+                steps.planner(),
+                stores,
+                settings,
+                sinks.emit(),
+                document,
+                calls,
+                steps.calls().steps());
     }
 
     /**
@@ -101,6 +119,12 @@ public final class ChunkRunner {
     public RunEnd run(final WorkList work) {
         Objects.requireNonNull(work, "work");
         learning.replay(work.decidedSegments());
+        // Finished chapters with no summary, or one written from other source text, are summarised before any draft;
+        // this runs with nothing pending too, so a decided book's gaps are filled.
+        final Optional<RunEnd> summarised = summaries.beforeDrafts(work);
+        if (summarised.isPresent()) {
+            return summarised.get();
+        }
         while (work.hasPending()) {
             final Optional<RunEnd> end = runUnit(work, work.nextSection());
             if (end.isPresent()) {
@@ -165,8 +189,7 @@ public final class ChunkRunner {
             return committed;
         }
         // A chapter this chunk finished is summarised before the next chunk is drafted.
-        summaries.afterCommit(work, items);
-        return Optional.empty();
+        return summaries.afterCommit(work, items);
     }
 
     // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.

@@ -105,12 +105,22 @@ class TranslationJobStepsTest {
                 .toList();
     }
 
+    // The book is one chapter, its last: the switch's default is on, so its summary step is planned and done with no
+    // call.
+    private static void assertLastChapterStepOnly(final List<JobEvent> events) {
+        assertThat(planned(events, StepKind.SUMMARY)).containsExactly(1);
+        assertThat(ended(events, StepKind.SUMMARY))
+                .extracting(StepChanged::itemRef, StepChanged::result)
+                .containsExactly(tuple("Book.txt:0", StepResult.NO_CALL));
+    }
+
     private static int total(final List<JobEvent> events, final StepKind kind) {
         return planned(events, kind).stream().mapToInt(Integer::intValue).sum();
     }
 
-    // The task's Fast row: 12 drafts in the one chunk the token budget allows, 2 done at once, and no check, summary or
-    // revision.
+    // The task's Fast row: 12 drafts in the one chunk the token budget allows, 2 done at once, no check or revision,
+    // and
+    // the one chapter's summary step done with no call.
     @Test
     void run_fastTwelveSegmentsTwoVerbatim_plansTwelveDraftsNoCheck() {
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.FAST), tenDrafts()));
@@ -122,7 +132,7 @@ class TranslationJobStepsTest {
                 .extracting(StepChanged::itemRef)
                 .containsExactly("Book.txt:0", "Book.txt:6");
         assertThat(planned(events, StepKind.CHECK)).isEmpty();
-        assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
+        assertLastChapterStepOnly(events);
         assertThat(planned(events, StepKind.REVISION)).isEmpty();
     }
 
@@ -135,21 +145,21 @@ class TranslationJobStepsTest {
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
         assertThat(planned(events, StepKind.CHECK)).containsExactly(1);
         assertThat(ended(events, StepKind.CHECK)).hasSize(1).allMatch(change -> change.result() == StepResult.DONE);
-        assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
+        assertLastChapterStepOnly(events);
         assertThat(planned(events, StepKind.REVISION)).isEmpty();
     }
 
-    // Max: one chunk of 12, two checks and the revision as an estimate; the unit-end summary of the rolling summary
-    // is gone (12.3), so no summary step is planned and no summary call is made.
+    // Max: one chunk of 12, two checks and the revision as an estimate; the one chapter is the book's last, so its
+    // summary step needs no call (12.6).
     @Test
-    void run_maxTwelveSegments_plansNoSummaryAndMakesNoSummaryCall() {
+    void run_maxTwelveSegments_plansOneSummaryStepAndMakesNoSummaryCall() {
         final ScriptedChatModel model = maxModel();
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), model));
 
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
         assertThat(planned(events, StepKind.CHECK)).containsExactly(2);
         assertThat(ended(events, StepKind.CHECK)).hasSize(2);
-        assertThat(planned(events, StepKind.SUMMARY)).isEmpty();
+        assertLastChapterStepOnly(events);
         assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.CHAPTER_SUMMARY);
         assertThat(events).contains(new StepsPlanned(StepKind.REVISION, 1, true));
         assertThat(ended(events, StepKind.REVISION)).hasSize(1);

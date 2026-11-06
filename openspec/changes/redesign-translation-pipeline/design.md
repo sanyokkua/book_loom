@@ -471,7 +471,7 @@ task edits the delta requirement and this file's line; the result is written int
   sentence naming a map entry absent from the chapter is dropped. Renderings never come from a summary.
 - **When.** Right after the chunk commit that finishes a chapter (every story segment decided), before the next draft,
   single-flight. The book's last chapter is not summarised: no later window reads it. Continue first writes every missing summary of a finished chapter (or one whose `sourceHash`
-  changed). A failed call leaves the chapter without one (WARN) and is tried once more on the next Continue.
+  changed). A failed call leaves the chapter without one (WARN) and is tried once more on the next Continue. The plan holds one summary step per chapter while the switch is on, done at once with no call for a stored summary and the last chapter; a pause aborts the call and makes it again on resume, a stop keeps nothing of it.
 - **Store.** `api: project/ChapterSummary(projectId, chapterKey, unitId, firstSegment, segmentCount, text, sourceHash)`
   replaces `RollingSummary`; the port `api: persistence/SummaryRepository` is reshaped to save and list chapter
   summaries per project, with in-memory and SQLite adapters and contract tests. One transaction per summary. A renamed

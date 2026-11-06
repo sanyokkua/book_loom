@@ -52,6 +52,14 @@ final class ProgressLedger {
      */
     record ChunkState(int segments, int decided) {}
 
+    /**
+     * One chapter of a stored project while chapter summaries are on, for rebuilding the ledger of a reopened one.
+     *
+     * @param finished whether every segment of the chapter is decided
+     * @param stored whether its summary is stored
+     */
+    record ChapterState(boolean finished, boolean stored) {}
+
     private static final class Tally {
         private int basePlanned;
         private int baseDone;
@@ -86,16 +94,23 @@ final class ProgressLedger {
     }
 
     /**
-     * Makes the ledger of a reopened project from what is stored: every decided segment is a finished draft, and
-     * every chunk whose segments are all decided has its checks finished.
+     * Makes the ledger of a reopened project from what is stored: every decided segment is a finished draft, every
+     * chunk whose segments are all decided has its checks finished, and each chapter is one summary step, done when its
+     * summary is stored or, for the book's last chapter, which gets no summary, when it is finished.
      *
      * @param clock the clock the new run is measured by
      * @param chunks the project's chunks in order
      * @param checksPerChunk the checks one chunk gets at the project's quality
+     * @param chapters the project's chapters in order; empty when chapter summaries are off
      * @return a ledger that starts where the work stands and shows no time left until it has timed its own steps
      */
-    static ProgressLedger rebuilt(final RunClock clock, final List<ChunkState> chunks, final int checksPerChunk) {
+    static ProgressLedger rebuilt(
+            final RunClock clock,
+            final List<ChunkState> chunks,
+            final int checksPerChunk,
+            final List<ChapterState> chapters) {
         Objects.requireNonNull(chunks, "chunks");
+        Objects.requireNonNull(chapters, "chapters");
         final ProgressLedger ledger = new ProgressLedger(clock);
         final Tally drafts = ledger.tally(StepKind.DRAFT);
         final Tally checks = ledger.tally(StepKind.CHECK);
@@ -105,6 +120,7 @@ final class ProgressLedger {
             checks.basePlanned += checksPerChunk;
             checks.baseDone += chunk.decided() >= chunk.segments() ? checksPerChunk : 0;
         }
+        ledger.rebuiltSummaries(chapters);
         ledger.bookSegments = drafts.basePlanned;
         ledger.decided = drafts.baseDone;
         ledger.baselineDecided = drafts.baseDone;
@@ -118,6 +134,20 @@ final class ProgressLedger {
                 checks.baseDone,
                 checks.basePlanned);
         return ledger;
+    }
+
+    private void rebuiltSummaries(final List<ChapterState> chapters) {
+        if (chapters.isEmpty()) {
+            return;
+        }
+        final Tally summaries = tally(StepKind.SUMMARY);
+        summaries.basePlanned = chapters.size();
+        for (int index = 0; index < chapters.size(); index++) {
+            final ChapterState chapter = chapters.get(index);
+            final boolean last = index == chapters.size() - 1;
+            summaries.baseDone += chapter.stored() || (last && chapter.finished()) ? 1 : 0;
+        }
+        log.debug("progress ledger rebuilt: {} of {} summary steps", summaries.baseDone, summaries.basePlanned);
     }
 
     /**
@@ -172,6 +202,13 @@ final class ProgressLedger {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(result, "result");
         final Tally tally = tally(kind);
+        // A summary already stored, or the last chapter's, is work done before this run, not a step it finished: it
+        // must not open the time left before any step was timed.
+        if (kind == StepKind.SUMMARY && result == StepResult.NO_CALL) {
+            tally.baseDone += count;
+            log.debug("progress ledger: {} SUMMARY step(s) done with no call", count);
+            return;
+        }
         tally.done += count;
         finished += count;
         if (result != StepResult.NO_CALL) {

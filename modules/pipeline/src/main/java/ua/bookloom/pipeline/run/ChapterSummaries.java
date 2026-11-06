@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.run;
 
 import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,11 +12,14 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.pipeline.Tokens;
@@ -26,12 +30,18 @@ import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.memory.ChapterSummaryCall;
 import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.ChapterBoundaries.Chapter;
+import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.util.hash.HashUtil;
 
 /**
- * Writes a chapter's summary right after the chunk commit that finishes it (design D10), on the job thread, so the call
- * is single-flight with every other and the next draft waits for it. The last chapter is never summarised, since no
- * later window reads it. A summary that is not kept or not stored is a warning, never the end of the run.
+ * Writes the chapters' summaries (design D10) on the job thread, so each call is single-flight with every other and the
+ * next draft waits for it: before a run's first draft, the summary of every finished chapter that has none or whose
+ * stored one was written from other source text (a Continue after a stop, a failure, a switch turned on mid-book or a
+ * changed book); and during the run, the summary of the chapter a chunk commit finishes. The plan holds one step per
+ * chapter while the switch is on. The last chapter is never summarised, since no later window reads it: its step, and a
+ * stored summary's, are done at once with no call. A summary that is not kept or not stored is a warning, never the end
+ * of the run, and is tried again on the next Continue; a pause aborting the call makes it again on resume, and a stop
+ * keeps nothing of it.
  *
  * <p>Used from the job thread only.
  */
@@ -40,6 +50,21 @@ final class ChapterSummaries {
 
     // Masked sources are joined by a character no source holds, so two different chapters never hash the same.
     private static final String HASH_JOIN = "\u0000";
+    private static final String STEP_LABEL = "summary";
+
+    /** Where a chapter stands when a run starts, for its summary. */
+    private enum Standing {
+        /** Some of its segments are still pending; it is summarised when its last chunk commits. */
+        OPEN,
+        /** The book's last chapter, which no later window reads. */
+        LAST,
+        /** Its stored summary was written from the source it holds now. */
+        STORED,
+        /** Its stored summary was written from other source text. */
+        STALE,
+        /** It has no stored summary. */
+        MISSING
+    }
 
     private final ChapterSummaryCall call;
     private final TranslatePlanner planner;
@@ -48,6 +73,9 @@ final class ChapterSummaries {
     private final Consumer<JobEvent> emit;
     private final LexiconFilter filter;
     private final Map<String, Segment> segments;
+    private final RoutedCalls routed;
+    private final StepAnnouncer steps;
+    // The chapters this run has settled — summarised, tried, or done with no call — so none is asked twice in a run.
     private final Set<String> tried = new HashSet<>();
 
     /**
@@ -59,6 +87,8 @@ final class ChapterSummaries {
      * @param settings the non-null settings of the run
      * @param emit the non-null receiver of the kept-summary event
      * @param document the non-null book the chapters were found in
+     * @param routed the non-null router that answers a call a pause or a stop aborted
+     * @param steps the non-null announcer of the run's steps
      */
     ChapterSummaries(
             final ChapterSummaryCall call,
@@ -66,7 +96,9 @@ final class ChapterSummaries {
             final RunStores stores,
             final RunSettings settings,
             final Consumer<JobEvent> emit,
-            final Document document) {
+            final Document document,
+            final RoutedCalls routed,
+            final StepAnnouncer steps) {
         this.call = Objects.requireNonNull(call, "call");
         this.planner = Objects.requireNonNull(planner, "planner");
         this.stores = Objects.requireNonNull(stores, "stores");
@@ -77,6 +109,84 @@ final class ChapterSummaries {
         this.segments = Objects.requireNonNull(document, "document").units().stream()
                 .flatMap(unit -> unit.segments().stream())
                 .collect(Collectors.toUnmodifiableMap(Segment::id, Function.identity(), (first, second) -> first));
+        this.routed = Objects.requireNonNull(routed, "routed");
+        this.steps = Objects.requireNonNull(steps, "steps");
+    }
+
+    /**
+     * Plans one summary step per chapter and writes every finished chapter's missing or stale summary, in reading
+     * order, before the run's first draft. A store that cannot be read skips the pass: the run goes on without it.
+     *
+     * @param work the non-null work list, whose remaining segments tell an open chapter
+     * @return empty to go on, or how a stop during a summary call ended the run
+     */
+    Optional<RunEnd> beforeDrafts(final WorkList work) {
+        Objects.requireNonNull(work, "work");
+        if (!planner.frame().brief().summariesOn()) {
+            log.debug("No chapter summaries before drafts: the brief's switch is off");
+            return Optional.empty();
+        }
+        final List<Chapter> chapters = planner.frame().chapters().chapters();
+        steps.planned(StepKind.SUMMARY, chapters.size(), false);
+        final Result<List<ChapterSummary>> read = stores.summaries().list(projectId);
+        if (read.isErr()) {
+            log.warn(
+                    "Chapter summaries not read before drafts; none is written now reason={}",
+                    Objects.requireNonNull(read.error(), "error").code());
+            return Optional.empty();
+        }
+        return writeMissing(work, chapters, Objects.requireNonNull(read.data(), "summaries"));
+    }
+
+    // Only the chapters the book has now are looked at: a stored key the current boundaries give no chapter is left.
+    private Optional<RunEnd> writeMissing(
+            final WorkList work, final List<Chapter> chapters, final List<ChapterSummary> stored) {
+        final Map<String, ChapterSummary> byKey = stored.stream()
+                .collect(Collectors.toMap(ChapterSummary::chapterKey, Function.identity(), (first, second) -> second));
+        final Map<Standing, Integer> counts = new EnumMap<>(Standing.class);
+        for (final Chapter chapter : chapters) {
+            final Optional<RunEnd> end = beforeDraft(work, chapter, byKey.get(chapter.key()), counts);
+            if (end.isPresent()) {
+                return end;
+            }
+        }
+        log.info(
+                "chapter summaries before drafts missing={} stale={} stored={}",
+                counts.getOrDefault(Standing.MISSING, 0),
+                counts.getOrDefault(Standing.STALE, 0),
+                counts.getOrDefault(Standing.STORED, 0));
+        return Optional.empty();
+    }
+
+    private Optional<RunEnd> beforeDraft(
+            final WorkList work,
+            final Chapter chapter,
+            @Nullable final ChapterSummary stored,
+            final Map<Standing, Integer> counts) {
+        final Standing standing = standing(work, chapter, stored);
+        log.debug("Chapter {} key={} summary={}", chapter.number(), chapter.key(), standing);
+        counts.merge(standing, 1, Integer::sum);
+        return switch (standing) {
+            case OPEN -> Optional.empty();
+            case LAST, STORED -> {
+                settled(chapter);
+                yield Optional.empty();
+            }
+            case STALE, MISSING -> tried.add(chapter.key()) ? summarize(work, chapter) : Optional.empty();
+        };
+    }
+
+    private Standing standing(final WorkList work, final Chapter chapter, @Nullable final ChapterSummary stored) {
+        if (isOpen(work, chapter)) {
+            return Standing.OPEN;
+        }
+        if (isLast(planner.frame().chapters(), chapter)) {
+            return Standing.LAST;
+        }
+        if (stored == null) {
+            return Standing.MISSING;
+        }
+        return stored.sourceHash().equals(sourceHash(held(chapter))) ? Standing.STORED : Standing.STALE;
     }
 
     /**
@@ -84,13 +194,14 @@ final class ChapterSummaries {
      *
      * @param work the non-null work list, whose remaining segments tell an open chapter
      * @param items the non-null items of the committed chunk, in reading order
+     * @return empty to go on, or how a stop during the summary call ended the run
      */
-    void afterCommit(final WorkList work, final List<WorkItem> items) {
+    Optional<RunEnd> afterCommit(final WorkList work, final List<WorkItem> items) {
         Objects.requireNonNull(work, "work");
         Objects.requireNonNull(items, "items");
         if (!planner.frame().brief().summariesOn()) {
             log.debug("No chapter summary: the brief's switch is off");
-            return;
+            return Optional.empty();
         }
         final ChapterBoundaries chapters = planner.frame().chapters();
         final Optional<Chapter> found =
@@ -99,13 +210,17 @@ final class ChapterSummaries {
             log.debug(
                     "No chapter summary: segment {} is in no chapter",
                     items.getLast().segment().id());
-            return;
+            return Optional.empty();
         }
         final Chapter chapter = found.get();
-        if (isOpen(work, chapter) || isLast(chapters, chapter) || !tried.add(chapter.key())) {
-            return;
+        if (isOpen(work, chapter)) {
+            return Optional.empty();
         }
-        summarize(chapter);
+        if (isLast(chapters, chapter)) {
+            settled(chapter);
+            return Optional.empty();
+        }
+        return tried.add(chapter.key()) ? summarize(work, chapter) : Optional.empty();
     }
 
     private boolean isOpen(final WorkList work, final Chapter chapter) {
@@ -127,11 +242,17 @@ final class ChapterSummaries {
         return last;
     }
 
-    private void summarize(final Chapter chapter) {
-        final List<Segment> held = chapter.segmentIds().stream()
-                .map(segments::get)
-                .filter(Objects::nonNull)
-                .toList();
+    // A chapter that needs no call: its step is done at once, once per run.
+    private void settled(final Chapter chapter) {
+        if (tried.add(chapter.key())) {
+            steps.instant(StepKind.SUMMARY, STEP_LABEL, chapter.key(), firstId(chapter), StepResult.NO_CALL);
+        }
+    }
+
+    // The step stays open when a stop ends the run inside the call; a pause makes the whole call again on resume.
+    private Optional<RunEnd> summarize(final WorkList work, final Chapter chapter) {
+        steps.started(StepKind.SUMMARY, STEP_LABEL, chapter.key(), firstId(chapter));
+        final List<Segment> held = held(chapter);
         final Result<List<GlossaryEntry>> glossary = stores.glossary().all(projectId);
         if (glossary.isErr()) {
             log.warn(
@@ -139,17 +260,57 @@ final class ChapterSummaries {
                     chapter.number(),
                     chapter.key(),
                     Objects.requireNonNull(glossary.error(), "error").code());
-            return;
+            steps.ended(StepKind.SUMMARY, chapter.key(), StepResult.FAILED);
+            return Optional.empty();
         }
         final BookMap map = planner.map(
                 Objects.requireNonNull(glossary.data(), "glossary"), new Lexicon(stores.lexicon()).entries(projectId));
-        call.summarize(chapter, Tokens.visibleTexts(held), map, filter).ifPresent(kept -> store(chapter, held, kept));
+        final List<String> lines = Tokens.visibleTexts(held);
+        return answered(
+                chapter, held, routed.untilAnswered(work, null, () -> call.summarize(chapter, lines, map, filter)));
     }
 
-    private void store(final Chapter chapter, final List<Segment> held, final ChapterSummaryCall.Kept kept) {
-        final String sourceHash = HashUtil.sha256Hex(
+    private Optional<RunEnd> answered(
+            final Chapter chapter, final List<Segment> held, final Step<Optional<ChapterSummaryCall.Kept>> answer) {
+        return switch (answer) {
+            case Step.Stopped<Optional<ChapterSummaryCall.Kept>>(final RunEnd end) -> {
+                log.debug("Chapter summary call chapter={} key={} ended with the run", chapter.number(), chapter.key());
+                yield Optional.of(end);
+            }
+            case Step.Done<Optional<ChapterSummaryCall.Kept>>(final Optional<ChapterSummaryCall.Kept> kept) -> {
+                final boolean stored = kept.isPresent() && store(chapter, held, kept.get());
+                steps.ended(StepKind.SUMMARY, chapter.key(), stored ? StepResult.DONE : StepResult.FAILED);
+                yield Optional.empty();
+            }
+        };
+    }
+
+    private List<Segment> held(final Chapter chapter) {
+        return chapter.segmentIds().stream()
+                .map(segments::get)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private static String firstId(final Chapter chapter) {
+        return chapter.segmentIds().getFirst();
+    }
+
+    /**
+     * The hash of a chapter's source, which a stored summary keeps so a changed book is told from the one it was
+     * written from.
+     *
+     * @param held the non-null segments of the chapter, in reading order
+     * @return the hex SHA-256 of their masked texts joined by a character no source holds
+     */
+    static String sourceHash(final List<Segment> held) {
+        return HashUtil.sha256Hex(
                 String.join(HASH_JOIN, held.stream().map(Segment::masked).toList())
                         .getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean store(final Chapter chapter, final List<Segment> held, final ChapterSummaryCall.Kept kept) {
+        final String sourceHash = sourceHash(held);
         final Result<ChapterSummary> saved = stores.summaries()
                 .save(new ChapterSummary(
                         projectId,
@@ -165,10 +326,11 @@ final class ChapterSummaries {
                     chapter.number(),
                     chapter.key(),
                     Objects.requireNonNull(saved.error(), "error").code());
-            return;
+            return false;
         }
         log.debug(
                 "Chapter summary stored chapter={} key={} sourceHash={}", chapter.number(), chapter.key(), sourceHash);
         emit.accept(new ChapterSummaryKept(chapter.key(), chapter.number(), kept.sentences(), kept.text()));
+        return true;
     }
 }

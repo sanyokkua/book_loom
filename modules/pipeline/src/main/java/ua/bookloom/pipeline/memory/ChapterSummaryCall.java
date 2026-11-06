@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -31,7 +33,8 @@ import ua.bookloom.pipeline.prompt.PromptName;
  * The call that writes a finished chapter's summary (design D10): the chapter's source with the names it holds, read in
  * parts when it is longer than one part of the model's tier, each part given the summary of the part before; the last
  * part's checked sentences are the chapter's. A failed, unreadable or emptied part leaves the chapter without a
- * summary and one warning, because a missing summary only means later calls get one fewer.
+ * summary and one warning, because a missing summary only means later calls get one fewer. A part's call that a pause
+ * or a stop aborted is no failure: the caller routes it like a draft's, and the chapter is asked again from part 1.
  *
  * <p>Used from the job thread only.
  */
@@ -71,6 +74,8 @@ public final class ChapterSummaryCall {
 
     private record Failed(String reason) implements Part {}
 
+    private record Aborted(AppError error, int part) implements Part {}
+
     /** One part of a chapter as it is asked. */
     private record Asked(int number, int parts, String text, List<String> mapLines, String previous) {}
 
@@ -103,9 +108,10 @@ public final class ChapterSummaryCall {
      * @param sourceLines the non-null source of its segments, tokens removed, one per segment in reading order
      * @param map the non-null book map, read only
      * @param filter the non-null filter of the recurring terms' renderings
-     * @return the kept summary, or empty when a part's call failed or its reply kept nothing
+     * @return the kept summary, or empty when a part's call failed or its reply kept nothing; an error only when a
+     *     pause or a stop aborted a part's call ({@code cancelled}), so the caller makes the whole call again or ends
      */
-    public Optional<Kept> summarize(
+    public Result<Optional<Kept>> summarize(
             final Chapter chapter, final List<String> sourceLines, final BookMap map, final LexiconFilter filter) {
         Objects.requireNonNull(chapter, "chapter");
         Objects.requireNonNull(sourceLines, "sourceLines");
@@ -122,20 +128,33 @@ public final class ChapterSummaryCall {
                 chapter.tokens(),
                 parts.size(),
                 WindowMap.chapterCounted(sourceLines, map, filter).size());
-        return switch (askParts(chapter, parts, map, filter, gate)) {
+        return outcome(chapter, askParts(chapter, parts, map, filter, gate));
+    }
+
+    private Result<Optional<Kept>> outcome(final Chapter chapter, final Part part) {
+        return switch (part) {
             case Failed(final String reason) -> {
                 log.warn(
                         "Chapter summary not kept chapter={} key={} reason={}",
                         chapter.number(),
                         chapter.key(),
                         reason);
-                yield Optional.empty();
+                yield Result.ok(Optional.empty());
             }
-            case Answered(final Kept kept) -> Optional.of(logKept(chapter, kept));
+            case Aborted(final AppError error, final int number) -> {
+                log.debug(
+                        "Chapter summary call aborted chapter={} key={} part={}; made again on resume",
+                        chapter.number(),
+                        chapter.key(),
+                        number);
+                yield Result.err(error);
+            }
+            case Answered(final Kept kept) -> Result.ok(Optional.of(logKept(chapter, kept)));
         };
     }
 
-    // Each part after the first carries the kept summary of the one before; the first failed part ends the chapter.
+    // Each part after the first carries the kept summary of the one before; the first failed or aborted part ends the
+    // chapter.
     private Part askParts(
             final Chapter chapter,
             final List<List<String>> parts,
@@ -152,6 +171,9 @@ public final class ChapterSummaryCall {
             switch (outcome) {
                 case Failed failed -> {
                     return failed;
+                }
+                case Aborted aborted -> {
+                    return aborted;
                 }
                 case Answered(final Kept kept) -> previous = kept.text();
             }
@@ -176,16 +198,22 @@ public final class ChapterSummaryCall {
                 + excerpt(asked.text());
         final Result<ChatResponse> first = send(values(asked, ""), line);
         if (first.isErr()) {
-            return new Failed(
-                    Objects.requireNonNull(first.error(), "error").code().name());
+            final AppError error = Objects.requireNonNull(first.error(), "error");
+            return isAbort(error)
+                    ? new Aborted(error, asked.number())
+                    : new Failed(error.code().name());
         }
         final Optional<SummaryGate.Reading> read =
                 gate.read(Objects.requireNonNull(first.data(), "reply").content(), place, false);
         if (read.isEmpty()) {
             return new Failed(UNREADABLE);
         }
-        final SummaryGate.Reading reading =
-                read.get().faultyWords().isEmpty() ? read.get() : reasked(asked, line, place, gate, read.get());
+        return read.get().faultyWords().isEmpty()
+                ? kept(line, read.get())
+                : reasked(asked, line, place, gate, read.get());
+    }
+
+    private Part kept(final String line, final SummaryGate.Reading reading) {
         if (reading.clean().isEmpty()) {
             return new Failed(ALL_DROPPED);
         }
@@ -195,9 +223,15 @@ public final class ChapterSummaryCall {
         return new Answered(kept);
     }
 
+    // A pause or a stop answers the call cancelled; a timeout or any other error is the part's failure.
+    private static boolean isAbort(final AppError error) {
+        return error.code() == ErrorCode.cancelled;
+    }
+
     // The second answer goes through the same checks with its faulty sentences dropped; when it cannot be had, the
-    // first answer's clean sentences stand.
-    private SummaryGate.Reading reasked(
+    // first answer's clean sentences stand. An aborted re-ask is an abort: the whole call is made again, never the
+    // first answer kept in its place.
+    private Part reasked(
             final Asked asked,
             final String line,
             final SummaryGate.Place place,
@@ -212,6 +246,9 @@ public final class ChapterSummaryCall {
         final String correction = CORRECTION_START + String.join(", ", first.faultyWords())
                 + ". Write the summary again with every word in the target language.";
         final Result<ChatResponse> second = send(values(asked, correction), line);
+        if (second.isErr() && isAbort(Objects.requireNonNull(second.error(), "error"))) {
+            return new Aborted(Objects.requireNonNull(second.error(), "error"), asked.number());
+        }
         final Optional<SummaryGate.Reading> read = second.isErr()
                 ? Optional.empty()
                 : gate.read(Objects.requireNonNull(second.data(), "reply").content(), place, true);
@@ -220,9 +257,9 @@ public final class ChapterSummaryCall {
                     "Chapter summary re-ask chapter={} part={} gave nothing; the first answer's clean sentences stand",
                     place.chapter(),
                     place.part());
-            return first;
+            return kept(line, first);
         }
-        return read.get();
+        return kept(line, read.get());
     }
 
     private Result<ChatResponse> send(final Map<String, String> values, final String line) {

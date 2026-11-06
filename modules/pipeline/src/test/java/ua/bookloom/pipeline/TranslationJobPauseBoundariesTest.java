@@ -92,7 +92,7 @@ class TranslationJobPauseBoundariesTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactly(
-                        "StageStarted StageStarted StepsPlanned SegmentStarted StepChanged ContextAssembled Paused"
+                        "StageStarted StageStarted StepsPlanned StepsPlanned SegmentStarted StepChanged ContextAssembled Paused"
                                 .split(" "));
         assertThat(model.requests()).isEmpty();
         translation.resume();

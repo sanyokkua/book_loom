@@ -69,7 +69,7 @@ WHEN the Proofread stage plans its windows, the system SHALL skip, with no model
 
 ### Requirement: Write the missing chapter summaries first
 
-WHEN Continue starts a run with chapter summaries on, the system SHALL write the summary of every finished chapter that has none, before the next draft that needs it, and SHALL write none for a chapter that is not finished.
+WHEN Continue starts a run with chapter summaries on, the system SHALL write the summary of every finished chapter that has none, or whose stored summary was written from other source text, before the next draft that needs it, and SHALL write none for a chapter that is not finished nor for the book's last chapter.
 
 **Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`, `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#resume-support`, `design.md#d10--chapter-summaries-and-the-recently-present-card`. In plain words: a chapter summary is what later chapters learn the story from, so a restart that lost one would leave every later window without it; Continue first fills the gap. A chapter that is still being translated is not summarised until it is done.
 

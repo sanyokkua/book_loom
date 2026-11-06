@@ -1285,7 +1285,7 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Test first:** `EarlierChaptersTest.block8_chapter3_carriesChapters1And2`; `block8_overBudget_dropsOldestKeepsNewest`; `block8_firstChapter_none`; `SummarySweepTest.rename_pinnedTarget_swappedInSummary`; `snapshot_storesSummaryKeys`.
   - **Done when:** the tests above are green, and so are the acceptance test's `run_switchOn_chapter2FirstDraftCarriesChapter1Summary` and `run_summaryNamesEntryAbsentFromChapter1_sentenceDropped` in both dialects; with 12.4's two cases the whole acceptance test is green.
 
-- [ ] 12.6 Write missing summaries first on Continue, count chapter-summary steps in the plan, and resume a cut-off summary call. A stopped or restarted run keeps its story memory complete. → :pipeline, :ui
+- [x] 12.6 Write missing summaries first on Continue, count chapter-summary steps in the plan, and resume a cut-off summary call. A stopped or restarted run keeps its story memory complete. → :pipeline, :ui
   - **Satisfies:** "Write the missing chapter summaries first" (resume), "Recompute the progress of a reopened project from its stored decisions" (resume; the summary steps), "Pause on request at the next boundary" (resume; the chapter-summary call), "Pause and stop act without waiting for the provider" (translation-pipeline; the chapter-summary call), "Plan a run's steps and count the time spent" (translation-pipeline; the chapter-summary steps)
   - **Depends on:** 12.5
   - **Excludes:** proofread windows in the plan and on resume (group 13).

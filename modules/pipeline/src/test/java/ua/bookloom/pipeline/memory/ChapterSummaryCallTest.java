@@ -28,6 +28,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
@@ -40,6 +41,9 @@ import ua.bookloom.pipeline.ScriptedChatModel;
  * a long chapter read in parts, and a failed call kept as no summary with one warning.
  */
 class ChapterSummaryCallTest {
+
+    private static final AppError CANCELLED =
+            AppError.of(ErrorCode.cancelled, "Cancelled", "The call was interrupted by a pause.");
 
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
     private Logger bookloom;
@@ -68,7 +72,7 @@ class ChapterSummaryCallTest {
                         FORMAT, reply("Мірта йде до міста. Там вона знаходить брата. Брат мовчить. Вони вертаються."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(1);
         assertThat(kept)
@@ -83,7 +87,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, reply(withChto)).answerTo(FORMAT, reply(withChto));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(2);
         assertThat(userMessage(model.requests().getFirst())).doesNotContain(ChapterSummaryCall.CORRECTION_START);
@@ -97,7 +101,7 @@ class ChapterSummaryCallTest {
                 .answerTo(FORMAT, reply("Мірта йде до міста. Вона зустрічає Глафіру біля воріт. Брат мовчить."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                call(model, event -> {}).summarize(chapter(2, 2), SOURCE, map(List.of(GLAFIRA)), FILTER);
+                keptOf(call(model, event -> {}).summarize(chapter(2, 2), SOURCE, map(List.of(GLAFIRA)), FILTER));
 
         assertThat(model.requests()).as("no re-ask for a name").hasSize(1);
         assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
@@ -114,7 +118,7 @@ class ChapterSummaryCallTest {
                 .answerTo(FORMAT, reply("Частина третя. Мірта вертається."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                call(model, event -> {}).summarize(chapter(3, 60), lines, map(List.of()), FILTER);
+                keptOf(call(model, event -> {}).summarize(chapter(3, 60), lines, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(3);
         assertThat(userMessage(model.requests().getFirst())).doesNotContain("<Earlier part>");
@@ -132,7 +136,7 @@ class ChapterSummaryCallTest {
                         Result.err(AppError.of(ErrorCode.contextWindow, "Too long", "The prompt does not fit.")));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                call(model, event -> {}).summarize(chapter(4, 2), SOURCE, map(List.of()), FILTER);
+                keptOf(call(model, event -> {}).summarize(chapter(4, 2), SOURCE, map(List.of()), FILTER));
 
         assertThat(kept).isEmpty();
         assertThat(appender.list)
@@ -150,7 +154,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, reply("Мірта йде до міста. Там вона знаходить брата."));
         final List<JobEvent> events = new ArrayList<>();
 
-        call(model, events::add).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+        keptOf(call(model, events::add).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
 
         final List<CallSnapshot> shown = events.stream()
                 .filter(CallSnapshotUpdated.class::isInstance)
@@ -164,6 +168,58 @@ class ChapterSummaryCallTest {
         assertThat(shown.getLast().items())
                 .extracting(CallItem::id, CallItem::target)
                 .containsExactly(tuple(asked, "Мірта йде до міста. Там вона знаходить брата."));
+    }
+
+    // IF a pause's abort were a failure, THEN the chapter would be left without a summary and a warning after resume.
+    @Test
+    void call_cancelled_errorNoWarn() {
+        final ScriptedChatModel model = new ScriptedChatModel().answerTo(FORMAT, Result.err(CANCELLED));
+
+        final Result<Optional<ChapterSummaryCall.Kept>> result =
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+
+        assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
+        assertThat(appender.list).noneMatch(event -> event.getLevel().isGreaterOrEqual(Level.WARN));
+    }
+
+    // IF an aborted re-ask fell back to the first answer, THEN a pause would keep a summary the run never finished.
+    @Test
+    void call_reAskCancelled_errorNotTheFirstAnswer() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answerTo(FORMAT, reply("Мірта йде до міста. Вона знає, что брат там."))
+                .answerTo(FORMAT, Result.err(CANCELLED));
+
+        final Result<Optional<ChapterSummaryCall.Kept>> result =
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
+    }
+
+    // A timeout is the call's failure, not an abort: the chapter gets no summary and the warning.
+    @Test
+    void call_timeout_noSummaryWarn() {
+        final Result<ChatResponse> timedOut =
+                Result.err(AppError.of(ErrorCode.timeout, "Timed out", "The call took too long."));
+        // Two, so a resend after the timeout meets the same answer.
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answerTo(FORMAT, timedOut).answerTo(FORMAT, timedOut);
+
+        final Result<Optional<ChapterSummaryCall.Kept>> result =
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+
+        assertThat(result.data()).isEmpty();
+        assertThat(appender.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .singleElement()
+                .asString()
+                .contains("reason=timeout");
+    }
+
+    private static Optional<ChapterSummaryCall.Kept> keptOf(final Result<Optional<ChapterSummaryCall.Kept>> result) {
+        assertThat(result.isOk()).as("summary error %s", result.error()).isTrue();
+        return java.util.Objects.requireNonNull(result.data(), "kept");
     }
 
     private static String userMessage(final ChatRequest request) {
