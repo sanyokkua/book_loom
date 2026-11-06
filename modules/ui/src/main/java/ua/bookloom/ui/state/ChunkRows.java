@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
@@ -22,7 +23,8 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.SegmentPath;
 
 /**
- * The rows of the live card: every segment the run has started, in book order, each with how far it has got. The
+ * The rows of the live card: every segment the run has started, in book order, each with how far it has got, and a
+ * row for each chapter summary the run kept, after its chapter's rows. The
  * chunk being translated is last and earlier chunks stay above it as history, so a reviewed chunk whose check decides
  * all its drafts at once never empties the card. A directed fix or a review call of one segment never adds a
  * row; only a draft call adds a segment the run did not announce. The history is the run's own: a new run session
@@ -134,6 +136,19 @@ final class ChunkRows {
     private static String firstCode(final String detail) {
         final String first = detail.split("[^A-Za-z_]", 2)[0];
         return first.isEmpty() ? "OTHER" : first.toUpperCase(Locale.ROOT);
+    }
+
+    // Called before the next chapter's first draft, so the end of the list is right after the chapter's last row; a
+    // chapter summarised again on Continue keeps its place.
+    void summaryKept(final ChapterSummaryKept kept) {
+        final LiveRow row = LiveRow.chapterSummary(kept);
+        final boolean again = rows.put(row.segmentId(), row) != null;
+        log.debug("live rows: chapter {} summary kept, {}", kept.chapter(), again ? "replaced in place" : "added");
+        if (!again) {
+            order.add(row.segmentId());
+            bound();
+        }
+        shown = null;
     }
 
     void drafted(final SegmentDrafted event) {

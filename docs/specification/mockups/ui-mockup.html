@@ -657,7 +657,7 @@ const ST = {
     model: 'found',             // first launch: found | none (looked for once, automatically — owner decision 13)
     importState: 'ok',          // ok | inspecting | known | mismatch | drm | corrupt | unsupported
     run: 'running',             // see RUN below
-    liveMode: 'simple', liveTab: 'live', autoShow: true, liveSel: 1, liveManual: false,
+    liveMode: 'simple', liveTab: 'live', autoShow: true, liveSel: 2, liveManual: false,
     providerKind: 'ollama', providerAuth: 'none', customHeaders: false, customModels: false, dirty: false, connOpen: false,
     tech: false,
     temp: 'app',                // Models › Temperature: app | mine | none
@@ -707,8 +707,8 @@ const toks = s => esc(s).replace(/⟦([a-z]?)(\d+)⟧/g, '<span class="tok" titl
 const toksPlain = s => esc(s).replace(/⟦([a-z]?)(\d+)⟧/g, '');
 const markText = s => s.replace(/⟦[a-z]?(\d+)⟧/g, '⟦$1⟧');
 /* state marker = icon + word (G, Ikonli in the app); one colour per meaning: blue working · green done · amber needs you · red failed · grey waiting · sand kept */
-const MK = {wait: 'waiting', run: 'translating…', done: 'translated', flag: 'to review', fail: 'translated again alone', keep: 'kept as is', ok: 'done', cancel: 'cancelled'};
-const mk = (kind, word) => `<span class="mk ${kind === 'ok' ? 'done' : kind === 'cancel' ? 'wait' : kind}">${word || MK[kind]}</span>`;
+const MK = {sum: 'summary kept', wait: 'waiting', run: 'translating…', done: 'translated', flag: 'to review', fail: 'translated again alone', keep: 'kept as is', ok: 'done', cancel: 'cancelled'};
+const mk = (kind, word) => `<span class="mk ${kind === 'ok' || kind === 'sum' ? 'done' : kind === 'cancel' ? 'wait' : kind}">${word || MK[kind]}</span>`;
 const req = (...ids) => ids.map(i => `<span class="req" title="Requirement ${i} — see README">${i}</span>`).join(' ');
 const sw = (on, extra = '') => `<span class="switch ${on ? 'on' : ''}" tabindex="0" role="switch" ${extra}></span>`;
 const seg = (opts, on, extra = '') => `<span class="seg" ${extra}>${opts.map((o, i) => `<span class="${i === on ? 'on' : ''}" tabindex="0">${o}</span>`).join('')}</span>`;
@@ -1219,7 +1219,9 @@ ${isRunning() ? `<div class="banner" style="margin-bottom:12px"><span class="ico
 </script>
 <script>
 /* ============================================================ TRANSLATING (T1–T12, C1, A, G10) */
+/* a kept chapter summary is a row of its own after its chapter's rows (D10): "Chapter 1 summarised", its text in the detail */
 const LIVE = [
+    {loc: 'Chapter 1 summarised', src: '', tgt: 'Розділ пояснює, як сила тяжіння тримає Місяць на його шляху. Ньютон порівнює падіння яблука з рухом Місяця.', st: 'sum', call: null, summary: true},
     {loc: 'ch2 · p01', src: 'Orbits', tgt: 'Орбіти', st: 'done', call: 41, id: 1},
     {loc: 'ch2 · p02', src: 'An orbit is the curved path an object follows around a planet or a star.', tgt: 'Орбіта — це вигнутий шлях, яким об’єкт рухається навколо планети чи зорі.', st: 'done', call: 41, id: 2},
     {loc: 'ch2 · p03', src: 'Gravity pulls the object in; its speed carries it forward.', tgt: 'Гравітація тягне об’єкт до себе, а швидкість несе його вперед.', st: 'done', call: 41, id: 3},
@@ -1236,16 +1238,16 @@ const REPLY42 = ['Уявіть гармату на вершині дуже ви�
 const rowState = r => r.call === 42 && r.st === 'run' ? RUN[ST.run].inCall : isFinished() && r.st === 'wait' ? 'done' : r.st;
 function simulateReply() {
     LIVE.forEach(r => { if (r.call === 42) { r.st = 'done'; r.tgt = REPLY42[r.id - 1]; } });
-    LIVE[8].st = 'run'; LIVE[8].call = 43; LIVE[9].st = 'run'; LIVE[9].call = 43;
-    if (ST.autoShow && !ST.liveManual) ST.liveSel = 4;
+    LIVE[9].st = 'run'; LIVE[9].call = 43; LIVE[10].st = 'run'; LIVE[10].call = 43;
+    if (ST.autoShow && !ST.liveManual) ST.liveSel = 5;
     rerender();
     toast('ok', 'Segments 5–8 translated', 'All 4 came back in one reply.');
 }
 function pickLive(i) { ST.liveSel = i; ST.liveManual = true; rerender(); }      // only a click turns following off (JX-T3)
 const detailedLive = () => ST.liveMode === 'detailed';
 function liveList() {
-    return `<div class="list">${LIVE.map((r, i) => `<div class="li ${i === ST.liveSel ? 'sel' : ''}" tabindex="0" title="${esc(markText(r.src))}" onclick="pickLive(${i})">
-  <span class="t"><span class="muted small">${r.loc}</span> ${toksPlain(r.src)}</span>${mk(rowState(r))}</div>`).join('')}</div>`;
+    return `<div class="list">${LIVE.map((r, i) => `<div class="li ${i === ST.liveSel ? 'sel' : ''}" tabindex="0" title="${esc(markText(r.summary ? r.tgt : r.src))}" onclick="pickLive(${i})">
+  <span class="t"><span class="muted small">${r.loc}</span> ${toksPlain(r.summary ? r.tgt : r.src)}</span>${mk(rowState(r))}</div>`).join('')}</div>`;
 }
 const CALL42_SYS = [
     {h: 'Style', cnt: '6 rules', kind: 'list', open: true, lines: ['Register: neutral; audience: adult general reader', 'Narrator: third person', 'Names: transliterate; text in other languages: keep as written', 'Units: keep; footnotes: translate', 'Balance: balanced (55)', 'Keep every ⟦g0⟧ mark exactly once, in order']},
@@ -1253,16 +1255,17 @@ const CALL42_SYS = [
     {h: 'Answer format', cnt: 'JSON', kind: 'text', lines: ['One item per id: {"items":[{"id":"1","target":"…"}]}']},
 ];
 const CALL42_USER = [
-    {h: 'Scene summary', cnt: '', kind: 'text', lines: ['Chapter 2 introduces orbits; a cannon on a mountain follows.']},
+    {h: 'Earlier chapters', cnt: '1', kind: 'text', lines: ['Chapter 1: Розділ пояснює, як сила тяжіння тримає Місяць на його шляху. Ньютон порівнює падіння яблука з рухом Місяця.']},
     {h: 'Glossary', cnt: '2 of 6 occur here', kind: 'terms', lines: [['Earth', 'Земля', 'locked · place'], ['Isaac Newton', 'Ісаак Ньютон', 'locked · person, male']]},
     {h: 'Recurring terms', cnt: '1', kind: 'terms', lines: [['orbit', 'орбіта', 'used 17 times']]},
     {h: 'Previous segments', cnt: '2', kind: 'pairs', lines: [['Gravity pulls the object in; its speed carries it forward.', 'Гравітація тягне об’єкт до себе, а швидкість несе його вперед.'], ['⟦g0⟧Newton’s cannonball⟦g1⟧', '⟦g0⟧Гарматне ядро Ньютона⟦g1⟧']]},
     {h: 'Segments to translate', cnt: '4', kind: 'items', open: true, lines: LIVE.filter(r => r.call === 42).map(r => [r.id, r.loc, r.src])},
 ];
-const RAW42 = `== System ==\nYou are translating a book from English to Ukrainian.\nStyle:\n- Register: neutral …\n\n== User ==\n[Book so far]\nChapter 2 introduces orbits …\n<Items>\n<s id="1">Imagine a cannon on top of a very tall mountain.</s>\n…`;
+const RAW42 = `== System ==\nYou are translating a book from English to Ukrainian.\nStyle:\n- Register: neutral …\n\n== User ==\n[Earlier chapters]\nChapter 1: Розділ пояснює, як сила тяжіння …\n<Items>\n<s id="1">Imagine a cannon on top of a very tall mountain.</s>\n…`;
 function liveDetail() {
     const r = LIVE[ST.liveSel], s = rowState(r);
     const head = `<div class="state">${mk(s)}<b>${r.loc}</b>${r.note ? `<span class="small">${r.note} — open Review to decide</span>` : ''}</div>`;
+    if (r.summary) return `${head}<div class="card pad small">${esc(r.tgt)}</div><div class="hint">Later chapters are drafted with this summary. ${req('D10')}</div>`;
     const io = `<div class="io"><div class="h">Source</div><div class="h">Translation</div><div class="c last">${toks(r.src)}</div><div class="c last">${r.tgt ? toks(r.tgt) : `<span class="pending">${s === 'run' ? 'Being translated now…' : 'Not translated yet.'}</span>`}</div></div>`;
     if (!detailedLive()) {
         const inCall = LIVE.filter(x => x.call === 42 && x.st === 'run');
@@ -1308,12 +1311,11 @@ ${['running', 'stuck'].includes(r) ? HELP_SLEEP() : ''}${strip()}
   <button class="btn btn-ghost btn-sm" onclick="openWork('calls')" title="Every call of this run, newest first">All calls…</button>${r === 'running' ? `<button class="btn btn-ghost btn-sm" title="Mockup only" onclick="simulateReply()">Mockup: reply arrives</button>` : ''}</div>` : `<span class="seg"><span class="on">All</span><span>Problems only</span></span>`}</div>
   ${ST.liveTab === 'live' ? `
   <div class="callline">${detailedLive() ? `<b>Call ${D.call}</b><span class="badge b-neutral">Draft · 4 segments · ch2 · p05–p08</span>` : ''}<span>${RUN[r].line}</span>${RUN[r].clock && detailedLive() ? `<span class="muted">attempt 1 of 2 · ${r === 'stuck' ? '3:40 of 6:00' : '0:21 of 3:00'}</span>` : ''}</div>
-  <div class="split"><div class="side">${liveList()}</div><div class="main-pane">${liveDetail()}
-    <div class="banner mt3"><span class="ico">≡</span><div class="small"><b>Scene summary</b> · Chapter 2 introduces orbits; a cannon on a mountain follows. <span class="muted">Updated after every 20 accepted segments and at the end of each chapter. On Max quality the model writes the one at the end of each chapter.</span> ${req('T5')}</div></div></div></div>` : `
+  <div class="split"><div class="side">${liveList()}</div><div class="main-pane">${liveDetail()}</div></div>` : `
   <div class="card-b log" style="overflow:auto">
     <div class="ln"><span class="tm">11:41:05</span><span class="lv">info</span><span>Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review (name in the wrong form)</span></div>
     <div class="ln"><span class="tm">11:41:07</span><span class="lv">info</span><span>Sent segments 5–8 of chapter 2</span></div>
-    <div class="ln"><span class="tm">11:41:28</span><span class="lv">info</span><span>Scene summary updated</span></div>
+    <div class="ln"><span class="tm">11:12:40</span><span class="lv">sum</span><span>Chapter 1 was summarised.</span></div>
     <div class="ln"><span class="tm">11:02:44</span><span class="lv w">warn</span><span>The model answered slowly (2:10); tried again with a shorter answer — fine</span></div>
     <div class="ln"><span class="tm">10:31:12</span><span class="lv w">warn</span><span>The model refused the setting “temperature” — BookLoom stopped sending it and repeated the request (see Settings › Models)</span></div>
     ${ST.tech ? '<div class="ln"><span class="tm">11:41:05</span><span class="lv">debug</span><span>call 41 · draft-batch-json · 4 items · ok=3 flagged=1 · 6.2 s · 2,100/212 tokens</span></div>' : ''}
@@ -1688,7 +1690,7 @@ WORK.calls = () => progressDialog({
     id: 'calls', ico: '≡', title: 'All model calls of this translation', sub: 'Newest first. The last 50 are kept while BookLoom is open; each translated segment keeps its own record.', follow: false,
     overall: [D.stepsDone, D.stepsTotal], extra: [['Calls', '42'], ['Average', '6.4 s'], ['Speed', D.speed]],
     steps: [42, 41, 40, 39, 38].map(n => ({name: `Call ${n} · ${n === 39 ? 'Check' : 'Translate'} · 4 segments`, state: n === 42 ? mk(RUN[ST.run].inCall === 'run' ? 'run' : 'wait', RUN[ST.run].inCall === 'run' ? 'answering…' : 'waiting') : n === 40 ? mk('flag', 'asked again') : mk('ok', 'answered'), res: n === 42 ? 'ch2 · p05–p08' : `ch1 · p${(n - 30) * 4 - 3}–p${(n - 30) * 4}`})),
-    sel: 1, detail: (s, mode) => { const keep = ST.liveSel; ST.liveSel = 0; const m = ST.liveMode; ST.liveMode = mode; const h = mode === 'simple' ? `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}</div><div class="say">4 segments went out in one call; each one in the reply is matched to its segment.</div>${replyTable(LIVE.filter(x => x.call === 41).map(x => [x.id, x.loc, x.tgt, mk(x.st)]))}` : liveDetail(); ST.liveSel = keep; ST.liveMode = m; return h; },
+    sel: 1, detail: (s, mode) => { const keep = ST.liveSel; ST.liveSel = 1; const m = ST.liveMode; ST.liveMode = mode; const h = mode === 'simple' ? `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}</div><div class="say">4 segments went out in one call; each one in the reply is matched to its segment.</div>${replyTable(LIVE.filter(x => x.call === 41).map(x => [x.id, x.loc, x.tgt, mk(x.st)]))}` : liveDetail(); ST.liveSel = keep; ST.liveMode = m; return h; },
     cancelSays: '', footer: `<button class="btn btn-primary" onclick="closeWork()">Close</button>`,
 });
 WORK_ESC.calls = () => closeWork();

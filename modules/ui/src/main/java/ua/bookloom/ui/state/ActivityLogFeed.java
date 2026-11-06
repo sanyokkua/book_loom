@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
@@ -168,11 +169,17 @@ final class ActivityLogFeed {
     }
 
     LogEntry memory(final MemoryUpdated event) {
+        log.debug("log: memory updated: {}", event.kind());
         return switch (event.kind()) {
             case GLOSSARY -> new LogEntry(LogKind.MEMORY, List.of(GLOSSARY, event.label()));
             case TM -> new LogEntry(LogKind.MEMORY, List.of(MEMORY_KEY, event.label()));
-            case SUMMARY -> new LogEntry(LogKind.SUMMARY, List.of(event.label()));
         };
+    }
+
+    // The summary's text is book text: the entry and the line name only the chapter and its size.
+    LogEntry summaryKept(final ChapterSummaryKept kept) {
+        log.debug("log: chapter {} summary kept with {} sentences", kept.chapter(), kept.sentences());
+        return new LogEntry(LogKind.SUMMARY, List.of(String.valueOf(kept.chapter())));
     }
 
     LogEntry stageStarted() {

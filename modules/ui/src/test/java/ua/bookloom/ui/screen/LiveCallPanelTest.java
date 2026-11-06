@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.LiveRowFixtures.row;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -12,23 +11,15 @@ import javafx.scene.control.ToggleButton;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.ui.LiveRowFixtures;
-import ua.bookloom.ui.MemorySummaries;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
-import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.LiveRow.Stage;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
-import ua.bookloom.ui.state.OpenedBookFixture;
 import ua.bookloom.ui.state.TechnicalDetails;
 
-/** The live card as a whole: its two tabs, its Simple and Detailed choice, its scene summary and the log tab. */
+/** The live card as a whole: its two tabs, its Simple and Detailed choice and the log tab. */
 class LiveCallPanelTest extends LiveCardTestBase {
-
-    private static final String SUMMARY_NOTE = "Written when a chapter is finished.";
 
     private void showCard() {
         showRows(List.of(row(1, Stage.ACCEPTED, "Перший."), row(2, Stage.IN_CALL, null)));
@@ -122,30 +113,6 @@ class LiveCallPanelTest extends LiveCardTestBase {
 
         assertThat(((ToggleSwitch) required("translating-live-follow")).isSelected())
                 .isFalse();
-    }
-
-    // IF a book with no summary left the line blank, THEN a person would wonder whether it broke.
-    @Test
-    void sceneSummary_noneYet_saysSoAndSaysHowItIsKept() {
-        showCard();
-
-        assertThat(labelText("translating-live-summary-text")).isEqualTo("No scene summary yet.");
-        assertThat(labelText("translating-live-summary-source")).isEqualTo(SUMMARY_NOTE);
-    }
-
-    // IF the line did not read the summary the run keeps, THEN it would stay "none" while the model remembers a story.
-    @Test
-    void sceneSummary_runSavedOne_showsItsText() {
-        onFx(() -> OpenedBookFixture.open(injector.getInstance(CurrentProject.class), "en", "uk"));
-        showCard();
-        final String id = ThemeTestSupport.onFx(
-                () -> injector.getInstance(CurrentProject.class).book().get().projectId());
-        ((MemorySummaries) injector.getInstance(SummaryRepository.class))
-                .put(id, "ch1.xhtml:0", "Міра Холт повертається до Велка.");
-
-        publishCalls(new LiveCalls(null, null, Map.of(), null, LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(), 1));
-
-        assertThat(labelText("translating-live-summary-text")).isEqualTo("Міра Холт повертається до Велка.");
     }
 
     // IF the log tab listed every line with no way to see only the trouble, THEN one failure would hide among them.

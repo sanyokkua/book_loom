@@ -52,7 +52,10 @@ class RowMarkerTest {
         "TRANSLATING, FLAGGED, TO_REVIEW",
         "FAILED, FLAGGED, TO_REVIEW",
         "TRANSLATING, KEPT, KEPT",
-        "STOPPED, KEPT, KEPT"
+        "STOPPED, KEPT, KEPT",
+        "TRANSLATING, SUMMARISED, SUMMARISED",
+        "PAUSED, SUMMARISED, SUMMARISED",
+        "STOPPED, SUMMARISED, SUMMARISED"
     })
     void of_decidedRow_keepsItsMarkerInEveryRun(final RunRow run, final Stage stage, final RowMarker expected) {
         assertThat(RowMarker.of(row(stage, null), run)).isEqualTo(expected);
@@ -79,7 +82,8 @@ class RowMarkerTest {
         "DRAFTED, WORKING",
         "TRANSLATED, DONE",
         "TO_REVIEW, ATTENTION",
-        "KEPT, KEPT"
+        "KEPT, KEPT",
+        "SUMMARISED, DONE"
     })
     void meaning_eachMarker_isTheStateColourItIsKnownBy(final RowMarker marker, final StateMarker.Meaning expected) {
         assertThat(marker.meaning()).isEqualTo(expected);

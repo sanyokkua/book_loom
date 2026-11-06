@@ -19,7 +19,6 @@ import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
-import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
 import ua.bookloom.ui.state.StartAdvice;
@@ -73,8 +72,8 @@ public final class TranslatingController {
      *     from Review (n) and the strip
      * @param tools the session's memory of which sections the person left open, the question asked before a start
      *     when the book is told in the first person, and the question asked before the run is stopped
-     * @param parts what the strip, the help line and the live card read and open: the start estimate, the scene
-     *     summary, the sleep help, the technical-details switch, the modal host and the activities' clock
+     * @param parts what the strip, the help line and the live card read and open: the start estimate,
+     *     the sleep help, the technical-details switch, the modal host and the activities' clock
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -105,13 +104,7 @@ public final class TranslatingController {
         this.sections = tools.sections();
         this.runs = run.runs();
         this.reads = new TranslatingView.Reads(
-                parts.estimate(),
-                parts.summary(),
-                parts.sleep(),
-                parts.technical(),
-                parts.advice(),
-                parts.brief(),
-                parts.lock());
+                parts.estimate(), parts.sleep(), parts.technical(), parts.advice(), parts.brief(), parts.lock());
     }
 
     /**
@@ -119,7 +112,6 @@ public final class TranslatingController {
      * constructor stays short.
      *
      * @param estimate the start estimate the strip shows before a run
-     * @param summary the scene summary line's text
      * @param sleep the sleep help line
      * @param technical whether technical details are on
      * @param advice the language advice shown under the model row
@@ -130,7 +122,6 @@ public final class TranslatingController {
      */
     public record Parts(
             BriefEstimate estimate,
-            SceneSummary summary,
             SleepHelp sleep,
             TechnicalDetails technical,
             StartAdvice advice,
@@ -143,7 +134,6 @@ public final class TranslatingController {
         @Inject
         public Parts {
             Objects.requireNonNull(estimate, "estimate");
-            Objects.requireNonNull(summary, "summary");
             Objects.requireNonNull(sleep, "sleep");
             Objects.requireNonNull(technical, "technical");
             Objects.requireNonNull(advice, "advice");

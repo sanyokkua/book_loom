@@ -42,9 +42,7 @@ class TaggedLogTest extends TranslatingScreenTestBase {
                 Arguments.of(
                         new LogEntry(LogKind.MEMORY, List.of("reuse", LOCATOR)),
                         "mem   ≡ Segment ch7 · p42 was reused from the translation memory."),
-                Arguments.of(
-                        new LogEntry(LogKind.SUMMARY, List.of("3")),
-                        "sum   Σ The running summary was updated (version 3)."),
+                Arguments.of(new LogEntry(LogKind.SUMMARY, List.of("3")), "sum   Σ Chapter 3 was summarised."),
                 Arguments.of(
                         LogEntry.of(
                                 LogKind.RETRIED,

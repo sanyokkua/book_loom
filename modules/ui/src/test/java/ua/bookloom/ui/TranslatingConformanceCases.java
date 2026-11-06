@@ -53,7 +53,7 @@ final class TranslatingConformanceCases {
                     Overlay.NONE,
                     List.of(new Part("#translating-ready-language-line", Kind.TEXT, "warn-fg", "#835d27", "#e6c086"))),
             // Running, with no banner: the strip's bar track surface-2 and its fill the primary, the full-height live
-            // card, a segment being translated in the info-toned working marker, and the scene summary line.
+            // card, and a segment being translated in the info-toned working marker.
             new Screen(
                     "TRANSLATING_RUNNING",
                     ViewNames.TRANSLATING,
@@ -76,10 +76,7 @@ final class TranslatingConformanceCases {
                                     Kind.BACKGROUND,
                                     "info-bg",
                                     "#e5edf0",
-                                    "#293940"),
-                            // The scene summary is the mockup's info banner (ui-mockup.html: .banner).
-                            new Part("#translating-live-summary", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#translating-live-summary", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                                    "#293940"))),
             // A finished run: the strip carries the outcome, so there is no outcome card any more.
             new Screen(
                     "TRANSLATING_COMPLETED",

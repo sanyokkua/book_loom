@@ -8,9 +8,6 @@ public enum MemoryKind {
     /** The project's glossary. */
     GLOSSARY,
 
-    /** The project's rolling summary. */
-    SUMMARY,
-
     /** The project's translation-memory store. */
     TM
 }

@@ -495,8 +495,8 @@ public enum MessageKey {
     RUN_CALL_KIND("run.callKind"),
     /** Activity-log entry for an applied glossary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),
-    /** Activity-log entry for an updated rolling summary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
-    LOG_SUMMARY_UPDATED("log.summaryUpdated"),
+    /** Activity-log entry for a kept chapter summary; argument 0 is the chapter's number, passed as a String so it is never grouped like a number. */
+    LOG_CHAPTER_SUMMARY_KEPT("log.chapterSummaryKept"),
     /** Activity-log entry for a retried segment; argument 0 is the segment id, passed as a String so it is never grouped like a number, argument 1 the attempt number. */
     LOG_RETRIED("log.retried"),
     /** Activity-log entry for a recoverable segment error; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
@@ -3785,6 +3785,10 @@ public enum MessageKey {
     LIVE_MARKER_ALONE_TIP("live.marker.alone.tip"),
     /** Live row marker: kept as it is. */
     LIVE_MARKER_KEPT("live.marker.kept"),
+    /** Live row marker: a chapter's summary was kept. */
+    LIVE_MARKER_SUMMARISED("live.marker.summarised"),
+    /** Live card: the row of a kept chapter summary; argument 0 is the chapter's number, passed as a String. */
+    LIVE_ROW_CHAPTER_SUMMARISED("live.row.chapterSummarised"),
     /** Live detail: why a flagged segment waits; its argument names the findings. */
     LIVE_DETAIL_WHY("live.detail.why"),
     /** Live detail: the translation of a segment being translated. */
@@ -3807,12 +3811,6 @@ public enum MessageKey {
     LIVE_CLOCK_OF("live.clock.of"),
     /** Live card: the line while a call has waited ten seconds; its argument is the clock. */
     LIVE_WAITING_FOR_MODEL("live.waitingForModel"),
-    /** Live card: the heading of the scene summary line. */
-    LIVE_SUMMARY_TITLE("live.summary.title"),
-    /** Live card: the scene summary line before there is one. */
-    LIVE_SUMMARY_NONE("live.summary.none"),
-    /** Live card: how the scene summary is kept. */
-    LIVE_SUMMARY_SOURCE("live.summary.source"),
     /** Title of the review desk dialog. */
     REVIEW_DESK_TITLE("review.desk.title"),
     /** The desk's header line; argument 0 is how many are left to review, argument 1 how many there were when the desk opened. */

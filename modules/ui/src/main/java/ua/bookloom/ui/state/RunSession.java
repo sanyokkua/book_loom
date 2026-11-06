@@ -251,7 +251,7 @@ final class RunSession implements JobListener {
                 });
             case SegmentDrafted drafted -> locked(() -> liveCalls.drafted(drafted));
             case ModelCallFinished finished -> onModelCallFinished(finished);
-            case MemoryUpdated updated -> onMemory(updated);
+            case MemoryUpdated updated -> locked(() -> queue(feed.memory(updated)));
             case ContextAssembled assembled ->
                 log.trace("context of segment {} is shown with its call", assembled.segmentId());
             case RoundStarted round -> onRound(round);
@@ -262,9 +262,7 @@ final class RunSession implements JobListener {
             case StepsPlanned planned -> locked(() -> progress.planned(planned));
             case StepChanged changed -> onStep(changed);
             case BriefSampleRead read -> log.trace("brief window {} of {} read", read.sample(), read.samples());
-            // The live card shows a kept summary from task 12.8; its text is book text, never logged here.
-            case ChapterSummaryKept kept ->
-                log.debug("chapter summary kept chapter={} sentences={}", kept.chapter(), kept.sentences());
+            case ChapterSummaryKept kept -> onSummaryKept(kept);
         }
     }
 
@@ -307,11 +305,10 @@ final class RunSession implements JobListener {
         });
     }
 
-    private void onMemory(final MemoryUpdated updated) {
-        log.debug("memory updated: {}", updated.kind());
+    private void onSummaryKept(final ChapterSummaryKept kept) {
         locked(() -> {
-            liveCalls.memory(updated);
-            queue(feed.memory(updated));
+            liveCalls.summaryKept(kept);
+            queue(feed.summaryKept(kept));
         });
     }
 

@@ -45,8 +45,8 @@ class TranslatingStripMessagesTest {
                 "LIVE_DETAIL_NOT_YET",
                 "LIVE_DETAIL_NOT_SENT",
                 "LIVE_WAITING_FOR_MODEL",
-                "LIVE_SUMMARY_NONE",
-                "LIVE_SUMMARY_SOURCE"
+                "LIVE_MARKER_SUMMARISED",
+                "LIVE_ROW_CHAPTER_SUMMARISED"
             })
     void key_inEachLanguage_hasAnEntryThatIsNotTheKeyItself(final String name) {
         final MessageKey key = MessageKey.valueOf(name);

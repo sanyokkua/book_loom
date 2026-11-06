@@ -116,7 +116,7 @@ and a localized message:
 | `ok`    | A segment/chunk was accepted                       | success (sage)      |
 | `fix`   | A directed repair round ran (QA re-entry)          | info (slate-blue)   |
 | `mem`   | Translation-memory / glossary applied              | info                |
-| `sum`   | A rolling-summary/context update occurred          | info                |
+| `sum`   | A finished chapter's summary was kept              | info                |
 | `retry` | An inference retry (rate-limit/timeout) fired      | warning (ochre)     |
 | `err`   | A recoverable error surfaced for a segment         | danger (terracotta) |
 | `info`  | A neutral run milestone (pass started, checkpoint) | info                |

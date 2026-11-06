@@ -98,8 +98,9 @@ testable.
 - `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
   snapshot, announcing a segment as decided.
 - `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one
-  glossary entry (label `+n`), on each memory reuse (labelled with the segment's locator), and on each summary
-  refresh (labelled with its version).
+  glossary entry (label `+n`) and on each memory reuse (labelled with the segment's locator). A kept chapter summary
+  is its own event, `ChapterSummaryKept(chapterKey, chapter, sentences, text)`: a live row and a `sum` log entry
+  naming the chapter (its text is book text, left out of `toString` and of every line above TRACE).
 - `Paused` names the segment the run paused on — for a pause on a provider error, the segment whose step failed (a
   chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what "Try
   again now" and "Skip these n segments" will do (`mockups/README.md`, Run states).
@@ -128,7 +129,7 @@ count within the current section's chunking. `pending` leaves out segments kept 
 | `progressFraction`    | decided segments over the total, `0.0` when the total is zero                                                   |
 | `tokensPerSecond`     | derived from the recent drafts' `ModelCallFinished` usage                                                       |
 | `timeLeft`, `elapsed` | the run's estimated time left and time spent                                                                    |
-| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds; the chunk's rows (`LiveRow`, worked out by `ChunkRows` from `SegmentStarted`, the call snapshots and their `FELL_BACK` notes, `SegmentDrafted` and `SegmentDecided`, the run's rows kept as history across chunks, at most 500, the oldest dropped first; their marker is `RowMarker.of(row, runRow)`), the last 50 calls oldest first for "All calls…" (one list kept until a call changes), and the rolling summary's version from `MemoryUpdated(SUMMARY)`; published at most once per cadence tick, and only when it changed |
+| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds; the chunk's rows (`LiveRow`, worked out by `ChunkRows` from `SegmentStarted`, the call snapshots and their `FELL_BACK` notes, `SegmentDrafted` and `SegmentDecided`, plus a `SUMMARISED` row per `ChapterSummaryKept` after its chapter's rows, replaced when the chapter is summarised again; the run's rows kept as history across chunks, at most 500, the oldest dropped first; their marker is `RowMarker.of(row, runRow)`), and the last 50 calls oldest first for "All calls…" (one list kept until a call changes); published at most once per cadence tick, and only when it changed |
 | `reviewQueue`         | the flagged (and, on the "All segments" filter, kept-as-source) segments the review panel lists                 |
 | `waitingSeconds`      | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)                         |
 | `providerErrorNotice` | the failure's error code, while the run is auto-paused on a provider error                                      |

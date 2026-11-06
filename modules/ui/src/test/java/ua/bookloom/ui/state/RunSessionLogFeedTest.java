@@ -177,7 +177,7 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
         final RunSession session = session();
         clock.advance(Duration.ofHours(9).plusMinutes(5).plusSeconds(7));
 
-        session.onEvent(new MemoryUpdated(MemoryKind.SUMMARY, "3"));
+        session.onEvent(new MemoryUpdated(MemoryKind.GLOSSARY, "+2"));
         tick(session);
 
         assertThat(shownLogEntries()).singleElement().extracting(LogEntry::time).isEqualTo(LocalTime.of(9, 5, 7));
@@ -185,19 +185,15 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
 
     // IF each memory kind did not log with its own tag and subject, THEN the log would not show what was remembered.
     @Test
-    void memoryUpdates_logMemAndSumWithTheirLabels() {
+    void memoryUpdates_logMemWithTheirLabels() {
         final RunSession session = session();
 
         session.onEvent(new MemoryUpdated(MemoryKind.GLOSSARY, "+2"));
         session.onEvent(new MemoryUpdated(MemoryKind.TM, LOCATOR));
-        session.onEvent(new MemoryUpdated(MemoryKind.SUMMARY, "3"));
         tick(session);
 
         assertThat(logEntries())
-                .containsExactly(
-                        log(LogKind.MEMORY, "glossary", "+2"),
-                        log(LogKind.MEMORY, "memory", LOCATOR),
-                        log(LogKind.SUMMARY, "3"));
+                .containsExactly(log(LogKind.MEMORY, "glossary", "+2"), log(LogKind.MEMORY, "memory", LOCATOR));
     }
 
     // IF an accepted or flagged segment named its id, THEN the two most common entries would be unreadable.

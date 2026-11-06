@@ -44,13 +44,13 @@ public final class LiveRowFixtures {
                 .toList();
     }
 
-    /** The calls the mirror publishes for {@code rows}, the {@code current} call and no summary. */
+    /** The calls the mirror publishes for {@code rows}, the {@code current} call. */
     public static LiveCalls calls(final @Nullable CallSnapshot current, final List<LiveRow> rows) {
-        return new LiveCalls(current, null, Map.of(), LiveCallFixtures.STARTED.plusSeconds(21), rows, List.of(), 0);
+        return new LiveCalls(current, null, Map.of(), LiveCallFixtures.STARTED.plusSeconds(21), rows, List.of());
     }
 
     /** The calls the mirror publishes for {@code rows}, with the last 50 calls the dialog lists. */
     public static LiveCalls calls(final List<LiveRow> rows, final List<CallSnapshot> recent) {
-        return new LiveCalls(null, null, Map.of(), LiveCallFixtures.STARTED.plusSeconds(21), rows, recent, 0);
+        return new LiveCalls(null, null, Map.of(), LiveCallFixtures.STARTED.plusSeconds(21), rows, recent);
     }
 }

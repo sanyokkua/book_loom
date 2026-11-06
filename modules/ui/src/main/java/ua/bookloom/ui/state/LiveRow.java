@@ -3,15 +3,18 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ChapterSummaryKept;
 
 /**
- * One row of the live card: a segment the run has started, with what the run knows of it so far. Its marker
- * is worked out from it and the run's state ({@link RowMarker#of}), so a pause changes the markers without a new row.
+ * One row of the live card: a segment the run has started, with what the run knows of it so far, or a finished
+ * chapter's kept summary ({@link Stage#SUMMARISED}). Its marker is worked out from it and the run's state
+ * ({@link RowMarker#of}), so a pause changes the markers without a new row.
  *
- * @param segmentId the segment's id
- * @param locator where the segment is, such as {@code ch7 · p42}
- * @param displaySource the source text with the inline marks shown as {@code ⟦1⟧}
- * @param target the draft or decided text, or {@code null} until a draft arrives
+ * @param segmentId the segment's id; for a summary row {@value #SUMMARY_ID_PREFIX} and the chapter's key
+ * @param locator where the segment is, such as {@code ch7 · p42}; for a summary row the chapter's number, which the
+ *     card words as "Chapter {n} summarised" (the state holds no catalogue)
+ * @param displaySource the source text with the inline marks shown as {@code ⟦1⟧}; empty for a summary row
+ * @param target the draft or decided text, or {@code null} until a draft arrives; for a summary row its text
  * @param stage how far the segment has got
  * @param fallbackCode the first detail code of the batch reply's fault that made the engine draft this segment again
  *     alone ({@code MISSING}, {@code DUPLICATE}, {@code MERGED_SUSPECT}), or {@code null} when it was not
@@ -41,16 +44,40 @@ public record LiveRow(
         /** Flagged for the person's review. */
         FLAGGED,
         /** Accepted as it is, with no translation (numbers, symbols, a text kept as its source). */
-        KEPT;
+        KEPT,
+        /** Not a segment: a finished chapter's summary was kept, which later drafts are told about. */
+        SUMMARISED;
 
         /**
          * Whether the segment is decided, so no later call or draft changes its stage.
          *
-         * @return {@code true} for accepted, flagged and kept, {@code false} otherwise
+         * @return {@code true} for accepted, flagged, kept and a kept summary, {@code false} otherwise
          */
         public boolean isDecided() {
-            return this == ACCEPTED || this == FLAGGED || this == KEPT;
+            return this == ACCEPTED || this == FLAGGED || this == KEPT || this == SUMMARISED;
         }
+    }
+
+    /** What a summary row's id starts with, so it never meets a segment's id. */
+    public static final String SUMMARY_ID_PREFIX = "chapter-summary:";
+
+    /**
+     * The row of a kept chapter summary.
+     *
+     * @param kept the kept summary
+     * @return a summarised row with no source and the summary as its text
+     */
+    public static LiveRow chapterSummary(final ChapterSummaryKept kept) {
+        Objects.requireNonNull(kept, "kept");
+        return new LiveRow(
+                SUMMARY_ID_PREFIX + kept.chapterKey(),
+                String.valueOf(kept.chapter()),
+                "",
+                kept.text(),
+                Stage.SUMMARISED,
+                null,
+                List.of(),
+                null);
     }
 
     /** Rejects a missing part and copies the findings. */

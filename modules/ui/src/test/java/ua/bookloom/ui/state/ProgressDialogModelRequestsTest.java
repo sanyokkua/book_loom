@@ -48,7 +48,7 @@ class ProgressDialogModelRequestsTest {
 
     private Activity activity() {
         final CallSnapshot newest = recent.isEmpty() ? null : recent.getLast();
-        final LiveCalls calls = new LiveCalls(newest, null, Map.of(), null, List.of(), recent, 0, requestOf);
+        final LiveCalls calls = new LiveCalls(newest, null, Map.of(), null, List.of(), recent, requestOf);
         return new Activity(
                 1,
                 ActivityKind.NAMES_PASS,

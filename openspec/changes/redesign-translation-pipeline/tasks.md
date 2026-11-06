@@ -1302,7 +1302,7 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Test first:** `BriefSynthesisTest.parse_storyShapeWithTwoQuotes_likely`; TestFX `BriefSuggestDialogTest.decides_fiveRowsWithStoryShapeAgreement` and `decides_unsupportedGenre_showsLikelyWithoutCount`; TestFX `BriefChapterSummariesTest.switch_separateStories_suggestedOff`; `switch_forcedOn_laterSuggestionKeepsIt`; `switch_turnedOnWithTwelveFinished_showsCount`; `switch_translating_readOnly`; `ReadyCardTest.switch_sameAsBrief`.
   - **Done when:** the tests are green; `scripts/ci-linux-ui.sh` passes.
 
-- [ ] 12.8 Show each kept summary as a live-card row, give the `sum` log kind its new meaning, and remove the scene-summary line. The person can read what the model will be told about earlier chapters. → :ui
+- [x] 12.8 Show each kept summary as a live-card row, give the `sum` log kind its new meaning, and remove the scene-summary line. The person can read what the model will be told about earlier chapters. → :ui
   - **Satisfies:** "Show a chapter summary as a live-card row" (app-shell), "Show the live card's Live and Activity log tabs" (app-shell; the chapter-summary entries), "Tag every activity-log entry with one of eight kinds" (translation-pipeline; the `sum` kind, the `proof` kind in group 13), "Always show the scene summary under the live detail" (translation-pipeline, REMOVED)
   - **Depends on:** 12.4
   - **Read:** `ui: state/LogKind`, `ui: state/RunSession`, `ui: control/LiveRowList`, `ui: state/LiveRow`, `ui: control/LiveRowDetail`, `ui: state/SceneSummary`

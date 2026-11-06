@@ -61,7 +61,7 @@ class ProgressRequestsScreenTest extends ProgressWorkTestBase {
     }
 
     private static LiveCalls panel(final CallSnapshot call) {
-        return new LiveCalls(call, null, Map.of(), null, List.of(), List.of(call), 0, Map.of(1L, "REQUEST:0"));
+        return new LiveCalls(call, null, Map.of(), null, List.of(), List.of(call), Map.of(1L, "REQUEST:0"));
     }
 
     private ActivityTracker.Handle sentRequest() throws TimeoutException {

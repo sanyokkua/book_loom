@@ -15,8 +15,8 @@ public enum LogKind {
     REPAIRED(MessageKey.LOG_MODEL_CALL, Tone.INFO, "↺", "fix"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
     MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, Tone.INFO, "≡", "mem"),
-    /** The rolling summary was refreshed. */
-    SUMMARY(MessageKey.LOG_SUMMARY_UPDATED, Tone.INFO, "Σ", "sum"),
+    /** A finished chapter's summary was kept; the entry names the chapter, never the text. */
+    SUMMARY(MessageKey.LOG_CHAPTER_SUMMARY_KEPT, Tone.INFO, "Σ", "sum"),
     /**
      * Something was tried again: a failed or refused attempt, a structure or placeholder repair, the run resuming after
      * a provider error, or a step of the automatic recovery.

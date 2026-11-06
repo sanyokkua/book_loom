@@ -42,7 +42,6 @@ import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.RunStateSource;
 import ua.bookloom.ui.state.RunStateView;
-import ua.bookloom.ui.state.SceneSummary;
 import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.SleepHelp;
 import ua.bookloom.ui.state.StartAdvice;
@@ -86,13 +85,12 @@ final class TranslatingView {
             RunStateSource runs) {}
 
     /**
-     * What the strip, the ready card and the live card read besides the mirror: the estimate before a start, the scene
-     * summary, the sleep help line, whether technical details are on, and the brief and lock the ready card's Chapter
+     * What the strip, the ready card and the live card read besides the mirror: the estimate before a start, the sleep
+     * help line, whether technical details are on, and the brief and lock the ready card's Chapter
      * summaries switch shares with the Book Brief.
      */
     record Reads(
             BriefEstimate estimate,
-            SceneSummary summary,
             SleepHelp sleep,
             TechnicalDetails technical,
             StartAdvice advice,
@@ -250,8 +248,7 @@ final class TranslatingView {
                 exits.runs().view(),
                 mirror.live().waitingCall(),
                 mirror.activityLog(),
-                reads.technical().property(),
-                reads.summary().text());
+                reads.technical().property());
         return new LiveCallPanel(sources, columnNames, exits.sections(), exits.dialogs()::showCalls, messages);
     }
 
