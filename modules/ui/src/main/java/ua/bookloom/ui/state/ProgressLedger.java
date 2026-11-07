@@ -155,9 +155,9 @@ final class ProgressLedger {
 
     private void rebuiltWindows(final ProofreadState windows) {
         if (windows.planned() > 0) {
-            final Tally proofread = tally(StepKind.PROOFREAD);
-            proofread.basePlanned = windows.planned();
-            proofread.baseDone = windows.done();
+            final Tally windowTally = tally(StepKind.PROOFREAD);
+            windowTally.basePlanned = windows.planned();
+            windowTally.baseDone = windows.done();
             log.debug("progress ledger rebuilt: {} of {} proofread windows", windows.done(), windows.planned());
         }
     }

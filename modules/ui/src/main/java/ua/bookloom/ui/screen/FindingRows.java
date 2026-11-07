@@ -26,6 +26,8 @@ import ua.bookloom.ui.state.FindingBadge;
  */
 final class FindingRows {
 
+    private static final String FINDING_KIND = "finding-kind";
+
     private final Messages messages;
 
     FindingRows(final Messages messages) {
@@ -49,7 +51,7 @@ final class FindingRows {
                 MessageKey.REVIEW_EDIT_APPLIED,
                 messages.get(MessageKey.REVIEW_EDIT_CRITERION, edit.criterion().replace('-', '_'))));
         heading.setId("review-edit-criterion");
-        heading.getStyleClass().add("finding-kind");
+        heading.getStyleClass().add(FINDING_KIND);
         final Label removed = diffLine("review-edit-removed", "diff-removed", "− " + edit.quote());
         final Label added = diffLine(
                 "review-edit-added",
@@ -80,7 +82,7 @@ final class FindingRows {
                 MessageKey.REVIEW_PROOFREAD_VERDICT,
                 ProofreadWords.verdict(messages, verdict.outcome(), verdict.reason(), List.of())));
         line.setId("review-proofread-verdict");
-        line.getStyleClass().add("finding-kind");
+        line.getStyleClass().add(FINDING_KIND);
         line.setWrapText(true);
         line.setMinHeight(Region.USE_PREF_SIZE);
         final @Nullable String before = verdict.before();
@@ -90,7 +92,7 @@ final class FindingRows {
         }
         final Label heading = new Label(messages.get(MessageKey.REVIEW_PROOFREAD_APPLIED));
         heading.setId("review-proofread-applied");
-        heading.getStyleClass().add("finding-kind");
+        heading.getStyleClass().add(FINDING_KIND);
         final Label removed = diffLine("review-proofread-removed", "diff-removed", "− " + before);
         final Label added = diffLine("review-proofread-added", "diff-added", "+ " + now);
         return List.of(new VBox(2, line), new VBox(2, heading, removed, added));
@@ -113,7 +115,7 @@ final class FindingRows {
                 messages.get(badge.label()),
                 finding.severity().name().toLowerCase(Locale.ROOT),
                 RaiserWords.raiser(messages, RaiserWords.checkOf(finding.raisedBy()))));
-        label.getStyleClass().add("finding-kind");
+        label.getStyleClass().add(FINDING_KIND);
         final Label why = wrapped(messages.get(MessageKey.REVIEW_WHY_LINE, messages.get(badge.why())), "finding-note");
         final VBox row = new VBox(2, label, why);
         if (technical) {

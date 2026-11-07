@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -111,8 +112,7 @@ final class ProofreadJudge {
             case GateResult.Restored restored -> byNeverWorse(segment, new Texts(current, restored), reasons, arrived);
             case GateResult.GateFailed failed ->
                 rejected(segment, failed.finding().raisedBy());
-            case GateResult.StepError error ->
-                rejected(segment, "gate-error " + error.error().code());
+            case GateResult.StepError(final AppError error) -> rejected(segment, "gate-error " + error.code());
         };
     }
 

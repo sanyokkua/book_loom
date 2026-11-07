@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
@@ -117,10 +118,7 @@ class ReviewDeskProofreadTest {
         final Result<SegmentRecord> refused =
                 desk.reviewDesk(ReviewMode.ASSISTED).undoProofread(desk.projectId(), EDITED_ID);
 
-        assertThat(refused.error())
-                .isNotNull()
-                .extracting(error -> error.code())
-                .isEqualTo(ErrorCode.validation);
+        assertThat(refused.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(stored(desk, EDITED_ID).userTarget()).isEqualTo("Дощ ущух аж надвечір.");
         assertThat(stored(desk, EDITED_ID).status()).isEqualTo(SegmentStatus.REVISED);
     }

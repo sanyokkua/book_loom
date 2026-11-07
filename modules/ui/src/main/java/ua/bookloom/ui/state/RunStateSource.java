@@ -68,8 +68,8 @@ public final class RunStateSource {
      * @param current the open project
      * @param review the count of flagged segments
      * @param messages the catalogue the time left and the program's name are worded from
-     * @param briefProject the open project's stored name, which the title bar shows as the Brief does
-     * @param standing where the open project's Proofread stage stands, which a Continue line names
+     * @param project the open project's stored name, which the title bar shows as the Brief does, and where its
+     *     Proofread stage stands, which a Continue line names
      */
     @Inject
     public RunStateSource(
@@ -79,10 +79,10 @@ public final class RunStateSource {
             final CurrentProject current,
             final ReviewViewModel review,
             final Messages messages,
-            final BriefProject briefProject,
-            final ProofreadStanding standing) {
-        this.standing = Objects.requireNonNull(standing, "standing");
-        this.briefProject = Objects.requireNonNull(briefProject, "briefProject");
+            final ProjectStanding project) {
+        Objects.requireNonNull(project, "project");
+        this.standing = project.proofread();
+        this.briefProject = project.briefProject();
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.settings = Objects.requireNonNull(settings, "settings");

@@ -22,7 +22,7 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
  * (never a likely one), or the narrator's stated or inferred one. Code then holds the deferral's segment to it with the
  * target language's gender check, so a segment with no word that agrees with the gender is settled with no call.
  *
- * @param name the name the reason shows: the entry's target, else its term, or {@value #NARRATOR}
+ * @param name the name the reason shows: the entry's target, else its term, or {@value #NARRATOR_NAME}
  * @param gender the known gender
  * @param narrator whether the deferral waited on the narrator rather than a character
  */
@@ -30,7 +30,7 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
 record ArrivedGender(String name, Gender gender, boolean narrator) {
 
     /** How a narrator deferral's reason names the one it waited on. */
-    static final String NARRATOR = "narrator";
+    static final String NARRATOR_NAME = "narrator";
 
     /** Rejects a missing part. */
     ArrivedGender {
@@ -57,7 +57,7 @@ record ArrivedGender(String name, Gender gender, boolean narrator) {
         }
         if (DeferralRegister.NARRATOR.equals(waitingOn)) {
             return narratorNow.hasCheckableGender()
-                    ? Optional.of(new ArrivedGender(NARRATOR, narratorNow.gender(), true))
+                    ? Optional.of(new ArrivedGender(NARRATOR_NAME, narratorNow.gender(), true))
                     : Optional.empty();
         }
         final GlossaryEntry entry = byTerm.get(waitingOn);

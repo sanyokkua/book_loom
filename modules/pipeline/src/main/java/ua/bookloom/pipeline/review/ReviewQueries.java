@@ -63,6 +63,7 @@ import ua.bookloom.pipeline.qa.ForeignMarking;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ReviewQueries {
 
+    private static final String PROJECT_ID = "projectId";
     private static final String GLOSSARY_KIND = "glossary";
     private static final String OMISSION_KIND = "omission";
 
@@ -82,7 +83,7 @@ public final class ReviewQueries {
      *     book; never null, empty when nothing matches
      */
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(filter, "filter");
         return read(projectId)
                 .map(reading -> reading.records().stream()
@@ -100,7 +101,7 @@ public final class ReviewQueries {
      * @return the counts with those three lists counted; {@code counts} as they are when the book is not open
      */
     public ReviewCounts withDeskLists(final String projectId, final ReviewCounts counts) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(counts, "counts");
         final Reading reading = read(projectId).data();
         if (reading == null) {
@@ -121,7 +122,7 @@ public final class ReviewQueries {
      *     such segment
      */
     public Result<SegmentView> segment(final String projectId, final String segmentId) {
-        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(segmentId, "segmentId");
         return read(projectId)
                 .flatMap(reading -> reading.records().stream()

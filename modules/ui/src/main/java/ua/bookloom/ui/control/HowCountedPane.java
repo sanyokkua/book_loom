@@ -53,17 +53,16 @@ public final class HowCountedPane extends TitledPane {
         kindLines.getChildren().setAll(kinds.stream().map(this::kindLine).toList());
     }
 
+    // A forecast kind with no measured time is an estimate; a planned one is merely not timed yet.
+    private static MessageKey untimedKey(final ProgressFigures.KindFigures kind) {
+        return kind.forecast() ? MessageKey.PROGRESS_HOW_COUNTED_ESTIMATE : MessageKey.PROGRESS_HOW_COUNTED_UNTIMED;
+    }
+
     private Label kindLine(final ProgressFigures.KindFigures kind) {
         final String name = messages.get(kindName(kind.kind()));
         final Double seconds = kind.secondsPerStep();
         final String text = seconds == null
-                ? messages.get(
-                        kind.forecast()
-                                ? MessageKey.PROGRESS_HOW_COUNTED_ESTIMATE
-                                : MessageKey.PROGRESS_HOW_COUNTED_UNTIMED,
-                        name,
-                        kind.done(),
-                        kind.planned())
+                ? messages.get(untimedKey(kind), name, kind.done(), kind.planned())
                 : messages.get(
                         MessageKey.PROGRESS_HOW_COUNTED_LINE,
                         name,

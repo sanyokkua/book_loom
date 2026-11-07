@@ -58,13 +58,13 @@ final class DeferralSettler {
             }
             if (isMismatch(deferral, arrived.get(), records, targetLanguage)) {
                 mismatches++;
-                continue;
+            } else {
+                final Result<Boolean> done = deferrals.resolve(projectId, deferral.id());
+                if (done.isErr()) {
+                    return Result.err(Objects.requireNonNull(done.error(), ERROR));
+                }
+                resolved++;
             }
-            final Result<Boolean> done = deferrals.resolve(projectId, deferral.id());
-            if (done.isErr()) {
-                return Result.err(Objects.requireNonNull(done.error(), ERROR));
-            }
-            resolved++;
         }
         log.debug("Deferrals settled by code project={} resolved={} mismatches={}", projectId, resolved, mismatches);
         return Result.ok(new Settled(resolved, mismatches));

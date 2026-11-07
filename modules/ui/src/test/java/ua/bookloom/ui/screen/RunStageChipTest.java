@@ -78,5 +78,7 @@ class RunStageChipTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> "Proofread · marks for review, no model calls".equals(chip()));
         releaseJob();
+
+        assertThat(chip()).isEqualTo("Proofread · marks for review, no model calls");
     }
 }

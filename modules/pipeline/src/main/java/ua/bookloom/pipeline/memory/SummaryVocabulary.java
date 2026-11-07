@@ -39,7 +39,7 @@ final class SummaryVocabulary {
 
     private static final int MIN_STEM_LETTERS = 4;
     private static final int ENDING_LETTERS = 2;
-    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]+(?:['’ʼ][\\p{L}\\p{M}]+)*");
+    private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}]++(?:['’ʼ][\\p{L}\\p{M}]++)*+");
     private static final Pattern APOSTROPHES = Pattern.compile("[’ʼ]");
     private static final String ALLOWED_DIRECTORY = "/ua/bookloom/pipeline/prompt/languages/summary-words/";
     private static final String ALLOWED_SUFFIX = ".txt";
@@ -114,7 +114,8 @@ final class SummaryVocabulary {
             return true;
         }
         final int length = word.length();
-        final String stem = word.substring(0, Math.min(length, Math.max(MIN_STEM_LETTERS, length - ENDING_LETTERS)));
+        final String stem = word.substring(
+                0, Math.clamp((long) length - ENDING_LETTERS, Math.min(MIN_STEM_LETTERS, length), length));
         final String next = words.ceiling(stem);
         return next != null && next.startsWith(stem);
     }

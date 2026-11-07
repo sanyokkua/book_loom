@@ -21,6 +21,7 @@ import ua.bookloom.pipeline.prompt.ProofreadInstruction;
 final class CallBlocks {
 
     private static final String TEXT = "{text}";
+    private static final String REASON = "{reason}";
 
     private final PromptTemplates templates;
     private final BlockWords words;
@@ -85,7 +86,7 @@ final class CallBlocks {
         reasons.stream()
                 .filter(reason -> !reason.isBlank())
                 .forEach(reason ->
-                        lines.add(words.get(BlockWords.PROOFREAD_REASON).replace("{reason}", reason)));
+                        lines.add(words.get(BlockWords.PROOFREAD_REASON).replace(REASON, reason)));
         lines.add(words.get(BlockWords.PROOFREAD_CLOSE));
         return lines;
     }
@@ -99,10 +100,10 @@ final class CallBlocks {
                     .filter(reason -> !reason.isBlank())
                     .forEach(reason -> lines.add(
                             one
-                                    ? words.get(BlockWords.REPAIR_LINE_ONE).replace("{reason}", reason)
+                                    ? words.get(BlockWords.REPAIR_LINE_ONE).replace(REASON, reason)
                                     : words.get(BlockWords.REPAIR_LINE)
                                             .replace("{id}", id)
-                                            .replace("{reason}", reason)));
+                                            .replace(REASON, reason)));
         }
         return lines;
     }

@@ -117,7 +117,7 @@ public final class ProofreadStanding {
         log.debug("proofread standing #{} asked for project {}, model chosen {}", ask, projectId, chosen.isPresent());
         try {
             background.execute(() -> read(ask, projectId, chosen));
-        } catch (RejectedExecutionException closing) {
+        } catch (RejectedExecutionException _) {
             // The window is closing and its executor is shut down: nothing is left to show the tally on.
             log.debug("proofread standing #{} not read: the background executor is shut down", ask);
         }

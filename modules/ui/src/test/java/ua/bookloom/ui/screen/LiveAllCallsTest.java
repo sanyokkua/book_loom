@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.LongStream;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -90,7 +91,8 @@ class LiveAllCallsTest extends LiveCardTestBase {
     // as done, THEN "Translate is done" would sit over "Nothing yet." every time the dialog is opened; it says the call
     // is still at work, and an answered batch says the translations it brought back.
     @Test
-    void allCalls_newestCallStillWaiting_saysItIsAtWorkAndAnAnsweredBatchShowsItsTranslations() {
+    void allCalls_newestCallStillWaiting_saysItIsAtWorkAndAnAnsweredBatchShowsItsTranslations()
+            throws TimeoutException {
         final CallSnapshot answered = draft(1).answered("{\"1\":\"Джерело 1\"}", null, Duration.ofSeconds(3))
                 .withItems(List.of(new CallItem("1", "s-1", "Джерело 1", CallItemStatus.OK, List.of())));
         showLive(LiveRowFixtures.calls(LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(answered, draft(2))));
@@ -99,7 +101,8 @@ class LiveAllCallsTest extends LiveCardTestBase {
         WaitForAsyncUtils.waitForFxEvents();
         final List<String> waiting = sayAndOutput();
         clickOn(required("progress-step-1"));
-        WaitForAsyncUtils.waitForFxEvents();
+        // Under a loaded machine the selection's detail can land a few pulses after the click.
+        awaitFx(() -> sayAndOutput().contains("Translate is done."));
 
         assertThat(waiting).containsExactly("Working on Translate.", "Nothing yet.");
         assertThat(sayAndOutput()).containsExactly("Translate is done.", "Джерело 1");
