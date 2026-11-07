@@ -98,6 +98,14 @@ final class PassTally {
         changed(segmentId, locator, "proposal recorded");
     }
 
+    int termSubstitutionCount() {
+        return termSubstitutions;
+    }
+
+    int proposalCount() {
+        return proposals;
+    }
+
     /** The number of distinct segments whose target or proposal changed. */
     int segmentsChanged() {
         return changedSegments.size();

@@ -67,6 +67,9 @@ class TranslationJobEventsTest {
     // A one-chapter book's chapter is its last: its summary step starts and ends with no call once it is decided.
     private static final List<String> LAST_CHAPTER = List.of("StepChanged", "StepChanged");
 
+    // Every run ends with its Proofread stage, announced before the run finishes.
+    private static final List<String> PROOFREAD = List.of("StageStarted");
+
     @TempDir
     private Path tempDir;
 
@@ -96,7 +99,13 @@ class TranslationJobEventsTest {
                         acceptedOnFirstCall("Book.txt:1", 2, 1),
                         acceptedOnFirstCall("Book.txt:2", 3, 0),
                         LAST_CHAPTER,
-                        List.of("Finished COMPLETED"))));
+                        List.of("StageStarted PROOFREAD", "Finished COMPLETED"))));
+        assertStageSnapshots(events);
+    }
+
+    // Each stage starts with the counts of its moment: nothing decided at Prepare and Translate, all three at
+    // Proofread.
+    private static void assertStageSnapshots(final List<JobEvent> events) {
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
                 .extracting(
@@ -106,7 +115,10 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.PREP, 1, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3));
+                .containsExactly(
+                        tuple(JobStage.PREP, 1, 1, 0, 0, 3),
+                        tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3),
+                        tuple(JobStage.PROOFREAD, 1, 1, 3, 0, 0));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -168,7 +180,8 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(OPENING.size() + ACCEPTED_ON_FIRST_CALL.size() + LAST_CHAPTER.size() + 1);
+        assertThat(healthy)
+                .hasSize(OPENING.size() + ACCEPTED_ON_FIRST_CALL.size() + LAST_CHAPTER.size() + PROOFREAD.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -206,7 +219,7 @@ class TranslationJobEventsTest {
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactlyElementsOf(
-                        concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, LAST_CHAPTER, List.of("Finished"))));
+                        concat(List.of(OPENING, ACCEPTED_ON_FIRST_CALL, LAST_CHAPTER, PROOFREAD, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -233,6 +246,7 @@ class TranslationJobEventsTest {
                         List.of("Paused", "Resumed"),
                         ACCEPTED_ON_FIRST_CALL,
                         LAST_CHAPTER,
+                        PROOFREAD,
                         List.of("Finished"))));
         shutdown(workers);
     }

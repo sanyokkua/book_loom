@@ -59,7 +59,7 @@ final class BatchedJobs {
                 new RunChecks(
                         TranslationJobTestSupport.qualityLoop(),
                         TranslationJobTestSupport.SPLITTER,
-                        ConsistencyPassFixture.over(project, templates),
+                        ProofreadFixture.over(project),
                         WordValidator.none()),
                 new RunPacing(
                         Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL, RunTicks.DAEMON, firstBatchSize),

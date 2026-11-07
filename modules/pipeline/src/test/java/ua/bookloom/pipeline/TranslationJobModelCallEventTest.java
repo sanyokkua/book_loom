@@ -55,8 +55,9 @@ class TranslationJobModelCallEventTest {
                                 List.of("StageStarted", "StageStarted", "StepsPlanned", "StepsPlanned"),
                                 ONE_SEGMENT,
                                 ONE_SEGMENT,
-                                // The one chapter's summary step, done with no call: it is the book's last.
-                                List.of("StepChanged", "StepChanged", "Finished"))
+                                // The one chapter's summary step, done with no call: it is the book's last; then the
+                                // Proofread stage, before the run finishes.
+                                List.of("StepChanged", "StepChanged", "StageStarted", "Finished"))
                         .flatMap(List::stream)
                         .toList());
         assertThat(events)

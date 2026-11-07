@@ -6,34 +6,31 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
 
-/** Runs the final audit when a run completes. The audit is advice: a run that completed stays completed. */
+/**
+ * Runs the final audit once, as a run's Translate stage ends and before the Proofread stage builds its mark list, which
+ * reads the audit's doubts as audit marks. The audit is advice: a failed audit never ends the run.
+ */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RunAudit {
 
     /**
-     * Audits the project's accepted segments and stores what the audit finds, when the run completed.
+     * Audits the project's accepted segments and stores what the audit finds.
      *
-     * @param end the non-null state the run ended in; any other than COMPLETED audits nothing
      * @param stores the non-null stores the run decided into
      * @param words the non-null word validator the run used
      * @param projectId the non-null project id
      */
-    public static void after(
-            final JobState end, final RunStores stores, final WordValidator words, final String projectId) {
-        Objects.requireNonNull(end, "end");
+    public static void run(final RunStores stores, final WordValidator words, final String projectId) {
         Objects.requireNonNull(stores, "stores");
-        if (end != JobState.COMPLETED) {
-            return;
-        }
         Objects.requireNonNull(words, "words");
         Objects.requireNonNull(projectId, "projectId");
+        log.debug("Final audit as the Translate stage ends project={}", projectId);
         try {
             audit(stores, words, projectId);
         } catch (VirtualMachineError fatal) {
@@ -41,7 +38,7 @@ public final class RunAudit {
         } catch (Exception thrown) {
             // Only the type is logged: a check's message may quote the book.
             log.warn(
-                    "Final audit failed project={} type={}; the run stays completed",
+                    "Final audit failed project={} type={}; the run goes on",
                     projectId,
                     thrown.getClass().getName());
         }

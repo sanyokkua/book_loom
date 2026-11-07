@@ -217,7 +217,7 @@ final class TranslationJobTestSupport {
                 new RunRequest(projectId, mode, null, MODEL_NAME, new ModelSelection("scripted-provider", MODEL_NAME)),
                 new JobTools(project.documents(), model, new ObjectMapper(), new PromptTemplates()),
                 project.stores(),
-                new RunChecks(qualityLoop(), SPLITTER, ConsistencyPassFixture.over(project), WordValidator.none()),
+                new RunChecks(qualityLoop(), SPLITTER, ProofreadFixture.over(project), WordValidator.none()),
                 new RunPacing(
                         Clock.systemUTC(),
                         new UuidIdSource(),

@@ -255,7 +255,9 @@ class LanguageRulesTest {
     @Test
     void negationWords_ukrainian_holdsOnlyTheNegations() {
         assertThat(LanguageRules.bundled().negationWords("uk"))
-                .containsExactlyInAnyOrder("не", "ні", "ніколи", "ніде", "ніхто", "нічого");
+                .containsExactlyInAnyOrder(
+                        "не", "ні", "ніколи", "ніде", "ніхто", "нікого", "нікому", "ніким", "нічого", "нічому",
+                        "нічим");
     }
 
     @ParameterizedTest

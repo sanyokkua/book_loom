@@ -37,7 +37,7 @@ final class TimedJobs {
                 new RunChecks(
                         TranslationJobTestSupport.qualityLoop(),
                         TranslationJobTestSupport.SPLITTER,
-                        ConsistencyPassFixture.over(project),
+                        ProofreadFixture.over(project),
                         WordValidator.none()),
                 new RunPacing(clock, new UuidIdSource(), timer, ticks, BatchDrafter.NO_BATCHING),
                 new RunLogFacts(CallLedger.none(), "unknown"));

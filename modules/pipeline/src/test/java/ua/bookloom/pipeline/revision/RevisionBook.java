@@ -109,6 +109,21 @@ final class RevisionBook {
         return pass().run(desk.projectId(), calls, options);
     }
 
+    /** Runs the Proofread stage's code sweep over the book. */
+    Result<CodeSweep.Swept> sweep() {
+        return new CodeSweep(
+                        desk.documents(),
+                        desk.openProjects(),
+                        desk.projects(),
+                        desk.segments(),
+                        desk.deferrals(),
+                        desk.glossary(),
+                        desk.lexicon())
+                .run(
+                        desk.projectId(),
+                        Objects.requireNonNull(desk.openProjects().get(desk.projectId()), "open book"));
+    }
+
     private ConsistencyPass pass() {
         return new ConsistencyPass(
                 desk.documents(),
@@ -148,6 +163,13 @@ final class RevisionBook {
     void change(final GlossaryEntry before, final GlossaryEntry after) {
         glossaryUpdate(after);
         DeferralRegister.termChanged(before, after, ok(desk.segments().all(desk.projectId())))
+                .forEach(this::recordDeferral);
+    }
+
+    /** Changes an entry as the glossary service does for a Ukrainian book, so a pinned target's forms are matched. */
+    void changeInUkrainian(final GlossaryEntry before, final GlossaryEntry after) {
+        glossaryUpdate(after);
+        DeferralRegister.termChanged(before, after, ok(desk.segments().all(desk.projectId())), "uk")
                 .forEach(this::recordDeferral);
     }
 

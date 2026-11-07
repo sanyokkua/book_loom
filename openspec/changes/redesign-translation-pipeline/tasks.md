@@ -1464,7 +1464,7 @@ set aside once.
     glossary save that records deferrals.
   - **Done when:** the tests are green and `scripts/test-focused.sh --full-module` passes for `:pipeline`.
 
-- [ ] 13.4 Add the Proofread stage's code part — term sweep, deferrals settled by code, the mark list and the audit —
+- [x] 13.4 Add the Proofread stage's code part — term sweep, deferrals settled by code, the mark list and the audit —
   and run it after the last chunk at every dial in place of Max's backward revision, so a Fast run ends with every
   late fact applied or listed and no model call. → :pipeline
   - **Satisfies:** "Run a book in three stages: Prepare, Translate and Proofread" (translation-pipeline), "Run the Proofread stage after the last chunk at every dial" (translation-pipeline), "Build the proofread mark list by code" (translation-pipeline), "Make no model call in the Proofread stage at Fast" (translation-pipeline), "Sweep a changed rendering through the decided text by code" (translation-pipeline), "Settle every deferral whose fact has arrived in the Proofread stage" (translation-pipeline), "Report progress and the outcome" (translation-pipeline), "Infer an unstated first-person narrator's gender from the decided translations" (translation-pipeline; it now runs when Translate ends, before the deferrals are settled), RENAMED "Audit every accepted segment again when the Translate stage ends" (quality-gates; runs once when Translate ends, before the mark list); REMOVED "Record deferrals and revise backwards on Max" and "Revise backwards after the last segment on Max" (translation-pipeline)
@@ -1474,34 +1474,53 @@ set aside once.
   - **Read:** `run/StageRunner` (`revise` at L110), `revision/TermSweep`, `revision/GenderWaits`,
     `revision/RevisionWriter`, `run/RunAudit`, `audit/FinalAudit`, `audit/AuditRecorder`, `checks/UkrainianGenderCheck`,
     `run/NarratorStage` and group 7's `PastTenseReader`; design D2, D15 "Audit", "Order" and "Fast".
-  - **Change:** when the last chunk is decided, in this order: `RunAudit` runs once (it ran when the run completed until
-    now; it is not run again after Proofread, and the desk's "Run the audit again" stays on demand), its doubts becoming
-    audit marks; the narrator inference counts the «I + past verb» forms of the decided targets (group 7's
-    `PastTenseReader`) for a first-person narrator with no gender or only a likely one; then the Proofread stage. New
-    package `pipeline.proofread` with `package-info.java`; `ProofreadStage` (entry `run`), `MarkList`
-    (tier 1: FLAGGED, proofread marks, deferrals whose fact arrived; tier 2: audit doubts, kept soft findings, a lemma
-    named in the source with none of its target forms, one source with different targets, a recurring term off its
-    rendering, gender endings against a USER/BOOK gender; story segments only). `StageRunner` calls
-    `ProofreadStage.run` at every dial after the last chunk and no longer calls `revise`; the run ends COMPLETED only
-    after the stage. `TermSweep` runs first: LOCKED whole-word, PINNED through `NameForms.forms` (old form k → new form
-    k), never SUGGESTED, a proposal through `RevisionWriter` for a person-edited segment, consuming TERM deferrals.
-    Deferrals whose fact arrived are checked by the gender check: no mismatch → resolved with no call; a mismatch →
-    tier-1 mark with the reason `gender now known: {target} — {gender}`. At Fast the stage stops after the list (no
-    model call): every entry goes to the review desk with its reasons and the run is COMPLETED. Continue at Fast runs
-    this code-only work again when a glossary change or a gender set after the run left work, so export's "Continue on
-    Translating to apply it" holds at every dial. The stage is announced with the existing `StageStarted` event carrying `JobStage.PROOFREAD` (13.2); no new
-    `JobEvent` variant is added, so no exhaustive switch changes.
-  - **Test first:** `ProofreadStageTest` (unit, pseudo model, invented book): `run_balancedLastChunk_ordersAuditNarratorSweepDeferralsList` (the audit runs once, before the mark list, and never after the stage);
-    `markList_negationLost_listedWithReason` (an invented segment `ch05.md:3` whose source holds two negations and whose target none); `markList_nameFormMissing_listed`
-    (`Ивар` / `Івар`, `ch04.md:8`); `sweep_lockedHale_replacedWholeWord` (`Хейл пішов.` → `Гейл пішов.`);
-    `sweep_pinnedForm_replaced` (`до Хейла` → `до Гейла`); `sweep_suggestedEntry_untouched`;
-    `sweep_personEdited_proposalStored`; `deferral_futureVerb_resolvedNoCall` (`… ключ залишить Івар …`);
+  - **Change:** when the last chunk is decided, in the spec's order ("Run the Proofread stage after the last chunk at
+    every dial"): `RunAudit` runs once as the Translate stage ends (it ran in `TranslationJobImpl.finish` when the run
+    completed until now; it is not run again after Proofread, and the desk's "Run the audit again" stays on demand), its
+    doubts becoming audit marks; then the Proofread stage: the term sweep, the narrator inference (the existing
+    `run/NarratorStage` over `narrator/NarratorInference`, which already counts the «I + past verb» forms through group
+    7's `PastTenseReader` for a first-person narrator with no gender or only a likely one — only its place moves), the
+    deferrals settled by code and the mark list. A run stopped during Translate still settles the narrator as before,
+    with no audit and no Proofread. New package `pipeline.proofread` with `package-info.java`; `ProofreadStage` (entry
+    `run`), `MarkList` (tier 1: FLAGGED, a REPAIR-level finding left after the one repair, deferrals whose fact arrived;
+    tier 2: NOTE findings and audit doubts — the audit already lists one source with different targets and a name spelled
+    two ways —, a map name named in the source with none of its target forms, a recurring term off its established
+    rendering, gender endings against a USER/BOOK gender; story segments only). A mark is a finding or an open deferral
+    on a segment, never a record of its own, so `MarkList` is computed from the stored state and the desk (13.8) can
+    compute the same list. `StageRunner` calls `ProofreadStage.run` at every dial after the last chunk and no longer
+    calls `revise`; the run ends COMPLETED only after the stage. The run no longer holds the backward-revision pass:
+    `RunChecks.revision` (`ConsistencyPass`) becomes `RunChecks.proofread` (`proofread/ProofreadTools`), and only the
+    export still injects `ConsistencyPass`. `TermSweep` stays package-private in `revision/` (group 14 moves it) behind
+    a new public `revision/CodeSweep`, which shares the pass's input reading with `ConsistencyPass`. The sweep runs
+    first: LOCKED whole-word, PINNED through `NameForms.forms` (old form k → new form k, by the shared ending), never
+    SUGGESTED, a proposal through `RevisionWriter` for a person-edited segment, consuming TERM deferrals; a swept
+    ACCEPTED segment stays ACCEPTED (it used to become REVISED), a FLAGGED one becomes REVISED only when its every
+    finding is a `glossary` one. Deferrals whose fact arrived (GENDER_CHANGED, and GENDER_UNKNOWN once the entry has a
+    USER/BOOK gender or the narrator a stated or inferred one) are checked by the gender check: no mismatch → resolved
+    with no call; a mismatch → left open as a tier-1 mark with the reason `gender now known: {target} — {gender}`. At
+    Fast the stage stops after the list (no model call): every entry goes to the review desk with its reasons and the
+    run is COMPLETED; Balanced and Max also stop there until 13.5 adds the windows. Continue at Fast runs this
+    code-only work again when a glossary change or a gender set after the run left work, so export's "Continue on
+    Translating to apply it" holds at every dial (a new run over a fully decided book goes straight to Proofread). The
+    stage is announced with the existing `StageStarted` event carrying `JobStage.PROOFREAD` (13.2); no new `JobEvent`
+    variant is added, so no exhaustive switch changes. The code part plans no progress step (Max's one planned
+    revision step goes; 13.6 plans the windows). A stop is checked between the stage's code steps through a new
+    `RunBoundaries.isStopRequested()`; a pause during the code part is 13.6's `pause_duringSweep_completesThenPauses`.
+  - **Test first:** `proofread/MarkListTest`: `markList_negationLost_listedWithReason` (an invented segment `ch05.md:3`
+    whose source holds two negations and whose target none); `markList_nameFormMissing_listed` (`Ивар` / `Івар`,
+    `ch04.md:8`). `revision/CodeSweepTest` over the EPUB of `RevisionBook`: `sweep_lockedHale_replacedWholeWord`
+    (`Хейл пішов.` → `Гейл пішов.`); `sweep_pinnedForm_replaced` (`до Хейла` → `до Гейла`);
+    `sweep_suggestedEntry_untouched`; `sweep_personEdited_proposalStored`. `ProofreadStageTest` (job level, scripted
+    model, invented book): `run_balancedLastChunk_ordersAuditSweepNarratorDeferralsList` (the audit runs once, before
+    the mark list, and never after the stage); `deferral_futureVerb_resolvedNoCall` (`… ключ залишить Івар …`);
     `run_fast_noModelCallAndDeskListsSix`; `continue_fastAfterGenderSetAfterRun_runsCodeOnlyProofreadAgain`;
-    `narrator_threeFemalePastFormsInTargets_storedInferredBeforeDeferrals`; `TranslationJob` event test: Prepare, Translate, Proofread stage events
-    before Completed for `Book.txt`; a stop during Proofread ends Cancelled with decided segments kept.
+    `narrator_eightFemalePastFormsInTargets_storedInferredBeforeDeferrals` (20 first-person segments, the thresholds of
+    `NarratorInference`); `run_fastBookTxt_stagesPrepareTranslateProofreadThenCompleted`;
+    `stop_duringProofread_cancelledWithDecidedSegmentsKept`.
   - **Log:** INFO stage start/end (dial, marked count by tier, deferrals resolved by code, sweep replacements);
     DEBUG per mark (segment id, reasons); WARN for a sweep turned into a proposal.
-  - **Done when:** the tests are green; acceptance case (c) passes except its desk-list assertion (13.8).
+  - **Done when:** the tests are green; acceptance case (c) passes on both dialects (its desk-list check is 14.x's
+    `ReviewDeskListTest`, as 13.1 says).
 
 - [ ] 13.5 Read the marked and doubtful windows at Balanced and Max with one minimal-edit proofread call each, keep a
   rewrite only through the never-worse gate, and store a proposal for the person's own edits, so the last pass edits
@@ -1538,7 +1557,9 @@ set aside once.
     `rewrite_foreignNameForm_rejected` (`Зотової` not a form of `Зотов`); `rewrite_personEdit_proposal`
     (`Він рвучко відчинив двері.`); `rewrite_flaggedSegmentClearedOfItsBlocker_revised`;
     `rewrite_flaggedSegmentStillBlocked_staysFlaggedWithProposal`; `PseudoChatModelTest.answer_proofreadKind_unchanged`; request body temperature 0.1 and `"think":false` on Ollama; a run summary counting
-    55 proofread calls with 45 reporting cached tokens. Acceptance cases (a) and (b) go green in 13.6, because (a) needs Max's second round and (b) needs Continue at every dial.
+    55 proofread calls with 45 reporting cached tokens; the two Max slip cases of `TranslationJobNarratorInferenceTest`
+    (13.4 left the slips as open narrator deferrals, `..._LeavesTheSlipsWaiting`) assert again that their windows
+    re-render them. Acceptance cases (a) and (b) go green in 13.6, because (a) needs Max's second round and (b) needs Continue at every dial.
   - **Log:** INFO per window decided (window id, focus count, verdict counts); DEBUG for window building and each
     dropped item; TRACE for the prompt and reply; WARN for each REJECTED verdict with the gate's reason.
   - **Done when:** the tests are green on both dialects; acceptance cases (a) and (b) still fail only for Max's second round and for Continue after a completed Balanced run (13.6).

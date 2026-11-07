@@ -100,7 +100,7 @@ class RevisionWriterFlaggedTest {
     // The status after the swap, by the status and the one finding the segment held before it.
     @ParameterizedTest
     @CsvSource({
-        "ACCEPTED, omission, length, REVISED",
+        "ACCEPTED, omission, length, ACCEPTED",
         "FLAGGED, glossary, locked-term, REVISED",
         "FLAGGED, language, script, FLAGGED",
         "FLAGGED, meaning, judge, FLAGGED"

@@ -45,7 +45,7 @@ import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.proofread.ProofreadTools;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -171,7 +171,7 @@ final class SoakRun {
                 new RunChecks(
                         injector.getInstance(QualityLoop.class),
                         injector.getInstance(SentenceSplitter.class),
-                        injector.getInstance(ConsistencyPass.class),
+                        injector.getInstance(ProofreadTools.class),
                         WordValidator.none()),
                 new RunPacing(
                         clock,

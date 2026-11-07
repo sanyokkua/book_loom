@@ -11,44 +11,31 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
-import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
-import ua.bookloom.pipeline.typography.TypographyChoices;
-import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Backward revision, shared by the Max run's last stage and by Export: first the deterministic sweep of every renamed
@@ -260,67 +247,7 @@ public final class ConsistencyPass {
     }
 
     private Result<PassInputs> inputs(final String projectId) {
-        final Result<Optional<Project>> found = projects.find(projectId);
-        if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), ERROR));
-        }
-        final BookBrief brief = Objects.requireNonNull(found.data(), "found")
-                .map(Project::brief)
-                .orElse(null);
-        final Document document = openProjects.get(projectId);
-        final String target = brief == null ? null : brief.targetLanguage();
-        log.debug(
-                "Backward revision inputs project={} stored={} bookOpen={} targetLanguage={}",
-                projectId,
-                brief != null,
-                document != null,
-                target);
-        if (brief == null || document == null || target == null || target.isBlank()) {
-            return Result.err(AppError.of(
-                    ErrorCode.validation,
-                    "Nothing to revise",
-                    "The project must be stored, name a target language and have its book open to be revised."));
-        }
-        return bookContext(projectId)
-                .flatMap(context ->
-                        glossary.all(projectId).map(entries -> inputsOf(projectId, brief, document, entries, context)));
-    }
-
-    private Result<BookContext> bookContext(final String projectId) {
-        log.debug("Backward revision context project={}", projectId);
-        return lexicon.all(projectId).map(BookContext::new);
-    }
-
-    private PassInputs inputsOf(
-            final String projectId,
-            final BookBrief brief,
-            final Document document,
-            final List<GlossaryEntry> entries,
-            final BookContext context) {
-        final String target = Objects.requireNonNull(brief.targetLanguage(), "target");
-        final Map<String, Segment> sources = new LinkedHashMap<>();
-        document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
-        return new PassInputs(
-                projectId,
-                CallFrame.forBook(brief, document, openProjects.index(projectId)),
-                brief.names(),
-                TypographyGate.around(
-                        GateFunction.of(documents, document.format()), target, TypographyChoices.of(brief)),
-                sources,
-                SegmentLocators.of(document),
-                entries,
-                List.copyOf(sources.keySet()),
-                new FinalAudit.Book(brief, document, entries, WordValidator.none()),
-                context,
-                matterIds(document));
-    }
-
-    private static Set<String> matterIds(final Document document) {
-        return document.units().stream()
-                .filter(unit -> unit.isAuxiliary() || unit.role() != UnitRole.BODY)
-                .flatMap(unit -> unit.segments().stream())
-                .map(Segment::id)
-                .collect(Collectors.toUnmodifiableSet());
+        return new PassReader(documents, openProjects, projects, glossary, lexicon).read(projectId);
     }
 
     private static Map<DeferralReason, Integer> byReason(final List<Deferral> open) {

@@ -87,6 +87,13 @@ final class JobBoundaries implements RunBoundaries {
     }
 
     @Override
+    public boolean isStopRequested() {
+        final boolean stop = control.isCancellationRequested();
+        log.debug("Checked for a stop between steps stop={}", stop);
+        return stop;
+    }
+
+    @Override
     public Optional<RunEnd> afterDecision(final Decision decision, final JobProgress progress) {
         Objects.requireNonNull(decision, "decision");
         forgetSkip();

@@ -87,6 +87,11 @@ class RoutedCallsTest {
         }
 
         @Override
+        public boolean isStopRequested() {
+            return false;
+        }
+
+        @Override
         public void callAnswered() {
             // Nothing to end: no outage is tracked here.
         }

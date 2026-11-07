@@ -26,12 +26,13 @@ import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.heal.GateResult;
 
 /**
- * The deterministic half of backward revision: each TERM deferral's previous rendering is replaced, whole-word, by its
- * locked entry's current target in the segment's masked form, and the plain form is restored from it through the
- * document gate, so both forms stay consistent and no tag or token is touched. Every term deferral of one segment is
- * swept into one new target, so two renamed terms in one sentence both arrive. A person-edited segment is swept from
- * the proposal already waiting on it, which the new one supersedes, so an earlier fix is never lost and one proposal
- * waits. No model call is made.
+ * The deterministic sweep of renamed glossary targets, run by the Proofread stage and by the export's backward
+ * revision: each TERM deferral's previous rendering is replaced in the segment's masked form — whole-word by a locked
+ * entry's current target, and form by form by the same case of a pinned entry's (a suggested entry is never swept) —
+ * and the plain form is restored from it through the document gate, so both forms stay consistent and no tag or token
+ * is touched. Every term deferral of one segment is swept into one new target, so two renamed terms in one sentence
+ * both arrive. A person-edited segment is swept from the proposal already waiting on it, which the new one supersedes,
+ * so an earlier fix is never lost and one proposal waits. No model call is made.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -82,7 +83,7 @@ final class TermSweep {
             log.debug("Term deferrals resolved unswept segmentId={}: no stored target or no such segment", segmentId);
             return writer.resolveAll(pending);
         }
-        final Result<Sweep> applied = substitute(inputs.projectId(), segmentId, base.masked(), pending);
+        final Result<Sweep> applied = substitute(inputs, segmentId, base.masked(), pending);
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), ERROR));
         }
@@ -104,11 +105,11 @@ final class TermSweep {
     }
 
     private Result<Sweep> substitute(
-            final String projectId, final String segmentId, final String masked, final List<Deferral> terms) {
+            final PassInputs inputs, final String segmentId, final String masked, final List<Deferral> terms) {
         String working = masked;
         final List<Deferral> swept = new ArrayList<>();
         for (final Deferral term : terms) {
-            final Result<Optional<String>> replaced = replaceOne(projectId, segmentId, working, term);
+            final Result<Optional<String>> replaced = replaceOne(inputs, segmentId, working, term);
             if (replaced.isErr()) {
                 return Result.err(Objects.requireNonNull(replaced.error(), ERROR));
             }
@@ -123,11 +124,11 @@ final class TermSweep {
 
     /** One term's substitution, or empty when the deferral was resolved instead: the answer is then already stored. */
     private Result<Optional<String>> replaceOne(
-            final String projectId, final String segmentId, final String working, final Deferral term) {
+            final PassInputs inputs, final String segmentId, final String working, final Deferral term) {
         final String waitingOn = term.waitingOn();
         final String previous = term.replacedRendering();
         final Result<Optional<GlossaryEntry>> found =
-                waitingOn == null ? Result.ok(Optional.empty()) : glossary.findByTerm(projectId, waitingOn);
+                waitingOn == null ? Result.ok(Optional.empty()) : glossary.findByTerm(inputs.projectId(), waitingOn);
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error(), ERROR));
         }
@@ -135,30 +136,45 @@ final class TermSweep {
                 Objects.requireNonNull(found.data(), "found").orElse(null);
         final Optional<String> reason = notSwept(entry, previous);
         if (reason.isPresent()) {
-            log.debug("Term deferral resolved unswept segmentId={}: {}", segmentId, reason.get());
-            return writer.resolveAll(List.of(term)).map(done -> Optional.empty());
+            return resolvedUnswept(segmentId, term, reason.get());
         }
-        final Matcher matcher =
-                WholeWord.pattern(Objects.requireNonNull(previous, "previous")).matcher(working);
+        final GlossaryEntry swept = Objects.requireNonNull(entry, "entry");
+        final Map<String, String> renamings = renamings(
+                swept,
+                Objects.requireNonNull(previous, "previous"),
+                inputs.frame().targetLanguage());
+        final Matcher matcher = WholeWord.anyOf(renamings.keySet()).matcher(working);
         if (!matcher.find()) {
-            log.debug(
-                    "Term deferral resolved unswept segmentId={}: the target no longer holds the old rendering",
-                    segmentId);
-            return writer.resolveAll(List.of(term)).map(done -> Optional.empty());
+            return resolvedUnswept(segmentId, term, "the target no longer holds the old rendering");
         }
-        final String target =
-                Objects.requireNonNull(Objects.requireNonNull(entry, "entry").target(), "target");
-        log.debug("Substituting a locked rendering segmentId={}", segmentId);
-        log.trace("Substituting segmentId={} term={} from={} to={}", segmentId, waitingOn, previous, target);
-        return Result.ok(Optional.of(matcher.replaceAll(Matcher.quoteReplacement(target))));
+        log.debug(
+                "Substituting a {} rendering segmentId={} forms={}", swept.targetState(), segmentId, renamings.size());
+        log.trace("Substituting segmentId={} term={} renamings={}", segmentId, waitingOn, renamings);
+        return Result.ok(
+                Optional.of(matcher.replaceAll(match -> Matcher.quoteReplacement(renamings.get(match.group())))));
+    }
+
+    private Result<Optional<String>> resolvedUnswept(final String segmentId, final Deferral term, final String reason) {
+        log.debug("Term deferral resolved unswept segmentId={}: {}", segmentId, reason);
+        return writer.resolveAll(List.of(term)).map(done -> Optional.empty());
+    }
+
+    // A locked target is exact text, replaced as written; a pinned one declines, so each of its forms is replaced by
+    // the same case of the new target.
+    private static Map<String, String> renamings(
+            final GlossaryEntry entry, final String previous, final String targetLanguage) {
+        final String target = Objects.requireNonNull(entry.target(), "target");
+        return entry.locked()
+                ? Map.of(previous, target)
+                : PinnedForms.renamings(previous, target, entry.gender(), targetLanguage);
     }
 
     private static Optional<String> notSwept(@Nullable final GlossaryEntry entry, @Nullable final String previous) {
         if (entry == null) {
             return Optional.of("the entry is gone");
         }
-        if (!entry.locked()) {
-            return Optional.of("the entry is not locked");
+        if (entry.isSuggested()) {
+            return Optional.of("the entry is only suggested");
         }
         final String target = entry.target();
         if (target == null || target.isBlank()) {
@@ -213,7 +229,10 @@ final class TermSweep {
         switch (how) {
             case MACHINE_TARGET ->
                 tally.swept(segmentId, inputs.locator(segmentId), sweep.swept().size());
-            case PROPOSAL -> tally.proposed(segmentId, inputs.locator(segmentId));
+            case PROPOSAL -> {
+                log.warn("Term sweep stored a proposal segmentId={}: the person edited the segment", segmentId);
+                tally.proposed(segmentId, inputs.locator(segmentId));
+            }
             // The sweep makes no model call, so only a truly concurrent action gets here; the next pass sweeps again.
             case STALE ->
                 log.debug("Term deferrals left open segmentId={}: the segment changed as it was swept", segmentId);

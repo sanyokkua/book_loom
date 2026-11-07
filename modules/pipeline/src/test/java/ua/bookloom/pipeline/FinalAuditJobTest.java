@@ -25,7 +25,6 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -233,15 +232,14 @@ class FinalAuditJobTest {
     }
 
     @Test
-    void after_checkThatThrows_leavesTheCompletedRunAndItsRecordsAlone() {
+    void run_checkThatThrows_leavesTheRunAndItsRecordsAlone() {
         final TestProject run = finished(Map.of());
         final List<SegmentRecord> before = stored(run);
         final WordValidator broken = (target, language) -> {
             throw new IllegalStateException("the dictionary is gone");
         };
 
-        assertThatCode(() -> RunAudit.after(JobState.COMPLETED, run.stores(), broken, run.id()))
-                .doesNotThrowAnyException();
+        assertThatCode(() -> RunAudit.run(run.stores(), broken, run.id())).doesNotThrowAnyException();
         assertThat(stored(run)).isEqualTo(before);
     }
 }

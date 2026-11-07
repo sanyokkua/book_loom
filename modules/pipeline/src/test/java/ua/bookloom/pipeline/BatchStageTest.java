@@ -144,7 +144,7 @@ class BatchStageTest {
                 new RunChecks(
                         TranslationJobTestSupport.qualityLoop(),
                         TranslationJobTestSupport.SPLITTER,
-                        ConsistencyPassFixture.over(project),
+                        ProofreadFixture.over(project),
                         WordValidator.none()),
                 new RunPacing(Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL),
                 new RunLogFacts(CallLedger.none(), "unknown"));

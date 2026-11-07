@@ -244,11 +244,11 @@ public final class WorkList {
     }
 
     /**
-     * Returns the counts as backward revision starts, after the last segment is decided.
+     * Returns the counts as the Proofread stage starts, after the last segment is decided.
      *
-     * @return the counts under the {@code REVISE} stage, at the last section
+     * @return the counts under the {@code PROOFREAD} stage, at the last section
      */
-    public JobProgress revisionProgress() {
+    public JobProgress proofreadProgress() {
         return progress(JobStage.PROOFREAD, currentSection());
     }
 

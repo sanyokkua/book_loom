@@ -71,14 +71,14 @@ class TranslationJobChunkTest {
     }
 
     @Test
-    void run_threeSegments_announcesPrepThenTranslateAndNoExport() {
+    void run_threeSegments_announcesPrepTranslateProofreadAndNoExport() {
         final Path book = TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree.");
         final TranslationJobImpl translation = job(book, replies("Один.", "Два.", "Третій."));
         final List<JobStage> stages = ChunkRunFixtures.stages(translation);
 
         assertThat(report(translation.run()).end()).isEqualTo(JobState.COMPLETED);
 
-        assertThat(stages).containsExactly(JobStage.PREP, JobStage.TRANSLATE);
+        assertThat(stages).containsExactly(JobStage.PREP, JobStage.TRANSLATE, JobStage.PROOFREAD);
         assertThat(tempDir.resolve("Book.uk.txt")).doesNotExist();
     }
 

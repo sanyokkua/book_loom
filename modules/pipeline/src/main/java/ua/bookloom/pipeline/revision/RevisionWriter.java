@@ -30,7 +30,10 @@ final class RevisionWriter {
 
     /** How a revised target was stored. */
     enum Stored {
-        /** The machine target was replaced; the segment is REVISED, or still FLAGGED when a finding remains unfixed. */
+        /**
+         * The machine target was replaced; the segment takes {@link Change#statusAfter}'s status, so a FLAGGED one stays
+         * FLAGGED while a finding remains unfixed.
+         */
         MACHINE_TARGET,
 
         /** The person's edit was kept and the target waits as a proposal. */
@@ -47,23 +50,35 @@ final class RevisionWriter {
      */
     enum Change {
         /**
-         * A renamed locked term swept in. It fixes a {@code glossary} finding: a finding does not name its term, so
-         * every glossary finding on the segment is taken to be about the swapped name.
+         * A renamed glossary target swept in. It fixes a {@code glossary} finding: a finding does not name its term, so
+         * every glossary finding on the segment is taken to be about the swapped name. Only the spelling of a name the
+         * person chose changed, so an ACCEPTED segment stays ACCEPTED.
          */
-        NAME_SWAP(true),
+        NAME_SWAP(true, true),
 
         /** A re-render for a character's now-known gender. Agreement is never a recorded finding, so it fixes none. */
-        GENDER(false),
+        GENDER(false, false),
 
         /** A fix made against the neighbouring paragraphs. It is a repair of unnamed defects, so it fixes no finding. */
-        NEIGHBOUR(false);
+        NEIGHBOUR(false, false);
 
         private static final String GLOSSARY_KIND = "glossary";
 
         private final boolean fixesGlossaryFindings;
+        private final boolean keepsAccepted;
 
-        Change(final boolean fixesGlossaryFindings) {
+        Change(final boolean fixesGlossaryFindings, final boolean keepsAccepted) {
             this.fixesGlossaryFindings = fixesGlossaryFindings;
+            this.keepsAccepted = keepsAccepted;
+        }
+
+        /** The status a machine-owned segment takes once this change is written into it. */
+        SegmentStatus statusAfter(final SegmentRecord current) {
+            return switch (current.status()) {
+                case FLAGGED -> canFixAll(current.findings()) ? SegmentStatus.REVISED : SegmentStatus.FLAGGED;
+                case ACCEPTED -> keepsAccepted ? SegmentStatus.ACCEPTED : SegmentStatus.REVISED;
+                case PENDING, REVISED -> SegmentStatus.REVISED;
+            };
         }
 
         /** Whether this change fixes every one of {@code findings}; a segment flagged with none has nothing fixed. */
@@ -128,9 +143,8 @@ final class RevisionWriter {
             return current;
         }
         how.set(Stored.MACHINE_TARGET);
-        final boolean keepsFlag = current.status() == SegmentStatus.FLAGGED && !change.canFixAll(current.findings());
         return current.withMachineTarget(revised.restored(), revised.maskedForm())
-                .withStatus(keepsFlag ? SegmentStatus.FLAGGED : SegmentStatus.REVISED);
+                .withStatus(change.statusAfter(current));
     }
 
     private static boolean readsAs(final SegmentRecord base, final SegmentRecord current) {

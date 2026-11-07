@@ -136,7 +136,7 @@ class TranslationEngineImplTest {
                 new RunChecks(
                         TranslationJobTestSupport.qualityLoop(),
                         Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                        ConsistencyPassFixture.over(project),
+                        ProofreadFixture.over(project),
                         WordValidator.none()),
                 new RunPacing(Clock.systemUTC(), new UuidIdSource(), RecoveryTimer.REAL),
                 new RunLogSources(CallLedger.none(), providers));

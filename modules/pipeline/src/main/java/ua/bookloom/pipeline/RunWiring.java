@@ -20,7 +20,9 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.proofread.ProofreadStage;
+import ua.bookloom.pipeline.proofread.ProofreadTools;
+import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.PrepStage;
@@ -42,7 +44,7 @@ final class RunWiring {
     private final RunStores stores;
     private final ChunkRunnerFactory chunkRunners;
     private final PromptTemplates templates;
-    private final ConsistencyPass revision;
+    private final ProofreadTools proofread;
     private final WordValidator words;
     private final Clock clock;
     private final int pacedBatchSize;
@@ -67,7 +69,7 @@ final class RunWiring {
         this.stores = Objects.requireNonNull(stores, "stores");
         this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks);
         this.templates = tools.templates();
-        this.revision = checks.revision();
+        this.proofread = checks.proofread();
         this.words = checks.words();
         this.clock = pacing.clock();
         this.pacedBatchSize = pacing.batchSize();
@@ -111,13 +113,17 @@ final class RunWiring {
                 run.document().units(),
                 () -> stores.summaries().list(request.projectId()),
                 new SummariesSwitch(stores, request.projectId(), brief.summariesOn()));
-        return new StageRunner(
-                chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner),
-                revision,
-                settings,
-                sinks,
-                calls,
-                new NarratorStage(stores, sinks, run.document(), settings));
+        return stagesOf(
+                run, settings, sinks, chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner));
+    }
+
+    // The narrator count serves both the Proofread stage and a run stopped during Translate.
+    private StageRunner stagesOf(
+            final RunStart.Started run, final RunSettings settings, final RunSinks sinks, final ChunkRunner chunks) {
+        final NarratorStage narrator = new NarratorStage(stores, sinks, run.document(), settings);
+        final ProofreadStage proofreadStage = new ProofreadStage(
+                new ProofreadStage.Parts(stores, proofread, words, narrator), settings, sinks, run.document());
+        return new StageRunner(chunks, settings, sinks, narrator, proofreadStage);
     }
 
     private ModelCalls callsOf(final RunStart.Started run, final RunWindow runWindow, final CallFrame frame) {

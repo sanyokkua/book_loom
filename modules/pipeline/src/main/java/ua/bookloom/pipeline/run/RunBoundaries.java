@@ -95,6 +95,14 @@ public interface RunBoundaries {
     boolean takeSkipRequest();
 
     /**
+     * Whether the person asked the run to stop, read between steps that make no model call, where no aborted call would
+     * report it.
+     *
+     * @return {@code true} if a stop was asked for, {@code false} otherwise
+     */
+    boolean isStopRequested();
+
+    /**
      * Takes the fact that the pause just ended on a provider outage was ended by the person, not by a probe that found
      * the provider back, so the call sent again is not counted against the failing step.
      *

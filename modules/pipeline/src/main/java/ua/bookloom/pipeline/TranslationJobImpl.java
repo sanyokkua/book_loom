@@ -25,12 +25,10 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.run.MemoryEvents;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
-import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunEnd;
 import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
@@ -63,7 +61,6 @@ final class TranslationJobImpl implements TranslationJob {
     private final UnattendedRecovery recovery;
     private final StallWatchdog watchdog;
     private final RunTicks ticks;
-    private final WordValidator words;
 
     /**
      * Creates a job paced by {@code pacing}, for a scripted clock; its start line names the provider kind {@code
@@ -77,7 +74,6 @@ final class TranslationJobImpl implements TranslationJob {
             final RunPacing pacing,
             final RunLogFacts logFacts) {
         this.jobId = pacing.idSource().newId();
-        this.words = checks.words();
         this.request = Objects.requireNonNull(request, "request");
         this.model = tools.model();
         this.stores = Objects.requireNonNull(stores, "stores");
@@ -247,7 +243,6 @@ final class TranslationJobImpl implements TranslationJob {
         if (unsaved != null && end != JobState.FAILED) {
             return finish(JobState.FAILED, run, unsaved);
         }
-        RunAudit.after(end, stores, words, run.project().id());
         final JobReport report =
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
         recorder.ended(report.end());

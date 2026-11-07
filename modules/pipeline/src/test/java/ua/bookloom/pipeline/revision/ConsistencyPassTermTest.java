@@ -52,7 +52,7 @@ class ConsistencyPassTermTest {
         final SegmentRecord record = book.stored(HALE_LEFT);
         assertThat(record.machineTarget()).isEqualTo("Гейл пішов.");
         assertThat(record.maskedMachineTarget()).isEqualTo("Гейл пішов.");
-        assertThat(record.status()).isEqualTo(SegmentStatus.REVISED);
+        assertThat(record.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(book.model().requests()).isEmpty();
         assertThat(report).isEqualTo(new ConsistencyReport(1, 0, 0, List.of("ch1 · p04: locked term substituted")));
         assertThat(book.openDeferrals()).isEmpty();
@@ -73,9 +73,9 @@ class ConsistencyPassTermTest {
         assertThat(book.openDeferrals()).isEmpty();
     }
 
-    // A term the person unlocked again after the change is no longer swept; its deferral is resolved.
+    // A term the person unlocked again after the change stays pinned, which still binds: it is swept all the same.
     @Test
-    void run_termUnlockedAfterChange_resolvesAndKeepsTarget() {
+    void run_termUnlockedAfterChange_sweptAsPinned() {
         final GlossaryEntry hale = book.add(book.character("Hale", "Хейл", Gender.MALE, true));
         book.decide(HALE_LEFT, "Хейл пішов.", "Хейл пішов.");
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, true));
@@ -83,7 +83,7 @@ class ConsistencyPassTermTest {
 
         ok(book.run(true));
 
-        assertThat(book.stored(HALE_LEFT).machineTarget()).isEqualTo("Хейл пішов.");
+        assertThat(book.stored(HALE_LEFT).machineTarget()).isEqualTo("Гейл пішов.");
         assertThat(book.stored(HALE_LEFT).status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(book.openDeferrals()).isEmpty();
     }

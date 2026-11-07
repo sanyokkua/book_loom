@@ -149,8 +149,8 @@ class TranslationJobStepsTest {
         assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
-    // Max: one chunk of 12, two checks and the revision as an estimate; the one chapter is the book's last, so its
-    // summary step needs no call (12.6).
+    // Max: one chunk of 12 and two checks; the Proofread stage's code part plans no step (its windows are planned with
+    // 13.6); the one chapter is the book's last, so its summary step needs no call (12.6).
     @Test
     void run_maxTwelveSegments_plansOneSummaryStepAndMakesNoSummaryCall() {
         final ScriptedChatModel model = maxModel();
@@ -161,8 +161,7 @@ class TranslationJobStepsTest {
         assertThat(ended(events, StepKind.CHECK)).hasSize(2);
         assertLastChapterStepOnly(events);
         assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.CHAPTER_SUMMARY);
-        assertThat(events).contains(new StepsPlanned(StepKind.PROOFREAD, 1, true));
-        assertThat(ended(events, StepKind.PROOFREAD)).hasSize(1);
+        assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
     // The two kept-as-is lines need no call, so their draft steps end the moment they start.
