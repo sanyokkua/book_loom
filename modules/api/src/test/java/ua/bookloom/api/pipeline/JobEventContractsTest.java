@@ -91,6 +91,9 @@ class JobEventContractsTest {
             case StepChanged _ -> "StepChanged";
             case BriefSampleRead _ -> "BriefSampleRead";
             case ChapterSummaryKept _ -> "ChapterSummaryKept";
+            case ProofreadForecast _ -> "ProofreadForecast";
+            case ProofreadRoundStarted _ -> "ProofreadRoundStarted";
+            case ProofreadWindowRead _ -> "ProofreadWindowRead";
         };
     }
 

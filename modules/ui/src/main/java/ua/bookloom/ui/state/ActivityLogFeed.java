@@ -2,12 +2,14 @@ package ua.bookloom.ui.state;
 
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
@@ -17,10 +19,13 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadItem;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
+import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -180,6 +185,26 @@ final class ActivityLogFeed {
     LogEntry summaryKept(final ChapterSummaryKept kept) {
         log.debug("log: chapter {} summary kept with {} sentences", kept.chapter(), kept.sentences());
         return new LogEntry(LogKind.SUMMARY, List.of(String.valueOf(kept.chapter())));
+    }
+
+    LogEntry windowRead(final ProofreadWindowRead read) {
+        final Map<ProofreadOutcome, Long> counts = read.items().stream()
+                .collect(Collectors.groupingBy(
+                        ProofreadItem::outcome, () -> new EnumMap<>(ProofreadOutcome.class), Collectors.counting()));
+        final String span = WindowSpan.of(read.items());
+        log.debug("log: proofread window {} read in round {}: {}", span, read.round(), counts);
+        return new LogEntry(
+                LogKind.PROOF,
+                List.of(
+                        span,
+                        count(counts, ProofreadOutcome.KEPT),
+                        count(counts, ProofreadOutcome.PROPOSED),
+                        count(counts, ProofreadOutcome.REJECTED),
+                        count(counts, ProofreadOutcome.UNCHANGED)));
+    }
+
+    private static String count(final Map<ProofreadOutcome, Long> counts, final ProofreadOutcome outcome) {
+        return String.valueOf(counts.getOrDefault(outcome, 0L));
     }
 
     LogEntry stageStarted() {

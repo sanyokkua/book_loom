@@ -15,6 +15,7 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -144,6 +145,18 @@ final class ChunkRows {
         final LiveRow row = LiveRow.chapterSummary(kept);
         final boolean again = rows.put(row.segmentId(), row) != null;
         log.debug("live rows: chapter {} summary kept, {}", kept.chapter(), again ? "replaced in place" : "added");
+        if (!again) {
+            order.add(row.segmentId());
+            bound();
+        }
+        shown = null;
+    }
+
+    // A window read again (a Continue, or a later window over the same first segment) keeps its place.
+    void windowRead(final ProofreadWindowRead read) {
+        final LiveRow row = LiveRow.proofreadWindow(read);
+        final boolean again = rows.put(row.segmentId(), row) != null;
+        log.debug("live rows: proofread window {} read, {}", row.locator(), again ? "replaced in place" : "added");
         if (!again) {
             order.add(row.segmentId());
             bound();

@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.ui.control.StateMarker.Meaning;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -75,12 +76,20 @@ final class RunChips {
         return waiting == null ? RunStateView.clock(Duration.ZERO) : RunStateView.clock(waiting.attemptWaited());
     }
 
+    // A project whose segments are all decided continues with its Proofread stage, at the window it names.
+    private static Text continuing(final RunStateInputs in, final MessageKey otherwise, final Object continuesAt) {
+        final ProofreadTally proofread = in.proofread();
+        return proofread == null
+                ? Text.of(otherwise, continuesAt)
+                : Text.of(MessageKey.RUN_LIVE_CONTINUES_PROOFREAD, proofread.next(), proofread.windows());
+    }
+
     static Text liveLine(final RunRow row, final RunStateInputs in) {
         final Object span = RunStateView.orNone(in.span());
         final Object continuesAt = RunStateView.orNone(in.continuesAt());
         return switch (row) {
             case READY -> Text.of(MessageKey.RUN_LIVE_READY);
-            case READY_TO_CONTINUE -> Text.of(MessageKey.RUN_LIVE_CONTINUES, continuesAt);
+            case READY_TO_CONTINUE -> continuing(in, MessageKey.RUN_LIVE_CONTINUES, continuesAt);
             case CANNOT_START -> Text.of(MessageKey.RUN_LIVE_CANNOT_START);
             case TRANSLATING -> Text.of(MessageKey.RUN_LIVE_RUNNING, span);
             case PAUSING -> Text.of(MessageKey.RUN_LIVE_PAUSING, span);
@@ -88,7 +97,7 @@ final class RunChips {
             case WAITING -> Text.of(MessageKey.RUN_LIVE_WAITING, in.model().provider(), span);
             case STUCK -> Text.of(MessageKey.RUN_LIVE_STUCK, span);
             case STOPPING -> Text.of(MessageKey.RUN_LIVE_STOPPING, span);
-            case STOPPED -> Text.of(MessageKey.RUN_LIVE_STOPPED, continuesAt);
+            case STOPPED -> continuing(in, MessageKey.RUN_LIVE_STOPPED, continuesAt);
             case FINISHED_TO_REVIEW, FINISHED_NONE -> Text.of(MessageKey.RUN_LIVE_FINISHED);
             case FAILED -> Text.of(MessageKey.RUN_LIVE_FAILED, continuesAt);
         };

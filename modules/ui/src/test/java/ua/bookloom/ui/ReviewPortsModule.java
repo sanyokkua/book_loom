@@ -1,11 +1,14 @@
 package ua.bookloom.ui;
 
 import com.google.inject.AbstractModule;
+import java.util.Optional;
 import java.util.function.Supplier;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 
@@ -40,5 +43,7 @@ final class ReviewPortsModule extends AbstractModule {
         bind(ReviewDesk.class).toInstance(desk);
         bind(ReviewMode.class).toProvider(reviewMode::get);
         bind(SummaryRepository.class).toInstance(summaries);
+        // No stored project has proofread windows left unless a test says so through the run-state inputs.
+        bind(ProofreadProgress.class).toInstance((projectId, batchSize) -> Result.ok(Optional.empty()));
     }
 }

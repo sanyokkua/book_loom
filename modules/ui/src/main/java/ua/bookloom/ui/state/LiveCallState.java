@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -96,6 +97,10 @@ final class LiveCallState {
 
     void summaryKept(final ChapterSummaryKept kept) {
         rows.summaryKept(kept);
+    }
+
+    void windowRead(final ProofreadWindowRead read) {
+        rows.windowRead(read);
     }
 
     void drafted(final SegmentDrafted event) {

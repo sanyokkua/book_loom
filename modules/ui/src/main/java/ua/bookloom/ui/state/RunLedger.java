@@ -32,6 +32,10 @@ final class RunLedger {
         }
     }
 
+    ProofreadPlan proofread() {
+        return ledger.proofread();
+    }
+
     @Nullable
     Double draftSecondsPerSegment() {
         return ledger.draftSecondsPerSegment();

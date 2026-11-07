@@ -317,7 +317,7 @@ public final class LiveRowList extends ListView<LiveRow> {
             }
             // A summary row's locator is a sentence ("Chapter 12 summarised"): at the list's smallest width it gives
             // way, never the marker, which must stay whole.
-            locator.setMinWidth(LiveRowWords.isSummary(item) ? 0 : Region.USE_PREF_SIZE);
+            locator.setMinWidth(LiveRowWords.isSummary(item) || LiveRowWords.isWindow(item) ? 0 : Region.USE_PREF_SIZE);
             locator.setText(LiveRowWords.locator(item, messages));
             text.setText(LiveRowWords.oneLine(item));
             whole.setText(LiveRowWords.text(item));

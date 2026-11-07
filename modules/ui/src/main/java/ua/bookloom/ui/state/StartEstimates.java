@@ -18,7 +18,8 @@ import ua.bookloom.api.pipeline.QualityDial;
  * seconds a run measured for each on this model when it measured every kind the plan makes; else a range from this
  * model's seconds per drafted segment, scaled by the dial; else nothing. {@code DRAFT} is seconds per drafted segment,
  * every other kind seconds per call; the chapter summaries the run writes count as calls of their own kind, and a kind
- * never measured sends the estimate to the range.
+ * never measured sends the estimate to the range. At Balanced and Max the Proofread stage's windows are planned calls
+ * of their own kind, so a model whose proofread calls were never timed gets the range.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -73,7 +74,7 @@ public final class StartEstimates {
             log.debug("start estimate: no draft speed stored or no segments, no time shown");
             return new StartEstimate.None();
         }
-        final Map<CallKind, Integer> planned = planned(segments, chunks, reviewPasses, summaries);
+        final Map<CallKind, Integer> planned = planned(segments, chunks, reviewPasses, summaries, dial);
         if (planned.keySet().stream().allMatch(kind -> isRunMeasured(stored.get(kind)))) {
             final double seconds = planned.entrySet().stream()
                     .mapToDouble(entry -> entry.getValue()
@@ -107,8 +108,9 @@ public final class StartEstimates {
     }
 
     private static Map<CallKind, Integer> planned(
-            final int segments, final int chunks, final int reviewPasses, final int summaries) {
+            final int segments, final int chunks, final int reviewPasses, final int summaries, final QualityDial dial) {
         final Map<CallKind, Integer> planned = new EnumMap<>(CallKind.class);
+        planned.putAll(proofreadCalls(dial, chunks));
         planned.put(CallKind.DRAFT, segments);
         if (reviewPasses > 0 && chunks > 0) {
             planned.put(CallKind.REVIEW, chunks * reviewPasses);
@@ -117,6 +119,18 @@ public final class StartEstimates {
             planned.put(CallKind.CHAPTER_SUMMARY, summaries);
         }
         return planned;
+    }
+
+    // Balanced reads about one marked window per chunk; Max reads those and then every paragraph again in windows of a
+    // chunk's size. Fast makes no proofread call (design D15 "Estimate").
+    private static Map<CallKind, Integer> proofreadCalls(final QualityDial dial, final int chunks) {
+        final int calls =
+                switch (dial) {
+                    case FAST -> 0;
+                    case BALANCED -> chunks;
+                    case MAX -> 2 * chunks;
+                };
+        return calls > 0 ? Map.of(CallKind.PROOFREAD, calls) : Map.of();
     }
 
     private static boolean isRunMeasured(@Nullable final MeasuredSpeed speed) {

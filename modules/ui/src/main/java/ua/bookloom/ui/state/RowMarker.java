@@ -26,7 +26,9 @@ public enum RowMarker {
     /** Accepted as it is, with no translation. */
     KEPT(StateMarker.Meaning.KEPT, MessageKey.LIVE_MARKER_KEPT),
     /** A chapter's summary was kept. */
-    SUMMARISED(StateMarker.Meaning.DONE, MessageKey.LIVE_MARKER_SUMMARISED);
+    SUMMARISED(StateMarker.Meaning.DONE, MessageKey.LIVE_MARKER_SUMMARISED),
+    /** A proofread window was read. */
+    PROOFREAD(StateMarker.Meaning.DONE, MessageKey.LIVE_MARKER_PROOFREAD);
 
     // The rows where a call in flight is still being answered: a pending pause or stop waits for it.
     private static final Set<RunRow> WORKING =
@@ -68,6 +70,7 @@ public enum RowMarker {
             case IN_CALL -> inFlight(run);
             case QUEUED -> WAITING;
             case SUMMARISED -> SUMMARISED;
+            case PROOFREAD -> PROOFREAD;
         };
     }
 

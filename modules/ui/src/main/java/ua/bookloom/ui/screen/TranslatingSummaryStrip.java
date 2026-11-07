@@ -101,6 +101,7 @@ final class TranslatingSummaryStrip {
         final VBox strip = new VBox(
                 SPACING,
                 top,
+                StageStrip.build(mirror, messages),
                 bar(mirror, inputs, messages),
                 factsLine(mirror, inputs, messages),
                 counts(mirror, messages),

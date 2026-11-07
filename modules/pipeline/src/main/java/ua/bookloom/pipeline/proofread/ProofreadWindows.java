@@ -11,6 +11,9 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.Document;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.ProofreadForecast;
 
 /**
  * Groups the mark list into proofread windows (design D15 "Windows"): marks in reading order with at most one unmarked
@@ -89,6 +92,32 @@ public final class ProofreadWindows {
                 size,
                 reasons.size());
         return List.copyOf(windows);
+    }
+
+    /**
+     * The Proofread stage's forecast at Start (design D15 "Estimate"): Max's whole-book round as the story paragraphs
+     * over the batch size, rounded up; the marked windows are counted by the window as the marks arrive.
+     *
+     * @param document the non-null opened book
+     * @param coverage the non-null coverage of the run's quality
+     * @param batchSize the most focus segments of one window; at least 1
+     * @return the forecast; never null
+     */
+    public static ProofreadForecast forecast(
+            final Document document, final ProofreadCoverage coverage, final int batchSize) {
+        Objects.requireNonNull(document, "document");
+        Objects.requireNonNull(coverage, "coverage");
+        final int story = MarkList.storySegments(document).size();
+        final int windows = coverage == ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH
+                ? Math.ceilDiv(story, Math.max(1, batchSize))
+                : 0;
+        log.debug(
+                "Proofread forecast coverage={} storyParagraphs={} batchSize={} wholeBookWindows={}",
+                coverage,
+                story,
+                batchSize,
+                windows);
+        return new ProofreadForecast(coverage, windows);
     }
 
     /** The story's reading order, which segments a window may read, and each segment's position. */

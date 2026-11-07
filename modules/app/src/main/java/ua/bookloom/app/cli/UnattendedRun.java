@@ -31,6 +31,9 @@ import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadForecast;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
@@ -143,7 +146,10 @@ final class UnattendedRun {
                     StepsPlanned _,
                     StepChanged _,
                     BriefSampleRead _,
-                    ChapterSummaryKept _ -> {}
+                    ChapterSummaryKept _,
+                    ProofreadForecast _,
+                    ProofreadRoundStarted _,
+                    ProofreadWindowRead _ -> {}
         }
     }
 

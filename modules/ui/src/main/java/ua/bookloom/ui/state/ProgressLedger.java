@@ -60,6 +60,18 @@ final class ProgressLedger {
      */
     record ChapterState(boolean finished, boolean stored) {}
 
+    /**
+     * Where a stored project's Proofread stage stands, for rebuilding the ledger of a reopened one.
+     *
+     * @param planned the windows of the round with work left
+     * @param done how many of them the stored fingerprints say were read
+     */
+    record ProofreadState(int planned, int done) {
+
+        /** Nothing left to proofread, or nothing known. */
+        static final ProofreadState NONE = new ProofreadState(0, 0);
+    }
+
     private static final class Tally {
         private int basePlanned;
         private int baseDone;
@@ -77,6 +89,7 @@ final class ProgressLedger {
     private final RunClock clock;
     private final Map<StepKind, Tally> tallies = new EnumMap<>(StepKind.class);
     private final TimeLeftShaper shaper = new TimeLeftShaper();
+    private final ProofreadPlan proofread = new ProofreadPlan();
     private int bookSegments;
     private int decided;
     private int baselineDecided;
@@ -102,13 +115,16 @@ final class ProgressLedger {
      * @param chunks the project's chunks in order
      * @param checksPerChunk the checks one chunk gets at the project's quality
      * @param chapters the project's chapters in order; empty when chapter summaries are off
+     * @param windows where the Proofread stage stands, each window of the round with work left one step, done when the
+     *     stored fingerprints say it was read; {@link ProofreadState#NONE} when it has nothing left
      * @return a ledger that starts where the work stands and shows no time left until it has timed its own steps
      */
     static ProgressLedger rebuilt(
             final RunClock clock,
             final List<ChunkState> chunks,
             final int checksPerChunk,
-            final List<ChapterState> chapters) {
+            final List<ChapterState> chapters,
+            final ProofreadState windows) {
         Objects.requireNonNull(chunks, "chunks");
         Objects.requireNonNull(chapters, "chapters");
         final ProgressLedger ledger = new ProgressLedger(clock);
@@ -121,6 +137,7 @@ final class ProgressLedger {
             checks.baseDone += chunk.decided() >= chunk.segments() ? checksPerChunk : 0;
         }
         ledger.rebuiltSummaries(chapters);
+        ledger.rebuiltWindows(Objects.requireNonNull(windows, "windows"));
         ledger.bookSegments = drafts.basePlanned;
         ledger.decided = drafts.baseDone;
         ledger.baselineDecided = drafts.baseDone;
@@ -134,6 +151,15 @@ final class ProgressLedger {
                 checks.baseDone,
                 checks.basePlanned);
         return ledger;
+    }
+
+    private void rebuiltWindows(final ProofreadState windows) {
+        if (windows.planned() > 0) {
+            final Tally proofread = tally(StepKind.PROOFREAD);
+            proofread.basePlanned = windows.planned();
+            proofread.baseDone = windows.done();
+            log.debug("progress ledger rebuilt: {} of {} proofread windows", windows.done(), windows.planned());
+        }
     }
 
     private void rebuiltSummaries(final List<ChapterState> chapters) {
@@ -177,6 +203,12 @@ final class ProgressLedger {
         Objects.requireNonNull(kind, "kind");
         log.debug("progress ledger: {} {} steps planned", added, kind);
         tally(kind).planned += added;
+    }
+
+    /** {@return the Proofread steps forecast before the stage plans them, fed by the run's events} */
+    ProofreadPlan proofread() {
+        tally(StepKind.PROOFREAD);
+        return proofread;
     }
 
     /**
@@ -268,7 +300,12 @@ final class ProgressLedger {
             final int done = doneOf(kind, tally);
             final int planned = plannedOf(kind, tally, done);
             if (planned > 0) {
-                kinds.add(new KindFigures(kind, planned, done, tally.secondsPerStep()));
+                kinds.add(new KindFigures(
+                        kind,
+                        planned,
+                        done,
+                        tally.secondsPerStep(),
+                        kind == StepKind.PROOFREAD && proofread.steps() > 0));
             }
         });
         return kinds;
@@ -280,6 +317,7 @@ final class ProgressLedger {
                 switch (kind) {
                     case DRAFT -> Math.max(announced, bookSegments);
                     case CHECK -> Math.max(announced, forecastChecks());
+                    case PROOFREAD -> announced + proofread.steps();
                     default -> announced;
                 };
         return Math.max(wanted, done);

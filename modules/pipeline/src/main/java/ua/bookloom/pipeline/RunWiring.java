@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -24,6 +25,7 @@ import ua.bookloom.pipeline.prompt.StepAnnouncer;
 import ua.bookloom.pipeline.proofread.ProofreadCall;
 import ua.bookloom.pipeline.proofread.ProofreadStage;
 import ua.bookloom.pipeline.proofread.ProofreadTools;
+import ua.bookloom.pipeline.proofread.ProofreadWindows;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.NarratorStage;
@@ -119,8 +121,22 @@ final class RunWiring {
                 run.document().units(),
                 () -> stores.summaries().list(request.projectId()),
                 new SummariesSwitch(stores, request.projectId(), brief.summariesOn()));
+        forecast(run, settings, sinks);
         final ChunkRunner chunks = chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner);
         return stagesOf(run, settings, sinks, chunks, windowsOf(run, settings, sinks, calls, planner));
+    }
+
+    // Fast's Proofread stage reads no window, so it is forecast nothing; the window takes a run with no forecast as one
+    // whose Proofread makes no model call.
+    private void forecast(final RunStart.Started run, final RunSettings settings, final RunSinks sinks) {
+        final ProofreadCoverage coverage = settings.dial().proofreadCoverage();
+        if (coverage == ProofreadCoverage.NONE) {
+            log.debug("No proofread forecast: the dial's coverage is {}", coverage);
+            return;
+        }
+        sinks.emit()
+                .accept(ProofreadWindows.forecast(
+                        run.document(), coverage, model.profile().batchSize()));
     }
 
     // The proofread windows go to the run's own model through the run's one call seam (design D15 "Call").

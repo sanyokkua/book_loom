@@ -32,6 +32,7 @@ public final class LiveSection {
     private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
             new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
+    private final ReadOnlyObjectWrapper<@Nullable RunStage> stage = new ReadOnlyObjectWrapper<>();
     private boolean counting;
     private final ObservableList<FlaggedRow> queue = FXCollections.observableArrayList();
     private final ObservableList<FlaggedRow> readOnlyQueue = FXCollections.unmodifiableObservableList(queue);
@@ -79,6 +80,24 @@ public final class LiveSection {
      */
     public ReadOnlyObjectProperty<ConnectionStatus> connection() {
         return connection.getReadOnlyProperty();
+    }
+
+    /**
+     * The stage the run is in, which the title bar's chip and the Translating strip show.
+     *
+     * @return a read-only property holding {@code null} while no run is at work; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable RunStage> stage() {
+        return stage.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows the stage the run is in, or withdraws it when the run ends.
+     *
+     * @param now the stage, or {@code null} once the run has ended
+     */
+    public void publishStage(final @Nullable RunStage now) {
+        Platform.runLater(() -> stage.set(now));
     }
 
     /**
@@ -218,6 +237,7 @@ public final class LiveSection {
         sourceKept.set(0);
         suspicious.set(0);
         waitingCall.set(null);
+        stage.set(null);
         connection.set(ConnectionStatus.UNKNOWN);
         queue.clear();
     }

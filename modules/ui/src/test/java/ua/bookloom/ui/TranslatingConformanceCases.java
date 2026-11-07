@@ -76,7 +76,11 @@ final class TranslatingConformanceCases {
                                     Kind.BACKGROUND,
                                     "info-bg",
                                     "#e5edf0",
-                                    "#293940"))),
+                                    "#293940"),
+                            // The stage in work on the strip in the info tone, the others neutral.
+                            new Part("#translating-stage-proofread", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#translating-stage-prep", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
+                            new Part("#shell-run-stage", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"))),
             // A finished run: the strip carries the outcome, so there is no outcome card any more.
             new Screen(
                     "TRANSLATING_COMPLETED",

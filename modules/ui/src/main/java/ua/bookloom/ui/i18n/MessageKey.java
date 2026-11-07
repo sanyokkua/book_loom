@@ -153,6 +153,8 @@ public enum MessageKey {
     PROGRESS_HOW_COUNTED_LINE("progress.howCounted.line"),
     /** "How progress is counted": one kind of step not timed yet; arguments: 0 its name, 1 done, 2 planned. */
     PROGRESS_HOW_COUNTED_UNTIMED("progress.howCounted.untimed"),
+    /** "How progress is counted": a kind whose steps were forecast and not timed yet; arguments as the untimed line. */
+    PROGRESS_HOW_COUNTED_ESTIMATE("progress.howCounted.estimate"),
     /** Name of the draft steps in the note on how progress is counted. */
     PROGRESS_KIND_DRAFT("progress.kind.draft"),
     /** Name of the check steps in the note on how progress is counted. */
@@ -457,6 +459,14 @@ public enum MessageKey {
     SHELL_RUN_MODE("shell.run.mode"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
     SHELL_RUN_MODE_TIP("shell.run.mode.tip"),
+    /** Hover explanation of the stage chip in the title bar and the stages on the Translating strip. */
+    SHELL_RUN_STAGE_TIP("run.stage.name.tip"),
+    /** A run stage's name; argument 0 is the stage's code (prep, translate, proofread). */
+    RUN_STAGE_NAME("run.stage.name"),
+    /** The Proofread stage at Fast, which makes no model call; argument 0 is the stage's name. */
+    RUN_STAGE_PROOFREAD_FAST("run.stage.proofread.fast"),
+    /** The Proofread stage at Max with its round; argument 0 is the stage's name, 1 the round (1 or 2). */
+    RUN_STAGE_PROOFREAD_ROUND("run.stage.proofread.round"),
     /** A duration of an hour or more; argument 0 is the hours, argument 1 the two-digit minutes, both Strings. */
     DURATION_HM("duration.hm"),
     /** A duration of a minute or more, under an hour; argument 0 is the minutes, a String. */
@@ -499,6 +509,8 @@ public enum MessageKey {
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),
     /** Activity-log entry for a kept chapter summary; argument 0 is the chapter's number, passed as a String so it is never grouped like a number. */
     LOG_CHAPTER_SUMMARY_KEPT("log.chapterSummaryKept"),
+    /** Activity-log entry for a read proofread window; arguments: 0 its span, 1 kept, 2 proposed, 3 rejected, 4 unchanged, each passed as a String. */
+    LOG_PROOFREAD("log.proofread"),
     /** Activity-log entry for a retried segment; argument 0 is the segment id, passed as a String so it is never grouped like a number, argument 1 the attempt number. */
     LOG_RETRIED("log.retried"),
     /** Activity-log entry for a recoverable segment error; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
@@ -3275,6 +3287,8 @@ public enum MessageKey {
     RUN_LIVE_READY("run.live.ready"),
     /** Live line of a reopened project: where it continues, or {@code none}. */
     RUN_LIVE_CONTINUES("run.live.continues"),
+    /** Live line of a reopened project whose Proofread stage has windows left; arguments: 0 the next window, 1 all. */
+    RUN_LIVE_CONTINUES_PROOFREAD("run.live.continuesProofread"),
     /** Live line while a start lacks an input: nothing to say. */
     RUN_LIVE_CANNOT_START("run.live.cannotStart"),
     /** Live line while translating: the segments of the current call, or {@code none}. */
@@ -3791,6 +3805,34 @@ public enum MessageKey {
     LIVE_MARKER_SUMMARISED("live.marker.summarised"),
     /** Live card: the row of a kept chapter summary; argument 0 is the chapter's number, passed as a String. */
     LIVE_ROW_CHAPTER_SUMMARISED("live.row.chapterSummarised"),
+    /** Live row marker: a proofread window was read. */
+    LIVE_MARKER_PROOFREAD("live.marker.proofread"),
+    /** Live card: the row of a read proofread window; argument 0 is its span, such as "ch7 · p40–p42". */
+    LIVE_ROW_WINDOW("live.row.window"),
+    /** Live card detail: one segment of a proofread window; arguments: 0 its locator, 1 the verdict in words. */
+    LIVE_DETAIL_WINDOW_ITEM("live.detail.window.item"),
+    /** Live card detail: the heading of a proofread segment's text before the window. */
+    LIVE_DETAIL_BEFORE("live.detail.before"),
+    /** Live card detail: the heading of a proofread segment's text after the window. */
+    LIVE_DETAIL_AFTER("live.detail.after"),
+    /** A proofread verdict's outcome; argument 0 is its code (kept, proposed, rejected, unchanged). */
+    PROOF_VERDICT("proof.verdict"),
+    /** A proofread verdict with its reason; arguments: 0 the outcome's word, 1 the reason. */
+    PROOF_VERDICT_WHY("proof.verdict.why"),
+    /** The reason of a kept rewrite of a segment marked for a gender ending. */
+    PROOF_KEPT_GENDER("proof.kept.gender"),
+    /** The reason of a kept rewrite of a segment marked by a check; argument 0 is who raised the mark. */
+    PROOF_KEPT_CHECK("proof.kept.check"),
+    /** A refused rewrite's reason; argument 0 is the check's code, 1 the code as stored, 2 who raised it. */
+    PROOF_REJECTED("proof.rejected"),
+    /** A refused rewrite's reason with the words that broke it; arguments: 0 the reason, 1 the words. */
+    PROOF_REJECTED_WORDS("proof.rejected.words"),
+    /** Who blocks a proposal when no check is named. */
+    PROOF_A_CHECK("proof.aCheck"),
+    /** A proposal of a flagged segment still blocked; argument 0 is who blocks it. */
+    PROOF_PROPOSED_BLOCKED("proof.proposed.blocked"),
+    /** A proposal that waits because the person edited the segment. */
+    PROOF_PROPOSED_EDIT("proof.proposed.edit"),
     /** Live detail: why a flagged segment waits; its argument names the findings. */
     LIVE_DETAIL_WHY("live.detail.why"),
     /** Live detail: the translation of a segment being translated. */

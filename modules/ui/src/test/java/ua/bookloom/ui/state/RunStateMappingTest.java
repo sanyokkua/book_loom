@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.ui.control.StateMarker.Meaning;
 import ua.bookloom.ui.i18n.LocaleProvider;
@@ -348,5 +349,18 @@ class RunStateMappingTest {
         final Messages ukrainian = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
 
         assertThat(RunInputs.in(RunState.PAUSED).view().title().in(ukrainian)).isEqualTo("Пауза на 51 %");
+    }
+    // IF a book whose segments are all decided read as finished while its Proofread stage had windows left, THEN the
+    // person would export a book the last pass had not read; the toolbar offers Continue and the line names the window.
+    @Test
+    void liveLine_allDecidedWithProofreadLeft_continuesWithProofreadAtWindow41Of120() {
+        final RunStateView view = RunInputs.in(RunState.IDLE)
+                .decided(142)
+                .proofread(new ProofreadTally(1, 120, 40, 41))
+                .view();
+
+        assertThat(view.row()).isEqualTo(RunRow.READY_TO_CONTINUE);
+        assertThat(view.liveLine().in(ENGLISH)).isEqualTo("Continues with Proofread at window 41 of 120.");
+        assertThat(toolbar(view)).contains("start:Continue translation:on");
     }
 }

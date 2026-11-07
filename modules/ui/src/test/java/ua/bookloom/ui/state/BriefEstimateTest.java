@@ -140,6 +140,7 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
         final Map<CallKind, MeasuredSpeed> measured = Map.of(
                 CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
                 CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
+                CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
                 CallKind.CHAPTER_SUMMARY, new MeasuredSpeed(30.0, MeasuredFrom.RUN));
         modelSettings.measured("ollama", "gemma", measured);
         final StartEstimate without = shown(estimateOver(300, executor, new ChapterTally(10, 0, 0, 0)));
@@ -157,10 +158,11 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                         "every planned kind measured by a run",
                         Map.of(
                                 CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
-                                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
+                                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
+                                CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
                         300,
                         QualityDial.BALANCED,
-                        List.of("For this book on this computer: about 17 min, measured on this model")),
+                        List.of("For this book on this computer: about 19 min, measured on this model")),
                 Arguments.of(
                         "only the draft speed of the model test, at Fast",
                         Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.TEST)),
@@ -190,5 +192,18 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
 
         assertThat(StartEstimates.of(stored, segments, 20, dial, passes, 0).lines(EN))
                 .containsExactlyElementsOf(expected);
+    }
+    // IF a proofread call never timed counted as measured, THEN Balanced would promise a time no run has seen; the
+    // draft and review speeds of an earlier run give a range marked as an estimate instead.
+    @Test
+    void line_neverMeasuredProofreadKindAtBalanced_isAnEstimateFromAnEarlierTranslation() {
+        final Map<CallKind, MeasuredSpeed> stored = Map.of(
+                CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
+                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN));
+
+        final StartEstimate estimate = StartEstimates.of(stored, 300, 20, QualityDial.BALANCED, 1, 0);
+
+        assertThat(estimate).isInstanceOf(StartEstimate.Ranged.class);
+        assertThat(estimate.lines(EN)).singleElement().asString().endsWith("estimate from an earlier translation");
     }
 }

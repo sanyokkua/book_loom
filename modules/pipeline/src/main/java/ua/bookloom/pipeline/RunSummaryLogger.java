@@ -29,6 +29,9 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadForecast;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.RoundStarted;
@@ -100,6 +103,15 @@ final class RunSummaryLogger {
      */
     void onEvent(final JobEvent event) {
         Objects.requireNonNull(event, "event");
+        if (event instanceof Finished) {
+            write("final");
+            return;
+        }
+        count(event);
+        writeWhenDue();
+    }
+
+    private void count(final JobEvent event) {
         switch (event) {
             case SegmentStarted started -> locator = started.locator();
             case SegmentDecided decided -> decide(decided);
@@ -107,11 +119,8 @@ final class RunSummaryLogger {
             case Resumed resumed -> progress = resumed.progress();
             case StageStarted stage -> progress = stage.progress();
             case ModelCallFinished finished -> record(finished);
-            case Finished _ -> {
-                write("final");
-                return;
-            }
-            case ModelCallStarted _,
+            case Finished _,
+                    ModelCallStarted _,
                     SegmentDrafted _,
                     MemoryUpdated _,
                     ContextAssembled _,
@@ -122,9 +131,11 @@ final class RunSummaryLogger {
                     StepsPlanned _,
                     StepChanged _,
                     BriefSampleRead _,
-                    ChapterSummaryKept _ -> {}
+                    ChapterSummaryKept _,
+                    ProofreadForecast _,
+                    ProofreadRoundStarted _,
+                    ProofreadWindowRead _ -> {}
         }
-        writeWhenDue();
     }
 
     private void writeWhenDue() {

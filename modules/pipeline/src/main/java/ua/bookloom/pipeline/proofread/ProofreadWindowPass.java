@@ -16,11 +16,13 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
+import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.run.RunEnd;
 import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
@@ -61,7 +63,7 @@ final class ProofreadWindowPass {
         this.tools = Objects.requireNonNull(tools, "tools");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
-        this.reader = new WindowReader(tools, settings, Objects.requireNonNull(stores, "stores"));
+        this.reader = new WindowReader(tools, settings, Objects.requireNonNull(stores, "stores"), sinks.emit());
     }
 
     /**
@@ -108,7 +110,8 @@ final class ProofreadWindowPass {
                 segments,
                 verdicts(state),
                 tools.planner().map(state.book().glossary(), state.book().lexicon()),
-                keptNow);
+                keptNow,
+                SegmentLocators.of(state.book().document()));
     }
 
     private static Predicate<String> readable(final State state, final WindowReading reading) {
@@ -135,6 +138,7 @@ final class ProofreadWindowPass {
                 .filter(window -> !reader.isRead(reader.question(round, window, reading), reading))
                 .toList();
         started(round, windows, unread);
+        sinks.emit().accept(new ProofreadRoundStarted(round, rounds(), windows.size(), unread.size()));
         tools.call().steps().planned(StepKind.PROOFREAD, unread.size(), false);
         for (final ProofreadWindow window : unread) {
             if (sinks.boundaries().isStopRequested()) {
@@ -148,6 +152,12 @@ final class ProofreadWindowPass {
         }
         log.info("Proofread round {} ended project={} read={}", round, settings.projectId(), unread.size());
         return Optional.empty();
+    }
+
+    private int rounds() {
+        return settings.dial().proofreadCoverage() == ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH
+                ? ProofreadRoundStarted.WHOLE_BOOK
+                : 1;
     }
 
     private void started(final int round, final List<ProofreadWindow> windows, final List<ProofreadWindow> unread) {

@@ -22,4 +22,7 @@ public sealed interface JobEvent
                 StepsPlanned,
                 StepChanged,
                 BriefSampleRead,
-                ChapterSummaryKept {}
+                ChapterSummaryKept,
+                ProofreadForecast,
+                ProofreadRoundStarted,
+                ProofreadWindowRead {}

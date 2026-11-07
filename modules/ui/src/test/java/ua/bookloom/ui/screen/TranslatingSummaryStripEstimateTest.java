@@ -37,6 +37,7 @@ class TranslatingSummaryStripEstimateTest {
                 Controls.of(RunState.IDLE, false, false),
                 null,
                 null,
+                null,
                 null);
         return TranslatingSummaryStrip.bigText(RunStateView.of(inputs), Throughput.EMPTY, estimate, EN);
     }

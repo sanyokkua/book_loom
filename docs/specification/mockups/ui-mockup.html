@@ -707,8 +707,8 @@ const toks = s => esc(s).replace(/⟦([a-z]?)(\d+)⟧/g, '<span class="tok" titl
 const toksPlain = s => esc(s).replace(/⟦([a-z]?)(\d+)⟧/g, '');
 const markText = s => s.replace(/⟦[a-z]?(\d+)⟧/g, '⟦$1⟧');
 /* state marker = icon + word (G, Ikonli in the app); one colour per meaning: blue working · green done · amber needs you · red failed · grey waiting · sand kept */
-const MK = {sum: 'summary kept', wait: 'waiting', run: 'translating…', done: 'translated', flag: 'to review', fail: 'translated again alone', keep: 'kept as is', ok: 'done', cancel: 'cancelled'};
-const mk = (kind, word) => `<span class="mk ${kind === 'ok' || kind === 'sum' ? 'done' : kind === 'cancel' ? 'wait' : kind}">${word || MK[kind]}</span>`;
+const MK = {proof: 'proofread', sum: 'summary kept', wait: 'waiting', run: 'translating…', done: 'translated', flag: 'to review', fail: 'translated again alone', keep: 'kept as is', ok: 'done', cancel: 'cancelled'};
+const mk = (kind, word) => `<span class="mk ${kind === 'ok' || kind === 'sum' || kind === 'proof' ? 'done' : kind === 'cancel' ? 'wait' : kind}">${word || MK[kind]}</span>`;
 const req = (...ids) => ids.map(i => `<span class="req" title="Requirement ${i} — see README">${i}</span>`).join(' ');
 const sw = (on, extra = '') => `<span class="switch ${on ? 'on' : ''}" tabindex="0" role="switch" ${extra}></span>`;
 const seg = (opts, on, extra = '') => `<span class="seg" ${extra}>${opts.map((o, i) => `<span class="${i === on ? 'on' : ''}" tabindex="0">${o}</span>`).join('')}</span>`;
@@ -833,7 +833,7 @@ function renderRunStatus() {
     if (!ST.projectOpen || ST.run === 'ready' && current === 'projects') { $('#runStatus').innerHTML = ''; renderNavFoot(); return; }
     const chipCls = {'': '', idle: 'idle', bad: 'bad', slow: 'wait'}[r.chip[0]];
     const ticking = ['running', 'stuck'].includes(ST.run);
-    $('#runStatus').innerHTML = `<span class="p2" title="The open project">${PNAME}</span><b title="Share of all the work, checks included (G10)">${r.title}</b><span class="p3">${D.dial} · ${D.mode}</span>${ticking ? `<span class="p3">${D.elapsed} elapsed</span><span class="p3" title="How fast the model writes">${D.speed}</span>` : ''}<span class="conn ${chipCls}" onclick="go('settings')" title="The AI model's state — click for Settings"><i></i>${r.chip[1]}</span>${ticking ? `<button class="tbtn" onclick="setRun('paused')">Pause</button>` : ['paused', 'pausedErr'].includes(ST.run) ? `<button class="tbtn" onclick="setRun('running')">Resume</button>` : ''}`;
+    $('#runStatus').innerHTML = `<span class="p2" title="The open project">${PNAME}</span><b title="Share of all the work, checks included (G10)">${r.title}</b>${['running', 'stuck', 'paused', 'pausedErr'].includes(ST.run) ? `<span class="chip chip-info" title="The stage the run is in: Prepare reads the book and its brief, Translate drafts and checks each segment, Proofread rereads what a later fact may have made wrong.">Translate</span>` : ''}<span class="p3">${D.dial} · ${D.mode}</span>${ticking ? `<span class="p3">${D.elapsed} elapsed</span><span class="p3" title="How fast the model writes">${D.speed}</span>` : ''}<span class="conn ${chipCls}" onclick="go('settings')" title="The AI model's state — click for Settings"><i></i>${r.chip[1]}</span>${ticking ? `<button class="tbtn" onclick="setRun('paused')">Pause</button>` : ['paused', 'pausedErr'].includes(ST.run) ? `<button class="tbtn" onclick="setRun('running')">Resume</button>` : ''}`;
     renderActChip();
     renderNavFoot();
 }
@@ -1233,6 +1233,12 @@ const LIVE = [
     {loc: 'ch2 · p09', src: 'The ball never lands: it is in orbit.', tgt: '', st: 'wait', call: null},
     {loc: 'ch2 · p10', src: 'This is how satellites and the Moon stay up.', tgt: '', st: 'wait', call: null},
 ];
+/* the window row closes the list: Proofread reads after the last chunk */
+/* a read proofread window is a row of its own (D15): "window ch1 · p40–p42", each segment's text before and after and the verdict in words */
+const WINDOW_ROW = {loc: 'window ch1 · p40–p42', src: '', tgt: 'Ліна сказала, що прийде.', st: 'proof', call: null, window: [
+    ['ch1 · p40', 'kept: gender ending fixed', 'Ліна сказав, що прийде.', 'Ліна сказала, що прийде.'],
+    ['ch1 · p42', 'rejected: added an untranslated word «что»', 'Він знав, що вона прийде.', 'Він знав, що вона прийде.']]};
+LIVE.push(WINDOW_ROW);
 const REPLY42 = ['Уявіть гармату на вершині дуже високої гори.', 'Вистреліть ядром повільно — і воно впаде на землю біля гори.', 'Вистреліть швидше — і воно впаде далі, бо Земля вигинається під ним.', 'Приблизно на 7,9 км/с земля відходить униз так само швидко, як падає ядро.'];
 /* a row's marker depends on the run state: in a paused or stopped run the current call's rows are "waiting", not "translating…" */
 const rowState = r => r.call === 42 && r.st === 'run' ? RUN[ST.run].inCall : isFinished() && r.st === 'wait' ? 'done' : r.st;
@@ -1246,8 +1252,8 @@ function simulateReply() {
 function pickLive(i) { ST.liveSel = i; ST.liveManual = true; rerender(); }      // only a click turns following off (JX-T3)
 const detailedLive = () => ST.liveMode === 'detailed';
 function liveList() {
-    return `<div class="list">${LIVE.map((r, i) => `<div class="li ${i === ST.liveSel ? 'sel' : ''}" tabindex="0" title="${esc(markText(r.summary ? r.tgt : r.src))}" onclick="pickLive(${i})">
-  <span class="t"><span class="muted small">${r.loc}</span> ${toksPlain(r.summary ? r.tgt : r.src)}</span>${mk(rowState(r))}</div>`).join('')}</div>`;
+    return `<div class="list">${LIVE.map((r, i) => `<div class="li ${i === ST.liveSel ? 'sel' : ''}" tabindex="0" title="${esc(markText(r.summary || r.window ? r.tgt : r.src))}" onclick="pickLive(${i})">
+  <span class="t"><span class="muted small">${r.loc}</span> ${toksPlain(r.summary || r.window ? r.tgt : r.src)}</span>${mk(rowState(r))}</div>`).join('')}</div>`;
 }
 const CALL42_SYS = [
     {h: 'Style', cnt: '6 rules', kind: 'list', open: true, lines: ['Register: neutral; audience: adult general reader', 'Narrator: third person', 'Names: transliterate; text in other languages: keep as written', 'Units: keep; footnotes: translate', 'Balance: balanced (55)', 'Keep every ⟦g0⟧ mark exactly once, in order']},
@@ -1266,6 +1272,7 @@ function liveDetail() {
     const r = LIVE[ST.liveSel], s = rowState(r);
     const head = `<div class="state">${mk(s)}<b>${r.loc}</b>${r.note ? `<span class="small">${r.note} — open Review to decide</span>` : ''}</div>`;
     if (r.summary) return `${head}<div class="card pad small">${esc(r.tgt)}</div><div class="hint">Later chapters are drafted with this summary. ${req('D10')}</div>`;
+    if (r.window) return `${head}${r.window.map(([loc, verdict, before, after]) => `<div class="mt2"><b class="small">${loc} · ${verdict}</b><div class="io"><div class="h">Before</div><div class="h">After</div><div class="c last">${esc(before)}</div><div class="c last">${esc(after)}</div></div></div>`).join('')}<div class="hint">Proofread reread this window; a rewrite is kept only when no check got worse. ${req('D15')}</div>`;
     const io = `<div class="io"><div class="h">Source</div><div class="h">Translation</div><div class="c last">${toks(r.src)}</div><div class="c last">${r.tgt ? toks(r.tgt) : `<span class="pending">${s === 'run' ? 'Being translated now…' : 'Not translated yet.'}</span>`}</div></div>`;
     if (!detailedLive()) {
         const inCall = LIVE.filter(x => x.call === 42 && x.st === 'run');
@@ -1286,6 +1293,7 @@ function strip() {
   <div class="left-big" title="${['running', 'stuck'].includes(r) ? 'Time per step measured over the whole run, per kind of step (G10)' : ''}">${big}</div>
   <div class="gap8">${!fin && hasProgress() ? `<button class="btn btn-secondary btn-sm" onclick="openDialog('review')" title="Open the review desk">${D.flagged} to review</button>` : fin && ST.run === 'finished' ? `<button class="btn btn-secondary btn-sm" onclick="openDialog('review')">${D.flagged} to review</button>` : ''}</div>
   <div class="bar" title="${pct} % of all the work — ${fin ? D.stepsTotal : D.stepsDone} of ${D.stepsTotal} steps, checks included (G10)"><span style="width:${pct}%"></span></div>
+  ${['running', 'stuck', 'paused'].includes(r) ? `<div class="gap4" style="grid-column:1/-1;flex-wrap:wrap" title="The stage the run is in: Prepare reads the book and its brief, Translate drafts and checks each segment, Proofread rereads what a later fact may have made wrong.">${['Prepare', 'Translate', D.dial === 'Max' ? 'Proofread · round 2 of 2: whole book' : D.dial === 'Fast' ? 'Proofread · marks for review, no model calls' : 'Proofread'].map((t, i) => `<span class="chip ${i === 1 ? 'chip-info' : 'chip-neutral'}">${t}</span>`).join('')}</div>` : ''}
   <div class="facts" style="grid-column:1/-1"><span><b>${done} of ${D.total}</b> segments done</span>${hasProgress() ? `<span>${fin ? D.total - D.kept - D.repaired - D.flagged : D.autoAccepted} translated</span><span>${D.repaired} fixed automatically</span><span>${D.flagged} to review</span><span>${D.kept} kept as is</span>` : ''}${['running', 'stuck'].includes(r) ? `<span>${D.chapter}</span><span>${D.elapsed} elapsed</span>` : ''}
     <details class="sec" style="border:0;padding:0"><summary class="small" style="font-weight:400">ⓘ How progress is counted</summary>
       ${gridTable(['Kind of step', 'Planned', 'Done', 'Time per step'], [['Translate a segment <span class="muted small">(kept-as-is ones count as done at once)</span>', D.steps.draft[0], fin ? D.steps.draft[0] : D.steps.draft[1], '14 s'], ['Check a segment <span class="muted small">(Balanced: one per translated segment)</span>', D.steps.review[0], fin ? D.steps.review[0] : D.steps.review[1], '9 s'], ['Fix after a failed check <span class="muted small">(added as found)</span>', `+${D.steps.repair[0]}`, D.steps.repair[1], '11 s'], ['<b>All steps</b>', `<b>${D.stepsTotal}</b>`, `<b>${fin ? D.stepsTotal : D.stepsDone}</b>`, '<span class="muted small">time left = steps left × time per step</span>']])}
@@ -1316,6 +1324,7 @@ ${['running', 'stuck'].includes(r) ? HELP_SLEEP() : ''}${strip()}
     <div class="ln"><span class="tm">11:41:05</span><span class="lv">info</span><span>Segments 1–4 of chapter 2 translated in one reply · 3 accepted · 1 to review (name in the wrong form)</span></div>
     <div class="ln"><span class="tm">11:41:07</span><span class="lv">info</span><span>Sent segments 5–8 of chapter 2</span></div>
     <div class="ln"><span class="tm">11:12:40</span><span class="lv">sum</span><span>Chapter 1 was summarised.</span></div>
+    <div class="ln"><span class="tm">10:58:02</span><span class="lv">proof</span><span>Proofread ch1 · p40–p42: 1 kept, 0 proposed, 1 rejected, 0 unchanged.</span></div>
     <div class="ln"><span class="tm">11:02:44</span><span class="lv w">warn</span><span>The model answered slowly (2:10); tried again with a shorter answer — fine</span></div>
     <div class="ln"><span class="tm">10:31:12</span><span class="lv w">warn</span><span>The model refused the setting “temperature” — BookLoom stopped sending it and repeated the request (see Settings › Models)</span></div>
     ${ST.tech ? '<div class="ln"><span class="tm">11:41:05</span><span class="lv">debug</span><span>call 41 · draft-batch-json · 4 items · ok=3 flagged=1 · 6.2 s · 2,100/212 tokens</span></div>' : ''}

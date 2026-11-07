@@ -57,7 +57,13 @@ public final class HowCountedPane extends TitledPane {
         final String name = messages.get(kindName(kind.kind()));
         final Double seconds = kind.secondsPerStep();
         final String text = seconds == null
-                ? messages.get(MessageKey.PROGRESS_HOW_COUNTED_UNTIMED, name, kind.done(), kind.planned())
+                ? messages.get(
+                        kind.forecast()
+                                ? MessageKey.PROGRESS_HOW_COUNTED_ESTIMATE
+                                : MessageKey.PROGRESS_HOW_COUNTED_UNTIMED,
+                        name,
+                        kind.done(),
+                        kind.planned())
                 : messages.get(
                         MessageKey.PROGRESS_HOW_COUNTED_LINE,
                         name,

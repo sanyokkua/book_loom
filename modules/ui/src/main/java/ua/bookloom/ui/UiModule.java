@@ -21,6 +21,7 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -272,6 +273,7 @@ public final class UiModule extends AbstractModule {
         requireBinding(ModelCapabilities.class);
         requireBinding(TranslationEngine.class);
         requireBinding(ProjectService.class);
+        requireBinding(ProofreadProgress.class);
         requireBinding(GlossaryService.class);
         requireBinding(LexiconService.class);
         requireBinding(NamesPass.class);

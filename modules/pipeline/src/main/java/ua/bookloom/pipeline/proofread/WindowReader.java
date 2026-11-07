@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.StepKind;
@@ -42,6 +44,7 @@ final class WindowReader {
     private final RunSettings settings;
     private final RunStores stores;
     private final StepAnnouncer steps;
+    private final Consumer<JobEvent> emit;
 
     /**
      * One window's question: its texts, its planned call and the fingerprint they make.
@@ -65,8 +68,13 @@ final class WindowReader {
         }
     }
 
-    WindowReader(final ProofreadStage.Windows tools, final RunSettings settings, final RunStores stores) {
+    WindowReader(
+            final ProofreadStage.Windows tools,
+            final RunSettings settings,
+            final RunStores stores,
+            final Consumer<JobEvent> emit) {
         this.tools = Objects.requireNonNull(tools, "tools");
+        this.emit = Objects.requireNonNull(emit, "emit");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.stores = Objects.requireNonNull(stores, "stores");
         this.steps = tools.call().steps();
@@ -179,6 +187,7 @@ final class WindowReader {
             return failed;
         }
         remember(question, decided, reading);
+        emit.accept(WindowNotice.of(question, decided, reading.locators()));
         steps.ended(StepKind.PROOFREAD, question.key(), StepResult.DONE);
         log.info(
                 "Proofread window decided round={} window={} focus={} verdicts={} proposals={} deferralsResolved={}",

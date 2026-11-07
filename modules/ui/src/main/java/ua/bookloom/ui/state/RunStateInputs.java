@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.ProofreadTally;
 
 /**
  * Everything the run-state table reads, gathered in one place so the table itself is a pure function of it.
@@ -23,6 +24,8 @@ import ua.bookloom.api.ErrorCode;
  * @param otherWork other model work that holds start and resume, or {@code null}
  * @param span the segments of the current call as worded for a person ("ch2 · p05–ch2 · p08"), or {@code null}
  * @param continuesAt where a stopped or reopened project continues, or {@code null} while not known
+ * @param proofread where a stopped or reopened project's Proofread stage stands, or {@code null} when it has no window
+ *     left or the Translate stage still has work
  */
 public record RunStateInputs(
         RunState state,
@@ -40,7 +43,8 @@ public record RunStateInputs(
         Controls controls,
         @Nullable ActivityKind otherWork,
         @Nullable String span,
-        @Nullable String continuesAt) {
+        @Nullable String continuesAt,
+        @Nullable ProofreadTally proofread) {
 
     /** Rejects a missing part or a negative count. */
     public RunStateInputs {

@@ -17,6 +17,8 @@ public enum LogKind {
     MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, Tone.INFO, "≡", "mem"),
     /** A finished chapter's summary was kept; the entry names the chapter, never the text. */
     SUMMARY(MessageKey.LOG_CHAPTER_SUMMARY_KEPT, Tone.INFO, "Σ", "sum"),
+    /** A proofread window was read; the entry names its span and what it decided, never the text. */
+    PROOF(MessageKey.LOG_PROOFREAD, Tone.INFO, "¶", "proof"),
     /**
      * Something was tried again: a failed or refused attempt, a structure or placeholder repair, the run resuming after
      * a provider error, or a step of the automatic recovery.
@@ -72,7 +74,7 @@ public enum LogKind {
     /**
      * The short tag that starts this kind's entry in the log.
      *
-     * @return one of {@code ok}, {@code fix}, {@code mem}, {@code sum}, {@code retry}, {@code err} or {@code info}
+     * @return one of {@code ok}, {@code fix}, {@code mem}, {@code sum}, {@code proof}, {@code retry}, {@code err} or {@code info}
      */
     public String tag() {
         return tag;

@@ -50,6 +50,7 @@ public final class RunStateSource {
     private final ReviewViewModel review;
     private final Messages messages;
     private final BriefProject briefProject;
+    private final ProofreadStanding standing;
     private final ReadOnlyObjectWrapper<RunStateView> view = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper projectOpen = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<ModelChoice> model = new ReadOnlyObjectWrapper<>(ModelChoice.NONE);
@@ -68,6 +69,7 @@ public final class RunStateSource {
      * @param review the count of flagged segments
      * @param messages the catalogue the time left and the program's name are worded from
      * @param briefProject the open project's stored name, which the title bar shows as the Brief does
+     * @param standing where the open project's Proofread stage stands, which a Continue line names
      */
     @Inject
     public RunStateSource(
@@ -77,7 +79,9 @@ public final class RunStateSource {
             final CurrentProject current,
             final ReviewViewModel review,
             final Messages messages,
-            final BriefProject briefProject) {
+            final BriefProject briefProject,
+            final ProofreadStanding standing) {
+        this.standing = Objects.requireNonNull(standing, "standing");
         this.briefProject = Objects.requireNonNull(briefProject, "briefProject");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.translating = Objects.requireNonNull(translating, "translating");
@@ -113,6 +117,7 @@ public final class RunStateSource {
                 current.book(),
                 current.brief(),
                 briefProject.name(),
+                standing.tally(),
                 review.flaggedCount());
         inputs.forEach(input -> input.addListener(refresh));
     }
@@ -254,7 +259,8 @@ public final class RunStateSource {
                 translating.controls().get(),
                 translating.otherWork().get(),
                 span(call, waiting),
-                null);
+                null,
+                standing.tally().get());
     }
 
     // The desk reads the stored count, which lags the run's last flush; while the run decides, its own figure counts

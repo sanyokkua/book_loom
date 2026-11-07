@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ProofreadProjects.decide;
 import static ua.bookloom.pipeline.ProofreadProjects.decideAll;
 import static ua.bookloom.pipeline.ProofreadProjects.decided;
@@ -20,7 +21,9 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.junit.jupiter.api.AfterEach;
@@ -36,6 +39,12 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.ProofreadForecast;
+import ua.bookloom.api.pipeline.ProofreadItem;
+import ua.bookloom.api.pipeline.ProofreadRoundStarted;
+import ua.bookloom.api.pipeline.ProofreadTally;
+import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.StepChanged;
@@ -45,7 +54,10 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.dial.DialParameterProfiles;
+import ua.bookloom.pipeline.proofread.ProofreadTallies;
 import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * The Proofread stage's windows across a stop, a pause and a Continue (design D15 "Resume"): a window already read with
@@ -84,6 +96,67 @@ class ProofreadResumeTest {
 
         assertThat(proofreadCalls(second)).as("windows 5 and 6 only").isEqualTo(2);
         assertThat(second.requests().getFirst().messages().getLast().content()).contains("Book.md:12");
+    }
+
+    // IF a reopened project could not say where Proofread stopped, THEN Continue would read as a fresh start; the
+    // tally counts the four windows read from their stored fingerprints and names the fifth of six.
+    @Test
+    void tally_stoppedAfterWindow4_continuesAtWindow5Of6() {
+        final TestProject project = flaggedBook(QualityDial.BALANCED, SIX_MARKS);
+        final TranslationJobImpl stopped = job(project, new ScriptedChatModel());
+        stopped.subscribe(event -> stopAfterFourthWindow(stopped, event));
+        assertThat(report(stopped.run()).end()).isEqualTo(JobState.CANCELLED);
+
+        final Result<Optional<ProofreadTally>> tally = tallies(project).tally(project.id(), 2);
+
+        assertThat(tally.data()).hasValue(new ProofreadTally(1, 6, 4, 5));
+    }
+
+    // IF a finished stage still reported windows left, THEN a finished book would offer to continue proofreading.
+    @Test
+    void tally_finishedBalancedRun_isEmpty() {
+        final TestProject project = flaggedBook(QualityDial.BALANCED, SIX_MARKS);
+        assertThat(report(job(project, new ScriptedChatModel()).run()).end()).isEqualTo(JobState.COMPLETED);
+
+        assertThat(tallies(project).tally(project.id(), 2).data()).isEmpty();
+    }
+
+    // IF the window were not told what the stage reads and which windows it read, THEN the live card could not list
+    // them; a Balanced run announces its coverage at Start, its one round and each of its six windows.
+    @Test
+    void run_balancedSixMarks_announcesTheForecastTheRoundAndEachWindow() {
+        final TestProject project = flaggedBook(QualityDial.BALANCED, SIX_MARKS);
+        final TranslationJobImpl translation = job(project, new ScriptedChatModel());
+        final List<JobEvent> events = new CopyOnWriteArrayList<>();
+        translation.subscribe(events::add);
+
+        assertThat(report(translation.run()).end()).isEqualTo(JobState.COMPLETED);
+
+        assertThat(events)
+                .filteredOn(ProofreadForecast.class::isInstance)
+                .containsExactly(new ProofreadForecast(ProofreadCoverage.MARKED_AND_DOUBTFUL, 0));
+        assertThat(events)
+                .filteredOn(ProofreadRoundStarted.class::isInstance)
+                .containsExactly(new ProofreadRoundStarted(1, 1, 6, 6));
+        assertThat(events)
+                .filteredOn(ProofreadWindowRead.class::isInstance)
+                .hasSize(6)
+                .first()
+                .satisfies(event -> assertThat(((ProofreadWindowRead) event).items())
+                        .extracting(ProofreadItem::segmentId, ProofreadItem::outcome)
+                        .containsExactly(tuple("Book.md:0", ProofreadOutcome.UNCHANGED)));
+    }
+
+    private static ProofreadTallies tallies(final TestProject project) {
+        final RunStores stores = project.stores();
+        return new ProofreadTallies(
+                stores.openProjects(),
+                stores.projects(),
+                stores.segments(),
+                stores.glossary(),
+                stores.lexicon(),
+                project.deferrals(),
+                new DialParameterProfiles());
     }
 
     // Max's whole-book round re-reads the marked lines too; a Continue with nothing changed reads neither round again.

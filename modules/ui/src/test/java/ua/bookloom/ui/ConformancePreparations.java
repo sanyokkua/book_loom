@@ -354,10 +354,10 @@ final class ConformancePreparations {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
         final List<PromptSection> prompt = LiveCallFixtures.smallPrompt();
-        mirror.live()
-                .publishCalls(LiveRowFixtures.calls(
-                        LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
-                        LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL)));
+        LiveRowFixtures.publishRunning(
+                mirror.live(),
+                LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
+                LiveRowFixtures.rows(2, LiveRow.Stage.IN_CALL));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

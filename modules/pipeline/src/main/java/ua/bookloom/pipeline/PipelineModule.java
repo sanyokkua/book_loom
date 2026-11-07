@@ -12,6 +12,7 @@ import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -28,6 +29,7 @@ import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
+import ua.bookloom.pipeline.proofread.ProofreadTallies;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
 import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 
@@ -66,6 +68,7 @@ public final class PipelineModule extends AbstractModule {
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
         bind(ProjectService.class).to(ProjectServiceImpl.class);
+        bind(ProofreadProgress.class).to(ProofreadTallies.class);
         bind(GlossaryService.class).to(GlossaryServiceImpl.class);
         bind(LexiconService.class).to(LexiconServiceImpl.class);
         bind(NamesPass.class).to(NamesPassImpl.class);

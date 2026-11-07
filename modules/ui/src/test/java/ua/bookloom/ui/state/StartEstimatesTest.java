@@ -43,16 +43,17 @@ class StartEstimatesTest {
         assertThat(estimate).isEqualTo(new StartEstimate.None());
     }
 
+    // The spec's case: 300 drafts of 3 s and 20 proofread calls of 6 s at Balanced, no other kind, read 17 min.
     @Test
     void of_everyPlannedKindMeasuredByARun_isMeasuredPerKind() {
         final StartEstimate estimate = StartEstimates.of(
                 Map.of(
                         CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
-                        CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
+                        CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
                 300,
                 20,
                 QualityDial.BALANCED,
-                1,
+                0,
                 0);
 
         assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofMinutes(17)));

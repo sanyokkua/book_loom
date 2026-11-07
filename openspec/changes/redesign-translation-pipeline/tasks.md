@@ -1636,7 +1636,7 @@ set aside once.
     left unread after its pause budget.
   - **Done when:** both sub-steps are done, acceptance cases (a) and (b) of 13.1 are green on both dialects, and `scripts/test-focused.sh --full-module` passes for `:pipeline` and `:app`, with `:ui` `fastTest` green.
 
-- [ ] 13.7 Show the Proofread stage on the Translating screen, the title bar and the progress dialog — stage chip,
+- [x] 13.7 Show the Proofread stage on the Translating screen, the title bar and the progress dialog — stage chip,
   window rows with before, after and verdict, the `proof` log kind — so the person sees what the last pass did while it
   works. → :ui
   - **Satisfies:** "Show the run's stage on the Translating summary strip" (app-shell), "Show a proofread window as a live-card row with its verdict" (app-shell), "Show the run in the title bar while one exists" (app-shell), "Show all model work in one progress dialog" (app-shell, its proofread-window steps), "Show the live card's Live and Activity log tabs" (app-shell), "Continue an existing translation and never call it a start" (app-shell), "Call a model call stuck after a minute and show one clock" (app-shell, its proofread scenario), "Tag every activity-log entry with one of eight kinds" (translation-pipeline; with the RENAMED heading from "seven kinds")
@@ -1662,6 +1662,22 @@ set aside once.
     `ProgressLedgerTest.reopened_6WindowsPlanned1Done`, `ProgressLedgerTest.dialSteps_fastNoneBalancedOnMarkMaxOneAtStart`
     and `BriefEstimateTest.line_neverMeasuredProofreadKindAtBalanced_isAnEstimateFromAnEarlierTranslation`.
   - **Done when:** the TestFX and i18n tests are green and `scripts/ci-linux-ui.sh` passes.
+  - **As built:** three `:api` events carry the stage to the window — `ProofreadForecast` (coverage and Max's
+    ⌈story paragraphs ÷ B⌉ windows, sent at Start only when the dial reads windows, so a run with none reads as Fast),
+    `ProofreadRoundStarted` (round, rounds, windows, to read) and `ProofreadWindowRead` (each focus segment's locator,
+    text before and after, outcome, stored reason and marks; texts left out of `toString`). `ui: state/StageTracker`
+    publishes `RunStage` on `LiveSection.stage()` (withdrawn when the run ends) for the title bar's chip
+    (`RunStatusBar`, gives way last) and the strip's `StageStrip`; a window is a `LiveRow` of stage `PROOFREAD` whose
+    detail (`control/WindowDetail`) words each verdict through `control/ProofreadWords`; `LogKind.PROOF` (`proof ¶`)
+    makes eight kinds. The ledger's `ProofreadPlan` forecasts the stage (Fast none, one window per mark at Balanced and
+    Max, Max's whole-book windows from Start) and drops each part when its round plans exactly; an untimed forecast
+    kind reads "estimate" under "How progress is counted". The port is `api: pipeline/ProofreadProgress`
+    (`pipeline: proofread/ProofreadTallies`): windows read are the round's distinct stored fingerprints, windows left
+    are planned by the stage's rules with the chosen model's batch size (`ui: state/ProofreadStanding`), and a book
+    whose segments are all decided but whose Proofread has windows left is Ready to continue with "Continues with
+    Proofread at window N of M.". The estimate before Start plans PROOFREAD calls (Balanced one per chunk, Max two), so
+    a never-timed proofread kind gives the labelled range. The progress dialog lists proofread calls under their own
+    kind (the "All calls…" list); a verdict on the call row is not shown there (the live row carries it).
 
 - [ ] 13.8 Show proofread verdicts on the review desk — the verdict and reason in the compare, Undo proofread, the
   filters "Changed by proofread" and "Waiting on a gender", and Fast's list of segments a known gender may have left

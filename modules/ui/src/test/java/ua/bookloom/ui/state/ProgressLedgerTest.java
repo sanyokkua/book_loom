@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.state.ProgressLedger.ProofreadState.NONE;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -9,9 +10,12 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
+import ua.bookloom.api.pipeline.ProofreadForecast;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.state.ProgressFigures.Figures;
+import ua.bookloom.ui.state.ProgressFigures.KindFigures;
 
 /**
  * The steps of an operation counted into one share that never falls and a time left taken per kind of step. The clock
@@ -223,7 +227,7 @@ class ProgressLedgerTest {
     @Test
     void rebuilt_74Of142Decided_startsTheBarThereAndHidesTimeLeftUntilFiveNewSteps() {
         final ProgressLedger rebuilt =
-                ProgressLedger.rebuilt(clock, List.of(new ProgressLedger.ChunkState(142, 74)), 0, List.of());
+                ProgressLedger.rebuilt(clock, List.of(new ProgressLedger.ChunkState(142, 74)), 0, List.of(), NONE);
         assertThat(rebuilt.read(now).percent()).isEqualTo(52);
         assertThat(rebuilt.read(now).done()).isEqualTo(74);
         assertThat(rebuilt.read(now).total()).isEqualTo(142);
@@ -250,7 +254,8 @@ class ProgressLedgerTest {
                 new ProgressLedger.ChunkState(8, 0),
                 new ProgressLedger.ChunkState(8, 0));
 
-        final Figures read = ProgressLedger.rebuilt(clock, chunks, 1, List.of()).read(now);
+        final Figures read =
+                ProgressLedger.rebuilt(clock, chunks, 1, List.of(), NONE).read(now);
 
         assertThat(read.done()).isEqualTo(18);
         assertThat(read.total()).isEqualTo(45);
@@ -276,9 +281,10 @@ class ProgressLedgerTest {
                 new ProgressLedger.ChapterState(false, false),
                 new ProgressLedger.ChapterState(false, false));
 
-        final Figures read = ProgressLedger.rebuilt(clock, chunks, 0, stored).read(now);
+        final Figures read =
+                ProgressLedger.rebuilt(clock, chunks, 0, stored, NONE).read(now);
         final Figures missing =
-                ProgressLedger.rebuilt(clock, chunks, 0, secondMissing).read(now);
+                ProgressLedger.rebuilt(clock, chunks, 0, secondMissing, NONE).read(now);
 
         assertThat(read.done()).isEqualTo(22);
         assertThat(read.total()).isEqualTo(44);
@@ -294,7 +300,8 @@ class ProgressLedgerTest {
         final List<ProgressLedger.ChapterState> chapters =
                 List.of(new ProgressLedger.ChapterState(true, true), new ProgressLedger.ChapterState(true, false));
 
-        final Figures read = ProgressLedger.rebuilt(clock, List.of(new ProgressLedger.ChunkState(10, 10)), 0, chapters)
+        final Figures read = ProgressLedger.rebuilt(
+                        clock, List.of(new ProgressLedger.ChunkState(10, 10)), 0, chapters, NONE)
                 .read(now);
 
         assertThat(read.done()).isEqualTo(12);
@@ -331,5 +338,49 @@ class ProgressLedgerTest {
                 .containsExactly(
                         new ProgressFigures.KindFigures(StepKind.DRAFT, 8, 4, 12.0),
                         new ProgressFigures.KindFigures(StepKind.CHECK, 1, 1, 30.0));
+    }
+
+    static KindFigures proofreadOf(final Figures read) {
+        return read.kinds().stream()
+                .filter(kind -> kind.kind() == StepKind.PROOFREAD)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    // IF a reopened project forgot the windows it had read, THEN Continue would look as if Proofread started over.
+    @Test
+    void reopened_6WindowsPlanned1Done() {
+        final Figures read = ProgressLedger.rebuilt(
+                        clock,
+                        List.of(new ProgressLedger.ChunkState(142, 142)),
+                        0,
+                        List.of(),
+                        new ProgressLedger.ProofreadState(6, 1))
+                .read(now);
+
+        assertThat(proofreadOf(read).planned()).isEqualTo(6);
+        assertThat(proofreadOf(read).done()).isEqualTo(1);
+        assertThat(read.total()).isEqualTo(148);
+        assertThat(read.done()).isEqualTo(143);
+    }
+
+    // IF the Proofread stage counted no steps until it started, THEN the bar would be full before the last pass ran;
+    // Fast reads no window, Balanced one per mark, Max the whole book from Start.
+    @ParameterizedTest(name = "{0}: {2} at Start, {3} after three marks")
+    @CsvSource({
+        "NONE, 0, 0, 0",
+        "MARKED_AND_DOUBTFUL, 0, 0, 3",
+        "MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH, 750, 750, 753"
+    })
+    void dialSteps_fastNoneBalancedOnMarkMaxOneAtStart(
+            final ProofreadCoverage coverage, final int wholeBook, final int atStart, final int afterMarks) {
+        ledger.proofread().forecast(new ProofreadForecast(coverage, wholeBook));
+        final int start = ledger.read(now).total();
+        ledger.proofread().marked();
+        ledger.proofread().marked();
+        ledger.proofread().marked();
+
+        assertThat(start).isEqualTo(atStart);
+        assertThat(ledger.read(now).total()).isEqualTo(afterMarks);
     }
 }

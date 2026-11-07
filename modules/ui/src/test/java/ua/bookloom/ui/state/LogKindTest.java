@@ -24,11 +24,12 @@ class LogKindTest {
         "REPAIRED, INFO, LOG_MODEL_CALL",
         "MEMORY, INFO, LOG_GLOSSARY_APPLIED",
         "SUMMARY, INFO, LOG_CHAPTER_SUMMARY_KEPT",
+        "PROOF, INFO, LOG_PROOFREAD",
         "RETRIED, WARN, LOG_RETRIED",
         "SEGMENT_ERROR, ERR, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
-    void kind_eachOfTheSeven_hasItsRoleAndDefaultCatalogueKey(
+    void kind_eachOfTheEight_hasItsRoleAndDefaultCatalogueKey(
             final LogKind kind, final Tone role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
@@ -41,11 +42,12 @@ class LogKindTest {
         "REPAIRED, fix, ↺",
         "MEMORY, mem, ≡",
         "SUMMARY, sum, Σ",
+        "PROOF, proof, ¶",
         "RETRIED, retry, ↻",
         "SEGMENT_ERROR, err, ✕",
         "MILESTONE, info, ◆"
     })
-    void tagAndMark_eachOfTheSeven_isItsFixedWordAndGlyph(final LogKind kind, final String tag, final String mark) {
+    void tagAndMark_eachOfTheEight_isItsFixedWordAndGlyph(final LogKind kind, final String tag, final String mark) {
         assertThat(kind.tag()).isEqualTo(tag);
         assertThat(kind.mark()).isEqualTo(mark);
     }
@@ -55,13 +57,14 @@ class LogKindTest {
     @CsvSource({
         "ACCEPTED, false",
         "REPAIRED, false",
+        "PROOF, false",
         "MEMORY, false",
         "SUMMARY, false",
         "RETRIED, true",
         "SEGMENT_ERROR, true",
         "MILESTONE, false"
     })
-    void isTrouble_eachOfTheSeven_isTrueOnlyForRetriesAndErrors(final LogKind kind, final boolean trouble) {
+    void isTrouble_eachOfTheEight_isTrueOnlyForRetriesAndErrors(final LogKind kind, final boolean trouble) {
         assertThat(kind.isTrouble()).isEqualTo(trouble);
     }
 
@@ -87,7 +90,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).toList();
 
-        assertThat(LogKind.values()).hasSize(7);
+        assertThat(LogKind.values()).hasSize(8);
         assertThat(marks).doesNotHaveDuplicates();
     }
 

@@ -23,7 +23,8 @@ import ua.bookloom.ui.state.SectionMemory;
  * The detail of the row selected in the live card. Simple shows its marker and location, why a flagged one waits, its
  * source beside its translation, and what the model works on now. Detailed shows the same head and texts, then the
  * call the row was sent in (its prompt and reply), or that it has not been sent yet. A kept chapter summary's row shows
- * its text alone, in place of the two columns: it has no source, and later drafts are told exactly this text.
+ * its text alone, in place of the two columns: it has no source, and later drafts are told exactly this text. A
+ * proofread window's row shows each segment it read with its verdict and its text before and after.
  *
  * <p>It is rebuilt only when what it shows changed — the row, its marker, its call, the call in flight or the view —
  * so a tick that only moves a clock changes nothing here. Showing logs nothing, as it runs on every publication.
@@ -42,6 +43,7 @@ public final class LiveRowDetail extends VBox {
     private final Label target = new Label();
     private final Label summary = Wrapped.wholeLines(new Label());
     private final GridPane texts;
+    private final WindowDetail window;
     private final VBox inFlight = new VBox(4);
     private final Label notSent = new Label();
     private final LiveCallView call;
@@ -86,7 +88,8 @@ public final class LiveRowDetail extends VBox {
         summary.setId("translating-live-detail-summary");
         summary.getStyleClass().add("live-detail-text");
         texts = texts(sourceName, targetName);
-        getChildren().addAll(head, texts, summary, inFlight, notSent, call);
+        window = new WindowDetail(messages);
+        getChildren().addAll(head, texts, summary, window, inFlight, notSent, call);
         show(null, null, LiveCalls.EMPTY, false);
     }
 
@@ -133,14 +136,17 @@ public final class LiveRowDetail extends VBox {
         shown = next;
         showHead(row, marker);
         final boolean isSummary = row != null && LiveRowWords.isSummary(row);
-        Visibility.show(texts, !isSummary);
+        final boolean isWindow = row != null && LiveRowWords.isWindow(row);
+        Visibility.show(texts, !isSummary && !isWindow);
+        Visibility.show(window, isWindow);
+        window.show(row != null && isWindow ? row.proofread() : List.of());
         Visibility.show(summary, isSummary);
         summary.setText(row != null && isSummary ? LiveRowWords.text(row) : "");
         showTexts(row, marker);
         Visibility.show(inFlight, !detailed);
         showInFlight(waiting);
         final boolean sent = next.call() != null;
-        Visibility.show(notSent, detailed && row != null && !sent && !isSummary);
+        Visibility.show(notSent, detailed && row != null && !sent && !isSummary && !isWindow);
         call.show(detailed ? next.call() : null);
     }
 

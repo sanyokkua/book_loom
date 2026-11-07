@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.context.BookMap;
 
@@ -21,6 +22,7 @@ import ua.bookloom.pipeline.context.BookMap;
  * @param verdicts the verdict rules of the stage
  * @param map the book map as the stage read it
  * @param keptNow the segments whose text a window of this stage changed, so their marks no longer ride along
+ * @param locators the locator of every segment of the book, which the window's event names its segments by
  */
 record WindowReading(
         ProofreadWindowPass.State state,
@@ -28,7 +30,8 @@ record WindowReading(
         Map<String, Segment> segments,
         WindowVerdicts verdicts,
         BookMap map,
-        Set<String> keptNow) {
+        Set<String> keptNow,
+        Map<String, SegmentLocator> locators) {
 
     // A window names only readable story segments, so each one has a record and a segment.
     SegmentRecord record(final String id) {

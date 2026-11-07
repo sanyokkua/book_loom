@@ -10,7 +10,7 @@ import ua.bookloom.ui.state.LiveRow;
 
 /**
  * How the list and the detail word a live row: a segment by its locator and its source, a kept chapter summary as
- * "Chapter {n} summarised" and its text. The state holds no catalogue, so a summary row carries only the chapter's
+ * "Chapter {n} summarised" and its text, a proofread window as "window {span}" and its text after. The state holds no catalogue, so a summary row carries only the chapter's
  * number, and its wording happens here. Nothing here logs: the cells call it on every redraw.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -25,13 +25,20 @@ final class LiveRowWords {
         return row.stage() == LiveRow.Stage.SUMMARISED;
     }
 
-    static String locator(final LiveRow row, final Messages messages) {
-        return isSummary(row) ? messages.get(MessageKey.LIVE_ROW_CHAPTER_SUMMARISED, row.locator()) : row.locator();
+    static boolean isWindow(final LiveRow row) {
+        return row.stage() == LiveRow.Stage.PROOFREAD;
     }
 
-    /** The row's whole text: a segment's source, or a summary's text. */
+    static String locator(final LiveRow row, final Messages messages) {
+        if (isSummary(row)) {
+            return messages.get(MessageKey.LIVE_ROW_CHAPTER_SUMMARISED, row.locator());
+        }
+        return isWindow(row) ? messages.get(MessageKey.LIVE_ROW_WINDOW, row.locator()) : row.locator();
+    }
+
+    /** The row's whole text: a segment's source, a summary's text, or a proofread window's text after it. */
     static String text(final LiveRow row) {
-        return isSummary(row) ? Objects.requireNonNullElse(row.target(), "") : row.displaySource();
+        return isSummary(row) || isWindow(row) ? Objects.requireNonNullElse(row.target(), "") : row.displaySource();
     }
 
     /** The row's text as one line of words: the inline marks are left out and line breaks become spaces. */
