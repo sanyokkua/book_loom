@@ -59,7 +59,8 @@ public final class TestPlanners {
                 profile,
                 () -> window,
                 document.units(),
-                () -> Result.ok(List.of()));
+                () -> Result.ok(List.of()),
+                brief::summariesOn);
     }
 
     /** A context with no neighbours, an empty map and no memory, for a batch built with nothing around its items. */

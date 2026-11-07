@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class EvalBriefLabel {
 
-    private static final String[] BRIEF_KEYS = {"PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE"};
+    private static final String[] BRIEF_KEYS = {
+        "PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE", "CHAPTER_SUMMARIES"
+    };
 
     static String briefSummary(final Map<String, String> env) {
         final StringBuilder out = new StringBuilder();

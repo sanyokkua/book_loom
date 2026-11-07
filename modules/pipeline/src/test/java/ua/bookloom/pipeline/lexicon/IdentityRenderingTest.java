@@ -3,38 +3,19 @@ package ua.bookloom.pipeline.lexicon;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /**
  * A recurring term never learns its own source word as its rendering across scripts (15i.T4, with 15i.N6's one identity
- * rule): the Latin word «data» left in a Ukrainian sentence is a leftover, not the book's rendering. Both ways a
- * rendering reaches the lexicon are held to it — the model's reported pair and the learner's co-occurrence count.
- * The paired genuine rendering is still learned.
+ * rule): the Latin word «data» left in a Ukrainian sentence is a leftover, not the book's rendering. The learner's
+ * co-occurrence count is the one way a rendering reaches the lexicon since the model no longer reports pairs (12.9); the
+ * paired genuine rendering is still learned.
  */
 class IdentityRenderingTest {
 
-    private static final List<String> KEY_TERMS = List.of("data");
-    private static final String SOURCE = "They lost the data on the way.";
     private static final String KEPT_LATIN = "Вони загубили data дорогою.";
     private static final String TRANSLATED = "Вони загубили дані дорогою.";
-
-    // IF the model's claim "data → data" were counted, THEN every later prompt would show the leftover as the book's
-    // established rendering.
-    @Test
-    void verify_claimOfTheSourceWordAsItsOwnRendering_isDropped() {
-        final List<TermMappingVerifier.Pair> pairs = TermMappingVerifier.verify(
-                Map.of("data", "data"), KEY_TERMS, SOURCE, KEPT_LATIN, List.of(), "en", "uk");
-
-        assertThat(pairs).isEmpty();
-    }
-
-    @Test
-    void verify_claimOfAGenuineRendering_isKept() {
-        assertThat(TermMappingVerifier.verify(Map.of("data", "дані"), KEY_TERMS, SOURCE, TRANSLATED))
-                .containsExactly(new TermMappingVerifier.Pair("data", "дані"));
-    }
 
     @Test
     void established_sourceWordKeptInLatinInEveryTargetSegment_isNotLearnedAsTheRendering() {

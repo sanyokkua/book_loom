@@ -15,12 +15,15 @@
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
 #                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
-#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]]
+#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]] [--summaries on|off]
 # Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
 # in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
 # --variants FIELD=VALUE[,...] binds further PromptVariants fields in the eval's test injector (an arm's alternative,
 # e.g. languageRules=GENERIC_ONLY); it is joined with the --rules choice, and without it an outer BOOKLOOM_EVAL_VARIANTS
 # is kept. Set BOOKLOOM_EVAL_LABEL to name the arm's side in the run's history folder.
+# --summaries on|off (BOOKLOOM_EVAL_CHAPTER_SUMMARIES, arm 6) forces the brief's chapter-summaries switch in the mini and
+# sequence runs; unset leaves it to the story shape, which those briefs leave unread, so summaries are on. The mini and
+# sequence reports carry, per repeat, what the chapter-summary gate kept and dropped (`summaryGate`).
 # --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
 # read only by the eval test classes; reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
@@ -172,6 +175,9 @@ while [ $# -gt 0 ]; do
       shift 2 ;;
     --baseline-of) BASELINE_OF=$2; shift 2 ;;
     --variants) EXTRA_VARIANTS=$2; shift 2 ;;
+    --summaries)
+      case "$2" in on|off) export BOOKLOOM_EVAL_CHAPTER_SUMMARIES=$2 ;; *) echo "--summaries takes on or off, not $2" >&2; exit 2 ;; esac
+      shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -180,6 +186,7 @@ done
 VARIANTS=$EXTRA_VARIANTS
 if [ "$RULES" = generic ]; then VARIANTS="languageRules=GENERIC_ONLY${VARIANTS:+,$VARIANTS}"; fi
 [ -n "$VARIANTS" ] && echo "-- prompt variants: BOOKLOOM_EVAL_VARIANTS=$VARIANTS"
+[ -n "${BOOKLOOM_EVAL_CHAPTER_SUMMARIES:-}" ] && echo "-- chapter summaries: BOOKLOOM_EVAL_CHAPTER_SUMMARIES=$BOOKLOOM_EVAL_CHAPTER_SUMMARIES"
 
 if [ "$QUICK" = 1 ]; then
   export BOOKLOOM_EVAL_QUICK=1

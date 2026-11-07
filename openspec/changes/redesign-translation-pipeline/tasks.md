@@ -1320,7 +1320,7 @@ design D10). Arm 5b (key-term asks) runs last, once the summaries reach block 8.
   - **Test first:** after 5b's default, `BatchReplyTest.parse_replyWithExtraTermsField_ignored` and `BatchRequestTest.schema_hasOnlyIdAndTarget`; `LexiconLearnerTest.learn_noTermsReply_learnsFromDecidedPairs`.
   - **Done when:** the arm line is recorded and the repository holds one variant.
 
-- [ ] 12.10 Run arm 6, make the acceptance test green, fix the docs, run the gate and the hand check. → :api, :persistence, :pipeline, :ui, docs
+- [x] 12.10 Run arm 6, make the acceptance test green, fix the docs, run the gate and the hand check. → :api, :persistence, :pipeline, :ui, docs
   - **Satisfies:** enabling work for design D10 and D24 (arm 6; closes the group; every requirement is named by 12.2–12.9)
   - **Depends on:** 12.1–12.9
   - **Read:** design.md D1 "Done per group"; the group's acceptance test from 12.1; `docs/DEVELOPMENT.md#quality-gate`

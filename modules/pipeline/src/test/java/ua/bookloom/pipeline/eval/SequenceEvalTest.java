@@ -58,7 +58,7 @@ class SequenceEvalTest {
         final SequenceRun run = runs.results().getFirst();
         final SequenceReport report = new SequenceReport(repeats.getFirst());
 
-        write(model, dial, narrator, report, new Repeats(run, runs.seeds(), repeats, runs.aggregates()));
+        write(model, dial, narrator, report, new Repeats(runs.results(), runs.seeds(), repeats, runs.aggregates()));
         assertThat(run.segments()).as(report.table()).isNotEmpty();
     }
 
@@ -88,12 +88,12 @@ class SequenceEvalTest {
                 EvalProvenance.capture("sequence", model, label).withAggregates(repeats.aggregates()),
                 name,
                 report.table() + "\n" + SequenceReport.repeatLines(repeats.metrics()),
-                report.json(repeats.first(), repeats.seeds(), repeats.metrics()));
+                report.json(repeats.runs(), repeats.seeds(), repeats.metrics()));
         log.info(
                 "Sequence eval report {}\n{}\n{}", name, report.table(), SequenceReport.repeatLines(repeats.metrics()));
     }
 
-    /** Every repeat's run-level figures; the first run's targets are the ones the report keeps. */
+    /** Every repeat's run and run-level figures; the first run's targets are the report's {@code outputs}. */
     private record Repeats(
-            SequenceRun first, List<Integer> seeds, List<SequenceMetrics> metrics, List<Double> aggregates) {}
+            List<SequenceRun> runs, List<Integer> seeds, List<SequenceMetrics> metrics, List<Double> aggregates) {}
 }

@@ -43,19 +43,23 @@ record SequenceReport(SequenceMetrics metrics) {
     /**
      * The first repeat's report with every repeat's own figures beside it, so a K-repeat arm decides on all of them:
      * {@code ltcr1PerRepeat} and a {@code perRepeat} entry per repeat (its seed, LTCR-1, first-round hard-gate failures,
-     * flagged, batch fallbacks, calls, seconds per segment, prompt and cached tokens, and the key-term asks stopping).
+     * flagged, batch fallbacks, calls, seconds per segment, prompt and cached tokens, what the chapter-summary gate kept
+     * and dropped, and the repeat's stored targets by segment id, so every repeat can be read by hand).
      *
-     * @param run the first repeat's run, whose targets the report keeps
+     * @param runs every repeat's run, in repeat order; the first one's targets are the report's {@code outputs}
      * @param seeds the repeats' seeds, in repeat order
      * @param repeats every repeat's metrics, in repeat order, the first being this report's
      */
-    String json(final SequenceRun run, final List<Integer> seeds, final List<SequenceMetrics> repeats) {
+    String json(final List<SequenceRun> runs, final List<Integer> seeds, final List<SequenceMetrics> repeats) {
         try {
             final ObjectMapper mapper = new ObjectMapper();
-            final ObjectNode root = (ObjectNode) mapper.readTree(json(run));
+            final ObjectNode root = (ObjectNode) mapper.readTree(json(runs.getFirst()));
             repeats.forEach(repeat -> root.withArray("ltcr1PerRepeat").add(repeat.ltcr1()));
             for (int k = 0; k < repeats.size(); k++) {
-                root.withArray("perRepeat").add(repeatNode(mapper, k, seeds.get(k), repeats.get(k)));
+                final ObjectNode node = repeatNode(mapper, k, seeds.get(k), repeats.get(k));
+                final ObjectNode outputs = node.putObject("outputs");
+                runs.get(k).segments().forEach(segment -> outputs.put(segment.id(), segment.target()));
+                root.withArray("perRepeat").add(node);
             }
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
         } catch (JsonProcessingException e) {
@@ -80,6 +84,7 @@ record SequenceReport(SequenceMetrics metrics) {
                 .put("promptTokens", m.promptTokens())
                 .put("cachedPromptTokens", m.cachedPromptTokens());
         node.set("hardGateKinds", mapper.valueToTree(m.hardGateKinds()));
+        node.set("summaryGate", mapper.valueToTree(m.summaryGate()));
         return node;
     }
 
@@ -102,7 +107,11 @@ record SequenceReport(SequenceMetrics metrics) {
                     "calls",
                     m.calls(),
                     "sec/seg",
-                    f2(m.secondsPerSegment())));
+                    f2(m.secondsPerSegment()),
+                    "summaries",
+                    m.summaryGate().chaptersKept(),
+                    "summaryDropped",
+                    gateDrops(m.summaryGate())));
         }
         return String.join("\n", lines);
     }
@@ -115,6 +124,7 @@ record SequenceReport(SequenceMetrics metrics) {
         lines.addAll(defects(metrics));
         lines.addAll(realRun(metrics));
         lines.addAll(cost(metrics));
+        lines.add(summaries(metrics.summaryGate()));
         lines.add("terms (segments naming it; renderings seen):");
         metrics.terms().forEach(t -> lines.add(term(t)));
         lines.add("names (segments naming it; spellings seen):");
@@ -207,6 +217,23 @@ record SequenceReport(SequenceMetrics metrics) {
                         "reasons",
                         m.fallbackReasons()),
                 row("editsApplied", m.editsApplied(), "editsRefused", m.editsRefused(), "calls", m.callsByKind()));
+    }
+
+    private static String summaries(final SummaryGateTally gate) {
+        return row(
+                "chapterSummaries",
+                gate.chaptersKept(),
+                "notKept",
+                gate.notKept(),
+                "gateDropped",
+                gateDrops(gate),
+                "decisions",
+                gate.decisions());
+    }
+
+    // The sentences the chapter-summary gate dropped of those it read, with the share.
+    private static String gateDrops(final SummaryGateTally gate) {
+        return gate.dropped() + "/" + gate.sentences() + " (" + ltcr(gate.dropShare()) + ")";
     }
 
     private static String term(final TermStat t) {

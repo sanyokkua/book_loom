@@ -29,19 +29,16 @@ final class EarlierChapters {
      * The summaries a call whose first item is {@code segmentId} carries.
      *
      * @param stored the non-null kept summaries, in any order
-     * @param frame the non-null run frame, whose chapters number them and whose brief holds the switch
+     * @param frame the non-null run frame, whose chapters number them; the caller has read the switch, which the frame's
+     *     brief holds only as it stood at Start
      * @param segmentId the non-null id of the call's first item
-     * @return never null; oldest first, empty when the switch is off, the item is in the first chapter or in none
+     * @return never null; oldest first, empty when the item is in the first chapter or in none
      */
     static List<EarlierSummary> forFocus(
             final List<ChapterSummary> stored, final RunFrame frame, final String segmentId) {
         Objects.requireNonNull(stored, "stored");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(segmentId, "segmentId");
-        if (!frame.brief().summariesOn()) {
-            log.debug("Earlier chapters none segmentId={}: the brief's switch is off", segmentId);
-            return List.of();
-        }
         final ChapterBoundaries chapters = frame.chapters();
         final Optional<ChapterBoundaries.Chapter> focus = chapters.chapterOf(segmentId);
         if (focus.isEmpty()) {

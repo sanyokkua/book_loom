@@ -6,6 +6,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.eval.CaseRecord.Entry;
 import ua.bookloom.pipeline.eval.CaseRecord.Exchange;
 import ua.bookloom.pipeline.eval.CaseRecord.Grader;
@@ -17,7 +18,8 @@ import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind.Level;
  * The per-case records of one mini run: one case per block with the expectations that concern it, and one
  * {@value #GLOSSARY_CASE} case for the glossary expectations. A block's calls are the calls whose prompt holds its
  * text, so a batch shared by several blocks is counted for each of them, and a case no call mentions reports no
- * figures rather than zeros.
+ * figures rather than zeros. A block's record keeps the repeat's stored target as its {@code output}, so
+ * {@code eval-score.py blind --all-repeats} can show every repeat of two runs side by side (arm 6).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -50,13 +52,13 @@ final class MiniCases {
                     .filter(r -> r.blocks().contains(outcome.id()))
                     .map(r -> new Grader(r.id(), r.level(), !r.failingBlocks().contains(outcome.id())))
                     .toList();
-            cases.add(entry(outcome.id(), repeat, seed, graders, callsOf(run, outcome.source())));
+            cases.add(entry(outcome.id(), repeat, seed, graders, callsOf(run, outcome.source()), outcome.target()));
         }
         final List<Grader> glossary = results.stream()
                 .filter(r -> r.blocks().isEmpty())
                 .map(r -> new Grader(r.id(), Level.SOFT, r.passed()))
                 .toList();
-        cases.add(entry(GLOSSARY_CASE, repeat, seed, glossary, List.of()));
+        cases.add(entry(GLOSSARY_CASE, repeat, seed, glossary, List.of(), null));
         return List.copyOf(cases);
     }
 
@@ -65,8 +67,10 @@ final class MiniCases {
             final int repeat,
             final int seed,
             final List<Grader> graders,
-            final List<StageProbe.Call> calls) {
-        final CaseRecord record = new CaseRecord(id, repeat, seed, graders, Time.of(calls), Tokens.of(calls));
+            final List<StageProbe.Call> calls,
+            @Nullable final String output) {
+        final CaseRecord record =
+                new CaseRecord(id, repeat, seed, graders, Time.of(calls), Tokens.of(calls), null, output);
         return new Entry(record, calls.stream().map(Exchange::of).toList());
     }
 

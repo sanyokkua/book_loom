@@ -22,6 +22,7 @@ import ua.bookloom.api.project.QaFinding;
  * @param calls the model calls made by the names pass, the translation and the consistency pass
  * @param elapsed the wall time of the three phases
  * @param sent every call the run made, with the usage each reply reported, for the per-case records
+ * @param summaryGate what the chapter-summary gate kept and dropped
  */
 record MiniRun(
         NamePolicy policy,
@@ -31,9 +32,10 @@ record MiniRun(
         List<String> errors,
         Calls calls,
         Duration elapsed,
-        List<StageProbe.Call> sent) {
+        List<StageProbe.Call> sent,
+        SummaryGateTally summaryGate) {
 
-    /** A run that kept no record of its calls. */
+    /** A run that kept no record of its calls and whose log was not read. */
     MiniRun(
             final NamePolicy policy,
             final JobState end,
@@ -42,7 +44,7 @@ record MiniRun(
             final List<String> errors,
             final Calls calls,
             final Duration elapsed) {
-        this(policy, end, outcomes, glossary, errors, calls, elapsed, List.of());
+        this(policy, end, outcomes, glossary, errors, calls, elapsed, List.of(), SummaryGateTally.NONE);
     }
 
     /**
@@ -85,5 +87,6 @@ record MiniRun(
         glossary = List.copyOf(glossary);
         errors = List.copyOf(errors);
         sent = List.copyOf(sent);
+        Objects.requireNonNull(summaryGate, "summaryGate");
     }
 }

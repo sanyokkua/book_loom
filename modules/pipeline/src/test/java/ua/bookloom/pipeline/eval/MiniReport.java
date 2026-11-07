@@ -92,6 +92,7 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         root.put("translationCalls", run.calls().translation());
         root.put("consistencyCalls", run.calls().consistency());
         root.put("seconds", run.elapsed().toMillis() / SECONDS);
+        root.set("summaryGate", MAPPER.valueToTree(run.summaryGate()));
         final ArrayNode errors = root.putArray("errors");
         run.errors().forEach(errors::add);
         putDefects(root);
@@ -120,8 +121,9 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
     }
 
     /**
-     * The first report's JSON with every repeat's stored targets and characters, so a K-run report keeps what each
-     * repeat decided and with which gender origins (arm 4b reads both).
+     * The first report's JSON with every repeat's figures (pass rate, flagged, calls, seconds, what the chapter-summary
+     * gate kept and dropped), stored targets and characters, so a K-run report keeps what each repeat decided and with
+     * which gender origins (arm 4b reads both).
      *
      * @param reports one report per repeat, in repeat order; not empty
      * @param seeds each repeat's seed, in the same order
@@ -135,6 +137,7 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
             for (int repeat = 0; repeat < reports.size(); repeat++) {
                 final ObjectNode row = repeats.addObject().put("seed", seeds.get(repeat));
                 final MiniRun each = reports.get(repeat).run();
+                reports.get(repeat).putFigures(row);
                 final ObjectNode outputs = row.putObject("outputs");
                 each.outcomes().forEach((id, outcome) -> outputs.put(id, outcome.target()));
                 final ArrayNode characters = row.putArray("characters");
@@ -154,6 +157,16 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    // One repeat's own figures beside its outputs, so a K-run report can be compared repeat by repeat (arm 6).
+    private void putFigures(final ObjectNode row) {
+        row.put("passRate", passRate())
+                .put("flagged", flagged())
+                .put("calls", run.calls().total())
+                .put("translationCalls", run.calls().translation())
+                .put("seconds", run.elapsed().toMillis() / SECONDS);
+        row.set("summaryGate", MAPPER.valueToTree(run.summaryGate()));
     }
 
     /** Every block's stored target of this report's run, so a baseline keeps the text of invented books. */
@@ -188,12 +201,29 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
                 run.elapsed().toMillis() / SECONDS,
                 run.end()));
         run.errors().forEach(error -> out.append("  ERROR ").append(error).append('\n'));
+        out.append(gateLine(run.summaryGate()));
         results.stream()
                 .filter(r -> !r.passed())
                 .forEach(r -> out.append(
                         String.format(Locale.ROOT, "  MISS %-22s %-26s %s%n", r.id(), r.defect(), r.detail())));
         out.append(labels.describe(usableByBlock()));
         return out.toString();
+    }
+
+    // The chapter-summary gate's figures; none when the run kept no summary and the gate read nothing.
+    private static String gateLine(final SummaryGateTally gate) {
+        if (gate.sentences() == 0 && gate.notKept().isEmpty()) {
+            return "";
+        }
+        return String.format(
+                Locale.ROOT,
+                "  chapter summaries %d kept, not kept %s; gate dropped %d of %d sentences (%.1f%%) %s%n",
+                gate.chaptersKept(),
+                gate.notKept(),
+                gate.dropped(),
+                gate.sentences(),
+                PERCENT * Math.max(0, gate.dropShare()),
+                gate.decisions());
     }
 
     private Map<String, Boolean> usableByBlock() {

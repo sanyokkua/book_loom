@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.context;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public final class TranslatePlanner {
     private final IntSupplier contextSize;
     private final List<Unit> units;
     private final Supplier<Result<List<ChapterSummary>>> summaries;
+    private final BooleanSupplier summariesOn;
 
     /**
      * Binds the builder to one run.
@@ -42,6 +44,8 @@ public final class TranslatePlanner {
      * @param units the non-null units of the book in reading order
      * @param summaries the non-null reader of the project's kept chapter summaries, read again for each draft so a
      *     summary kept mid-run reaches the next chapter's first draft
+     * @param summariesOn the non-null reader of the brief's Chapter summaries switch as it is stored now, not as the
+     *     frame holds it: the switch may change while the run is paused, and the change applies from the resume
      */
     public TranslatePlanner(
             final ContextBuilder builder,
@@ -49,18 +53,25 @@ public final class TranslatePlanner {
             final ModelProfile profile,
             final IntSupplier contextSize,
             final List<Unit> units,
-            final Supplier<Result<List<ChapterSummary>>> summaries) {
+            final Supplier<Result<List<ChapterSummary>>> summaries,
+            final BooleanSupplier summariesOn) {
         this.builder = Objects.requireNonNull(builder, "builder");
         this.frame = Objects.requireNonNull(frame, "frame");
         this.profile = Objects.requireNonNull(profile, "profile");
         this.contextSize = Objects.requireNonNull(contextSize, "contextSize");
         this.units = List.copyOf(Objects.requireNonNull(units, "units"));
         this.summaries = Objects.requireNonNull(summaries, "summaries");
+        this.summariesOn = Objects.requireNonNull(summariesOn, "summariesOn");
     }
 
     /** The run's fixed frame. */
     public RunFrame frame() {
         return frame;
+    }
+
+    /** {@return whether the brief's Chapter summaries switch is on now} */
+    public boolean summariesOn() {
+        return summariesOn.getAsBoolean();
     }
 
     /** The profile of the run's model. */
@@ -99,11 +110,12 @@ public final class TranslatePlanner {
      */
     public List<EarlierSummary> earlierChapters(final Focus focus) {
         Objects.requireNonNull(focus, "focus");
-        if (focus.items().isEmpty() || !frame.brief().summariesOn()) {
-            log.debug(
-                    "Earlier chapters not read items={} switchOn={}",
-                    focus.items().size(),
-                    frame.brief().summariesOn());
+        if (focus.items().isEmpty()) {
+            log.debug("Earlier chapters not read: the call has no item");
+            return List.of();
+        }
+        if (!summariesOn()) {
+            log.debug("Earlier chapters not read: the brief's switch is off");
             return List.of();
         }
         final Result<List<ChapterSummary>> stored = summaries.get();

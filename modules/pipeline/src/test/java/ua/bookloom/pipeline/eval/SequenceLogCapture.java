@@ -16,7 +16,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Reads what the run only reports in its log — why a batch item fell back to its own draft, which reviewer edits the
- * verifier refused, which segments failed a hard gate in their first round and on what — by listening on the
+ * verifier refused, which segments failed a hard gate in their first round and on what, what the chapter-summary gate
+ * kept and dropped — by listening on the
  * {@code ua.bookloom} logger for the length of the run, with that logger at DEBUG whatever the configuration says. Test
  * code only: the application stays on the SLF4J facade.
  */
@@ -30,13 +31,23 @@ final class SequenceLogCapture implements AutoCloseable {
             Pattern.compile("one repair segment=(\\S+) findings=\\[([^\\]]*+)\\] keep=.*+");
     private static final Pattern COMMA = Pattern.compile(",\\s*");
     private static final String REFUSED = "Edit refused";
+    private static final Pattern GATE = Pattern.compile(
+            "Chapter summary gate chapter=(\\d+) part=(\\d+) sentence=(\\d+) decision=(\\S+) entry=.*+");
+    private static final Pattern SUMMARY_KEPT =
+            Pattern.compile("chapter summary chapter=\\d+ sentences=\\d+ dropped=\\d+");
+    private static final Pattern NOT_KEPT =
+            Pattern.compile("Chapter summary not kept chapter=\\d+ key=\\S+ reason=(\\S+)");
+    private static final String KEPT = "kept";
 
     private final Logger logger = (Logger) LoggerFactory.getLogger("ua.bookloom");
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
     private final Level before = logger.getLevel();
 
     SequenceLogCapture() {
-        logger.setLevel(Level.DEBUG);
+        // DEBUG at least, never coarser than the configuration asks: a TRACE run keeps its prompts in the test log.
+        if (!logger.isDebugEnabled()) {
+            logger.setLevel(Level.DEBUG);
+        }
         appender.setContext(logger.getLoggerContext());
         appender.start();
         logger.addAppender(appender);
@@ -85,6 +96,45 @@ final class SequenceLogCapture implements AutoCloseable {
                 .filter(event -> event.getFormattedMessage().startsWith(REFUSED))
                 .filter(event -> segmentIds.contains(event.getMDCPropertyMap().get("segment")))
                 .count();
+    }
+
+    /** What the chapter-summary gate decided over the run, read from its per-sentence decision lines. */
+    SummaryGateTally summaryGate() {
+        final Map<String, List<String>> finalAnswers = new LinkedHashMap<>();
+        final Set<String> reasked = new LinkedHashSet<>();
+        int chaptersKept = 0;
+        final Map<String, Integer> notKept = new LinkedHashMap<>();
+        for (final ILoggingEvent event : snapshot()) {
+            final String message = event.getFormattedMessage();
+            final Matcher gate = GATE.matcher(message);
+            if (gate.matches()) {
+                sentence(finalAnswers, reasked, gate);
+            } else if (SUMMARY_KEPT.matcher(message).matches()) {
+                chaptersKept++;
+            } else {
+                final Matcher failed = NOT_KEPT.matcher(message);
+                if (failed.matches()) {
+                    notKept.merge(failed.group(1), 1, Integer::sum);
+                }
+            }
+        }
+        final Map<String, Integer> decisions = new LinkedHashMap<>();
+        finalAnswers.values().forEach(answer -> answer.forEach(d -> decisions.merge(d, 1, Integer::sum)));
+        final int sentences =
+                decisions.values().stream().mapToInt(Integer::intValue).sum();
+        return new SummaryGateTally(
+                sentences, decisions.getOrDefault(KEPT, 0), decisions, reasked.size(), chaptersKept, notKept);
+    }
+
+    // A part's answer starts at sentence 1; a second answer of the same part is the re-ask's, which replaces the first.
+    private static void sentence(
+            final Map<String, List<String>> finalAnswers, final Set<String> reasked, final Matcher gate) {
+        final String part = gate.group(1) + "/" + gate.group(2);
+        if ("1".equals(gate.group(3)) && finalAnswers.containsKey(part)) {
+            reasked.add(part);
+            finalAnswers.remove(part);
+        }
+        finalAnswers.computeIfAbsent(part, key -> new ArrayList<>()).add(gate.group(4));
     }
 
     private List<ILoggingEvent> snapshot() {

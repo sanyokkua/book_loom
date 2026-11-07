@@ -450,7 +450,7 @@ tokens on a small model, 4,500 on a large one) is read in consecutive parts cut 
 the previous part's kept summary; the last part's sentences are kept.
 
 **The gate** (`memory/SummaryGate`). At most three whole sentences; a sentence that names a glossary entry the chapter
-never names is dropped; a sentence with a letter the target alphabet lacks or a source-only function word is asked once
+never names is dropped, and so is one holding angle-bracket markup (a leaked prompt tag such as `<Names>`); a sentence with a letter the target alphabet lacks or a source-only function word is asked once
 more and dropped if the second answer still has it. The glossary and lexicon are only read: no rendering is learned
 from a summary.
 
@@ -458,8 +458,7 @@ from a summary.
 `ChapterSummaryKept` (chapter key, number, sentence count, text; its `toString` leaves the text out). A failed call
 (`contextWindow` included), an unreadable reply or nothing left keeps no summary and logs one WARN
 `Chapter summary not kept chapter=… key=… reason=…`; a storage failure logs one WARN too; the run goes on. The INFO line
-is `chapter summary chapter=… sentences=… dropped=…`; the text is logged at TRACE only. The earlier chapters' block of
-the draft prompt comes with task 12.5.
+is `chapter summary chapter=… sentences=… dropped=…`; the text is logged at TRACE only. The kept summaries reach later draft prompts as the earlier-chapters block (`12_PROMPT_CATALOG.md#draft-translation`).
 
 ## deferred-resolution-and-backward-revision {#deferred-resolution}
 

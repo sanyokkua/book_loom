@@ -41,13 +41,17 @@ import ua.bookloom.pipeline.prompt.StepAnnouncer;
  * chapter while the switch is on. The last chapter is never summarised, since no later window reads it: its step, and a
  * stored summary's, are done at once with no call. A summary that is not kept or not stored is a warning, never the end
  * of the run, and is tried again on the next Continue; a pause aborting the call makes it again on resume, and a stop
- * keeps nothing of it.
+ * keeps nothing of it. The switch is read from the stored brief at each of these places, since the person may change it
+ * while the run is paused: turned on, the finished chapters are summarised at the next chunk's entry or commit, as a new
+ * run's first pass would; turned off, no further summary is written and each finished chapter's planned step is done at
+ * once with no call.
  *
  * <p>Used from the job thread only.
  */
 @Slf4j
 final class ChapterSummaries {
 
+    private static final String ERROR = "error";
     private static final String STEP_LABEL = "summary";
 
     private final ChapterSummaryCall call;
@@ -61,30 +65,31 @@ final class ChapterSummaries {
     private final StepAnnouncer steps;
     // The chapters this run has settled — summarised, tried, or done with no call — so none is asked twice in a run.
     private final Set<String> tried = new HashSet<>();
+    // The switch as last read, so a turn from off to on is seen once.
+    private boolean wasOn;
+    private boolean planned;
 
     /**
      * Binds the summaries to one run.
      *
-     * @param call the non-null chapter-summary call
-     * @param planner the non-null planner, whose frame holds the chapters and the brief's switch
+     * @param runSteps the non-null steps of the run: the chapter-summary call, the planner whose frame holds the
+     *     chapters and which reads the brief's switch as stored now, and the announcer of the run's steps
      * @param stores the non-null stores the map is read from and the summary saved to
      * @param settings the non-null settings of the run
      * @param emit the non-null receiver of the kept-summary event
      * @param document the non-null book the chapters were found in
      * @param routed the non-null router that answers a call a pause or a stop aborted
-     * @param steps the non-null announcer of the run's steps
      */
     ChapterSummaries(
-            final ChapterSummaryCall call,
-            final TranslatePlanner planner,
+            final RunSteps runSteps,
             final RunStores stores,
             final RunSettings settings,
             final Consumer<JobEvent> emit,
             final Document document,
-            final RoutedCalls routed,
-            final StepAnnouncer steps) {
-        this.call = Objects.requireNonNull(call, "call");
-        this.planner = Objects.requireNonNull(planner, "planner");
+            final RoutedCalls routed) {
+        Objects.requireNonNull(runSteps, "runSteps");
+        this.call = runSteps.summary();
+        this.planner = runSteps.planner();
         this.stores = Objects.requireNonNull(stores, "stores");
         this.projectId = settings.projectId();
         this.emit = Objects.requireNonNull(emit, "emit");
@@ -94,7 +99,7 @@ final class ChapterSummaries {
                 .flatMap(unit -> unit.segments().stream())
                 .collect(Collectors.toUnmodifiableMap(Segment::id, Function.identity(), (first, second) -> first));
         this.routed = Objects.requireNonNull(routed, "routed");
-        this.steps = Objects.requireNonNull(steps, "steps");
+        this.steps = runSteps.calls().steps();
     }
 
     /**
@@ -106,17 +111,46 @@ final class ChapterSummaries {
      */
     Optional<RunEnd> beforeDrafts(final WorkList work) {
         Objects.requireNonNull(work, "work");
-        if (!planner.frame().brief().summariesOn()) {
+        wasOn = planner.summariesOn();
+        if (!wasOn) {
             log.debug("No chapter summaries before drafts: the brief's switch is off");
             return Optional.empty();
         }
+        return writeFinished(work);
+    }
+
+    /**
+     * Writes every finished chapter's missing or stale summary at a chunk's entry when the switch was turned on since
+     * it was last read, as the run's first pass would have; nothing otherwise.
+     *
+     * @param work the non-null work list, whose remaining segments tell an open chapter
+     * @return empty to go on, or how a stop during a summary call ended the run
+     */
+    Optional<RunEnd> beforeChunk(final WorkList work) {
+        Objects.requireNonNull(work, "work");
+        return turnedOn() ? writeFinished(work) : Optional.empty();
+    }
+
+    // Reads the switch now; true once for each turn from off to on.
+    private boolean turnedOn() {
+        final boolean on = planner.summariesOn();
+        final boolean turned = on && !wasOn;
+        wasOn = on;
+        log.debug("Chapter summaries switch on={} turnedOn={}", on, turned);
+        return turned;
+    }
+
+    private Optional<RunEnd> writeFinished(final WorkList work) {
         final List<Chapter> chapters = planner.frame().chapters().chapters();
-        steps.planned(StepKind.SUMMARY, chapters.size(), false);
+        if (!planned) {
+            steps.planned(StepKind.SUMMARY, chapters.size(), false);
+            planned = true;
+        }
         final Result<List<ChapterSummary>> read = stores.summaries().list(projectId);
         if (read.isErr()) {
             log.warn(
-                    "Chapter summaries not read before drafts; none is written now reason={}",
-                    Objects.requireNonNull(read.error(), "error").code());
+                    "Chapter summaries not read; none is written now reason={}",
+                    Objects.requireNonNull(read.error(), ERROR).code());
             return Optional.empty();
         }
         return writeMissing(work, chapters, Objects.requireNonNull(read.data(), "summaries"));
@@ -175,9 +209,9 @@ final class ChapterSummaries {
     Optional<RunEnd> afterCommit(final WorkList work, final List<WorkItem> items) {
         Objects.requireNonNull(work, "work");
         Objects.requireNonNull(items, "items");
-        if (!planner.frame().brief().summariesOn()) {
-            log.debug("No chapter summary: the brief's switch is off");
-            return Optional.empty();
+        if (turnedOn()) {
+            log.debug("Chapter summaries switch turned on; summarising the finished chapters");
+            return writeFinished(work);
         }
         final ChapterBoundaries chapters = planner.frame().chapters();
         final Optional<Chapter> found =
@@ -190,6 +224,10 @@ final class ChapterSummaries {
         }
         final Chapter chapter = found.get();
         if (isOpen(work, chapter)) {
+            return Optional.empty();
+        }
+        if (!wasOn) {
+            closedOff(chapter);
             return Optional.empty();
         }
         if (ChapterStandings.isLast(chapters, chapter)) {
@@ -206,6 +244,15 @@ final class ChapterSummaries {
                 .count();
         log.debug("Chapter {} key={} openSegments={}", chapter.number(), chapter.key(), open);
         return open > 0;
+    }
+
+    // A chapter finished while the switch is off: a step planned while it was on is done at once. The chapter is not
+    // settled, so a switch turned on again later in the run still summarises it.
+    private void closedOff(final Chapter chapter) {
+        log.debug("No chapter summary chapter={} key={}: the brief's switch is off", chapter.number(), chapter.key());
+        if (planned && !tried.contains(chapter.key())) {
+            steps.instant(StepKind.SUMMARY, STEP_LABEL, chapter.key(), firstId(chapter), StepResult.NO_CALL);
+        }
     }
 
     // A chapter that needs no call: its step is done at once, once per run.
@@ -225,7 +272,7 @@ final class ChapterSummaries {
                     "Chapter summary not kept chapter={} key={} reason={}",
                     chapter.number(),
                     chapter.key(),
-                    Objects.requireNonNull(glossary.error(), "error").code());
+                    Objects.requireNonNull(glossary.error(), ERROR).code());
             steps.ended(StepKind.SUMMARY, chapter.key(), StepResult.FAILED);
             return Optional.empty();
         }
@@ -278,7 +325,7 @@ final class ChapterSummaries {
                     "Chapter summary not stored chapter={} key={} reason={}",
                     chapter.number(),
                     chapter.key(),
-                    Objects.requireNonNull(saved.error(), "error").code());
+                    Objects.requireNonNull(saved.error(), ERROR).code());
             return false;
         }
         log.debug(

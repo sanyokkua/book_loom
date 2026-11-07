@@ -67,7 +67,7 @@ final class StoryShapeDecision {
             return Shape.NONE;
         }
         final List<ShapeQuote> kept = kept(node.path("quotes"), windows);
-        final int samples = Math.max(1, Math.min(COMPARED, windows.size()));
+        final int samples = Math.clamp(windows.size(), 1, COMPARED);
         final boolean compared = kept.size() >= COMPARED;
         final FieldEvidence evidence = compared
                 ? new FieldEvidence(

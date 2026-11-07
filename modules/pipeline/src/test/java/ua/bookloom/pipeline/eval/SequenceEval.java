@@ -104,7 +104,8 @@ final class SequenceEval {
     SequenceRun run(final ChatModel model, final Path workDir) {
         final String name = "sequence-" + workDir.getFileName() + ".md";
         final Path book = write(workDir.resolve(name));
-        final BookBrief brief = SequenceJobs.brief(fixture.source(), fixture.target(), dial, narrator.narrator());
+        final BookBrief brief = EvalChapterSummaries.apply(
+                SequenceJobs.brief(fixture.source(), fixture.target(), dial, narrator.narrator()), System.getenv());
         final Prepared prepared = SequenceJobs.importBook(book, brief);
         seedGlossary(prepared);
         applyDetectedNarrator(prepared);
@@ -158,7 +159,8 @@ final class SequenceEval {
                 failedFirst.size(),
                 capture.firstRepairKinds(failedFirst),
                 recorder.reviewerTruncated(),
-                narrator);
+                narrator,
+                capture.summaryGate());
     }
 
     // The names whose spelling the run suggested, to read beside the spellings the targets carry.

@@ -27,13 +27,14 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 /**
  * The code check of one chapter-summary reply (design D10). A summary rides into every later call, so it is held to
  * at most three whole sentences; a sentence with a letter the target alphabet lacks or a source-only function word is
- * marked for one re-ask; a sentence naming a glossary entry the chapter never names is dropped, since the model took
+ * marked for one re-ask; a sentence holding angle-bracket markup (a leaked prompt tag) is dropped; a sentence naming a glossary entry the chapter never names is dropped, since the model took
  * it from elsewhere. Only the glossary is read, never written: no rendering is learned from a summary.
  */
 @Slf4j
 final class SummaryGate {
 
     private static final Pattern TERMINAL = Pattern.compile("[.!?…][»”\"’)\\]]*$");
+    private static final Pattern MARKUP = Pattern.compile("</?\\p{L}|<\\p{L}");
     private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}'’ʼ-]+");
 
     /** Where a reply came from, for the decision lines. */
@@ -140,7 +141,9 @@ final class SummaryGate {
         /** It failed the language check in the answer to the re-ask. */
         DROPPED_LETTERS("dropped-letters"),
         /** It names an entry the chapter never names. */
-        DROPPED_ENTRY("dropped-entry");
+        DROPPED_ENTRY("dropped-entry"),
+        /** It holds prompt markup such as {@code <Names>} that leaked into the reply. */
+        DROPPED_MARKUP("dropped-markup");
 
         private final String label;
 
@@ -167,7 +170,7 @@ final class SummaryGate {
             switch (verdict.decision()) {
                 case KEPT -> clean.add(sentence);
                 case REASK, DROPPED_LETTERS -> faulty++;
-                case CUT, FRAGMENT, DROPPED_ENTRY -> dropped++;
+                case CUT, FRAGMENT, DROPPED_ENTRY, DROPPED_MARKUP -> dropped++;
             }
             log.debug(
                     "Chapter summary gate chapter={} part={} sentence={} decision={} entry={}",
@@ -188,6 +191,9 @@ final class SummaryGate {
         }
         if (index >= ChapterSummaryKept.MAX_SENTENCES) {
             return new Verdict(Decision.CUT, null);
+        }
+        if (MARKUP.matcher(sentence).find()) {
+            return new Verdict(Decision.DROPPED_MARKUP, null);
         }
         final Optional<Absent> named = absent.stream()
                 .filter(entry -> entry.forms().stream().anyMatch(form -> TermMatch.isNamedIn(form, sentence)))

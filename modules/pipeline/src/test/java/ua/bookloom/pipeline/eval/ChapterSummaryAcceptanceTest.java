@@ -54,7 +54,7 @@ class ChapterSummaryAcceptanceTest {
     private static final String CHAPTER_2 = "Lamp Room";
     private static final String ITEM_MARK = "<s id=";
     private static final String ITEMS_OPEN = "<Items>";
-    private static final String ABSENT_NAME = "Tobin Reed";
+    static final String ABSENT_NAME = "Tobin Reed";
     private static final Pattern ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
 
     @TempDir
@@ -207,7 +207,7 @@ class ChapterSummaryAcceptanceTest {
     /** The request bodies a run sent and the brief its project holds afterwards. */
     private record RunSeen(List<String> bodies, BookBrief storedBrief) {}
 
-    private static void seed(final Prepared prepared, final String term) {
+    static void seed(final Prepared prepared, final String term) {
         Objects.requireNonNull(
                 prepared.stores()
                         .glossary()
@@ -224,7 +224,7 @@ class ChapterSummaryAcceptanceTest {
     }
 
     // The summary call gets its canned summary, a batch draft its items upper-cased, anything else the empty reviewer.
-    private static String replyTo(final String body) {
+    static String replyTo(final String body) {
         if (isChapterSummary(body)) {
             return SUMMARY_REPLY;
         }

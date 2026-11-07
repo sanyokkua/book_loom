@@ -44,6 +44,8 @@ public final class ChapterSummaryCall {
     /** How the one re-ask's correction starts; the faulty words follow it. */
     static final String CORRECTION_START = "Your last answer held words that are not in the target language: ";
 
+    private static final String ERROR = "error";
+    private static final String REPLY = "reply";
     private static final int ASKED_CHARS = 160;
     private static final String CHAPTER_SOURCE = "chapterSource";
     private static final String MAP_LINES = "mapLines";
@@ -198,13 +200,13 @@ public final class ChapterSummaryCall {
                 + excerpt(asked.text());
         final Result<ChatResponse> first = send(values(asked, ""), line);
         if (first.isErr()) {
-            final AppError error = Objects.requireNonNull(first.error(), "error");
+            final AppError error = Objects.requireNonNull(first.error(), ERROR);
             return isAbort(error)
                     ? new Aborted(error, asked.number())
                     : new Failed(error.code().name());
         }
         final Optional<SummaryGate.Reading> read =
-                gate.read(Objects.requireNonNull(first.data(), "reply").content(), place, false);
+                gate.read(Objects.requireNonNull(first.data(), REPLY).content(), place, false);
         if (read.isEmpty()) {
             return new Failed(UNREADABLE);
         }
@@ -246,12 +248,12 @@ public final class ChapterSummaryCall {
         final String correction = CORRECTION_START + String.join(", ", first.faultyWords())
                 + ". Write the summary again with every word in the target language.";
         final Result<ChatResponse> second = send(values(asked, correction), line);
-        if (second.isErr() && isAbort(Objects.requireNonNull(second.error(), "error"))) {
-            return new Aborted(Objects.requireNonNull(second.error(), "error"), asked.number());
+        if (second.isErr() && isAbort(Objects.requireNonNull(second.error(), ERROR))) {
+            return new Aborted(Objects.requireNonNull(second.error(), ERROR), asked.number());
         }
         final Optional<SummaryGate.Reading> read = second.isErr()
                 ? Optional.empty()
-                : gate.read(Objects.requireNonNull(second.data(), "reply").content(), place, true);
+                : gate.read(Objects.requireNonNull(second.data(), REPLY).content(), place, true);
         if (read.isEmpty()) {
             log.debug(
                     "Chapter summary re-ask chapter={} part={} gave nothing; the first answer's clean sentences stand",
@@ -276,7 +278,7 @@ public final class ChapterSummaryCall {
         if (reply.isOk()) {
             log.trace(
                     "Chapter summary call reply {}",
-                    Objects.requireNonNull(reply.data(), "reply").content());
+                    Objects.requireNonNull(reply.data(), REPLY).content());
         }
         return reply;
     }

@@ -40,7 +40,7 @@ afterward. From the first release migrations are incremental, so normal launches
 - Segment text is the dominant footprint; targets/masks are stored, but large books stream accepted segments to SQLite
   and need not keep every `targetInner` resident.
 - No whole-book byte buffer is held during translation — only the skeleton, the active chunk's segments, and the capped
-  context window (the last 2 or 3 previous pairs, the recently-present card, the rolling summary).
+  context window (the last 2 or 3 previous pairs, the recently-present card, the earlier chapters' summaries).
 
 ## throughput {#throughput}
 

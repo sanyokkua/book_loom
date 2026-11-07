@@ -4,9 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Locale;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.ChunkPosition;
@@ -57,8 +61,7 @@ class LiveCardSummaryRowTest extends LiveCardTestBase {
         pick(1);
 
         assertThat(locators()).containsExactly("ch3 · p01", ROW_WORDS);
-        assertThat(ThemeTestSupport.onFx(() -> ((Labeled) cells().get(1).lookup(".live-row-text")).getText()))
-                .isEqualTo(SUMMARY);
+        assertThat(ThemeTestSupport.onFx(this::secondRowText)).isEqualTo(SUMMARY);
         assertThat(((Label) required("translating-live-detail-summary")).getText())
                 .isEqualTo(SUMMARY);
         assertThat(isShown("translating-live-detail-texts")).isFalse();
@@ -93,5 +96,32 @@ class LiveCardSummaryRowTest extends LiveCardTestBase {
                 .isEqualTo(LONG);
         assertThat(ThemeTestSupport.onFx(() -> FitProbe.cutParts(required(DETAIL))))
                 .isEmpty();
+    }
+
+    // IF the chip sat past the right edge of the list's narrowest row, THEN a person would read "summary ke" and not
+    // see that the summary was kept; at the list's smallest width the locator gives way and the chip stays whole.
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "uk"})
+    void summaryRow_smallestList_chipStaysInsideTheRow(final String language) {
+        useLocale(Locale.forLanguageTag(language));
+        resizeScene(960, 640);
+        showRows(List.of(LiveRow.chapterSummary(new ChapterSummaryKept("unit-12#0", 12, 3, LONG))));
+        onFx(() -> {});
+
+        final boolean inside = ThemeTestSupport.onFx(() -> {
+            final Node chip = cells().getFirst().lookup(".state-marker");
+            final Bounds cell =
+                    cells().getFirst().localToScene(cells().getFirst().getLayoutBounds());
+            return chip.localToScene(chip.getLayoutBounds()).getMaxX() <= cell.getMaxX() + 0.5;
+        });
+
+        assertThat(inside).isTrue();
+        assertThat(ThemeTestSupport.onFx(
+                        () -> FitProbe.cutParts(cells().getFirst().lookup(".state-marker"))))
+                .isEmpty();
+    }
+
+    private String secondRowText() {
+        return ((Labeled) cells().get(1).lookup(".live-row-text")).getText();
     }
 }

@@ -304,7 +304,8 @@ public final class RetryDraft {
                 plan.target().profile(),
                 () -> window,
                 plan.document().units(),
-                () -> summaries.list(plan.record().projectId()));
+                () -> summaries.list(plan.record().projectId()),
+                () -> plan.brief().summariesOn());
     }
 
     private RunSettings settingsOf(final RetryPlan plan) {

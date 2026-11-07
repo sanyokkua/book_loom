@@ -27,8 +27,7 @@ continue where it stopped (DD-20, ADR-0009).
 
 ## crash-safe-checkpoints {#crash-safe-checkpoints}
 
-Each chunk's outcome — accepted/revised segments, updated TM, name-dictionary entries, and (at chapter end) the rolling
-summary — is committed in one transaction before the engine moves on
+Each chunk's outcome — accepted/revised segments, updated TM, name-dictionary entries — is committed in one transaction before the engine moves on; each chapter summary is saved in its own transaction right after the chunk commit that closes the chapter
 (`02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`). Because SQLite runs in WAL with `synchronous=NORMAL`, a committed
 transaction is process-crash-safe and forced-quit-safe and a crash cannot tear it; on OS crash / power loss at most the
 last in-flight commit may be lost, never earlier accepted work (`06_DATA_MODEL_SQLITE.md#storage-conventions`, DD-20,

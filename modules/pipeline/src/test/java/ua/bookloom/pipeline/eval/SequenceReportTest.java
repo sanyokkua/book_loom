@@ -40,11 +40,12 @@ class SequenceReportTest {
 
     @Test
     void json_threeRepeats_writesEachRepeatsFigures() throws IOException {
-        final SequenceRun first = run(2);
-        final List<SequenceMetrics> repeats = List.of(measured(first), measured(run(5)), measured(run(0)));
+        final List<SequenceRun> runs = List.of(run(2), run(5), run(0));
+        final List<SequenceMetrics> repeats =
+                runs.stream().map(SequenceReportTest::measured).toList();
 
         final JsonNode json = new ObjectMapper()
-                .readTree(new SequenceReport(repeats.getFirst()).json(first, List.of(1000, 1001, 1002), repeats));
+                .readTree(new SequenceReport(repeats.getFirst()).json(runs, List.of(1000, 1001, 1002), repeats));
 
         assertThat(json.get("ltcr1PerRepeat").size()).isEqualTo(3);
         assertThat(json.get("ltcr1PerRepeat").get(1).asDouble()).isEqualTo(-1.0);
@@ -53,6 +54,14 @@ class SequenceReportTest {
                 .isEqualTo(5);
         assertThat(json.get("hardGateFailuresRound0").asInt()).isEqualTo(2);
         assertThat(json.get("outputs").get("s0").asText()).isEqualTo("Господар прийшов.");
+        assertThat(json.get("perRepeat").get(2).get("outputs").get("s0").asText())
+                .isEqualTo("Господар прийшов.");
+        assertThat(json.get("perRepeat")
+                        .get(1)
+                        .get("summaryGate")
+                        .get("dropShare")
+                        .asDouble())
+                .isEqualTo(-1.0);
     }
 
     @Test

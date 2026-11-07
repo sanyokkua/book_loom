@@ -39,6 +39,8 @@ import ua.bookloom.pipeline.qa.LockedRendering;
 public final class WindowMap {
 
     // Texts are joined with a blank line, so no name runs from one segment into the next.
+    private static final String FILTER = "filter";
+    private static final String TARGET = "target";
     private static final String JOIN = "\n\n";
     private static final String GLOSS = "; gloss once: ";
 
@@ -104,7 +106,7 @@ public final class WindowMap {
         Objects.requireNonNull(targets, "targets");
         Objects.requireNonNull(map, "map");
         Objects.requireNonNull(masks, "masks");
-        Objects.requireNonNull(filter, "filter");
+        Objects.requireNonNull(filter, FILTER);
         final Texts texts = new Texts(
                 String.join(JOIN, window.visibleSources()),
                 String.join(
@@ -134,14 +136,14 @@ public final class WindowMap {
             final List<String> sources, final BookMap map, final LexiconFilter filter) {
         Objects.requireNonNull(sources, "sources");
         Objects.requireNonNull(map, "map");
-        Objects.requireNonNull(filter, "filter");
+        Objects.requireNonNull(filter, FILTER);
         final String text = String.join(JOIN, sources);
         final List<Placed> placed = new ArrayList<>();
         for (final GlossaryEntry entry : map.entries()) {
             final int occurrences = hasTarget(entry) ? TermMatch.namedCount(entry.names(), text) : 0;
             if (occurrences > 0) {
                 final String line = entry.term() + " → "
-                        + Objects.requireNonNull(entry.target(), "target").strip();
+                        + Objects.requireNonNull(entry.target(), TARGET).strip();
                 placed.add(new Placed(earliest(entry.names(), text), line, false, occurrences, true));
             }
         }
@@ -194,7 +196,7 @@ public final class WindowMap {
     // Tokens are numbered per segment, so in a batch two items' ⟦g0⟧ differ: a line is prefixed with its item's id.
     private static List<String> lockedLines(final GlossaryEntry entry, final List<ProtectedMask> masks) {
         final boolean batch = masks.size() > 1;
-        final String target = Objects.requireNonNull(entry.target(), "target");
+        final String target = Objects.requireNonNull(entry.target(), TARGET);
         final String facts = TermFacts.of(entry.type(), entry.gender(), entry.genderOrigin());
         final List<String> lines = IntStream.range(0, masks.size())
                 .boxed()
@@ -232,7 +234,7 @@ public final class WindowMap {
         if (inSource >= 0 || texts.targets().isEmpty() || !hasTarget(entry)) {
             return inSource;
         }
-        final String target = Objects.requireNonNull(entry.target(), "target");
+        final String target = Objects.requireNonNull(entry.target(), TARGET);
         final int inTarget = earliest(
                 NameForms.forms(target, entry.gender(), texts.targetLanguage()).all(), texts.targets());
         return inTarget < 0 ? -1 : texts.sources().length() + JOIN.length() + inTarget;
@@ -312,7 +314,7 @@ public final class WindowMap {
         Objects.requireNonNull(texts, "texts");
         Objects.requireNonNull(terms, "terms");
         Objects.requireNonNull(glossary, "glossary");
-        Objects.requireNonNull(filter, "filter");
+        Objects.requireNonNull(filter, FILTER);
         final List<String> lines = terms.stream()
                 .filter(entry -> texts.stream().anyMatch(text -> earliest(formsOf(entry), text) >= 0))
                 .filter(entry -> !heldByGlossary(entry, glossary))

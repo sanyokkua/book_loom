@@ -705,7 +705,7 @@ fifth of its words, brings no new Latin run and no new audit doubt; a refusal is
 
 {{/characters}}
 {{#summary}}
-[Book so far — context only]
+[Earlier chapters] The story so far, in the book's target language — context only; do NOT translate.
 {{summary}}
 
 {{/summary}}
@@ -731,7 +731,7 @@ Return one JSON object: {"unchanged":true} if nothing needs to change, else {"ta
 | `{{resolvedFacts}}` | Optional  | `- term → target, gender` (a gender for a character of confirmed gender only) for every glossary name the three paragraphs hold, at most 40 lines and about 600 tokens. |
 | `{{lexiconTerms}}`  | Optional  | `term → rendering` for the recurring terms the three paragraphs name that the glossary does not decide, about 400 tokens. |
 | `{{characters}}`    | Optional  | `name — gender` for each glossary character of confirmed gender they name (a suggested one is left out), about 200 tokens. |
-| `{{summary}}`       | Optional  | The rolling summary in the target language.                                                                 |
+| `{{summary}}`       | Optional  | The earlier chapters' summaries, one `Chapter n: text` line each.                                                              |
 | `{{source}}`, `{{text}}`, `{{tokens}}` | Required / optional | The masked source, the stored masked target and the source's `⟦gN⟧` sequence.        |
 
 **Parameters:** temperature 0.1; output format = JSON object / schema `{"unchanged":true}` or `{"target":"…"}` (neither key required). A paragraph the model leaves as it is costs a few tokens instead of the paragraph again.
@@ -1733,7 +1733,7 @@ segment longer than a part is a part alone, its middle dropped (`ChapterText`).
 **Code gate** (`SummaryGate`). The reply is read tolerantly: `summary` must be non-blank text, else the reply is
 unreadable. It is split into sentences; a last piece with no terminal mark is dropped, and only the first three
 sentences are kept. A sentence naming a glossary entry the chapter never names (its source spellings or any form of
-its target) is dropped with no re-ask. A sentence holding a letter the target alphabet lacks (the language file's
+its target) is dropped with no re-ask, and so is one holding angle-bracket markup (`<` followed by a letter or `/`; a leaked prompt tag), counted as `dropped-markup`. A sentence holding a letter the target alphabet lacks (the language file's
 `forbiddenLetters`) or a source-only function word (`FunctionWords`) earns one re-ask naming those words; in the second
 answer such a sentence is dropped, and if the re-ask fails the first answer's clean sentences stand. The reply's terms
 are never parsed: no rendering is learned from a summary, and the glossary and lexicon are only read.

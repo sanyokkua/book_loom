@@ -107,6 +107,32 @@ class ChapterSummaryCallTest {
         assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
     }
 
+    @Test
+    void call_sentenceWithLeakedMarkup_dropped() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answerTo(
+                        FORMAT,
+                        reply("Мірта йде до міста. Вона зустрічає <Names> Корран</Names> біля воріт. Брат мовчить."));
+
+        final Optional<ChapterSummaryCall.Kept> kept =
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+
+        assertThat(model.requests()).as("no re-ask for markup").hasSize(1);
+        assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
+    }
+
+    @Test
+    void call_sentenceWithPlainLessThan_kept() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answerTo(FORMAT, reply("Мірта йде до міста. Дорога займає менше 5 < 6 годин."));
+
+        final Optional<ChapterSummaryCall.Kept> kept =
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+
+        assertThat(kept)
+                .hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Дорога займає менше 5 < 6 годин.", 2, 0));
+    }
+
     // About 6,700 source tokens against the small tier's 2,500 per part: three parts in order.
     @Test
     void call_longChapter_threeParts() {

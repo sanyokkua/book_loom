@@ -172,10 +172,10 @@ a documented future extension. **ADR:** ADR-0007 **Requirements:** FR-QA-01, FR-
 
 ## dd-18-consistency-stack {#dd-18-consistency-stack}
 
-### DD-18 — Name dictionary + context-aware TM + rolling summary
+### DD-18 — Name dictionary + context-aware TM + chapter summaries
 
 **Decision:** Use a name/term dictionary, context-aware translation memory (exact / context / fuzzy via deterministic
-string similarity), and a rolling bilingual summary as the consistency stack. **Why:** These
+string similarity), and per-chapter summaries as the consistency stack. **Why:** These
 deterministic-plus-lightweight mechanisms give most of the consistency benefit cheaply, with no vector store to build or
 ship. **Consequences:** No embeddings and no RAG stage; fuzzy matching is string-similarity, not vectors. The optional
 glossary **pre-scan is a general-instruction-model call** (DD-46), not an NER library or embeddings. **ADR:** ADR-0007
@@ -508,8 +508,7 @@ started with, and the next chunk's calls are sized at the new one. A chunk is pa
 model profile's tier (600 or 1,000 estimated source tokens, redesign group 11), never to the window, so a saved window
 changes no packing. **Why:** The user's model tokenizer is
 unknown and OpenAI-compatible servers don't expose a context size; a bounded default is deterministic and offline, and
-the per-model override lets a person who knows their model's window use it. **Consequences:** K table + margin +
-rolling-summary K are fixed constants, not settings; a window saved mid-run changes the next chunk, never the one in
+the per-model override lets a person who knows their model's window use it. **Consequences:** K table + margin are fixed constants, not settings; a window saved mid-run changes the next chunk, never the one in
 flight. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07.
 
 ## dd-45-acceptance-model {#dd-45-acceptance-model}

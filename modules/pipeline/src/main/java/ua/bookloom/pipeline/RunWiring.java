@@ -31,6 +31,7 @@ import ua.bookloom.pipeline.run.RunStartLog;
 import ua.bookloom.pipeline.run.RunStores;
 import ua.bookloom.pipeline.run.RunWindow;
 import ua.bookloom.pipeline.run.StageRunner;
+import ua.bookloom.pipeline.run.SummariesSwitch;
 
 /** Wires one run's stages and chunk runner from the tools a job holds, so the job itself names none of the steps. */
 @Slf4j
@@ -108,7 +109,8 @@ final class RunWiring {
                 model.profile(),
                 runWindow::current,
                 run.document().units(),
-                () -> stores.summaries().list(request.projectId()));
+                () -> stores.summaries().list(request.projectId()),
+                new SummariesSwitch(stores, request.projectId(), brief.summariesOn()));
         return new StageRunner(
                 chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner),
                 revision,

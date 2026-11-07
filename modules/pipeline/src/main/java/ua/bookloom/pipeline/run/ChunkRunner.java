@@ -24,7 +24,8 @@ import ua.bookloom.pipeline.index.BookIndex;
  * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
  * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary. Before the first draft
  * every finished chapter that lacks a current summary gets one, and a chunk whose commit finishes a chapter is followed
- * by that chapter's summary call ({@link ChapterSummaries}) before the next chunk.
+ * by that chapter's summary call ({@link ChapterSummaries}) before the next chunk; the brief's switch is read again at
+ * each chunk, so a change made while the run is paused applies from the resume.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
@@ -98,15 +99,7 @@ public final class ChunkRunner {
             final RunSinks sinks,
             final Document document,
             final RoutedCalls calls) {
-        return new ChapterSummaries(
-                steps.summary(),
-                steps.planner(),
-                stores,
-                settings,
-                sinks.emit(),
-                document,
-                calls,
-                steps.calls().steps());
+        return new ChapterSummaries(steps, stores, settings, sinks.emit(), document, calls);
     }
 
     /**
@@ -153,7 +146,10 @@ public final class ChunkRunner {
             final ChunkPlanner.Next next = walk.next();
             work.enterChunk(next.number(), next.total());
             announced.chunkEntered(next.items().size());
-            final Optional<RunEnd> end = runChunk(work, next.chunk(), next.items(), next.number() - 1, next.budget());
+            // A switch turned on during a pause summarises the finished chapters before this chunk is drafted.
+            final Optional<RunEnd> end = summaries
+                    .beforeChunk(work)
+                    .or(() -> runChunk(work, next.chunk(), next.items(), next.number() - 1, next.budget()));
             if (end.isPresent()) {
                 return end;
             }

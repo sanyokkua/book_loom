@@ -88,7 +88,7 @@ public final class BriefSummaries {
                 final Result<ChapterTally> tally = projects.chapterTally(projectId);
                 Platform.runLater(() -> counted(projectId, ask, tally));
             });
-        } catch (RejectedExecutionException rejected) {
+        } catch (RejectedExecutionException _) {
             log.debug("the chapters of project {} are not counted: the executor is shut down", projectId);
         }
     }

@@ -60,6 +60,7 @@ import lombok.Builder;
  * @param terms one entry per fixture term
  * @param names one entry per fixture name
  * @param learnedRenderings the learned renderings, {@code term -> rendering}
+ * @param summaryGate what the chapter-summary gate kept and dropped
  */
 @Builder
 record SequenceMetrics(
@@ -109,7 +110,8 @@ record SequenceMetrics(
         Map<String, Integer> callsByKind,
         List<TermStat> terms,
         List<NameStat> names,
-        List<String> learnedRenderings) {
+        List<String> learnedRenderings,
+        SummaryGateTally summaryGate) {
 
     static final String SUITE = "sequence";
 

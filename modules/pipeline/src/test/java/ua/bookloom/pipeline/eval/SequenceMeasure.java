@@ -40,10 +40,9 @@ import ua.bookloom.pipeline.eval.SequenceMetrics.TermStat;
 import ua.bookloom.pipeline.eval.SequenceRun.Decided;
 
 /**
- * Turns one run into the sequence metrics with production checks only: {@link TextChecks} for the language, quote and
- * script findings, {@link GenderChecks} for the narrator, {@link RenderingConsistency} for the lexicon. A term's
- * renderings are read by co-occurrence: a source segment naming the term counts for every known rendering its target
- * carries, so a target that uses a rendering the fixture does not list counts for none.
+ * Turns one run into the sequence metrics with production checks only ({@link TextChecks}, {@link GenderChecks},
+ * {@link RenderingConsistency}). A term's renderings are read by co-occurrence: a segment naming the term counts for
+ * every known rendering its target carries, so a target using a rendering the fixture does not list counts for none.
  */
 final class SequenceMeasure {
 
@@ -72,7 +71,8 @@ final class SequenceMeasure {
                 .narrator(run.narrator().label())
                 .dial(dial)
                 .terms(terms)
-                .names(names);
+                .names(names)
+                .summaryGate(run.summaryGate());
         quality(builder, segments, terms, names);
         realRun(builder, run, terms);
         builder.ltcr1(ltcr1(segments));

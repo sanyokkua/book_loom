@@ -1178,6 +1178,31 @@ Studio. Graded by LTCR-1, the share of a term's later occurrences that keep its 
   `TermMappingVerifier` stays: the name checks use it through `AlternationGuard`.
 - *Runs* (`.temporary_context/eval-history/20261106-*arm5b-{flat,asks}*`, logs `.temporary_context/arm5b-*.log`).
 
+**Arm 6: chapter summaries (task 12.10).** Default: the Book Brief's switch, suggested from the story shape. Alternative: no
+summaries. Balanced, en-uk, single-flight; e4b K = 3, 26b K = 1; `sequence` (8 chapters), then `mini-en` and `mini-ru`.
+- *Result, `sequence`.* e4b LTCR-1 on 93.6/93.6/97.2 (mean 94.8) against off 94.0/92.6/92.8 (mean 93.1); repeat 0 flagged
+  11 against 12, calls 261 against 251, 4.54 against 3.96 s per segment. 26b LTCR-1 93.4 against 92.1, flagged 16 against 14,
+  calls 289 against 278, 6.02 against 5.65 s per segment. The summary gate kept 29 of 29 sentences over 7 chapters (the last
+  chapter is never summarised), drop share 0 %, so the 20 % falsifier is not met.
+- *Result, mini.* `mini-en` (e4b K = 3, 26b K = 1): pass rate identical on both sides (93.0 % e4b, 94.7 % 26b), 0 flagged,
+  calls e4b 37 against 37, 26b 35 against 33, gate 3 of 3 kept (a three-sentence sample, weak evidence for the share).
+  `mini-ru` is one chapter, so nothing is summarised and the sides are identical.
+- *Rule.* The noise band is about 1.8 points; the LTCR-1 gain of about 1.7 is inside it, so "on" is not worse beyond noise
+  and the owner is not told of a loss. The cost is about 4 % more calls and 5-15 % more time (reported, not weighed). **The
+  switch and its suggestion stay.**
+- *Hand grade* (`.temporary_context/arm6-grading.md`, 139 of about 460 differing chapter 1-7 segment pairs read; no
+  automated grader exists). e4b: meaning and name errors OFF 22 narrator-gender slips against ON 16 and OFF 49 wrong
+  or dropped names against ON 11, but about 35 of OFF's come from one title garbled in the same 17-18 segments of two
+  repeats, from chapter 0 on, before any summary exists; without it the sides sit inside the spread between repeats.
+  26b: even. So ON is not shown worse. The summary sentences themselves could not be graded from the eval runs (the
+  reports keep counts only).
+- *Hand check* (`.temporary_context/hand-12b/`, e4b on an invented two-chapter book): two real chapter-1 summaries were
+  three Ukrainian sentences, true to the chapter with the right referents, but with non-words and renderings that
+  contradict the decided text, and one carried leaked `<Names>` markup that the gate kept and block 8 sent on. The gate
+  now drops a sentence holding markup (`dropped-markup`); it still checks letters and names, not meaning or agreement
+  with the glossary.
+- *Runs* (`.temporary_context/eval-history/*arm6-{on,off}*`, logs `.temporary_context/arm6-*.log`).
+
 **Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
 `6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
 every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.

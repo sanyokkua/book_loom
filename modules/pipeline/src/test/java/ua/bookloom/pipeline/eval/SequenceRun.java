@@ -27,6 +27,7 @@ import ua.bookloom.api.project.SegmentPath;
  * @param hardGateKinds the findings that sent those segments to their first repair round, counted per kind
  * @param reviewerTruncated reviewer replies the provider cut off at the output cap
  * @param narrator the narrator mode the brief was written with
+ * @param summaryGate what the chapter-summary gate kept and dropped
  */
 record SequenceRun(
         JobReport report,
@@ -39,7 +40,36 @@ record SequenceRun(
         int hardGateFailuresRound0,
         Map<String, Integer> hardGateKinds,
         int reviewerTruncated,
-        SequenceNarratorMode narrator) {
+        SequenceNarratorMode narrator,
+        SummaryGateTally summaryGate) {
+
+    /** A run whose log was not read for the chapter-summary gate. */
+    SequenceRun(
+            final JobReport report,
+            final Duration elapsed,
+            final List<ModelCallFinished> calls,
+            final List<Decided> segments,
+            final List<LexiconEntry> lexicon,
+            final Map<String, Integer> fallbackReasons,
+            final int editsRefused,
+            final int hardGateFailuresRound0,
+            final Map<String, Integer> hardGateKinds,
+            final int reviewerTruncated,
+            final SequenceNarratorMode narrator) {
+        this(
+                report,
+                elapsed,
+                calls,
+                segments,
+                lexicon,
+                fallbackReasons,
+                editsRefused,
+                hardGateFailuresRound0,
+                hardGateKinds,
+                reviewerTruncated,
+                narrator,
+                SummaryGateTally.NONE);
+    }
 
     /** Copies the lists. */
     SequenceRun {
@@ -51,6 +81,7 @@ record SequenceRun(
         fallbackReasons = Map.copyOf(fallbackReasons);
         hardGateKinds = Map.copyOf(hardGateKinds);
         Objects.requireNonNull(narrator, "narrator");
+        Objects.requireNonNull(summaryGate, "summaryGate");
     }
 
     /**

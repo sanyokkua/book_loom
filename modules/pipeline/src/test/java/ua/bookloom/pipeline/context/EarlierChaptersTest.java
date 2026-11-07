@@ -62,7 +62,8 @@ class EarlierChaptersTest {
                 ModelProfile.defaults(),
                 () -> window,
                 document.units(),
-                () -> Result.ok(stored));
+                () -> Result.ok(stored),
+                brief::summariesOn);
         final Focus focus = TranslatePlanner.focusOf(segmentId, FILLER);
         final TranslateContext context = new TranslateContext(
                 Window.of(focus), FrameFixtures.emptyMap(brief), List.of(), Map.of(), planner.earlierChapters(focus));
@@ -136,7 +137,8 @@ class EarlierChaptersTest {
                 ModelProfile.defaults(),
                 () -> ModelWindow.DEFAULT_WINDOW,
                 document.units(),
-                () -> Result.err(AppError.of(ErrorCode.internal, "Store failed", "The summaries could not be read.")));
+                () -> Result.err(AppError.of(ErrorCode.internal, "Store failed", "The summaries could not be read.")),
+                brief::summariesOn);
 
         assertThat(planner.earlierChapters(TranslatePlanner.focusOf("ch3:0", FILLER)))
                 .isEmpty();

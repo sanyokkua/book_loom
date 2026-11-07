@@ -96,6 +96,13 @@ final class MiniRunner {
         log.info("Mini eval start dial={} names={} window={}", dial, policy, window);
         final Path file = book.writeEpub(workDir);
         final Prepared prepared = SequenceJobs.importBook(file, brief());
+        try (SequenceLogCapture capture = new SequenceLogCapture()) {
+            return run(prepared, model, capture);
+        }
+    }
+
+    // The three phases, with the log read for what the chapter-summary gate decided.
+    private MiniRun run(final Prepared prepared, final ChatModel model, final SequenceLogCapture capture) {
         final StageProbe probe = new StageProbe(model);
         final List<String> errors = new ArrayList<>();
         final Instant started = Instant.now();
@@ -108,14 +115,27 @@ final class MiniRunner {
         final Duration elapsed = Duration.between(started, Instant.now());
         log.info("Mini eval end state={} calls={} errors={} elapsed={}", end, calls, errors, elapsed);
         return new MiniRun(
-                policy, end, outcomes(prepared), glossary(prepared), errors, calls, elapsed, probe.callsSince(0));
+                policy,
+                end,
+                outcomes(prepared),
+                glossary(prepared),
+                errors,
+                calls,
+                elapsed,
+                probe.callsSince(0),
+                capture.summaryGate());
     }
 
-    /** The brief the run imports the book with: the dataset's pair and narrator, this runner's dial and policy. */
+    /**
+     * The brief the run imports the book with: the dataset's pair and narrator, this runner's dial and policy, and the
+     * chapter-summaries switch the environment forces ({@link EvalChapterSummaries}).
+     */
     BookBrief brief() {
         final Narrator narrator =
                 new Narrator(book.narrator().person(), book.narrator().gender());
-        return SequenceJobs.brief(book.sourceLanguage(), book.targetLanguage(), dial, narrator, policy);
+        return EvalChapterSummaries.apply(
+                SequenceJobs.brief(book.sourceLanguage(), book.targetLanguage(), dial, narrator, policy),
+                System.getenv());
     }
 
     // After the names pass, as the person adds a character the scan left out and then asks "Review with model": the

@@ -111,6 +111,7 @@ record EvalBook(List<Segment> chunk, AcceptedTargets accepted, TranslatePlanner 
                 profile,
                 () -> window,
                 document.units(),
-                () -> Result.ok(List.of()));
+                () -> Result.ok(List.of()),
+                brief::summariesOn);
     }
 }
