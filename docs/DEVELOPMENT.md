@@ -2661,7 +2661,40 @@ every dial and is Completed only after Proofread (`01_Product/05_TRANSLATION_ALG
 `02_Architecture/05_PIPELINE_ENGINE.md#proofread-stage`, `12_PROMPT_CATALOG.md#proofread`). `ProofreadStageAcceptanceTest`
 is green on both dialects (3 cases × Ollama-native and OpenAI-compatible). Task 13.10 results: GATE_RESULT
 
-HAND_RESULT
+Hand check (2026-11-08, `BOOKLOOM_DATA_DIR=.temporary_context/handcheck-13/data`, seeded with an older database;
+`gemma4:e4b-mlx` on Ollama, Balanced, the invented `gravity.md`, 152 segments in 9 chapters; screenshots in
+`.temporary_context/handcheck-13/`): the older database was set aside as `bookloom.db.old-<time>` at launch; the first-launch
+look found Ollama; "Book passages read" lists the sampled passages; the names pass made `Earth` a place → `Земля`
+(`Markdown`, named once in the colophon, is no candidate); the strip read Prepare · Translate · Proofread with "Chapter 1
+of 9" and the title-bar chip followed Translate → Proofread; Proofread read 16 windows (1 kept, 0 proposed, 13
+rejected as `no-gain`) and the run ended Completed only after it; the desk opened by itself and listed "Changed by
+proofread (1)"; Undo proofread put the text, status and findings back; the activity log has `proof ¶` lines; a gender
+set after the run, then a restart, gave "Continues with Proofread at window 15 of 19." and Continue read only the new
+windows (3 kept, each "gender of Ньютон is female"). Fixed in place: a kept proofread rewrite was marked "your edit" on
+the desk (now "proofread"); the "Edit applied" diff showed the text before unmasked with the book's markup and the text
+after with stored `⟦gN⟧` tokens (both now masked, numbered `⟦N⟧`); a window row's locator was squeezed away by its text;
+the Book Brief's quality hint and tooltip and the Generation tab still described the backward revision (now the
+Proofread stage's reach).
+
+**Found in the hand check, not fixed** (each with its repro):
+
+- *No Continue in the same session after a late fact.* After a Completed run, setting a character's gender records
+  `GENDER_CHANGED` deferrals, but Translating keeps "Finished" with no Continue until the app is restarted (then "Ready ·
+  Continues with Proofread at window N of M"). `Controls.of(COMPLETED)` offers start only while segments are pending,
+  and `ProofreadStanding` refreshes only on a project change or a settled run state, not on a glossary write.
+- *A gender rewrite changes another person's words.* After setting Newton female, the window kept
+  `Альберт Ейнштейн опублікувала …` (and `простір` → `космічний простір`) as clearing the Newton mark: the never-worse
+  gate has no check that a rewrite for one name leaves other names' agreement and the other words alone.
+- *All calls… is empty after a Continue that only proofreads* (screenshot `49-all-calls.png`): the run sent proofread
+  calls, but the dialog lists none.
+- *Counts.* "Chapter 0 of 9" while a Continue proofreads a fully decided book; "Stopped at 100 %" while Proofread had
+  windows left; the Continue line said "window 15 of 19" while the run logged `continues at window 1 of 18`; the welcome
+  banner says "picks up at the first segment not done" when every segment is done; the live line reads "Now
+  translating." during Proofread.
+- *Words.* "Genders to confirm" still says "the next export re-renders those segments" (the Proofread stage does now;
+  group 14 removes the export pass); the names pass gave Newton and Cavendish "neuter (likely)".
+- *Not reached:* a stopped proofread call in All calls (the list was empty), and a Fast run with "Waiting on a gender"
+  (covered by acceptance case (c) and `ReviewDeskListTest`).
 
 **Open items carried forward** (none blocks the group; each names what would settle it):
 

@@ -48,6 +48,25 @@ class LiveCardWindowRowTest extends LiveCardTestBase {
                 .toList());
     }
 
+    // IF a window's long text squeezed its locator away, THEN the row would not say which paragraphs the window read;
+    // the text gives way first and the locator stays whole.
+    @Test
+    void windowRow_longTextAfter_locatorStaysWhole() {
+        resizeScene(960, 640);
+        final String longText =
+                "Редакційна команда · Опубліковано 2026-10-28 · Час читання: близько 12 хвилин. ".repeat(4);
+        showRows(List.of(window(new ProofreadItem(
+                "ch1.md:3", "ch1 · p03", "Редакторська команда", longText, ProofreadOutcome.KEPT, "", List.of()))));
+        onFx(() -> {});
+
+        assertThat(locators()).containsExactly("window ch1 · p03");
+        final double[] widthAndNeed = ThemeTestSupport.onFx(() -> {
+            final Label locator = (Label) cells().getFirst().lookup(".live-row-locator");
+            return new double[] {locator.getWidth(), locator.prefWidth(-1)};
+        });
+        assertThat(widthAndNeed[0]).isGreaterThanOrEqualTo(widthAndNeed[1] - 0.5);
+    }
+
     // IF a kept rewrite showed no text before and after, THEN the person could not see what the last pass changed.
     @Test
     void keptRow_detailShowsBeforeAfterAndVerdict() {

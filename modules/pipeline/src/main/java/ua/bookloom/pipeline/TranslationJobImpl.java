@@ -87,7 +87,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.watchdog = new StallWatchdog(control, clock);
         this.ticks = pacing.ticks();
         this.wiring = new RunWiring(
-                request, tools, stores, checks, pacing, logFacts, new RunWiring.Live(control, watchdog, this::emit));
+                request, tools, stores, checks, pacing, logFacts, new RunLive(control, watchdog, this::emit));
     }
 
     @Override

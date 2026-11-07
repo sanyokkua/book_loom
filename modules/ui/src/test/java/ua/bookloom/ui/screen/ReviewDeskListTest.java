@@ -77,6 +77,22 @@ class ReviewDeskListTest extends ReviewDeskTestBase {
         assertThat(labelText("review-proofread-added")).isEqualTo("+ Ліна сказала.");
     }
 
+    // IF the diff showed the text before in another form than the text after, THEN a person would read the book's
+    // markup or the stored mark tokens as a change the proofread made.
+    @Test
+    void changedByProofread_keptRewriteWithMarks_showsBothSidesWithNumberedMarks() throws Exception {
+        desk.willAnswerQueue(ReviewFilter.CHANGED_BY_PROOFREAD, List.of(ReviewFixtures.keptRewriteWithMarks()));
+        desk.willAnswerSegment(ReviewFixtures.keptRewriteWithMarks());
+        openWithFourAndThree();
+
+        chooseFilter(ReviewFilter.CHANGED_BY_PROOFREAD);
+        awaitFx(() -> "ch4 · p08".equals(selectedLocator()));
+
+        awaitFx(() -> optional("review-proofread-removed") != null);
+        assertThat(labelText("review-proofread-removed")).isEqualTo("− ⟦0⟧Ліна⟦1⟧ сказав.");
+        assertThat(labelText("review-proofread-added")).isEqualTo("+ ⟦0⟧Ліна⟦1⟧ сказала.");
+    }
+
     // IF All segments were offered only after an Unattended run, THEN a person who chose Assisted could not browse.
     @Test
     void filter_runWasNotUnattended_stillOffersAllSegments() throws Exception {

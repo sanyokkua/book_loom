@@ -1480,7 +1480,7 @@ SET.models = () => `
 const instant = (txt = 'Changes apply at once.') => `<div class="hint" style="margin-bottom:10px">✓ ${txt}</div>`;
 SET.generation = () => `
 <div class="grid2 collapse">
-  <div class="card"><div class="card-h"><h3>What the quality choice does</h3><span class="muted small">chosen per book in the Book Brief</span></div><div class="card-b">${gridTable(['', 'Fast', 'Balanced', 'Max quality'], [['Segments in one request', 'up to 8', 'up to 8', 'up to 2'], ['Fix rounds after a failed check', '1', '2', '3'], ['Checks of each segment', '0', '1', '2'], ['Read the book backwards once more', '—', '—', '✓'], ['Model-written chapter summary', '—', '—', '✓']])}<div class="hint mt1">The same for every model.</div></div></div>
+  <div class="card"><div class="card-h"><h3>What the quality choice does</h3><span class="muted small">chosen per book in the Book Brief</span></div><div class="card-b">${gridTable(['', 'Fast', 'Balanced', 'Max quality'], [['Repair after a failed check', 'lost marks only', 'one repair', 'one repair'], ['Checks of each segment', '0', '1', '2'], ['Proofread after the last chapter', 'marks for review, no model calls', 'marked passages', 'marked passages, then the whole book']])}<div class="hint mt1">The same for every model.</div></div></div>
   <div class="stack">
     <div class="card"><div class="card-h"><h3>Time limits</h3><span class="muted small">fixed</span></div><div class="card-b">
       <div class="kv"><span class="k">A check</span><span>90 s</span></div><div class="kv"><span class="k">Names, brief, file name, summary</span><span>120 s (longer for a model that always thinks)</span></div>

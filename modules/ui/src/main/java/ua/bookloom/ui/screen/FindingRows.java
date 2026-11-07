@@ -18,6 +18,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.FindingBadge;
+import ua.bookloom.ui.state.MarkStatus;
 
 /**
  * Draws one finding of the review desk's "What may be wrong": one label naming its kind, severity and who raised it,
@@ -85,7 +86,10 @@ final class FindingRows {
         line.getStyleClass().add(FINDING_KIND);
         line.setWrapText(true);
         line.setMinHeight(Region.USE_PREF_SIZE);
-        final @Nullable String before = verdict.before();
+        // Both sides in the masked form, marks numbered as the editor shows them, so only the proofread's change
+        // differs.
+        final @Nullable String maskedBefore = verdict.maskedBefore();
+        final @Nullable String before = maskedBefore != null ? maskedBefore : verdict.before();
         final @Nullable String now = view.maskedMachineTarget();
         if (verdict.outcome() != ProofreadOutcome.KEPT || before == null || now == null) {
             return List.of(new VBox(2, line));
@@ -93,8 +97,8 @@ final class FindingRows {
         final Label heading = new Label(messages.get(MessageKey.REVIEW_PROOFREAD_APPLIED));
         heading.setId("review-proofread-applied");
         heading.getStyleClass().add(FINDING_KIND);
-        final Label removed = diffLine("review-proofread-removed", "diff-removed", "− " + before);
-        final Label added = diffLine("review-proofread-added", "diff-added", "+ " + now);
+        final Label removed = diffLine("review-proofread-removed", "diff-removed", "− " + MarkStatus.show(before));
+        final Label added = diffLine("review-proofread-added", "diff-added", "+ " + MarkStatus.show(now));
         return List.of(new VBox(2, line), new VBox(2, heading, removed, added));
     }
 

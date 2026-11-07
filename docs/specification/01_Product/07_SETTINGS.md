@@ -195,11 +195,14 @@ temperature for this retry" (DD-36).
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
 user-editable per knob:
 
-| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Backward revision |
-|----------|----------------------------|--------------------------|-------------------|
-| Fast     | marks-only re-draft        | 0 (no reviewer)          | off               |
-| Balanced | one repair                 | 1                        | off               |
-| Max      | one repair                 | 2                        | on                |
+| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Proofread stage (`proofreadCoverage`) |
+|----------|----------------------------|--------------------------|----------------------------------------|
+| Fast     | marks-only re-draft        | 0 (no reviewer)          | code only: marks for review, no model calls |
+| Balanced | one repair                 | 1                        | the marked passages                    |
+| Max      | one repair                 | 2                        | the marked passages, then the whole book |
+
+The Generation tab's table shows these three rows (Repair after a failed check, Checks of each segment, Proofread
+after the last chapter); Max's backward revision is gone from the run since redesign group 13.
 
 Chapter summaries are not a dial setting: the Book Brief's switch decides them, the same at every dial.
 

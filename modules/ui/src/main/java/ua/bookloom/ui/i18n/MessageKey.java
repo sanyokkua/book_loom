@@ -1222,12 +1222,14 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY("settings.generation.quality.repair.marks_only"),
     /** Row of the quality table: reviewer passes. */
     SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
-    /** Row of the quality table: the backward revision. */
-    SETTINGS_GENERATION_QUALITY_BACKWARD("settings.generation.quality.backward"),
-    /** Cell of the quality table for a step that runs. */
-    SETTINGS_GENERATION_QUALITY_YES("settings.generation.quality.yes"),
-    /** Cell of the quality table for a step that does not run. */
-    SETTINGS_GENERATION_QUALITY_NO("settings.generation.quality.no"),
+    /** Row of the quality table: how far the Proofread stage reads. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD("settings.generation.quality.proofread"),
+    /** Cell of the proofread row: code only, the marks go to the review desk. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_NONE("settings.generation.quality.proofread.none"),
+    /** Cell of the proofread row: the marked passages are read. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_MARKED("settings.generation.quality.proofread.marked"),
+    /** Cell of the proofread row: the marked passages, then every story paragraph. */
+    SETTINGS_GENERATION_QUALITY_PROOFREAD_WHOLE("settings.generation.quality.proofread.whole"),
     /** Title of the card listing the fixed time limits. */
     SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
     /** Tag saying the limits cannot be changed. */
@@ -3909,6 +3911,8 @@ public enum MessageKey {
     REVIEW_MARKER_ACCEPTED("review.marker.accepted"),
     /** Row marker of a segment holding the person's edit. */
     REVIEW_MARKER_YOUR_EDIT("review.marker.yourEdit"),
+    /** Desk row marker: a rewrite the Proofread stage kept. */
+    REVIEW_MARKER_PROOFREAD("review.marker.proofread"),
     /** Row marker of a segment left for later. */
     REVIEW_MARKER_LATER("review.marker.later"),
     /** A row's line; argument 0 is why it is listed, argument 1 its text. */

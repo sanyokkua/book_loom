@@ -24,7 +24,7 @@ final class RunModelCalls {
 
     static ModelCalls of(
             final ChatModel model,
-            final RunWiring.Live live,
+            final RunLive live,
             final Clock clock,
             final Document document,
             final RunWindow runWindow,

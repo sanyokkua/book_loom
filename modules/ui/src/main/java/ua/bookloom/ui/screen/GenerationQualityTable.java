@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.DialProfile;
 import ua.bookloom.api.pipeline.DialProfiles;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.ui.control.ReadOnlyGrid;
@@ -79,14 +80,17 @@ final class GenerationQualityTable {
                         MessageKey.SETTINGS_GENERATION_QUALITY_REVIEWS,
                         profile -> Integer.toString(profile.reviewPasses())),
                 new Row(
-                        "backward",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_BACKWARD,
-                        profile -> mark(messages, profile.backwardRevision())));
+                        "proofread",
+                        MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD,
+                        profile -> messages.get(coverageKey(profile.proofreadCoverage()))));
     }
 
-    private static String mark(final Messages messages, final boolean runs) {
-        return messages.get(
-                runs ? MessageKey.SETTINGS_GENERATION_QUALITY_YES : MessageKey.SETTINGS_GENERATION_QUALITY_NO);
+    private static MessageKey coverageKey(final ProofreadCoverage coverage) {
+        return switch (coverage) {
+            case NONE -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_NONE;
+            case MARKED_AND_DOUBTFUL -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_MARKED;
+            case MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_WHOLE;
+        };
     }
 
     private static int column(final QualityDial dial) {

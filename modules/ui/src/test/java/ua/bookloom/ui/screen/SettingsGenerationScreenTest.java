@@ -81,7 +81,13 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
                 .containsExactly("Fast", "Balanced", "Max quality");
         assertThat(lookup("#generation-quality-batch-max").tryQuery()).isEmpty();
         assertThat(text("generation-quality-reviews-fast")).isEqualTo("0");
-        assertThat(text("generation-quality-backward-fast")).isEqualTo("—");
+        assertThat(List.of(
+                        text("generation-quality-proofread-fast"),
+                        text("generation-quality-proofread-balanced"),
+                        text("generation-quality-proofread-max")))
+                .containsExactly(
+                        "marks for review, no model calls", "marked passages", "marked passages, then the whole book");
+        assertThat(text("generation-quality-label-proofread")).isEqualTo("Proofread after the last chapter");
         assertThat(lookup("#generation-quality-summary-max").tryQuery()).isEmpty();
         assertThat(text("generation-quality-repair-balanced")).isEqualTo("one repair");
         assertThat(text("generation-quality-repair-fast")).isEqualTo("lost marks only");

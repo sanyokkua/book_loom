@@ -293,6 +293,9 @@ public final class LiveRowList extends ListView<LiveRow> {
             locator.setMinWidth(Region.USE_PREF_SIZE);
             text.getStyleClass().add("live-row-text");
             text.setMinWidth(0);
+            // The text asks for no room of its own and takes what the locator and the marker leave, so a long text
+            // never squeezes the locator away; it is the part that gives way.
+            text.setPrefWidth(0);
             text.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(text, Priority.ALWAYS);
             row.setAlignment(Pos.CENTER_LEFT);

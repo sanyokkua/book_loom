@@ -2,11 +2,9 @@ package ua.bookloom.pipeline;
 
 import java.time.Clock;
 import java.util.Objects;
-import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -43,10 +41,7 @@ final class RunWiring {
     private final Clock clock;
     private final int pacedBatchSize;
     private final String providerKind;
-    private final Live live;
-
-    /** The parts of a running job the wiring hands to the calls and stages it builds. */
-    record Live(JobControl control, StallWatchdog watchdog, Consumer<JobEvent> emit) {}
+    private final RunLive live;
 
     RunWiring(
             final RunRequest request,
@@ -55,7 +50,7 @@ final class RunWiring {
             final RunChecks checks,
             final RunPacing pacing,
             final RunLogFacts logFacts,
-            final Live live) {
+            final RunLive live) {
         Objects.requireNonNull(tools, "tools");
         Objects.requireNonNull(checks, "checks");
         this.request = Objects.requireNonNull(request, "request");

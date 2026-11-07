@@ -231,6 +231,40 @@ public final class ReviewFixtures {
                         List.of()));
     }
 
+    /**
+     * {@code ch4 · p08}, REVISED by a kept proofread rewrite of an emphasised name: the stored texts hold the marks
+     * {@code ⟦g0⟧…⟦g1⟧}, and the plain text before keeps the book's own emphasis markup.
+     */
+    public static SegmentView keptRewriteWithMarks() {
+        final SegmentView base = keptRewrite();
+        return new SegmentView(
+                "ch04.xhtml:8",
+                "ch4 · p08",
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                "⟦g0⟧Ліна⟦g1⟧ сказала.",
+                null,
+                null,
+                List.of(),
+                null,
+                base.path(),
+                false,
+                null,
+                null,
+                null,
+                List.of(),
+                new ProofreadVerdict(
+                        "r1:fp",
+                        ProofreadOutcome.KEPT,
+                        "gender now known: Ліна — female",
+                        "*Ліна* сказав.",
+                        SegmentStatus.ACCEPTED,
+                        "⟦g0⟧Ліна⟦g1⟧ сказав.",
+                        List.of()));
+    }
+
     public static SegmentView accepted() {
         return view("ch02.xhtml:4", "ch2 · p04", SegmentStatus.ACCEPTED, List.of(), null, null);
     }

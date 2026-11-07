@@ -258,12 +258,14 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void qualityHint_dialMovedToMax_followsTheDial() throws TimeoutException {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Balanced: one repair per failing segment · AI reviewer on · backward-consistency pass off");
+                .isEqualTo(
+                        "Balanced: one repair per failing segment · AI reviewer on · proofread of the marked passages");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Max: one repair per failing segment · AI reviewer twice · backward-consistency pass on");
+                .isEqualTo(
+                        "Max: one repair per failing segment · AI reviewer twice · proofread of the marked passages, then the whole book");
     }
 
     // IF the model row named another model than the run uses, THEN the person would trust the wrong one; and
