@@ -112,9 +112,9 @@ final class WindowVerdicts {
             final SegmentRecord decided = rewrite == null
                     ? read.record().withProofread(verdict(fingerprint, ProofreadOutcome.UNCHANGED, ""))
                     : rewritten(read, rewrite, fingerprint, proposals, resolved);
-            records.add(decided);
             counts.merge(
                     Objects.requireNonNull(decided.proofread(), "proofread").outcome(), 1, Integer::sum);
+            records.add(carried(read.record(), decided));
         }
         return new Decided(records, proposals, resolved, counts);
     }
@@ -216,6 +216,27 @@ final class WindowVerdicts {
                 .toList();
         log.debug("Proofread rewrite settles segmentId={} deferrals={}", segmentId, ids.size());
         return ids;
+    }
+
+    // A segment whose earlier rewrite was kept keeps that verdict's text and status before it, so Undo proofread still
+    // returns to the text no proofread touched: a later window that changes nothing (or is refused) leaves it KEPT
+    // under
+    // the new fingerprint, and a second kept rewrite keeps the first text before.
+    private static SegmentRecord carried(final SegmentRecord before, final SegmentRecord decided) {
+        final @Nullable ProofreadVerdict earlier = before.proofread();
+        final ProofreadVerdict now = Objects.requireNonNull(decided.proofread(), "proofread");
+        if (earlier == null
+                || earlier.outcome() != ProofreadOutcome.KEPT
+                || now.outcome() == ProofreadOutcome.PROPOSED) {
+            return decided;
+        }
+        log.debug(
+                "Proofread verdict of segmentId={} carries the earlier kept rewrite; outcome now={}",
+                before.segmentId(),
+                now.outcome());
+        final String reason = now.outcome() == ProofreadOutcome.KEPT ? now.reason() : earlier.reason();
+        return decided.withProofread(new ProofreadVerdict(
+                now.fingerprint(), ProofreadOutcome.KEPT, reason, earlier.before(), earlier.statusBefore()));
     }
 
     // A verdict that kept no text keeps no text or status before it.

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,42 @@ class ProofreadWindowsTest {
         assertThat(windows)
                 .extracting(ProofreadWindow::focusIds, ProofreadWindow::beforeId)
                 .containsExactly(tuple(List.of("ch06.xhtml:20"), null), tuple(List.of("ch06.xhtml:22"), null));
+    }
+
+    // Max's whole-book round: 3,000 story paragraphs at batch size 4 are 750 windows of 4 consecutive paragraphs.
+    @Test
+    void tiles_3000ParagraphsBatchFour_750Windows() {
+        final List<String> book = IntStream.range(0, 3000)
+                .mapToObj(index -> "ch05.xhtml:" + index)
+                .toList();
+
+        final List<ProofreadWindow> windows = ProofreadWindows.tiles(book, id -> true, 4, Map.of());
+
+        assertThat(windows).hasSize(750);
+        assertThat(windows.get(10))
+                .extracting(ProofreadWindow::focusIds, ProofreadWindow::beforeId, ProofreadWindow::afterId)
+                .containsExactly(
+                        List.of("ch05.xhtml:40", "ch05.xhtml:41", "ch05.xhtml:42", "ch05.xhtml:43"),
+                        "ch05.xhtml:39",
+                        "ch05.xhtml:44");
+        assertThat(windows.getFirst().beforeId()).isNull();
+        assertThat(windows.getLast().afterId()).isNull();
+    }
+
+    // A segment with no decided text is skipped, and a mark still open rides along as its segment's reasons.
+    @Test
+    void tiles_unreadableSkippedAndOpenMarkRides() {
+        final List<ProofreadWindow> windows = ProofreadWindows.tiles(
+                CH02.subList(0, 6), id -> !"ch02.md:2".equals(id), 2, Map.of("ch02.md:4", List.of("flagged: echo")));
+
+        assertThat(windows)
+                .extracting(ProofreadWindow::focusIds)
+                .containsExactly(
+                        List.of("ch02.md:0", "ch02.md:1"), List.of("ch02.md:3", "ch02.md:4"), List.of("ch02.md:5"));
+        assertThat(windows.get(1).beforeId()).isEqualTo("ch02.md:1");
+        assertThat(windows.get(1).reasons())
+                .containsEntry("ch02.md:4", List.of("flagged: echo"))
+                .containsEntry("ch02.md:3", List.of());
     }
 
     private static Mark mark(final String segmentId) {

@@ -1,6 +1,7 @@
 package ua.bookloom.app.cli;
 
 import java.io.PrintStream;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
@@ -67,6 +69,8 @@ final class UnattendedRun {
     private final AtomicReference<@Nullable String> stopReason = new AtomicReference<>();
     private @Nullable JobProgress lastProgress;
     private final CallLedger ledger;
+    private final Clock clock;
+    private final StageTimes stages = new StageTimes();
     // The ledger's records after this mark are the run's: taken when the job is wired, before it runs.
     private final long mark;
     private int modelCalls;
@@ -74,11 +78,12 @@ final class UnattendedRun {
     private Duration modelTime = Duration.ZERO;
     private int waits;
 
-    private UnattendedRun(TranslationJob job, PrintStream out, int stopAfter, CallLedger ledger) {
+    private UnattendedRun(TranslationJob job, PrintStream out, int stopAfter, CallLedger ledger, Clock clock) {
         this.job = job;
         this.out = out;
         this.stopAfter = stopAfter;
         this.ledger = ledger;
+        this.clock = clock;
         this.mark = ledger.mark();
     }
 
@@ -91,6 +96,7 @@ final class UnattendedRun {
      * @param stopAfter how many decided segments end the run early, or zero to run the whole book
      * @param out where the outage lines go; never null
      * @param ledger the ledger the run's calls are counted from, by kind; never null
+     * @param clock the clock each stage's time is measured by; never null
      * @return the watcher, whose tallies are complete once the job's run returns
      */
     static UnattendedRun attach(
@@ -99,12 +105,14 @@ final class UnattendedRun {
             Duration maxOutage,
             int stopAfter,
             PrintStream out,
-            CallLedger ledger) {
+            CallLedger ledger,
+            Clock clock) {
         final UnattendedRun run = new UnattendedRun(
                 Objects.requireNonNull(job, "job"),
                 Objects.requireNonNull(out),
                 stopAfter,
-                Objects.requireNonNull(ledger, "ledger"));
+                Objects.requireNonNull(ledger, "ledger"),
+                Objects.requireNonNull(clock, "clock"));
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         job.recoverWith(Objects.requireNonNull(probe, "probe"), Objects.requireNonNull(maxOutage, "maxOutage"));
         job.subscribe(run::onEvent);
@@ -122,9 +130,9 @@ final class UnattendedRun {
                 modelCalls++;
                 modelTime = modelTime.plus(finished.elapsed());
             }
-            case StageStarted _,
-                    ModelCallStarted _,
-                    Finished _,
+            case StageStarted started -> stages.started(started.stage(), clock.instant());
+            case Finished _ -> stages.ended(clock.instant());
+            case ModelCallStarted _,
                     SegmentStarted _,
                     SegmentDrafted _,
                     MemoryUpdated _,
@@ -216,6 +224,12 @@ final class UnattendedRun {
     /** The run's calls by kind, counted from what each call reported. */
     CallKindTotals kindTotals() {
         return CallKindTotals.of(ledger.since(mark));
+    }
+
+    /** {@return the time the run spent in each stage; a stage still open when the run returned ends now} */
+    Map<JobStage, Duration> stageTimes() {
+        stages.ended(clock.instant());
+        return stages.spent();
     }
 
     int modelCalls() {

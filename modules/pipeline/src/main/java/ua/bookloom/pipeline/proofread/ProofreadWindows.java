@@ -50,6 +50,47 @@ public final class ProofreadWindows {
         return List.copyOf(windows);
     }
 
+    /**
+     * The windows of Max's whole-book round (design D15 "Windows"): every readable story segment in reading order, in
+     * consecutive windows of at most the batch size, each with the readable segment before and after it as read-only
+     * neighbours; a mark still open rides along as its segment's reasons.
+     *
+     * @param order the non-null story segment ids in reading order
+     * @param readable which segments hold a decided text a window may read
+     * @param batchSize the most focus segments of one window; at least 1
+     * @param reasons the non-null reasons of the segments still marked, by segment id
+     * @return the windows in reading order; never null, empty when no segment is readable
+     */
+    public static List<ProofreadWindow> tiles(
+            final List<String> order,
+            final Predicate<String> readable,
+            final int batchSize,
+            final Map<String, List<String>> reasons) {
+        Objects.requireNonNull(order, "order");
+        Objects.requireNonNull(readable, "readable");
+        Objects.requireNonNull(reasons, "reasons");
+        final int size = Math.max(1, batchSize);
+        final List<String> listed = order.stream().filter(readable).toList();
+        final List<ProofreadWindow> windows = new ArrayList<>();
+        for (int first = 0; first < listed.size(); first += size) {
+            final int end = Math.min(first + size, listed.size());
+            final Map<String, List<String>> focus = new LinkedHashMap<>();
+            listed.subList(first, end).forEach(id -> focus.put(id, reasons.getOrDefault(id, List.of())));
+            windows.add(new ProofreadWindow(
+                    List.copyOf(focus.keySet()),
+                    focus,
+                    first == 0 ? null : listed.get(first - 1),
+                    end == listed.size() ? null : listed.get(end)));
+        }
+        log.debug(
+                "Proofread whole-book windows readable={} windows={} batchSize={} marked={}",
+                listed.size(),
+                windows.size(),
+                size,
+                reasons.size());
+        return List.copyOf(windows);
+    }
+
     /** The story's reading order, which segments a window may read, and each segment's position. */
     private record Story(List<String> order, Predicate<String> readable, Map<String, Integer> positions) {}
 

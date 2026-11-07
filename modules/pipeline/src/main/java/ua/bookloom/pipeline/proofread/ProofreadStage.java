@@ -37,9 +37,10 @@ import ua.bookloom.pipeline.run.RunStores;
  * The run's last stage, at every dial (design D2, D15): once the final audit has closed the Translate stage, the code
  * part sweeps renamed glossary targets through the decided text, infers an unstated narrator's gender, settles the
  * deferrals whose fact arrived and builds the mark list. At Fast it makes no model call and the list goes to the review
- * desk as it is; at Balanced and Max the marked and doubtful windows are then read with one minimal-edit call each
- * ({@link ProofreadWindowPass}). A stop asked for is honoured between these steps, and the segments decided so far keep
- * their decisions.
+ * desk as it is; at Balanced and Max the marked and doubtful windows are then read with one minimal-edit call each,
+ * and at Max every story paragraph again in a second round ({@link ProofreadWindowPass}); a window already read with the
+ * fingerprint it has now is skipped. A stop asked for is honoured between these steps, and the segments decided so far
+ * keep their decisions.
  *
  * <p>Used from the job thread only.
  */

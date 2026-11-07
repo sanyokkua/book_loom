@@ -98,9 +98,9 @@ public final class RoutedCalls {
 
     /**
      * As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, a pause reporting the
-     * progress {@code progress} gives.
+     * progress {@code progress} gives: a step of no translation chunk, such as a proofread window.
      */
-    <T> Step<T> untilAnsweredOrFlagged(
+    public <T> Step<T> untilAnsweredOrFlagged(
             final Supplier<JobProgress> progress,
             @Nullable final String segmentId,
             final StepName step,
@@ -341,10 +341,10 @@ public final class RoutedCalls {
      * @param kind the step's kind, such as {@code draft}, {@code review} or {@code decide}
      * @param segmentId the segment the step is for, the first of its chunk for a chunk's reviewer call
      */
-    record StepName(String kind, String segmentId) {
+    public record StepName(String kind, String segmentId) {
 
         /** Rejects a missing part. */
-        StepName {
+        public StepName {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(segmentId, "segmentId");
         }

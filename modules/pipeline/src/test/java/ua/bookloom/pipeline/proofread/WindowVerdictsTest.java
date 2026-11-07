@@ -181,6 +181,28 @@ class WindowVerdictsTest {
         assertThat(decided.resolved()).containsExactly("d1");
     }
 
+    // Max's whole-book round reads a segment whose first-round rewrite was kept and changes nothing: the kept verdict
+    // and its text before stay, under the new fingerprint, so Undo proofread still has the original.
+    @Test
+    void reply_unchangedAfterKeptRewrite_keepsTheFirstTextBefore() {
+        final Document document = ProofreadFixtures.chapter("ch02.md", NEGATION_SOURCE);
+        final SegmentRecord kept = decided(ID, SegmentStatus.REVISED, NEGATION_KEPT)
+                .withProofread(new ProofreadVerdict(
+                        "r1:first", ProofreadOutcome.KEPT, "", NEGATION_LOST, SegmentStatus.ACCEPTED));
+
+        final WindowVerdicts.Decided decided = verdicts(List.of(ZOTOV), List.of())
+                .decide(List.of(read(document.units().getFirst().segments().getFirst(), kept)), Map.of(), "r2:whole");
+
+        assertThat(decided.records().getFirst().proofread())
+                .extracting(
+                        ProofreadVerdict::fingerprint,
+                        ProofreadVerdict::outcome,
+                        ProofreadVerdict::before,
+                        ProofreadVerdict::statusBefore)
+                .containsExactly("r2:whole", ProofreadOutcome.KEPT, NEGATION_LOST, SegmentStatus.ACCEPTED);
+        assertThat(decided.counts()).containsExactly(Map.entry(ProofreadOutcome.UNCHANGED, 1));
+    }
+
     private static WindowVerdicts.Decided decide(
             final List<GlossaryEntry> glossary, final String source, final SegmentRecord record, final String rewrite) {
         final Document document = ProofreadFixtures.chapter("ch02.md", source);

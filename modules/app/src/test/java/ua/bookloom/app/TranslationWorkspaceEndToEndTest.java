@@ -156,12 +156,13 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
     }
 
     // The flagged figure is the desk's count once the run is over, so segments the person accepted are no longer shown
-    // as flagged beside a Review flagged button that counts none.
+    // as flagged beside a Review flagged button that counts none. The Proofread stage starts from the stored decisions,
+    // so the segments the person accepted at each pause are counted accepted.
     private void assertMirror(final boolean reviewed) {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         assertThat(onFx(() -> mirror.figures().get().total())).isEqualTo(SEGMENT_COUNT);
         assertThat(onFx(() -> mirror.figures().get().remaining())).isZero();
-        assertThat(onFx(() -> mirror.figures().get().accepted())).isZero();
+        assertThat(onFx(() -> mirror.figures().get().accepted())).isEqualTo(reviewed ? SEGMENT_COUNT : 0);
         assertThat(onFx(() -> mirror.figures().get().flagged())).isEqualTo(reviewed ? 0 : SEGMENT_COUNT);
     }
 }

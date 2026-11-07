@@ -90,6 +90,7 @@ final class RunReport {
         run.put("stoppedBecause", watch.stopReason());
         timings.put("modelCalls", watch.modelCalls());
         timings.put("modelSeconds", seconds(watch.modelTime()));
+        stageTimes(watch);
         modelCallsByKind(watch);
         recovery(watch);
         flagged(watch);
@@ -185,6 +186,12 @@ final class RunReport {
             return Result.err(AppError.of(
                     ErrorCode.internal, "The run report was not written", "The report file could not be written."));
         }
+    }
+
+    // Every stage is named, so a Fast run's report shows its Proofread stage took its few code steps' time.
+    private void stageTimes(UnattendedRun watch) {
+        final ObjectNode stages = timings.putObject("stageSeconds");
+        watch.stageTimes().forEach((stage, took) -> stages.put(stage.name(), seconds(took)));
     }
 
     private void modelCallsByKind(UnattendedRun watch) {

@@ -1584,7 +1584,7 @@ set aside once.
     acceptance test's trap draft is `Мирена кивнула й промовила, що ключ має Тарн.`: the dataset's word-for-word
     reference is 90 % like its Russian source, so the echo check flagged it and the trap was read for its flag.
 
-- [ ] 13.6 Add Max's whole-book second round, the window fingerprint, resume by fingerprint and the step plan, so Max
+- [x] 13.6 Add Max's whole-book second round, the window fingerprint, resume by fingerprint and the step plan, so Max
   re-reads every story paragraph for every model and a stopped Proofread stage continues at its first unread window.
   → :pipeline, :ui, :app
   - **Satisfies:** "Re-read every story paragraph at Max in a second round" (translation-pipeline), "Fingerprint each proofread window by what it read" (translation-pipeline), "Map the quality dial to the run's mechanics" (translation-pipeline), "Pause and stop act without waiting for the provider" (translation-pipeline), "Plan a run's steps and count the time spent" (translation-pipeline), "Name the three stages in the command line's report" (translation-pipeline), "Continue the stage that has work" (resume), "Skip a Proofread window that already holds the same fingerprint" (resume), "Pause on request at the next boundary" (resume), "Pause at enabled pause points" (resume), "Pause instead of failing when an error stops the job" (resume, its Proofread scenarios), "Resume a stopped run with a new run" (resume), "Continue at the first segment not yet decided" (resume), "Recompute the progress of a reopened project from its stored decisions" (resume), "Flag a step after its budget of pauses" (resume)
@@ -1592,31 +1592,49 @@ set aside once.
   - **Read:** `revision/ParagraphFingerprint`, `run/PauseDecider`, `run/StageRunner`, `ui: state/ProgressLedger`,
     `ui: state/ProgressLedgerTest`, `app: cli/RunReport`, `app: bootstrap/TranslateLauncher`; design D15 "Resume",
     "Estimate".
-  - **Change:** two named sub-steps, each its own commit, green under `scripts/test-focused.sh --full-module` and closed by its own *Done when* (the group already holds ten tasks, so the task is split inside):
+  - **Change:** two named sub-steps, each closed by its own *Done when* (the group already holds ten tasks, so the task is split inside; built as one commit, because (b)'s skip lives in the window reader (a) introduces):
     - **(a) Max's second round and the window fingerprint.** `WindowFingerprint` grows from `ParagraphFingerprint`: hash of focus sources, current targets, neighbour
-    targets, injected map lines, proofread prompt version and round. Round 2 (Max only, every model) tiles the story
-    paragraphs in windows of at most the batch size after round 1, with open marks riding as reasons. *Done when:*
-      `ProofreadStageTest.maxRound2_3000Paragraphs_750Windows` (batch size 4), `fingerprint_targetRenamed_changes` and
-      `fingerprint_round_differs` are green.
+    targets, the map lines the planned call carries (`ProofreadCall.plan`, no model call), proofread prompt version and
+    round, written `r<round>:<sha-256>` so a whole-book verdict is told from a first-round one. A window's verdicts carry
+    the fingerprint of the window as it stands after its own decisions (a kept rewrite re-plans it), so a Continue asks
+    the same question and skips it. Round 2 (Max only, every model) tiles the readable story paragraphs in windows of at
+    most the batch size after round 1 (`ProofreadWindows.tiles`), with open marks riding as reasons (a mark whose text
+    round 1 changed no longer rides). A first-round window whose focus all holds whole-book verdicts is skipped (round 2
+    re-checks those segments by its own fingerprint), so a finished Max run reads nothing on Continue. A later window
+    that changes nothing on a segment whose earlier rewrite was kept leaves the KEPT verdict and its `before` (new
+    fingerprint), so Undo proofread keeps the original. *Done when:*
+      `ProofreadWindowsTest.tiles_3000ParagraphsBatchFour_750Windows` (batch size 4; the tiling is pure, so no job runs
+      750 calls), `WindowFingerprintTest.fingerprint_targetRenamed_changes` and `fingerprint_round_differs` (through the
+      real planner), `WindowVerdictsTest.reply_unchangedAfterKeptRewrite_keepsTheFirstTextBefore` and acceptance case
+      (a) on both dialects are green.
     - **(b) Resume by fingerprint, the step plan and the command-line report.** Planning skips
     every window whose focus segments all hold a proofread verdict with the current fingerprint. Continue starts at the first stage with
-    work (Prepare, Translate, Proofread) and announces "Continues with Proofread at window 41 of 120."; Prepare is
+    work (Prepare, Translate, Proofread) and logs `Proofread round 1 continues at window 41 of 120` (the screen's words
+    "Continues with Proofread at window 41 of 120." are 13.7's); Prepare is
     resumed only when the run stopped before Prepare finished, and the person-triggered Brief Suggest and "Prepare names
     automatically" are never resumed by Continue (design D2 "Stages"). A pause aborts an
     in-flight proofread call and makes it again on resume; a stop leaves the window undecided; a window past its pause
     budget is left unread with its marks kept and counted. The between-stages pause point sits before Proofread.
-    `ProgressLedger` plans proofread steps from Start (Max round 2 as ⌈story paragraphs ÷ B⌉, tiers 1–2 as windows
-    marked so far) and counts done windows from stored fingerprints after a restart; a proofread step with no measured
-    time is labelled an estimate. `RunReport` gives the time of each stage and calls per kind. *Done when:* the resume,
-      pause, stop, timeout, `ProgressLedgerTest`, `BriefEstimateTest` and command-line tests below are green.
-  - **Test first:** each sub-step's tests seen red before it; (a)'s are named above; (b): resume test `continue_stoppedAfterWindow4_onlyWindows5And6Sent`
-    (WireMock counts 2 proofread requests); `pause_duringSweep_completesThenPauses`; `stop_inFlightWindow_noVerdict`;
-    `timeout_thirdTime_windowUnreadRunCompletes` (window 41); `ProgressLedgerTest.reopened_6WindowsPlanned1Done`;
-    `ProgressLedgerTest.dialSteps_fastNoneBalancedOnMarkMaxOneAtStart`; `BriefEstimateTest.line_neverMeasuredProofreadKindAtBalanced_isAnEstimateFromAnEarlierTranslation` (the proofread-kind case 7.9 left here, now that the plan has proofread steps); a CLI test that `--report run.json` on Fast
-    names Prepare, Translate and Proofread times and no proofread call.
+    Each round plans its windows that are not skipped as exact PROOFREAD steps (`StepsPlanned`) when it starts and
+    announces each window as one step (started, then ended DONE, or FAILED when left unread), so the live ledger counts
+    them. `RunReport` gives `timings.stageSeconds` (PREP, TRANSLATE, PROOFREAD, every stage named) and calls per kind.
+    *Moved to 13.7* (the task that shows the stage on Translating, which owns the ledger and the estimate line):
+    `ProgressLedger` forecasting proofread steps from Start (Max round 2 as ⌈story paragraphs ÷ B⌉, tiers 1–2 as windows
+    marked so far), a reopened project's ledger counting done windows from stored fingerprints, and a proofread step with
+    no measured time labelled an estimate — the window plan is pipeline code the `:ui` ledger cannot call today, so
+    these need a port 13.7 adds. *Moved to 13.9*: mapping each stored verdict to the eval's `ProofreadChange` and
+    reporting `PROOFREAD_NEVER_WORSE` in the eval run — the verdict stores no check counts, and 13.9's arm run is the
+    first eval run that reads proofread verdicts; it counts the failing checks on the verdict's `before` and on the kept
+    text there. *Done when:* the resume, pause, stop, timeout, run-summary and command-line tests below are green.
+  - **Test first:** each sub-step's tests seen red before it; (a)'s are named above; (b), in `ProofreadResumeTest`
+    (job level, scripted model, every segment decided before the run): `continue_stoppedAfterWindow4_onlyWindows5And6Sent`
+    (2 proofread requests on Continue); `continue_finishedMaxRun_sendsNoRequest`; `pause_duringSweep_completesThenPauses`;
+    `stop_inFlightWindow_noVerdict`; `timeout_thirdTime_windowUnreadRunCompletes`; `TranslationJobStepsTest` Max plans
+    5 PROOFREAD steps; `RunSummaryLoggerTest.onEvent_finishedAfter55ProofreadCalls_countsThemAndTheCachedShareOverThe45ThatReportedIt`
+    (the run-summary case moved here from 13.5); `TranslateCommandRecoveryTest.run_fastReport_namesPrepareTranslateProofreadTimesAndNoProofreadCall`.
   - **Log:** INFO round start/end with window counts; DEBUG per skipped window (fingerprint match); WARN for a window
     left unread after its pause budget.
-  - **Done when:** both sub-steps are done, acceptance cases (a) and (b) of 13.1 are green on both dialects, and `scripts/test-focused.sh --full-module` passes for `:pipeline` and `:ui`.
+  - **Done when:** both sub-steps are done, acceptance cases (a) and (b) of 13.1 are green on both dialects, and `scripts/test-focused.sh --full-module` passes for `:pipeline` and `:app`, with `:ui` `fastTest` green.
 
 - [ ] 13.7 Show the Proofread stage on the Translating screen, the title bar and the progress dialog — stage chip,
   window rows with before, after and verdict, the `proof` log kind — so the person sees what the last pass did while it
@@ -1631,12 +1649,18 @@ set aside once.
     reading "marks for review, no model calls"; the title bar's stage chip follows the run and disappears when it ends;
     the live card lists `window ¶40–¶42` rows whose detail shows before, after, verdict and the reason in words; the
     activity log gains kind proofread tagged `proof` (eight kinds); the progress dialog lists proofread windows as steps;
-    the stuck-call clock covers proofread calls. EN and UK words (plural forms one/few/many/other). Mockup and
-    `ScreenConformanceTest` updated for the strip and the window row.
+    the stuck-call clock covers proofread calls; the Continue line reads "Continues with Proofread at window 41 of
+    120.". Moved here from 13.6: `ProgressLedger` forecasts proofread steps from Start (Max round 2 as ⌈story paragraphs
+    ÷ B⌉, tiers 1–2 as windows marked so far), a reopened project's ledger counts done windows from stored fingerprints
+    (through a pipeline port that plans the windows), and a proofread step with no measured time is labelled an
+    estimate. EN and UK words (plural forms one/few/many/other). Mockup and `ScreenConformanceTest` updated for the strip
+    and the window row.
   - **Test first:** TestFX `TranslatingSummaryStripTest.proofreadStage_marked`, `…_maxNamesRound2`, `…_fastNoCalls`;
     `RunStatusBar` chip follows `JobStage.PROOFREAD` and hides after Completed; `LiveRowList` shows a KEPT row with
     before `Ліна сказав` and after `Ліна сказала`; a REJECTED row names its reason; activity log entry `proof` naming
-    `ch7 · p42`; `VocabularyTest` key parity; `ScreenFitTest` in Ukrainian at 960 px.
+    `ch7 · p42`; `VocabularyTest` key parity; `ScreenFitTest` in Ukrainian at 960 px; moved from 13.6:
+    `ProgressLedgerTest.reopened_6WindowsPlanned1Done`, `ProgressLedgerTest.dialSteps_fastNoneBalancedOnMarkMaxOneAtStart`
+    and `BriefEstimateTest.line_neverMeasuredProofreadKindAtBalanced_isAnEstimateFromAnEarlierTranslation`.
   - **Done when:** the TestFX and i18n tests are green and `scripts/ci-linux-ui.sh` passes.
 
 - [ ] 13.8 Show proofread verdicts on the review desk — the verdict and reason in the compare, Undo proofread, the
@@ -1681,7 +1705,11 @@ set aside once.
     field. If P2 wins: `proofread.user.prompt` becomes the English frame, design D15 "Call" changes, and the delta
     requirement "Give a proofread call the drafts' system part and the target language's proofread instruction" is
     edited (the target file's instruction becomes the rules block only).
-  - **Test first:** none new; the existing proofread tests of 13.5 stay green with the winner.
+    Moved here from 13.6: the eval run maps each stored proofread verdict to `ProofreadChange` (kept = KEPT; the
+    failing-check counts of the verdict's `before` and of the kept text, counted by the eval's scorer) and reports the
+    `PROOFREAD_NEVER_WORSE` grader for each arm.
+  - **Test first:** a `MiniScorerProofreadTest` case mapping a stored KEPT verdict whose kept text fails one check more
+    than its `before` to a failing grade; the existing proofread tests of 13.5 stay green with the winner.
   - **Done when:** the result row is recorded, the loser is deleted and the module check is green.
 
 - [ ] 13.10 Make the acceptance test green, run the gate, fix the documents this group makes wrong and check the

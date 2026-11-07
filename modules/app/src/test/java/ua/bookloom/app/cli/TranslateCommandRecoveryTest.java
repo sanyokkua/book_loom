@@ -127,6 +127,22 @@ class TranslateCommandRecoveryTest {
                 .isFalse();
     }
 
+    // A Fast run's report gives the time of each of the three stages and counts no proofread call.
+    @Test
+    void run_fastReport_namesPrepareTranslateProofreadTimesAndNoProofreadCall() throws IOException {
+        final Path report = tempDir.resolve("reports/stages.json");
+
+        command(new ScriptedModels(Set.of(), ErrorCode.unreachable), new ScriptedProbe(0))
+                .run(arguments("--report", report.toString()), print(new ByteArrayOutputStream()));
+
+        final JsonNode json = new ObjectMapper().readTree(Files.readString(report));
+        assertThat(json.path("quality").asText()).isEqualTo("FAST");
+        assertThat(json.path("timings").path("stageSeconds").properties())
+                .extracting(java.util.Map.Entry::getKey)
+                .containsExactly("PREP", "TRANSLATE", "PROOFREAD");
+        assertThat(json.path("modelCallsByKind").has("PROOFREAD")).isFalse();
+    }
+
     // A doubled word passes the run's gates as a note; the audit lists the segment, the console says so in one line
     // and the report carries the segment with the check.
     @Test

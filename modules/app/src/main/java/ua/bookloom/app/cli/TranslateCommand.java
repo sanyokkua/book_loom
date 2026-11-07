@@ -184,7 +184,7 @@ public final class TranslateCommand {
             TranslationJob job, ModelSelection selection, Target target, RunReport report, PrintStream out) {
         final RunOptions options = target.arguments().options();
         final UnattendedRun watch = UnattendedRun.attach(
-                job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out, ledger);
+                job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out, ledger, clock);
         shutdown.hold(job::cancel);
         final Result<JobReport> result = timed(report, "translate", job::run);
         report.run(result, watch);

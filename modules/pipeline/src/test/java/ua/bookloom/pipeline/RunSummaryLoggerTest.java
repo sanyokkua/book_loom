@@ -174,6 +174,34 @@ class RunSummaryLoggerTest {
                         " byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600 ttftMs:400 prefill:13.3%]");
     }
 
+    // The Proofread stage's calls are counted by kind like every other; 10 of the 55 reported no cache figure, so the
+    // cached share is taken over the prompt tokens of the 45 that did (13,500 of 45,000), never over all 55.
+    @Test
+    void onEvent_finishedAfter55ProofreadCalls_countsThemAndTheCachedShareOverThe45ThatReportedIt() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
+        final TokenUsage cached = new TokenUsage(1000, 50, Duration.ofMillis(900), Duration.ofMillis(100), 300);
+        final TokenUsage uncounted = new TokenUsage(1000, 50, Duration.ofMillis(900), Duration.ofMillis(100), null);
+        java.util.stream.IntStream.range(0, 45)
+                .forEach(ignored ->
+                        ledger.record(new CallRecord(CallKind.PROOFREAD, cached, Duration.ofSeconds(1), null, null)));
+        java.util.stream.IntStream.range(0, 10)
+                .forEach(ignored -> ledger.record(
+                        new CallRecord(CallKind.PROOFREAD, uncounted, Duration.ofSeconds(1), null, null)));
+
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries())
+                .singleElement()
+                .asString()
+                .contains("PROOFREAD=55/0 ")
+                .contains(" cached:13500 ");
+        assertThat(CallKindTotals.of(ledger.since(0)).totals())
+                .hasEntrySatisfying(
+                        CallKind.PROOFREAD,
+                        totals -> assertThat(totals.cachedShare()).hasValue(0.3));
+    }
+
     // The final line says the seconds per answered call of each kind the run stores on its model; DRAFT is per segment
     // and left out, a failed call too.
     @Test
