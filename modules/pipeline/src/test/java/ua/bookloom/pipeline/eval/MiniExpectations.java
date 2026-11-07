@@ -77,7 +77,12 @@ record MiniExpectations(List<Expectation> every, List<Expectation> segments, Lis
         /** The target holds one of the wanted narrator forms and none of those marked with a leading {@code !}. */
         NARRATOR_GENDER(Level.SOFT),
         /** A run-level check: no recorded call names a map entry outside its window or a block-8 name the book has not said yet. */
-        WINDOW_INJECTION(Level.HARD);
+        WINDOW_INJECTION(Level.HARD),
+        /**
+         * A run-level check (a floor of 0 from task 13.1): no proofread change was kept while a check count on the kept
+         * text is higher than on the text before.
+         */
+        PROOFREAD_NEVER_WORSE(Level.HARD);
 
         private final Level level;
 

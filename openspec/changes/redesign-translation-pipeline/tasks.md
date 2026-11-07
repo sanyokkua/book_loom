@@ -1352,28 +1352,42 @@ set aside once.
   whole-run case. → :pipeline
   - **Satisfies:** enabling work for design D15
   - **Depends on:** groups 10, 11, 12 (mini-ru, the one repair, the never-worse gate, the context builder)
-  - **Read:** `pipeline/src/test/java/ua/bookloom/pipeline/WholeBookPipelineEndToEndTest.java`, `WholeBookRun`; the
-    mini-ru dataset and its case labels from group 1; `qa/NeverWorse` from group 10; design D15.
-  - **Change:** first add the hard grader `PROOFREAD_NEVER_WORSE` to the eval `CheckKind` (group 1 left it to this
-    group; a floor of 0 from here, design D24 "Graders"): it fails a case whose proofread verdict is KEPT while a check
-    count on the kept text is higher than on the text before. Then new `ProofreadStageAcceptanceTest` (pipeline e2e at the HTTP seam, parameterised over Ollama-native
-    `/api/chat` and OpenAI-compatible `/v1/chat/completions`), three cases on mini-ru:
+  - **Read:** `pipeline/src/test/java/ua/bookloom/pipeline/eval/ChapterSummaryAcceptanceTest.java` (the pattern: WireMock
+    responder, both dialects), `WireMockProvider`, `eval/MiniBook`, `eval/MiniExpectations.CheckKind`, `eval/MiniGraders`;
+    the mini-ru dataset and its case labels from group 1; `qa/NeverWorse` from group 10; design D15.
+  - **Change:** first add the hard grader `PROOFREAD_NEVER_WORSE` to the nested enum `MiniExpectations.CheckKind`
+    (group 1 left it to this group; a floor of 0 from here, design D24 "Graders"): it fails a case whose proofread
+    verdict is KEPT while a check count on the kept text is higher than on the text before. It is a run-level check like
+    `WINDOW_INJECTION`: `MiniGraders.proofreadNeverWorse(List<ProofreadChange>)` grades records of
+    `(segmentId, kept, checksBefore, checksAfter)`, unit-tested in `MiniScorerTest`; task 13.2, which adds
+    `ProofreadVerdict`, maps each stored verdict to a `ProofreadChange` and reports the grader in the eval run. Then new
+    `eval/ProofreadStageAcceptanceTest` (pipeline e2e at the HTTP seam, parameterised over Ollama-native `/api/chat` and
+    OpenAI-compatible `/v1/chat/completions`, `@Tag("slow")`), three cases on mini-ru. The mini-ru ids are the dataset's
+    labels; the imported segments have their own ids, matched by text, and the test translates the labels. A
+    proofread request is the one whose body carries the schema title `"proofread"` (task 13.5 gives its schema that
+    title, as 12.4 did for `chapter_summary`). Verdicts are read from the stored record's JSON
+    (`proofread.outcome`, `proofread.reason`, the shape 13.2 gives `SegmentRecord`), so the class compiles before the
+    types exist:
     (a) Max, the proofread trap at `ch02.md:14`: the accepted target `Мирена кивнула й сказала, що ключ у Тарна.` is
     clean, so no mark sends it to Proofread; the case runs at Max, whose second round reads every story paragraph, so its
     window is read (other windows are stubbed `{"unchanged":true}`); the stubbed proofread reply
-    is `{"items":[{"id":"ch02.md:14","target":"Мирена кивнула й сказала, что ключ у Тарна."}]}`; the segment keeps its
+    is `{"items":[{"id":<the segment's id>,"target":"Мирена кивнула й сказала, что ключ у Тарна."}]}`; the segment keeps its
     text, and its stored proofread verdict is REJECTED with a reason naming the source-only function word `что`;
-    (b) Balanced: after the run the person sets `Івар` (entry of the source name `Ивар`, male from the book's `сказал`)
-    to female (the person's value wins over the book's, design D3); on
+    (b) Balanced: the glossary holds `Ивар` → `Івар` (male, from the book's `сказал`); after the run the person sets
+    it female through the glossary service (the person's value wins over the book's, design D3); on
     Continue the decided `ch02.md:16` `Івар сказав, що повернеться.` is read in one proofread window, the stub answers
-    `Івар сказала, що повернеться.`, the text is kept and no deferral whose fact has arrived is left open;
-    (c) Fast, same book and same gender change: WireMock records zero requests whose body carries the proofread response
-    format, and the desk's "Waiting on a gender" list holds `ch02.md:16` with the reason `gender now known: Івар — female`.
+    `Івар сказала, що повернеться.`, the text is kept (verdict KEPT) and no open deferral of that segment is left;
+    (c) Fast, same book and same gender change: WireMock records zero requests whose body carries the proofread schema
+    title, the text stays `Івар сказав, що повернеться.`, and the segment keeps an open `GENDER_CHANGED` deferral, which
+    is what the desk's "Waiting on a gender" list is built from. The reason line `gender now known: Івар — female` is the
+    mark's reason in "Worth a second look" (review-queue spec, "List at Fast the segments a gender now known may have
+    left wrong"); no desk query exists before 14.x, so 14.x's `ReviewDeskListTest` Fast case asserts it, not this class.
     Both lines are group 1's labelled mini-ru cases (`ch02.md:14`, the proofread trap; `ch02.md:16`, `gender-after-run`).
   - **Test first:** the test itself; it fails today because no Proofread stage exists below Max and the backward
     revision runs only at Max.
-  - **Done when:** the test compiles, runs and fails for those reasons; the failure output is pasted into the group's
-    commit message.
+  - **Done when:** the test compiles, runs and fails for those reasons (6 failures: 3 cases × 2 dialects; the baseline
+    drafts pass first); the failure output is pasted into the commit message. It stays red on the branch (tagged `slow`,
+    as 11.1 and 12.1 did) and goes green with 13.6, with case (c) fully green at 14.x.
 
 - [ ] 13.2 Rename the stage to PROOFREAD and add the stored proofread verdict, the changed-gender reason and the
   window's commit, so a decided window's text, verdicts and settled deferrals are saved together and survive a restart.
@@ -1495,6 +1509,7 @@ set aside once.
     block 12 from the target file's new keys `proofreadInstruction` and `proofreadRules` (at most 5 lines;
     `{{sourceLanguageGenitive}}` from the target file), with an English default in `generic.properties`; new
     `proofread.user.prompt` (P1, target-language block); reasoning off unless the person's override allows it,
+    the response schema titled `proofread` (the acceptance test of 13.1 finds the call by that title),
     temperature 0.1, output = the pair reserve over the focus; always the run's model through the one gate. The reply is
     `{"unchanged":true}` or `{"items":[…]}`; ids outside the focus and texts equal to the current are dropped; a missing
     focus id is UNCHANGED. Each change goes through the hard gates and `NeverWorse`. A person-edited segment is never

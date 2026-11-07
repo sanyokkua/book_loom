@@ -191,7 +191,7 @@ final class MiniScorer {
             case NARRATOR_GENDER -> MiniGraders.narratorGender(joined, expectation.args());
             case ONE_SPELLING_PER_LEMMA -> MiniGraders.oneSpelling(joined, expectation.args());
             case GLOSSARY_ONE_ENTRY, GLOSSARY_GENDER -> throw new IllegalStateException("glossary level");
-            case WINDOW_INJECTION -> throw new IllegalStateException("run level");
+            case WINDOW_INJECTION, PROOFREAD_NEVER_WORSE -> throw new IllegalStateException("run level");
             case NOT_FLAGGED, NO_FINDING -> throw new IllegalStateException("handled above");
         };
     }

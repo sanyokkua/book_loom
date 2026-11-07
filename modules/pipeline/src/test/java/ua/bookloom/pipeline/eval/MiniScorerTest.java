@@ -161,7 +161,8 @@ class MiniScorerTest {
         "VOCATIVE,SOFT",
         "NARRATOR_GENDER,SOFT",
         "ADDRESS_SAME,SOFT",
-        "WINDOW_INJECTION,HARD"
+        "WINDOW_INJECTION,HARD",
+        "PROOFREAD_NEVER_WORSE,HARD"
     })
     void level_ruGraders_followTheDesignTable(final CheckKind check, final CheckKind.Level level) {
         assertThat(check.level()).isEqualTo(level);
@@ -178,6 +179,25 @@ class MiniScorerTest {
                         + "Dorrin Vask → Дорін Васк (character, male)\n\n<Items>\n"
                         + items + "\n</Items>\n\nReminder.",
                 "{}");
+    }
+
+    @Test
+    void proofreadNeverWorse_keptChangeWithMoreFailingChecks_fails() {
+        final MiniScorer.Verdict verdict = MiniGraders.proofreadNeverWorse(List.of(
+                new ProofreadChange("a", true, 1, 1),
+                new ProofreadChange("b", true, 0, 2),
+                new ProofreadChange("c", false, 0, 3)));
+
+        assertThat(verdict.ok()).isFalse();
+        assertThat(verdict.detail()).contains("[b]");
+    }
+
+    @Test
+    void proofreadNeverWorse_noKeptChangeWorse_passes() {
+        final MiniScorer.Verdict verdict = MiniGraders.proofreadNeverWorse(
+                List.of(new ProofreadChange("a", true, 2, 1), new ProofreadChange("c", false, 0, 3)));
+
+        assertThat(verdict.ok()).isTrue();
     }
 
     @Test

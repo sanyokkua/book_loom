@@ -36,7 +36,9 @@ final class MiniGraders {
     }
 
     static boolean isRunLevel(final CheckKind check) {
-        return isGlossaryLevel(check) || check == CheckKind.WINDOW_INJECTION;
+        return isGlossaryLevel(check)
+                || check == CheckKind.WINDOW_INJECTION
+                || check == CheckKind.PROOFREAD_NEVER_WORSE;
     }
 
     /**
@@ -51,6 +53,24 @@ final class MiniGraders {
     static Verdict windowInjection(
             final List<CaseRecord.Exchange> calls, final List<String> bookTexts, final List<MiniGold.Entry> gold) {
         return WindowInjectionGrader.grade(calls, bookTexts, gold);
+    }
+
+    /**
+     * Grades the Proofread stage's decisions of a run: a change whose verdict is KEPT must not have more failing checks
+     * on the kept text than on the text before it. Task 13.2 adds the stored verdict; it maps each one to a
+     * {@link ProofreadChange}.
+     *
+     * @param changes what the stage decided, one entry per segment it read
+     * @return the verdict, whose detail names each kept change that got worse
+     */
+    static Verdict proofreadNeverWorse(final List<ProofreadChange> changes) {
+        Objects.requireNonNull(changes, "changes");
+        final List<String> worse = changes.stream()
+                .filter(ProofreadChange::isWorse)
+                .map(ProofreadChange::segmentId)
+                .toList();
+        log.debug("proofread never-worse grader changes={} worse={}", changes.size(), worse);
+        return worse.isEmpty() ? Verdict.pass("changes " + changes.size()) : Verdict.fail("kept but worse " + worse);
     }
 
     static Verdict targetAlphabet(final String target, final List<String> args) {

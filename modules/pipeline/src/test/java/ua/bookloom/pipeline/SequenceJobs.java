@@ -13,6 +13,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobListener;
@@ -65,6 +66,11 @@ public final class SequenceJobs {
         /** The stored project's id. */
         public String projectId() {
             return project.id();
+        }
+
+        /** The deferrals of the stored project, as the review desk and the Proofread stage read them. */
+        public DeferralRepository deferrals() {
+            return project.deferrals();
         }
 
         /** The stores the run reads and writes. */

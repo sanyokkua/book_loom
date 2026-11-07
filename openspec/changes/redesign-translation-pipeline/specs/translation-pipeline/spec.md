@@ -802,7 +802,7 @@ WHEN the Proofread stage starts, the system SHALL check by code, at every dial, 
 
 #### Scenario: No agreeing verb, no call
 
-- **WHEN** the person sets `Ивар` female after `ch02.md:16` (`… ключ залишить Івар …`, a future verb) was decided
+- **WHEN** the person sets `Ивар` female after `ch06.md:9` (`… ключ залишить Івар …`, a future verb) was decided
 - **THEN** the deferral is resolved with no model call
 
 #### Scenario: A mismatch becomes a mark
