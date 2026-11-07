@@ -180,7 +180,7 @@ final class TranslationJobImpl implements TranslationJob {
             if (control.isCancellationRequested()) {
                 return finish(JobState.CANCELLED, run, null);
             }
-            final Result<WorkList> read = WorkList.read(stores, request.projectId(), run.document());
+            final Result<WorkList> read = WorkList.read(stores, request.projectId(), run.document(), run.chapters());
             if (read.isErr()) {
                 return finish(JobState.FAILED, run, errorOf(read));
             }

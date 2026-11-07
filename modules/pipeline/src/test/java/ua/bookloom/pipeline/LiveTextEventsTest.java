@@ -59,6 +59,7 @@ class LiveTextEventsTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
+    // The position counts the book's chapters by the chapter rule: this short book is one, whatever its files.
     @Test
     void run_doorSentenceInChapterSeven_announcesItsStartDraftAndDecision() {
         final List<JobEvent> events = runDoor();
@@ -71,7 +72,7 @@ class LiveTextEventsTest {
                 .satisfies(started -> {
                     assertThat(started.locator()).isEqualTo("ch7 · p42");
                     assertThat(started.displaySource()).isEqualTo("He opened the old door.");
-                    assertThat(started.position()).isEqualTo(new ChunkPosition(7, 11, 1, 1));
+                    assertThat(started.position()).isEqualTo(new ChunkPosition(1, 1, 1, 1));
                 });
         assertThat(events)
                 .filteredOn(SegmentDrafted.class::isInstance)
@@ -122,9 +123,9 @@ class LiveTextEventsTest {
     }
 
     // The book has no navigation, so its 264 paragraphs of 129 tokens are cut into pseudo-chapters of 23 paragraphs,
-    // each closing its last chunk early: 69 chunks of up to four paragraphs, :160 in the 42nd.
+    // each closing its last chunk early: 12 chapters, 69 chunks of up to four paragraphs, :160 in the 42nd of the 7th.
     @Test
-    void run_decisionInChunkFortyTwoOfSixtyNine_carriesSectionSevenOfElevenAndChunkFortyTwoOfSixtyNine() {
+    void run_decisionInChunkFortyTwoOfSixtyNine_carriesChapterSevenOfTwelveAndChunkFortyTwoOfSixtyNine() {
         final List<String> paragraphs = IntStream.range(0, 264)
                 .mapToObj(index -> "Line " + index + ". " + FILLER)
                 .toList();
@@ -137,7 +138,7 @@ class LiveTextEventsTest {
 
         assertThat(decided(events, "ch07.xhtml:160").progress())
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::chunk, JobProgress::chunks)
-                .containsExactly(7, 11, 42, 69);
+                .containsExactly(7, 12, 42, 69);
     }
 
     // A repair is its own call, and both belong to the segment before its decision.

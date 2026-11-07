@@ -2,12 +2,20 @@ package ua.bookloom.ui.control;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.api.pipeline.StepKind;
+import ua.bookloom.api.pipeline.StepState;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.state.StepEntry;
 
 /** What the progress dialog's "What it says" shows for a call that gave no targets. */
 class ProgressStepDetailTest {
@@ -37,6 +45,19 @@ class ProgressStepDetailTest {
     void plainOutput_targetsPresent_alwaysWinOverTheReply(final boolean technical) {
         assertThat(ProgressStepDetail.plainOutput(technical, "Привіт", RAW, "Genre: Mystery"))
                 .isEqualTo("Привіт");
+    }
+
+    // IF the brief's calls listed their field names under "Book passages read", THEN the person would read words that
+    // are not passages.
+    @ParameterizedTest
+    @CsvSource({"BRIEF_SYNTHESIS", "BOOK_KNOWLEDGE", "BRIEF_SUGGESTION"})
+    void inputOf_briefCallWithNoPassages_isNothingNotTheFieldNames(final CallKind kind) {
+        final CallSnapshot call = CallSnapshot.waiting(
+                        1, kind, "brief", null, List.of(), List.of(), Instant.EPOCH, 1, 1, null)
+                .withItems(List.of(new CallItem("genre", null, null, CallItemStatus.OK, List.of())));
+        final StepEntry step = new StepEntry(StepKind.REQUEST, "synthesis", 0, StepState.STARTED, null, null, null);
+
+        assertThat(ProgressStepDetail.inputOf(step, call)).isNull();
     }
 
     // IF a finished call with no translated text said "Nothing yet.", THEN a done reviewer would look as if it had not

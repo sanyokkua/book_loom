@@ -30,6 +30,11 @@ record CallHeadings(MessageKey input, MessageKey output) {
     private static final CallHeadings FILE_NAME =
             new CallHeadings(MessageKey.PROGRESS_INPUT_FILE_NAME, MessageKey.PROGRESS_OUTPUT_FILE_NAME);
 
+    /** {@return whether these are the headings of the book brief's calls} */
+    boolean isBrief() {
+        return equals(BRIEF);
+    }
+
     /**
      * The headings for a call.
      *

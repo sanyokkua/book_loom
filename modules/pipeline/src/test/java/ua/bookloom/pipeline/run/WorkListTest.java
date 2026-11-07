@@ -1,24 +1,25 @@
 package ua.bookloom.pipeline.run;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.run.WorkListFixtures.PROJECT;
+import static ua.bookloom.pipeline.run.WorkListFixtures.chapterBook;
+import static ua.bookloom.pipeline.run.WorkListFixtures.document;
+import static ua.bookloom.pipeline.run.WorkListFixtures.documentWithAuxiliary;
+import static ua.bookloom.pipeline.run.WorkListFixtures.record;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.document.SkeletonHandle;
-import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -39,12 +40,11 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.TestProjects;
+import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** What the run still has to decide, read from the stored records, and the counts that move as it decides. */
 class WorkListTest {
-
-    private static final String PROJECT = "p1";
 
     private RunStores stores;
 
@@ -127,7 +127,7 @@ class WorkListTest {
 
         assertThat(progress)
                 .extracting(JobProgress::section, JobProgress::sections)
-                .containsExactly(2, 2);
+                .containsExactly(1, 1);
     }
 
     // Pausing after a section names body sections only: nothing follows the last body segment's section end but the
@@ -217,7 +217,7 @@ class WorkListTest {
 
         assertThat(progress)
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::accepted, JobProgress::flagged)
-                .containsExactly(1, 2, 2, 1);
+                .containsExactly(1, 1, 2, 1);
         assertThat(progress.pending()).isEqualTo(2);
     }
 
@@ -263,11 +263,33 @@ class WorkListTest {
 
     // The screen shows "chapter k of n" and "chunk k of n": both must be 1-based and name the item's own unit.
     @Test
-    void position_itemOfTheSecondUnitInItsThirdChunk_isSectionTwoOfTwoAndChunkThreeOfFive() {
+    void position_itemOfTheSecondUnitInItsThirdChunk_isChapterOneOfOneAndChunkThreeOfFive() {
         final WorkList work = read(document(), Map.of());
         work.enterChunk(3, 5);
 
-        assertThat(work.position(work.remaining().getLast())).isEqualTo(new ChunkPosition(2, 2, 3, 5));
+        assertThat(work.position(work.remaining().getLast())).isEqualTo(new ChunkPosition(1, 1, 3, 5));
+    }
+
+    // One unit holding three chapters must read "chapter 2 of 3" once the first is decided, not "1 of 1" (the unit
+    // count).
+    @Test
+    void currentTranslationProgress_oneUnitOfThreeChapters_countsChapters() {
+        final Document book = chapterBook();
+        final List<StructureNode> structure = List.of(
+                new StructureNode("One", "big", 12, List.of(), 0),
+                new StructureNode("Two", "big", 12, List.of(), 12),
+                new StructureNode("Three", "big", 12, List.of(), 24));
+        final Map<String, SegmentStatus> decided = new java.util.HashMap<>();
+        java.util.stream.IntStream.range(0, 12).forEach(index -> decided.put("big:" + index, SegmentStatus.ACCEPTED));
+
+        final WorkList work = read(book, decided, structure);
+
+        assertThat(work.currentTranslationProgress())
+                .extracting(JobProgress::section, JobProgress::sections)
+                .containsExactly(2, 3);
+        assertThat(work.position(work.remaining().getFirst()))
+                .extracting(ChunkPosition::section, ChunkPosition::sections)
+                .containsExactly(2, 3);
     }
 
     private static List<String> pendingIds(final WorkList work) {
@@ -275,6 +297,11 @@ class WorkListTest {
     }
 
     private WorkList read(final Document document, final Map<String, SegmentStatus> stored) {
+        return read(document, stored, List.of());
+    }
+
+    private WorkList read(
+            final Document document, final Map<String, SegmentStatus> stored, final List<StructureNode> structure) {
         final List<SegmentRecord> records = document.units().stream()
                 .flatMap(unit -> unit.segments().stream())
                 .map(segment -> record(segment, stored.getOrDefault(segment.id(), SegmentStatus.PENDING)))
@@ -284,7 +311,10 @@ class WorkListTest {
                 .isEmpty()) {
             saveProject(AlsoTranslate.defaults());
         }
-        return Objects.requireNonNull(WorkList.read(stores, PROJECT, document).data(), "work list");
+        return Objects.requireNonNull(
+                WorkList.read(stores, PROJECT, document, ChapterBoundaries.of(document, structure, "en"))
+                        .data(),
+                "work list");
     }
 
     private void saveProject(final AlsoTranslate alsoTranslate) {
@@ -304,93 +334,5 @@ class WorkListTest {
                 alsoTranslate,
                 QualityDial.FAST);
         stores.projects().save(TestProjects.of(PROJECT, Path.of("Book.md"), BookFormat.MARKDOWN, "hash", brief));
-    }
-
-    private static SegmentRecord record(final Segment segment, final SegmentStatus status) {
-        return new SegmentRecord(
-                PROJECT,
-                segment.id(),
-                segment.unit(),
-                segment.order(),
-                segment.kind(),
-                status,
-                null,
-                null,
-                null,
-                null,
-                0.0,
-                null,
-                List.of(),
-                SegmentPath.DRAFT,
-                false,
-                null);
-    }
-
-    private static Document documentWithAuxiliary() {
-        final Document body = document();
-        final Segment title = new Segment(
-                "aux:title",
-                Unit.AUXILIARY_ID,
-                0,
-                SegmentKind.METADATA_TITLE,
-                "Book",
-                "Book",
-                Map.of(),
-                "hash-title",
-                null,
-                null,
-                new ByteSpanAnchor(0, 4),
-                null,
-                SegmentStatus.PENDING,
-                0.0);
-        final Unit auxiliary = new Unit(
-                Unit.AUXILIARY_ID,
-                2,
-                "one.md",
-                "application/x-bookloom-auxiliary",
-                new SkeletonHandle("aux"),
-                List.of(title));
-        final List<Unit> units = new ArrayList<>(body.units());
-        units.add(auxiliary);
-        return body.withUnits(units);
-    }
-
-    private static Document document() {
-        return new Document(
-                "Book",
-                BookFormat.MARKDOWN,
-                "en",
-                null,
-                "UTF-8",
-                false,
-                "hash",
-                Map.of(),
-                List.of(unit("one", 0, 4), unit("two", 1, 1)));
-    }
-
-    private static Unit unit(final String id, final int order, final int segmentCount) {
-        final List<Segment> segments = java.util.stream.IntStream.range(0, segmentCount)
-                .mapToObj(index -> segment(id, index))
-                .toList();
-        return new Unit(id, order, id + ".md", "text/markdown", new SkeletonHandle(id), segments);
-    }
-
-    private static Segment segment(final String unit, final int order) {
-        final String text = "Source " + order + ".";
-        return new Segment(
-                unit + ":" + order,
-                unit,
-                order,
-                SegmentKind.PARAGRAPH,
-                text,
-                text,
-                Map.of(),
-                "hash-" + unit + "-" + order,
-                null,
-                null,
-                new ByteSpanAnchor(0, text.length()),
-                null,
-                SegmentStatus.PENDING,
-                0.0);
     }
 }

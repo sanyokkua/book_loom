@@ -155,7 +155,7 @@ class BriefChapterSummariesTest extends BriefSuggestTestBase {
     // IF the cost were hidden, THEN turning summaries on at chapter 13 would spend twelve calls unannounced.
     @Test
     void switch_turnedOnWithTwelveFinished_showsCount() throws Exception {
-        projects.onChapterTally(new ChapterTally(20, 12, 12));
+        projects.onChapterTally(new ChapterTally(20, 12, 12, 19));
         openAndShowBrief();
         switchTo(false);
 
@@ -193,7 +193,7 @@ class BriefChapterSummariesTest extends BriefSuggestTestBase {
 
     @Test
     void switch_ukrainian_pendingLineReadsItsPlural() throws Exception {
-        projects.onChapterTally(new ChapterTally(9, 3, 3));
+        projects.onChapterTally(new ChapterTally(9, 3, 3, 8));
         useLocale(Locale.forLanguageTag("uk"));
         openAndShowBrief();
         switchTo(false);

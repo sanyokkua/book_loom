@@ -36,7 +36,9 @@ final class StepWords {
         /** Ended at once, needing no model call. */
         NO_CALL("–", "nocall", MessageKey.PROGRESS_STEP_NO_CALL),
         /** Ended without its outcome. */
-        FAILED("✕", "failed", MessageKey.PROGRESS_STEP_FAILED);
+        FAILED("✕", "failed", MessageKey.PROGRESS_STEP_FAILED),
+        /** Cut off by the person's Stop. */
+        STOPPED("■", "stopped", MessageKey.PROGRESS_STEP_STOPPED);
 
         private final String glyph;
         private final String token;
@@ -82,6 +84,7 @@ final class StepWords {
                         // A stage that needed no request still did its work (found, checked, wrote).
                         case NO_CALL -> noCallLook(step);
                         case FAILED -> FAILED;
+                        case STOPPED -> STOPPED;
                     };
         }
     }
@@ -141,7 +144,10 @@ final class StepWords {
 
     /** {@return the step's one result line: its verdict when it gave one, else its state in words} */
     static String result(final Messages messages, final StepEntry step) {
-        if (step.requests() != StepEntry.NO_COUNT && !step.isPending() && Look.of(step) != Look.FAILED) {
+        if (step.requests() != StepEntry.NO_COUNT
+                && !step.isPending()
+                && Look.of(step) != Look.FAILED
+                && Look.of(step) != Look.STOPPED) {
             return messages.get(
                     step.isRunning()
                             ? MessageKey.PROGRESS_STAGE_REQUESTS_RUNNING

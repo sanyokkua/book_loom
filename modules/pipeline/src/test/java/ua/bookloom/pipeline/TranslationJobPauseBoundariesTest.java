@@ -171,7 +171,8 @@ class TranslationJobPauseBoundariesTest {
         shutdown(workers);
     }
 
-    // Treating a spine as one section would miss the first of these two pauses.
+    // Treating a spine as one section would miss the first of these two pauses; the progress section is the chapter,
+    // and this small book is one chapter in two files.
     @Test
     void pauseAt_afterSection_epubTwoPlusOne_pausesTwice() {
         final Path source =
@@ -194,7 +195,7 @@ class TranslationJobPauseBoundariesTest {
                 .containsExactly(1, 2, 1);
         assertThat(second.progress())
                 .extracting(p -> p.section(), p -> p.accepted(), p -> p.pending())
-                .containsExactly(2, 3, 0);
+                .containsExactly(1, 3, 0);
         assertThat(first.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(second.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
@@ -220,7 +221,7 @@ class TranslationJobPauseBoundariesTest {
 
         assertThat(pause.progress())
                 .extracting(p -> p.section(), p -> p.accepted(), p -> p.flagged(), p -> p.pending())
-                .containsExactly(2, 2, 0, 0);
+                .containsExactly(1, 2, 0, 0);
         assertThat(pause.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
         assertThat(pauses).isEmpty();

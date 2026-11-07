@@ -77,6 +77,7 @@ final class ChapterTallies {
                 .collect(Collectors.toMap(ChapterSummary::chapterKey, Function.identity(), (first, second) -> second));
         int finished = 0;
         int toSummarise = 0;
+        int toWrite = 0;
         for (final Chapter chapter : chapters.chapters()) {
             final boolean isOpen = chapter.segmentIds().stream().anyMatch(open::contains);
             final List<Segment> held = chapter.segmentIds().stream()
@@ -87,14 +88,22 @@ final class ChapterTallies {
                     ChapterStandings.standing(isOpen, chapters, chapter, byKey.get(chapter.key()), held);
             finished += isOpen ? 0 : 1;
             toSummarise += standing.needsSummary() ? 1 : 0;
+            final boolean openBeforeTheEnd = standing == Standing.OPEN
+                    && chapter.number() < chapters.chapters().size();
+            toWrite += openBeforeTheEnd || standing.needsSummary() ? 1 : 0;
         }
-        final ChapterTally tally = new ChapterTally(chapters.chapters().size(), finished, toSummarise);
+        final ChapterTally tally = new ChapterTally(chapters.chapters().size(), finished, toSummarise, toWrite);
+        logTally(projectId, tally);
+        return tally;
+    }
+
+    private static void logTally(final String projectId, final ChapterTally tally) {
         log.debug(
-                "chapter tally project={} chapters={} finished={} toSummarise={}",
+                "chapter tally project={} chapters={} finished={} toSummarise={} toWrite={}",
                 projectId,
                 tally.chapters(),
                 tally.finished(),
-                tally.toSummarise());
-        return tally;
+                tally.toSummarise(),
+                tally.toWrite());
     }
 }

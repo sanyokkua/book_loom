@@ -150,7 +150,7 @@ class TranslationJobAuxiliaryTest {
                 .containsExactly(SegmentStatus.ACCEPTED, "Тест");
     }
 
-    // Progress must not count the title as a section: it is decided last and still reports the last section.
+    // Progress counts the book's chapters (this small book is one) and the title, decided last, reports the last one.
     @Test
     void run_auxiliaryTitle_decidedAtLastSection() {
         final Path source =
@@ -170,7 +170,7 @@ class TranslationJobAuxiliaryTest {
         assertThat(decided).extracting(SegmentDecided::segmentId).last().isEqualTo("aux:title");
         assertThat(decided.getLast().progress())
                 .extracting(p -> p.section(), p -> p.sections(), p -> p.pending())
-                .containsExactly(2, 2, 0);
+                .containsExactly(1, 1, 0);
     }
 
     // An after-section pause names body sections only, so the title costs no third pause.

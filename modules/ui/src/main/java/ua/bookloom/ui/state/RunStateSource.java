@@ -281,7 +281,12 @@ public final class RunStateSource {
         final RunFigures figures = mirror.figures().get();
         final int total = figures.total();
         final int decided = Math.max(0, total - figures.remaining());
-        return new Counts(decided, total, mirror.live().progress().get().percent());
+        // A paused or ended run states what is decided; the ledger's bar also counts drafts made ahead of their
+        // decisions.
+        final int percent = state.isSettled()
+                ? percentOf(decided, total)
+                : mirror.live().progress().get().percent();
+        return new Counts(decided, total, percent);
     }
 
     private static int percentOf(final int decided, final int total) {

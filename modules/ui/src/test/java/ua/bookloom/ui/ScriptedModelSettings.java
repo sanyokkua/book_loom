@@ -91,6 +91,11 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
     /** Stores a measured speed with the place it was measured, without counting as a save. */
     public void measured(
             final String providerId, final String modelId, final double secondsPerSegment, final MeasuredFrom source) {
+        measured(providerId, modelId, Map.of(CallKind.DRAFT, new MeasuredSpeed(secondsPerSegment, source)));
+    }
+
+    /** Stores the measured seconds of several kinds of call, without counting as a save. */
+    public void measured(final String providerId, final String modelId, final Map<CallKind, MeasuredSpeed> speeds) {
         final ModelSettings base = ModelSettings.defaults(providerId, modelId);
         final ModelSettings seeded = new ModelSettings(
                 providerId,
@@ -101,7 +106,7 @@ public final class ScriptedModelSettings implements ModelSettingsRepository {
                 null,
                 base.outputField(),
                 List.of(),
-                Map.of(CallKind.DRAFT, new MeasuredSpeed(secondsPerSegment, source)),
+                speeds,
                 ProbeVerdicts.none(),
                 ThinkingOverride.RECOMMENDED,
                 SamplingOverride.profileDefault());

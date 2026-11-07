@@ -19,7 +19,7 @@ final class ScriptedPlans {
     private final List<String> calls = new CopyOnWriteArrayList<>();
     private final List<Boolean> onFxThread = new CopyOnWriteArrayList<>();
     private volatile Result<BookPlan> answer = notScripted();
-    private volatile ChapterTally tally = new ChapterTally(0, 0, 0);
+    private volatile ChapterTally tally = new ChapterTally(0, 0, 0, 0);
 
     Result<BookPlan> plan(final String projectId) {
         calls.add(Objects.requireNonNull(projectId, "projectId"));

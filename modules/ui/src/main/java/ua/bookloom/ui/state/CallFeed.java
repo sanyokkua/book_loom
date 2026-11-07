@@ -142,7 +142,7 @@ final class CallFeed {
                 switch (snapshot.state()) {
                     case WAITING, FAILED -> null;
                     case ANSWERED -> StepResult.DONE;
-                    case CANCELLED -> StepResult.FAILED;
+                    case CANCELLED -> StepResult.STOPPED;
                 };
         if (result != null) {
             handle.steps(new StepChanged(StepKind.REQUEST, snapshot.label(), index, StepState.ENDED, null, result));

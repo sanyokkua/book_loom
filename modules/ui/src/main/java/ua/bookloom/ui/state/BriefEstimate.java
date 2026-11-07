@@ -17,8 +17,10 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChapterTally;
 import ua.bookloom.api.pipeline.DialProfile;
 import ua.bookloom.api.pipeline.DialProfiles;
+import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -45,6 +47,7 @@ public final class BriefEstimate {
     private final SettingsViewModel settings;
     private final BriefProject project;
     private final ModelSettingsRepository stored;
+    private final ProjectService projects;
     private final DialProfiles profiles;
     private final Executor background;
     private final Executor fx;
@@ -95,6 +98,7 @@ public final class BriefEstimate {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.project = Objects.requireNonNull(project, "project");
         this.stored = sources.stored();
+        this.projects = sources.projects();
         current.brief().addListener((observed, was, now) -> recompute());
         settings.model().addListener((observed, was, now) -> recompute());
         settings.selectedProviderId().addListener((observed, was, now) -> recompute());
@@ -117,10 +121,11 @@ public final class BriefEstimate {
         final long ask = ++asked;
         log.debug("estimate #{} asked for {} segments on {}, model chosen {}", ask, segments, dial, chosen.isPresent());
         final DialProfile profile = profiles.of(dial);
+        final @Nullable String projectId = brief != null && brief.summariesOn() ? openProjectId() : null;
         final int chunks = Math.ceilDiv(Math.max(0, segments), ESTIMATED_SEGMENTS_PER_CHUNK);
         background.execute(() -> {
-            final StartEstimate now =
-                    StartEstimates.of(speedsOf(chosen), segments, chunks, dial, profile.reviewPasses());
+            final StartEstimate now = StartEstimates.of(
+                    speedsOf(chosen), segments, chunks, dial, profile.reviewPasses(), summariesOf(projectId));
             fx.execute(() -> publish(ask, now));
         });
     }
@@ -134,6 +139,24 @@ public final class BriefEstimate {
         if (!now.equals(estimate.get())) {
             estimate.set(now);
         }
+    }
+
+    private @Nullable String openProjectId() {
+        final @Nullable OpenedBook book = current.book().get();
+        return book == null ? null : book.projectId();
+    }
+
+    // The summaries a run from the start would write; none when the switch is off or the chapters cannot be counted.
+    private int summariesOf(final @Nullable String projectId) {
+        if (projectId == null) {
+            return 0;
+        }
+        final @Nullable ChapterTally tally = projects.chapterTally(projectId).data();
+        log.debug(
+                "estimate: project {} has {} chapter summaries to write",
+                projectId,
+                tally == null ? 0 : tally.toWrite());
+        return tally == null ? 0 : tally.toWrite();
     }
 
     // A keyed read of one stored row, taken on the background executor.

@@ -9,6 +9,8 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -50,6 +52,17 @@ class CallHistoryTest {
                 CallHistory.modelOf(List.of(batch, repair), NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE);
 
         assertThat(model.rows()).extracting(StepEntry::label).containsExactly("Translate", "Repair");
+    }
+
+    // IF a call cut off by Stop read as failed, THEN the person would see an error where they pressed Stop.
+    @Test
+    void modelOf_callCutOffByStop_endsAsStoppedNotFailed() {
+        final CallSnapshot cut = ChunkFixtures.draft(1, CallKind.DRAFT, 1).ended(CallState.CANCELLED, Duration.ZERO);
+
+        final ProgressDialogModel model =
+                CallHistory.modelOf(List.of(cut), NOW, MESSAGES, ProgressDialogModel.Mode.SIMPLE);
+
+        assertThat(model.rows()).extracting(StepEntry::result).containsExactly(StepResult.STOPPED);
     }
 
     // IF a run with no call opened a dialog with a phantom row, THEN the list would show a call that never happened.

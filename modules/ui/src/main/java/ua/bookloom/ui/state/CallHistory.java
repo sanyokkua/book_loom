@@ -69,7 +69,8 @@ public final class CallHistory {
                 switch (call.state()) {
                     case WAITING -> null;
                     case ANSWERED -> StepResult.DONE;
-                    case FAILED, CANCELLED -> StepResult.FAILED;
+                    case FAILED -> StepResult.FAILED;
+                    case CANCELLED -> StepResult.STOPPED;
                 };
         if (result == null) {
             log.debug("all calls: call {} is still waiting, its row stays at work", call.callId());

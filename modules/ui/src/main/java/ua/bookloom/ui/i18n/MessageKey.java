@@ -203,6 +203,8 @@ public enum MessageKey {
     PROGRESS_STEP_DONE("progress.step.done"),
     /** Progress dialog: the result line of a step that failed. */
     PROGRESS_STEP_FAILED("progress.step.failed"),
+    /** Progress dialog: the result line of a step the person's Stop cut off. */
+    PROGRESS_STEP_STOPPED("progress.step.stopped"),
     /** Progress dialog: the result line of a step done with no model call. */
     PROGRESS_STEP_NO_CALL("progress.step.noCall"),
     /** Progress dialog: the plain sentence about the selected step; arguments: 0 its state word, 1 its name. */

@@ -21,7 +21,8 @@ class StepWordsStageTest {
         "STAGE, DONE, DONE",
         "STAGE, FAILED, FAILED",
         "REQUEST, NO_CALL, NO_CALL",
-        "REQUEST, DONE, DONE"
+        "REQUEST, DONE, DONE",
+        "REQUEST, STOPPED, STOPPED"
     })
     void look_endedStep_readsByItsKindAndResult(
             final StepKind kind, final StepResult result, final StepWords.Look expected) {

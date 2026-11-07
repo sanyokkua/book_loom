@@ -6,8 +6,8 @@ import java.util.Objects;
  * A point-in-time count snapshot emitted during a job.
  *
  * @param stage the stage represented by the counts
- * @param section the 1-based position of the current body unit; the auxiliary unit is never counted
- * @param sections the total count of body units; the auxiliary unit is never counted
+ * @param section the 1-based position of the current chapter; the auxiliary unit's titles count in the last one
+ * @param sections the total count of the book's chapters
  * @param accepted number of accepted segments
  * @param flagged number of flagged segments
  * @param pending number of undecided segments

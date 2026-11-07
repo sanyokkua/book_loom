@@ -86,7 +86,7 @@ class ChapterTallyTest {
         final TestProject project = SummaryBooks.book(injector, tempDir, 13, false);
         decideChapters(project, 12);
 
-        assertThat(tally(project)).isEqualTo(new ChapterTally(13, 12, 12));
+        assertThat(tally(project)).isEqualTo(new ChapterTally(13, 12, 12, 12));
     }
 
     @Test
@@ -94,7 +94,7 @@ class ChapterTallyTest {
         final TestProject project = SummaryBooks.book(injector, tempDir, 4, false);
         decideChapters(project, 4);
 
-        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 4, 3));
+        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 4, 3, 3));
     }
 
     // Chapter 1's summary was written from the source it holds now; chapter 2's from other text, so it is written
@@ -106,14 +106,14 @@ class ChapterTallyTest {
         storeSummary(project, 1, ChapterStandings.sourceHash(chapterSegments(project, 1)));
         storeSummary(project, 2, "stale");
 
-        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 3, 2));
+        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 3, 2, 2));
     }
 
     @Test
     void tally_nothingFinished_none() {
         final TestProject project = SummaryBooks.book(injector, tempDir, 4, false);
 
-        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 0, 0));
+        assertThat(tally(project)).isEqualTo(new ChapterTally(4, 0, 0, 3));
     }
 
     @Test

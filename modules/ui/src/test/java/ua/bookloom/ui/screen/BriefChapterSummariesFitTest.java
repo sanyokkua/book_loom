@@ -52,7 +52,7 @@ class BriefChapterSummariesFitTest extends BriefSuggestTestBase {
     @ParameterizedTest(name = "{0} x {1}")
     @CsvSource({"944, 600", "1280, 800", "1920, 700"})
     void toneCard_ukrainianShapeAndBothLines_fitWhole(final double width, final double height) throws Exception {
-        projects.onChapterTally(new ChapterTally(30, 21, 21));
+        projects.onChapterTally(new ChapterTally(30, 21, 21, 29));
         useUkrainian();
         openAndShowBrief();
         assistant.answersBrief(Result.ok(SEPARATE));

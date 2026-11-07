@@ -80,7 +80,11 @@ final class RequestWords {
         if (result == null) {
             return MessageKey.PROGRESS_REQUEST_SENDING;
         }
-        return result == StepResult.FAILED ? MessageKey.PROGRESS_REQUEST_LOST : MessageKey.PROGRESS_REQUEST_DONE;
+        return switch (result) {
+            case FAILED -> MessageKey.PROGRESS_REQUEST_LOST;
+            case STOPPED -> MessageKey.PROGRESS_REQUEST_STOPPED;
+            case DONE, NO_CALL -> MessageKey.PROGRESS_REQUEST_DONE;
+        };
     }
 
     static String clock(final Duration took) {

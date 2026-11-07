@@ -168,7 +168,7 @@ final class ProgressStepDetail extends VBox {
         inputHeading.setText(messages.get(headings.input()));
         outputHeading.setText(messages.get(headings.output()));
         Visibility.show(grid, step != null && grid.show(step.text(), step.isRunning()));
-        input.setText(orNothing(step == null ? null : inputOf(step, made)));
+        showInput(step, made, headings);
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
         output.setText(said(step == null ? null : outputOf(step, made, technical), made));
         showCall(technical, made);
@@ -184,6 +184,15 @@ final class ProgressStepDetail extends VBox {
         Visibility.show(reply, technical && made != null && made.reply() != null);
         final CallSnapshot wired = technical ? made : null;
         wire.show(wired == null ? null : wired.requestBody(), wired == null ? null : wired.rawReply(), messages);
+    }
+
+    private void showInput(
+            final @Nullable StepEntry step, final @Nullable CallSnapshot made, final CallHeadings headings) {
+        final @Nullable String read = step == null ? null : inputOf(step, made);
+        final boolean readsSomething = read != null || made == null || !headings.isBrief();
+        Visibility.show(inputHeading, readsSomething);
+        Visibility.show(input, readsSomething);
+        input.setText(orNothing(read));
     }
 
     private void showCall(final boolean technical, final @Nullable CallSnapshot made) {
@@ -239,12 +248,16 @@ final class ProgressStepDetail extends VBox {
                 limit == null ? NONE : DurationText.clock((int) limit.toSeconds())));
     }
 
-    private static @Nullable String inputOf(final StepEntry step, final @Nullable CallSnapshot made) {
+    // A brief call's items are the fields it fills in, not the passages it read: with no passages to show, nothing is.
+    static @Nullable String inputOf(final StepEntry step, final @Nullable CallSnapshot made) {
         final StepEntry.StepText text = step.text();
         if (text != null && text.before() != null) {
             return text.before();
         }
         if (made == null) {
+            return null;
+        }
+        if (made.segments().isEmpty() && CallHeadings.of(made.kind()).isBrief()) {
             return null;
         }
         return made.segments().isEmpty()

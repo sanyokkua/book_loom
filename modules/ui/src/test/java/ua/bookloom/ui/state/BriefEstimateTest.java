@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.MeasuredFrom;
 import ua.bookloom.api.llm.MeasuredSpeed;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChapterTally;
 import ua.bookloom.api.pipeline.ProjectSummary;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.NameOrigin;
@@ -44,7 +45,12 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
     }
 
     private BriefEstimate estimateOver(final int segments, final Executor background) {
+        return estimateOver(segments, background, new ChapterTally(0, 0, 0, 0));
+    }
+
+    private BriefEstimate estimateOver(final int segments, final Executor background, final ChapterTally chapters) {
         final ScriptedProjectService projects = new ScriptedProjectService();
+        projects.onChapterTally(chapters);
         final CurrentProject current = new CurrentProject();
         final SettingsViewModel viewModel = viewModel();
         onFx(() -> {
@@ -61,7 +67,7 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                 current,
                 viewModel,
                 project,
-                new EstimateSources(modelSettings, speeds, dial),
+                new EstimateSources(modelSettings, speeds, dial, projects),
                 background,
                 Platform::runLater));
         WaitForAsyncUtils.waitForFxEvents();
@@ -128,6 +134,23 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                 .isEqualTo(new StartEstimate.Ranged(Duration.ofMinutes(5), Duration.ofMinutes(10), MeasuredFrom.RUN));
     }
 
+    // IF the chapters' summaries were left out, THEN a book of many chapters would start with too short a time.
+    @Test
+    void estimate_chapterSummariesDue_addTheirMeasuredSecondsToTheTime() {
+        final Map<CallKind, MeasuredSpeed> measured = Map.of(
+                CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
+                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
+                CallKind.CHAPTER_SUMMARY, new MeasuredSpeed(30.0, MeasuredFrom.RUN));
+        modelSettings.measured("ollama", "gemma", measured);
+        final StartEstimate without = shown(estimateOver(300, executor, new ChapterTally(10, 0, 0, 0)));
+
+        final StartEstimate with = shown(estimateOver(300, executor, new ChapterTally(10, 0, 0, 4)));
+
+        assertThat(without).isInstanceOf(StartEstimate.Measured.class);
+        assertThat(((StartEstimate.Measured) with).forBook().minus(((StartEstimate.Measured) without).forBook()))
+                .isEqualTo(Duration.ofMinutes(2));
+    }
+
     static Stream<Arguments> wordings() {
         return Stream.of(
                 Arguments.of(
@@ -165,7 +188,7 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
             final List<String> expected) {
         final int passes = dial == QualityDial.FAST ? 0 : 1;
 
-        assertThat(StartEstimates.of(stored, segments, 20, dial, passes).lines(EN))
+        assertThat(StartEstimates.of(stored, segments, 20, dial, passes, 0).lines(EN))
                 .containsExactlyElementsOf(expected);
     }
 }

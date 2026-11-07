@@ -7,5 +7,7 @@ public enum StepResult {
     /** The step needed nothing and was done at once with no model call. */
     NO_CALL,
     /** The step ended without its outcome. */
-    FAILED
+    FAILED,
+    /** The step was cut off because the person stopped the run; nothing went wrong. */
+    STOPPED
 }

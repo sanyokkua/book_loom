@@ -59,6 +59,19 @@ class RunStateSourceTest extends TranslatingScreenTestBase {
         assertThat(row()).isEqualTo(RunRow.PAUSED_AFTER_ERROR);
     }
 
+    // A stopped run says how many segments are decided (10 of 19), never the step ledger's figure, which counts drafts
+    // made ahead of their decisions.
+    @Test
+    void view_stoppedRun_namesTheShareOfSegmentsDecided() throws TimeoutException {
+        readyToStart();
+        publish(RunState.RUNNING);
+        publishProgress(10, 0, 9);
+        publish(RunState.STOPPED);
+
+        assertThat(ThemeTestSupport.onFx(() -> source().view().get().title().args()))
+                .containsExactly(52);
+    }
+
     // IF the chip and the footer each read the settings their own way, THEN they could name different models.
     @Test
     void model_typedInSettings_isTheOneChoiceTheChipAndTheFooterRead() throws TimeoutException {
