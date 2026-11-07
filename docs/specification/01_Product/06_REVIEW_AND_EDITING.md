@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** product, architect, engineering (`:ui`, `:pipeline`), QA, UX **Last
-Updated:** 2026-10-19 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+Updated:** 2026-11-07 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md`, `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`,
 `docs/specification/01_Product/07_SETTINGS.md`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`,
 `docs/specification/01_Product/12_PROMPT_CATALOG.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
@@ -29,9 +29,12 @@ Every segment moves through a deterministic state machine (FR-REVIEW-06):
 | FLAGGED               | User accepts as-is                                                                        | ACCEPTED |
 | FLAGGED               | User edits and confirms                                                                   | REVISED  |
 | FLAGGED               | User retries / retry-with-note and it now passes                                          | ACCEPTED |
-| ACCEPTED / FLAGGED    | Backward revision re-renders the segment                                                  | REVISED  |
-| REVISED (machine)     | Backward revision re-renders it again                                                     | REVISED  |
-| REVISED (user-edited) | Backward-revision sweep — **only with user opt-in**                                       | REVISED  |
+| ACCEPTED              | The Proofread stage keeps a rewrite (never-worse gate); `before` and the status before are stored | REVISED  |
+| FLAGGED               | The Proofread stage keeps a rewrite that clears every blocking finding                   | REVISED  |
+| FLAGGED               | A passing rewrite that leaves a blocking finding — stored as a proposal (PROPOSED)       | FLAGGED  |
+| REVISED (machine)     | A later Proofread window keeps another rewrite (the first `before` stays)                 | REVISED  |
+| REVISED (proofread)   | User chooses Undo proofread                                                               | ACCEPTED / FLAGGED (as before) |
+| REVISED (user-edited) | A passing Proofread rewrite — **only as a proposal**, applied by the person               | REVISED  |
 | REVISED               | User edits again                                                                          | REVISED  |
 
 `τ` is owned by the **review-mode dial** (Unattended 0.60 / Assisted 0.75 / Manual 0.85); a manual Settings override
@@ -39,9 +42,12 @@ is not offered in this build. Neither the quality dial nor the review mode sets 
 
 Rules: PENDING is the only initial state; ACCEPTED, FLAGGED, and REVISED are the terminal working states; a segment
 never returns to PENDING once processed. Resume picks up at the **first PENDING** segment; FLAGGED is
-**terminal-for-run** — surfaced in the review desk and excluded from auto-resume. Backward revision (FR-ALGO-D1) may
-move an ACCEPTED or FLAGGED segment to REVISED, but **user-edited `REVISED` segments are protected**: the sweep
-**proposes, never overwrites**, and re-sweeps a user-edited segment only with explicit user opt-in.
+**terminal-for-run** — surfaced in the review desk and excluded from auto-resume. The Proofread stage
+(`05_TRANSLATION_ALGORITHM.md#proofread-stage`) may move an ACCEPTED segment, or a FLAGGED one whose rewrite clears
+every blocking finding, to REVISED; REVISED therefore means the person's edit or a kept proofread rewrite. **User-edited
+`REVISED` segments are protected** (FR-REVIEW-10): the stage and the term sweep **propose, never overwrite**. Max's
+backward revision is gone from the run; until group 14 of `redesign-translation-pipeline` removes it, the export's last
+check still proposes in the same way.
 
 ## flagged-queue {#flagged-queue}
 
@@ -50,7 +56,7 @@ The flagged queue is the review desk's left pane (planned dialog; today the pane
 
 | ID           | Requirement                                                                                                                                                           |
 |--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-REVIEW-Q1 | The list shows the FLAGGED segments with locator (e.g. `ch5 · p12`), a **state marker** (to review · accepted · your edit · later) and a one-line "why · text" taken from the QA findings that caused the flag. A filter offers To review (n), Worth a second look (n) and All segments, all three always (All segments lists only decided segments and those kept as source, so it is safe in every review mode); ‹ › move between rows. |
+| FR-REVIEW-Q1 | The list shows the FLAGGED segments with locator (e.g. `ch5 · p12`), a **state marker** (to review · accepted · your edit · later) and a one-line "why · text" taken from the QA findings that caused the flag. A filter offers To review (n), Worth a second look (n), Changed by proofread (n), Waiting on a gender (n) and All segments, all five always (Changed by proofread lists the segments whose proofread rewrite was kept or proposed; Waiting on a gender those holding an open gender deferral — a character's gender unknown when they were translated, or set later; Worth a second look the accepted, unreviewed segments with an audit doubt, a repair-level finding left, or a gender set later that the text disagrees with, shown as `gender now known: Корін Ешбі — female`) (All segments lists only decided segments and those kept as source, so it is safe in every review mode); ‹ › move between rows. |
 | FR-REVIEW-Q2 | The queue reflects the segments the pipeline could not clear automatically (aspirationally a small residual, ~1% of **segments** — a non-normative goal, not a gate). |
 | FR-REVIEW-Q3 | Selecting a row opens it in the side-by-side compare.                                                                                                                 |
 | FR-REVIEW-Q4 | An empty list shows "Nothing needs your review".                                                                                                                      |
@@ -68,6 +74,7 @@ The flagged queue is the review desk's left pane (planned dialog; today the pane
 | FR-REVIEW-C5 | The editors and the tabs share the dialog's height through a draggable divider (vertical `SplitPane`), so the editors grow with the dialog. Planned. |
 | FR-REVIEW-C6 | Tab **What the model saw** shows the stored context snapshot of the segment's draft, parsed into System and User sections (T8). The snapshot holds the run frame's hash (the frame is stored once per project as `promptFrame:<hash>`) and the sections of the call that was actually sent, so a batch-drafted segment shows what its batch carried. After Try again the tab says: "Built again for Try again from today's glossary and settings, as it was sent for this retry." (`review.context.retry`). Built (redesign 11.7). |
 | FR-REVIEW-C7 | Tab **Suggestion** shows Now \| Suggested by the check, with "Use the suggestion". |
+| FR-REVIEW-C8 | A segment the Proofread stage read shows its **proofread verdict** in the compare ("Proofread · kept", proposed, rejected or unchanged) with its reason in words (what the window was marked for, or the check the never-worse gate saw get worse); a kept rewrite shows **Edit applied** with − the text before and + the text after. Built (redesign 13.8). |
 
 ## segment-actions {#segment-actions}
 
@@ -75,7 +82,8 @@ The footer has **Close**, a **More ▾** menu and **one main button**.
 
 - The main button reads **✓ Accept & next** and turns into **✓ Save my edit & next** once the text is edited (T7). It
   accepts or saves, then moves to the next segment.
-- **More ▾** lists, each with what it does: Leave for later · Try again · Try again with a note… · Undo my edit.
+- **More ▾** lists, each with what it does: Leave for later · Try again · Try again with a note… · Undo my edit · Undo
+  proofread (off with no kept proofread rewrite to undo).
 - **Try again with a note** opens an inline panel inside the desk, not a second dialog; so do the questions of Undo my
   edit and of typing that is not saved (`ModalHost` shows one card at a time).
 - Shortcuts: Ctrl/⌘+Enter runs the main button (plain Enter does nothing in the desk); Ctrl+Alt+↓/↑ moves between
@@ -86,12 +94,13 @@ The footer has **Close**, a **More ▾** menu and **one main button**.
 | Action          | Effect                                                                                                                                                                  | Resulting status                                  |
 |-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
 | Accept (main button, text unedited) | Keep the machine target as-is. Acts only on a FLAGGED or an ACCEPTED segment (a confirmation on the latter); refused on a PENDING or REVISED one, and on a segment with no machine target. | ACCEPTED                                        |
-| Save edit (main button, text edited) | Persist the person's edited target, placeholders included, keeping the machine target apart so a later revert restores it exactly. Refused for a PENDING segment, and with `validation` (nothing stored) when a formatting mark is missing or doubled or the edit breaks the placeholders otherwise; the editor treats each mark as one unit and keeps the main button off until each is present once. Withdraws a backward-revision proposal waiting on the segment. | REVISED                                         |
+| Save edit (main button, text edited) | Persist the person's edited target, placeholders included, keeping the machine target apart so a later revert restores it exactly. Refused for a PENDING segment, and with `validation` (nothing stored) when a formatting mark is missing or doubled or the edit breaks the placeholders otherwise; the editor treats each mark as one unit and keeps the main button off until each is present once. Withdraws a proposal waiting on the segment (the deferral behind it stays open, so the next Proofread reads the new text). | REVISED                                         |
 | Undo my edit (Revert) | Clear the saved edit and restore the stored machine target. Acts only on a REVISED segment that has a machine target; withdraws a waiting proposal.                  | ACCEPTED                                        |
 | Try again (Retry) | Re-run the segment through the pipeline as a batch of one, **with a context rebuilt at that moment** from the current brief, glossary, recurring-term renderings and the stored targets kept before it (never a replay of what the first draft saw; design D8); allowed whenever no run of the project is running, refused with `ErrorCode.busy` while one is. | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Try again with a note | Re-run as above, with the rebuilt context and the user's free-text note under `[Extra instruction]` (block 11; no repair call follows a retry).                | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Leave for later | Writes nothing: the row is marked "later" for this application run only and the desk moves to the next segment of the filter shown. The segment stays to review. | unchanged                                       |
-| Apply a proposal | Take the backward-revision proposal waiting on an edited segment as the person's own edit. Acts only on a REVISED segment with a proposal waiting.                      | REVISED                                         |
+| Apply a proposal | Take the proposal waiting on an edited segment — a passing Proofread rewrite (or, until group 14, the export's last check) of the person's own text — as the person's own edit, and resolve the deferral that held it. Acts only on a REVISED segment with a proposal waiting; a proposal is never applied by itself. A flagged segment's proofread proposal is shown on the Suggestion tab and applied only by "Use the suggestion". | REVISED                                         |
+| Undo proofread (More ▾) | Put back the text, the status (ACCEPTED or FLAGGED) and the findings a kept proofread rewrite replaced, from the stored verdict; clears the verdict and marks the segment reviewed, with no check run. Refused with `validation` on a segment with no kept rewrite or one holding the person's edit. | ACCEPTED / FLAGGED |
 
 A refused action changes nothing and answers `validation` (`SegmentActions`); the desk shows the reason in place.
 

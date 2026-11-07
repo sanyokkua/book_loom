@@ -16,7 +16,8 @@ any figure such as "~1% flagged" is measured in **segments**.
 
 ## pipeline-overview {#pipeline-overview}
 
-The pipeline has five phases: A Import, B Prep, C Translate, D Optional backward revision, E Export. The core
+The pipeline has five phases: A Import, B Prep, C Translate, D Proofread (`#proofread-stage`; it replaced Max's
+backward revision), E Export; a run holds B to D as its three stages Prepare, Translate and Proofread. The core
 correctness invariant: the skeleton is never sent to the model and never regenerated — only text nodes change (DD-07),
 so formatting is preserved by construction. Import masks no numerals and runs no language detection over the book's
 own text: the source language is the book's own declared language, normalized and left editable on the Book Brief
@@ -249,14 +250,59 @@ self-heal model (ADR-0007).
 
 ## phase-d-backward-revision {#phase-d-backward-revision}
 
-Optional whole-book pass (enabled by the Max dial or the export toggle). The sweep **proposes, never overwrites**:
-user-edited `REVISED` segments are **protected** and change only with explicit user opt-in.
+Max's whole-book backward revision is gone from the run (redesign group 13, design D15): its job — fixing what a fact
+learned late made wrong — is the Proofread stage's below, at every dial. The anchor keeps its name for the citations
+that point here; the export's optional last check keeps the old pass until group 14 removes it.
+
+### Proofread stage {#proofread-stage}
+
+A run has three stages: **Prepare** (code only), **Translate** (the chunk loop, ended by the final audit) and
+**Proofread**. Proofread runs after the last chunk is decided, at every dial, and the run is COMPLETED only after it. It
+edits only what is wrong: a mistake found late is fixed without rewriting text that was already right (owner decision
+D-18). In order:
+
+1. **Final audit** (once, as Translate ends; never again after Proofread): its doubts become audit marks.
+2. **Term sweep** (code, no call): a LOCKED entry's changed target whole-word, a PINNED one through its generated forms
+   (old form k → new form k), never a SUGGESTED one; a person-edited segment gets a proposal instead. It consumes the
+   TERM deferrals.
+3. **Narrator inference** for a first-person narrator with no gender or only a likely one (the «я + past verb» count).
+4. **Deferrals settled by code**: a `GENDER_CHANGED` deferral, or a `GENDER_UNKNOWN` one whose entry now has a gender the
+   person or the book set, is checked by the gender check — no mismatch → resolved with no call; a mismatch → left open
+   as a mark with the reason `gender now known: Івар — female`.
+5. **Mark list** (code, story segments only): tier 1 = FLAGGED segments, a REPAIR-level finding left after the one
+   repair, and deferrals whose fact arrived; tier 2 = NOTE findings, audit doubts and the detectors (a map name in the
+   source with none of its target forms, one source with different targets, a recurring term off its rendering, gender
+   endings against a person's or the book's gender). A mark is a finding or an open deferral on a segment, never a
+   record of its own, so the review desk computes the same list.
+6. **Windows** (Balanced and Max): marks merged in reading order with at most one unmarked segment between them, up to
+   the model profile's batch size, plus one read-only neighbour each side; one minimal-edit proofread call per window
+   (`12_PROMPT_CATALOG.md#proofread`). Max adds a **second round** that tiles every readable story paragraph in windows
+   of at most the batch size, open marks riding as reasons.
+
+**Fast** stops after step 5: no model call; every mark goes to the review desk with its reasons (the gender mismatches
+under "Waiting on a gender" and "Worth a second look"). Continue at Fast runs the code part again when a glossary change
+or a gender set after the run left work.
+
+**Verdicts.** The reply is `{"unchanged":true}` or the changed items; ids outside the focus and texts equal to the
+current are dropped, a focus id left out is UNCHANGED, an unreadable reply stores no verdict. Each change passes the hard
+gates and the never-worse gate (no check may get worse; a refusal names what got worse, such as
+`function-word-residue: что`). A kept rewrite of an ACCEPTED segment makes it REVISED (outcome KEPT, the text, status
+and findings before kept for Undo proofread); a FLAGGED one becomes REVISED only when the rewrite clears every blocking
+finding, else it stays FLAGGED with the text as a proposal (PROPOSED); a person-edited text is never rewritten — the
+change waits as a proposal (PROPOSED); a refused one is REJECTED with the gate's reason. A kept text settles each gender
+deferral it now agrees with. A window's texts, verdicts and resolved deferrals commit in one transaction.
+
+**Resume.** Each verdict carries the window's fingerprint (`r<round>:<sha-256>` of the focus sources and texts, the
+neighbours' texts, the map lines the call carries and the prompt version); a window whose focus all holds a verdict with
+the current fingerprint is skipped, so Continue starts at the first unread window ("Continues with Proofread at window
+41 of 120.") and a finished Max run reads nothing. A pause makes the in-flight call again on resume; a stop leaves the
+window undecided; a window past its pause budget is left unread with its marks kept.
 
 | ID         | Requirement                                                                                                                                                                                                                                                                            |
 |------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-ALGO-D1 | Resolve deferred-resolution items using full-book facts and re-render affected earlier segments to REVISED. User-`REVISED` segments are protected: the sweep proposes a change but does not overwrite them.                            |
-| FR-ALGO-D2 | Run a global term-consistency sweep **bounded to segments that contain a swept term**. Apply **deterministic string substitution, without a model call**, and only where the glossary held a previous target for that term which the person then changed; a rendering the model chose on its own for a term that had no glossary target is never swept. Invoke an **LLM re-render only** where a gender/agreement deferral now has a known gender. |
-| FR-ALGO-D3 | A `REVISED → REVISED` transition (re-sweeping an already user-edited segment) happens **only with user opt-in**.                                                                                                                                                                       |
+| FR-ALGO-D1 | Settle deferred-resolution items in the Proofread stage using full-book facts: by code where the decided text already agrees, else as a mark for a proofread window (Balanced, Max) or the review desk (Fast). User-`REVISED` segments are protected: a change becomes a proposal and never overwrites them. |
+| FR-ALGO-D2 | Run a global term-consistency sweep **bounded to segments that contain a swept term**. Apply **deterministic string substitution, without a model call**, and only where the glossary held a previous target for that term which the person then changed (LOCKED whole-word, PINNED through its forms); a rendering the model chose on its own for a term that had no glossary target is never swept. A gender deferral whose gender is now known reaches the model only through a proofread window. |
+| FR-ALGO-D3 | A change to a segment the person edited is only ever a proposal, applied by the person on the review desk (Apply a proposal).                                                                                                                                                         |
 
 ## phase-e-export {#phase-e-export}
 
@@ -275,7 +321,7 @@ in this build (DD-45, `07_SETTINGS.md`). `τ_judge` equals `τ`.
 |--------------------------------------|---------------------|------------|------------|
 | Fixing call (`RepairMode`)           | Marks-only re-draft | One repair | One repair |
 | Reviewer passes per chunk            | 0                   | 1          | 2          |
-| Backward revision runs               | Off                 | Off        | On         |
+| Proofread stage (`#proofread-stage`) | Code only: sweep, deferrals, mark list to the desk | + one call per marked window | + round 2 over every story paragraph |
 
 Neither the chunk budget, the batch size nor the number of previous pairs is a dial row: the first closes on the token budget, the batch size is the model profile's, and the window's count follows the model's tier. A review retry runs with no repair.
 
@@ -291,7 +337,7 @@ paraphrase-away-from-source failure mode. The per-phase guidance is:
 | Judge / deterministic-QA-assisting judge | 0.1                      | A scorer should be near-deterministic so the same draft yields the same verdict; τ comparisons stay stable.        |
 | Repair                                   | 0.1                      | A second try that keeps what the draft got right and fixes the named defects.                                                      |
 | Directed fix (reviewer's refused edit)   | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
-| Backward revision                        | 0.2                      | Consistency alignment across the book; determinism preferred.                                                      |
+| Proofread                                | 0.1                      | A minimal edit of what a mark names; the same text otherwise.                                                      |
 
 The default is **0.2**. Per model, Settings › Models can replace these values (`07_SETTINGS.md#models-tab`: the
 Temperature row's My value or Don't send, or the Sampling row's Custom values); the review panel's "lower temperature for

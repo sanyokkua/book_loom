@@ -62,7 +62,9 @@ theme toggle and About. While one is, it reads, left to right: product name · t
 (`ActivityChip`, for example "▬ Names · 53 % · open") · the project's name (`#shell-run-project`: the book's title up to
 a subtitle, or the file name without its extension, then the language pair, "Earth Gravity · EN → UK") · the state text
 of its run-state row (`#shell-run-state`, `#run-states`, for example "51 % done · about 1 h 10 min left") · the quality
-dial and review mode (`#shell-run-mode`, "Balanced · Unattended") · while translating, elapsed time and speed
+dial and review mode (`#shell-run-mode`, "Balanced · Unattended") · while a run works, the **stage chip** naming its
+stage (Prepare, Translate or Proofread, with a tooltip saying what each does; it follows the run and disappears when the
+run ends, and gives way last; `RunStatusBar` from `StageTracker`) · while translating, elapsed time and speed
 (`#shell-run-elapsed`, `#shell-run-rate`, "9.4 tok/s" with its tooltip) · the **AI-model chip** (`#shell-run-connection`,
 a state marker coloured by G11 — grey "AI model ready" / "Model idle", blue "Model answering", amber "No answer for
 3:40", red "Cannot reach Ollama" (only when nothing answered), "Ollama reports an error" (it answered with an HTTP
@@ -596,10 +598,10 @@ is saved, so the subtitle changes with the project store.)
 | Control               | JavaFX control            | Behaviour                                                                                                                                       |
 |-------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | Help line               | `HBox` banner (info)         | While a translation runs, once per project and closable (`SleepHelp`, `help.sleepLineClosed.<project>`): the keep-awake sentence, or the keep-awake-off one |
-| Summary strip           | `TranslatingSummaryStrip`    | Every state: the big line (about … left, Finished in …, the measured estimate before a start, else the run's title), the bar over all steps, "791 of 1,240 segments done · Chapter 7 of 11 · 1h 21m elapsed", the counts (translated / fixed automatically / to review / kept as is — kept-verbatim plus kept-as-source — and worth a second look), "n to review" (opens the review desk) and the closed "How progress is counted" |
+| Summary strip           | `TranslatingSummaryStrip`    | Every state: the big line (about … left, Finished in …, the measured estimate before a start, else the run's title), the bar over all steps, "791 of 1,240 segments done · Chapter 7 of 11 · 1h 21m elapsed", the counts (translated / fixed automatically / to review / kept as is — kept-verbatim plus kept-as-source — and worth a second look), "n to review" (opens the review desk) and the closed "How progress is counted"; while a run works, the **stage strip** Prepare · Translate · Proofread with the stage in work marked — Balanced "Proofread · round 1 of 2: marked windows", Max naming the round ("round 2 of 2: whole book"), Fast "Proofread · marks for review, no model calls" (`StageStrip`) |
 | Ready card              | card                         | IDLE only: book, model, review mode, quality, segments to translate, the Book Brief's own **Chapter summaries** switch with its lines (turning it here turns it on the Brief) and the run-state row's line ("Nothing translated yet.") |
-| Live card               | `LiveCallPanel` (≥ 460 px, fills the height) | Every other state. Tabs Live · Activity log. Live: Simple / Detailed (Detailed at first with technical details on; the choice and the follow switch are kept for the session), Show each segment when translated, Follow again, All calls…; the call line (`#translating-live-line`, the run-state row's line, "Waiting for the model… m:ss" from 10 s, the call itself in Detailed) with a stuck call's one clock (`#translating-live-clock`); the run's rows in book order, the chunk being translated last and earlier chunks above it as history (`LiveRowList`, markers by `RowMarker`) beside the selected row's detail (`LiveRowDetail`: Source \| Translation — a row kept as is shows its kept text, or "No words — only formatting" — what the model works on now; Detailed adds the row's call, its prompt and reply); each kept chapter summary is a row `Chapter {n} summarised` after its chapter's rows (marker "summary kept"), whose detail shows its text alone, the words later drafts are told about that chapter |
-| Activity log            | `ListView` (monospace)       | The live card's second tab: All · Problems only, Jump to latest. Tagged entries — `ok`, `fix`, `mem`, `sum`, `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); technical `info` lines (answered calls, the one repair per segment) only with Show technical details; bounded to the last 500 |
+| Live card               | `LiveCallPanel` (≥ 460 px, fills the height) | Every other state. Tabs Live · Activity log. Live: Simple / Detailed (Detailed at first with technical details on; the choice and the follow switch are kept for the session), Show each segment when translated, Follow again, All calls…; the call line (`#translating-live-line`, the run-state row's line, "Waiting for the model… m:ss" from 10 s, the call itself in Detailed) with a stuck call's one clock (`#translating-live-clock`); the run's rows in book order, the chunk being translated last and earlier chunks above it as history (`LiveRowList`, markers by `RowMarker`) beside the selected row's detail (`LiveRowDetail`: Source \| Translation — a row kept as is shows its kept text, or "No words — only formatting" — what the model works on now; Detailed adds the row's call, its prompt and reply); each kept chapter summary is a row `Chapter {n} summarised` after its chapter's rows (marker "summary kept"), whose detail shows its text alone, the words later drafts are told about that chapter; each proofread window the stage read is a row `window ch7 · p40–p42` (marker "proofread") whose detail lists each segment it read with its locator, verdict (kept, proposed, rejected, unchanged), the reason in words, and Before \| After (`control/WindowDetail`, `control/ProofreadWords`) |
+| Activity log            | `ListView` (monospace)       | The live card's second tab: All · Problems only, Jump to latest. Tagged entries, eight kinds — `ok`, `fix`, `mem`, `sum`, `proof` (a window's verdict counts: "Proofread ch7 · p42: 1 kept, 0 proposed, 0 rejected, 2 unchanged."), `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); technical `info` lines (answered calls, the one repair per segment) only with Show technical details; bounded to the last 500 |
 | Controls                | `Button`s in the toolbar     | Start / Continue translation, Resume / Try again now, Pause, Stop, `Review (n)`, Continue to Export; which are offered follows the run-state table (`#run-states`) |
 
 The start toast reads `Translation started` / `Progress is saved as you go.` (Built.)
@@ -632,7 +634,7 @@ offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all s
 | State | Code | Title bar · chip | Toolbar | Banner | Live line · current-call rows | Review · Export · awake |
 |---|---|---|---|---|---|---|
 | Ready | IDLE | "Ready" · AI model ready (grey) | **Start translation** | — | "Nothing translated yet." · waiting | off · off · no |
-| Ready to continue | IDLE + stored progress | "Ready · 51 % done" | **Continue translation** · Review (6) | "Welcome back — 74 of 142 segments are done." | "Continues at Chapter 2, segment 5." · waiting | editable · partial · no |
+| Ready to continue | IDLE + stored progress | "Ready · 51 % done" | **Continue translation** · Review (6) | "Welcome back — 74 of 142 segments are done." | "Continues at Chapter 2, segment 5." (a book whose segments are all decided but whose Proofread has windows left: "Continues with Proofread at window 41 of 120.") · waiting | editable · partial · no |
 | Cannot start yet | IDLE + `MissingInput` | "Ready" · No AI model (red) | Start (disabled, tooltip names what is missing; a disabled control's tooltip shows on hover through `DisabledTips` on the window's scene, which JavaFX alone never does) | "Cannot start yet — no AI model is chosen." [Open settings] | — | off · off · no |
 | Translating | RUNNING | "51 % done · about 1 h 10 min left" · Model answering (blue) | **Pause** · Stop · Review (6) | — | "Now translating: Chapter 2, segments 5–8" · translating… | read-only ("Pause to edit") · disabled · yes |
 | Pausing | PAUSING | "Pausing…" | Pause disabled · Stop | — | "Pausing… segments 5–8 are translated again when you resume." · translating… | read-only · disabled · yes |
@@ -644,7 +646,7 @@ offer, the stored counts) by `RunStateSource`; `RunStateMappingTest` walks all s
 | Stuck call | RUNNING + call past its usual time | as Translating · No answer for 3:40 (amber) | Pause · Stop · Review (6) | "The model is taking longer than usual (3:40). BookLoom tries again by itself at 6:00. You do not need to do anything." | "The model is taking longer than usual with segments 5–8." · translating… · one clock "3:40 of 6:00" | as Translating |
 | Stopping | STOPPING | "Stopping…" | all disabled | — | "Stopping… segments 5–8 are translated next time." | read-only · disabled · yes |
 | Stopped | STOPPED | "Stopped at 51 %" · Model idle | **Continue translation** · Review (6) | — | "Stopped. Continues at Chapter 2, segment 5." · waiting | editable · partial · no |
-| Finished, to review | COMPLETED | "Finished" · Model idle | Review (6) · **Continue to Export** | "Translation finished. 6 segments need your review. You can export now and review later." [Review 6 segments] — on Translating only; the desk opens by itself | "All segments translated." · no chapter, no chunk | editable · on · no |
+| Finished, to review | COMPLETED | "Finished" · Model idle | Review (6) · **Continue to Export** | "Translation finished. 6 segments need your review. You can export now and review later." [Review 6 segments] — on Translating only; the desk opens by itself | "All segments translated." · no chapter, no chunk (Completed only after the Proofread stage) | editable · on · no |
 | Finished, nothing to review | COMPLETED, 0 flagged | "Finished" | **Continue to Export** | "Translation finished. Nothing needs your review." | as above | "Nothing needs your review" · on · no; the desk does **not** open |
 | Failed | FAILED | "Did not finish" · Error (red) | **Continue translation** · Review (n) | "The translation stopped because of an error. Finished segments are saved." [Show details] | "Stopped by an error at Chapter 2, segment 5." | editable · partial · no |
 
@@ -700,8 +702,11 @@ without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDesk
   translating the desk is read-only ("read-only while translating") with the banner "Pause the translation to edit,
   accept or try again." [Pause]; while a retry is in flight on a run that is not translating the banner says "Trying
   again… the desk is available when the model answers." with no Pause.
-- **Left pane:** a filter box (To review (n) · Worth a second look (n) · All segments, all three always; Worth a second
-  look explains itself on hover) and ‹ › to move; rows show the location, a **state marker** (to review · accepted · your
+- **Left pane:** a filter box (To review (n) · Worth a second look (n) · Changed by proofread (n) · Waiting on a gender
+  (n) · All segments, all five always; Worth a second look explains on hover that it lists the accepted segments the
+  audit or the Proofread stage still doubts — at Fast each gender mismatch the mark list named, as `gender now known:
+  Корін Ешбі — female`; Changed by proofread lists the kept or proposed rewrites; Waiting on a gender the segments with
+  an open gender deferral) and ‹ › to move; rows show the location, a **state marker** (to review · accepted · your
   edit · later · kept as source) and a one-line "why · text" with no formatting tokens; a muted line under the list
   names the shortcuts.
 - **Detail:** the locator, the worst finding said in plain words ("may be missing words", never the rule's code) and the Technical details switch (the shared one); Original
@@ -711,9 +716,12 @@ without leaving the screen shown. **Built** as an `.xl` `ModalCard` (`ReviewDesk
 - **Tabs:** **What may be wrong** (one label per finding — kind · severity · who raised it — and the plain reason plus
   "if it reads well, press Accept"; the rule's kind and own words only with Technical details); **What the model saw**
   (for a batch-drafted segment the sections that batch request really sent, else the segment's stored context);
-  **Suggestion** (Now \| Suggested by the check, applied only by "Use the suggestion").
-- **Footer:** **Close**; **More ▾** (Leave for later · Try again · Try again with a note… · Undo my edit, each with what
-  it does; Undo is off with no edit to undo); the **one main button** **✓ Accept & next**, which turns into **✓ Save my
+  **Suggestion** (Now \| Suggested by the check, applied only by "Use the suggestion"). A segment the Proofread stage
+  read shows "Proofread · kept" (proposed, rejected, unchanged) with its reason, and a kept rewrite "Edit applied" with −
+  before / + after.
+- **Footer:** **Close**; **More ▾** (Leave for later · Try again · Try again with a note… · Undo my edit · Undo proofread,
+  each with what it does; Undo my edit is off with no edit to undo, Undo proofread with no kept proofread rewrite — it
+  puts back the text, status and findings before the rewrite); the **one main button** **✓ Accept & next**, which turns into **✓ Save my
   edit & next** once the text is edited (T7), and "& continue" when a review pause resumes after it. Ctrl/⌘+Enter runs
   the main button and plain Enter does nothing; Ctrl+Alt+↓/↑ moves between segments. **Try again with a note** opens an
   inline panel inside the desk, and Undo and unsaved typing ask in an inline bar, so no second card replaces the desk.

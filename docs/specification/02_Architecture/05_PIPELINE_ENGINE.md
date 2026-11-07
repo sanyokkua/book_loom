@@ -179,10 +179,10 @@ inside stays open — it is never ended `FAILED` — because the next run plans 
 | `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
 | `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
 | `SUMMARY` | one per chapter, planned at the start of translation while the brief's chapter-summary switch is on | the chapter's first segment id | `DONE`; `NO_CALL` for a stored summary or the book's last chapter; `FAILED` when not kept or not stored |
-| `REVISION` | one forecast (`estimated`) at the start of a run whose dial revises backwards | none | `DONE` or `FAILED` |
+| `PROOFREAD` | one per proofread window, planned exactly when each round starts (windows whose fingerprint is already stored are skipped); before that the ledger forecasts them (Balanced and Max: one per mark so far; Max: ⌈story paragraphs ÷ B⌉ for round 2); none at Fast | the window's first focus segment id | `DONE`; `FAILED` when left unread after its pause budget |
 
 Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair`, `redraft`,
-`directed-fix`, `re-ask`, `resend-N`, `summary`, `revision`). The plan is per chunk, not per book; a screen that shows
+`directed-fix`, `re-ask`, `resend-N`, `summary`, `proofread`). The plan is per chunk, not per book; a screen that shows
 a book-level total seeds it from the run's figures.
 
 ## qa-checks {#qa-checks}
@@ -276,7 +276,7 @@ source only when its language has a negation list), so a repair that replaces a 
 removes a stray quote or drops a doubled sentence is not refused for it.
 A candidate that passes the vetoes is kept when its score is not higher and the finding that triggered the edit is
 cleared or the score is strictly lower; the score weighs a blocking finding 5, a repair-level (soft) one 1 and an
-audit one 1. The one repair uses it; the Proofread stage and the export pass reach it in later groups of the redesign.
+audit one 1. The one repair and the Proofread stage's windows (`#proofread-stage`) use it; the export's last check reaches it in group 14 of the redesign.
 
 ### qa-thresholds {#qa-thresholds}
 
@@ -463,18 +463,58 @@ is `chapter summary chapter=… sentences=… dropped=…`; the text is logged a
 
 ## deferred-resolution-and-backward-revision {#deferred-resolution}
 
-When a chunk cannot be finalized without facts revealed later (a gendered pronoun for a not-yet-introduced character, a
-term whose canonical form is decided later), the engine records a **deferred-resolution** entry. Deferrals are detected
-two ways: the draft/judge calls may **emit** an optional `deferrals:[{segmentId,reason}]` array
-(`12_PROMPT_CATALOG.md`), and a deterministic **unknown-gender heuristic** flags a target segment that references a
-glossary person whose dictionary gender is still `unknown`.
+When a segment is decided before a fact it depends on is known (a character's gender, a target the person changes
+later), the engine records a **deferral** (`api: project/Deferral`, `DeferralReason`). One helper,
+`revision/DeferralRegister.changed(before, after, decided)`, is the only producer for every glossary write (the service,
+`GenderConfirmations` through it, the names pass's `NamesPassStore` and the CSV import's `GlossaryRowsImport`): a TERM
+deferral when a PINNED or LOCKED entry's non-empty target changes, a `GENDER_CHANGED` one per decided segment naming an
+entry whose enforced gender (the person's or the book's, a confirmed likely value included) appears or changes, and
+`GENDER_UNKNOWN` only for an entry with no gender of any origin. A proofread rewrite of the person's edit waits on a
+`PROOFREAD` deferral, which carries the proposal. Max's backward-revision pass is gone from the run; the deferrals are
+the Proofread stage's input.
 
-In the optional **backward-revision** pass (dial-gated, whole-book), deferred items are resolved with full-book facts
-and affected earlier segments are re-rendered → `REVISED`, and a global **term-consistency sweep** normalizes glossary
-usage. The sweep **proposes, never overwrites**: **user-`REVISED` segments are protected** and change only with explicit
-user opt-in (a `REVISED → REVISED` transition). The sweep is **bounded to segments containing a swept term**; it applies
-**deterministic string substitution for locked terms** and invokes an **LLM re-render only** for gender/agreement
-deferrals.
+### proofread-stage {#proofread-stage}
+
+`pipeline.proofread.ProofreadStage` runs after the last chunk at every dial (`run/StageRunner`); the run is COMPLETED
+only after it and the stage is announced with `StageStarted(JobStage.PROOFREAD)`. As Translate ends, `run/RunAudit`
+runs the final audit once (never again after the stage). Then, by code: the term sweep (`revision/CodeSweep` over
+`TermSweep`; LOCKED whole-word, PINNED through `NameForms.forms`, never SUGGESTED, a proposal through `RevisionWriter`
+for a person-edited segment; it consumes TERM deferrals), the narrator inference (`run/NarratorStage`), the deferrals
+whose fact arrived checked by the gender check (agreeing → resolved, no call; disagreeing → an open mark with the reason
+`gender now known: {target} — {gender}`, `proofread/GenderNowKnown`), and `proofread/MarkList` (tier 1 = FLAGGED,
+a REPAIR-level finding left, deferrals whose fact arrived; tier 2 = NOTE findings, audit doubts, the map-name, one-source
+-two-targets, recurring-term and gender-ending detectors; story segments only). **Marks** are findings or open
+deferrals, never records, so the desk computes the same list. A stop is checked between the code steps
+(`JobBoundaries.isStopRequested()`). The dial's `proofreadCoverage` decides what follows: `NONE` (Fast) stops here,
+`MARKED_AND_DOUBTFUL` (Balanced) reads the marked windows, `MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH` (Max) adds round 2.
+
+**Windows.** `ProofreadWindows` merges marks in reading order with at most one unmarked story segment between them,
+up to the profile's batch size, plus one read-only neighbour each side, keeping each mark's reasons (blocking first);
+`ProofreadWindows.tiles` cuts Max's round 2 into windows of at most the batch size, open marks riding as reasons. A
+first-round window whose focus all holds whole-book verdicts is skipped. `ProofreadCall` builds `PromptName.PROOFREAD`
+/ `CallKind.PROOFREAD` through `ContextBuilder` with the TRANSLATE frame (the drafts' system part byte for byte), block
+12 the target file's `proofreadInstruction` and `proofreadRules`, block 13 the focus items, block 10 the neighbours
+read-only; temperature 0.1, reasoning off unless the person's override allows it, schema titled `proofread`, the
+run's own model through the one gate (`12_PROMPT_CATALOG.md#proofread`).
+
+**Verdicts.** `WindowVerdicts` reads the reply through `ProofreadJudge` (hard gates + `NeverWorse`;
+`qa/NeverWorseReasons` names what got worse) into `api: project/ProofreadVerdict(fingerprint, outcome, reason, before,
+statusBefore, maskedBefore, findingsBefore)` with `ProofreadOutcome {KEPT, PROPOSED, REJECTED, UNCHANGED}`, held in
+`SegmentRecord.proofread`. KEPT: ACCEPTED → REVISED, FLAGGED → REVISED only when every blocking finding is cleared;
+otherwise, and for a person-edited text, PROPOSED on a `PROOFREAD` deferral; REJECTED with the gate's reason. A later
+window that changes nothing leaves an earlier KEPT verdict and its `before`, so Undo proofread restores the original.
+A window's texts, verdicts and resolved deferrals are one `ChunkCommit` (`resolvedDeferralIds`), one transaction in both
+adapter families.
+
+**Resume.** `proofread/WindowFingerprint` hashes the focus sources and current targets, the neighbour targets, the map
+lines the planned call carries (`ProofreadCall.plan`, no model call), the prompt version and the round, written
+`r<round>:<sha-256>`. Planning skips a window whose focus all holds a verdict with the current fingerprint; each round
+plans the rest as `PROOFREAD` steps when it starts (`StepsPlanned`). Continue starts at the first stage with work and logs
+`Proofread round 1 continues at window 41 of 120`; a pause aborts the in-flight proofread call and makes it again on
+resume; a stop leaves the window undecided; a window past its pause budget is left unread (`FAILED` step) with its marks
+kept. The between-stages pause point sits before Proofread. The window learns its standing through `api:
+pipeline/ProofreadProgress` (`proofread/ProofreadTallies`: windows read are a round's distinct stored fingerprints).
+Events: `ProofreadForecast`, `ProofreadRoundStarted`, `ProofreadWindowRead`.
 
 ## brief-key-recheck {#brief-key-recheck}
 
@@ -492,8 +532,8 @@ no edit, a `placeholder` finding).
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
-output): draft 0.2 (the default), judge 0.1, repair 0.1, directed fix 0.2, backward
-revision 0.2, pre-scan/summary 0.2. These are the pipeline's per-kind values; a model's own settings on Settings ›
+output): draft 0.2 (the default), judge 0.1, repair 0.1, directed fix 0.2, proofread
+0.1, pre-scan/summary 0.2. These are the pipeline's per-kind values; a model's own settings on Settings ›
 Models (`01_Product/07_SETTINGS.md#models-tab`) may replace them, and a review-desk retry can opt into 0.1 for its draft
 call when a lower temperature is asked. Every call carries a **reasoning intent** for its kind (off for draft, repair,
 proofread, names and brief), never a level; `:llm` maps the intent through the model's profile to the engine's own field
@@ -519,7 +559,7 @@ Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.m
 |------------------------------------|------------------|----------|-------|
 | fixing call (`RepairMode`)         | marks-only re-draft | one repair | one repair |
 | reviewer passes per chunk          | 0                | 1        | 2     |
-| backward revision runs             | no               | no       | yes   |
+| Proofread stage (`#proofread-stage`) | code only, no call | + one call per marked window | + round 2 over every story paragraph |
 
 The dial no longer sets the batch size or a chunk's segment cap: the batch size belongs to the model profile
 (`#tiered-loop`, step 1), so the dial means the same for every model. A review retry runs with no repair

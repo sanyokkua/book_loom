@@ -2653,3 +2653,35 @@ decision of the chunk in flight, which can now be more segments than before; and
 pair of the chunk in one reviewer call, so the reviewer prompt (and its output cap) is larger. Reviewer slicing and a
 per-batch commit belong to groups 11 and 14. Recommended first: measure, at Max on `mini`, the reviewer prompt's tokens
 and replies cut by length, and the decided segments a kill in mid-chunk loses.
+
+### Redesign group 13 status {#redesign-group-13}
+
+Group 13 (the Proofread stage of `redesign-translation-pipeline`) is built: a run is Prepare · Translate · Proofread at
+every dial and is Completed only after Proofread (`01_Product/05_TRANSLATION_ALGORITHM.md#proofread-stage`,
+`02_Architecture/05_PIPELINE_ENGINE.md#proofread-stage`, `12_PROMPT_CATALOG.md#proofread`). `ProofreadStageAcceptanceTest`
+is green on both dialects (3 cases × Ollama-native and OpenAI-compatible). Task 13.10 results: GATE_RESULT
+
+HAND_RESULT
+
+**Open items carried forward** (none blocks the group; each names what would settle it):
+
+- *11.6 prompt wording.* The names, brief and file-name calls moved onto the ANALYSIS frame with their task wording as it
+  was; no template was reworded for a frame that no longer carries the style sheet, rules and examples, and no eval
+  measured whether a rewording helps. Settled by a paired names/brief eval (`--suite names`, `--suite setup`) of a
+  reworded set against today's.
+- *Chunk limits.* The dial's chunk cap is gone (10.8), so a chunk closes on the token budget alone; a kill loses the chunk
+  in flight and the reviewer reads the whole chunk in one call (`#redesign-group-10`, "Open item"). Group 14 removes the
+  reviewer; a per-batch commit is still unmeasured.
+- *Arm 5c hint.* Rules per window halved the gender slips on `sequence` (9 against 4, one run a side) with no significance
+  test, so rules stay per book (`#redesign-arms`). Worth a K = 3 `sequence` repeat if gender slips stay a top defect.
+- *Speed.* The goal of about 1.6 s per segment on e4b is not met (3.0 s; `#15d-results`): generating the translation is the
+  floor (about 2.0 s a segment at about 38 tokens a second). The Proofread stage adds calls at Balanced (one per marked
+  window) and Max (round 2 over every story paragraph); its time is measured per kind in the run summary.
+- *Arm 7c caveat.* P1 (the target-language proofread block) stayed on a tie: no book yet had a proofread rewrite pass the
+  never-worse gate (`mini-en` 6–11 proposals per repeat refused, `mini-ru` none proposed), so the judge screen graded
+  0 changed paragraphs. A book where rewrites are kept is needed before the prompt choice means anything (arm 7b reuses
+  `ProofreadJudgeEvalTest`).
+- *Echo check on near-literal ru→uk.* The dataset's word-for-word Ukrainian reference of a mini-ru line is 90 % like its
+  Russian source, so the echo check flagged it (13.5 had to change the acceptance test's trap draft). Close languages may
+  produce correct drafts the echo check calls untranslated; open question: measure the echo check's false flags on
+  decided ru→uk text (`DetectorsRuUkTest` holds the cases) before tuning its threshold per pair.

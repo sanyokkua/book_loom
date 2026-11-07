@@ -7,11 +7,12 @@ flowchart TD
     S5["5 · Auto-check + LLM reviewer<br/>accept if no check blocks and no verified blocker is left<br/>repair only what fails"] --> S6
     S6{"More chunks / chapters?"}
     S6 -- yes --> S4
-    S6 -- no --> BR["6 · Optional backward revision<br/>resolve deferred gender/terms with full-book facts"]
-    BR --> S7["7 · Put text back into the tree<br/>images/fonts/IDs untouched, update language tags"]
+    S6 -- no --> PR["6 · Proofread stage (every dial)<br/>audit · term sweep · deferrals settled by code · mark list<br/>Balanced/Max: one minimal-edit call per marked window, never-worse gate<br/>Max: round 2 over every story paragraph · Fast: no model call"]
+    PR --> S7["7 · Put text back into the tree<br/>images/fonts/IDs untouched, update language tags"]
     S7 --> S8["8 · Repackage<br/>EPUB (mimetype-first) / FB2 / MD / TXT"]
     S8 --> S9["9 · Optional whole-book consistency pass"]
     S9 --> DONE(["Translated book saved"])
     S5 -. " failing segments (rare) " .-> Q["Flagged segments<br/>(optional human look)"]
-    S5 -. " deferrals emitted<br/>(facts revealed later) " .-> BR
+    S5 -. " deferrals and marks<br/>(facts revealed later) " .-> PR
+    PR -. " Fast marks, proposals,<br/>kept rewrites (Undo proofread) " .-> Q
     S8 --> Q

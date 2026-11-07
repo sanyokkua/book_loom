@@ -586,9 +586,43 @@ The check behind the finding is chosen by the target language's file (`genderChe
   speech.`, is repeated in the repair's defect list with the quoted formal form (15i.T6). The forms are the target
   file's `informalAddress` and `formalAddress` keys.
 
+## proofread {#proofread}
+
+The Proofread stage's one call per window (`05_TRANSLATION_ALGORITHM.md#proofread-stage`; `PromptName.PROOFREAD`,
+`CallKind.PROOFREAD`, Balanced and Max only — Fast makes none). Built through `ContextBuilder` with the **TRANSLATE
+frame**, so its system part is the drafts' byte for byte (role, data sentence, rules, style sheet, pair rules, examples,
+JSON line). The last user message holds block 10, the window's read-only neighbours (source and translation), the map
+items whose forms occur in the window, block 12, the target file's minimal-edit block, and block 13, the focus items —
+each by its segment id with its source, its current text and the reasons it was marked for (blocking first).
+
+Block 12 is `proofread.user.prompt`:
+
+```text
+{{instruction}}
+{{#rules}}
+{{rules}}
+{{/rules}}
+When no item needs a change, return exactly: {"unchanged":true}
+Otherwise return exactly one JSON object holding only the items you changed, each under its own id: {"items":[{"id":"<id>","target":"<corrected translation>"}]}
+```
+
+`{{instruction}}` is the target file's `proofreadInstruction` (Ukrainian: «Ти коректор перекладу з
+{{sourceLanguageGenitive}} на українську. …»; `proofreadInstruction.noSource` for a book whose source language nobody
+chose), `{{sourceLanguageGenitive}}` the target file's `languageGenitive.<tag>` (a source with none gets the English
+default), and `{{rules}}` its `proofreadRules` (at most 5 lines: fix wrong or missing meaning, a wrong name form,
+gender agreement or a word left in the source language; keep each `⟦…⟧` mark once; leave a correct sentence exactly as
+it is; the neighbours are read-only). A target file with no instruction gets the English default of
+`generic.properties`. Arm 7c (redesign 13.9) kept this target-language block against an English frame (a tie).
+
+Parameters: temperature 0.1; reasoning off unless the person's Thinking override allows it for proofreading (a model
+whose profile declares no reasoning field gets none sent); response schema titled `proofread`; output cap the pair
+reserve over the focus. Reply: `{"unchanged":true}` or the changed items only; an id outside the focus and a text equal
+to the current are dropped, a focus id left out is unchanged, and every change passes the hard gates and the
+never-worse gate before it is kept (`02_Architecture/05_PIPELINE_ENGINE.md#proofread-stage`).
+
 ## backward-revision-consistency {#backward-revision-consistency}
 
-Optional whole-book pass (dial-gated: Max or the export toggle), applied **one segment per call**. Resolves
+Optional whole-book pass, now only the export's last check (gone from the run since redesign group 13; group 14 removes it), applied **one segment per call**. Resolves
 deferred-resolution items with full-book facts and aligns terminology, re-rendering an affected earlier segment to
 `REVISED` (`05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, `FR-ALGO-D1`/`D2`). This **LLM re-render is invoked
 only for gender/agreement deferrals**; **locked-term** consistency is applied by **deterministic string substitution**
