@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
@@ -80,7 +81,7 @@ class TranslationJobNarratorGenderTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, WRONG);
@@ -155,7 +156,7 @@ class TranslationJobNarratorGenderTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
         assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(WRONG);
         assertThat(stored(project, "Book.txt:0").findings())
                 .filteredOn(finding -> finding.kind().equals("ignored-edit"))

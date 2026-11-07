@@ -24,6 +24,7 @@ class PromptNameTest {
     @ParameterizedTest
     @CsvSource({
         "REPAIR,repair,REPAIR,draft-batch-json,0.1",
+        "PROOFREAD,proofread,PROOFREAD,proofread,0.1",
         "TRANSLATE,translate,DRAFT,draft-batch-json,0.2",
         "FORMAT_REASK,format-reask,STRUCTURAL_REPAIR,draft-batch-json,0.2",
         "REVIEWER,reviewer,REVIEW,reviewer,0.0",
@@ -72,6 +73,7 @@ class PromptNameTest {
     @CsvSource({
         "FORMAT_REASK",
         "REPAIR",
+        "PROOFREAD",
         "REVIEWER",
         "DIRECTED_FIX",
         "REVISION",

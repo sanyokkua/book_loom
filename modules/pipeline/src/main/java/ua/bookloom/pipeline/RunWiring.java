@@ -15,17 +15,20 @@ import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.RunFrame;
 import ua.bookloom.pipeline.context.RunFrames;
 import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StepAnnouncer;
+import ua.bookloom.pipeline.proofread.ProofreadCall;
 import ua.bookloom.pipeline.proofread.ProofreadStage;
 import ua.bookloom.pipeline.proofread.ProofreadTools;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.PrepStage;
+import ua.bookloom.pipeline.run.RoutedCalls;
 import ua.bookloom.pipeline.run.RunSettings;
 import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
@@ -34,6 +37,7 @@ import ua.bookloom.pipeline.run.RunStores;
 import ua.bookloom.pipeline.run.RunWindow;
 import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.SummariesSwitch;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /** Wires one run's stages and chunk runner from the tools a job holds, so the job itself names none of the steps. */
 @Slf4j
@@ -41,6 +45,7 @@ final class RunWiring {
 
     private final RunRequest request;
     private final ChatModel model;
+    private final JobTools tools;
     private final RunStores stores;
     private final ChunkRunnerFactory chunkRunners;
     private final PromptTemplates templates;
@@ -66,6 +71,7 @@ final class RunWiring {
         Objects.requireNonNull(checks, "checks");
         this.request = Objects.requireNonNull(request, "request");
         this.model = tools.model();
+        this.tools = tools;
         this.stores = Objects.requireNonNull(stores, "stores");
         this.chunkRunners = new ChunkRunnerFactory(tools, stores, checks);
         this.templates = tools.templates();
@@ -113,16 +119,39 @@ final class RunWiring {
                 run.document().units(),
                 () -> stores.summaries().list(request.projectId()),
                 new SummariesSwitch(stores, request.projectId(), brief.summariesOn()));
-        return stagesOf(
-                run, settings, sinks, chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner));
+        final ChunkRunner chunks = chunkRunners.create(run, settings, runWindow, sinks, calls, batchSize, planner);
+        return stagesOf(run, settings, sinks, chunks, windowsOf(run, settings, sinks, calls, planner));
+    }
+
+    // The proofread windows go to the run's own model through the run's one call seam (design D15 "Call").
+    private ProofreadStage.Windows windowsOf(
+            final RunStart.Started run,
+            final RunSettings settings,
+            final RunSinks sinks,
+            final ModelCalls calls,
+            final TranslatePlanner planner) {
+        final GateFunction gate = TypographyGate.around(
+                GateFunction.of(tools.documents(), run.document().format()),
+                settings.frame().targetLanguage(),
+                settings.frame().typography());
+        return new ProofreadStage.Windows(
+                new ProofreadCall(planner, calls, tools.mapper()),
+                gate,
+                new RoutedCalls(sinks.boundaries()),
+                planner,
+                words);
     }
 
     // The narrator count serves both the Proofread stage and a run stopped during Translate.
     private StageRunner stagesOf(
-            final RunStart.Started run, final RunSettings settings, final RunSinks sinks, final ChunkRunner chunks) {
+            final RunStart.Started run,
+            final RunSettings settings,
+            final RunSinks sinks,
+            final ChunkRunner chunks,
+            final ProofreadStage.Windows windows) {
         final NarratorStage narrator = new NarratorStage(stores, sinks, run.document(), settings);
         final ProofreadStage proofreadStage = new ProofreadStage(
-                new ProofreadStage.Parts(stores, proofread, words, narrator), settings, sinks, run.document());
+                new ProofreadStage.Parts(stores, proofread, words, narrator), windows, settings, sinks, run.document());
         return new StageRunner(chunks, settings, sinks, narrator, proofreadStage);
     }
 

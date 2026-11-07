@@ -156,6 +156,16 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"summary\":\"A CLERK FINDS A LEDGER.\"}");
     }
 
+    // The offline model cannot proofread, so every window it reads stays as it is, in the proofread reply's own shape.
+    @Test
+    void answer_proofreadKind_unchanged() {
+        final ChatResponse response = send(
+                "<Items>\n<s id=\"ch1:0\">\nSource: He left.\nCurrent translation: Він пішов.\n</s>\n</Items>",
+                "proofread");
+
+        assertThat(response.content()).isEqualTo("{\"unchanged\":true}");
+    }
+
     // The cap is a provider-side control the pseudo model has no use for; the reply is the same with it set.
     @Test
     void chat_requestWithOutputCap_repliesAsWithoutOne() {

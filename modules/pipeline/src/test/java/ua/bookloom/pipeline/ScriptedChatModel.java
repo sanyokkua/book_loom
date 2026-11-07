@@ -16,6 +16,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.BatchSchema;
@@ -30,7 +31,8 @@ import ua.bookloom.pipeline.prompt.BatchSchema;
  * kind — and every other request takes the next outcome added with {@link #answer(Result)}. A chapter-summary
  * request never takes from that general queue: a test that scripts none under {@code chapter_summary} gets a
  * {@code validation} error for it, so a multi-chapter run's summary call never eats a draft's reply and the run, which
- * only warns about a summary it could not keep, goes on.
+ * only warns about a summary it could not keep, goes on. A proofread request no test scripted under {@code proofread}
+ * is answered {@code {"unchanged":true}}, so a Balanced or Max run's Proofread windows never eat a draft's reply.
  */
 public final class ScriptedChatModel implements ChatModel {
 
@@ -40,6 +42,7 @@ public final class ScriptedChatModel implements ChatModel {
     private static final String REASK = "structural-repair";
     private static final Pattern ITEM = Pattern.compile("<s id=\"[^\"]+\">");
     private static final String CHAPTER_SUMMARY = "chapter_summary";
+    private static final String PROOFREAD = "proofread";
 
     private final ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>> outcomes = new ConcurrentLinkedDeque<>();
     private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Supplier<Result<ChatResponse>>>> named =
@@ -142,6 +145,9 @@ public final class ScriptedChatModel implements ChatModel {
             final var byName = forName == null ? null : forName.pollFirst();
             if (byName != null) {
                 return byName;
+            }
+            if (PROOFREAD.equals(name)) {
+                return () -> Result.ok(new ChatResponse("{\"unchanged\":true}", FinishReason.STOP));
             }
             if (CHAPTER_SUMMARY.equals(name)) {
                 return () -> Result.err(

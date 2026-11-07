@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
@@ -101,7 +102,7 @@ class TranslationJobGenderOriginTest {
 
         report(TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
         assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(FEMININE);
     }
 

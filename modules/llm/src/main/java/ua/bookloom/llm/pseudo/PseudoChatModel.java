@@ -42,6 +42,9 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_REVIEWER = "reviewer";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_CHAPTER_SUMMARY = "chapter_summary";
+    private static final String FORMAT_PROOFREAD = "proofread";
+    // The offline model cannot proofread: every window it is shown stays as it is.
+    private static final String PROOFREAD_REPLY = "{\"unchanged\":true}";
     private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
@@ -124,6 +127,7 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_REVIEWER -> REVIEWER_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_CHAPTER_SUMMARY -> writeValue(Map.of("summary", translation));
+            case FORMAT_PROOFREAD -> PROOFREAD_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
             case FORMAT_TERM_READING -> readingReply(source);

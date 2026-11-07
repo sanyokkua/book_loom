@@ -10,14 +10,17 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.prompt.ProofreadInstruction;
 
 /**
  * Writes the call's own blocks of a translate-family prompt (design D8): block 11 from the repair and format re-ask
- * templates, block 12 from the translate template and block 13's numbered items, so the wording of each is the
- * catalogue's, never code.
+ * templates, block 12 from the translate template (a proofread call's from the proofread template and the target's
+ * instruction) and block 13's items, so the wording of each is the catalogue's, never code.
  */
 @Slf4j
 final class CallBlocks {
+
+    private static final String TEXT = "{text}";
 
     private final PromptTemplates templates;
     private final BlockWords words;
@@ -27,7 +30,15 @@ final class CallBlocks {
         this.words = words;
     }
 
-    String task(@Nullable final String source, final String target) {
+    // Block 12: the translate task, or a proofread call's minimal-edit instruction and rules from the target's file.
+    String task(final CallKind kind, @Nullable final String source, final String target) {
+        if (kind == CallKind.PROOFREAD) {
+            final ProofreadInstruction.Block block = templates.proofreadBlock(source, target);
+            final Map<String, String> values = new HashMap<>();
+            values.put("instruction", block.instruction());
+            values.put("rules", block.rules());
+            return templates.renderUser(PromptName.PROOFREAD, values).strip();
+        }
         return templates
                 .renderUser(PromptName.TRANSLATE, RunFrames.languageSlots(source, target))
                 .strip();
@@ -64,6 +75,21 @@ final class CallBlocks {
         return String.join("\n\n", parts);
     }
 
+    // A proofread item is named by its segment's id, so a reply answers the segment, never a position in the window.
+    private List<String> proofreadItem(final FocusItem item, final List<String> reasons) {
+        final List<String> lines = new ArrayList<>();
+        lines.add(words.get(BlockWords.PROOFREAD_OPEN).replace("{id}", item.segmentId()));
+        lines.add(words.get(BlockWords.PROOFREAD_SOURCE).replace(TEXT, item.maskedSource()));
+        lines.add(words.get(BlockWords.PROOFREAD_CURRENT)
+                .replace(TEXT, Objects.requireNonNull(item.currentTarget(), "currentTarget")));
+        reasons.stream()
+                .filter(reason -> !reason.isBlank())
+                .forEach(reason ->
+                        lines.add(words.get(BlockWords.PROOFREAD_REASON).replace("{reason}", reason)));
+        lines.add(words.get(BlockWords.PROOFREAD_CLOSE));
+        return lines;
+    }
+
     private List<String> defects(final Focus focus) {
         final List<String> lines = new ArrayList<>();
         final boolean one = focus.items().size() == 1;
@@ -85,9 +111,14 @@ final class CallBlocks {
         final List<String> lines = new ArrayList<>();
         lines.add(words.get(BlockWords.ITEMS_OPEN));
         for (int index = 0; index < focus.items().size(); index++) {
-            lines.add(words.get(BlockWords.ITEM)
-                    .replace("{id}", Integer.toString(index + 1))
-                    .replace("{text}", focus.items().get(index).maskedSource()));
+            final FocusItem item = focus.items().get(index);
+            if (item.currentTarget() == null) {
+                lines.add(words.get(BlockWords.ITEM)
+                        .replace("{id}", Integer.toString(index + 1))
+                        .replace(TEXT, item.maskedSource()));
+            } else {
+                lines.addAll(proofreadItem(item, focus.reasons().getOrDefault(item.segmentId(), List.of())));
+            }
         }
         lines.add(words.get(BlockWords.ITEMS_CLOSE));
         lines.addAll(reminder);

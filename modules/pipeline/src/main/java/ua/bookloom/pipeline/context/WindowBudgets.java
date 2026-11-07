@@ -275,7 +275,8 @@ public final class WindowBudgets {
                     "fit share summaries={} over {}: drop the oldest", summaryTokens(kept, budget), shares.summaries());
             kept.removeFirst();
         }
-        return new Candidate(new Window(previous, window.focus(), next), List.copyOf(kept), Set.of());
+        final @Nullable String nextTarget = next == null ? null : window.nextTarget();
+        return new Candidate(new Window(previous, window.focus(), next, nextTarget), List.copyOf(kept), Set.of());
     }
 
     private static int sourceTokens(final List<WindowPair> pairs, final Budget budget) {

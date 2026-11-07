@@ -41,7 +41,8 @@ public record TranslateContext(
      * @return the window with the previous pairs and the next source kept; never null
      */
     public Window windowFor(final Focus focus) {
-        return new Window(window.previous(), Objects.requireNonNull(focus, "focus"), window.nextSource());
+        return new Window(
+                window.previous(), Objects.requireNonNull(focus, "focus"), window.nextSource(), window.nextTarget());
     }
 
     /**

@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
@@ -58,7 +59,7 @@ class TranslationJobAlphabetTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.FLAGGED, RUSSIAN_LETTER);

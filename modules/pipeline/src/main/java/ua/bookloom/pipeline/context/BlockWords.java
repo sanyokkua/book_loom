@@ -43,6 +43,12 @@ final class BlockWords {
     static final String WINDOW_SOURCE = "window.source";
     static final String WINDOW_TARGET = "window.target";
     static final String WINDOW_NEXT = "window.next";
+    static final String WINDOW_NEXT_TARGET = "window.nextTarget";
+    static final String PROOFREAD_OPEN = "proofread.open";
+    static final String PROOFREAD_SOURCE = "proofread.source";
+    static final String PROOFREAD_CURRENT = "proofread.current";
+    static final String PROOFREAD_REASON = "proofread.reason";
+    static final String PROOFREAD_CLOSE = "proofread.close";
     static final String LABEL = "label.";
     static final String EARLIER_HEADING = "earlier.heading";
     static final String EARLIER_LINE = "earlier.line";
@@ -79,6 +85,12 @@ final class BlockWords {
             WINDOW_SOURCE,
             WINDOW_TARGET,
             WINDOW_NEXT,
+            WINDOW_NEXT_TARGET,
+            PROOFREAD_OPEN,
+            PROOFREAD_SOURCE,
+            PROOFREAD_CURRENT,
+            PROOFREAD_REASON,
+            PROOFREAD_CLOSE,
             LABEL + "marks",
             LABEL + "dialogue",
             LABEL + "address",

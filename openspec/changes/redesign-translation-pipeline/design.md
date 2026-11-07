@@ -669,7 +669,8 @@ task edits the delta requirement and this file's line; the result is written int
   it; temperature 0.1; output = the pair reserve over the focus. The proofreading model is the drafter.
 - **Reply.** `{"unchanged":true}` or changed items; ids outside the focus and texts identical to the current are
   dropped; a missing focus id is UNCHANGED. Each change goes through `NeverWorse`. A person-edited text is never
-  rewritten: the change becomes a proposal (`RevisionWriter`), outcome PROPOSED. Keep on an ACCEPTED segment → status
+  rewritten: the change becomes a proposal held on a `DeferralReason.PROOFREAD` deferral (the desk's proposal
+  carrier), outcome PROPOSED. Keep on an ACCEPTED segment → status
   REVISED, outcome KEPT, `before` stored. Keep on a FLAGGED segment → REVISED and KEPT only when the kept text clears
   every blocking finding; otherwise the segment stays FLAGGED and the text is stored as a proposal for the desk
   (PROPOSED). A Reject → REJECTED. The review-queue delta's status machine says the same.
@@ -1109,7 +1110,7 @@ The command line keeps the in-memory adapters and is unaffected.
 | 10 | `SegmentRecord` − `repairRounds` (stored findings keep `QaFinding.kind` as a string, so the new `FindingKind` and `CheckName` constants change no fingerprint) | yes |
 | 11 | `ContextSnapshot` → `(frameHash, sections, chapterSummaryKeys, retry)`; new `promptFrame` document root (`PromptFrame`) | yes |
 | 12 | `RollingSummary` → `ChapterSummary` (root replaced); `BookBrief` + `storyShape`, `chapterSummaries` | yes |
-| 13 | `SegmentRecord` + `proofread: ProofreadVerdict` (with `ProofreadOutcome`); `DeferralReason` + `GENDER_CHANGED` | yes |
+| 13 | `SegmentRecord` + `proofread: ProofreadVerdict` (with `ProofreadOutcome`); `DeferralReason` + `GENDER_CHANGED`, `PROOFREAD` | yes |
 | 14 | `ExportRecord.verifiedSegments` → `proofreadSegments` (`ProofreadSummary` replaces `ExportReport.consistency`, which is not stored); settings key `automation.lastCheck` gone | yes |
 | 15–17 | none | no |
 

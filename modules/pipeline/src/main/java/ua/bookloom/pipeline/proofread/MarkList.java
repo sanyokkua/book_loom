@@ -170,7 +170,15 @@ public final class MarkList {
                 .toList();
     }
 
-    private static boolean isListed(final SegmentRecord record, final Set<SegmentKind> kept) {
+    /**
+     * Whether a stored segment holds a decided text the stage reads: not pending, not kept verbatim or in the source
+     * language.
+     *
+     * @param record the non-null stored record
+     * @param kept the auxiliary kinds the brief keeps in the source language
+     * @return {@code true} if the stage may list or read it, {@code false} otherwise
+     */
+    static boolean isListed(final SegmentRecord record, final Set<SegmentKind> kept) {
         return record.status() != SegmentStatus.PENDING
                 && maskedTarget(record) != null
                 && record.path() != SegmentPath.VERBATIM
@@ -178,11 +186,13 @@ public final class MarkList {
                 && !record.isKeptAsSource(kept);
     }
 
-    private static @Nullable String maskedTarget(final SegmentRecord record) {
+    /** The decided text a window shows: the person's edit, else the machine's; null when there is none. */
+    static @Nullable String maskedTarget(final SegmentRecord record) {
         return record.maskedUserTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
     }
 
-    private static List<Segment> storySegments(final Document document) {
+    /** The segments of the book's body units, in reading order: the story the stage reads. */
+    static List<Segment> storySegments(final Document document) {
         return document.units().stream()
                 .filter(unit -> !unit.isAuxiliary() && unit.role() == UnitRole.BODY)
                 .flatMap(unit -> unit.segments().stream())

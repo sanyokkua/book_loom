@@ -51,7 +51,13 @@ final class WindowBlocks {
         section(sections, words.get(BlockWords.MEMORY_HEADING), memory);
         final String next = window.nextSource();
         if (next != null) {
-            section(sections, words.get(BlockWords.WINDOW_NEXT), List.of(DisplayText.of(next)));
+            final List<String> lines = new ArrayList<>();
+            lines.add(DisplayText.of(next));
+            final String nextTarget = window.nextTarget();
+            if (nextTarget != null) {
+                lines.add(words.get(BlockWords.WINDOW_NEXT_TARGET).replace(TEXT, DisplayText.of(nextTarget)));
+            }
+            section(sections, words.get(BlockWords.WINDOW_NEXT), lines);
         }
         return String.join("\n\n", sections);
     }

@@ -178,6 +178,34 @@ public final class TranslatePlanner {
     }
 
     /**
+     * Plans one proofread window (design D15 "Call"): the run's frame, the window's map items, its read-only
+     * neighbours and its focus with each item's current text. No protected span is hidden, since the current texts
+     * already show every locked name as its rendering.
+     *
+     * @param window the non-null window: the read-only pair before, the focus, the read-only segment after
+     * @param map the non-null book map as it stands now
+     * @return the fitted plan, or the builder's error
+     */
+    public Result<ContextBuilder.FittedPlan> planProofread(final Window window, final BookMap map) {
+        Objects.requireNonNull(window, "window");
+        Objects.requireNonNull(map, "map");
+        final int size = contextSize.getAsInt();
+        final List<EarlierSummary> earlier = earlierChapters(window.focus());
+        log.debug(
+                "Planning PROOFREAD for {} items summaries={} contextSize={}",
+                window.focus().items().size(),
+                earlier.size(),
+                size);
+        return builder.planFitted(
+                CallKind.PROOFREAD,
+                window,
+                map,
+                frame,
+                profile,
+                new CallInputs(List.of(), size, List.of(), KindExtra.NONE, earlier));
+    }
+
+    /**
      * The focus of one item.
      *
      * @param segmentId the non-null segment id

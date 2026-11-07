@@ -3,7 +3,7 @@ package ua.bookloom.pipeline.run;
 import java.util.function.Function;
 
 /** A call's answer once the run went on, or how the run ended while it waited for one. */
-sealed interface Step<T> {
+public sealed interface Step<T> {
 
     /**
      * Reads the step by which way it went.

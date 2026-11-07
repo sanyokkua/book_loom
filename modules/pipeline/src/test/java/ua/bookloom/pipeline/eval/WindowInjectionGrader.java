@@ -32,6 +32,7 @@ final class WindowInjectionGrader {
     private static final String NEXT_HEADING = "[Next item after the batch";
     private static final String SOURCE_PREFIX = "Source: ";
     private static final Pattern TAG = Pattern.compile("</?s(?:\\s[^>]*)?>");
+    private static final Pattern SOURCE_LINE = Pattern.compile("(?m)^Source: ");
     private static final Pattern ALSO = Pattern.compile("\\(also ([^)]*)\\)");
     private static final Pattern TRAILING_NOTE = Pattern.compile("\\s*\\([^)]*\\)\\s*$");
     private static final Pattern COMMA = Pattern.compile(",");
@@ -80,7 +81,8 @@ final class WindowInjectionGrader {
             return null;
         }
         final List<String> windowLines = new ArrayList<>();
-        windowLines.add(TAG.matcher(text).replaceAll(""));
+        // A proofread item shows its source after "Source: ", so the window's end is found by the source alone.
+        windowLines.add(SOURCE_LINE.matcher(TAG.matcher(text).replaceAll("")).replaceAll(""));
         sections(user, List.of(PAIRS_HEADING)).stream()
                 .filter(l -> l.startsWith(SOURCE_PREFIX))
                 .map(l -> TAG.matcher(l.substring(SOURCE_PREFIX.length())).replaceAll(""))

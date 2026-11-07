@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
@@ -111,7 +112,7 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.FLAGGED, SegmentPath.REPAIRED, RUSSIAN_LETTER);
@@ -127,7 +128,7 @@ class TranslationJobRepairGuardsTest {
         report(job(project, model).run());
 
         final SegmentRecord stored = stored(project, "Book.txt:0");
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored)
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, RIGHT);
@@ -177,7 +178,7 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
         assertThat(model.requests().getLast().messages().getLast().content())
                 .contains("Chisel")
                 .doesNotContain("female");
@@ -196,7 +197,7 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW);
+        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
         assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(FEMININE);
     }
 

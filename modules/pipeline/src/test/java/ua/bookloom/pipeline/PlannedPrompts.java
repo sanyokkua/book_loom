@@ -15,12 +15,14 @@ import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.Focus;
 import ua.bookloom.pipeline.context.FocusItem;
 import ua.bookloom.pipeline.context.KindExtra;
 import ua.bookloom.pipeline.context.PromptPlan;
 import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.context.Window;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.NameRules;
@@ -39,7 +41,7 @@ public final class PlannedPrompts {
 
     /** The prompts the context builder plans; their files hold only part of what is sent. */
     public static final Set<PromptName> PLANNED =
-            Set.of(PromptName.TRANSLATE, PromptName.FORMAT_REASK, PromptName.REPAIR);
+            Set.of(PromptName.TRANSLATE, PromptName.FORMAT_REASK, PromptName.REPAIR, PromptName.PROOFREAD);
 
     /** The analysis prompts (design D8): planned on the ANALYSIS frame, their files holding the task alone. */
     public static final Set<PromptName> ANALYSIS = EnumSet.of(
@@ -83,6 +85,9 @@ public final class PlannedPrompts {
         final TranslatePlanner planner =
                 TestPlanners.planner(brief, IndexTestBooks.oneUnit(masked), ModelProfile.defaults());
         final CallKind kind = name.callKind();
+        if (kind == CallKind.PROOFREAD) {
+            return proofreadPlan(planner, brief, masked);
+        }
         final Focus focus = new Focus(
                 List.of(new FocusItem(SEGMENT, masked)),
                 kind == CallKind.REPAIR
@@ -96,6 +101,18 @@ public final class PlannedPrompts {
                 };
         return Objects.requireNonNull(
                         planner.plan(kind, TestPlanners.empty(planner), focus, extra)
+                                .data(),
+                        "plan")
+                .plan();
+    }
+
+    // A proofread window of the one item, its current text the item itself, marked by an echo.
+    private static PromptPlan proofreadPlan(
+            final TranslatePlanner planner, final BookBrief brief, final String masked) {
+        final Focus focus =
+                new Focus(List.of(new FocusItem(SEGMENT, masked, masked)), Map.of(SEGMENT, List.of("flagged: echo")));
+        return Objects.requireNonNull(
+                        planner.planProofread(Window.of(focus), BookMap.of(List.of(), List.of(), brief))
                                 .data(),
                         "plan")
                 .plan();

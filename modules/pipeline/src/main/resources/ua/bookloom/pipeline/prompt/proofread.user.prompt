@@ -1,0 +1,6 @@
+{{instruction}}
+{{#rules}}
+{{rules}}
+{{/rules}}
+When no item needs a change, return exactly: {"unchanged":true}
+Otherwise return exactly one JSON object holding only the items you changed, each under its own id: {"items":[{"id":"<id>","target":"<corrected translation>"}]}

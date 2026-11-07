@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_ECHO;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
@@ -131,7 +132,7 @@ class TranslationJobQualityTest {
 
         final JobReport report = report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:0", ErrorCode.validation));
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
@@ -150,7 +151,7 @@ class TranslationJobQualityTest {
         report(translation.run());
 
         // The pseudo model's repair returns the echo unchanged, and no second repair is tried.
-        assertThat(model.formats()).containsExactly(DRAFT, REPAIR);
+        assertThat(model.formats()).containsExactly(DRAFT, REPAIR, PROOFREAD);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::path)
                 .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, SegmentPath.REPAIRED);

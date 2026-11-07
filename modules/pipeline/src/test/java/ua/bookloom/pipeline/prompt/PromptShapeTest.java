@@ -50,6 +50,7 @@ class PromptShapeTest {
             Map.entry("review-terms", "verdicts"),
             Map.entry("suggest-targets", "suggestions"),
             Map.entry("chapter_summary", "summary"),
+            Map.entry("proofread", "unchanged"),
             Map.entry("draft-batch-json", "items"),
             Map.entry("suspicious-words", "words"),
             Map.entry("brief-suggestion", "genre"),
@@ -61,12 +62,10 @@ class PromptShapeTest {
             Map.entry("term-summary", "usage"),
             Map.entry("name-knowledge", "items"));
 
-    // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
-    // language-rules map replaced the per-language example files.
+    // Raised from 697 by the pair's straight-quote example line (15h.C3); 698 before the language-rules map.
     private static final int DRAFT_SYSTEM_BUDGET = 720;
     private static final int SYSTEM_BUDGET = 900;
-    // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples, and
-    // since the title and common-word rows 1302 of them (1230 before), about 72 tokens for two rules.
+    // The reviewer's language checks and the suggestion call's name examples (1302 since the title rows, 1230 before).
     private static final int LARGE_SYSTEM_BUDGET = 1310;
 
     @ParameterizedTest
@@ -104,7 +103,8 @@ class PromptShapeTest {
                 "NAME_KNOWLEDGE",
                 "TRANSLATE",
                 "FORMAT_REASK",
-                "REPAIR"
+                "REPAIR",
+                "PROOFREAD"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
@@ -115,7 +115,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"TRANSLATE", "FORMAT_REASK", "REPAIR"})
+            names = {"TRANSLATE", "FORMAT_REASK", "REPAIR", "PROOFREAD"})
     void render_plannedCallWithMarks_statesTheMarkRuleAndRemindsOfItLast(final PromptName name) {
         assertThat(system(name)).contains("- Marks: ⟦gN⟧ marks stand for");
         assertThat(user(name)).endsWith("Keep every ⟦…⟧ mark exactly once.");

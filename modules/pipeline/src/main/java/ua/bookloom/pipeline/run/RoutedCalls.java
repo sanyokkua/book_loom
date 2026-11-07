@@ -19,13 +19,13 @@ import ua.bookloom.api.pipeline.JobState;
 /**
  * Makes a run's calls until they answer, routing each error they answer by design D3: a stop or a pause aborting a
  * call, and a provider error the run pauses on, are answered by the job's boundaries, which either end the run or send
- * the call again once the person resumes. A draft, the reviewer and a unit's summary are all routed here, so they pause
- * and fail alike.
+ * the call again once the person resumes. A draft, the reviewer, a unit's summary and a proofread window are all routed
+ * here, so they pause and fail alike.
  *
  * <p>Used from the job thread only.
  */
 @Slf4j
-final class RoutedCalls {
+public final class RoutedCalls {
 
     // The answer a step skipped while its call waited is flagged with: the person left it, so it has no other error.
     private static final AppError SKIPPED = AppError.of(
@@ -42,7 +42,7 @@ final class RoutedCalls {
      *
      * @param boundaries the non-null job boundaries that answer a routed error
      */
-    RoutedCalls(final RunBoundaries boundaries) {
+    public RoutedCalls(final RunBoundaries boundaries) {
         this.boundaries = Objects.requireNonNull(boundaries, "boundaries");
     }
 
@@ -67,7 +67,7 @@ final class RoutedCalls {
      * @param call the call
      * @return the answer, or how the run ended while the call was routed
      */
-    <T> Step<T> untilAnswered(
+    public <T> Step<T> untilAnswered(
             final Supplier<JobProgress> progress, @Nullable final String segmentId, final Supplier<Result<T>> call) {
         return route(progress, segmentId, call, null);
     }

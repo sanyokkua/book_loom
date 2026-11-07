@@ -45,7 +45,8 @@ class LanguageFilesTest {
                     + "|prepExample\\.(termReading|lexiconReading|prescan|reviewTerms)\\.(\\d+|reply)"
                     + "|nameExample\\.(TRANSLATE|TRANSLITERATE|KEEP_ORIGINAL)"
                     + "|rule\\.(marks|inflect|dialogue|address|numbers|agreement)|reminder\\.(marks|dialogue|narrator)"
-                    + "|illustration(\\.label)?)");
+                    + "|illustration(\\.label)?"
+                    + "|proofreadInstruction(\\.noSource)?|proofreadRules|languageGenitive\\.[a-z]{2,3})");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
 
     static Properties file(final String resource) throws IOException {

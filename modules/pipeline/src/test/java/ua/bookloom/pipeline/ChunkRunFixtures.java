@@ -43,6 +43,7 @@ final class ChunkRunFixtures {
     static final String EDIT = "Він рвучко відчинив двері.";
     static final String REVIEW = "reviewer";
     static final String DRAFT = "draft";
+    static final String PROOFREAD = "proofread";
     static final String FIX = "directed-fix";
     static final String REPAIR = "repair";
 

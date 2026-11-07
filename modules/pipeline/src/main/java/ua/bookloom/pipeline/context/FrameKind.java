@@ -5,7 +5,7 @@ import ua.bookloom.api.pipeline.CallKind;
 
 /** Which fixed part a kind of call sends (design D8): the TRANSLATE frame, the ANALYSIS frame, or none of the builder's. */
 enum FrameKind {
-    /** Blocks 1–13: drafts, format re-asks and repairs. */
+    /** Blocks 1–13: drafts, format re-asks, repairs and proofread windows. */
     TRANSLATE,
     /** Blocks 1, 2 and 7 and the kind's user blocks: the names pass, the brief, the file name, the chapter summary. */
     ANALYSIS,
@@ -14,7 +14,7 @@ enum FrameKind {
 
     static FrameKind of(final CallKind kind) {
         return switch (kind) {
-            case DRAFT, REPAIR, STRUCTURAL_REPAIR -> TRANSLATE;
+            case DRAFT, REPAIR, STRUCTURAL_REPAIR, PROOFREAD -> TRANSLATE;
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,
@@ -26,7 +26,7 @@ enum FrameKind {
                     TERM_READING,
                     TERM_CHOICE,
                     NAME_KNOWLEDGE -> ANALYSIS;
-            case REVIEW, DIRECTED_FIX, PROOFREAD -> NONE;
+            case REVIEW, DIRECTED_FIX -> NONE;
         };
     }
 

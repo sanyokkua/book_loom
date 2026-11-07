@@ -348,7 +348,7 @@ public final class ContextBuilder {
                 BlockSlots.KIND_EXTRA,
                 calls.kindExtra(kind, planned.window().focus(), inputs.extra()));
         final String target = Objects.requireNonNull(frame.brief().targetLanguage(), "targetLanguage");
-        blocks.add(user(BlockSlots.TASK, calls.task(frame.brief().sourceLanguage(), target)));
+        blocks.add(user(BlockSlots.TASK, calls.task(kind, frame.brief().sourceLanguage(), target)));
         blocks.add(user(
                 BlockSlots.ITEMS,
                 calls.items(

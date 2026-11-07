@@ -68,6 +68,21 @@ public enum PromptName {
             new Slots(Set.of("defects"), Set.of("previousAttempt"))),
 
     /**
+     * The Proofread stage's minimal-edit read of one window (design D15 "Call"): the drafts' system part, block 12 from
+     * the target language's proofread instruction and rules, and block 13 the focus with each item's source, current
+     * text and reasons. It answers unchanged or the changed items only, at a low temperature, because a proofreader
+     * must change as little as it can.
+     */
+    PROOFREAD(
+            "proofread",
+            CallKind.PROOFREAD,
+            ProofreadSchema.FORMAT_NAME,
+            ProofreadSchema.SCHEMA,
+            new Temperatures(0.1, null),
+            null,
+            new Slots(Set.of("instruction"), Set.of("rules"))),
+
+    /**
      * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a
      * rewrite; its temperature is zero, because the answer must repeat, and its output limit grows with the pairs.
      */

@@ -14,14 +14,30 @@ import ua.bookloom.pipeline.Tokens;
  * @param previous the segments before the focus in reading order; copied, empty at the body's start
  * @param focus the items the call works on
  * @param nextSource the masked source of the segment after the focus, or null at the body's end
+ * @param nextTarget the decided text of the segment after the focus, shown read-only to a proofread call, or null for a
+ *     call that drafts
  */
 public record Window(
-        List<WindowPair> previous, Focus focus, @Nullable String nextSource) {
+        List<WindowPair> previous,
+        Focus focus,
+        @Nullable String nextSource,
+        @Nullable String nextTarget) {
 
     /** Copies the previous pairs. */
     public Window {
         previous = List.copyOf(Objects.requireNonNull(previous, "previous"));
         Objects.requireNonNull(focus, "focus");
+    }
+
+    /**
+     * A window of a call that drafts: the next segment's source alone.
+     *
+     * @param previous the non-null pairs before the focus
+     * @param focus the non-null items
+     * @param nextSource the next source, or null
+     */
+    public Window(final List<WindowPair> previous, final Focus focus, @Nullable final String nextSource) {
+        this(previous, focus, nextSource, null);
     }
 
     /**

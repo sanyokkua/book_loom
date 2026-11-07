@@ -1522,7 +1522,7 @@ set aside once.
   - **Done when:** the tests are green; acceptance case (c) passes on both dialects (its desk-list check is 14.x's
     `ReviewDeskListTest`, as 13.1 says).
 
-- [ ] 13.5 Read the marked and doubtful windows at Balanced and Max with one minimal-edit proofread call each, keep a
+- [x] 13.5 Read the marked and doubtful windows at Balanced and Max with one minimal-edit proofread call each, keep a
   rewrite only through the never-worse gate, and store a proposal for the person's own edits, so the last pass edits
   only what is wrong. → :pipeline, :llm
   - **Satisfies:** "Proofread the marked windows at Balanced and Max with a minimal edit" (translation-pipeline), "Give a proofread call the drafts' system part and the target language's proofread instruction" (translation-pipeline), "Read a proofread reply as unchanged or as the changed items only" (translation-pipeline), "Keep a proofread rewrite only when the never-worse gate keeps it" (translation-pipeline), "Make a proposal of a proofread rewrite of the person's own edit" (translation-pipeline), "Proofread with the run's own model" (translation-pipeline), "Announce each model call as it starts" (translation-pipeline), "Count every call of the run by kind, the Proofread stage included" (translation-pipeline), "Send each call kind of the three stages at its own temperature" (inference), "Send each call kind at its own temperature" (inference, REMOVED), "The pseudo model answers every call kind with the text in capitals" (inference), "The pseudo model answers with the last user message in capitals" (inference, REMOVED), "Move segments only through the segment status machine" (review-queue; a kept rewrite moves ACCEPTED to REVISED, and FLAGGED to REVISED only when it clears every blocking finding)
@@ -1531,38 +1531,58 @@ set aside once.
     `revision/UnchangedReply`, `revision/RevisionWriter`, `revision/RevisionBase`, `memory/CheckedParagraphs`,
     `languages/uk.properties`, `languages/ru.properties`, `languages/generic.properties`, `llm: pseudo/` (pseudo model),
     group 3's `CallLedger`; design D15 "Windows", "Call", "Reply".
-  - **Change:** `ProofreadWindows` merges marks within one paragraph up to the profile's batch size and the current-part
-    budget, adds one read-only neighbour each side, orders reasons blocking first. `ProofreadCall` builds
-    `PromptName.PROOFREAD` / `CallKind.PROOFREAD` through `ContextBuilder` with the drafts' system part byte for byte;
-    block 12 from the target file's new keys `proofreadInstruction` and `proofreadRules` (at most 5 lines;
-    `{{sourceLanguageGenitive}}` from the target file), with an English default in `generic.properties`; new
-    `proofread.user.prompt` (P1, target-language block); reasoning off unless the person's override allows it,
-    the response schema titled `proofread` (the acceptance test of 13.1 finds the call by that title),
-    temperature 0.1, output = the pair reserve over the focus; always the run's model through the one gate. The reply is
-    `{"unchanged":true}` or `{"items":[…]}`; ids outside the focus and texts equal to the current are dropped; a missing
-    focus id is UNCHANGED. Each change goes through the hard gates and `NeverWorse`. A person-edited segment is never
-    rewritten: the change becomes a proposal (`RevisionWriter`), outcome PROPOSED. Keep on an ACCEPTED segment →
-    REVISED, outcome KEPT, `before` and `statusBefore` stored. Keep on a FLAGGED segment → REVISED and KEPT only when the
-    kept text clears every blocking finding; otherwise the segment stays FLAGGED and the text is stored as a proposal
-    for the desk (PROPOSED). A Reject → REJECTED with the gate's reason. Each decided window commits through 13.2's window commit. `memory/CheckedParagraphs` is deleted.
+  - **Change:** `ProofreadWindows` merges marks in reading order with at most one unmarked story segment between them
+    (that segment is read too) up to the profile's batch size, adds one read-only neighbour each side, and keeps each
+    mark's reasons (blocking first, as `MarkList` orders them); the context builder fits the window to the tier's
+    budgets, so no token budget is applied here. `ProofreadCall` builds `PromptName.PROOFREAD` / `CallKind.PROOFREAD`
+    through `ContextBuilder` (`FrameKind.of(PROOFREAD)` is now TRANSLATE) with the drafts' system part byte for byte;
+    block 12 from the target file's new keys `proofreadInstruction` (and `proofreadInstruction.noSource` for a book
+    whose source nobody chose) and `proofreadRules` (one value, at most 5 lines), `{{sourceLanguageGenitive}}` from
+    the target file's `languageGenitive.<tag>` keys (a source with no genitive gets the English default), with an
+    English default in `generic.properties`; new `proofread.user.prompt` (P1, target-language block), and
+    `PromptVariants.proofreadPrompt {P1, P2}` (P2 states the English default instruction for every target, the
+    target's rules kept), so arm 7c in 13.9 only runs the arm; block 13 names each focus item by its segment id with
+    its source, current text and reasons, and block 10 shows the neighbours' sources and translations read-only;
+    reasoning off unless the person's override allows it (a model profile that declares no reasoning field gets none
+    sent, design D20), the response schema titled `proofread` (the acceptance test of 13.1 finds the call by that
+    title), temperature 0.1, output = the pair reserve over the focus; always the run's model through the one gate,
+    routed through `RoutedCalls` like a draft. The reply is `{"unchanged":true}` or `{"items":[…]}`; ids outside the
+    focus and texts equal to the current are dropped; a missing focus id is UNCHANGED; an unreadable reply stores no
+    verdict. Each change goes through the hard gates and `NeverWorse` (`proofread/ProofreadJudge`; a refusal names the
+    word that broke the veto through `qa/NeverWorseReasons`, such as `function-word-residue: что`; a gender now known
+    that the current text breaks and the rewrite keeps counts as the cleared finding). A person-edited segment is never
+    rewritten: the change becomes a proposal, outcome PROPOSED, held on a new `DeferralReason.PROOFREAD` deferral (the
+    stored shape changes once more). Keep on an ACCEPTED segment → REVISED, outcome KEPT, `before` and `statusBefore`
+    stored. Keep on a FLAGGED segment → REVISED and KEPT only when the kept text clears every blocking finding;
+    otherwise the segment stays FLAGGED and the text is stored as a proposal for the desk (PROPOSED). A Reject →
+    REJECTED with the gate's reason. A kept text settles each gender deferral of its segment it now agrees with. Each
+    decided window commits through 13.2's window commit. A verdict's fingerprint is `proofread/WindowFingerprint`
+    (focus sources and texts, neighbours' texts, prompt version, round); 13.6 adds the map lines and reads it.
+    `memory/CheckedParagraphs` stays until group 14 deletes the export pass that still uses it.
     The pseudo model answers every call kind in capitals in its own shape (the flat batch of items, the proofread reply
     with `{"unchanged":true}` for a window it cannot change, the chapter summary), with the kept tokens and no usage;
     the per-kind temperatures name the three stages' kinds (draft, repair, proofread, chapter summary, names, brief)
     and, once 14.7 deletes them, no reviewer or directed-fix kind (until then those two keep their own temperatures). Model-call events name kind proofread.
   - **Test first:** WireMock both dialects (`ProofreadCallWireMockTest`): `proofread_oneMark_oneCallWithNeighbours`
-    (`ch02.md:13`–`15`); `proofread_closeMarks_oneWindow` (`ch06.xhtml:20`, `21`, `23`, batch size 4);
+    (`ch02.md:13`–`15`); `proofread_request_lowTemperatureProofreadSchemaNoThinking`;
     `proofread_ruUk_systemEqualsDraftAndUkInstruction` (instruction begins `Ти коректор перекладу з російської на
-    українську.`); `proofread_enJa_englishDefault`; `reply_unchanged_verdictUnchanged`; `reply_missingFocusId_unchanged`;
-    `reply_neighbourItem_dropped` (`ch06.xhtml:19`); `rewrite_negationRestored_keptRevisedBeforeStored`;
-    `rewrite_foreignNameForm_rejected` (`Зотової` not a form of `Зотов`); `rewrite_personEdit_proposal`
-    (`Він рвучко відчинив двері.`); `rewrite_flaggedSegmentClearedOfItsBlocker_revised`;
-    `rewrite_flaggedSegmentStillBlocked_staysFlaggedWithProposal`; `PseudoChatModelTest.answer_proofreadKind_unchanged`; request body temperature 0.1 and `"think":false` on Ollama; a run summary counting
-    55 proofread calls with 45 reporting cached tokens; the two Max slip cases of `TranslationJobNarratorInferenceTest`
-    (13.4 left the slips as open narrator deferrals, `..._LeavesTheSlipsWaiting`) assert again that their windows
-    re-render them. Acceptance cases (a) and (b) go green in 13.6, because (a) needs Max's second round and (b) needs Continue at every dial.
+    українську.`); `proofread_enJa_englishDefault`; `reply_unchanged_noChange`; `reply_neighbourItemAndEcho_dropped`;
+    `reply_changedFocusItem_readAsTheChange`. `ProofreadWindowsTest`: `of_oneMark_oneWindowWithNeighbours`,
+    `of_closeMarks_oneWindowHoldsThemAndTheLineBetween` (`ch06.xhtml:20`, `21`, `23`, batch size 4) and the split
+    cases. `WindowVerdictsTest` (real gate and checks): `reply_missingFocusId_unchanged`;
+    `rewrite_negationRestored_keptRevisedBeforeStored`; `rewrite_foreignNameForm_rejectedNamingTheForm` (`Зотової`
+    not a form of `Зотов`); `rewrite_sourceOnlyFunctionWord_rejectedNamingTheWord` (`что`);
+    `rewrite_personEdit_proposalAndTheEditStays`; `rewrite_flaggedSegmentClearedOfItsBlocker_revised`;
+    `rewrite_flaggedSegmentStillBlocked_staysFlaggedWithProposal`; `rewrite_genderNowKnown_keptAndDeferralSettled`;
+    `PseudoChatModelTest.answer_proofreadKind_unchanged`; the two Max slip cases of
+    `TranslationJobNarratorInferenceTest` assert again that their windows re-render them. The run-summary case (55
+    proofread calls, 45 with cached tokens) moves to 13.6, whose step plan counts the windows.
   - **Log:** INFO per window decided (window id, focus count, verdict counts); DEBUG for window building and each
     dropped item; TRACE for the prompt and reply; WARN for each REJECTED verdict with the gate's reason.
-  - **Done when:** the tests are green on both dialects; acceptance cases (a) and (b) still fail only for Max's second round and for Continue after a completed Balanced run (13.6).
+  - **Done when:** the tests are green on both dialects; acceptance case (b) is green (a Continue over a fully decided
+    book already reaches Proofread since 13.4), and case (a) still fails only for Max's second round (13.6). The
+    acceptance test's trap draft is `Мирена кивнула й промовила, що ключ має Тарн.`: the dataset's word-for-word
+    reference is 90 % like its Russian source, so the echo check flagged it and the trap was read for its flag.
 
 - [ ] 13.6 Add Max's whole-book second round, the window fingerprint, resume by fingerprint and the step plan, so Max
   re-reads every story paragraph for every model and a stopped Proofread stage continues at its first unread window.
@@ -1652,8 +1672,8 @@ set aside once.
   - **Depends on:** 13.8
   - **Read:** design D24 arm table; group 1's `PromptVariants`, `scripts/eval-matrix.sh`, `scripts/eval-score.py`;
     `docs/DEVELOPMENT.md`.
-  - **Change:** add a temporary `PromptVariants.proofreadPrompt {P1, P2}` field and a P2 template (English frame with
-    the same blocks). Sets: mini-en and mini-ru, K = 3 with recorded seeds, judge pairwise on changed paragraphs
+  - **Change:** the temporary `PromptVariants.proofreadPrompt {P1, P2}` field exists since 13.5 (P2 states the English
+    default instruction for every target, the target's rules kept, the same blocks otherwise). Sets: mini-en and mini-ru, K = 3 with recorded seeds, judge pairwise on changed paragraphs
     (`gemma4:26b`, local), screened on `gemma4:e4b-mlx`, then once on `gemma4:26b-mlx`. Rule: P2 only if it wins (sign
     test p < 0.05 on discordant cases, or the screen rule — at least 2 cases better with no key metric losing 2 —
     confirmed on `sequence`) with no hard grader worse; a tie keeps P1. Record the table under
@@ -1756,7 +1776,8 @@ database is set aside once.
     `ConsistencyPassFixture`; design D25 row 14.
   - **Change:** delete `ConsistencyPass`, `NeighbourRevision`, `NeighbourPrompt`, `GenderRevision`, `RetryPass`,
     `RevisionCall`, `PassOptions`, `PassTally`, `PassInputs`, `PassChecks`, `RevisionGuards`, `EarlyStop`,
-    `RevisionAnswer`, `ConsistencyReport`, `BookContext`, `StageRunner.revise`, the `revision.*` and `consistency.*`
+    `RevisionAnswer`, `ConsistencyReport`, `BookContext`, `memory/CheckedParagraphs` (13.5 left it to the export pass),
+    `StageRunner.revise`, the `revision.*` and `consistency.*`
     prompt files, `PromptName.REVISION`/`CONSISTENCY`, and their tests and fixtures. Move `TermSweep`, `RevisionWriter`,
     `RevisionBase`, `UnchangedReply`, `DeferralRegister`, `GenderWaits` into `pipeline.proofread` (tests moved with
     them). Port each guard case of `RevisionGuardsPolicyTest` into `NeverWorseTest` and each behaviour case of the

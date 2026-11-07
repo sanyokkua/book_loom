@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
+import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
@@ -21,7 +22,10 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Deferral;
@@ -79,6 +83,15 @@ class TranslationJobNarratorInferenceTest {
                 .toList();
     }
 
+    // The proofread window of one slip answers it in the narrator's gender; the windows are read in book order.
+    private static void proofreadAs(final ScriptedChatModel model, final int index, final String target) {
+        model.answerTo(
+                PROOFREAD,
+                Result.ok(new ChatResponse(
+                        "{\"items\":[{\"id\":\"" + id(index) + "\",\"target\":\"" + target + "\"}]}",
+                        FinishReason.STOP)));
+    }
+
     private static Narrator narratorOf(final TestProject project) {
         return Objects.requireNonNull(
                         project.stores().projects().find(project.id()).data(), "project")
@@ -114,20 +127,24 @@ class TranslationJobNarratorInferenceTest {
 
     // IF the majority were never counted, THEN a man's book with two feminine slips would stay unknown and keep them
     // (the Oct 9 runs: 26 of 41 wrong paragraphs came from one mistyped gender). The Proofread stage's code part leaves
-    // each slip an open deferral on the narrator, which its windows (13.5) read; nothing is re-rendered by code.
+    // each slip an open deferral on the narrator, and its window re-renders it with no deferral left.
     @Test
-    void run_maleFirstPersonBookWithTwoFeminineSlips_endsMaleInferredAndLeavesTheSlipsWaiting() {
+    void run_maleFirstPersonBookWithTwoFeminineSlips_endsMaleInferredAndItsWindowsReRenderTheSlips() {
         final int count = 24;
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
         final ScriptedChatModel model = model(NarratorInferenceBooks.firstTargets(count, Set.of(3, 12)), List.of());
+        proofreadAs(model, 3, NarratorInferenceBooks.masculine(3));
+        proofreadAs(model, 12, NarratorInferenceBooks.masculine(12));
 
         assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
         assertThat(narratorOf(project))
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE, GenderOrigin.INFERRED, List.of()));
-        assertThat(formats(model)).doesNotContain(REVISION);
-        assertThat(stored(project, id(3)).machineTarget()).isEqualTo(NarratorInferenceBooks.feminine(3));
+        assertThat(formats(model)).doesNotContain(REVISION).contains(PROOFREAD);
+        assertThat(stored(project, id(3)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(3));
+        assertThat(stored(project, id(3)).status()).isEqualTo(SegmentStatus.REVISED);
+        assertThat(stored(project, id(12)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(12));
         assertThat(stored(project, id(0)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(0));
-        assertThat(open(project)).extracting(Deferral::segmentId).containsExactlyInAnyOrder(id(3), id(12));
+        assertThat(open(project)).isEmpty();
     }
 
     // The Start question was answered "not stated" for a book the detector reads as first person: the narrator's
@@ -165,18 +182,21 @@ class TranslationJobNarratorInferenceTest {
     }
 
     @Test
-    void run_femaleFirstPersonBookWithTwoMasculineSlips_endsFemaleInferredAndLeavesTheSlipsWaiting() {
+    void run_femaleFirstPersonBookWithTwoMasculineSlips_endsFemaleInferredAndItsWindowsReRenderTheSlips() {
         final int count = 24;
         final List<String> targets = mostlyFeminine(count, Set.of(5, 17));
         final TestProject project = book(NarratorInferenceBooks.firstSources(count), QualityDial.MAX, UNKNOWN_FIRST);
         final ScriptedChatModel model = model(targets, List.of());
+        proofreadAs(model, 5, NarratorInferenceBooks.feminine(5));
+        proofreadAs(model, 17, NarratorInferenceBooks.feminine(17));
 
         report(job(project, model).run());
 
         assertThat(narratorOf(project))
                 .isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE, GenderOrigin.INFERRED, List.of()));
-        assertThat(stored(project, id(5)).machineTarget()).isEqualTo(NarratorInferenceBooks.masculine(5));
-        assertThat(open(project)).extracting(Deferral::segmentId).containsExactlyInAnyOrder(id(5), id(17));
+        assertThat(stored(project, id(5)).machineTarget()).isEqualTo(NarratorInferenceBooks.feminine(5));
+        assertThat(stored(project, id(17)).machineTarget()).isEqualTo(NarratorInferenceBooks.feminine(17));
+        assertThat(open(project)).isEmpty();
     }
 
     // IF a bar below 80 % passed, THEN a woman's book with a third of its forms masculine could end with a male

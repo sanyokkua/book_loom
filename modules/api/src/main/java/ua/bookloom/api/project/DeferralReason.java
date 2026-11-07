@@ -16,5 +16,11 @@ public enum DeferralReason {
     TERM,
 
     /** A character's gender became known or enforced after decided segments were written without it. */
-    GENDER_CHANGED
+    GENDER_CHANGED,
+
+    /**
+     * A proofread rewrite the never-worse gate kept that may not replace the text by itself — the person's own edit, or
+     * a flagged segment the rewrite leaves blocked — held as a proposal for the review desk.
+     */
+    PROOFREAD
 }

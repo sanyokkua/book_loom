@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.TargetState;
@@ -36,6 +37,28 @@ final class NameVetoes {
      * @return the number of such words; zero when the map holds no pinned or locked name
      */
     static long foreignForms(final String text, final WindowFacts facts) {
+        return respelt(text, facts).count();
+    }
+
+    /**
+     * Each word of a text that is a pinned or locked name written in a form the map does not list, with the rendering
+     * it was read as, so a refusal can name both.
+     *
+     * @param text the non-null display text
+     * @param facts the window's names and target language
+     * @return lines such as {@code Зотової is not a form of Зотов}, in text order; never null
+     */
+    static List<String> foreignFormNotes(final String text, final WindowFacts facts) {
+        return respelt(text, facts)
+                .map(word -> facts.names().stream()
+                        .filter(name -> isRespelt(word, name))
+                        .findFirst()
+                        .map(name -> word + " is not a form of " + name.target())
+                        .orElse(word))
+                .toList();
+    }
+
+    private static Stream<String> respelt(final String text, final WindowFacts facts) {
         final Set<String> lowerCase = NameSpelling.lowerCaseWords(List.of(text));
         return NameSpelling.CAPITALISED
                 .matcher(text)
@@ -43,8 +66,7 @@ final class NameVetoes {
                 .map(MatchResult::group)
                 .filter(word -> word.codePointCount(0, word.length()) >= MIN_NAME_LETTERS)
                 .filter(word -> !NameSpelling.isCommonWord(word, facts.targetLanguage(), lowerCase))
-                .filter(word -> facts.names().stream().anyMatch(name -> isRespelt(word, name)))
-                .count();
+                .filter(word -> facts.names().stream().anyMatch(name -> isRespelt(word, name)));
     }
 
     /**

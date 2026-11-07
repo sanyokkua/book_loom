@@ -48,8 +48,10 @@ class ProofreadStageAcceptanceTest {
     private static final String UNCHANGED = "{\"unchanged\":true}";
     private static final String TRAP_ID = "ch02.md:14";
     private static final String GENDER_ID = "ch02.md:16";
-    private static final String TRAP_TARGET = "Мирена кивнула й сказала, що ключ у Тарна.";
-    private static final String TRAP_REWRITE = "Мирена кивнула й сказала, что ключ у Тарна.";
+    // Not the word-for-word "Мирена кивнула й сказала, що ключ у Тарна.": that one is 90 % like its Russian source, so
+    // the echo check flags it and the trap would be read for its flag, not by Max's second round.
+    private static final String TRAP_TARGET = "Мирена кивнула й промовила, що ключ має Тарн.";
+    private static final String TRAP_REWRITE = "Мирена кивнула й промовила, что ключ має Тарн.";
     private static final String MALE_TARGET = "Івар сказав, що повернеться.";
     private static final String FEMALE_TARGET = "Івар сказала, що повернеться.";
     private static final String SOURCE_NAME = "Ивар";
@@ -270,14 +272,17 @@ class ProofreadStageAcceptanceTest {
         return items.isEmpty() ? "{\"results\":[]}" : write(Map.of("items", items));
     }
 
+    // A window shows its read-only neighbours too, so the reply rewrites every scripted line the message holds; the
+    // reader drops an item that is no focus id of the window.
     private static String proofreadReply(final String message, final Map<String, String> ids) {
+        final List<Map<String, String>> items = new ArrayList<>();
         if (message.contains(TRAP_TARGET)) {
-            return write(Map.of("items", List.of(Map.of("id", ids.get(TRAP_ID), "target", TRAP_REWRITE))));
+            items.add(Map.of("id", ids.get(TRAP_ID), "target", TRAP_REWRITE));
         }
         if (message.contains(MALE_TARGET)) {
-            return write(Map.of("items", List.of(Map.of("id", ids.get(GENDER_ID), "target", FEMALE_TARGET))));
+            items.add(Map.of("id", ids.get(GENDER_ID), "target", FEMALE_TARGET));
         }
-        return UNCHANGED;
+        return items.isEmpty() ? UNCHANGED : write(Map.of("items", items));
     }
 
     private static String draftFor(final String source) {

@@ -23,6 +23,7 @@ class OneRepairE2eTest {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
     private static final String REPAIR_PROMPT_MARK = "[Defects to fix";
+    private static final String PROOFREAD_SCHEMA_TITLE = "\"title\":\"proofread\"";
     private static final String PREVIOUS_ATTEMPT_MARK = "[Previous attempt";
 
     @TempDir
@@ -42,7 +43,8 @@ class OneRepairE2eTest {
             WholeBookRun.export(project, directory.resolve("Book.uk.md"));
 
             assertThat(WholeBookRun.read(directory.resolve("Book.uk.md"))).contains("4. Нічний перевал");
-            assertThat(provider.chatBodies()).hasSize(1).noneMatch(body -> body.contains(REPAIR_PROMPT_MARK));
+            assertThat(provider.chatBodies()).noneMatch(body -> body.contains(REPAIR_PROMPT_MARK));
+            assertThat(drafting(provider)).hasSize(1);
         }
     }
 
@@ -65,7 +67,14 @@ class OneRepairE2eTest {
             assertThat(provider.chatBodies())
                     .filteredOn(body -> body.contains(PREVIOUS_ATTEMPT_MARK) && body.contains(REPAIR_PROMPT_MARK))
                     .hasSize(1);
-            assertThat(provider.chatBodies()).hasSize(3);
+            assertThat(drafting(provider)).hasSize(3);
         }
+    }
+
+    // The Proofread stage may read a marked segment once more after the run's last chunk (13.5); it is no repair.
+    private static List<String> drafting(final WireMockProvider provider) {
+        return provider.chatBodies().stream()
+                .filter(body -> !body.contains(PROOFREAD_SCHEMA_TITLE))
+                .toList();
     }
 }

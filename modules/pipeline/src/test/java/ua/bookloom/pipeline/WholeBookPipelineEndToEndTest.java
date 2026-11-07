@@ -90,7 +90,8 @@ class WholeBookPipelineEndToEndTest {
 
     // The chunk's one batch draft and its reviewer come before any decision; the two fixes follow, and the flagged
     // eighth segment stops the run before the next chunk's draft. A call about several segments — the batch draft of
-    // eight, the chunk's reviewer over eight — names none; a call about one segment names it.
+    // eight, the chunk's reviewer over eight — names none; a call about one segment names it. The Proofread stage then
+    // reads the one marked window, the person's edit of the flagged segment.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_assistedBalancedBook_callsInTheStubbedOrder(final ProviderKind kind) {
@@ -103,7 +104,8 @@ class WholeBookPipelineEndToEndTest {
                         "DIRECTED_FIX Book.md:1",
                         "DIRECTED_FIX Book.md:7",
                         "DRAFT Book.md:8",
-                        "REVIEW Book.md:8");
+                        "REVIEW Book.md:8",
+                        "PROOFREAD Book.md:7");
     }
 
     // A pause on the flagged segment after exactly four requests, with the whole first chunk already stored.
@@ -166,7 +168,9 @@ class WholeBookPipelineEndToEndTest {
                 .extracting(SegmentView::status, SegmentView::userTarget)
                 .containsExactly(SegmentStatus.REVISED, WholeBookRun.EDIT);
         assertThat(WholeBookRun.previousPairs(run.bodies().get(4))).contains(WholeBookRun.EDIT);
-        assertThat(run.bodies()).hasSize(6);
+        assertThat(run.bodies())
+                .as("five drafts and reviews, then one proofread window")
+                .hasSize(7);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
         assertThat(run.runState()).isEqualTo(JobState.COMPLETED);
         assertThat(run.segment("Book.md:8").status()).isEqualTo(SegmentStatus.ACCEPTED);
