@@ -77,7 +77,7 @@ class ChapterSummaryLogTest {
     private static boolean summarize() {
         return java.util.Objects.requireNonNull(
                         call(new ScriptedChatModel().answerTo(FORMAT, reply(SUMMARY)), event -> {})
-                                .summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER)
+                                .summarize(chapter(1, 2), SOURCE, List.of(), map(List.of()), FILTER)
                                 .data(),
                         "kept")
                 .isPresent();

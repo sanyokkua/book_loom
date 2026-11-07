@@ -40,6 +40,12 @@ final class ChapterSummaryCalls {
     static final List<String> SOURCE =
             List.of("Мирта вышла из мельницы и пошла к городу.", "В городе она нашла брата у старого моста.");
 
+    /** The decided translation of {@link #SOURCE}, whose words the summary's sentences are checked against. */
+    static final List<String> TARGET = List.of(
+            "Мірта вийшла з млина і пішла до міста. Мірта мовчить.",
+            "У місті вона знайшла брата біля старого мосту.",
+            "Дорога займає менше години.");
+
     /** A glossary entry no line of {@link #SOURCE} names. */
     static final GlossaryEntry GLAFIRA =
             GlossaryEntry.of("p:Глафира", "p", "Глафира", "Глафіра", TermType.CHARACTER, Gender.FEMALE, false);

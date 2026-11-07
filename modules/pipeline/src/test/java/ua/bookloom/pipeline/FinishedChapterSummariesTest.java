@@ -29,7 +29,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class FinishedChapterSummariesTest {
 
     private static final int CHAPTERS = 4;
-    private static final String DECIDED_OUTSIDE = "Рішення поза запуском.";
     private static final String CHAPTER_2 = "ch02.xhtml";
     private static final String CHAPTER_2_KEY = CHAPTER_2 + ":0";
 
@@ -49,7 +48,7 @@ class FinishedChapterSummariesTest {
                         .update(
                                 project.id(),
                                 CHAPTER_2 + ":" + index,
-                                record -> record.withMachineTarget(DECIDED_OUTSIDE, DECIDED_OUTSIDE)
+                                record -> record.withMachineTarget(SummaryBooks.DRAFT, SummaryBooks.DRAFT)
                                         .withStatus(SegmentStatus.ACCEPTED)));
     }
 

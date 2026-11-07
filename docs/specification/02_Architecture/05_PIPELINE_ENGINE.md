@@ -451,7 +451,8 @@ the previous part's kept summary; the last part's sentences are kept.
 
 **The gate** (`memory/SummaryGate`). At most three whole sentences; a sentence that names a glossary entry the chapter
 never names is dropped, and so is one holding angle-bracket markup (a leaked prompt tag such as `<Names>`); a sentence with a letter the target alphabet lacks or a source-only function word is asked once
-more and dropped if the second answer still has it. The glossary and lexicon are only read: no rendering is learned
+more and dropped if the second answer still has it. A sentence that spells a glossary name by its source spelling when the entry has a target is dropped. A vocabulary check
+(`memory/SummaryVocabulary`) joins the same one re-ask: the words known are those of the chapter's decided target text, every form of the glossary's target names, the language's function words and the closed list `prompt/languages/summary-words/<language>.txt` (numerals, story verbs); a word also counts when its stem (its letters less a two-letter ending, at least four) starts a known word, and words of fewer than three letters are never judged. A sentence with more than one unknown word is asked again with those words named and dropped if the second answer still has them; with no decided text the check is off. The glossary and lexicon are only read: no rendering is learned
 from a summary.
 
 **Outcome.** A kept summary is saved with the hash of the chapter's masked sources and announced with the job event

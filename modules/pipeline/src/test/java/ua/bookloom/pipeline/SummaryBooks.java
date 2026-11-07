@@ -45,7 +45,7 @@ final class SummaryBooks {
     private static final int PARAGRAPHS = 3;
     private static final int SPARE_REPLIES = 64;
     private static final int SPARE_SUMMARIES = 8;
-    private static final String DRAFT = "Човни чекали біля берега, поки річка повільно текла повз старий млин.";
+    static final String DRAFT = "Човни чекали біля берега, поки річка повільно текла повз старий млин.";
     private static final String SUMMARY = "Човни чекали біля берега річки.";
     private static final String TAIL = " the boats waited by the shore while the river ran slowly past the old mill,"
             + " the narrow bridge, the quiet market and the long grey wall of the town, and the people who lived there"

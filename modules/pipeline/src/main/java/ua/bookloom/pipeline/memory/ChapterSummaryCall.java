@@ -44,6 +44,9 @@ public final class ChapterSummaryCall {
     /** How the one re-ask's correction starts; the faulty words follow it. */
     static final String CORRECTION_START = "Your last answer held words that are not in the target language: ";
 
+    /** How the one re-ask's correction names the words no source of the book holds. */
+    static final String UNKNOWN_START = "Your last answer held words that do not occur in the text or the names: ";
+
     private static final String ERROR = "error";
     private static final String REPLY = "reply";
     private static final int ASKED_CHARS = 160;
@@ -108,20 +111,27 @@ public final class ChapterSummaryCall {
      *
      * @param chapter the non-null chapter
      * @param sourceLines the non-null source of its segments, tokens removed, one per segment in reading order
+     * @param decidedLines the non-null decided target text of its segments, one per decided segment in reading order;
+     *     the words of a summary sentence are checked against it, and with none the check is off
      * @param map the non-null book map, read only
      * @param filter the non-null filter of the recurring terms' renderings
      * @return the kept summary, or empty when a part's call failed or its reply kept nothing; an error only when a
      *     pause or a stop aborted a part's call ({@code cancelled}), so the caller makes the whole call again or ends
      */
     public Result<Optional<Kept>> summarize(
-            final Chapter chapter, final List<String> sourceLines, final BookMap map, final LexiconFilter filter) {
+            final Chapter chapter,
+            final List<String> sourceLines,
+            final List<String> decidedLines,
+            final BookMap map,
+            final LexiconFilter filter) {
         Objects.requireNonNull(chapter, "chapter");
         Objects.requireNonNull(sourceLines, "sourceLines");
+        Objects.requireNonNull(decidedLines, "decidedLines");
         Objects.requireNonNull(map, "map");
         Objects.requireNonNull(filter, "filter");
         final List<List<String>> parts = parts(sourceLines);
         final SummaryGate gate = SummaryGate.of(
-                mapper, readingLanguage(), frame.targetLanguage(), map, String.join("\n\n", sourceLines));
+                mapper, readingLanguage(), frame.targetLanguage(), map, String.join("\n\n", sourceLines), decidedLines);
         log.debug(
                 "Chapter summary call chapter={} key={} segments={} tokens={} parts={} mapLines={}",
                 chapter.number(),
@@ -210,9 +220,7 @@ public final class ChapterSummaryCall {
         if (read.isEmpty()) {
             return new Failed(UNREADABLE);
         }
-        return read.get().faultyWords().isEmpty()
-                ? kept(line, read.get())
-                : reasked(asked, line, place, gate, read.get());
+        return read.get().needsReask() ? reasked(asked, line, place, gate, read.get()) : kept(line, read.get());
     }
 
     private Part kept(final String line, final SummaryGate.Reading reading) {
@@ -240,14 +248,13 @@ public final class ChapterSummaryCall {
             final SummaryGate gate,
             final SummaryGate.Reading first) {
         log.debug(
-                "Chapter summary re-ask chapter={} part={} faultySentences={}",
+                "Chapter summary re-ask chapter={} part={} faultySentences={} unknownWords={}",
                 place.chapter(),
                 place.part(),
-                first.faulty());
-        log.trace("Chapter summary re-ask words {}", first.faultyWords());
-        final String correction = CORRECTION_START + String.join(", ", first.faultyWords())
-                + ". Write the summary again with every word in the target language.";
-        final Result<ChatResponse> second = send(values(asked, correction), line);
+                first.faulty(),
+                first.unknownWords().size());
+        log.trace("Chapter summary re-ask words {} unknown {}", first.faultyWords(), first.unknownWords());
+        final Result<ChatResponse> second = send(values(asked, correction(first)), line);
         if (second.isErr() && isAbort(Objects.requireNonNull(second.error(), ERROR))) {
             return new Aborted(Objects.requireNonNull(second.error(), ERROR), asked.number());
         }
@@ -262,6 +269,21 @@ public final class ChapterSummaryCall {
             return kept(line, first);
         }
         return kept(line, read.get());
+    }
+
+    // One correction names every kind of word that failed, each on its own sentence.
+    private static String correction(final SummaryGate.Reading first) {
+        final List<String> parts = new ArrayList<>();
+        if (!first.faultyWords().isEmpty()) {
+            parts.add(CORRECTION_START + String.join(", ", first.faultyWords())
+                    + ". Write the summary again with every word in the target language.");
+        }
+        if (!first.unknownWords().isEmpty()) {
+            parts.add(UNKNOWN_START + String.join(", ", first.unknownWords())
+                    + ". Use only words that occur in the text or the names, or ordinary words of the target"
+                    + " language; do not invent words.");
+        }
+        return String.join(" ", parts);
     }
 
     private Result<ChatResponse> send(final Map<String, String> values, final String line) {

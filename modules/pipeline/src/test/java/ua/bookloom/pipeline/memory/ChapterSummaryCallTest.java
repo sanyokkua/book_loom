@@ -6,6 +6,7 @@ import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.FILTER;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.FORMAT;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.GLAFIRA;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.SOURCE;
+import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.TARGET;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.call;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.chapter;
 import static ua.bookloom.pipeline.memory.ChapterSummaryCalls.map;
@@ -72,7 +73,7 @@ class ChapterSummaryCallTest {
                         FORMAT, reply("Мірта йде до міста. Там вона знаходить брата. Брат мовчить. Вони вертаються."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(1);
         assertThat(kept)
@@ -87,7 +88,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, reply(withChto)).answerTo(FORMAT, reply(withChto));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(2);
         assertThat(userMessage(model.requests().getFirst())).doesNotContain(ChapterSummaryCall.CORRECTION_START);
@@ -96,12 +97,54 @@ class ChapterSummaryCallTest {
     }
 
     @Test
+    void call_sentenceWithInventedWords_askedAgainWithTheWordsThenDropped() {
+        final String invented = "Мірта йде до міста. Вона зустрічає брата з блазаками шмурляє. Брат мовчить.";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answerTo(FORMAT, reply(invented)).answerTo(FORMAT, reply(invented));
+
+        final Optional<ChapterSummaryCall.Kept> kept =
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(userMessage(model.requests().getFirst())).doesNotContain(ChapterSummaryCall.UNKNOWN_START);
+        assertThat(userMessage(model.requests().get(1)))
+                .contains(ChapterSummaryCall.UNKNOWN_START + "блазаками, шмурляє.")
+                .doesNotContain(ChapterSummaryCall.CORRECTION_START);
+        assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
+    }
+
+    @Test
+    void call_inventedWordsMendedOnReask_secondAnswerKept() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answerTo(FORMAT, reply("Мірта йде до міста. Вона зустрічає брата з блазаками шмурляє."))
+                .answerTo(FORMAT, reply("Мірта йде до міста. Вона зустрічає брата."));
+
+        final Optional<ChapterSummaryCall.Kept> kept =
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Вона зустрічає брата.", 2, 0));
+    }
+
+    @Test
+    void call_noDecidedText_vocabularyNotChecked() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answerTo(FORMAT, reply("Вона зустрічає брата з блазаками шмурляє."));
+
+        final Optional<ChapterSummaryCall.Kept> kept =
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, List.of(), map(List.of()), FILTER));
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Вона зустрічає брата з блазаками шмурляє.", 1, 0));
+    }
+
+    @Test
     void call_entryFromLaterChapter_dropped() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(FORMAT, reply("Мірта йде до міста. Вона зустрічає Глафіру біля воріт. Брат мовчить."));
 
-        final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(2, 2), SOURCE, map(List.of(GLAFIRA)), FILTER));
+        final Optional<ChapterSummaryCall.Kept> kept = keptOf(
+                call(model, event -> {}).summarize(chapter(2, 2), SOURCE, TARGET, map(List.of(GLAFIRA)), FILTER));
 
         assertThat(model.requests()).as("no re-ask for a name").hasSize(1);
         assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
@@ -115,7 +158,7 @@ class ChapterSummaryCallTest {
                         reply("Мірта йде до міста. Вона зустрічає <Names> Корран</Names> біля воріт. Брат мовчить."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         assertThat(model.requests()).as("no re-ask for markup").hasSize(1);
         assertThat(kept).hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Брат мовчить.", 2, 1));
@@ -127,7 +170,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, reply("Мірта йде до міста. Дорога займає менше 5 < 6 годин."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         assertThat(kept)
                 .hasValue(new ChapterSummaryCall.Kept("Мірта йде до міста. Дорога займає менше 5 < 6 годин.", 2, 0));
@@ -144,7 +187,7 @@ class ChapterSummaryCallTest {
                 .answerTo(FORMAT, reply("Частина третя. Мірта вертається."));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(3, 60), lines, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(3, 60), lines, TARGET, map(List.of()), FILTER));
 
         assertThat(model.requests()).hasSize(3);
         assertThat(userMessage(model.requests().getFirst())).doesNotContain("<Earlier part>");
@@ -162,7 +205,7 @@ class ChapterSummaryCallTest {
                         Result.err(AppError.of(ErrorCode.contextWindow, "Too long", "The prompt does not fit.")));
 
         final Optional<ChapterSummaryCall.Kept> kept =
-                keptOf(call(model, event -> {}).summarize(chapter(4, 2), SOURCE, map(List.of()), FILTER));
+                keptOf(call(model, event -> {}).summarize(chapter(4, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         assertThat(kept).isEmpty();
         assertThat(appender.list)
@@ -180,7 +223,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, reply("Мірта йде до міста. Там вона знаходить брата."));
         final List<JobEvent> events = new ArrayList<>();
 
-        keptOf(call(model, events::add).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER));
+        keptOf(call(model, events::add).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER));
 
         final List<CallSnapshot> shown = events.stream()
                 .filter(CallSnapshotUpdated.class::isInstance)
@@ -202,7 +245,7 @@ class ChapterSummaryCallTest {
         final ScriptedChatModel model = new ScriptedChatModel().answerTo(FORMAT, Result.err(CANCELLED));
 
         final Result<Optional<ChapterSummaryCall.Kept>> result =
-                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER);
 
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
         assertThat(appender.list).noneMatch(event -> event.getLevel().isGreaterOrEqual(Level.WARN));
@@ -216,7 +259,7 @@ class ChapterSummaryCallTest {
                 .answerTo(FORMAT, Result.err(CANCELLED));
 
         final Result<Optional<ChapterSummaryCall.Kept>> result =
-                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER);
 
         assertThat(model.requests()).hasSize(2);
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
@@ -232,7 +275,7 @@ class ChapterSummaryCallTest {
                 new ScriptedChatModel().answerTo(FORMAT, timedOut).answerTo(FORMAT, timedOut);
 
         final Result<Optional<ChapterSummaryCall.Kept>> result =
-                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, map(List.of()), FILTER);
+                call(model, event -> {}).summarize(chapter(1, 2), SOURCE, TARGET, map(List.of()), FILTER);
 
         assertThat(result.data()).isEmpty();
         assertThat(appender.list)

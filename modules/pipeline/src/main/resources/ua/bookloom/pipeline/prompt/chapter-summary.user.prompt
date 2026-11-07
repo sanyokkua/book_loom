@@ -5,6 +5,7 @@ Rules:
 2. Write every word in {{targetLanguage}}.
 3. Spell each name only as <Names> spells it, declined to fit the sentence; a name <Names> does not list keeps the spelling of the book.
 4. Name nobody and nothing that <Text> does not name, and add no event or name of your own.
+5. Use only real {{targetLanguage}} words and the names exactly as <Names> spells them; do not invent words, and never write a name the way the book's own language spells it when <Names> gives it another spelling.
 {{#mapLines}}
 
 <Names>

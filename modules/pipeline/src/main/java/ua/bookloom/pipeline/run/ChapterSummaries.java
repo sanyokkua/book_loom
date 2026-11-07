@@ -15,12 +15,14 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ChapterSummaryKept;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.StepKind;
 import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.LexiconFilter;
@@ -296,8 +298,34 @@ final class ChapterSummaries {
         final BookMap map = planner.map(
                 Objects.requireNonNull(glossary.data(), "glossary"), new Lexicon(stores.lexicon()).entries(projectId));
         final List<String> lines = Tokens.visibleTexts(held);
+        final List<String> decided = decidedTexts(chapter);
         return answered(
-                chapter, held, routed.untilAnswered(work, null, () -> call.summarize(chapter, lines, map, filter)));
+                chapter,
+                held,
+                routed.untilAnswered(work, null, () -> call.summarize(chapter, lines, decided, map, filter)));
+    }
+
+    // The chapter's decided target text in reading order, which the summary's words are checked against; a store that
+    // cannot be read gives none, and the check is then off for this chapter.
+    private List<String> decidedTexts(final Chapter chapter) {
+        final Result<List<SegmentRecord>> read = stores.segments().all(projectId);
+        if (read.isErr()) {
+            log.warn(
+                    "Decided text of chapter {} not read; the summary's words are not checked reason={}",
+                    chapter.number(),
+                    Objects.requireNonNull(read.error(), ERROR).code());
+            return List.of();
+        }
+        final Map<String, SegmentRecord> byId = Objects.requireNonNull(read.data(), "records").stream()
+                .collect(Collectors.toMap(SegmentRecord::segmentId, Function.identity(), (first, second) -> second));
+        final List<String> decided = chapter.segmentIds().stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .filter(record -> record.status() != SegmentStatus.PENDING)
+                .flatMap(record -> record.effectiveTarget().stream())
+                .toList();
+        log.debug("Decided text of chapter {} key={} segments={}", chapter.number(), chapter.key(), decided.size());
+        return decided;
     }
 
     private Optional<RunEnd> answered(
