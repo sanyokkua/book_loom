@@ -35,8 +35,8 @@ final class ReviewQueries {
     }
 
     /**
-     * The flagged count, or {@code shown} when it could not be read; the suspicious count read with it is published, so
-     * the Review button's second number follows what the person does at the desk.
+     * The flagged count, or {@code shown} when it could not be read; the counts of the desk's own lists read with it are
+     * published, so the Review button's second number and the filters follow what the person does at the desk.
      */
     int refreshed(final String projectId, final int shown, final LiveSection live) {
         final ReviewCounts counts = desk.counts(projectId).data();
@@ -44,6 +44,17 @@ final class ReviewQueries {
             return shown;
         }
         live.publishSuspicious(counts.suspicious());
+        live.publishProofreadLists(counts.changedByProofread(), counts.waitingOnGender());
+        return counts.flagged();
+    }
+
+    /** The flagged count, or {@code shown} when it could not be read; the proofread lists read with it are published. */
+    int flagged(final String projectId, final int shown, final LiveSection live) {
+        final ReviewCounts counts = desk.counts(projectId).data();
+        if (counts == null) {
+            return shown;
+        }
+        live.publishProofreadLists(counts.changedByProofread(), counts.waitingOnGender());
         return counts.flagged();
     }
 

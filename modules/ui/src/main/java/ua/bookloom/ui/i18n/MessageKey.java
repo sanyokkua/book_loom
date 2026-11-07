@@ -3065,6 +3065,10 @@ public enum MessageKey {
     REVIEW_FINDINGS_NONE("review.findings.none"),
     /** Heading of an edit the reviewer made and the app verified; argument 0 is the criterion's name. */
     REVIEW_EDIT_APPLIED("review.edit.applied"),
+    /** Compare: the Proofread stage's verdict line; argument 0 is the verdict in words. */
+    REVIEW_PROOFREAD_VERDICT("review.proofread.verdict"),
+    /** Compare: the heading of a kept proofread rewrite's diff. */
+    REVIEW_PROOFREAD_APPLIED("review.proofread.applied"),
     /** The name of an edit criterion; argument 0 is its token with underscores for hyphens, such as {@code gender} or {@code invented_word}, because an ICU selector holds no hyphen. */
     REVIEW_EDIT_CRITERION("review.edit.criterion"),
     /** The replacement line of an edit that only deleted its quote. */
@@ -3821,6 +3825,8 @@ public enum MessageKey {
     PROOF_VERDICT_WHY("proof.verdict.why"),
     /** The reason of a kept rewrite of a segment marked for a gender ending. */
     PROOF_KEPT_GENDER("proof.kept.gender"),
+    /** The reason of a kept rewrite of a segment whose gender deferral's gender arrived; arguments: 0 the name, 1 the gender code. */
+    PROOF_KEPT_GENDER_KNOWN("proof.kept.genderKnown"),
     /** The reason of a kept rewrite of a segment marked by a check; argument 0 is who raised the mark. */
     PROOF_KEPT_CHECK("proof.kept.check"),
     /** A refused rewrite's reason; argument 0 is the check's code, 1 the code as stored, 2 who raised it. */
@@ -3879,6 +3885,14 @@ public enum MessageKey {
     REVIEW_FILTER_SECOND_LOOK("review.filter.secondLook"),
     /** Hover explanation of {@link #REVIEW_FILTER_SECOND_LOOK}. */
     REVIEW_FILTER_SECOND_LOOK_TIP("review.filter.secondLook.tip"),
+    /** Filter "Changed by proofread"; argument 0 is how many segments it lists. */
+    REVIEW_FILTER_CHANGED("review.filter.changed"),
+    /** Hover explanation of {@link #REVIEW_FILTER_CHANGED}. */
+    REVIEW_FILTER_CHANGED_TIP("review.filter.changed.tip"),
+    /** Filter "Waiting on a gender"; argument 0 is how many segments it lists. */
+    REVIEW_FILTER_WAITING("review.filter.waiting"),
+    /** Hover explanation of {@link #REVIEW_FILTER_WAITING}. */
+    REVIEW_FILTER_WAITING_TIP("review.filter.waiting.tip"),
     /** Filter item listing every segment. */
     REVIEW_FILTER_ALL("review.filter.all"),
     /** Hover explanation of {@link #REVIEW_FILTER_ALL}. */
@@ -3931,6 +3945,12 @@ public enum MessageKey {
     REVIEW_MORE_UNDO_SUB("review.more.undo.sub"),
     /** The line under {@link #REVIEW_MORE_UNDO} when there is no edit. */
     REVIEW_MORE_UNDO_NONE("review.more.undo.none"),
+    /** More menu: Undo proofread. */
+    REVIEW_MORE_UNDO_PROOFREAD("review.more.undoProofread"),
+    /** More menu: the line under Undo proofread. */
+    REVIEW_MORE_UNDO_PROOFREAD_SUB("review.more.undoProofread.sub"),
+    /** More menu: the line under Undo proofread when the segment holds no kept proofread rewrite. */
+    REVIEW_MORE_UNDO_PROOFREAD_NONE("review.more.undoProofread.none"),
     /** Heading of the inline note panel. */
     REVIEW_NOTE_LABEL("review.note.label"),
     /** Placeholder of the note field. */

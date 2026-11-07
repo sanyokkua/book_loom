@@ -87,7 +87,7 @@ public final class ReviewFixtures {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
-            return new ReviewQueries(new OpenProjects(), projects, segments, deferrals, frames);
+            return new ReviewQueries(new OpenProjects(), projects, segments, deferrals, frames, glossary);
         }
 
         /** The retry over the same stores, deciding with {@code mode}'s threshold. */
@@ -304,6 +304,7 @@ public final class ReviewFixtures {
         final SegmentRepository segments = injector.getInstance(SegmentRepository.class);
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
         final PromptFrameRepository frames = injector.getInstance(PromptFrameRepository.class);
+        final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
         final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
         final ImportedBook imported =
                 Objects.requireNonNull(service.create(book).data(), "imported book");
@@ -312,14 +313,14 @@ public final class ReviewFixtures {
         return new Desk(
                 id,
                 new SegmentActions(documents, openProjects, segments, deferrals),
-                new ReviewQueries(openProjects, projects, segments, deferrals, frames),
+                new ReviewQueries(openProjects, projects, segments, deferrals, frames, glossary),
                 segments,
                 deferrals,
                 projects,
                 openProjects,
                 documents,
                 injector.getInstance(RunRepository.class),
-                injector.getInstance(GlossaryRepository.class),
+                glossary,
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(LexiconRepository.class),
                 injector.getInstance(SummaryRepository.class),

@@ -161,6 +161,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     }
 
     @Override
+    public Result<SegmentRecord> undoProofread(final String projectId, final String segmentId) {
+        return action("undoProofread(" + projectId + ", " + segmentId + ")", projectId, segmentId);
+    }
+
+    @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
         final List<SegmentView> forFilter = queuesByFilter.get(filter);
         final Result<List<SegmentView>> view = forFilter != null ? Result.ok(forFilter) : queueView;

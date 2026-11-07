@@ -29,6 +29,8 @@ public final class LiveSection {
             new ReadOnlyObjectWrapper<>(ProgressFigures.Figures.NONE);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suspicious = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper changedByProofread = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper waitingOnGender = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
             new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
@@ -138,6 +140,38 @@ public final class LiveSection {
     }
 
     /**
+     * How many segments the Proofread stage changed, kept or proposed, as the review desk last counted them.
+     *
+     * @return the read-only count, zero until counted; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty changedByProofread() {
+        return changedByProofread.getReadOnlyProperty();
+    }
+
+    /**
+     * How many segments wait on a gender, as the review desk last counted them.
+     *
+     * @return the read-only count, zero until counted; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty waitingOnGender() {
+        return waitingOnGender.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows the counts of the review desk's proofread lists.
+     *
+     * @param changed the segments Changed by proofread lists
+     * @param waiting the segments Waiting on a gender lists
+     */
+    public void publishProofreadLists(final int changed, final int waiting) {
+        log.debug("publishing the proofread lists: {} changed, {} waiting on a gender", changed, waiting);
+        Platform.runLater(() -> {
+            changedByProofread.set(changed);
+            waitingOnGender.set(waiting);
+        });
+    }
+
+    /**
      * The flagged segments, in document order, as of the last flagged decision.
      *
      * @return an unmodifiable list; read on the FX thread
@@ -236,6 +270,8 @@ public final class LiveSection {
         progress.set(ProgressFigures.Figures.NONE);
         sourceKept.set(0);
         suspicious.set(0);
+        changedByProofread.set(0);
+        waitingOnGender.set(0);
         waitingCall.set(null);
         stage.set(null);
         connection.set(ConnectionStatus.UNKNOWN);

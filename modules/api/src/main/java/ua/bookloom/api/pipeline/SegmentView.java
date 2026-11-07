@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 
@@ -34,6 +35,7 @@ import ua.bookloom.api.project.SegmentPath;
  *     null — review shows it labelled as no usable translation rather than the source
  * @param frame the fixed frame {@code context} names, joined from the project's stored frames; empty when the segment
  *     has no snapshot, no call was made for it or the frame is not stored
+ * @param proofread what the Proofread stage decided for the segment, or null when no window read it
  */
 public record SegmentView(
         String segmentId,
@@ -52,7 +54,48 @@ public record SegmentView(
         @Nullable ContextSnapshot context,
         @Nullable String proposal,
         @Nullable String rejectedTarget,
-        List<PromptSection> frame) {
+        List<PromptSection> frame,
+        @Nullable ProofreadVerdict proofread) {
+
+    /** A segment view that no proofread window read. */
+    public SegmentView(
+            final String segmentId,
+            final String locator,
+            final SegmentKind kind,
+            final SegmentStatus status,
+            final String maskedSource,
+            final String displaySource,
+            @Nullable final String maskedMachineTarget,
+            @Nullable final String userTarget,
+            @Nullable final String maskedUserTarget,
+            final List<QaFinding> findings,
+            @Nullable final Double judgeScore,
+            final SegmentPath path,
+            final boolean reviewed,
+            @Nullable final ContextSnapshot context,
+            @Nullable final String proposal,
+            @Nullable final String rejectedTarget,
+            final List<PromptSection> frame) {
+        this(
+                segmentId,
+                locator,
+                kind,
+                status,
+                maskedSource,
+                displaySource,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                findings,
+                judgeScore,
+                path,
+                reviewed,
+                context,
+                proposal,
+                rejectedTarget,
+                frame,
+                null);
+    }
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings}.

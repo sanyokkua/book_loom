@@ -160,7 +160,7 @@ public final class ReviewDeskLauncher {
                 TranslatingView.languageName(
                         current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages),
                 pauses.get().acceptContinues(),
-                mirror.live().suspicious(),
+                mirror.live(),
                 technical.get().property(),
                 () -> translating.get().pause());
         final ReviewDeskCard desk = new ReviewDeskCard(viewModels.get(), parts, messages, this::close);

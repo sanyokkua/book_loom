@@ -25,6 +25,8 @@ public final class ProofreadWords {
 
     private static final String WORDS = ": ";
     private static final String GENDER_MARK = "gender ending against";
+    private static final String GENDER_KNOWN = "gender now known: ";
+    private static final String NAME_GENDER = " — ";
     private static final String STILL_BLOCKED = "still blocked";
     private static final List<String> VETO_PREFIXES = List.of("new-block:", "count:");
     private static final List<String> MARK_PREFIXES = List.of("flagged: ", "proofread mark: ", "audit ");
@@ -46,7 +48,7 @@ public final class ProofreadWords {
         final String word = messages.code(MessageKey.PROOF_VERDICT, outcome.name());
         final String why =
                 switch (outcome) {
-                    case KEPT -> marks.isEmpty() ? "" : kept(messages, marks.getFirst());
+                    case KEPT -> keptWhy(messages, reason, marks);
                     case REJECTED -> reason.isBlank() ? "" : rejected(messages, reason);
                     case PROPOSED -> reason.isBlank() ? "" : proposed(messages, reason);
                     case UNCHANGED -> "";
@@ -54,9 +56,25 @@ public final class ProofreadWords {
         return why.isEmpty() ? word : messages.get(MessageKey.PROOF_VERDICT_WHY, word, why);
     }
 
+    // A window's marks say why it was read; a stored verdict keeps the first of them as its reason.
+    private static String keptWhy(final Messages messages, final String reason, final List<String> marks) {
+        if (!marks.isEmpty()) {
+            return kept(messages, marks.getFirst());
+        }
+        return reason.isBlank() ? "" : kept(messages, reason);
+    }
+
     private static String kept(final Messages messages, final String mark) {
         if (mark.startsWith(GENDER_MARK)) {
             return messages.get(MessageKey.PROOF_KEPT_GENDER);
+        }
+        if (mark.startsWith(GENDER_KNOWN) && mark.contains(NAME_GENDER)) {
+            final String fact = mark.substring(GENDER_KNOWN.length());
+            final int split = fact.lastIndexOf(NAME_GENDER);
+            return messages.get(
+                    MessageKey.PROOF_KEPT_GENDER_KNOWN,
+                    fact.substring(0, split),
+                    fact.substring(split + NAME_GENDER.length()));
         }
         return messages.get(MessageKey.PROOF_KEPT_CHECK, RaiserWords.raiser(messages, checkOfMark(mark)));
     }

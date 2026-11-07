@@ -26,7 +26,8 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 /**
  * Turns one window's answer into the segments' verdicts (design D15 "Reply"): an item left out or answered unchanged
  * is UNCHANGED; a rewrite the gates refuse is REJECTED with their reason; a kept rewrite of a machine text replaces it
- * and sets the segment REVISED, with the text and status before kept for Undo proofread — for a FLAGGED segment only
+ * and sets the segment REVISED, with the text, its masked form, the status and the findings before kept for Undo
+ * proofread and the first reason it was marked for as the verdict's reason — for a FLAGGED segment only
  * when the rewrite clears every blocking finding; a kept rewrite of the person's own edit, or one that leaves a flagged
  * segment blocked, waits as a proposal, PROPOSED. A kept rewrite settles each gender deferral of its segment whose
  * gender the new text now agrees with.
@@ -159,7 +160,13 @@ final class WindowVerdicts {
                 .withFindings(keep.qa().findings())
                 .withStatus(SegmentStatus.REVISED)
                 .withProofread(new ProofreadVerdict(
-                        fingerprint, ProofreadOutcome.KEPT, "", record.machineTarget(), record.status()));
+                        fingerprint,
+                        ProofreadOutcome.KEPT,
+                        read.reasons().isEmpty() ? "" : read.reasons().getFirst(),
+                        record.machineTarget(),
+                        record.status(),
+                        record.maskedMachineTarget(),
+                        record.findings()));
     }
 
     // A FLAGGED segment is cleared only when the rewrite leaves no blocking finding.
@@ -236,12 +243,18 @@ final class WindowVerdicts {
                 now.outcome());
         final String reason = now.outcome() == ProofreadOutcome.KEPT ? now.reason() : earlier.reason();
         return decided.withProofread(new ProofreadVerdict(
-                now.fingerprint(), ProofreadOutcome.KEPT, reason, earlier.before(), earlier.statusBefore()));
+                now.fingerprint(),
+                ProofreadOutcome.KEPT,
+                reason,
+                earlier.before(),
+                earlier.statusBefore(),
+                earlier.maskedBefore(),
+                earlier.findingsBefore()));
     }
 
     // A verdict that kept no text keeps no text or status before it.
     private static ProofreadVerdict verdict(
             final String fingerprint, final ProofreadOutcome outcome, final String reason) {
-        return new ProofreadVerdict(fingerprint, outcome, reason, null, null);
+        return new ProofreadVerdict(fingerprint, outcome, reason);
     }
 }

@@ -113,6 +113,14 @@ public final class ReviewDeskImpl implements ReviewDesk {
     }
 
     @Override
+    public Result<SegmentRecord> undoProofread(final String projectId, final String segmentId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
+        log.debug("undoProofread project={} segment={} part={}", projectId, segmentId, PART_NAME);
+        return guarded("undoProofread", segmentId, () -> actions.undoProofread(projectId, segmentId));
+    }
+
+    @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
         Objects.requireNonNull(projectId, PROJECT_ID);
         Objects.requireNonNull(filter, "filter");
@@ -134,8 +142,11 @@ public final class ReviewDeskImpl implements ReviewDesk {
                 null,
                 () -> projectOf(projectId)
                         .flatMap(project -> segments.all(projectId)
-                                .map(records -> ReviewCounting.count(
-                                        records, project.brief().alsoTranslate().keptKinds()))));
+                                .map(records -> queries.withDeskLists(
+                                        projectId,
+                                        ReviewCounting.count(
+                                                records,
+                                                project.brief().alsoTranslate().keptKinds())))));
     }
 
     @Override

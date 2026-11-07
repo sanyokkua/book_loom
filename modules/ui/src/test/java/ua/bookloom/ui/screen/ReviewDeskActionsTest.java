@@ -134,6 +134,20 @@ class ReviewDeskActionsTest extends ReviewDeskTestBase {
         openDeskWith(List.of(ReviewFixtures.withUserEdit()), List.of());
 
         assertThat(fx(() -> moreItem("review-more-undo").isDisable())).isFalse();
+        assertThat(fx(() -> moreItem("review-more-undo-proofread").isDisable())).isTrue();
+    }
+
+    // IF Undo proofread were off on a kept rewrite, THEN the person could not put back what the last pass replaced;
+    // their own edit is a different undo.
+    @Test
+    void more_keptProofreadRewrite_hasUndoProofreadEnabledAndSendsIt() throws Exception {
+        openDeskWith(List.of(ReviewFixtures.keptRewrite()), List.of());
+
+        assertThat(fx(() -> moreItem("review-more-undo-proofread").isDisable())).isFalse();
+        assertThat(fx(() -> moreItem("review-more-undo").isDisable())).isTrue();
+
+        onFx(() -> moreItem("review-more-undo-proofread").fire());
+        awaitFx(() -> desk.calls().stream().anyMatch(call -> call.startsWith("undoProofread(")));
     }
 
     @Test

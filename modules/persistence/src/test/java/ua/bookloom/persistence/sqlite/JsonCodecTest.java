@@ -204,7 +204,13 @@ class JsonCodecTest {
 
     private static ProofreadVerdict verdict() {
         return new ProofreadVerdict(
-                "f".repeat(8), ProofreadOutcome.KEPT, "gender now known " + UK, "before " + UK, SegmentStatus.FLAGGED);
+                "f".repeat(8),
+                ProofreadOutcome.KEPT,
+                "gender now known " + UK,
+                "before " + UK,
+                SegmentStatus.FLAGGED,
+                "before " + UK,
+                List.of(new QaFinding("language", Severity.HIGH, "кобылу", "alphabet")));
     }
 
     private static GlossaryEntry glossary() {

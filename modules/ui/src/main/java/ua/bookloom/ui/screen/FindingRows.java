@@ -6,8 +6,13 @@ import java.util.Objects;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.AppliedEdit;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.ui.control.ProofreadWords;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -17,7 +22,7 @@ import ua.bookloom.ui.state.FindingBadge;
 /**
  * Draws one finding of the review desk's "What may be wrong": one label naming its kind, severity and who raised it,
  * then in plain words what may be wrong, or an edit the reviewer made as the words it removed beside the words it put
- * there. It owns no state and logs nothing.
+ * there; and the Proofread stage's verdict on the segment. It owns no state and logs nothing.
  */
 final class FindingRows {
 
@@ -57,6 +62,38 @@ final class FindingRows {
         Tips.install(messages, removed, MessageKey.REVIEW_EDIT_TIP);
         Tips.install(messages, added, MessageKey.REVIEW_EDIT_TIP);
         return row;
+    }
+
+    /**
+     * The Proofread stage's verdict on a segment: its line in words and, for a kept rewrite, the text it replaced beside
+     * the text it put there, headed "Edit applied".
+     *
+     * @param view the segment shown
+     * @return the rows; empty when no proofread window read the segment
+     */
+    List<VBox> verdict(final SegmentView view) {
+        final @Nullable ProofreadVerdict verdict = view.proofread();
+        if (verdict == null) {
+            return List.of();
+        }
+        final Label line = new Label(messages.get(
+                MessageKey.REVIEW_PROOFREAD_VERDICT,
+                ProofreadWords.verdict(messages, verdict.outcome(), verdict.reason(), List.of())));
+        line.setId("review-proofread-verdict");
+        line.getStyleClass().add("finding-kind");
+        line.setWrapText(true);
+        line.setMinHeight(Region.USE_PREF_SIZE);
+        final @Nullable String before = verdict.before();
+        final @Nullable String now = view.maskedMachineTarget();
+        if (verdict.outcome() != ProofreadOutcome.KEPT || before == null || now == null) {
+            return List.of(new VBox(2, line));
+        }
+        final Label heading = new Label(messages.get(MessageKey.REVIEW_PROOFREAD_APPLIED));
+        heading.setId("review-proofread-applied");
+        heading.getStyleClass().add("finding-kind");
+        final Label removed = diffLine("review-proofread-removed", "diff-removed", "− " + before);
+        final Label added = diffLine("review-proofread-added", "diff-added", "+ " + now);
+        return List.of(new VBox(2, line), new VBox(2, heading, removed, added));
     }
 
     private static Label diffLine(final String id, final String style, final String text) {

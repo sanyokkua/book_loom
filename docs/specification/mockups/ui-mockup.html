@@ -1750,7 +1750,7 @@ DLG.review = () => {
   ${ro ? `<div class="banner banner-warn" style="margin:10px 16px 0"><span class="ico">⏸</span><div class="grow small">Pause the translation to edit, accept or try again.</div><button class="btn btn-secondary btn-sm" onclick="setRun('paused');redrawDialog()">Pause</button></div>` : ''}
   <div class="rv-body">
     <div class="pd-list"><div style="padding:8px 10px;border-bottom:1px solid var(--divider)" class="between">
-        <select class="input" style="width:auto;padding:3px 6px"><option>To review (${left})</option><option>Worth a second look (3)</option><option>All segments</option></select>
+        <select class="input" style="width:auto;padding:3px 6px"><option>To review (${left})</option><option title="Accepted segments that the audit or the Proofread stage still doubts">Worth a second look (3)</option><option title="Segments whose wording the Proofread stage changed or wants to change">Changed by proofread (2)</option><option title="Segments that name a character whose gender was not known when they were translated">Waiting on a gender (1)</option><option>All segments</option></select>
         <span class="gap4"><button class="btn btn-ghost btn-sm" title="Previous (Ctrl+Alt+↑)" onclick="RV.sel=Math.max(0,RV.sel-1);RV.dirty=false;redrawDialog()">‹</button><button class="btn btn-ghost btn-sm" title="Next (Ctrl+Alt+↓)" onclick="RV.sel=Math.min(${FLAGGED.length - 1},RV.sel+1);RV.dirty=false;redrawDialog()">›</button></span></div>
       ${FLAGGED.map((x, i) => `<div class="li ${i === RV.sel ? 'sel' : ''}" tabindex="0" onclick="RV.sel=${i};RV.dirty=false;RV.note=false;redrawDialog()"><div class="top"><span class="t">${x.loc}</span>${mk(RV_WORD[RV.st[i]][1], RV_WORD[RV.st[i]][0])}</div><div class="res" title="${esc(x.kind[0] + ' · ' + markText(x.src))}">${x.kind[0]} · ${toksPlain(x.src)}</div></div>`).join('')}</div>
     <div class="pd-detail rv-detail">
@@ -1778,7 +1778,8 @@ DLG.review = () => {
       <button onclick="rvAct('skip')">Leave for later<span class="sub">It stays to review; move to the next one</span></button>
       <button onclick="RV.menu=false;redrawDialog();toast('info','Translating again','${s.loc} — using what the model saw the first time.')">Try again<span class="sub">Ask the model again, same context</span></button>
       <button onclick="RV.menu=false;RV.note=true;redrawDialog()">Try again with a note…<span class="sub">Tell the model what to fix</span></button>
-      <button ${RV.dirty ? '' : 'disabled style="opacity:.5" title="There is no edit to undo"'} onclick="RV.dirty=false;RV.menu=false;redrawDialog()">Undo my edit<span class="sub">Back to the model’s translation</span></button></div></div>
+      <button ${RV.dirty ? '' : 'disabled style="opacity:.5" title="There is no edit to undo"'} onclick="RV.dirty=false;RV.menu=false;redrawDialog()">Undo my edit<span class="sub">Back to the model’s translation</span></button>
+      <button disabled style="opacity:.5" title="There is no proofread rewrite to undo">Undo proofread<span class="sub">Puts back the text the Proofread stage replaced</span></button></div></div>
     <button class="btn btn-primary" id="rvMain" ${dis} onclick="rvAct(RV.dirty?'edit':'ok')" title="Accept: the model’s translation is fine. After you edit, it saves your text instead.">${RV.dirty ? '✓ Save my edit & next' : '✓ Accept & next'}</button>
   </div></div>`;
 };

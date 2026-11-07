@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -25,7 +26,8 @@ import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
  * The desk's More ▾ button and its menu of the less common actions, each a word with a line under it: Leave for later,
- * Try again, Try again with a note…, and Undo my edit, which is off while the segment holds no edit of the person's.
+ * Try again, Try again with a note…, Undo my edit, which is off while the segment holds no edit of the person's, and
+ * Undo proofread, which is off while it holds no kept proofread rewrite.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -113,7 +115,8 @@ final class ReviewMoreMenu {
                         Words.RETRY,
                         () -> asks.guard().run(() -> viewModel.retry(null, false))),
                 retry(messages, viewModel, "review-more-note", Words.NOTE, asks.askNote()),
-                undo(messages, viewModel, asks.askUndo()));
+                undo(messages, viewModel, asks.askUndo()),
+                undoProofread(messages, viewModel, asks.guard()));
     }
 
     // Off with no segment selected, or while the actions are not offered (a run translates, a retry is in flight).
@@ -191,6 +194,35 @@ final class ReviewMoreMenu {
                         .then(messages.get(MessageKey.REVIEW_MORE_UNDO_NONE))
                         .otherwise(messages.get(MessageKey.REVIEW_MORE_UNDO_SUB)));
         return undo;
+    }
+
+    // On only for a segment whose kept proofread rewrite can be put back; the person's own edit is never touched.
+    private static CustomMenuItem undoProofread(
+            final Messages messages, final ReviewViewModel viewModel, final ReviewListPane.Guard guard) {
+        final BooleanBinding nothing = Bindings.createBooleanBinding(
+                () -> !isProofreadUndoable(viewModel.selected().get()), viewModel.selected());
+        final CustomMenuItem item = item(
+                messages,
+                "review-more-undo-proofread",
+                MessageKey.REVIEW_MORE_UNDO_PROOFREAD,
+                MessageKey.REVIEW_MORE_UNDO_PROOFREAD_SUB,
+                () -> guard.run(viewModel::undoProofread));
+        item.disableProperty().bind(nothing.or(Bindings.not(viewModel.actionsAvailable())));
+        final Label sub = (Label) ((VBox) item.getContent()).getChildren().get(1);
+        sub.textProperty()
+                .bind(Bindings.when(nothing)
+                        .then(messages.get(MessageKey.REVIEW_MORE_UNDO_PROOFREAD_NONE))
+                        .otherwise(messages.get(MessageKey.REVIEW_MORE_UNDO_PROOFREAD_SUB)));
+        return item;
+    }
+
+    private static boolean isProofreadUndoable(final @Nullable SegmentView segment) {
+        final @Nullable ProofreadVerdict verdict = segment == null ? null : segment.proofread();
+        return segment != null
+                && segment.status() == SegmentStatus.REVISED
+                && segment.userTarget() == null
+                && verdict != null
+                && verdict.isUndoable();
     }
 
     private static CustomMenuItem item(

@@ -258,8 +258,7 @@ final class WindowReader {
         if (verdict == null || !verdict.fingerprint().equals(was)) {
             return record;
         }
-        return record.withProofread(new ProofreadVerdict(
-                now, verdict.outcome(), verdict.reason(), verdict.before(), verdict.statusBefore()));
+        return record.withProofread(verdict.restamped(now));
     }
 
     // The window's texts, verdicts, proposals and settled deferrals in one transaction.

@@ -25,6 +25,7 @@ import ua.bookloom.ui.control.Wrapped;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.LiveSection;
 import ua.bookloom.ui.state.ReviewMainAction;
 import ua.bookloom.ui.state.ReviewViewModel;
 
@@ -55,7 +56,7 @@ final class ReviewDeskCard extends ModalCard {
      * @param sourceName the heading of the source pane
      * @param targetName the heading of the target pane
      * @param acceptContinues whether a decision resumes a paused run, which words the main button "& continue"
-     * @param suspicious the count of Worth a second look
+     * @param lists the counts of the desk's own lists: Worth a second look, Changed by proofread, Waiting on a gender
      * @param technical the shared technical-details switch
      * @param pause pauses the run, from the read-only banner
      */
@@ -63,7 +64,7 @@ final class ReviewDeskCard extends ModalCard {
             ObservableValue<String> sourceName,
             ObservableValue<String> targetName,
             ObservableValue<Boolean> acceptContinues,
-            javafx.beans.value.ObservableIntegerValue suspicious,
+            LiveSection lists,
             javafx.beans.property.BooleanProperty technical,
             Runnable pause) {}
 
@@ -109,7 +110,7 @@ final class ReviewDeskCard extends ModalCard {
     }
 
     private Node body(final Parts parts) {
-        final ReviewListPane list = new ReviewListPane(viewModel, parts.suspicious(), this::guard, messages);
+        final ReviewListPane list = new ReviewListPane(viewModel, parts.lists(), this::guard, messages);
         list.setMinWidth(LIST_MIN);
         list.setPrefWidth(LIST_PREF);
         list.maxWidthProperty().bind(widthProperty().multiply(LIST_SHARE));

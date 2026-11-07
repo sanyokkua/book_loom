@@ -95,6 +95,7 @@ final class ReviewDeskTabs extends TabPane {
             empty.setWrapText(true);
             empty.setMinHeight(Region.USE_PREF_SIZE);
             findings.getChildren().setAll(empty);
+            findings.getChildren().addAll(0, rows.verdict(view));
             return;
         }
         final List<QaFinding> shown = withoutRepeatedDoubts(view.findings());
@@ -103,10 +104,9 @@ final class ReviewDeskTabs extends TabPane {
                 view.segmentId(),
                 view.findings().size(),
                 shown.size());
-        findings.getChildren()
-                .setAll(shown.stream()
-                        .map(finding -> rows.of(finding, technical))
-                        .toList());
+        final List<Node> drawn = new ArrayList<>(rows.verdict(view));
+        shown.forEach(finding -> drawn.add(rows.of(finding, technical)));
+        findings.getChildren().setAll(drawn);
     }
 
     // The audit doubts every accepted segment with the run's own checks, so a check the run already recorded comes back

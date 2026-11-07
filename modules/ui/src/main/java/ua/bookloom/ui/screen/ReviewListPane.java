@@ -32,11 +32,13 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.i18n.RaiserWords;
 import ua.bookloom.ui.state.FindingBadge;
+import ua.bookloom.ui.state.LiveSection;
 import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
- * The review desk's left side: the filter box (To review, Worth a second look, All segments, each with its count),
+ * The review desk's left side: the filter box (To review, Worth a second look, Changed by proofread, Waiting on a
+ * gender, All segments, each with its count),
  * previous and next, the list of segments with a marker and one line each, and the shortcut line under it.
  *
  * <p>The list only follows the view model: picking a row selects that segment, and a segment the view model selects is
@@ -80,12 +82,16 @@ final class ReviewListPane extends VBox {
     private static final double SPACING = 8;
     private static final double ROW_GAP = 2;
     private static final double LIST_MIN_HEIGHT = 120;
-    private static final List<ReviewFilter> FILTERS =
-            List.of(ReviewFilter.ALL_FLAGGED, ReviewFilter.SUSPICIOUS, ReviewFilter.ALL_SEGMENTS);
+    private static final List<ReviewFilter> FILTERS = List.of(
+            ReviewFilter.ALL_FLAGGED,
+            ReviewFilter.SUSPICIOUS,
+            ReviewFilter.CHANGED_BY_PROOFREAD,
+            ReviewFilter.WAITING_ON_GENDER,
+            ReviewFilter.ALL_SEGMENTS);
 
     private final ReviewViewModel viewModel;
     private final Messages messages;
-    private final ObservableIntegerValue suspicious;
+    private final LiveSection lists;
     private final Guard guard;
     private final ListView<ReviewRow> list = new ListView<>();
     private final ComboBox<ReviewFilter> filterBox = new ComboBox<>();
@@ -94,13 +100,10 @@ final class ReviewListPane extends VBox {
     private boolean applying;
 
     ReviewListPane(
-            final ReviewViewModel viewModel,
-            final ObservableIntegerValue suspicious,
-            final Guard guard,
-            final Messages messages) {
+            final ReviewViewModel viewModel, final LiveSection lists, final Guard guard, final Messages messages) {
         super(SPACING);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
-        this.suspicious = Objects.requireNonNull(suspicious, "suspicious");
+        this.lists = Objects.requireNonNull(lists, "lists");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
         list.setId("review-list");
@@ -122,7 +125,10 @@ final class ReviewListPane extends VBox {
         viewModel.rows().addListener((ListChangeListener<ReviewRow>) change -> Platform.runLater(this::syncSelection));
         viewModel.filter().addListener((observed, was, now) -> showFilter(now));
         viewModel.flaggedCount().addListener((observed, was, now) -> buttonCell.reword());
-        suspicious.addListener((observed, was, now) -> buttonCell.reword());
+        for (final ObservableIntegerValue count :
+                List.of(lists.suspicious(), lists.changedByProofread(), lists.waitingOnGender())) {
+            count.addListener((observed, was, now) -> buttonCell.reword());
+        }
     }
 
     private HBox filterRow() {
@@ -242,7 +248,18 @@ final class ReviewListPane extends VBox {
 
         private String wordOf(final ReviewFilter filter) {
             return switch (filter) {
-                case SUSPICIOUS -> messages.get(MessageKey.REVIEW_FILTER_SECOND_LOOK, suspicious.get());
+                case SUSPICIOUS ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_SECOND_LOOK,
+                            lists.suspicious().get());
+                case CHANGED_BY_PROOFREAD ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_CHANGED,
+                            lists.changedByProofread().get());
+                case WAITING_ON_GENDER ->
+                    messages.get(
+                            MessageKey.REVIEW_FILTER_WAITING,
+                            lists.waitingOnGender().get());
                 case ALL_SEGMENTS -> messages.get(MessageKey.REVIEW_FILTER_ALL);
                 default ->
                     messages.get(
@@ -254,6 +271,8 @@ final class ReviewListPane extends VBox {
         private static MessageKey tipOf(final ReviewFilter filter) {
             return switch (filter) {
                 case SUSPICIOUS -> MessageKey.REVIEW_FILTER_SECOND_LOOK_TIP;
+                case CHANGED_BY_PROOFREAD -> MessageKey.REVIEW_FILTER_CHANGED_TIP;
+                case WAITING_ON_GENDER -> MessageKey.REVIEW_FILTER_WAITING_TIP;
                 case ALL_SEGMENTS -> MessageKey.REVIEW_FILTER_ALL_TIP;
                 default -> MessageKey.REVIEW_FILTER_TO_REVIEW_TIP;
             };

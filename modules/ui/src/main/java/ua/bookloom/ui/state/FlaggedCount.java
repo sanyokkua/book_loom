@@ -22,13 +22,15 @@ final class FlaggedCount {
 
     private final ReviewQueries queries;
     private final ExecutorService executor;
+    private final LiveSection live;
     private final AtomicLong ticket = new AtomicLong();
     private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
 
-    FlaggedCount(final ReviewQueries queries, final ExecutorService executor) {
+    FlaggedCount(final ReviewQueries queries, final ExecutorService executor, final LiveSection live) {
         this.queries = Objects.requireNonNull(queries, "queries");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.live = Objects.requireNonNull(live, "live");
     }
 
     /**
@@ -76,7 +78,7 @@ final class FlaggedCount {
         final long mine = ticket.incrementAndGet();
         try {
             executor.execute(() -> {
-                final int count = queries.flagged(projectId, shown);
+                final int count = queries.flagged(projectId, shown, live);
                 Platform.runLater(() -> {
                     if (mine == ticket.get()) {
                         publish.accept(count);

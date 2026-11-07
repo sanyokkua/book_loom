@@ -100,12 +100,14 @@ class StoredShapesTest {
     }
 
     // The proofread verdict lives on the segment record and a gender-changed deferral exists, so a database from before
-    // task 13.2 is set aside.
+    // task 13.2 is set aside; since task 13.8 the verdict also keeps the masked text and the findings before a kept
+    // rewrite, for Undo proofread.
     @Test
     void describe_afterProofreadVerdict_holdsTheVerdictOnTheSegment() {
         assertThat(StoredShapes.describe(StoredShapes.ROOTS))
                 .contains(
-                        "proofread:{before:java.lang.String,fingerprint:java.lang.String,"
+                        "proofread:{before:java.lang.String,findingsBefore:java.util.List<{kind:",
+                        "fingerprint:java.lang.String,maskedBefore:java.lang.String,"
                                 + "outcome:enum[KEPT,PROPOSED,REJECTED,UNCHANGED],reason:java.lang.String,",
                         "statusBefore:enum[",
                         "GENDER_CHANGED");

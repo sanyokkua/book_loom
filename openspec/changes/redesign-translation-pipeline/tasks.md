@@ -1679,7 +1679,7 @@ set aside once.
     a never-timed proofread kind gives the labelled range. The progress dialog lists proofread calls under their own
     kind (the "All calls…" list); a verdict on the call row is not shown there (the live row carries it).
 
-- [ ] 13.8 Show proofread verdicts on the review desk — the verdict and reason in the compare, Undo proofread, the
+- [x] 13.8 Show proofread verdicts on the review desk — the verdict and reason in the compare, Undo proofread, the
   filters "Changed by proofread" and "Waiting on a gender", and Fast's list of segments a known gender may have left
   wrong — so the person can check or reverse every change the last pass made. → :api, :pipeline, :ui
   - **Satisfies:** "Show a segment's proofread verdict and its reason in the compare" (review-queue), "Undo a kept proofread rewrite" (review-queue), "List in Changed by proofread the segments whose rewrite was kept or proposed" (review-queue), "List in Waiting on a gender the segments that hold an open gender deferral" (review-queue), "List at Fast the segments a gender now known may have left wrong" (review-queue), "Apply proofread proposals for edited segments only on acceptance" (review-queue), "Show a segment's findings, score and context in the compare" (review-queue), "Filter the desk by what needs attention" (review-queue), "Offer the less common actions under More" (review-queue), "Refuse a desk action on a segment whose status it does not start from" (review-queue), "List in Worth a second look the accepted segments the final audit doubts" (review-queue; audit marks and proofread marks still open, and at Fast each doubt the mark list named), "Explain Worth a second look on hover where its count is shown" (review-queue; the audit or the Proofread stage, no last check)
@@ -1705,6 +1705,20 @@ set aside once.
     `ch05.xhtml:40` with `gender now known: Корін Ешбі — male`. Acceptance case (c) goes fully green here.
   - **Log:** INFO per desk action taken (segment id, action, result); DEBUG for refusals.
   - **Done when:** the tests are green on both the pipeline and the TestFX side, and `scripts/ci-linux-ui.sh` passes.
+  - **As built:** `ProofreadVerdict` also stores the masked text and the findings before a kept rewrite (and the first
+    mark as a kept rewrite's reason), so `SegmentActions.undoProofread` puts back the text, the status and the
+    findings with no check run, clears the verdict and marks the segment reviewed (a stored record shape changed, so a
+    database from before is set aside). `ReviewFilter` gains `CHANGED_BY_PROOFREAD` and `WAITING_ON_GENDER`;
+    `ReviewQueries` lists them and widens `SUSPICIOUS` to an accepted unreviewed segment with an audit doubt, a
+    repair-level finding left, or a gender set later that its text disagrees with (`proofread/GenderNowKnown`, shown
+    as an `audit:gender-now-known` doubt with the reason); `ReviewCounts` carries the two new counts and the desk
+    counts its three lists by the rules it lists them by (`ReviewQueries.withDeskLists`). `SegmentView.proofread`
+    carries the verdict to the compare (`FindingRows.verdict`: the verdict line, and "Edit applied" with − before / +
+    after for a kept rewrite); More ▾ holds Undo proofread. Deviations: the undo tests live in
+    `ReviewDeskProofreadTest` (`ReviewDeskImplTest` is at its length limit); the Fast case's gender is female
+    (`gender now known: Корін Ешбі — female`), because the Ukrainian agreement check holds only a woman's name to its
+    verb; note-level findings and the code's detectors do not enter Worth a second look (they would list most
+    accepted segments); the export report's suspicious count stays the audit's.
 
 - [ ] 13.9 Run arm 7c (proofread prompt P1, the target-language block, against P2, the English frame) and keep the
   winner, so the shipped proofread instruction is the one that measured better. → :pipeline

@@ -8,6 +8,8 @@ import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
@@ -193,6 +195,40 @@ public final class ReviewFixtures {
                 base.reviewed(),
                 null,
                 null);
+    }
+
+    /**
+     * {@code ch4 · p07}, REVISED by a kept proofread rewrite {@code Ліна сказала} of {@code Ліна сказав}, made while
+     * it was accepted.
+     */
+    public static SegmentView keptRewrite() {
+        final SegmentView base = view("ch04.xhtml:7", "ch4 · p07", SegmentStatus.REVISED, List.of(), null, null);
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                "Ліна сказала.",
+                null,
+                null,
+                List.of(),
+                null,
+                base.path(),
+                false,
+                null,
+                null,
+                null,
+                List.of(),
+                new ProofreadVerdict(
+                        "r1:fp",
+                        ProofreadOutcome.KEPT,
+                        "gender now known: Ліна — female",
+                        "Ліна сказав.",
+                        SegmentStatus.ACCEPTED,
+                        "Ліна сказав.",
+                        List.of()));
     }
 
     public static SegmentView accepted() {

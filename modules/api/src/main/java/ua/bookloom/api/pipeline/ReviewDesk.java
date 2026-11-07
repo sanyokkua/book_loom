@@ -90,6 +90,17 @@ public interface ReviewDesk {
     Result<SegmentRecord> acceptProposal(String projectId, String segmentId);
 
     /**
+     * Puts back the text and the status a kept proofread rewrite replaced: ACCEPTED, or FLAGGED with the findings that
+     * blocked it.
+     *
+     * @param projectId the non-null project id
+     * @param segmentId the non-null segment id
+     * @return the stored record, reviewed, with no proofread verdict; {@code validation} for a segment that holds no
+     *     kept rewrite or holds the person's own edit, with nothing changed
+     */
+    Result<SegmentRecord> undoProofread(String projectId, String segmentId);
+
+    /**
      * Lists the segments matching a filter, in document order.
      *
      * @param projectId the non-null project id

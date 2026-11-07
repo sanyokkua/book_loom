@@ -255,7 +255,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
         assertThat(labelText("translating-count-second-look")).isEqualTo("3 worth a second look");
         assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("translating-count-second-look")))
-                .startsWith("Accepted segments that a last check");
+                .startsWith("Accepted segments that the audit or the Proofread stage still doubts");
     }
 
     // IF text kept verbatim and text kept as the source were counted apart, THEN "kept as is" would under-report.

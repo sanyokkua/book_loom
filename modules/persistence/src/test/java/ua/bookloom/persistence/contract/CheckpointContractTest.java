@@ -116,7 +116,7 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
                 .withMachineTarget("Тарна прийшла завтра.", "Тарна прийшла завтра.")
                 .withProofread(keptVerdict());
         final SegmentRecord unchanged = decidedBeforeProofread("ch06.xhtml:21")
-                .withProofread(new ProofreadVerdict("fp2", ProofreadOutcome.UNCHANGED, "", null, null));
+                .withProofread(new ProofreadVerdict("fp2", ProofreadOutcome.UNCHANGED, ""));
         return new ChunkCommit(
                 "p1",
                 List.of(kept, unchanged),
@@ -129,7 +129,13 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
 
     protected static ProofreadVerdict keptVerdict() {
         return new ProofreadVerdict(
-                "fp1", ProofreadOutcome.KEPT, "gender now known: Тарн", "Тарн прийшов завтра.", SegmentStatus.ACCEPTED);
+                "fp1",
+                ProofreadOutcome.KEPT,
+                "gender now known: Тарн",
+                "Тарн прийшов завтра.",
+                SegmentStatus.ACCEPTED,
+                "Тарн прийшов завтра.",
+                List.of());
     }
 
     protected static SegmentRecord decidedBeforeProofread(final String segmentId) {

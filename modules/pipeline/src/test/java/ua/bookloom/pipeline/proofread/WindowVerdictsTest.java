@@ -188,7 +188,13 @@ class WindowVerdictsTest {
         final Document document = ProofreadFixtures.chapter("ch02.md", NEGATION_SOURCE);
         final SegmentRecord kept = decided(ID, SegmentStatus.REVISED, NEGATION_KEPT)
                 .withProofread(new ProofreadVerdict(
-                        "r1:first", ProofreadOutcome.KEPT, "", NEGATION_LOST, SegmentStatus.ACCEPTED));
+                        "r1:first",
+                        ProofreadOutcome.KEPT,
+                        "",
+                        NEGATION_LOST,
+                        SegmentStatus.ACCEPTED,
+                        NEGATION_LOST,
+                        List.of()));
 
         final WindowVerdicts.Decided decided = verdicts(List.of(ZOTOV), List.of())
                 .decide(List.of(read(document.units().getFirst().segments().getFirst(), kept)), Map.of(), "r2:whole");

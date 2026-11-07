@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -22,6 +23,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.WhitespaceRestoration;
@@ -50,6 +52,7 @@ public final class SegmentActions {
     private static final String SAVE_EDIT = "save the edit";
     private static final String REVERT = "revert";
     private static final String APPLY_PROPOSAL = "apply the proposal";
+    private static final String UNDO_PROOFREAD = "undo the proofread";
 
     private final DocumentPort documents;
     private final OpenProjects openProjects;
@@ -118,6 +121,46 @@ public final class SegmentActions {
         Objects.requireNonNull(segmentId, SEGMENT_ID);
         log.debug("acceptProposal project={} segment={}", projectId, segmentId);
         return load(APPLY_PROPOSAL, projectId, segmentId).flatMap(this::proposed);
+    }
+
+    /**
+     * Puts back the text, the status and the findings a kept proofread rewrite replaced, from the stored verdict.
+     *
+     * @param projectId the non-null project id
+     * @param segmentId the non-null segment id
+     * @return the stored record, ACCEPTED or FLAGGED as before the rewrite, reviewed and with no proofread verdict;
+     *     {@code validation} for a segment that is not REVISED by a kept rewrite, for one that holds the person's own
+     *     edit, or for an unknown id, with nothing changed
+     */
+    public Result<SegmentRecord> undoProofread(final String projectId, final String segmentId) {
+        Objects.requireNonNull(projectId, PROJECT_ID);
+        Objects.requireNonNull(segmentId, SEGMENT_ID);
+        log.debug("undoProofread project={} segment={}", projectId, segmentId);
+        return load(UNDO_PROOFREAD, projectId, segmentId).flatMap(this::undone);
+    }
+
+    // The verdict's earlier text was the machine's, so it goes back as the machine target with its status and findings.
+    private Result<SegmentRecord> undone(final SegmentRecord record) {
+        final @Nullable ProofreadVerdict verdict = record.proofread();
+        final boolean undoable = record.status() == SegmentStatus.REVISED
+                && record.maskedUserTarget() == null
+                && verdict != null
+                && verdict.isUndoable();
+        log.debug("undoProofread: status={} undoable={}", record.status(), undoable);
+        if (!undoable) {
+            return refuse(UNDO_PROOFREAD, record.segmentId(), "No proofread rewrite of this segment can be undone.");
+        }
+        final ProofreadVerdict kept = Objects.requireNonNull(verdict, "verdict");
+        return write(
+                UNDO_PROOFREAD,
+                record,
+                current -> current.withMachineTarget(
+                                Objects.requireNonNull(kept.before(), "before"),
+                                Objects.requireNonNull(kept.maskedBefore(), "maskedBefore"))
+                        .withStatus(Objects.requireNonNull(kept.statusBefore(), "statusBefore"))
+                        .withFindings(kept.findingsBefore())
+                        .withProofread(null)
+                        .withReviewed(true));
     }
 
     private Result<SegmentRecord> accepted(final SegmentRecord record) {
