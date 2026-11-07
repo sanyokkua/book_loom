@@ -108,7 +108,7 @@ class MiniEvalTest {
                     model,
                     dial.name(),
                     run,
-                    MiniScorer.score(MiniExpectations.load(dataset), run),
+                    ProofreadChanges.scored(MiniExpectations.load(dataset), run),
                     MiniLabels.load(dataset));
         } catch (IOException e) {
             throw new UncheckedIOException(e);

@@ -122,7 +122,7 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
 
     /**
      * The first report's JSON with every repeat's figures (pass rate, flagged, calls, seconds, what the chapter-summary
-     * gate kept and dropped), stored targets and characters, so a K-run report keeps what each repeat decided and with
+     * gate kept and dropped), stored targets, proofread verdicts and characters, so a K-run report keeps what each repeat decided and with
      * which gender origins (arm 4b reads both).
      *
      * @param reports one report per repeat, in repeat order; not empty
@@ -140,6 +140,7 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
                 reports.get(repeat).putFigures(row);
                 final ObjectNode outputs = row.putObject("outputs");
                 each.outcomes().forEach((id, outcome) -> outputs.put(id, outcome.target()));
+                putProofread(row, each);
                 final ArrayNode characters = row.putArray("characters");
                 each.glossary().stream()
                         .filter(entry -> entry.type() == TermType.CHARACTER)
@@ -157,6 +158,19 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    // What the repeat's Proofread stage decided per segment it read, with the text before and after, so two arms'
+    // changed paragraphs can be judged (arm 7c).
+    private static void putProofread(final ObjectNode row, final MiniRun run) {
+        final ArrayNode rows = row.putArray("proofread");
+        run.proofread()
+                .forEach(read -> rows.addObject()
+                        .put("id", read.id())
+                        .put("outcome", read.outcome().name())
+                        .put("reason", read.reason())
+                        .put("before", read.before().target())
+                        .put("after", read.after().target()));
     }
 
     // One repeat's own figures beside its outputs, so a K-run report can be compared repeat by repeat (arm 6).

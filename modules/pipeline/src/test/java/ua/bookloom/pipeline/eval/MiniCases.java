@@ -12,11 +12,10 @@ import ua.bookloom.pipeline.eval.CaseRecord.Exchange;
 import ua.bookloom.pipeline.eval.CaseRecord.Grader;
 import ua.bookloom.pipeline.eval.CaseRecord.Time;
 import ua.bookloom.pipeline.eval.CaseRecord.Tokens;
-import ua.bookloom.pipeline.eval.MiniExpectations.CheckKind.Level;
 
 /**
  * The per-case records of one mini run: one case per block with the expectations that concern it, and one
- * {@value #GLOSSARY_CASE} case for the glossary expectations. A block's calls are the calls whose prompt holds its
+ * {@value #GLOSSARY_CASE} case for the glossary expectations and the run-level proofread grader. A block's calls are the calls whose prompt holds its
  * text, so a batch shared by several blocks is counted for each of them, and a case no call mentions reports no
  * figures rather than zeros. A block's record keeps the repeat's stored target as its {@code output}, so
  * {@code eval-score.py blind --all-repeats} can show every repeat of two runs side by side (arm 6).
@@ -56,7 +55,7 @@ final class MiniCases {
         }
         final List<Grader> glossary = results.stream()
                 .filter(r -> r.blocks().isEmpty())
-                .map(r -> new Grader(r.id(), Level.SOFT, r.passed()))
+                .map(r -> new Grader(r.id(), r.level(), r.passed()))
                 .toList();
         cases.add(entry(GLOSSARY_CASE, repeat, seed, glossary, List.of(), null));
         return List.copyOf(cases);

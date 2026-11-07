@@ -1203,6 +1203,50 @@ summaries. Balanced, en-uk, single-flight; e4b K = 3, 26b K = 1; `sequence` (8 c
   with the glossary.
 - *Runs* (`.temporary_context/eval-history/*arm6-{on,off}*`, logs `.temporary_context/arm6-*.log`).
 
+**Arm 7c: the proofread prompt (task 13.9).** Default P1: block 12 of a proofread call states the target language's own
+instruction and rules (`proofreadInstruction`, `proofreadRules` in `uk.properties`; the English default for a target with
+none). Alternative P2: the English instruction of `generic.properties` for every target, the target's rules kept, every other
+block the same. The alternative reached the job through the test-only `PromptVariants.proofreadPrompt` field
+(`BOOKLOOM_EVAL_VARIANTS=proofreadPrompt=P2`); the calls of every P2 run held `You proofread a translation` and none
+`Ти коректор`, and the P1 runs the reverse. Max (round 1 on marks, then round 2 over every story paragraph, so every
+paragraph is read), the `mini` suite (`mini-en` 33 blocks, `mini-ru` 17), Ollama, single-flight, paired by seed
+(`eval-score.py diff --paired`); `gemma4:e4b-mlx` K = 3 (seeds 1000-1002), then `gemma4:26b-mlx` once (K = 1).
+
+| Per repeat | P1 | P2 |
+|---|---|---|
+| e4b `mini-en` verdicts (UNCHANGED / REJECTED / KEPT) | 22/9/0, 20/11/0, 24/7/0 | 21/10/0, 20/11/0, 24/7/0 |
+| e4b `mini-ru` verdicts | 15/0/0 ×3 | 15/0/0 ×3 |
+| 26b `mini-en` verdicts | 25/6/0 | 24/7/0 |
+| 26b `mini-ru` verdicts | 15/0/0 | 15/0/0 |
+| e4b grader pass rate `mini-en` / `mini-ru` | 0.931, 0.931, 0.914 / 0.963 ×3 | 0.931 ×3 / 0.963 ×3 |
+| 26b grader pass rate `mini-en` / `mini-ru` | 0.948 / 0.963 | 0.948 / 0.963 |
+| `proofread-never-worse` (hard) | passed in every run | passed in every run |
+| Calls, seconds (e4b `mini-en`, first repeat) | 91, 285 s | 92, 256 s |
+
+- *Graders.* Every grader 0:0 discordant except e4b `mini-en` `every-usable` 1:0 for P2 (one segment flagged by its draft in
+  P1's third repeat, before any proofread call; p = 1.0); noise band 0.0172 on `mini-en`, 0 on `mini-ru`; the screen rule
+  fails (no 2 cases moved) and there is no real effect. 26b: 0 discordant on both books.
+- *Judge.* The judge screen (`ProofreadJudgeEvalTest`, `gemma4:26b-mlx`, `bl-judge-1`, pairwise with the order swapped)
+  compares the two sides' final text of every changed paragraph, a block whose rewrite either side kept, and each side's kept
+  rewrites against the text they replaced. Neither prompt got a rewrite kept on either model, so there were 0 changed
+  paragraphs and the judge was asked nothing. The draft text differs between the sides in 14-19 of 33 `mini-en` blocks per e4b
+  repeat (9 on 26b) and in 0-1 of 17 `mini-ru` blocks; that is the MLX runtime's own nondeterminism at a fixed seed (arm 3a),
+  not the proofread prompt, and it is not what the arm grades.
+- *What the stage did.* `mini-ru` was read without a single proposed change by either prompt. On `mini-en` both prompts
+  proposed rewrites in 6-11 paragraphs per repeat (4-9 of the block ids shared by the two sides in a repeat), and the never-worse gate
+  refused every one, on 26b each with `no-gain` (no check got better); the e4b reports predate the stored reason.
+- *Decision rule.* P2 only on a quality win (sign test p < 0.05 on discordant cases, or the screen rule confirmed on
+  `sequence`) with no hard grader worse; a tie keeps P1. A tie on measured data, so **P1 stays**: the `proofreadPrompt` field
+  and the P2 branch of `ProofreadInstruction` were deleted (the English default stays for targets with no instruction). Not
+  measured: a book where the proofread call's rewrites pass the gate; on the mini books no rewrite was kept, so the arm says
+  that the two prompts are not told apart there, not that they would edit alike where an edit is kept.
+- *Since this arm.* Each mini repeat writes the Proofread stage's verdicts (`repeats[].proofread`: id, outcome, reason, text
+  before and after), and a run whose stage read any segment reports the hard `proofread-never-worse` grader
+  (`ProofreadChanges`: the failing expectations of the block counted on the verdict's earlier text and on the text the job
+  left, before the consistency pass).
+- *Runs* (`.temporary_context/eval-history/20261107-*arm7c-P{1,2}*`; scripts, logs and the judge files in
+  `.temporary_context/arm7c/`).
+
 **Arm 8: quants of e4b (task 9.9).** Translator `gemma4:e4b` on Ollama, Balanced, single-flight, K = 3 (seeds 1000-1002), commit
 `6f6f819d` for all four, `mini-ru` (17 segments) and `mini-en` (33). Quants: NVFP4 `gemma4:e4b-mlx` (the default and the baseline of
 every pair), MXFP8 `gemma4:e4b-mxfp8`, Q8_0 `gemma4:e4b-it-q8_0` and the QAT build `gemma4:e4b-it-qat`; the owner pulled the last three.

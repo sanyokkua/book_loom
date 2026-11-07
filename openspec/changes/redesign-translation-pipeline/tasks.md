@@ -1720,7 +1720,7 @@ set aside once.
     verb; note-level findings and the code's detectors do not enter Worth a second look (they would list most
     accepted segments); the export report's suspicious count stays the audit's.
 
-- [ ] 13.9 Run arm 7c (proofread prompt P1, the target-language block, against P2, the English frame) and keep the
+- [x] 13.9 Run arm 7c (proofread prompt P1, the target-language block, against P2, the English frame) and keep the
   winner, so the shipped proofread instruction is the one that measured better. → :pipeline
   - **Satisfies:** enabling work for design D24 (arm 7c)
   - **Depends on:** 13.8
@@ -1741,6 +1741,20 @@ set aside once.
   - **Test first:** a `MiniScorerProofreadTest` case mapping a stored KEPT verdict whose kept text fails one check more
     than its `before` to a failing grade; the existing proofread tests of 13.5 stay green with the winner.
   - **Done when:** the result row is recorded, the loser is deleted and the module check is green.
+  - **As built:** P1 stays (a tie on measured data). Run at Max, where round 2 reads every story paragraph, on
+    `mini-en` and `mini-ru`, `gemma4:e4b-mlx` K = 3 and `gemma4:26b-mlx` K = 1: every grader 0:0 discordant except e4b
+    `every-usable` 1:0 (a draft flag, p = 1.0), `proofread-never-worse` passed in every run, and no rewrite was kept on
+    either side (`mini-en` 6-11 proposals per repeat refused by the never-worse gate, on 26b each `no-gain`; `mini-ru` none
+    proposed), so the judge screen had 0 changed paragraphs to grade. Deleted: `PromptVariants.proofreadPrompt` with its
+    enum and the P2 branch of `ProofreadInstruction` (the English default stays for a target with no instruction), and the
+    variants field `PromptTemplates` held for it; `PromptVariantsTest` asserts `languageRules` is the record's one
+    component. Eval: `MiniRun.Proofread` maps each stored verdict (the earlier text, status and findings of a kept rewrite,
+    else the text itself), read after the job and before the consistency pass; `ProofreadChanges` counts the block's
+    failing expectations on both sides and adds the hard `proofread-never-worse` result when the stage read any segment
+    (`MiniEvalTest` scores through it); each repeat's report row carries `proofread` (id, outcome, reason, before, after);
+    `ProofreadJudgeEvalTest` (`BOOKLOOM_EVAL_SUITE=proofread-judge`) is the pairwise judge screen of two runs' changed
+    paragraphs and of each side's kept rewrites, kept for arm 7b. Not measured: a book whose proofread rewrites pass the
+    gate (`docs/DEVELOPMENT.md#redesign-arms`).
 
 - [ ] 13.10 Make the acceptance test green, run the gate, fix the documents this group makes wrong and check the
   stage by hand, so the group merges with evidence. → :api, :persistence, :pipeline, :ui, :app

@@ -51,7 +51,6 @@ public final class PromptTemplates {
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
     private final PreparationExamples preparations;
-    private final PromptVariants variants;
 
     /** Loads the bundled templates with the bundled language rules. */
     public PromptTemplates() {
@@ -65,7 +64,7 @@ public final class PromptTemplates {
      */
     @Inject
     public PromptTemplates(final PromptVariants variants) {
-        this(PromptTemplates.class::getResourceAsStream, variantRules(variants), variants);
+        this(PromptTemplates.class::getResourceAsStream, variantRules(variants));
     }
 
     private static LanguageRules variantRules(final PromptVariants variants) {
@@ -81,13 +80,8 @@ public final class PromptTemplates {
     }
 
     PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
-        this(loader, rules, PromptVariants.DEFAULTS);
-    }
-
-    private PromptTemplates(final ResourceLoader loader, final LanguageRules rules, final PromptVariants variants) {
         Objects.requireNonNull(loader, "loader");
         this.rules = Objects.requireNonNull(rules, "rules");
-        this.variants = variants;
         this.preparations = new PreparationExamples(rules);
         for (final PromptName name : PromptName.values()) {
             name.systemSlots().ifPresent(slots -> systems.put(name, load(loader, name, "system", slots)));
@@ -111,14 +105,14 @@ public final class PromptTemplates {
     }
 
     /**
-     * Block 12 of a proofread call for one language pair, as the bound variants choose it.
+     * Block 12 of a proofread call for one language pair, from the language rules this instance was loaded with.
      *
      * @param sourceTag the source language tag, or null when nobody chose one
      * @param targetTag the non-null target language tag
      * @return the instruction and rules; never null
      */
     public ProofreadInstruction.Block proofreadBlock(@Nullable final String sourceTag, final String targetTag) {
-        return ProofreadInstruction.of(rules, sourceTag, targetTag, variants.proofreadPrompt());
+        return ProofreadInstruction.of(rules, sourceTag, targetTag);
     }
 
     /** Renders the system template of {@code name}; the map holds every required slot and only declared ones. */

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import java.lang.reflect.RecordComponent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.document.DocumentModule;
@@ -33,6 +34,14 @@ class PromptVariantsTest {
 
         assertThat(variants.languageRules()).isEqualTo(LanguageRulesVariant.BUNDLED);
         assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.bundled());
+    }
+
+    // Each settled arm deletes its field (arm 7c's proofreadPrompt in task 13.9); task 14.7 deletes the last one.
+    @Test
+    void components_afterArm7c_areTheLanguageRulesAlone() {
+        assertThat(PromptVariants.class.getRecordComponents())
+                .extracting(RecordComponent::getName)
+                .containsExactly("languageRules");
     }
 
     @Test

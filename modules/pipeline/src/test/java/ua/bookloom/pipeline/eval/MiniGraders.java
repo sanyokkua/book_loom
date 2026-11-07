@@ -57,7 +57,7 @@ final class MiniGraders {
 
     /**
      * Grades the Proofread stage's decisions of a run: a change whose verdict is KEPT must not have more failing checks
-     * on the kept text than on the text before it. Task 13.2 adds the stored verdict; it maps each one to a
+     * on the kept text than on the text before it. {@link ProofreadChanges} maps each stored verdict to a
      * {@link ProofreadChange}.
      *
      * @param changes what the stage decided, one entry per segment it read

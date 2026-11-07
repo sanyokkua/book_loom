@@ -110,6 +110,7 @@ final class MiniRunner {
         final int afterNames = probe.mark();
         final JobState end = WholeBookStages.translate(prepared, probe, window, errors);
         final int afterJob = probe.mark();
+        final List<MiniRun.Proofread> proofread = proofread(prepared);
         consistency(prepared, probe, errors);
         final Calls calls = new Calls(names, afterJob - afterNames, probe.mark() - afterJob);
         final Duration elapsed = Duration.between(started, Instant.now());
@@ -123,7 +124,8 @@ final class MiniRunner {
                 calls,
                 elapsed,
                 probe.callsSince(0),
-                capture.summaryGate());
+                capture.summaryGate(),
+                proofread);
     }
 
     /**
@@ -193,34 +195,49 @@ final class MiniRunner {
     }
 
     private Map<String, Outcome> outcomes(final Prepared prepared) {
+        final Map<String, Outcome> outcomes = new LinkedHashMap<>();
+        stored(prepared)
+                .forEach((block, record) -> outcomes.put(block.id(), Outcome.of(block.id(), block.text(), record)));
+        return outcomes;
+    }
+
+    // Each segment the job's Proofread stage read, as the job left it: the consistency pass that follows may rewrite
+    // a text, so the verdicts are read before it runs.
+    private List<MiniRun.Proofread> proofread(final Prepared prepared) {
+        final List<MiniRun.Proofread> read = new ArrayList<>();
+        stored(prepared).forEach((block, record) -> {
+            if (record.proofread() != null) {
+                read.add(MiniRun.Proofread.of(block.id(), block.text(), record));
+            }
+        });
+        log.info(
+                "Mini eval proofread verdicts read={} kept={}",
+                read.size(),
+                read.stream().filter(MiniRun.Proofread::isKept).count());
+        return read;
+    }
+
+    // Each block of the book with the stored record of its segment, in reading order; a block with no segment or no
+    // record is left out.
+    private Map<Block, SegmentRecord> stored(final Prepared prepared) {
         final Map<String, SegmentRecord> stored = new LinkedHashMap<>();
         Objects.requireNonNull(
                         prepared.stores().segments().all(prepared.projectId()).data())
                 .forEach(record -> stored.put(record.segmentId(), record));
         final Map<String, Block> byText = new LinkedHashMap<>();
         book.blocks().forEach(block -> byText.put(block.text(), block));
-        final Map<String, Outcome> outcomes = new LinkedHashMap<>();
+        final Map<Block, SegmentRecord> pairs = new LinkedHashMap<>();
         for (final Unit unit : prepared.document().units()) {
             for (final Segment segment : unit.segments()) {
                 final Block block = byText.get(
                         TOKEN.matcher(segment.masked()).replaceAll("").strip());
                 final SegmentRecord record = stored.get(segment.id());
                 if (block != null && record != null) {
-                    outcomes.put(block.id(), outcome(block, record));
+                    pairs.put(block, record);
                 }
             }
         }
-        return outcomes;
-    }
-
-    private static Outcome outcome(final Block block, final SegmentRecord record) {
-        final String target = record.maskedMachineTarget();
-        return new Outcome(
-                block.id(),
-                block.text(),
-                target == null ? null : TOKEN.matcher(target).replaceAll(""),
-                record.status(),
-                record.findings());
+        return pairs;
     }
 
     private static List<GlossaryEntry> glossary(final Prepared prepared) {

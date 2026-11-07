@@ -46,27 +46,18 @@ public final class ProofreadInstruction {
      * @param rules the non-null language-rules map the run's prompts read
      * @param sourceTag the source language tag, or null when nobody chose one
      * @param targetTag the non-null target language tag
-     * @param prompt the non-null proofread prompt variant: P2 states the English default instruction for every target
      * @return the block; never null
      */
-    public static Block of(
-            final LanguageRules rules,
-            @Nullable final String sourceTag,
-            final String targetTag,
-            final PromptVariants.ProofreadPrompt prompt) {
+    public static Block of(final LanguageRules rules, @Nullable final String sourceTag, final String targetTag) {
         Objects.requireNonNull(rules, "rules");
         Objects.requireNonNull(targetTag, "targetTag");
-        Objects.requireNonNull(prompt, "prompt");
-        final @Nullable String own = prompt == PromptVariants.ProofreadPrompt.P1 && !rules.genericOnly
-                ? targetInstruction(rules, sourceTag, targetTag)
-                : null;
+        final @Nullable String own = rules.genericOnly ? null : targetInstruction(rules, sourceTag, targetTag);
         final String instruction = own != null ? own : englishInstruction(rules, sourceTag, targetTag);
         final String ruleLines = String.join("\n", ruleLines(rules, targetTag));
         log.debug(
-                "Proofread instruction source={} target={} prompt={} own={} ruleLines={}",
+                "Proofread instruction source={} target={} own={} ruleLines={}",
                 sourceTag,
                 targetTag,
-                prompt,
                 own != null,
                 ruleLines.isEmpty() ? 0 : ruleLines.split("\n").length);
         return new Block(instruction, ruleLines);

@@ -8,9 +8,8 @@ import java.util.Objects;
  * setting can steer a release's prompts. Each field lives only until the task that settles its arm deletes it.
  *
  * @param languageRules which language rules a prompt states
- * @param proofreadPrompt which instruction block 12 of a proofread call states (arm 7c)
  */
-public record PromptVariants(LanguageRulesVariant languageRules, ProofreadPrompt proofreadPrompt) {
+public record PromptVariants(LanguageRulesVariant languageRules) {
 
     /** The shipped prompts. */
     public static final PromptVariants DEFAULTS = new PromptVariants();
@@ -23,18 +22,9 @@ public record PromptVariants(LanguageRulesVariant languageRules, ProofreadPrompt
         GENERIC_ONLY
     }
 
-    /** Which instruction a proofread call's block 12 states (design D24, arm 7c). */
-    public enum ProofreadPrompt {
-        /** The target language's own instruction and rules, as shipped; the English default for a target with none. */
-        P1,
-        /** The English default instruction for every target, the target's rules kept. */
-        P2
-    }
-
     /** Rejects a missing choice. */
     public PromptVariants {
         Objects.requireNonNull(languageRules, "languageRules");
-        Objects.requireNonNull(proofreadPrompt, "proofreadPrompt");
     }
 
     /**
@@ -42,31 +32,12 @@ public record PromptVariants(LanguageRulesVariant languageRules, ProofreadPrompt
      * injector sends exactly what the production one does.
      */
     public PromptVariants() {
-        this(LanguageRulesVariant.BUNDLED, ProofreadPrompt.P1);
-    }
-
-    /**
-     * The shipped proofread prompt with the given language rules.
-     *
-     * @param languageRules the non-null language-rules choice
-     */
-    public PromptVariants(final LanguageRulesVariant languageRules) {
-        this(languageRules, ProofreadPrompt.P1);
+        this(LanguageRulesVariant.BUNDLED);
     }
 
     /** {@code true} when every field is the shipped value. */
     public boolean isDefault() {
         return equals(DEFAULTS);
-    }
-
-    /**
-     * A copy with another proofread prompt.
-     *
-     * @param prompt the non-null proofread prompt
-     * @return the variants; never null
-     */
-    public PromptVariants withProofreadPrompt(final ProofreadPrompt prompt) {
-        return new PromptVariants(languageRules, prompt);
     }
 
     /** The language-rules map {@link #languageRules} selects; one shared instance per choice. */
