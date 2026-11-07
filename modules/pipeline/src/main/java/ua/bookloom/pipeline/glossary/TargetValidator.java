@@ -199,7 +199,7 @@ final class TargetValidator implements SuggestionReplies.Judge {
     public Standing standing(final GlossaryEntry entry, final String rendering) {
         final String term = entry.term();
         if (term.strip().equalsIgnoreCase(rendering.strip())) {
-            return copyStanding(term, rendering);
+            return copyStanding(entry, rendering);
         }
         if (IdentityRule.isIdentifier(term)) {
             log.debug("Rendering of entry {} changes an identifier", entry.id());
@@ -386,9 +386,10 @@ final class TargetValidator implements SuggestionReplies.Judge {
         return Edges.trailingRun(name.strip(), c -> !Character.isWhitespace(c) && c != '-');
     }
 
-    private Standing copyStanding(final String term, final String rendering) {
+    private Standing copyStanding(final GlossaryEntry entry, final String rendering) {
+        final String term = entry.term();
         if (IdentityRule.refuses(term, rendering, analysisLanguage, targetLanguage, Kept.NOT_KEPT)) {
-            return Standing.COPY;
+            return SuggestionLocks.isTechnicalTerm(entry, context) ? Standing.VERBATIM : Standing.COPY;
         }
         return IdentityRule.isIdentifier(term) ? Standing.VERBATIM : Standing.OPEN;
     }

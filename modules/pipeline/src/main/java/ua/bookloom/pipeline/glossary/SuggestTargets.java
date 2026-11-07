@@ -325,10 +325,10 @@ public final class SuggestTargets {
         if (second.isErr()) {
             return Result.err(Objects.requireNonNull(second.error(), ERROR));
         }
-        final List<Suggestion> retried =
-                Objects.requireNonNull(second.data(), "replies").kept();
+        final List<Suggestion> retried = RefusedAgain.settle(refused, Objects.requireNonNull(second.data(), "replies"));
         log.info("Suggestion batch {}: {} of {} refused renderings replaced", index, retried.size(), refused.size());
         run.setting().rejected().accept(Math.max(0, refused.size() - retried.size()));
+        RefusedAgain.warnLeftWithoutTarget(index, refused, retried);
         kept.addAll(retried);
         return Result.ok(kept);
     }

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermReading.Reading;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -80,6 +81,13 @@ final class SuggestionLocks {
     static boolean isTranslatable(final GlossaryEntry entry, final TargetContext context) {
         final Reading reading = context.readings().get(entry.id());
         return (reading != null && reading.speaking()) || hasCommonWord(entry, context);
+    }
+
+    // A technical word (Markdown): a plain term the book never writes in lower case is no ordinary word, so a model
+    // that keeps it as written is right and sounding it out would invent a word.
+    static boolean isTechnicalTerm(final GlossaryEntry entry, final TargetContext context) {
+        final Reading reading = context.readings().get(entry.id());
+        return entry.type() == TermType.TERM && !isCommonWord(entry, context) && (reading == null || !reading.brand());
     }
 
     static boolean hasCommonWord(final GlossaryEntry entry, final TargetContext context) {

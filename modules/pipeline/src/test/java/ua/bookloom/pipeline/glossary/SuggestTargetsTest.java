@@ -150,7 +150,7 @@ class SuggestTargetsTest {
 
         assertThat(termLines(model.requests().get(1)))
                 .containsExactly("- Milton — place — \"Hale walked to Milton.\" — refused: \"мілтон\""
-                        + " (capitalisation differs); give another");
+                        + " (capitalisation differs)");
         assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Мілтон");
     }
 

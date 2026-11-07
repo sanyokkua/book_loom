@@ -162,4 +162,59 @@ class SuggestTargetsRulesTest {
 
         assertThat(termLines(model).getFirst()).startsWith("- Milton — place");
     }
+
+    private static final BookSlice CAPITALISED_ONLY = GlossaryTestSegments.of(List.of(
+            "Earth turned slowly under them.",
+            "They had left Earth long ago.",
+            "Write it in Markdown, then export.",
+            "The Markdown file was short."));
+
+    // A one-word place the model renders twice as the same word (Земля) is an established word no letter table
+    // derives; refusing it for not opening like "Earth" would leave the entry without a target.
+    @Test
+    void suggest_singleWordPlaceAnsweredWithItsEstablishedWord_isKept() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(says("Earth", "Земля")).answer(says("Earth", "Земля"));
+
+        final Result<List<Suggestion>> suggested = suggest.suggest(
+                List.of(entry("Earth", TermType.PLACE, Gender.UNKNOWN, null)),
+                CAPITALISED_ONLY,
+                FRAME,
+                NamePolicy.TRANSLITERATE,
+                calls(model));
+
+        assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Земля");
+        assertThat(model.requests()).hasSize(2);
+    }
+
+    // A technical word is kept as written; sounding it out would invent a word.
+    @Test
+    void suggest_technicalTermKeptAsWritten_isKeptWithoutARetry() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(says("Markdown", "Markdown"));
+
+        final Result<List<Suggestion>> suggested = suggest.suggest(
+                List.of(entry("Markdown", TermType.TERM, Gender.UNKNOWN, null)),
+                CAPITALISED_ONLY,
+                FRAME,
+                NamePolicy.TRANSLITERATE,
+                calls(model));
+
+        assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Markdown");
+        assertThat(model.requests()).hasSize(1);
+    }
+
+    @Test
+    void suggest_prompt_allowsKeepingATechnicalWordAndDoesNotPushForAnotherRendering() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(says("Markdown", "Markdown"));
+
+        suggest.suggest(
+                List.of(entry("Markdown", TermType.TERM, Gender.UNKNOWN, null)),
+                CAPITALISED_ONLY,
+                FRAME,
+                NamePolicy.TRANSLITERATE,
+                calls(model));
+
+        final String prompt = model.requests().getFirst().messages().get(1).content();
+        assertThat(prompt).contains("keep it as written").doesNotContain("answer with a different rendering");
+    }
 }
