@@ -53,6 +53,8 @@ public final class ChapterBoundaries {
      * @param segmentCount how many story segments it holds; positive
      * @param segmentIds its segments' ids, in reading order; copied
      * @param tokens its source tokens, estimated in the source language
+     * @param sourceHash the hash of its segments' masked source ({@link ChapterStandings#sourceHash}), which a stored
+     *     summary keeps, so a summary written from other text is told from a fresh one
      * @param pseudo {@code true} if the book has no chapter level and the chapter was cut by size, {@code false}
      *     otherwise
      */
@@ -64,12 +66,14 @@ public final class ChapterBoundaries {
             int segmentCount,
             List<String> segmentIds,
             int tokens,
+            String sourceHash,
             boolean pseudo) {
 
         /** Rejects a missing part and copies the ids. */
         public Chapter {
             Objects.requireNonNull(key, "key");
             Objects.requireNonNull(unitId, "unitId");
+            Objects.requireNonNull(sourceHash, "sourceHash");
             segmentIds = List.copyOf(Objects.requireNonNull(segmentIds, "segmentIds"));
         }
     }
@@ -329,6 +333,7 @@ public final class ChapterBoundaries {
                 segments.size(),
                 segments.stream().map(Segment::id).toList(),
                 story.tokens(range.from(), range.to()),
+                ChapterStandings.sourceHash(segments),
                 pseudo);
     }
 }

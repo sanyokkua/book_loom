@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.pipeline.index.IndexTestBooks;
+import ua.bookloom.pipeline.project.ChapterStandings;
 
 /** Block 8's earlier chapters (design D10, "Use"): every finished chapter before the focus's, oldest first, in budget. */
 class EarlierChaptersTest {
@@ -41,7 +42,15 @@ class EarlierChaptersTest {
                 .toArray(Unit[]::new));
     }
 
+    // Every chapter of the test book holds the same paragraphs, so one hash is the fresh one for all of them.
+    private static final String FRESH_HASH =
+            ChapterStandings.sourceHash(book(1).units().getFirst().segments());
+
     private static ChapterSummary summary(final String chapterKey, final String text) {
+        return summary(chapterKey, text, FRESH_HASH);
+    }
+
+    private static ChapterSummary summary(final String chapterKey, final String text, final String sourceHash) {
         return new ChapterSummary(
                 PROJECT,
                 chapterKey,
@@ -49,7 +58,7 @@ class EarlierChaptersTest {
                 0,
                 CHAPTER_PARAGRAPHS,
                 text,
-                "hash");
+                sourceHash);
     }
 
     private static PromptPlan draftAt(
@@ -103,6 +112,17 @@ class EarlierChaptersTest {
         assertThat(keys).hasSizeBetween(2, 28).doesNotContain("ch1:0").endsWith("ch28:0", "ch29:0");
         assertThat(stored.stream().map(ChapterSummary::chapterKey).toList()).endsWith(keys.toArray(String[]::new));
         assertThat(scene(plan)).contains("Chapter 29: ").doesNotContain("Chapter 1: ");
+    }
+
+    @Test
+    void block8_staleSummary_passedOver() {
+        final List<ChapterSummary> stored = List.of(
+                summary("ch1:0", "Перший розділ.", "written-from-other-text"), summary("ch2:0", "Другий розділ."));
+
+        final PromptPlan plan = draftAt(book(3), FrameFixtures.brief("ru", "uk"), "ch3:0", stored);
+
+        assertThat(scene(plan)).isEqualTo(HEADING + "\nChapter 2: Другий розділ.");
+        assertThat(plan.chapterSummaryKeys()).containsExactly("ch2:0");
     }
 
     @Test

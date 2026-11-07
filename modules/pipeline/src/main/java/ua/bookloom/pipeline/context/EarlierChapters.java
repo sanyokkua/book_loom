@@ -15,7 +15,7 @@ import ua.bookloom.pipeline.project.ChapterBoundaries;
 /**
  * Chooses and writes the earlier chapters' summaries of block 8 (design D10, "Use"): every kept summary of a chapter
  * before the focus's chapter, ordered by the chapter's place in the book rather than by when it was saved, so a summary
- * written again on Continue never moves. A summary whose key no chapter of the book has now is passed over.
+ * written again on Continue never moves. A summary whose key no chapter of the book has now, or that was written from other source text than the chapter holds now, is passed over.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -47,10 +47,10 @@ final class EarlierChapters {
         }
         final List<EarlierSummary> eligible = new ArrayList<>();
         for (final ChapterSummary summary : stored) {
-            numberOf(chapters, summary.chapterKey())
-                    .filter(number -> number < focus.get().number())
-                    .ifPresent(
-                            number -> eligible.add(new EarlierSummary(summary.chapterKey(), number, summary.text())));
+            freshChapter(chapters, summary)
+                    .filter(chapter -> chapter.number() < focus.get().number())
+                    .ifPresent(chapter ->
+                            eligible.add(new EarlierSummary(summary.chapterKey(), chapter.number(), summary.text())));
         }
         eligible.sort(Comparator.comparingInt(EarlierSummary::chapter));
         log.debug(
@@ -115,14 +115,17 @@ final class EarlierChapters {
         return text.startsWith(BlockWords.bundled().get(BlockWords.EARLIER_HEADING));
     }
 
-    private static Optional<Integer> numberOf(final ChapterBoundaries chapters, final String chapterKey) {
-        final Optional<Integer> number = chapters.chapters().stream()
-                .filter(chapter -> chapter.key().equals(chapterKey))
-                .map(ChapterBoundaries.Chapter::number)
+    private static Optional<ChapterBoundaries.Chapter> freshChapter(
+            final ChapterBoundaries chapters, final ChapterSummary summary) {
+        final Optional<ChapterBoundaries.Chapter> chapter = chapters.chapters().stream()
+                .filter(candidate -> candidate.key().equals(summary.chapterKey()))
                 .findFirst();
-        if (number.isEmpty()) {
-            log.debug("Earlier chapters pass over key={}: no chapter of the book has it now", chapterKey);
+        if (chapter.isEmpty()) {
+            log.debug("Earlier chapters pass over key={}: no chapter of the book has it now", summary.chapterKey());
+        } else if (!chapter.get().sourceHash().equals(summary.sourceHash())) {
+            log.debug("Earlier chapters pass over key={}: written from other source text", summary.chapterKey());
+            return Optional.empty();
         }
-        return number;
+        return chapter;
     }
 }

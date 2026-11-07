@@ -435,8 +435,8 @@ call, the switch turned on mid-book or a changed book all leave such a gap. An o
 book's last chapter and a chapter with a current summary end their step `NO_CALL`, and a stored summary whose chapter
 key the current boundaries no longer produce is ignored. A store that cannot be read skips this pass with one WARN. A
 chapter is tried at most once per run, so a failed one is tried again on the next Continue; a stale summary whose
-rewrite fails stays stored and still reaches block 8, since the port has no remove. One INFO line counts the pass:
-`chapter summaries before drafts missing=… stale=… stored=…`.
+rewrite fails stays stored and still reaches block 8, since the port has no remove. The same pass runs again after every chunk commit and once before the run reports completion, so a chapter finished by a skip or the review desk is summarised in the run; a stored summary written from other source text than the chapter holds now is not offered to block 8. One INFO line counts a pass that wrote anything:
+`chapter summaries written missing=… stale=… stored=…`.
 
 A pause or a stop aborts the call without waiting for the provider: its `cancelled` answer is not a failure (no WARN)
 but is routed like a draft's (`RoutedCalls`): a pause waits, then the whole call is made again from part 1 on resume

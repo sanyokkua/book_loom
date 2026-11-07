@@ -128,7 +128,8 @@ public final class ChunkRunner {
                 return RoutedCalls.failedBy(Objects.requireNonNull(refreshed.error(), ERROR));
             }
         }
-        return new RunEnd(JobState.COMPLETED, null);
+        // A chapter finished by a skip or the review desk, whose segments no commit of this run touched.
+        return summaries.beforeCompletion(work).orElseGet(() -> new RunEnd(JobState.COMPLETED, null));
     }
 
     // The unit's glossary is read as it stands when the unit is packed, so an unreadable glossary ends the run before
@@ -184,7 +185,7 @@ public final class ChunkRunner {
         if (committed.isPresent()) {
             return committed;
         }
-        // A chapter this chunk finished is summarised before the next chunk is drafted.
+        // Every finished chapter without a summary is summarised before the next chunk is drafted.
         return summaries.afterCommit(work, items);
     }
 

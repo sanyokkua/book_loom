@@ -27,7 +27,6 @@ import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.memory.ChapterSummaryCall;
-import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.project.ChapterBoundaries.Chapter;
 import ua.bookloom.pipeline.project.ChapterStandings;
 import ua.bookloom.pipeline.project.ChapterStandings.Standing;
@@ -168,11 +167,18 @@ final class ChapterSummaries {
                 return end;
             }
         }
-        log.info(
-                "chapter summaries before drafts missing={} stale={} stored={}",
-                counts.getOrDefault(Standing.MISSING, 0),
-                counts.getOrDefault(Standing.STALE, 0),
-                counts.getOrDefault(Standing.STORED, 0));
+        final int missing = counts.getOrDefault(Standing.MISSING, 0);
+        final int stale = counts.getOrDefault(Standing.STALE, 0);
+        // Written after every commit now, so a pass that finds nothing to write is not a milestone.
+        if (missing + stale > 0) {
+            log.info(
+                    "chapter summaries written missing={} stale={} stored={}",
+                    missing,
+                    stale,
+                    counts.getOrDefault(Standing.STORED, 0));
+        } else {
+            log.debug("Chapter summaries: nothing to write stored={}", counts.getOrDefault(Standing.STORED, 0));
+        }
         return Optional.empty();
     }
 
@@ -200,7 +206,9 @@ final class ChapterSummaries {
     }
 
     /**
-     * Summarises the chapter the committed chunk finished, if it finished one.
+     * Writes the summary of every chapter that is finished and has none after a chunk is committed: the chapter the
+     * chunk finished, and any chapter that was finished by a skip or the review desk, whose segments no chunk of this
+     * run commits.
      *
      * @param work the non-null work list, whose remaining segments tell an open chapter
      * @param items the non-null items of the committed chunk, in reading order
@@ -213,28 +221,37 @@ final class ChapterSummaries {
             log.debug("Chapter summaries switch turned on; summarising the finished chapters");
             return writeFinished(work);
         }
-        final ChapterBoundaries chapters = planner.frame().chapters();
-        final Optional<Chapter> found =
-                chapters.chapterOf(items.getLast().segment().id());
-        if (found.isEmpty()) {
-            log.debug(
-                    "No chapter summary: segment {} is in no chapter",
-                    items.getLast().segment().id());
-            return Optional.empty();
-        }
-        final Chapter chapter = found.get();
-        if (isOpen(work, chapter)) {
-            return Optional.empty();
-        }
         if (!wasOn) {
-            closedOff(chapter);
+            closedOffAfter(work, items.getLast());
             return Optional.empty();
         }
-        if (ChapterStandings.isLast(chapters, chapter)) {
-            settled(chapter);
+        return writeFinished(work);
+    }
+
+    /**
+     * Writes the summary of every finished chapter that has none, once the last chunk is committed and before the run
+     * reports completion, so a chapter finished by a skip or the review desk at the end is not left to the next
+     * Continue.
+     *
+     * @param work the non-null work list, whose remaining segments tell an open chapter
+     * @return empty to go on, or how a stop during a summary call ended the run
+     */
+    Optional<RunEnd> beforeCompletion(final WorkList work) {
+        Objects.requireNonNull(work, "work");
+        if (!planner.summariesOn()) {
+            log.debug("No chapter summaries at the end: the brief's switch is off");
             return Optional.empty();
         }
-        return tried.add(chapter.key()) ? summarize(work, chapter) : Optional.empty();
+        return writeFinished(work);
+    }
+
+    // With the switch off, a step planned while it was on is done at once for the chapter the chunk finished.
+    private void closedOffAfter(final WorkList work, final WorkItem last) {
+        final Optional<Chapter> found =
+                planner.frame().chapters().chapterOf(last.segment().id());
+        if (found.isPresent() && !isOpen(work, found.get())) {
+            closedOff(found.get());
+        }
     }
 
     private boolean isOpen(final WorkList work, final Chapter chapter) {

@@ -205,6 +205,39 @@ public final class TestBooks {
         }
     }
 
+    /**
+     * An EPUB at the container root of chapters {@code ch01.xhtml}…, whose navigation document lists one label per
+     * chapter, each linking its own chapter, so the book has one chapter per file.
+     */
+    public static Path epubWithChapterLinks(
+            final Path destination, final List<List<String>> chapters, final List<String> labels) {
+        final List<String> names = new ArrayList<>();
+        final StringBuilder items = new StringBuilder();
+        for (int index = 0; index < chapters.size(); index++) {
+            names.add(String.format("ch%02d.xhtml", index + 1));
+            items.append("<li><a href=\"")
+                    .append(names.get(index))
+                    .append("\">")
+                    .append(labels.get(index))
+                    .append("</a></li>");
+        }
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml().replace("OEBPS/", ""), ZipEntry.DEFLATED);
+            final String navItem =
+                    "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>";
+            put(zip, "content.opf", rootOpf(names, navItem), ZipEntry.DEFLATED);
+            for (int index = 0; index < names.size(); index++) {
+                put(zip, names.get(index), xhtml(chapters.get(index), null, DEFAULT_PAGE_TITLE), ZipEntry.DEFLATED);
+            }
+            put(zip, "nav.xhtml", navigation(items.toString()), ZipEntry.DEFLATED);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
     private static String rootOpf(final List<String> chapterNames) {
         return rootOpf(chapterNames, "");
     }
@@ -224,9 +257,12 @@ public final class TestBooks {
     }
 
     private static String navigation(final List<String> labels) {
-        final String items = labels.stream()
+        return navigation(labels.stream()
                 .map(label -> "<li><a href=\"ch0.xhtml\">" + label + "</a></li>")
-                .reduce("", String::concat);
+                .reduce("", String::concat));
+    }
+
+    private static String navigation(final String items) {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">"
                 + "<head><title>Contents</title></head><body><nav epub:type=\"toc\"><ol>"

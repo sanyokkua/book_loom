@@ -48,7 +48,8 @@ final class ChapterSummaryCalls {
         final List<String> ids = IntStream.range(0, segments)
                 .mapToObj(index -> "ch" + number + ".xhtml:" + index)
                 .toList();
-        return new Chapter("ch" + number + ".xhtml:0", number, "ch" + number + ".xhtml", 0, segments, ids, 50, false);
+        return new Chapter(
+                "ch" + number + ".xhtml:0", number, "ch" + number + ".xhtml", 0, segments, ids, 50, "hash", false);
     }
 
     static BookMap map(final List<GlossaryEntry> entries) {

@@ -94,10 +94,35 @@ final class SummaryBooks {
         return "In the " + NUMBERS.get(number - 1).toLowerCase(java.util.Locale.ROOT) + " part";
     }
 
+    private static String paragraph(final int number) {
+        return marker(number) + TAIL + " the morning.";
+    }
+
     private static String chapter(final int number) {
-        final String paragraph = marker(number) + TAIL + " the morning.";
         return "# " + heading(number) + "\n\n"
-                + IntStream.range(0, PARAGRAPHS).mapToObj(index -> paragraph).collect(Collectors.joining("\n\n"));
+                + IntStream.range(0, PARAGRAPHS)
+                        .mapToObj(index -> paragraph(number))
+                        .collect(Collectors.joining("\n\n"));
+    }
+
+    /**
+     * The same chapters as an EPUB with one file per chapter, each listed in the navigation, so a unit is a chapter
+     * and a chapter's segments can be decided apart from the units around it. A chapter holds four paragraphs.
+     */
+    static TestProject epubBook(final Path dir, final int chapters, final boolean summaries) {
+        final List<List<String>> files = IntStream.rangeClosed(1, chapters)
+                .mapToObj(number -> IntStream.range(0, CHAPTER_SEGMENTS)
+                        .mapToObj(index -> paragraph(number))
+                        .toList())
+                .toList();
+        final List<String> labels = IntStream.rangeClosed(1, chapters)
+                .mapToObj(SummaryBooks::heading)
+                .toList();
+        return project(
+                Guice.createInjector(new DocumentModule(), new InMemoryPersistenceModule()),
+                UnaryOperator.identity(),
+                TestBooks.epubWithChapterLinks(dir.resolve("Book.epub"), files, labels),
+                brief("en", "uk").withChapterSummaries(summaries));
     }
 
     /** A model with a draft for every segment and a summary for every chapter. */
