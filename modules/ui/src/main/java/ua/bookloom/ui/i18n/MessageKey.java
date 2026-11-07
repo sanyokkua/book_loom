@@ -165,8 +165,8 @@ public enum MessageKey {
     PROGRESS_KIND_RESEND("progress.kind.resend"),
     /** Name of the chapter-summary steps in the note on how progress is counted. */
     PROGRESS_KIND_SUMMARY("progress.kind.summary"),
-    /** Name of the backward-revision step in the note on how progress is counted. */
-    PROGRESS_KIND_REVISION("progress.kind.revision"),
+    /** Name of the proofread step in the note on how progress is counted. */
+    PROGRESS_KIND_PROOFREAD("progress.kind.proofread"),
     /** Name of the stage rows in the note on how progress is counted. */
     PROGRESS_KIND_STAGE("progress.kind.stage"),
     /** Name of the model-request steps in the note on how progress is counted. */
@@ -263,9 +263,9 @@ public enum MessageKey {
     /** Progress dialog: heading of the model's suggestion for the brief. */
     PROGRESS_OUTPUT_BRIEF("progress.output.brief"),
     /** Progress dialog: heading of the paragraphs a consistency-pass call checked. */
-    PROGRESS_INPUT_REVISION("progress.input.revision"),
+    PROGRESS_INPUT_PROOFREAD("progress.input.proofread"),
     /** Progress dialog: heading of the model's verdict on the paragraphs checked. */
-    PROGRESS_OUTPUT_REVISION("progress.output.revision"),
+    PROGRESS_OUTPUT_PROOFREAD("progress.output.proofread"),
     /** Progress dialog: heading of the text a summary call read. */
     PROGRESS_INPUT_SUMMARY("progress.input.summary"),
     /** Progress dialog: heading of the summary the model wrote. */

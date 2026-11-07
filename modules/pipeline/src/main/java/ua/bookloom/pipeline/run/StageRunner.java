@@ -81,7 +81,7 @@ public final class StageRunner {
         log.debug("Translation job stage change stage={} project={}", JobStage.TRANSLATE, settings.projectId());
         sinks.emit().accept(new StageStarted(JobStage.TRANSLATE, work.currentTranslationProgress()));
         if (settings.dial().backwardRevision()) {
-            calls.steps().planned(StepKind.REVISION, 1, true);
+            calls.steps().planned(StepKind.PROOFREAD, 1, true);
         }
         final RunEnd translated = narratorSettled(chunks.run(work));
         final boolean revises = settings.dial().backwardRevision();
@@ -116,17 +116,17 @@ public final class StageRunner {
         if (flushed.isErr()) {
             return RoutedCalls.failedBy(Objects.requireNonNull(flushed.error(), "error"));
         }
-        log.debug("Translation job stage change stage={} project={}", JobStage.REVISE, settings.projectId());
-        sinks.emit().accept(new StageStarted(JobStage.REVISE, work.revisionProgress()));
+        log.debug("Translation job stage change stage={} project={}", JobStage.PROOFREAD, settings.projectId());
+        sinks.emit().accept(new StageStarted(JobStage.PROOFREAD, work.revisionProgress()));
         final RoutedRevisionCalls routed = new RoutedRevisionCalls(new RoutedCalls(sinks.boundaries()), work);
-        calls.steps().started(StepKind.REVISION, REVISION_STEP, REVISION_STEP, null);
+        calls.steps().started(StepKind.PROOFREAD, REVISION_STEP, REVISION_STEP, null);
         final Result<ConsistencyReport> revised = revision.run(settings.projectId(), routed);
         final RunEnd stopped = routed.stopped();
         if (stopped != null) {
             log.debug("Backward revision ended by the run's boundary end={}", stopped.state());
             return stopped;
         }
-        calls.steps().ended(StepKind.REVISION, REVISION_STEP, revised.isErr() ? StepResult.FAILED : StepResult.DONE);
+        calls.steps().ended(StepKind.PROOFREAD, REVISION_STEP, revised.isErr() ? StepResult.FAILED : StepResult.DONE);
         if (revised.isErr()) {
             return RoutedCalls.failedBy(Objects.requireNonNull(revised.error(), "error"));
         }

@@ -75,12 +75,7 @@ public final class SqliteDeferralRepository implements DeferralRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(deferralId, "deferralId");
         return db.write("deferral resolve", h -> {
-            final boolean resolved = h.createUpdate(
-                                    "DELETE FROM deferrals WHERE project_id = :project AND json_extract(json, '$.id') = :id")
-                            .bind(PROJECT, projectId)
-                            .bind("id", deferralId)
-                            .execute()
-                    > 0;
+            final boolean resolved = resolveIn(h, projectId, deferralId);
             log.debug("Deferral resolve projectId={} deferralId={} resolved={}", projectId, deferralId, resolved);
             return resolved;
         });
@@ -100,6 +95,15 @@ public final class SqliteDeferralRepository implements DeferralRepository {
                         .bind("reason", deferral.reason().name())
                         .bind("waitingOn", waitingOn(deferral.waitingOn()))
                         .bind("json", codec.write(deferral))
+                        .execute()
+                > 0;
+    }
+
+    /** Deletes one open deferral by id; the checkpoint shares it so a window's settled deferrals go with its texts. */
+    static boolean resolveIn(final Handle h, final String projectId, final String deferralId) {
+        return h.createUpdate("DELETE FROM deferrals WHERE project_id = :project AND json_extract(json, '$.id') = :id")
+                        .bind(PROJECT, projectId)
+                        .bind("id", deferralId)
                         .execute()
                 > 0;
     }

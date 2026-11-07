@@ -25,6 +25,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -263,7 +264,7 @@ class QualityLoopOneRepairCallTest {
     private static LoopSettings oneRepairReviewerOff() {
         return new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(RepairMode.ONE, 0, false),
+                new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

@@ -55,6 +55,8 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Origin;
 import ua.bookloom.api.project.PromptFrame;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.QuoteStyle;
 import ua.bookloom.api.project.Register;
@@ -158,6 +160,22 @@ class JsonCodecTest {
         assertThat(json).contains("\"frameHash\":\"9f2c", "\"retry\":true").doesNotContain("Translate");
     }
 
+    @Test
+    void proofreadVerdict_roundTrip_equal() {
+        final SegmentRecord record = segment(true);
+
+        final String json = codec.write(record);
+
+        assertThat(codec.read(json, SegmentRecord.class).proofread()).isEqualTo(verdict());
+        assertThat(json).contains("\"outcome\":\"KEPT\"", "\"statusBefore\":\"FLAGGED\"");
+    }
+
+    @Test
+    void proofreadVerdict_absent_readsBackNull() {
+        assertThat(codec.read(codec.write(segment(false)), SegmentRecord.class).proofread())
+                .isNull();
+    }
+
     private static SegmentRecord segment(final boolean full) {
         return new SegmentRecord(
                 "p1",
@@ -180,7 +198,13 @@ class JsonCodecTest {
                 SegmentPath.REPAIRED,
                 true,
                 full ? context(full) : null,
-                full ? "rejected " + UK : null);
+                full ? "rejected " + UK : null,
+                full ? verdict() : null);
+    }
+
+    private static ProofreadVerdict verdict() {
+        return new ProofreadVerdict(
+                "f".repeat(8), ProofreadOutcome.KEPT, "gender now known " + UK, "before " + UK, SegmentStatus.FLAGGED);
     }
 
     private static GlossaryEntry glossary() {

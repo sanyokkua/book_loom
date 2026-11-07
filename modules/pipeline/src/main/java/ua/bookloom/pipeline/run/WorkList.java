@@ -249,7 +249,7 @@ public final class WorkList {
      * @return the counts under the {@code REVISE} stage, at the last section
      */
     public JobProgress revisionProgress() {
-        return progress(JobStage.REVISE, currentSection());
+        return progress(JobStage.PROOFREAD, currentSection());
     }
 
     /**

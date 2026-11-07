@@ -14,6 +14,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
@@ -42,7 +43,8 @@ class QualityLoopProgressTest {
                 .answer(readable(itemReply(STILL_ECHO)))
                 .answer(readable(itemReply(GOOD_TARGET)));
 
-        final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(RepairMode.ONE, 0, false)));
+        final SegmentOutcome decided =
+                first(decider(ECHO, model, new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
@@ -55,7 +57,8 @@ class QualityLoopProgressTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
                 .answer(readable(itemReply(GOOD_TARGET)));
-        final ChunkDecider decider = decider(ECHO, model, new DialParameters(RepairMode.ONE, 0, false));
+        final ChunkDecider decider =
+                decider(ECHO, model, new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE));
 
         final Result<SegmentOutcome> failed = decider.nextDecision();
         final SegmentOutcome decided = first(decider);
@@ -72,7 +75,8 @@ class QualityLoopProgressTest {
     void nextDecision_repairedTargetPassingTheChecks_isAcceptedWithoutAReviewerCall() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(itemReply(GOOD_TARGET)));
 
-        final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(RepairMode.ONE, 1, false)));
+        final SegmentOutcome decided =
+                first(decider(ECHO, model, new DialParameters(RepairMode.ONE, 1, false, ProofreadCoverage.NONE)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(model.requests()).hasSize(1);

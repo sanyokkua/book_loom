@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -26,6 +27,8 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.ProofreadOutcome;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
@@ -69,6 +72,70 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
         assertThat(deferralRepository().open("p1").data())
                 .extracting(Deferral::id)
                 .containsExactly("d1");
+    }
+
+    // The Proofread stage's window: new texts, their verdicts and the deferral they settled are one step.
+    @Test
+    void commitWindow_textsMarksAndResolvedDeferrals_storedTogether() {
+        givenProjects("p1");
+        final SegmentRepository segments = segmentRepository();
+        segments.saveAll(
+                "p1", List.of(decidedBeforeProofread("ch06.xhtml:20"), decidedBeforeProofread("ch06.xhtml:21")));
+        final Deferral gender =
+                new Deferral("d1", "p1", "ch06.xhtml:20", DeferralReason.GENDER_CHANGED, "Тарн", null, null, null);
+        deferralRepository().add(gender);
+
+        final Result<Integer> result = checkpointPort().commit(windowCommit(gender));
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(segments.find("p1", "ch06.xhtml:20").data()).hasValueSatisfying(r -> {
+            assertThat(r.machineTarget()).isEqualTo("Тарна прийшла завтра.");
+            assertThat(r.proofread()).isEqualTo(keptVerdict());
+        });
+        assertThat(segments.find("p1", "ch06.xhtml:21").data())
+                .hasValueSatisfying(r -> assertThat(r.proofread().outcome()).isEqualTo(ProofreadOutcome.UNCHANGED));
+        assertThat(deferralRepository().open("p1").data()).isEmpty();
+    }
+
+    @Test
+    void removeProject_withProofreadVerdicts_verdictsGone() {
+        givenProjects("p1", "p2");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        segmentRepository().saveAll("p2", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        checkpointPort().commit(windowCommit(null));
+
+        projectRepository().delete("p1");
+
+        assertThat(segmentRepository().all("p1").data()).isEmpty();
+        assertThat(segmentRepository().find("p2", "ch06.xhtml:20").data())
+                .hasValueSatisfying(r -> assertThat(r.proofread()).isNull());
+    }
+
+    protected static ChunkCommit windowCommit(@Nullable final Deferral resolved) {
+        final SegmentRecord kept = decidedBeforeProofread("ch06.xhtml:20")
+                .withMachineTarget("Тарна прийшла завтра.", "Тарна прийшла завтра.")
+                .withProofread(keptVerdict());
+        final SegmentRecord unchanged = decidedBeforeProofread("ch06.xhtml:21")
+                .withProofread(new ProofreadVerdict("fp2", ProofreadOutcome.UNCHANGED, "", null, null));
+        return new ChunkCommit(
+                "p1",
+                List.of(kept, unchanged),
+                List.of(),
+                List.of(),
+                List.of(),
+                resolved == null ? List.of() : List.of(resolved.id()),
+                null);
+    }
+
+    protected static ProofreadVerdict keptVerdict() {
+        return new ProofreadVerdict(
+                "fp1", ProofreadOutcome.KEPT, "gender now known: Тарн", "Тарн прийшов завтра.", SegmentStatus.ACCEPTED);
+    }
+
+    protected static SegmentRecord decidedBeforeProofread(final String segmentId) {
+        return pending("p1", segmentId, "ch06.xhtml", 0, SegmentKind.PARAGRAPH)
+                .withStatus(SegmentStatus.ACCEPTED)
+                .withMachineTarget("Тарн прийшов завтра.", "Тарн прийшов завтра.");
     }
 
     @Test

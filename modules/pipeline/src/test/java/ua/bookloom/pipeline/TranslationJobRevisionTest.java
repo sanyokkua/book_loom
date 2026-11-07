@@ -77,7 +77,7 @@ class TranslationJobRevisionTest {
         final JobReport report = report(translation.run());
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(events).containsSubsequence("decided " + WIND, "stage REVISE", "finished");
+        assertThat(events).containsSubsequence("decided " + WIND, "stage PROOFREAD", "finished");
         assertThat(events.getLast()).isEqualTo("finished");
         assertThat(stored(project, HALE_LEFT).machineTarget()).isEqualTo("Гейл пішов.");
         assertThat(stored(project, SAM_LEFT).machineTarget()).isEqualTo("Сем пішла.");
@@ -112,7 +112,7 @@ class TranslationJobRevisionTest {
         final Paused pause = awaitPaused(pauses);
 
         assertThat(pause.reason()).isEqualTo(PauseReason.REQUESTED);
-        assertThat(pause.progress().stage()).isEqualTo(JobStage.REVISE);
+        assertThat(pause.progress().stage()).isEqualTo(JobStage.PROOFREAD);
         assertThat(translation.state()).isEqualTo(JobState.PAUSED);
         assertThat(stored(project, HALE_LEFT).machineTarget()).isEqualTo("Гейл пішов.");
         assertThat(formats(model)).doesNotContain(REVISION);
@@ -158,7 +158,7 @@ class TranslationJobRevisionTest {
     }
 
     private static void pauseOnRevise(final TranslationJobImpl translation, final JobEvent event) {
-        if (event instanceof StageStarted started && started.stage() == JobStage.REVISE) {
+        if (event instanceof StageStarted started && started.stage() == JobStage.PROOFREAD) {
             translation.pause();
         }
     }

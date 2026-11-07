@@ -31,6 +31,8 @@ import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ChunkCommit;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -224,6 +226,29 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         assertThat(Objects.requireNonNull(result.error()).details()).isEqualTo("storage checkpoint commit");
         assertThat(segmentRepository().find("p1", "ch1:0").data())
                 .hasValueSatisfying(r -> assertThat(r.status()).isEqualTo(SegmentStatus.PENDING));
+    }
+
+    // A settled deferral the database refuses to delete rolls the window's new text and verdict back too.
+    @Test
+    void commitWindow_failureMidWrite_nothingStored() {
+        givenProjects("p1");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        final Deferral gender =
+                new Deferral("d1", "p1", "ch06.xhtml:20", DeferralReason.GENDER_CHANGED, "Тарн", null, null, null);
+        deferralRepository().add(gender);
+        db.write(
+                "test inject",
+                h -> h.execute("CREATE TRIGGER refuse_resolve BEFORE DELETE ON deferrals "
+                        + "BEGIN SELECT RAISE(ABORT, 'refused'); END"));
+
+        final Result<Integer> result = checkpointPort().commit(windowCommit(gender));
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(segmentRepository().find("p1", "ch06.xhtml:20").data()).hasValueSatisfying(r -> {
+            assertThat(r.machineTarget()).isEqualTo("Тарн прийшов завтра.");
+            assertThat(r.proofread()).isNull();
+        });
+        assertThat(deferralRepository().open("p1").data()).containsExactly(gender);
     }
 
     // The run a failed chunk carried must not replace the run stored before it.

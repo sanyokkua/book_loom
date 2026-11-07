@@ -80,7 +80,7 @@ public final class RequestTimeouts {
                     TERM_READING,
                     TERM_CHOICE,
                     NAME_KNOWLEDGE -> CallLimits.HELPER_TIMEOUT;
-            case DRAFT, STRUCTURAL_REPAIR, REPAIR, DIRECTED_FIX, REVISION -> null;
+            case DRAFT, STRUCTURAL_REPAIR, REPAIR, DIRECTED_FIX, PROOFREAD -> null;
         };
     }
 

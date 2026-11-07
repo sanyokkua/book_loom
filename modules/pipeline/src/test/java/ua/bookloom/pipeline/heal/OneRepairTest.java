@@ -16,6 +16,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
@@ -42,7 +43,8 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 class OneRepairTest {
 
     // A dial with the one repair and no reviewer, so every request a test sees is the draft's repair.
-    private static final DialParameters ONE_NO_REVIEWER = new DialParameters(RepairMode.ONE, 0, false);
+    private static final DialParameters ONE_NO_REVIEWER =
+            new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE);
 
     @TempDir
     private Path tempDir;
@@ -114,7 +116,7 @@ class OneRepairTest {
                 .answer(readable(itemReply("Він відчинив старі двері, що вели в сад.")));
         final LoopSettings reviewed = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(RepairMode.ONE, 1, false),
+                new DialParameters(RepairMode.ONE, 1, false, ProofreadCoverage.NONE),
                 frame("ru"),
                 NamePolicy.TRANSLITERATE,
                 List.of());

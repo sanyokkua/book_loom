@@ -96,9 +96,9 @@ class StepAnnouncerTest {
 
     @Test
     void planned_positive_emitsTheCountAndTheEstimateFlag() {
-        steps.planned(StepKind.REVISION, 1, true);
+        steps.planned(StepKind.PROOFREAD, 1, true);
 
-        assertThat(events).containsExactly(new StepsPlanned(StepKind.REVISION, 1, true));
+        assertThat(events).containsExactly(new StepsPlanned(StepKind.PROOFREAD, 1, true));
     }
 
     @Test

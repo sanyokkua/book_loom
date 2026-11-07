@@ -89,7 +89,7 @@ class ExportJobPassCallsTest {
 
         assertThat(calls).extracting(CallSnapshot::state).containsExactly(CallState.WAITING, CallState.ANSWERED);
         final CallSnapshot answered = calls.getLast();
-        assertThat(answered.kind()).isEqualTo(CallKind.REVISION);
+        assertThat(answered.kind()).isEqualTo(CallKind.PROOFREAD);
         assertThat(answered.label()).isEqualTo("consistency");
         assertThat(answered.segments()).extracting(CallSegment::id).containsExactly(SECOND);
         assertThat(answered.sections())

@@ -102,7 +102,7 @@ final class RevisionCall {
                 ChatRequests.build(name, messages, SelfHealCalls.outputLimit(segment.masked(), inputs.frame()), false);
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.callAbout(
-                CallKind.REVISION,
+                CallKind.PROOFREAD,
                 List.of(segment.id()),
                 request,
                 SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user)

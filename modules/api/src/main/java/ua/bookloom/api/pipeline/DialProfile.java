@@ -26,4 +26,11 @@ public interface DialProfile {
      * @return {@code true} when it runs
      */
     boolean backwardRevision();
+
+    /**
+     * Which decided segments the Proofread stage reads.
+     *
+     * @return the coverage; {@code NONE} means no model call in the stage
+     */
+    ProofreadCoverage proofreadCoverage();
 }

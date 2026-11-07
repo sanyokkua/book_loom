@@ -133,7 +133,7 @@ class TranslationJobStepsTest {
                 .containsExactly("Book.txt:0", "Book.txt:6");
         assertThat(planned(events, StepKind.CHECK)).isEmpty();
         assertLastChapterStepOnly(events);
-        assertThat(planned(events, StepKind.REVISION)).isEmpty();
+        assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
     @Test
@@ -146,7 +146,7 @@ class TranslationJobStepsTest {
         assertThat(planned(events, StepKind.CHECK)).containsExactly(1);
         assertThat(ended(events, StepKind.CHECK)).hasSize(1).allMatch(change -> change.result() == StepResult.DONE);
         assertLastChapterStepOnly(events);
-        assertThat(planned(events, StepKind.REVISION)).isEmpty();
+        assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
     // Max: one chunk of 12, two checks and the revision as an estimate; the one chapter is the book's last, so its
@@ -161,8 +161,8 @@ class TranslationJobStepsTest {
         assertThat(ended(events, StepKind.CHECK)).hasSize(2);
         assertLastChapterStepOnly(events);
         assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.CHAPTER_SUMMARY);
-        assertThat(events).contains(new StepsPlanned(StepKind.REVISION, 1, true));
-        assertThat(ended(events, StepKind.REVISION)).hasSize(1);
+        assertThat(events).contains(new StepsPlanned(StepKind.PROOFREAD, 1, true));
+        assertThat(ended(events, StepKind.PROOFREAD)).hasSize(1);
     }
 
     // The two kept-as-is lines need no call, so their draft steps end the moment they start.

@@ -37,11 +37,14 @@ public final class SqliteCheckpoint implements CheckpointPort {
     public Result<Integer> commit(final ChunkCommit commit) {
         Objects.requireNonNull(commit, "commit");
         log.debug(
-                "Commit projectId={} segments={} tmEntries={} deferrals={} glossaryAdditions={}",
+                "Commit projectId={} segments={} verdicts={} tmEntries={} deferrals={} resolvedDeferrals={} "
+                        + "glossaryAdditions={}",
                 commit.projectId(),
                 commit.segments().size(),
+                commit.verdictCount(),
                 commit.tmEntries().size(),
                 commit.deferrals().size(),
+                commit.resolvedDeferralIds().size(),
                 commit.glossaryAdditions().size());
         return db.write("checkpoint commit", h -> commitIn(h, commit)).flatMap(Function.identity());
     }
@@ -80,6 +83,9 @@ public final class SqliteCheckpoint implements CheckpointPort {
         }
         for (final Deferral deferral : commit.deferrals()) {
             SqliteDeferralRepository.insertIfAbsent(h, codec, projectId, deferral);
+        }
+        for (final String deferralId : commit.resolvedDeferralIds()) {
+            SqliteDeferralRepository.resolveIn(h, projectId, deferralId);
         }
         final RunRecord run = commit.run();
         if (run != null) {

@@ -77,7 +77,7 @@ public final class HowCountedPane extends TitledPane {
             case RE_ASK -> MessageKey.PROGRESS_KIND_RE_ASK;
             case RESEND -> MessageKey.PROGRESS_KIND_RESEND;
             case SUMMARY -> MessageKey.PROGRESS_KIND_SUMMARY;
-            case REVISION -> MessageKey.PROGRESS_KIND_REVISION;
+            case PROOFREAD -> MessageKey.PROGRESS_KIND_PROOFREAD;
             case STAGE -> MessageKey.PROGRESS_KIND_STAGE;
             case REQUEST -> MessageKey.PROGRESS_KIND_REQUEST;
         };

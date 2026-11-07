@@ -11,6 +11,6 @@ public enum JobStage {
     /** Segment-by-segment model inference. */
     TRANSLATE,
 
-    /** The backward-revision pass over deferred segments. */
-    REVISE
+    /** The Proofread stage over the decided segments a late fact may have made wrong. */
+    PROOFREAD
 }

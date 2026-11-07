@@ -100,7 +100,7 @@ public enum PromptName {
      */
     REVISION(
             "revision",
-            CallKind.REVISION,
+            CallKind.PROOFREAD,
             "revision",
             DraftSchema.SCHEMA,
             new Temperatures(0.2, null),
@@ -113,7 +113,7 @@ public enum PromptName {
      */
     CONSISTENCY(
             "consistency",
-            CallKind.REVISION,
+            CallKind.PROOFREAD,
             "consistency",
             ConsistencySchema.SCHEMA,
             new Temperatures(0.1, null),

@@ -13,5 +13,8 @@ public enum DeferralReason {
     NAME_UNRESOLVED,
 
     /** A locked rendering the person changed after decided segments used the old one. */
-    TERM
+    TERM,
+
+    /** A character's gender became known or enforced after decided segments were written without it. */
+    GENDER_CHANGED
 }

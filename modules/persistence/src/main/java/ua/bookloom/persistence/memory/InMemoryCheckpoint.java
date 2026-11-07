@@ -3,6 +3,7 @@ package ua.bookloom.persistence.memory;
 import com.google.inject.Inject;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,12 +60,14 @@ public final class InMemoryCheckpoint implements CheckpointPort {
                 + commit.deferrals().size()
                 + glossaryApplied;
         log.debug(
-                "Commit applied projectId={} segments={} tmEntries={} deferrals={} glossaryApplied={} "
-                        + "glossarySkipped={}",
+                "Commit applied projectId={} segments={} verdicts={} tmEntries={} deferrals={} resolvedDeferrals={} "
+                        + "glossaryApplied={} glossarySkipped={}",
                 commit.projectId(),
                 commit.segments().size(),
+                commit.verdictCount(),
                 commit.tmEntries().size(),
                 commit.deferrals().size(),
+                commit.resolvedDeferralIds().size(),
                 glossaryApplied,
                 commit.glossaryAdditions().size() - glossaryApplied);
         return applied;
@@ -97,6 +100,8 @@ public final class InMemoryCheckpoint implements CheckpointPort {
             deferrals.putIfAbsent(
                     InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
         }
+        final Set<String> resolved = Set.copyOf(commit.resolvedDeferralIds());
+        deferrals.values().removeIf(open -> resolved.contains(open.id()));
         final RunRecord run = commit.run();
         if (run != null) {
             final RunRecord held = store.keepRun(run);

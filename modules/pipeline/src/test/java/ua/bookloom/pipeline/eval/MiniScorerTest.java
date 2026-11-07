@@ -182,25 +182,6 @@ class MiniScorerTest {
     }
 
     @Test
-    void proofreadNeverWorse_keptChangeWithMoreFailingChecks_fails() {
-        final MiniScorer.Verdict verdict = MiniGraders.proofreadNeverWorse(List.of(
-                new ProofreadChange("a", true, 1, 1),
-                new ProofreadChange("b", true, 0, 2),
-                new ProofreadChange("c", false, 0, 3)));
-
-        assertThat(verdict.ok()).isFalse();
-        assertThat(verdict.detail()).contains("[b]");
-    }
-
-    @Test
-    void proofreadNeverWorse_noKeptChangeWorse_passes() {
-        final MiniScorer.Verdict verdict = MiniGraders.proofreadNeverWorse(
-                List.of(new ProofreadChange("a", true, 2, 1), new ProofreadChange("c", false, 0, 3)));
-
-        assertThat(verdict.ok()).isTrue();
-    }
-
-    @Test
     void windowInjection_entryNamedOutsideItsWindow_fails() {
         // A glossary line for Dorrin Vask in a call whose items never mention him is an injection.
         final MiniScorer.Verdict verdict = MiniGraders.windowInjection(

@@ -9,6 +9,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.pipeline.dial.DialParameters;
@@ -49,7 +50,7 @@ class ReplyJudgeParityTest {
                 new DirectedFix(templates, new DraftReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())));
         final LoopSettings settings = new LoopSettings(
                         ReviewMode.UNATTENDED,
-                        new DialParameters(RepairMode.ONE, 0, false),
+                        new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
                         project.frame(),
                         project.settings().names(),
                         List.of())

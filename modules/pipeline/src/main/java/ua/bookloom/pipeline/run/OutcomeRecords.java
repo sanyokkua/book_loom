@@ -68,7 +68,9 @@ public final class OutcomeRecords {
                 outcome.path(),
                 stored.reviewed(),
                 context,
-                outcome.rejectedTarget());
+                outcome.rejectedTarget(),
+                // a fresh draft makes any earlier proofread verdict stale
+                null);
     }
 
     /**

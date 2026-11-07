@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 
@@ -11,9 +12,17 @@ import ua.bookloom.api.pipeline.RepairMode;
 class DialParametersTest {
 
     @ParameterizedTest
-    @CsvSource({"FAST,MARKS_ONLY,0,false", "BALANCED,ONE,1,false", "MAX,ONE,2,true"})
+    @CsvSource({
+        "FAST,MARKS_ONLY,0,false,NONE",
+        "BALANCED,ONE,1,false,MARKED_AND_DOUBTFUL",
+        "MAX,ONE,2,true,MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH"
+    })
     void of_eachDial_holdsItsRow(
-            final QualityDial dial, final RepairMode repairs, final int reviewPasses, final boolean backward) {
-        assertThat(DialParameters.of(dial)).isEqualTo(new DialParameters(repairs, reviewPasses, backward));
+            final QualityDial dial,
+            final RepairMode repairs,
+            final int reviewPasses,
+            final boolean backward,
+            final ProofreadCoverage coverage) {
+        assertThat(DialParameters.of(dial)).isEqualTo(new DialParameters(repairs, reviewPasses, backward, coverage));
     }
 }

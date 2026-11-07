@@ -14,6 +14,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
@@ -39,7 +40,7 @@ class QualityLoopReplyRetryTest {
                 .answer(readable("{\"items\":[{\"id\":\"1\",\"target\":\"Він відчинив старі двері.\"}]}"));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(RepairMode.ONE, 0, false),
+                new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

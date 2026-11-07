@@ -134,6 +134,8 @@ record LogReplayCorpus(List<LoggedCall> calls, Map<String, Decision> decisions) 
     /** The state of one read: the call each thread is in the middle of, the calls done and the decisions so far. */
     private static final String OLD_SUMMARY = "SUMMARY";
 
+    private static final String OLD_REVISION = "REVISION";
+
     private static final class Reading {
 
         private final Map<String, Pending> open = new HashMap<>();
@@ -169,8 +171,13 @@ record LogReplayCorpus(List<LoggedCall> calls, Map<String, Decision> decisions) 
         }
 
         // A log written before task 12.4 names the rolling summary's call SUMMARY; it reads as the chapter summary.
+        // One written before task 13.2 names the backward revision's call REVISION; it reads as PROOFREAD.
         private static CallKind kindOf(final String name) {
-            return OLD_SUMMARY.equals(name) ? CallKind.CHAPTER_SUMMARY : CallKind.valueOf(name);
+            return switch (name) {
+                case OLD_SUMMARY -> CallKind.CHAPTER_SUMMARY;
+                case OLD_REVISION -> CallKind.PROOFREAD;
+                default -> CallKind.valueOf(name);
+            };
         }
 
         LogReplayCorpus finish() {

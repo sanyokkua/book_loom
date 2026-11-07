@@ -36,6 +36,7 @@ import ua.bookloom.api.document.Unit;
  * @param context what the segment's call was sent besides the run's fixed frame, or null when none was recorded
  * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, so
  *     review shows the model's words labelled as unusable instead of the source; null otherwise
+ * @param proofread what the Proofread stage decided when a window read this segment, or null when none did
  */
 public record SegmentRecord(
         String projectId,
@@ -54,7 +55,8 @@ public record SegmentRecord(
         SegmentPath path,
         boolean reviewed,
         @Nullable ContextSnapshot context,
-        @Nullable String rejectedTarget) {
+        @Nullable String rejectedTarget,
+        @Nullable ProofreadVerdict proofread) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings} into an
@@ -106,7 +108,36 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
+                null,
                 null);
+    }
+
+    /**
+     * Returns a record with a replacement proofread verdict, preserving every other field.
+     *
+     * @param proofread the verdict a Proofread window left, or null to clear it
+     * @return a new record with the supplied verdict
+     */
+    public SegmentRecord withProofread(@Nullable final ProofreadVerdict proofread) {
+        return new SegmentRecord(
+                projectId,
+                segmentId,
+                unitId,
+                ord,
+                kind,
+                status,
+                machineTarget,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                reviewed,
+                context,
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -133,7 +164,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -182,7 +214,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -213,7 +246,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                keptRejected);
+                keptRejected,
+                proofread);
     }
 
     /**
@@ -242,7 +276,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -270,7 +305,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -298,7 +334,8 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 
     /**
@@ -325,6 +362,7 @@ public record SegmentRecord(
                 path,
                 reviewed,
                 context,
-                rejectedTarget);
+                rejectedTarget,
+                proofread);
     }
 }

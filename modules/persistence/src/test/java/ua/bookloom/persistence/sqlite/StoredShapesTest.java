@@ -99,6 +99,18 @@ class StoredShapesTest {
         assertThat(withoutNewFields).isNotEqualTo(described);
     }
 
+    // The proofread verdict lives on the segment record and a gender-changed deferral exists, so a database from before
+    // task 13.2 is set aside.
+    @Test
+    void describe_afterProofreadVerdict_holdsTheVerdictOnTheSegment() {
+        assertThat(StoredShapes.describe(StoredShapes.ROOTS))
+                .contains(
+                        "proofread:{before:java.lang.String,fingerprint:java.lang.String,"
+                                + "outcome:enum[KEPT,PROPOSED,REJECTED,UNCHANGED],reason:java.lang.String,",
+                        "statusBefore:enum[",
+                        "GENDER_CHANGED");
+    }
+
     @Test
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);

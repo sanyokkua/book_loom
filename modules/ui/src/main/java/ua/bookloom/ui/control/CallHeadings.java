@@ -23,8 +23,8 @@ record CallHeadings(MessageKey input, MessageKey output) {
             new CallHeadings(MessageKey.PROGRESS_INPUT_TARGETS, MessageKey.PROGRESS_OUTPUT_TARGETS);
     private static final CallHeadings BRIEF =
             new CallHeadings(MessageKey.PROGRESS_INPUT_BRIEF, MessageKey.PROGRESS_OUTPUT_BRIEF);
-    private static final CallHeadings REVISION =
-            new CallHeadings(MessageKey.PROGRESS_INPUT_REVISION, MessageKey.PROGRESS_OUTPUT_REVISION);
+    private static final CallHeadings PROOFREAD =
+            new CallHeadings(MessageKey.PROGRESS_INPUT_PROOFREAD, MessageKey.PROGRESS_OUTPUT_PROOFREAD);
     private static final CallHeadings SUMMARY =
             new CallHeadings(MessageKey.PROGRESS_INPUT_SUMMARY, MessageKey.PROGRESS_OUTPUT_SUMMARY);
     private static final CallHeadings FILE_NAME =
@@ -50,7 +50,7 @@ record CallHeadings(MessageKey input, MessageKey output) {
             case REVIEW_TERMS, TERM_READING, TERM_CHOICE -> TERMS;
             case SUGGEST_TARGETS -> TARGETS;
             case BRIEF_SUGGESTION, BRIEF_SYNTHESIS, BOOK_KNOWLEDGE -> BRIEF;
-            case REVISION -> REVISION;
+            case PROOFREAD -> PROOFREAD;
             case CHAPTER_SUMMARY -> SUMMARY;
             case FILE_NAME -> FILE_NAME;
             case DRAFT, STRUCTURAL_REPAIR, REPAIR, REVIEW, DIRECTED_FIX -> GENERIC;

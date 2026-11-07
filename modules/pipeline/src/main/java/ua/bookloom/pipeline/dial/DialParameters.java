@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.dial;
 
 import java.util.Objects;
 import ua.bookloom.api.pipeline.DialProfile;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 
@@ -11,13 +12,17 @@ import ua.bookloom.api.pipeline.RepairMode;
  * @param repair what a segment whose draft fails a check is given
  * @param reviewPasses how many times the reviewer reads each chunk: none for Fast, one for Balanced, two for Max, the
  *     second with a narrower checklist
- * @param backwardRevision whether the backward-revision pass runs after the last segment of the book
+ * @param backwardRevision whether the backward-revision pass runs after the last segment of the book (until group 14)
+ * @param proofreadCoverage which decided segments the Proofread stage reads
  */
-public record DialParameters(RepairMode repair, int reviewPasses, boolean backwardRevision) implements DialProfile {
+public record DialParameters(
+        RepairMode repair, int reviewPasses, boolean backwardRevision, ProofreadCoverage proofreadCoverage)
+        implements DialProfile {
 
     /** Rejects a missing repair mode. */
     public DialParameters {
         Objects.requireNonNull(repair, "repair");
+        Objects.requireNonNull(proofreadCoverage, "proofreadCoverage");
     }
 
     /**
@@ -28,9 +33,10 @@ public record DialParameters(RepairMode repair, int reviewPasses, boolean backwa
      */
     public static DialParameters of(final QualityDial dial) {
         return switch (Objects.requireNonNull(dial, "dial")) {
-            case FAST -> new DialParameters(RepairMode.MARKS_ONLY, 0, false);
-            case BALANCED -> new DialParameters(RepairMode.ONE, 1, false);
-            case MAX -> new DialParameters(RepairMode.ONE, 2, true);
+            case FAST -> new DialParameters(RepairMode.MARKS_ONLY, 0, false, ProofreadCoverage.NONE);
+            case BALANCED -> new DialParameters(RepairMode.ONE, 1, false, ProofreadCoverage.MARKED_AND_DOUBTFUL);
+            case MAX ->
+                new DialParameters(RepairMode.ONE, 2, true, ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH);
         };
     }
 

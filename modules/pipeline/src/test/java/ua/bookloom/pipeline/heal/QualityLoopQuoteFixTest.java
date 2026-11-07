@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
@@ -91,7 +92,7 @@ class QualityLoopQuoteFixTest {
                 new DraftOutcome.Drafted(segment(), source, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(RepairMode.ONE, 0, false),
+                new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

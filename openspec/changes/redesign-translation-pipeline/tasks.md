@@ -1395,14 +1395,18 @@ set aside once.
   - **Satisfies:** "Store a proofread verdict with each segment the stage read" (local-storage), "Write a chunk's decisions together" (local-storage), "Keep the application's work across a restart" (local-storage), "Remove a project's saved work and nothing else" (local-storage), "Set aside a database that cannot be used and start a fresh one" (local-storage)
   - **Depends on:** 13.1
   - **Read:** `api: pipeline/JobStage` (`PREP, TRANSLATE, REVISE`), `api: pipeline/StepKind` (`REVISION`; `ui: control/HowCountedPane.kindName` switches over it),
-    `api: pipeline/CallKind`, `pipeline: prompt/PromptName`, `api: project/SegmentRecord`, `api: project/ChunkCommit`,
+    `api: pipeline/CallKind`, `pipeline: prompt/PromptName`, `pipeline: context/FrameKind.of`, `ui: control/CallHeadings`, `api: project/SegmentRecord`, `api: project/ChunkCommit`,
     `api: project/DeferralReason`, `api: persistence/CheckpointPort`, `api: pipeline/DialProfile`,
     `api: pipeline/DialProfiles`, `pipeline: dial/DialParameters`, `persistence: sqlite/StoredShapes`,
     `persistence/src/test/.../contract/CheckpointContractTest`, `RepositoryContractTest`, `sqlite/JsonCodecTest`;
     design D2, D15, D26.
   - **Change:** rename `JobStage.REVISE` → `PROOFREAD`, `StepKind.REVISION` → `PROOFREAD`, `CallKind.REVISION` →
-    `PROOFREAD` and add `PromptName.PROOFREAD` (every switch and caller updated in the same commit; until group 14
-    deletes the export pass, its calls carry the `PROOFREAD` label too). Terms (design D15): a proofread *mark* is the
+    `PROOFREAD` (every switch and caller updated in the same commit — `FrameKind.of` keeps `PROOFREAD` at `NONE` until
+    13.5 gives it the window frame; `HowCountedPane.kindName` and `CallHeadings` use the keys `progress.kind.proofread`,
+    `progress.input.proofread`, `progress.output.proofread` in both bundles; until group 14 deletes the export pass, its
+    calls carry the `PROOFREAD` label too). `PromptName.PROOFREAD` is not added here: a name needs its prompt files, the
+    answer schema and a `PromptNameTest` row, which are 13.5's; the old `PromptName.REVISION` and `CONSISTENCY` keep their
+    files and now report `CallKind.PROOFREAD`. Terms (design D15): a proofread *mark* is the
     note that a segment must be looked at (a finding, never a record of its own); a proofread *verdict* is the record
     kept on a segment after a window read it. Add `:api` record `project/ProofreadVerdict(fingerprint, outcome, reason,
     @Nullable before, @Nullable statusBefore)` and enum `project/ProofreadOutcome {KEPT, PROPOSED, REJECTED,
@@ -1410,14 +1414,19 @@ set aside once.
     requirement says); `SegmentRecord` gains `@Nullable ProofreadVerdict proofread`; `DeferralReason` gains
     `GENDER_CHANGED`; `ChunkCommit` gains the resolved deferral ids so a window commit writes texts, verdicts and
     resolved deferrals in one transaction (both adapter families). `DialProfile` gains `proofreadCoverage(): ProofreadCoverage
-    {NONE, MARKED_AND_DOUBTFUL, MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH}` (Fast, Balanced, Max) in `DialProfiles` and
-    `DialParameters`. Add the new types to `StoredShapes` (the fingerprint changes; the next launch sets the old file
+    {NONE, MARKED_AND_DOUBTFUL, MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH}` (Fast, Balanced, Max); the record
+    `DialParameters` carries it (`backwardRevision` stays until group 14) and `DialParameterProfiles` serves the same rows.
+    `SegmentRecord` keeps its 16-component convenience constructor (no rejected reply, no verdict); the 17-argument form
+    is gone, and `withProofread` joins the other copiers. `ChunkCommit` gains `resolvedDeferralIds` and
+    `verdictCount()`; no producer sets them before 13.6. Mapping a stored verdict to the eval's `ProofreadChange` needs the
+    check counts before and after, which the verdict does not hold, so it belongs to 13.6 where the gate computes them. The new types are reached through `SegmentRecord` and `Deferral`, so `StoredShapes.ROOTS` needs no edit (the fingerprint changes; the next launch sets the old file
     aside). Project removal deletes the verdicts with the segments.
   - **Test first:** `CheckpointContractTest.commitWindow_textsMarksAndResolvedDeferrals_storedTogether` over both
     adapters (window of `ch06.xhtml:20`–`21`, one KEPT verdict with before `Тарн прийшов завтра.`, one resolved
     `GENDER_CHANGED` deferral); `commitWindow_failureMidWrite_nothingStored` (SQLite, a forced constraint failure);
     `JsonCodecTest.proofreadVerdict_roundTrip_equal`; `StoredShapesTest` sees the new fingerprint;
-    `RepositoryContractTest.removeProject_withProofreadVerdicts_verdictsGone`.
+    `CheckpointContractTest.removeProject_withProofreadVerdicts_verdictsGone` (in the checkpoint class because
+    `RepositoryContractTest` is at the length limit).
   - **Log:** DEBUG on each window commit (project id, segment ids count, verdicts count, resolved deferral count).
   - **Done when:** the contract tests are green on both adapters, `./gradlew build` is green, and the acceptance test
     still fails only for the missing stage.
