@@ -85,7 +85,7 @@ class BookRunnerOfflineTest {
         "/noConsistencyPass/unaligned,0",
         "/noConsistencyPass/latinWords,827",
         "/noConsistencyPass/alphabetWords,0",
-        "/noConsistencyPass/awaitingGenderSegments,13",
+        "/noConsistencyPass/awaitingGenderSegments,0",
         "/noConsistencyPass/detectors/echo,39",
         "/withConsistencyPass/aligned,39",
         "/withConsistencyPass/latinWords,827",

@@ -9,23 +9,24 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.EntryChanges;
-import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * Writes what the names pass decided into the stored tables (15i.N8, 15i review): the glossary's removals, changes and
  * additions, then the lexicon's, as one step. A rendering the pass changes on an entry it leaves locked, over segments
- * already decided, leaves a term deferral as the person's own edit does ({@link DeferralRegister#termChanged}), so the
- * revision finds them. A write that fails half-way puts both tables back as they were before the step and returns its
+ * already decided, leaves the deferrals the person's own edit does ({@link DeferralRegister#changed}), so the
+ * Proofread stage finds them. A write that fails half-way puts both tables back as they were before the step and returns its
  * error; the in-memory stores make that restore exact.
  */
 @Slf4j
@@ -36,6 +37,8 @@ final class NamesPassStore {
     private final LexiconRepository lexicon;
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
+    private final OpenProjects openProjects;
+    private final @Nullable String targetLanguage;
 
     /**
      * Writes both tables' changes, or none of them.
@@ -95,16 +98,11 @@ final class NamesPassStore {
         return Result.ok(true);
     }
 
-    // The same term deferrals the glossary service records for the person's edit of a locked rendering.
+    // The same deferrals the glossary service records for the person's edit.
     private Result<Boolean> deferred(
             final GlossaryEntry before, final GlossaryEntry after, final List<SegmentRecord> decided) {
-        for (final Deferral deferral : DeferralRegister.termChanged(before, after, decided)) {
-            final Result<Deferral> added = deferrals.add(deferral);
-            if (added.isErr()) {
-                return Result.err(Objects.requireNonNull(added.error(), ERROR));
-            }
-        }
-        return Result.ok(true);
+        return TermChanges.defer(deferrals, openProjects, before, after, decided, targetLanguage)
+                .map(added -> true);
     }
 
     private Result<Boolean> storeTerms(final String projectId, final EntryChanges<LexiconEntry> terms) {

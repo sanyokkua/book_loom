@@ -14,6 +14,7 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
@@ -26,6 +27,7 @@ import ua.bookloom.util.text.GlossaryKeys;
  * @param segments the decided segments a changed target is checked against
  * @param deferrals where a segment a changed target touches is deferred
  * @param summaries the kept chapter summaries a changed pinned or locked target is written into
+ * @param openProjects where the segments naming an entry are read from, for a gender that arrives
  * @param languageTag the source language's tag for the name clusters, or null when it is not known
  * @param targetLanguage the project's target language, whose file says whether a row's stress marks are removed; null
  *     when none is chosen
@@ -36,6 +38,7 @@ record GlossaryRowsImport(
         SegmentRepository segments,
         DeferralRepository deferrals,
         SummaryRepository summaries,
+        OpenProjects openProjects,
         @Nullable String languageTag,
         @Nullable String targetLanguage) {
 
@@ -44,6 +47,7 @@ record GlossaryRowsImport(
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(deferrals, "deferrals");
         Objects.requireNonNull(summaries, "summaries");
+        Objects.requireNonNull(openProjects, "openProjects");
     }
 
     /**
@@ -111,11 +115,11 @@ record GlossaryRowsImport(
                 row.locked());
     }
 
-    // A target the file changes defers the decided segments that used the old one, as an edit of the cell does.
+    // A target or an enforced gender the file changes defers the decided segments, as an edit of the cell does.
     private Result<Integer> deferChangedTargets(final String projectId, final List<EntryChange> changes) {
         final List<EntryChange> retargeted =
                 changes.stream().filter(GlossaryRowsImport::isRetargeted).toList();
-        log.debug("Glossary rows import project={} changedTargets={}", projectId, retargeted.size());
+        log.debug("Glossary rows import project={} changedEntries={}", projectId, retargeted.size());
         if (retargeted.isEmpty()) {
             return Result.ok(0);
         }
@@ -124,11 +128,11 @@ record GlossaryRowsImport(
 
     private static boolean isRetargeted(final EntryChange change) {
         final GlossaryEntry before = change.before();
-        return before != null && !Objects.equals(before.target(), change.after().target());
+        return before != null && TermChanges.touchesDecided(before, change.after());
     }
 
     private Result<Integer> deferAll(final List<EntryChange> retargeted, final List<SegmentRecord> decided) {
-        final TermChanges.Stores stores = new TermChanges.Stores(deferrals, summaries);
+        final TermChanges.Stores stores = new TermChanges.Stores(deferrals, summaries, openProjects);
         int added = 0;
         for (final EntryChange change : retargeted) {
             final Result<Integer> recorded = TermChanges.record(

@@ -200,15 +200,18 @@ class ConsistencyPassGenderTest {
         assertThat(report.awaitingGender()).containsExactly(new GenderWait("Hale", 1), new GenderWait("Sam", 1));
     }
 
-    // A gender the glossary only suggests waits to be confirmed, which is not the same ask as setting a missing one.
+    // A gender the glossary came to suggest after the wait was recorded waits to be confirmed, which is not the same
+    // ask as setting a missing one.
     @Test
     void run_suggestedAndUnknownGenderDeferrals_areSplitByWhatThePersonHasToDo() {
         book.add(book.character("Sam", "Сем", Gender.UNKNOWN, false));
-        book.add(book.character("Hale", "Хейл", Gender.UNKNOWN, false).withSuggestedGender(Gender.MALE));
+        book.add(book.character("Hale", "Хейл", Gender.UNKNOWN, false));
         book.decide(SAM_MET_HALE, "Сем зустрів Хейла.", "Сем зустрів Хейла.");
         book.decide(SAM_DOOR, DOOR_PLAIN, DOOR_MASKED);
         book.recordUnknownGender(SAM_MET_HALE);
         book.recordUnknownGender(SAM_DOOR);
+        book.glossaryUpdate(
+                book.character("Hale", "Хейл", Gender.UNKNOWN, false).withSuggestedGender(Gender.MALE));
 
         final ConsistencyReport report = ok(book.run(false));
 

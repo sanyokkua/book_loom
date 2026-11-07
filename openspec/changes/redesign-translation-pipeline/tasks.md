@@ -1431,7 +1431,7 @@ set aside once.
   - **Done when:** the contract tests are green on both adapters, `./gradlew build` is green, and the acceptance test
     still fails only for the missing stage.
 
-- [ ] 13.3 Produce deferrals by the new rules through one helper every glossary writer calls — a waiting gender
+- [x] 13.3 Produce deferrals by the new rules through one helper every glossary writer calls — a waiting gender
   deferral only for an entry with no gender, a changed-gender deferral when an enforced gender arrives or a likely one
   is confirmed, and term deferrals for pinned and locked entries — so the Proofread stage knows exactly which decided
   segments a late fact may have made wrong, whichever path wrote the glossary.

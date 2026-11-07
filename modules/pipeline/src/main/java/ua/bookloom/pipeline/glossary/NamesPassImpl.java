@@ -344,7 +344,13 @@ public final class NamesPassImpl implements NamesPass {
 
     private Result<Boolean> store(
             final String projectId, final EntryChanges<GlossaryEntry> names, final EntryChanges<LexiconEntry> terms) {
-        return new NamesPassStore(stores.glossary(), stores.lexicon(), stores.segments(), deferrals)
+        return new NamesPassStore(
+                        stores.glossary(),
+                        stores.lexicon(),
+                        stores.segments(),
+                        deferrals,
+                        stores.openProjects(),
+                        TargetText.targetLanguageOf(stores.projects(), projectId))
                 .store(projectId, names, terms);
     }
 

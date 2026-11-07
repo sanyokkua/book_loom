@@ -41,7 +41,6 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.MeaningChoice;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SourceLanguage;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.project.OpenProjects;
@@ -314,20 +313,12 @@ public final class GlossaryServiceImpl implements GlossaryService {
 
     private Result<GlossaryEntry> recordTermChange(final GlossaryEntry before, final GlossaryEntry after) {
         log.debug("Glossary update project={} entryId={} stored", after.projectId(), after.id());
-        if (Objects.equals(before.target(), after.target())) {
-            return Result.ok(after);
-        }
-        final Result<List<SegmentRecord>> decided = segments.all(after.projectId());
-        if (decided.isErr()) {
-            return Result.err(Objects.requireNonNull(decided.error(), ERROR));
-        }
-        return TermChanges.record(
-                        new TermChanges.Stores(deferrals, summaries),
-                        before,
-                        after,
-                        Objects.requireNonNull(decided.data(), "decided"),
-                        TargetText.targetLanguageOf(projects, after.projectId()))
-                .map(added -> after);
+        return TermChanges.recordWrite(
+                new TermChanges.Stores(deferrals, summaries, openProjects),
+                segments,
+                before,
+                after,
+                TargetText.targetLanguageOf(projects, after.projectId()));
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {
@@ -357,7 +348,13 @@ public final class GlossaryServiceImpl implements GlossaryService {
         final Document document = openProjects.get(projectId);
         final String language = document == null ? null : languageOf(briefOf(projectId), document);
         return new GlossaryRowsImport(
-                glossary, segments, deferrals, summaries, language, TargetText.targetLanguageOf(projects, projectId));
+                glossary,
+                segments,
+                deferrals,
+                summaries,
+                openProjects,
+                language,
+                TargetText.targetLanguageOf(projects, projectId));
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {

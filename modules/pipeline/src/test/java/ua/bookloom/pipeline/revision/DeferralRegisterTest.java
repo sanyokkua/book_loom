@@ -41,15 +41,18 @@ class DeferralRegisterTest {
 
     static Stream<Arguments> changesThatRecordNothing() {
         return Stream.of(
-                Arguments.of("an unlocked entry", term("Hale", "Хейл", false), term("Hale", "Гейл", false)),
+                Arguments.of(
+                        "an entry that is only suggested after the change",
+                        term("Hale", "Хейл", false),
+                        term("Hale", "Хейл", false).withSuggestedTarget("Гейл")),
                 Arguments.of("an entry with no previous target", term("Hale", null, false), term("Hale", "Гейл", true)),
                 Arguments.of(
                         "an entry with a blank previous target", term("Hale", " ", true), term("Hale", "Гейл", true)),
                 Arguments.of("an unchanged target", term("Hale", "Хейл", true), term("Hale", "Хейл", true)),
                 Arguments.of(
-                        "an entry that was locked and is now unlocked",
-                        term("Hale", "Хейл", true),
-                        term("Hale", "Гейл", false)));
+                        "a pinned entry whose target is unchanged",
+                        term("Hale", "Хейл", false),
+                        term("Hale", "Хейл", false)));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -180,12 +183,12 @@ class DeferralRegisterTest {
                         "a character known to be female",
                         List.of(entry("Sam", TermType.CHARACTER, Gender.FEMALE)),
                         List.of()),
-                // IF a guessed gender ended the wait, THEN the paragraphs drafted before the verdict would never be
-                // revised once it came (15i.T1).
+                // A likely value is a hint nothing would ever settle, so waiting on it only fills the register (13.3);
+                // confirming it later records GENDER_CHANGED instead.
                 Arguments.of(
                         "a character whose gender is only suggested",
                         List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN).withSuggestedGender(Gender.FEMALE)),
-                        List.of("Sam")),
+                        List.of()),
                 Arguments.of(
                         "a character whose gender was verified",
                         List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN).withInferredGender(Gender.FEMALE)),
