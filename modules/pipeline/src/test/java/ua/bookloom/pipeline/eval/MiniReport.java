@@ -169,6 +169,7 @@ record MiniReport(String model, String dial, MiniRun run, List<MiniResult> resul
                         .put("id", read.id())
                         .put("outcome", read.outcome().name())
                         .put("reason", read.reason())
+                        .put("round", read.round())
                         .put("before", read.before().target())
                         .put("after", read.after().target()));
     }

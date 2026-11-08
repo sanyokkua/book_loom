@@ -92,8 +92,9 @@ record MiniRun(
      * @param reason the verdict's stored reason, for a refusal the check that got worse; may be empty
      * @param before the block as it stood before the stage
      * @param after the block as the stage left it
+     * @param round the round of the window that decided it (1 marked, 2 Max's whole book), read from its fingerprint
      */
-    record Proofread(String id, ProofreadOutcome outcome, String reason, Outcome before, Outcome after) {
+    record Proofread(String id, ProofreadOutcome outcome, String reason, Outcome before, Outcome after, int round) {
 
         /** Rejects a missing part. */
         Proofread {
@@ -123,7 +124,13 @@ record MiniRun(
                             Objects.requireNonNull(verdict.statusBefore(), "statusBefore"),
                             verdict.findingsBefore())
                     : after;
-            return new Proofread(id, verdict.outcome(), verdict.reason(), before, after);
+            return new Proofread(
+                    id,
+                    verdict.outcome(),
+                    verdict.reason(),
+                    before,
+                    after,
+                    SequenceRun.Proofread.roundOf(verdict.fingerprint()));
         }
 
         /** Whether the stage's rewrite is the segment's text now. */

@@ -95,6 +95,7 @@ record SequenceRun(
      * @param status its final status
      * @param path how it was decided
      * @param editsApplied the reviewer edits that were applied to it
+     * @param proofread what the Proofread stage last decided for it, or null when no window read it
      */
     record Decided(
             String id,
@@ -104,7 +105,43 @@ record SequenceRun(
             @Nullable String target,
             SegmentStatus status,
             SegmentPath path,
-            int editsApplied) {}
+            int editsApplied,
+            @Nullable Proofread proofread) {
+
+        /** A segment no Proofread window read. */
+        Decided(
+                final String id,
+                final int chapter,
+                final NarratorPerson narrator,
+                final String source,
+                @Nullable final String target,
+                final SegmentStatus status,
+                final SegmentPath path,
+                final int editsApplied) {
+            this(id, chapter, narrator, source, target, status, path, editsApplied, null);
+        }
+    }
+
+    /**
+     * A segment's last proofread verdict, so an arm can judge a kept rewrite against the text it replaced (arm 7b).
+     *
+     * @param outcome the verdict's outcome name
+     * @param round the round of the window that decided it (1 marked, 2 Max's whole book), from its fingerprint
+     * @param before the masked text before a kept rewrite, tokens taken out, or null when none was kept
+     */
+    record Proofread(String outcome, int round, @Nullable String before) {
+
+        /**
+         * The round a verdict's fingerprint names: it starts with {@code r<round>:}.
+         *
+         * @param fingerprint the non-null stored fingerprint
+         * @return the round, or 0 when the fingerprint names none
+         */
+        static int roundOf(final String fingerprint) {
+            final int end = fingerprint.indexOf(':');
+            return fingerprint.startsWith("r") && end > 1 ? Integer.parseInt(fingerprint.substring(1, end)) : 0;
+        }
+    }
 
     /** What the job itself reported, before the stores and the log are read. */
     record Outcome(JobReport report, Duration elapsed, List<ModelCallFinished> calls, List<Decided> segments) {}

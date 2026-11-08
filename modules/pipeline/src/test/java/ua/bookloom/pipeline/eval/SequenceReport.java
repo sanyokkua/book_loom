@@ -59,12 +59,27 @@ record SequenceReport(SequenceMetrics metrics) {
                 final ObjectNode node = repeatNode(mapper, k, seeds.get(k), repeats.get(k));
                 final ObjectNode outputs = node.putObject("outputs");
                 runs.get(k).segments().forEach(segment -> outputs.put(segment.id(), segment.target()));
+                proofread(node, runs.get(k));
                 root.withArray("perRepeat").add(node);
             }
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    // Every segment a Proofread window read, with its round and, for a kept rewrite, the text it replaced (arm 7b).
+    private static void proofread(final ObjectNode node, final SequenceRun run) {
+        final var read = node.putArray("proofread");
+        run.segments().stream().filter(segment -> segment.proofread() != null).forEach(segment -> {
+            final SequenceRun.Proofread verdict = Objects.requireNonNull(segment.proofread());
+            read.addObject()
+                    .put("id", segment.id())
+                    .put("outcome", verdict.outcome())
+                    .put("round", verdict.round())
+                    .put("before", verdict.before())
+                    .put("after", segment.target());
+        });
     }
 
     private static ObjectNode repeatNode(

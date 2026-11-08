@@ -34,6 +34,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
@@ -260,6 +261,21 @@ final class SequenceEval {
                 record.path(),
                 (int) record.findings().stream()
                         .filter(finding -> AppliedEdit.from(finding).isPresent())
-                        .count());
+                        .count(),
+                proofread(record));
+    }
+
+    // The segment's last verdict with its round, for the arm-7b judge.
+    private static SequenceRun.@Nullable Proofread proofread(final SegmentRecord record) {
+        final ProofreadVerdict verdict = record.proofread();
+        if (verdict == null) {
+            return null;
+        }
+        final int round = SequenceRun.Proofread.roundOf(verdict.fingerprint());
+        final String before = verdict.maskedBefore();
+        return new SequenceRun.Proofread(
+                verdict.outcome().name(),
+                round,
+                before == null ? null : TOKEN.matcher(before).replaceAll(""));
     }
 }
