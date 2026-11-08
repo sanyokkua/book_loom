@@ -212,6 +212,7 @@ class ProofreadCallWireMockTest {
                                 .map(Segment::id)
                                 .toList(),
                         id -> true,
+                        id -> true,
                         4)
                 .getFirst();
         final Result<ProofreadCall.Answer> answer = new ProofreadCall(

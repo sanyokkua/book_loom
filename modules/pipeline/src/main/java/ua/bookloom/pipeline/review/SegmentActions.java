@@ -109,12 +109,13 @@ public final class SegmentActions {
     }
 
     /**
-     * Applies the backward-revision proposal waiting on an edited segment as the person's own edit.
+     * Applies the proposal waiting on a segment — a backward revision's or a proofread's — as the person's own edit.
      *
      * @param projectId the non-null project id
      * @param segmentId the non-null segment id
      * @return the stored record, REVISED and reviewed with the proposal as its edit and the deferral resolved;
-     *     {@code validation} for a segment that is not REVISED, for one with no proposal waiting, or for an unknown id
+     *     {@code validation} for a segment that is neither REVISED nor FLAGGED, for one with no proposal waiting, or
+     *     for an unknown id
      */
     public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
         Objects.requireNonNull(projectId, PROJECT_ID);
@@ -251,9 +252,10 @@ public final class SegmentActions {
                 .map(withdrawn -> after);
     }
 
+    // A proofread proposal also waits on a FLAGGED segment it could not clear; applying it is the person's edit.
     private Result<SegmentRecord> proposed(final SegmentRecord record) {
-        if (record.status() != SegmentStatus.REVISED) {
-            return wrongStatus(APPLY_PROPOSAL, record, "revised");
+        if (record.status() != SegmentStatus.REVISED && record.status() != SegmentStatus.FLAGGED) {
+            return wrongStatus(APPLY_PROPOSAL, record, "revised or flagged");
         }
         final Result<List<Deferral>> open = deferrals.open(record.projectId());
         if (open.isErr()) {

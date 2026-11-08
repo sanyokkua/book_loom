@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.proofread;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,11 +80,13 @@ final class ProofreadWindowPass {
         }
         final WindowReading reading = reading(state);
         final List<String> order = List.copyOf(reading.segments().keySet());
-        final Predicate<String> readable = readable(state, reading);
+        final Set<SegmentKind> kept = state.book().brief().alsoTranslate().keptKinds();
+        final Predicate<String> readable = MarkList.readable(reading.records(), kept);
+        final Predicate<String> focusable = MarkList.focusable(reading.records(), kept);
         final int batchSize = tools.planner().profile().batchSize();
         final Optional<RunEnd> marked = round(
                 WindowFingerprint.ROUND_MARKED,
-                ProofreadWindows.of(state.marks(), order, readable, batchSize),
+                ProofreadWindows.of(state.marks(), order, readable, focusable, batchSize),
                 reading,
                 progress);
         if (marked.isPresent() || coverage != ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH) {
@@ -93,7 +94,7 @@ final class ProofreadWindowPass {
         }
         return round(
                 WindowFingerprint.ROUND_WHOLE_BOOK,
-                ProofreadWindows.tiles(order, readable, batchSize, openReasons(state, reading)),
+                ProofreadWindows.tiles(order, readable, focusable, batchSize, openReasons(state, reading)),
                 reading,
                 progress);
     }
@@ -103,30 +104,23 @@ final class ProofreadWindowPass {
         state.records().forEach(record -> records.put(record.segmentId(), record));
         final Map<String, Segment> segments = new LinkedHashMap<>();
         MarkList.storySegments(state.book().document()).forEach(segment -> segments.put(segment.id(), segment));
-        final Set<String> keptNow = new HashSet<>();
         return new WindowReading(
                 state,
                 records,
                 segments,
                 verdicts(state),
                 tools.planner().map(state.book().glossary(), state.book().lexicon()),
-                keptNow,
                 SegmentLocators.of(state.book().document()));
     }
 
-    private static Predicate<String> readable(final State state, final WindowReading reading) {
-        final Set<SegmentKind> kept = state.book().brief().alsoTranslate().keptKinds();
-        return id -> reading.records().containsKey(id)
-                && MarkList.isListed(reading.records().get(id), kept);
-    }
-
-    // The marks still open after round 1: a segment whose text round 1 changed has had its mark answered.
+    // The marks still open after round 1, listed again from what round 1 committed, as a stored project's tally lists
+    // them: a mark a kept rewrite answered is gone, and a proposal or a settled deferral counts.
     private static Map<String, List<String>> openReasons(final State state, final WindowReading reading) {
-        final Map<String, List<String>> reasons = new HashMap<>();
-        state.marks().stream()
-                .filter(mark -> !reading.keptNow().contains(mark.segmentId()))
-                .forEach(mark -> reasons.put(mark.segmentId(), mark.reasons()));
-        return reasons;
+        final List<Mark> marks = MarkList.of(
+                state.book(),
+                List.copyOf(reading.records().values()),
+                reading.verdicts().open());
+        return MarkList.reasonsById(marks);
     }
 
     private Optional<RunEnd> round(
@@ -172,7 +166,7 @@ final class ProofreadWindowPass {
             log.info(
                     "Proofread round {} continues at window {} of {}",
                     round,
-                    windows.size() - unread.size() + 1,
+                    windows.indexOf(unread.getFirst()) + 1,
                     windows.size());
         }
     }

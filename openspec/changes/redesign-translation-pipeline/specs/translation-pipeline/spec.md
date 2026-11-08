@@ -677,6 +677,22 @@ WHEN a proofread rewrite is read, the system SHALL replace the segment's text, s
 - **WHEN** `ch03.md:6` is FLAGGED with a BLOCK `alphabet` finding and a BLOCK `number` finding, and the gate keeps a rewrite that clears only the `alphabet` finding
 - **THEN** `ch03.md:6` keeps its text, stays FLAGGED, and holds the rewrite as a proposal for the review desk
 
+### Requirement: Never rewrite in the Proofread stage a machine text the person reviewed
+
+The Proofread stage SHALL neither mark nor rewrite a segment whose machine text the person has reviewed — accepted it, reverted to it, or undone a proofread rewrite of it — and SHALL show such a segment to a window only as a read-only neighbour; in Max's whole-book round such a segment ends a window. A segment holding the person's own edit SHALL stay readable, a rewrite of it only ever a proposal.
+
+**Source**: `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`, the owner's decision of the group-13 review. In plain words: once the person has looked at a paragraph and decided, the next Continue must not silently change it again — an Undo proofread would otherwise be undone by the next run; the paragraph still helps its neighbours as context. The person's own edit is never changed silently anyway: a rewrite of it waits as a proposal.
+
+#### Scenario: An undone rewrite is not made again
+
+- **WHEN** a Balanced run kept a rewrite of `Book.md:3`, the person chose "Undo proofread" on it, and Continue is chosen with a model that would propose the same rewrite
+- **THEN** `Book.md:3` keeps the text the person restored and no proofread call reads it
+
+#### Scenario: A reviewed paragraph between two marks is a neighbour
+
+- **WHEN** `ch06.xhtml:20` and `ch06.xhtml:22` are marked and the person accepted `ch06.xhtml:21` as the machine wrote it
+- **THEN** two windows are read, with `ch06.xhtml:21` the neighbour after the first and before the second, and no verdict is stored on `ch06.xhtml:21`
+
 ### Requirement: Make a proposal of a proofread rewrite of the person's own edit
 
 IF a proofread rewrite that the never-worse gate would keep concerns a segment the person edited, THEN the system SHALL leave the person's text unchanged and store the rewrite as a proposal, with the verdict proposed.
@@ -687,6 +703,11 @@ IF a proofread rewrite that the never-worse gate would keep concerns a segment t
 
 - **WHEN** the person saved `Він рвучко відчинив двері.` for `ch07.xhtml:43` and a proofread rewrite of it passes the gate
 - **THEN** `ch07.xhtml:43` still holds `Він рвучко відчинив двері.` and a proposal holds the rewrite, with the verdict proposed
+
+#### Scenario: A later proposal replaces the earlier one
+
+- **WHEN** round 1 of a Max run proposed a rewrite of the person-edited `ch07.xhtml:43`, and round 2 proposes another
+- **THEN** exactly one proposal is open for `ch07.xhtml:43`, round 2's, and applying it on the desk makes it the segment's text
 
 ### Requirement: Re-read every story paragraph at Max in a second round
 
@@ -717,13 +738,23 @@ The Proofread stage SHALL send every proofread call to the model that drafted th
 
 ### Requirement: Fingerprint each proofread window by what it read
 
-The system SHALL compute a proofread window's fingerprint from its focus segments' sources and current targets, its neighbours' targets, the map lines it injected, the proofread prompt's version and the round, so that a change of any of these gives a new fingerprint and an unchanged window gives the same one.
+The system SHALL compute a proofread window's fingerprint from its focus segments' sources, current targets and mark reasons, its neighbours' targets, the map lines its texts name, the narrator's person and gender, the proofread prompt's version and the round, so that a change of any of these gives a new fingerprint and an unchanged window gives the same one.
 
-**Source**: `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a later Continue reads again only the windows whose text, names or prompt changed (the `resume` capability), and Max's whole-book round is never mistaken for its first round.
+**Source**: `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: a later Continue reads again only the windows whose text, names, marks, narrator or prompt changed (the `resume` capability), and Max's whole-book round is never mistaken for its first round. The fingerprint is taken with no planner, so the stored project's Continue line counts windows by the very fingerprint the run compares.
 
 #### Scenario: A changed name changes the fingerprint
 
 - **WHEN** the person changes the target of `Ивар` after `ch02.md:16`'s window was proofread
+- **THEN** that window's fingerprint changes
+
+#### Scenario: A new mark changes the fingerprint
+
+- **WHEN** `ch02.md:16`'s window was read, and the person then sets `Ивар`'s gender to female, which marks `ch02.md:16` with `gender now known: Івар — female`
+- **THEN** that window's fingerprint changes and a Continue reads it again
+
+#### Scenario: The narrator's gender is part of the fingerprint
+
+- **WHEN** a window was read while the first-person narrator's gender was unknown, and the narrator's gender is then stored as female
 - **THEN** that window's fingerprint changes
 
 #### Scenario: The round is part of the fingerprint

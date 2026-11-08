@@ -19,6 +19,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -83,6 +84,9 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     /** Where the stored project's Proofread stage stands as the next read gives it; none left unless a test says. */
     protected volatile @Nullable ProofreadTally proofreadLeft;
+
+    /** Whether the stored project's Proofread code part has work left, as the next read gives it; none unless said. */
+    protected volatile boolean codeWorkLeft;
 
     /** The glossary rows as stored, whose change reads the Proofread standing again. */
     protected final ObservableList<GlossaryEntry> glossaryRows = FXCollections.observableArrayList();
@@ -182,14 +186,27 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     private ProofreadStanding standing() {
         return new ProofreadStanding(
-                new ProofreadStanding.Ports(
-                        (projectId, batchSize) -> Result.ok(Optional.ofNullable(proofreadLeft)), models),
+                new ProofreadStanding.Ports(progress(), models),
                 settings,
                 current,
                 mirror,
                 new DirectExecutor(),
                 Runnable::run,
                 glossaryRows);
+    }
+
+    private ProofreadProgress progress() {
+        return new ProofreadProgress() {
+            @Override
+            public Result<Optional<ProofreadTally>> tally(final String projectId, final int batchSize) {
+                return Result.ok(Optional.ofNullable(proofreadLeft));
+            }
+
+            @Override
+            public Result<Boolean> codeWorkLeft(final String projectId) {
+                return Result.ok(codeWorkLeft);
+            }
+        };
     }
 
     /** Opens the book (declaring English) and chooses a target and a model, so that {@code start()} has all it needs. */

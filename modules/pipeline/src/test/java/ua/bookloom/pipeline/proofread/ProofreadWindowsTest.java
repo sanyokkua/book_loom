@@ -19,7 +19,8 @@ class ProofreadWindowsTest {
 
     @Test
     void of_oneMark_oneWindowWithNeighbours() {
-        final List<ProofreadWindow> windows = ProofreadWindows.of(List.of(mark("ch02.md:14")), CH02, id -> true, 4);
+        final List<ProofreadWindow> windows =
+                ProofreadWindows.of(List.of(mark("ch02.md:14")), CH02, id -> true, id -> true, 4);
 
         assertThat(windows)
                 .extracting(ProofreadWindow::focusIds, ProofreadWindow::beforeId, ProofreadWindow::afterId)
@@ -29,7 +30,11 @@ class ProofreadWindowsTest {
     @Test
     void of_closeMarks_oneWindowHoldsThemAndTheLineBetween() {
         final List<ProofreadWindow> windows = ProofreadWindows.of(
-                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:21"), mark("ch06.xhtml:23")), CH06, id -> true, 4);
+                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:21"), mark("ch06.xhtml:23")),
+                CH06,
+                id -> true,
+                id -> true,
+                4);
 
         assertThat(windows).hasSize(1);
         assertThat(windows.getFirst().focusIds())
@@ -41,8 +46,8 @@ class ProofreadWindowsTest {
 
     @Test
     void of_marksTwoLinesApart_twoWindows() {
-        final List<ProofreadWindow> windows =
-                ProofreadWindows.of(List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:23")), CH06, id -> true, 4);
+        final List<ProofreadWindow> windows = ProofreadWindows.of(
+                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:23")), CH06, id -> true, id -> true, 4);
 
         assertThat(windows)
                 .extracting(ProofreadWindow::focusIds)
@@ -55,7 +60,7 @@ class ProofreadWindowsTest {
                 .mapToObj(index -> mark("ch06.xhtml:" + index))
                 .toList();
 
-        final List<ProofreadWindow> windows = ProofreadWindows.of(marks, CH06, id -> true, 4);
+        final List<ProofreadWindow> windows = ProofreadWindows.of(marks, CH06, id -> true, id -> true, 4);
 
         assertThat(windows).extracting(window -> window.focusIds().size()).containsExactly(4, 1);
     }
@@ -66,7 +71,11 @@ class ProofreadWindowsTest {
         final Set<String> unread = Set.of("ch06.xhtml:19", "ch06.xhtml:21");
 
         final List<ProofreadWindow> windows = ProofreadWindows.of(
-                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:22")), CH06, id -> !unread.contains(id), 4);
+                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:22")),
+                CH06,
+                id -> !unread.contains(id),
+                id -> !unread.contains(id),
+                4);
 
         assertThat(windows)
                 .extracting(ProofreadWindow::focusIds, ProofreadWindow::beforeId)
@@ -80,7 +89,7 @@ class ProofreadWindowsTest {
                 .mapToObj(index -> "ch05.xhtml:" + index)
                 .toList();
 
-        final List<ProofreadWindow> windows = ProofreadWindows.tiles(book, id -> true, 4, Map.of());
+        final List<ProofreadWindow> windows = ProofreadWindows.tiles(book, id -> true, id -> true, 4, Map.of());
 
         assertThat(windows).hasSize(750);
         assertThat(windows.get(10))
@@ -97,7 +106,11 @@ class ProofreadWindowsTest {
     @Test
     void tiles_unreadableSkippedAndOpenMarkRides() {
         final List<ProofreadWindow> windows = ProofreadWindows.tiles(
-                CH02.subList(0, 6), id -> !"ch02.md:2".equals(id), 2, Map.of("ch02.md:4", List.of("flagged: echo")));
+                CH02.subList(0, 6),
+                id -> !"ch02.md:2".equals(id),
+                id -> !"ch02.md:2".equals(id),
+                2,
+                Map.of("ch02.md:4", List.of("flagged: echo")));
 
         assertThat(windows)
                 .extracting(ProofreadWindow::focusIds)
@@ -107,6 +120,36 @@ class ProofreadWindowsTest {
         assertThat(windows.get(1).reasons())
                 .containsEntry("ch02.md:4", List.of("flagged: echo"))
                 .containsEntry("ch02.md:3", List.of());
+    }
+
+    // The owner's rule: a segment the person reviewed is shown for context and never rewritten, so it is no line
+    // between two marks.
+    @Test
+    void of_reviewedLineBetweenMarks_twoWindowsWithItAsNeighbour() {
+        final List<ProofreadWindow> windows = ProofreadWindows.of(
+                List.of(mark("ch06.xhtml:20"), mark("ch06.xhtml:22")),
+                CH06,
+                id -> true,
+                id -> !"ch06.xhtml:21".equals(id),
+                4);
+
+        assertThat(windows)
+                .extracting(ProofreadWindow::focusIds, ProofreadWindow::afterId)
+                .containsExactly(
+                        tuple(List.of("ch06.xhtml:20"), "ch06.xhtml:21"),
+                        tuple(List.of("ch06.xhtml:22"), "ch06.xhtml:23"));
+    }
+
+    @Test
+    void tiles_reviewedSegment_endsTheTileAndIsItsNeighbour() {
+        final List<ProofreadWindow> windows =
+                ProofreadWindows.tiles(CH02.subList(0, 6), id -> true, id -> !"ch02.md:2".equals(id), 4, Map.of());
+
+        assertThat(windows)
+                .extracting(ProofreadWindow::focusIds, ProofreadWindow::beforeId, ProofreadWindow::afterId)
+                .containsExactly(
+                        tuple(List.of("ch02.md:0", "ch02.md:1"), null, "ch02.md:2"),
+                        tuple(List.of("ch02.md:3", "ch02.md:4", "ch02.md:5"), "ch02.md:2", null));
     }
 
     private static Mark mark(final String segmentId) {

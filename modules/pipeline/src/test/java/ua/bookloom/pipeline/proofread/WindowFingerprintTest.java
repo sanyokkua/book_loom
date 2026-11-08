@@ -2,24 +2,23 @@ package ua.bookloom.pipeline.proofread;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.ScriptedChatModel;
-import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.context.BookMap;
 
 /**
- * A proofread window's fingerprint (design D15 "Resume"), taken through the real planner so the map lines are the ones
- * the call would carry: a renamed target, an edited neighbour and the round each give a new one; the same window
- * planned twice gives the same one. Invented ru→uk lines.
+ * A proofread window's fingerprint (design D15 "Resume"), taken from the map lines the window names with no planner, so
+ * the stored project's tally takes the same one: a renamed target, an edited neighbour, a new mark, the narrator's
+ * gender and the round each give a new one; the same window taken twice gives the same one. Invented ru→uk lines.
  */
 class WindowFingerprintTest {
 
@@ -68,11 +67,35 @@ class WindowFingerprintTest {
         assertThat(WindowFingerprint.isWholeBook(first)).isFalse();
     }
 
+    // A new mark on the window's segment changes what block 13 asks, so the window is read again.
+    @Test
+    void fingerprint_newReason_changes() {
+        final ProofreadWindow marked = new ProofreadWindow(
+                List.of(FOCUS), Map.of(FOCUS, List.of("gender now known: Івар — female")), BEFORE, AFTER);
+
+        assertThat(fingerprint(WindowFingerprint.ROUND_MARKED, marked, BRIEF, "Івар", TARGETS))
+                .isNotEqualTo(fingerprint(WindowFingerprint.ROUND_MARKED, "Івар", TARGETS));
+    }
+
+    @Test
+    void fingerprint_narratorGenderSet_changes() {
+        final BookBrief female = BRIEF.withNarrator(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
+        final BookBrief male = BRIEF.withNarrator(new Narrator(NarratorPerson.FIRST, Gender.MALE));
+
+        assertThat(fingerprint(WindowFingerprint.ROUND_MARKED, WINDOW, female, "Івар", TARGETS))
+                .isNotEqualTo(fingerprint(WindowFingerprint.ROUND_MARKED, WINDOW, male, "Івар", TARGETS));
+    }
+
     private static String fingerprint(final int round, final String ivarTarget, final Map<String, String> targets) {
-        final ScriptedChatModel model = new ScriptedChatModel();
-        final TranslatePlanner planner = ProofreadFixtures.planner(ProofreadFixtures.TEMPLATES, BOOK, BRIEF, model);
-        final ProofreadCall call =
-                new ProofreadCall(planner, ProofreadFixtures.calls(model, event -> {}), new ObjectMapper());
+        return fingerprint(round, WINDOW, BRIEF, ivarTarget, targets);
+    }
+
+    private static String fingerprint(
+            final int round,
+            final ProofreadWindow window,
+            final BookBrief brief,
+            final String ivarTarget,
+            final Map<String, String> targets) {
         final GlossaryEntry ivar = GlossaryEntry.of(
                 ProofreadFixtures.PROJECT + ":Ивар",
                 ProofreadFixtures.PROJECT,
@@ -81,13 +104,8 @@ class WindowFingerprintTest {
                 TermType.CHARACTER,
                 Gender.MALE,
                 false);
-        final ProofreadCall.Texts texts = texts(targets);
-        final ProofreadCall.Planned planned = Objects.requireNonNull(
-                call.plan(WINDOW, texts, ProofreadFixtures.map(List.of(ivar), BRIEF))
-                        .data(),
-                "planned");
-        assertThat(planned.mapLines()).as("the call carries Ивар's line").contains(ivarTarget);
-        return WindowFingerprint.of(round, WINDOW, texts, planned.mapLines());
+        return WindowFingerprint.of(
+                round, window, texts(targets), BookMap.of(List.of(ivar), List.of(), brief, BOOK.units()), brief);
     }
 
     private static ProofreadCall.Texts texts(final Map<String, String> targets) {

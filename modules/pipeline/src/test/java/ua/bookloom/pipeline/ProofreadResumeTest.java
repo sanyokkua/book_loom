@@ -114,7 +114,8 @@ class ProofreadResumeTest {
 
     // IF the Continue line and the run counted windows differently, THEN the screen would say "window 15 of 19" while
     // the run read "window 1 of 18"; a late mark after a finished stage is counted the same way by both: the windows
-    // the round holds now, and the next one after those already read.
+    // the round holds now, those already read, and the first one left — here the first window, which the late mark
+    // joined.
     @Test
     void tally_lateMarkAfterFinishedRun_countsAsTheContinueRunReadsIt() {
         final TestProject project = flaggedBook(QualityDial.BALANCED, SIX_MARKS);
@@ -132,7 +133,7 @@ class ProofreadResumeTest {
                 .filter(ProofreadRoundStarted.class::isInstance)
                 .findFirst()
                 .orElseThrow();
-        assertThat(tally).hasValue(new ProofreadTally(1, 6, 5, 6));
+        assertThat(tally).hasValue(new ProofreadTally(1, 6, 5, 1));
         assertThat(round).isEqualTo(new ProofreadRoundStarted(1, 1, 6, 1));
     }
 

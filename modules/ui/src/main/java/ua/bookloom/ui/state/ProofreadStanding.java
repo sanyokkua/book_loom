@@ -9,10 +9,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
 import javafx.beans.Observable;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -24,8 +27,9 @@ import ua.bookloom.ui.BackgroundExecutor;
 
 /**
  * Where the open project's Proofread stage stands while no run is at work, so a reopened or stopped project says
- * "Continues with Proofread at window 41 of 120." (design D15 "Resume"). It is read in the background, with no model
- * call, whenever the open book changes, a run settles, or the glossary is written while no run is at work (a gender set
+ * "Continues with Proofread at window 41 of 120." (design D15 "Resume"), and whether its code part has work left — a
+ * renamed target to sweep, a deferral to settle — which a Continue does at every dial. It is read in the background,
+ * with no model call, whenever the open book changes, a run settles, or the glossary is written while no run is at work (a gender set
  * after a finished run marks segments for Proofread at once); the windows are planned with the chosen model's batch
  * size, as the run will plan them, or the built-in one when no model is chosen. A read that a newer one overtook is
  * dropped. FX thread only, apart from that read.
@@ -41,6 +45,7 @@ public final class ProofreadStanding {
     private final Executor background;
     private final Executor fx;
     private final ReadOnlyObjectWrapper<@Nullable ProofreadTally> tally = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyBooleanWrapper codeWork = new ReadOnlyBooleanWrapper();
     // Held so the read-only view of the glossary rows, which follows its source only weakly, lives as long as this.
     private final Observable glossary;
     private long asked;
@@ -93,8 +98,9 @@ public final class ProofreadStanding {
         mirror.runState().addListener((observed, was, now) -> {
             if (now.isSettled() || now == RunState.IDLE) {
                 refresh();
-            } else if (tally.get() != null) {
+            } else {
                 tally.set(null);
+                codeWork.set(false);
             }
         });
     }
@@ -120,17 +126,23 @@ public final class ProofreadStanding {
         return tally.getReadOnlyProperty();
     }
 
+    /** {@return whether a Continue has code-only Proofread work left, false while a run is at work; FX thread} */
+    public ReadOnlyBooleanProperty codeWorkLeft() {
+        return codeWork.getReadOnlyProperty();
+    }
+
     /** Reads the tally of the open project again; FX thread only. */
     public void refresh() {
         final @Nullable OpenedBook book = current.book().get();
         final long ask = ++asked;
         if (book == null) {
             tally.set(null);
+            codeWork.set(false);
             return;
         }
-        final Optional<ModelSelection> chosen = settings.selection();
+        final @Nullable ModelSelection chosen = settings.selection().orElse(null);
         final String projectId = book.projectId();
-        log.debug("proofread standing #{} asked for project {}, model chosen {}", ask, projectId, chosen.isPresent());
+        log.debug("proofread standing #{} asked for project {}, model chosen {}", ask, projectId, chosen != null);
         try {
             background.execute(() -> read(ask, projectId, chosen));
         } catch (RejectedExecutionException _) {
@@ -139,24 +151,38 @@ public final class ProofreadStanding {
         }
     }
 
-    private void read(final long ask, final String projectId, final Optional<ModelSelection> chosen) {
-        final Result<Optional<ProofreadTally>> read = progress.tally(projectId, batchSize(chosen));
-        final @Nullable ProofreadTally now =
-                Optional.ofNullable(read.data()).flatMap(found -> found).orElse(null);
-        log.debug("proofread standing #{} of project {}: {}", ask, projectId, now);
+    private void read(final long ask, final String projectId, final @Nullable ModelSelection chosen) {
+        final @Nullable ProofreadTally now = known(ask, "tally", progress.tally(projectId, batchSize(chosen)))
+                .flatMap(found -> found)
+                .orElse(null);
+        final boolean work =
+                known(ask, "code work", progress.codeWorkLeft(projectId)).orElse(false);
+        log.debug("proofread standing #{} of project {}: {} codeWork={}", ask, projectId, now, work);
         fx.execute(() -> {
             if (ask == asked) {
                 tally.set(now);
+                codeWork.set(work);
             }
         });
     }
 
+    // A read that failed shows nothing left; the port logged the failure with its cause.
+    private static <T> Optional<T> known(final long ask, final String what, final Result<T> read) {
+        final @Nullable AppError error = read.error();
+        if (error != null) {
+            log.warn(
+                    "proofread standing #{}: the {} could not be read code={}; nothing is shown",
+                    ask,
+                    what,
+                    error.code());
+        }
+        return Optional.ofNullable(read.data());
+    }
+
     // Binding a model makes no call; a choice that cannot be bound plans with the built-in batch size.
-    private int batchSize(final Optional<ModelSelection> chosen) {
-        return chosen.map(models::create)
-                .map(Result::data)
-                .map(ChatModel::profile)
-                .map(ModelProfile::batchSize)
-                .orElse(ModelProfile.DEFAULT_BATCH_SIZE);
+    private int batchSize(final @Nullable ModelSelection chosen) {
+        final @Nullable ChatModel model =
+                chosen == null ? null : models.create(chosen).data();
+        return model == null ? ModelProfile.DEFAULT_BATCH_SIZE : model.profile().batchSize();
     }
 }

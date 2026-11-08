@@ -26,6 +26,16 @@ WHEN the person chooses Continue translation, the system SHALL start a new run a
 - **WHEN** all segments are decided, no deferral is open, and the focus segments of every planned window hold proofread verdicts with their current fingerprint
 - **THEN** Continue translation sends no request to the provider and the run ends Completed
 
+#### Scenario: A gender set after a finished Max run is offered and read
+
+- **WHEN** a Max run has ended Completed, the person then sets the gender of `Hale` to female, which marks `Book.md:0` (`Хейл пішов.`) with `gender now known: Хейл — female`
+- **THEN** the Translating screen offers Continue translation, and once the Continue has read that window it offers nothing more
+
+#### Scenario: A rendering changed after a finished Fast run is offered
+
+- **WHEN** a Fast run has ended Completed and the person then changes the locked target of `Hale` from `Хейл` to `Гейл`
+- **THEN** the Translating screen offers Continue translation, the Continue sweeps `Гейл` into the decided text with no model call, and then nothing more is offered
+
 #### Scenario: A gender set after a finished Fast run is settled by code
 
 - **WHEN** a Fast run has ended Completed, the person then sets the gender of `Ірвін` to male in the Glossary, which records deferrals for 3 decided segments that name him, and chooses Continue translation
@@ -35,7 +45,7 @@ WHEN the person chooses Continue translation, the system SHALL start a new run a
 
 WHEN the Proofread stage plans its windows, the system SHALL skip, with no model call, each window whose focus segments all hold a proofread verdict with the fingerprint the window has now, and SHALL read every other window.
 
-**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`, `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#resume-support`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the fingerprint is a hash of everything a window's reading depended on: the source and current texts of its paragraphs, the neighbouring texts it was shown, the book-map lines it carried, the prompt version and whether it was the first or the whole-book reading. If none of those changed, reading it again would give the same answer, so a restart or a Continue pays only for what is new or changed. Only the focus segments count: a neighbour shown read-only gets no verdict from that window.
+**Source**: `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`, `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md#resume-support`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: the fingerprint is a hash of everything a window's reading depended on: the source and current texts of its paragraphs and the marks they were read for, the neighbouring texts it was shown, the book-map lines its texts name, the narrator's person and gender, the prompt version and whether it was the first or the whole-book reading. If none of those changed, reading it again would give the same answer, so a restart or a Continue pays only for what is new or changed. Only the focus segments count: a neighbour shown read-only gets no verdict from that window.
 
 #### Scenario: A stopped stage resumes with the unread windows only
 

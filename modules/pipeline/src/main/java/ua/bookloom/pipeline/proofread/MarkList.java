@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -36,7 +37,8 @@ import ua.bookloom.pipeline.qa.CheckLevels;
  * FLAGGED segments, those with a repair-level finding the one repair left, and those with an open deferral whose fact
  * has arrived; tier 2 holds the note-level findings and audit doubts, and the doubts of {@link MarkDetectors}. A model
  * asked to "improve" a paragraph with no named defect changes little or the wrong thing, so every entry names its
- * reasons. Nothing is stored: the list is read from the stored records, the open deferrals and the map.
+ * reasons. A machine text the person reviewed is never listed. Nothing is stored: the list is read from the stored records,
+ * the open deferrals and the map.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -83,7 +85,7 @@ public final class MarkList {
         final List<Mark> marks = new ArrayList<>();
         for (final Segment segment : storySegments(book.document())) {
             final SegmentRecord record = byId.get(segment.id());
-            if (record != null && isListed(record, kept)) {
+            if (record != null && isFocusable(record, kept)) {
                 final List<ArrivedGender> facts = arrived.getOrDefault(segment.id(), List.of());
                 final List<String> marked = marked(record, facts);
                 final List<String> doubtful = doubtful(record, segment, map, language);
@@ -111,6 +113,16 @@ public final class MarkList {
                 mark.reasons().size());
         log.trace("Marked segmentId={} reasons={}", segmentId, mark.reasons());
         return Optional.of(mark);
+    }
+
+    /**
+     * The reasons of each marked segment, by id: what rides along in Max's whole-book round.
+     *
+     * @param marks the non-null marks
+     * @return never null; empty when there is no mark
+     */
+    static Map<String, List<String>> reasonsById(final List<Mark> marks) {
+        return marks.stream().collect(Collectors.toMap(Mark::segmentId, Mark::reasons, (one, other) -> one));
     }
 
     private static Map<String, List<ArrivedGender>> arrivedFacts(final Book book, final List<Deferral> open) {
@@ -184,6 +196,48 @@ public final class MarkList {
                 && record.path() != SegmentPath.VERBATIM
                 && record.path() != SegmentPath.SOURCE_KEPT
                 && !record.isKeptAsSource(kept);
+    }
+
+    /**
+     * Whether the stage may read a stored segment as a window's focus: it is listed, and the person has not reviewed
+     * its machine text — accepted it, reverted to it or undone a proofread rewrite of it — which a kept rewrite would
+     * change silently (the owner's rule). A segment holding the person's own edit stays readable: a rewrite of it is
+     * only ever a proposal the person applies or not.
+     *
+     * @param record the non-null stored record
+     * @param kept the auxiliary kinds the brief keeps in the source language
+     * @return {@code true} if it may be marked and be a window's focus, {@code false} otherwise
+     */
+    static boolean isFocusable(final SegmentRecord record, final Set<SegmentKind> kept) {
+        return isListed(record, kept) && (!record.reviewed() || record.maskedUserTarget() != null);
+    }
+
+    /**
+     * The segments a window may show, read from the records as they stand when asked.
+     *
+     * @param byId the non-null stored records by segment id, which may change as windows commit
+     * @param kept the auxiliary kinds the brief keeps in the source language
+     * @return never null
+     */
+    static Predicate<String> readable(final Map<String, SegmentRecord> byId, final Set<SegmentKind> kept) {
+        return id -> {
+            final @Nullable SegmentRecord record = byId.get(id);
+            return record != null && isListed(record, kept);
+        };
+    }
+
+    /**
+     * The segments a window may rewrite, read from the records as they stand when asked.
+     *
+     * @param byId the non-null stored records by segment id, which may change as windows commit
+     * @param kept the auxiliary kinds the brief keeps in the source language
+     * @return never null
+     */
+    static Predicate<String> focusable(final Map<String, SegmentRecord> byId, final Set<SegmentKind> kept) {
+        return id -> {
+            final @Nullable SegmentRecord record = byId.get(id);
+            return record != null && isFocusable(record, kept);
+        };
     }
 
     /** The decided text a window shows: the person's edit, else the machine's; null when there is none. */

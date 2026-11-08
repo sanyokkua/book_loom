@@ -27,8 +27,8 @@ import ua.bookloom.pipeline.run.RunStores;
 import ua.bookloom.pipeline.run.Step;
 
 /**
- * Reads one proofread window (design D15 "Windows", "Resume"): plans its call with no model call so its fingerprint
- * can be compared with the verdicts its focus holds, sends it as one PROOFREAD step routed like a draft — a pause makes
+ * Reads one proofread window (design D15 "Windows", "Resume"): takes its fingerprint to compare with the verdicts its
+ * focus holds and plans its call with no model call, sends it as one PROOFREAD step routed like a draft — a pause makes
  * the call again on resume, a stop leaves the window undecided, a window past its budget of pauses is left unread — and
  * commits its texts, verdicts and settled deferrals in one transaction under the fingerprint of the window as it now
  * stands, so a Continue finds it read.
@@ -53,7 +53,7 @@ final class WindowReader {
      * @param window the window
      * @param texts the window's texts as committed now
      * @param planned the planned call, or null when it could not be planned (the call then routes the plan's error)
-     * @param fingerprint the window's fingerprint; empty when it could not be planned
+     * @param fingerprint the window's fingerprint
      */
     record Question(
             int round,
@@ -83,6 +83,7 @@ final class WindowReader {
     /** {@return the window's question as the reading stands now} */
     Question question(final int round, final ProofreadWindow window, final WindowReading reading) {
         final ProofreadCall.Texts texts = reading.texts(window);
+        final String fingerprint = fingerprint(round, window, texts, reading);
         final Result<ProofreadCall.Planned> planned = tools.call().plan(window, texts, reading.map());
         final ProofreadCall.@Nullable Planned held = planned.data();
         if (held == null) {
@@ -90,15 +91,22 @@ final class WindowReader {
                     "Proofread window {} could not be planned code={}; it is read and its error routed",
                     window.label(),
                     Objects.requireNonNull(planned.error(), "error").code());
-            return new Question(round, window, texts, null, "");
         }
-        return new Question(round, window, texts, held, WindowFingerprint.of(round, window, texts, held.mapLines()));
+        return new Question(round, window, texts, held, fingerprint);
+    }
+
+    private static String fingerprint(
+            final int round,
+            final ProofreadWindow window,
+            final ProofreadCall.Texts texts,
+            final WindowReading reading) {
+        return WindowFingerprint.of(
+                round, window, texts, reading.map(), reading.state().book().brief());
     }
 
     /**
-     * Whether a window was already read with the facts it has now: every focus segment holds a verdict with its
-     * fingerprint, or — for a first-round window — a verdict of Max's whole-book round, which read it after the first
-     * round and is checked by its own fingerprint there.
+     * Whether a window was already read with the question it has now ({@link WindowFingerprint#isRead}); a window
+     * that could not be planned is read, so its error is routed.
      *
      * @param question the non-null question
      * @param reading the non-null reading
@@ -108,8 +116,10 @@ final class WindowReader {
         if (question.planned() == null) {
             return false;
         }
-        final boolean read = question.window().focusIds().stream()
-                .allMatch(id -> holds(reading.record(id).proofread(), question));
+        final boolean read = WindowFingerprint.isRead(
+                question.fingerprint(),
+                question.window(),
+                id -> reading.record(id).proofread());
         if (read) {
             log.debug(
                     "Proofread window {} skipped: its focus holds the fingerprint {}",
@@ -117,13 +127,6 @@ final class WindowReader {
                     question.fingerprint());
         }
         return read;
-    }
-
-    private static boolean holds(final @Nullable ProofreadVerdict verdict, final Question question) {
-        return verdict != null
-                && (verdict.fingerprint().equals(question.fingerprint())
-                        || (question.round() == WindowFingerprint.ROUND_MARKED
-                                && WindowFingerprint.isWholeBook(verdict.fingerprint())));
     }
 
     /**
@@ -186,7 +189,7 @@ final class WindowReader {
         if (failed.isPresent()) {
             return failed;
         }
-        remember(question, decided, reading);
+        remember(decided, reading);
         emit.accept(WindowNotice.of(question, decided, reading.locators()));
         steps.ended(StepKind.PROOFREAD, question.key(), StepResult.DONE);
         log.info(
@@ -211,36 +214,26 @@ final class WindowReader {
                 .toList();
     }
 
-    // A segment whose text the window changed has its mark answered, so it no longer rides along in Max's second round.
-    private static void remember(
-            final Question question, final WindowVerdicts.Decided decided, final WindowReading reading) {
-        decided.records().forEach(record -> {
-            reading.records().put(record.segmentId(), record);
-            if (!question.texts().current(record.segmentId()).equals(MarkList.maskedTarget(record))) {
-                reading.keptNow().add(record.segmentId());
-            }
-        });
+    // Later windows and rounds read what this one committed.
+    private static void remember(final WindowVerdicts.Decided decided, final WindowReading reading) {
+        reading.verdicts().committed(decided);
+        decided.records().forEach(record -> reading.records().put(record.segmentId(), record));
     }
 
     // A kept rewrite changes the window, so its verdicts carry the fingerprint of the window as it now stands: the
     // next Continue asks the same question and finds it answered.
-    private WindowVerdicts.Decided stamped(
+    private static WindowVerdicts.Decided stamped(
             final Question question, final WindowVerdicts.Decided decided, final WindowReading reading) {
         final Map<String, String> currents = new HashMap<>(question.texts().currents());
         decided.records()
                 .forEach(record -> currents.put(
                         record.segmentId(), Objects.requireNonNull(MarkList.maskedTarget(record), record.segmentId())));
-        if (currents.equals(question.texts().currents()) || question.planned() == null) {
+        if (currents.equals(question.texts().currents())) {
             return decided;
         }
         final ProofreadCall.Texts after =
                 new ProofreadCall.Texts(question.texts().sources(), currents);
-        final Result<ProofreadCall.Planned> planned = tools.call().plan(question.window(), after, reading.map());
-        final ProofreadCall.@Nullable Planned held = planned.data();
-        if (held == null) {
-            return decided;
-        }
-        final String now = WindowFingerprint.of(question.round(), question.window(), after, held.mapLines());
+        final String now = fingerprint(question.round(), question.window(), after, reading);
         log.debug(
                 "Proofread window {} restamped after its kept rewrites",
                 question.window().label());

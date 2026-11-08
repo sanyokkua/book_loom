@@ -97,6 +97,27 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
         assertThat(deferralRepository().open("p1").data()).isEmpty();
     }
 
+    // A proposal keeps no waiting-on, so a new one shares the earlier one's key: it is resolved before the new is
+    // added.
+    @Test
+    void commit_newProposalResolvingTheEarlierOfTheSameSegment_leavesOnlyTheNewOneOpen() {
+        givenProjects("p1");
+        segmentRepository().saveAll("p1", List.of(decidedBeforeProofread("ch06.xhtml:20")));
+        final Deferral earlier = proposal("old", "Тарна прийшла.");
+        deferralRepository().add(earlier);
+        final Deferral fresh = proposal("new", "Тарна прийшла вчора.");
+
+        final Result<Integer> result = checkpointPort()
+                .commit(new ChunkCommit("p1", List.of(), List.of(), List.of(), List.of(fresh), List.of("old"), null));
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(deferralRepository().open("p1").data()).containsExactly(fresh);
+    }
+
+    private static Deferral proposal(final String id, final String text) {
+        return new Deferral(id, "p1", "ch06.xhtml:20", DeferralReason.PROOFREAD, null, null, text, text);
+    }
+
     @Test
     void removeProject_withProofreadVerdicts_verdictsGone() {
         givenProjects("p1", "p2");

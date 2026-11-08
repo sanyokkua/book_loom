@@ -483,15 +483,19 @@ for a person-edited segment; it consumes TERM deferrals), the narrator inference
 whose fact arrived checked by the gender check (agreeing → resolved, no call; disagreeing → an open mark with the reason
 `gender now known: {target} — {gender}`, `proofread/GenderNowKnown`), and `proofread/MarkList` (tier 1 = FLAGGED,
 a REPAIR-level finding left, deferrals whose fact arrived; tier 2 = NOTE findings, audit doubts, the map-name, one-source
--two-targets, recurring-term and gender-ending detectors; story segments only). **Marks** are findings or open
+-two-targets, recurring-term and gender-ending detectors; story segments only, never a machine text the person
+reviewed — accepted, reverted to or a rewrite undone, owner decision; the person's own edit stays readable, its rewrite
+only a proposal). **Marks** are findings or open
 deferrals, never records, so the desk computes the same list. A stop is checked between the code steps
 (`JobBoundaries.isStopRequested()`). The dial's `proofreadCoverage` decides what follows: `NONE` (Fast) stops here,
 `MARKED_AND_DOUBTFUL` (Balanced) reads the marked windows, `MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH` (Max) adds round 2.
 
 **Windows.** `ProofreadWindows` merges marks in reading order with at most one unmarked story segment between them,
 up to the profile's batch size, plus one read-only neighbour each side, keeping each mark's reasons (blocking first);
-`ProofreadWindows.tiles` cuts Max's round 2 into windows of at most the batch size, open marks riding as reasons. A
-first-round window whose focus all holds whole-book verdicts is skipped. `ProofreadCall` builds `PromptName.PROOFREAD`
+`ProofreadWindows.tiles` cuts Max's round 2 into windows of at most the batch size, the marks listed again from what
+round 1 committed riding as reasons. A machine text the person reviewed is never a focus, only a read-only neighbour: it is
+no line between two marks and it ends a round-2 window. A first-round window whose focus all holds whole-book verdicts
+is skipped. `ProofreadCall` builds `PromptName.PROOFREAD`
 / `CallKind.PROOFREAD` through `ContextBuilder` with the TRANSLATE frame (the drafts' system part byte for byte), block
 12 the target file's `proofreadInstruction` and `proofreadRules`, block 13 the focus items, block 10 the neighbours
 read-only; temperature 0.1, reasoning off unless the person's override allows it, schema titled `proofread`, the
@@ -502,19 +506,25 @@ run's own model through the one gate (`12_PROMPT_CATALOG.md#proofread`).
 a rewrite that changes any word but those the gender check found wrong, as `gender-scope`) into `api: project/ProofreadVerdict(fingerprint, outcome, reason, before,
 statusBefore, maskedBefore, findingsBefore)` with `ProofreadOutcome {KEPT, PROPOSED, REJECTED, UNCHANGED}`, held in
 `SegmentRecord.proofread`. KEPT: ACCEPTED → REVISED, FLAGGED → REVISED only when every blocking finding is cleared;
-otherwise, and for a person-edited text, PROPOSED on a `PROOFREAD` deferral; REJECTED with the gate's reason. A later
+otherwise, and for a person-edited text, PROPOSED on a `PROOFREAD` deferral (a later proposal of the same segment
+resolves the earlier one in the same commit; a commit resolves before it adds, as the proposals share the deferral key;
+the desk applies a proposal on a REVISED or a FLAGGED segment as the person's edit); REJECTED with the gate's reason.
+The refusal's words are book text: logs above TRACE carry only the veto's name. A later
 window that changes nothing leaves an earlier KEPT verdict and its `before`, so Undo proofread restores the original.
 A window's texts, verdicts and resolved deferrals are one `ChunkCommit` (`resolvedDeferralIds`), one transaction in both
 adapter families.
 
-**Resume.** `proofread/WindowFingerprint` hashes the focus sources and current targets, the neighbour targets, the map
-lines the planned call carries (`ProofreadCall.plan`, no model call), the prompt version and the round, written
-`r<round>:<sha-256>`. Planning skips a window whose focus all holds a verdict with the current fingerprint; each round
+**Resume.** `proofread/WindowFingerprint` hashes the focus sources, current targets and mark reasons, the neighbour
+targets, the map lines the window's texts name (`WindowMap.select` before the budgets, so no planner or model profile is
+needed), the narrator's person and gender, the prompt version and the round, written `r<round>:<sha-256>`. Planning skips a window whose focus all holds a verdict with the current fingerprint; each round
 plans the rest as `PROOFREAD` steps when it starts (`StepsPlanned`). Continue starts at the first stage with work and logs
-`Proofread round 1 continues at window 41 of 120`; a pause aborts the in-flight proofread call and makes it again on
+`Proofread round 1 continues at window 41 of 120` (the first unread window's place); a pause aborts the in-flight proofread call and makes it again on
 resume; a stop leaves the window undecided; a window past its pause budget is left unread (`FAILED` step) with its marks
 kept. The between-stages pause point sits before Proofread. The window learns its standing through `api:
-pipeline/ProofreadProgress` (`proofread/ProofreadTallies`: windows read are a round's distinct stored fingerprints).
+pipeline/ProofreadProgress` (`proofread/ProofreadTallies`: the round's windows planned by the stage's rules with the
+deferrals the code part would settle left out, each read by `WindowFingerprint.isRead`, the same test the run makes;
+`codeWorkLeft` answers whether the code part has work at any dial — an open TERM deferral or a gender deferral the text
+already agrees with — so Continue is offered for it too).
 Events: `ProofreadForecast`, `ProofreadRoundStarted`, `ProofreadWindowRead`.
 
 ## brief-key-recheck {#brief-key-recheck}

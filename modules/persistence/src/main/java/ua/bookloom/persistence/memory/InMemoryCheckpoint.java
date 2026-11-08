@@ -96,12 +96,13 @@ public final class InMemoryCheckpoint implements CheckpointPort {
             tm.put(InMemoryStore.tmKey(entry.sourceHash(), entry.contextKey()), entry);
         }
         final Map<String, Deferral> deferrals = store.deferrals(commit.projectId());
+        // Resolved first: a new proposal shares the key of the earlier one it supersedes.
+        final Set<String> resolved = Set.copyOf(commit.resolvedDeferralIds());
+        deferrals.values().removeIf(open -> resolved.contains(open.id()));
         for (final Deferral deferral : commit.deferrals()) {
             deferrals.putIfAbsent(
                     InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
         }
-        final Set<String> resolved = Set.copyOf(commit.resolvedDeferralIds());
-        deferrals.values().removeIf(open -> resolved.contains(open.id()));
         final RunRecord run = commit.run();
         if (run != null) {
             final RunRecord held = store.keepRun(run);

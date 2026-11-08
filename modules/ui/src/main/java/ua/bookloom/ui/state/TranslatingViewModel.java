@@ -109,8 +109,11 @@ public final class TranslatingViewModel {
         this.toasts = Objects.requireNonNull(reporting, "reporting").toasts();
         this.errors = reporting.errors();
         this.pending = new PendingCount(desk, executor);
-        // A finished book still has work while segments are pending or its Proofread stage has windows left.
-        this.workRemains = pending.remains().or(subject.proofread().tally().isNotNull());
+        // A finished book still has work while segments are pending, its Proofread stage has windows left, or its code
+        // part has a renamed target to sweep or a deferral to settle.
+        this.workRemains = pending.remains()
+                .or(subject.proofread().tally().isNotNull())
+                .or(subject.proofread().codeWorkLeft());
         this.missingInputs = new MissingInputNotice(notice, current, settings);
         // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
         final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);

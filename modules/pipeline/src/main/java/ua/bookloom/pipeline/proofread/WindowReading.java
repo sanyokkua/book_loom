@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.SegmentLocator;
@@ -21,7 +20,6 @@ import ua.bookloom.pipeline.context.BookMap;
  * @param segments the story segments by id, in reading order
  * @param verdicts the verdict rules of the stage
  * @param map the book map as the stage read it
- * @param keptNow the segments whose text a window of this stage changed, so their marks no longer ride along
  * @param locators the locator of every segment of the book, which the window's event names its segments by
  */
 record WindowReading(
@@ -30,7 +28,6 @@ record WindowReading(
         Map<String, Segment> segments,
         WindowVerdicts verdicts,
         BookMap map,
-        Set<String> keptNow,
         Map<String, SegmentLocator> locators) {
 
     // A window names only readable story segments, so each one has a record and a segment.
@@ -44,11 +41,27 @@ record WindowReading(
 
     /** {@return the window's sources and current texts, its neighbours' included, as committed now} */
     ProofreadCall.Texts texts(final ProofreadWindow window) {
+        return texts(window, segments, records);
+    }
+
+    /**
+     * A window's sources and current texts, its neighbours' included; the stored project's tally reads them the same.
+     *
+     * @param window the non-null window, which names only readable story segments
+     * @param segments the non-null story segments by id
+     * @param records the non-null stored records by id
+     * @return never null
+     */
+    static ProofreadCall.Texts texts(
+            final ProofreadWindow window,
+            final Map<String, Segment> segments,
+            final Map<String, SegmentRecord> records) {
         final Map<String, String> sources = new HashMap<>();
         final Map<String, String> currents = new HashMap<>();
         for (final String id : shownIds(window)) {
-            sources.put(id, segment(id).masked());
-            currents.put(id, Objects.requireNonNull(MarkList.maskedTarget(record(id)), id));
+            sources.put(id, Objects.requireNonNull(segments.get(id), id).masked());
+            currents.put(
+                    id, Objects.requireNonNull(MarkList.maskedTarget(Objects.requireNonNull(records.get(id), id)), id));
         }
         return new ProofreadCall.Texts(sources, currents);
     }

@@ -10,12 +10,10 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -27,7 +25,9 @@ import ua.bookloom.pipeline.glossary.NameForms;
 /**
  * The words a chapter's summary may use, so a word the model made up is told from a real one without a dictionary: the
  * words of the chapter's decided target text, every form of the glossary's target names, the language's bundled
- * function words and the closed list of numerals and story verbs beside {@code LanguageRules}' files. A word counts as
+ * function words and the closed list of numerals and story verbs beside {@code LanguageRules}' files — a short
+ * list of allowed everyday words for the summary gate alone, no dictionary: nothing in the translation or the
+ * glossary reads it. A word counts as
  * known when it is one of those or shares the stem of one (its letters less a two-letter ending, at least four), which
  * lets an inflected form pass. Words of fewer than three letters are never judged.
  */
@@ -43,7 +43,6 @@ final class SummaryVocabulary {
     private static final Pattern APOSTROPHES = Pattern.compile("[’ʼ]");
     private static final String ALLOWED_DIRECTORY = "/ua/bookloom/pipeline/prompt/languages/summary-words/";
     private static final String ALLOWED_SUFFIX = ".txt";
-    private static final Map<String, Set<String>> ALLOWED = new ConcurrentHashMap<>();
 
     private final NavigableSet<String> words;
     private final boolean hasDecidedText;
@@ -72,7 +71,8 @@ final class SummaryVocabulary {
         entries.forEach(entry -> words.addAll(targetWords(entry, targetLanguage)));
         final String language = Locale.forLanguageTag(targetLanguage.strip()).getLanguage();
         words.addAll(FunctionWords.of(language));
-        words.addAll(ALLOWED.computeIfAbsent(language, SummaryVocabulary::allowed));
+        // Read for each chapter, a few kilobytes once a chapter ends, so no shared state outlives the call.
+        words.addAll(allowed(language));
         log.debug(
                 "Summary vocabulary language={} lines={} decidedWords={} total={}",
                 language,

@@ -70,6 +70,28 @@ final class DeferralSettler {
         return Result.ok(new Settled(resolved, mismatches));
     }
 
+    /**
+     * Whether settling would resolve a deferral now: its gender fact has arrived and its segment's text agrees with it.
+     * The stored project's tally asks this with no write, so a Continue is offered for it.
+     *
+     * @param deferral the non-null open deferral
+     * @param records the project's stored records by segment id
+     * @param byTerm the glossary entries by term
+     * @param narrator the brief's narrator as it is now
+     * @param targetLanguage the target language tag
+     * @return {@code true} if a Continue would resolve it with no model call, {@code false} otherwise
+     */
+    static boolean resolves(
+            final Deferral deferral,
+            final Map<String, SegmentRecord> records,
+            final Map<String, GlossaryEntry> byTerm,
+            final Narrator narrator,
+            final String targetLanguage) {
+        return ArrivedGender.of(deferral, byTerm, narrator)
+                .filter(arrived -> !isMismatch(deferral, arrived, records, targetLanguage))
+                .isPresent();
+    }
+
     // A segment with no stored text is no mismatch: nothing in it can disagree, so its deferral has nothing to wait
     // for.
     private static boolean isMismatch(

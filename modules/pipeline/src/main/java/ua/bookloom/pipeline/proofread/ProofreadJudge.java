@@ -44,6 +44,7 @@ final class ProofreadJudge {
 
     private static final String GENDER_KIND = "gender";
     private static final String GENDER_DEFERRAL = "gender-deferral";
+    private static final String VETO_WORDS = ": ";
 
     private final Book book;
 
@@ -118,7 +119,13 @@ final class ProofreadJudge {
     }
 
     /** The text in place and the rewrite as the gate restored it. */
-    private record Texts(String current, GateResult.Restored restored) {}
+    private record Texts(String current, GateResult.Restored restored) {
+
+        // Read on the masked form like the text in place, so the book's markup and escapes are no words.
+        String plainAfter() {
+            return DisplayText.of(restored.maskedForm());
+        }
+    }
 
     // A mark only a gender now known stands behind is answered by its wrong words alone (GenderScope).
     private Judged inScope(
@@ -130,7 +137,7 @@ final class ProofreadJudge {
         final List<TextSpan> wrong = arrived.stream()
                 .flatMap(fact -> fact.wrongWords(plainBefore, book.frame().targetLanguage()).stream())
                 .toList();
-        return GenderScope.breach(plainBefore, texts.restored().restored(), wrong)
+        return GenderScope.breach(plainBefore, texts.plainAfter(), wrong)
                 .map(reason -> rejected(segment, reason))
                 .orElseGet(() -> byNeverWorse(segment, texts, reasons, arrived));
     }
@@ -165,8 +172,20 @@ final class ProofreadJudge {
     }
 
     private static Judged rejected(final Segment segment, final String reason) {
-        log.debug("Proofread rewrite refused segmentId={} reason={}", segment.id(), reason);
+        log.debug("Proofread rewrite refused segmentId={} veto={}", segment.id(), vetoOf(reason));
+        log.trace("Proofread rewrite refused segmentId={} reason={}", segment.id(), reason);
         return new Judged.Reject(reason);
+    }
+
+    /**
+     * The veto's name of a refusal, without the book's words that follow it, for a log line above TRACE.
+     *
+     * @param reason the non-null refusal, {@code veto} or {@code veto: words}
+     * @return the part before the first {@code ": "}; never null
+     */
+    static String vetoOf(final String reason) {
+        final int end = reason.indexOf(VETO_WORDS);
+        return end < 0 ? reason : reason.substring(0, end);
     }
 
     // The finding a mark named, which a kept rewrite may clear instead of scoring lower; none for a mark no finding
@@ -177,13 +196,14 @@ final class ProofreadJudge {
             final QaResult before, final List<String> reasons, final List<ArrivedGender> arrived, final Texts texts) {
         final String language = book.frame().targetLanguage();
         final String plainBefore = DisplayText.of(texts.current());
-        final String plainAfter = texts.restored().restored();
+        final String plainAfter = texts.plainAfter();
         final @Nullable ArrivedGender fixed = arrived.stream()
                 .filter(fact -> fact.mismatches(plainBefore, language) && !fact.mismatches(plainAfter, language))
                 .findFirst()
                 .orElse(null);
         if (fixed != null) {
-            log.debug("Proofread rewrite agrees with a gender now known: {}", fixed.reason());
+            log.debug("Proofread rewrite agrees with a gender now known gender={}", fixed.gender());
+            log.trace("Proofread rewrite agrees with a gender now known: {}", fixed.reason());
             return new QaFinding(GENDER_KIND, Severity.LOW, fixed.reason(), GENDER_DEFERRAL);
         }
         return before.findings().stream()

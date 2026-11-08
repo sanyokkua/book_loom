@@ -83,11 +83,15 @@ final class SuggestionLocks {
         return (reading != null && reading.speaking()) || hasCommonWord(entry, context);
     }
 
-    // A technical word (Markdown): a plain term the book never writes in lower case is no ordinary word, so a model
-    // that keeps it as written is right and sounding it out would invent a word.
+    // A technical word (Markdown, HTML): one plain word the book never writes in lower case is no ordinary word, so a
+    // model that keeps it as written is right and sounding it out would invent a word. A term of several words is a
+    // phrase the book coined (Glass Ministry), which is translated, so a copy of it is the source spelling.
     static boolean isTechnicalTerm(final GlossaryEntry entry, final TargetContext context) {
         final Reading reading = context.readings().get(entry.id());
-        return entry.type() == TermType.TERM && !isCommonWord(entry, context) && (reading == null || !reading.brand());
+        return entry.type() == TermType.TERM
+                && SPACES.split(entry.term().strip()).length == 1
+                && !isCommonWord(entry, context)
+                && (reading == null || !reading.brand());
     }
 
     static boolean hasCommonWord(final GlossaryEntry entry, final TargetContext context) {

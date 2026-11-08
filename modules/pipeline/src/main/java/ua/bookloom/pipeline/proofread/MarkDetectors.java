@@ -123,7 +123,10 @@ final class MarkDetectors {
         if (TermMatch.isNamedIn(rendering.get(), target)) {
             return Optional.empty();
         }
-        log.debug("Mark detector: a recurring term is written otherwise term={}", term.term());
+        log.debug(
+                "Mark detector: a recurring term is written otherwise renderings={}",
+                term.renderings().size());
+        log.trace("Mark detector: a recurring term is written otherwise term={}", term.term());
         return Optional.of("recurring term off its rendering: " + term.term() + " → " + rendering.get());
     }
 

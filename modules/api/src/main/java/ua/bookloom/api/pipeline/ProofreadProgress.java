@@ -19,4 +19,17 @@ public interface ProofreadProgress {
      *     no window is left to read; an error when the project cannot be read
      */
     Result<Optional<ProofreadTally>> tally(String projectId, int batchSize);
+
+    /**
+     * Whether a Continue has work for the Proofread stage's code part, which runs at every dial with no model call: a
+     * renamed target the term sweep has not carried through the decided text yet, or a gender deferral whose fact has
+     * arrived and that the text already agrees with.
+     *
+     * @param projectId the non-null id of an open project
+     * @return {@code true} if a Continue would change something with no model call, {@code false} otherwise; an
+     *     error when the project cannot be read. A planner with no code part has none, the default.
+     */
+    default Result<Boolean> codeWorkLeft(final String projectId) {
+        return Result.ok(false);
+    }
 }

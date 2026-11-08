@@ -36,7 +36,6 @@ import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.PromptFrame;
-import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
@@ -271,10 +270,22 @@ public final class ReviewQueries {
             return record.findings().stream().anyMatch(finding -> CheckLevels.of(finding) == CheckLevel.REPAIR);
         }
 
-        private static boolean isChangedByProofread(final SegmentRecord record) {
+        // A kept rewrite while it is still the text in place, and a proposal while it still waits: once the person
+        // writes over the one or applies the other, it is their decision.
+        private boolean isChangedByProofread(final SegmentRecord record) {
             final @Nullable ProofreadVerdict verdict = record.proofread();
-            return verdict != null
-                    && (verdict.outcome() == ProofreadOutcome.KEPT || verdict.outcome() == ProofreadOutcome.PROPOSED);
+            if (verdict == null) {
+                return false;
+            }
+            return switch (verdict.outcome()) {
+                case KEPT -> record.maskedUserTarget() == null;
+                case PROPOSED ->
+                    open.stream()
+                            .anyMatch(deferral -> deferral.segmentId().equals(record.segmentId())
+                                    && deferral.reason() == DeferralReason.PROOFREAD
+                                    && deferral.maskedProposal() != null);
+                case UNCHANGED, REJECTED -> false;
+            };
         }
 
         private boolean isWaitingOnGender(final SegmentRecord record) {

@@ -137,6 +137,7 @@ class ReviewDeskProofreadTest {
                 EDITED_ID,
                 record -> record.withProofread(
                         new ProofreadVerdict("r1:fp", ProofreadOutcome.PROPOSED, "the person's edit stays")));
+        add(desk, proposal(desk, EDITED_ID, "Вона вийшла."));
         accept(desk, GENDER_ID, "Ірвін прийшов.");
         add(desk, deferral(desk, GENDER_ID, "Irvin"));
         final ReviewDeskImpl port = desk.reviewDesk(ReviewMode.ASSISTED);
@@ -190,6 +191,46 @@ class ReviewDeskProofreadTest {
         assertThat(listed.getFirst().findings())
                 .extracting(QaFinding::note)
                 .contains("gender now known: Корін Ешбі — female");
+    }
+
+    // IF Changed by proofread went on listing a segment once the person applied its proposal or wrote over a kept
+    // rewrite, THEN the list would hold work already done.
+    @Test
+    void changedByProofread_proposalAppliedAndEditOverAKeptRewrite_leaveTheList() {
+        final Desk desk = ReviewFixtures.epub(tempDir);
+        accept(desk, KEPT_ID, BEFORE);
+        keptRewrite(desk, KEPT_ID, kept(BEFORE, SegmentStatus.ACCEPTED, List.of()), AFTER);
+        final ReviewDeskImpl port = desk.reviewDesk(ReviewMode.ASSISTED);
+        accept(desk, EDITED_ID, "Вона пішла.");
+        Objects.requireNonNull(
+                port.saveEdit(desk.projectId(), EDITED_ID, "Вона пішла геть.").data());
+        update(
+                desk,
+                EDITED_ID,
+                record -> record.withProofread(
+                        new ProofreadVerdict("r1:fp", ProofreadOutcome.PROPOSED, "the person's edit stays")));
+        add(desk, proposal(desk, EDITED_ID, "Вона вийшла геть."));
+        assertThat(ids(port, desk, ReviewFilter.CHANGED_BY_PROOFREAD)).containsExactly(EDITED_ID, KEPT_ID);
+
+        Objects.requireNonNull(port.acceptProposal(desk.projectId(), EDITED_ID).data());
+        Objects.requireNonNull(port.saveEdit(desk.projectId(), KEPT_ID, "Тарн прийшов аж завтра.")
+                .data());
+
+        assertThat(ids(port, desk, ReviewFilter.CHANGED_BY_PROOFREAD)).isEmpty();
+        assertThat(Objects.requireNonNull(port.counts(desk.projectId()).data()).changedByProofread())
+                .isZero();
+    }
+
+    private static Deferral proposal(final Desk desk, final String segmentId, final String text) {
+        return new Deferral(
+                desk.projectId() + ":" + segmentId + ":PROOFREAD:r1:fp",
+                desk.projectId(),
+                segmentId,
+                DeferralReason.PROOFREAD,
+                null,
+                null,
+                text,
+                text);
     }
 
     private static List<String> ids(final ReviewDeskImpl port, final Desk desk, final ReviewFilter filter) {

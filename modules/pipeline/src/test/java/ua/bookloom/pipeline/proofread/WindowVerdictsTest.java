@@ -4,12 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.proofread.ProofreadFixtures.PROJECT;
 import static ua.bookloom.pipeline.proofread.ProofreadFixtures.decided;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -24,6 +31,7 @@ import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -91,6 +99,34 @@ class WindowVerdictsTest {
         assertThat(verdict.reason()).contains("что");
     }
 
+    // The refusal's words are book text: above TRACE only the veto's name is logged.
+    @Test
+    void rewrite_refusedForAWord_logsTheWordAtTraceOnly() {
+        final Logger logger = (Logger) LoggerFactory.getLogger("ua.bookloom.pipeline.proofread");
+        final Level previous = logger.getLevel();
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.TRACE);
+        try {
+            decide(
+                    List.of(),
+                    "Мирена кивнула и сказала, что ключ у Тарна.",
+                    decided(ID, SegmentStatus.ACCEPTED, "Мирена кивнула й промовила, що ключ має Тарн."),
+                    "Мирена кивнула й промовила, что ключ має Тарн.");
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previous);
+        }
+
+        assertThat(appender.list)
+                .filteredOn(event -> event.getLevel().isGreaterOrEqual(Level.DEBUG))
+                .noneMatch(event -> event.getFormattedMessage().contains("что"));
+        assertThat(appender.list)
+                .filteredOn(event -> event.getLevel() == Level.TRACE)
+                .anyMatch(event -> event.getFormattedMessage().contains("что"));
+    }
+
     @Test
     void rewrite_personEdit_proposalAndTheEditStays() {
         final String edit = "Він рвучко відчинив двері, а потім ещё раз.";
@@ -108,6 +144,29 @@ class WindowVerdictsTest {
         assertThat(decided.proposals())
                 .extracting(Deferral::reason, Deferral::maskedProposal)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(DeferralReason.PROOFREAD, rewrite));
+    }
+
+    // Max's second round proposes again for the same edited segment: it supersedes round 1's committed proposal.
+    @Test
+    void rewrite_secondProposalAfterACommittedOne_resolvesTheFirst() {
+        final String edit = "Він рвучко відчинив двері, а потім ещё раз.";
+        final SegmentRecord edited = decided(ID, SegmentStatus.REVISED, "Він відчинив двері, а потім ещё раз.")
+                .withUserTarget(edit, edit);
+        final Segment segment = ProofreadFixtures.chapter("ch02.md", "Он рывком открыл дверь, а потом ещё раз.")
+                .units()
+                .getFirst()
+                .segments()
+                .getFirst();
+        final WindowVerdicts verdicts = verdicts(List.of(), List.of());
+        final WindowVerdicts.Decided first = verdicts.decide(
+                List.of(read(segment, edited)), Map.of(ID, "Він рвучко відчинив двері, а потім ще раз."), "r1:a");
+        verdicts.committed(first);
+
+        final WindowVerdicts.Decided second = verdicts.decide(
+                List.of(read(segment, edited)), Map.of(ID, "Він різко відчинив двері, а потім ще раз."), "r2:b");
+
+        assertThat(second.resolved())
+                .containsExactly(first.proposals().getFirst().id());
     }
 
     @Test
@@ -221,6 +280,39 @@ class WindowVerdictsTest {
         final WindowVerdicts.Decided decided = decideGravity(rewrite);
 
         assertThat(decided.records().getFirst().machineTarget()).isEqualTo(rewrite);
+        assertThat(decided.resolved()).containsExactly("d-newton");
+    }
+
+    // The same gender-only fix in an EPUB paragraph whose name is in italics: the markup is no word of the rewrite.
+    @Test
+    void rewrite_genderMarkOnAFormattedSegment_keptAndDeferralSettled(@TempDir final Path directory) {
+        final Segment segment = Objects.requireNonNull(TestDocuments.documents()
+                        .open(TestBooks.epub(
+                                directory.resolve("book.epub"),
+                                List.of(List.of("<em>Ньютон</em> опубликовал закон тяготения, а Альберт Эйнштейн"
+                                        + " опубликовал теорию, где пространство искривлено.")),
+                                "ru"))
+                        .data())
+                .units()
+                .stream()
+                .flatMap(unit -> unit.segments().stream())
+                .findFirst()
+                .orElseThrow();
+        final String current = "⟦g0⟧Ньютон⟦g1⟧ опублікував закон тяжіння, а Альберт Ейнштейн опублікував теорію, де"
+                + " простір викривлений.";
+        final String rewrite = current.replaceFirst("опублікував", "опублікувала");
+        final SegmentRecord record = decided(segment.id(), SegmentStatus.ACCEPTED, current);
+        final Deferral waiting = new Deferral(
+                "d-newton", PROJECT, segment.id(), DeferralReason.GENDER_CHANGED, "Ньютон", null, null, null);
+
+        final WindowVerdicts.Decided decided = verdicts(List.of(NEWTON, EINSTEIN), List.of(waiting))
+                .decide(
+                        List.of(new WindowVerdicts.Read(
+                                segment, record, current, List.of("gender now known: Ньютон — female"))),
+                        Map.of(segment.id(), rewrite),
+                        PRINT);
+
+        assertThat(decided.records().getFirst().maskedMachineTarget()).isEqualTo(rewrite);
         assertThat(decided.resolved()).containsExactly("d-newton");
     }
 

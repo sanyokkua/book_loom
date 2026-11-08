@@ -81,11 +81,12 @@ public final class SqliteCheckpoint implements CheckpointPort {
         for (final TmEntry entry : commit.tmEntries()) {
             SqliteTmRepository.upsert(h, codec, projectId, entry);
         }
-        for (final Deferral deferral : commit.deferrals()) {
-            SqliteDeferralRepository.insertIfAbsent(h, codec, projectId, deferral);
-        }
+        // Resolved first: a new proposal shares the key of the earlier one it supersedes.
         for (final String deferralId : commit.resolvedDeferralIds()) {
             SqliteDeferralRepository.resolveIn(h, projectId, deferralId);
+        }
+        for (final Deferral deferral : commit.deferrals()) {
+            SqliteDeferralRepository.insertIfAbsent(h, codec, projectId, deferral);
         }
         final RunRecord run = commit.run();
         if (run != null) {

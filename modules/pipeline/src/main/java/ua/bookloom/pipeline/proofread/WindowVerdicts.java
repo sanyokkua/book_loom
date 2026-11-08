@@ -18,6 +18,7 @@ import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.heal.AcceptanceRule;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.qa.CheckLevel;
@@ -39,6 +40,8 @@ final class WindowVerdicts {
 
     private final ProofreadJudge judge;
     private final Facts facts;
+    // The open deferrals as the committed windows left them, so a later round sees an earlier round's proposals.
+    private final List<Deferral> open;
 
     /**
      * What the verdicts read besides the window.
@@ -47,7 +50,7 @@ final class WindowVerdicts {
      * @param targetLanguage the target language tag, whose gender check settles a deferral
      * @param byTerm the glossary by term, for the gender deferrals' facts
      * @param narrator the brief's narrator as the stage read it
-     * @param open the open deferrals of the project as the stage read them
+     * @param open the open deferrals of the project as the stage read them, before any window was committed
      */
     record Facts(
             String projectId,
@@ -93,6 +96,28 @@ final class WindowVerdicts {
     WindowVerdicts(final ProofreadJudge judge, final Facts facts) {
         this.judge = Objects.requireNonNull(judge, "judge");
         this.facts = Objects.requireNonNull(facts, "facts");
+        this.open = new ArrayList<>(facts.open());
+    }
+
+    /** {@return the open deferrals as the committed windows left them} */
+    List<Deferral> open() {
+        return List.copyOf(open);
+    }
+
+    /**
+     * Takes in what a window committed: the deferrals it settled are no longer open and its proposals are.
+     *
+     * @param decided the non-null decisions just committed
+     */
+    void committed(final Decided decided) {
+        Objects.requireNonNull(decided, "decided");
+        open.removeIf(deferral -> decided.resolved().contains(deferral.id()));
+        open.addAll(decided.proposals());
+        log.debug(
+                "Proofread open deferrals now={} resolved={} proposed={}",
+                open.size(),
+                decided.resolved().size(),
+                decided.proposals().size());
     }
 
     /**
@@ -129,9 +154,9 @@ final class WindowVerdicts {
         return switch (judge.judge(read.segment(), read.current(), rewrite, read.reasons(), arrived(read))) {
             case ProofreadJudge.Judged.Reject(final String reason) -> {
                 log.warn(
-                        "Proofread rewrite rejected segmentId={} reason={}",
+                        "Proofread rewrite rejected segmentId={} veto={}",
                         read.segment().id(),
-                        reason);
+                        ProofreadJudge.vetoOf(reason));
                 yield read.record().withProofread(verdict(fingerprint, ProofreadOutcome.REJECTED, reason));
             }
             case ProofreadJudge.Judged.Keep keep -> kept(read, keep, fingerprint, proposals, resolved);
@@ -153,7 +178,8 @@ final class WindowVerdicts {
             log.debug("Proofread rewrite proposed segmentId={} reason={}", record.segmentId(), reason);
             return record.withProofread(verdict(fingerprint, ProofreadOutcome.PROPOSED, reason));
         }
-        resolved.addAll(settled(record.segmentId(), keep.restored().restored()));
+        resolved.addAll(
+                settled(record.segmentId(), DisplayText.of(keep.restored().maskedForm())));
         log.debug("Proofread rewrite kept segmentId={} statusBefore={}", record.segmentId(), record.status());
         return record.withMachineTarget(
                         keep.restored().restored(), keep.restored().maskedForm())
@@ -198,7 +224,7 @@ final class WindowVerdicts {
 
     // A new proposal supersedes an earlier proofread proposal of the same segment.
     private List<String> earlierProposals(final SegmentRecord record) {
-        return facts.open().stream()
+        return open.stream()
                 .filter(deferral -> deferral.segmentId().equals(record.segmentId()))
                 .filter(deferral -> deferral.reason() == DeferralReason.PROOFREAD)
                 .map(Deferral::id)
@@ -206,7 +232,7 @@ final class WindowVerdicts {
     }
 
     private List<ArrivedGender> arrived(final Read read) {
-        return facts.open().stream()
+        return open.stream()
                 .filter(deferral -> deferral.segmentId().equals(read.segment().id()))
                 .flatMap(deferral -> ArrivedGender.of(deferral, facts.byTerm(), facts.narrator()).stream())
                 .toList();
@@ -214,7 +240,7 @@ final class WindowVerdicts {
 
     // Each gender deferral of the segment whose gender is known now and that the kept text agrees with.
     private List<String> settled(final String segmentId, final String plain) {
-        final List<String> ids = facts.open().stream()
+        final List<String> ids = open.stream()
                 .filter(deferral -> deferral.segmentId().equals(segmentId))
                 .filter(deferral -> ArrivedGender.of(deferral, facts.byTerm(), facts.narrator())
                         .filter(fact -> !fact.mismatches(plain, facts.targetLanguage()))

@@ -9,11 +9,12 @@ import ua.bookloom.api.document.SegmentStatus;
  * The record a segment keeps after a Proofread window read it, so a restart shows what was decided and Undo proofread
  * can put the earlier text and status back.
  *
- * @param fingerprint a hash of the source and the facts the window was read with, so an unchanged segment is not read
- *     again; never blank
+ * @param fingerprint the round and a hash of the question the window asked — its sources, texts, reasons, map lines and
+ *     narrator — so a window asked the same question is not read again; never blank
  * @param outcome what the stage decided
  * @param reason a short human-readable reason, for a refusal the check that got worse; may be empty, never null
- * @param before the plain target before a {@link ProofreadOutcome#KEPT} edit replaced it, or null when no edit was kept
+ * @param before the segment's {@link SegmentRecord#machineTarget() machine target}, restored into the book's markup,
+ *     before a {@link ProofreadOutcome#KEPT} edit replaced it, or null when no edit was kept
  * @param statusBefore the segment's status before a kept edit, so Undo proofread can return a flagged segment to
  *     {@code FLAGGED}, or null when no edit was kept
  * @param maskedBefore the masked form of {@code before}, which Undo proofread puts back with it, or null when no edit

@@ -15,8 +15,6 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.context.Block;
-import ua.bookloom.pipeline.context.BlockSlots;
 import ua.bookloom.pipeline.context.BookMap;
 import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.Focus;
@@ -120,15 +118,6 @@ public final class ProofreadCall {
         List<String> readIds() {
             return window.focusIds().subList(0, fitted.keptItems());
         }
-
-        /** {@return the map lines the call carries, as sent; empty when it carries none} */
-        String mapLines() {
-            return fitted.plan().blocks().stream()
-                    .filter(block -> BlockSlots.MAP.equals(block.slot()))
-                    .map(Block::text)
-                    .findFirst()
-                    .orElse("");
-        }
     }
 
     /** {@return the announcer of the run's steps, which a window's step is announced through} */
@@ -149,7 +138,7 @@ public final class ProofreadCall {
     }
 
     /**
-     * Plans one window's call with no model call, so its fingerprint can be taken from the map lines it would carry.
+     * Plans one window's call with no model call.
      *
      * @param window the non-null window
      * @param texts the non-null texts of the window's segments
@@ -239,7 +228,8 @@ public final class ProofreadCall {
         return Optional.of(id);
     }
 
-    private static Window contextWindow(final ProofreadWindow window, final Texts texts) {
+    /** {@return the window as the context builder reads it: the neighbour before as a pair, the focus, the next one} */
+    static Window contextWindow(final ProofreadWindow window, final Texts texts) {
         final List<FocusItem> items = new ArrayList<>();
         window.focusIds().forEach(id -> items.add(new FocusItem(id, texts.source(id), texts.current(id))));
         final @Nullable String before = window.beforeId();

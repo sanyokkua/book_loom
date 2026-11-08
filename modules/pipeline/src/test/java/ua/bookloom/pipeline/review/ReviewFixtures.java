@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
@@ -23,7 +24,6 @@ import ua.bookloom.api.persistence.PromptFrameRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -83,7 +83,8 @@ public final class ReviewFixtures {
             SentenceSplitter splitter,
             LexiconRepository lexicon,
             SummaryRepository summaries,
-            PromptFrameRepository frames) {
+            PromptFrameRepository frames,
+            CheckpointPort checkpoint) {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
@@ -305,11 +306,7 @@ public final class ReviewFixtures {
         final DeferralRepository deferrals = injector.getInstance(DeferralRepository.class);
         final PromptFrameRepository frames = injector.getInstance(PromptFrameRepository.class);
         final GlossaryRepository glossary = injector.getInstance(GlossaryRepository.class);
-        final ProjectServiceImpl service = service(injector, documents, projects, segments, openProjects);
-        final ImportedBook imported =
-                Objects.requireNonNull(service.create(book).data(), "imported book");
-        final String id = Objects.requireNonNull(imported.projectId(), "project id");
-        service.updateBrief(id, brief);
+        final String id = imported(service(injector, documents, projects, segments, openProjects), book, brief);
         return new Desk(
                 id,
                 new SegmentActions(documents, openProjects, segments, deferrals),
@@ -324,7 +321,17 @@ public final class ReviewFixtures {
                 injector.getInstance(SentenceSplitter.class),
                 injector.getInstance(LexiconRepository.class),
                 injector.getInstance(SummaryRepository.class),
-                frames);
+                frames,
+                injector.getInstance(CheckpointPort.class));
+    }
+
+    private static String imported(final ProjectServiceImpl service, final Path book, final BookBrief brief) {
+        final String id = Objects.requireNonNull(
+                Objects.requireNonNull(service.create(book).data(), "imported book")
+                        .projectId(),
+                "project id");
+        service.updateBrief(id, brief);
+        return id;
     }
 
     private static ProjectServiceImpl service(

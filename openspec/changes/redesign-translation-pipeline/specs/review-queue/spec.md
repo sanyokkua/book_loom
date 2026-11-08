@@ -54,7 +54,7 @@ WHEN the person chooses "Undo proofread" on a segment whose proofread verdict is
 
 ### Requirement: List in Changed by proofread the segments whose rewrite was kept or proposed
 
-The review desk's "Changed by proofread" filter SHALL list, in document order, the segments whose proofread verdict is kept or proposed, each opened with its verdict line, and SHALL count them in its label.
+The review desk's "Changed by proofread" filter SHALL list, in document order, the segments whose kept proofread rewrite is still the text in place or whose proofread proposal still waits, each opened with its verdict line, and SHALL count them in its label.
 
 **Source**: `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`, `design.md#d15--the-proofread-stage-deferrals-and-proofread-marks`. In plain words: after the stage the person can read exactly what it touched, in order, and undo what they dislike.
 
@@ -67,6 +67,11 @@ The review desk's "Changed by proofread" filter SHALL list, in document order, t
 
 - **WHEN** the person chooses "Undo proofread" on `ch4 · p07`
 - **THEN** `ch4 · p07` leaves the list and the count falls to 1
+
+#### Scenario: Work the person has done leaves the list
+
+- **WHEN** the person applies the proposal of `ch2 · p07` and saves an edit of their own over the kept rewrite of `ch4 · p07`
+- **THEN** neither segment is listed and the filter reads "Changed by proofread (0)"
 
 #### Scenario: A run without proofread changes shows an empty list
 
@@ -170,6 +175,11 @@ WHEN the Proofread stage produces a passing rewrite for a segment the person edi
 - **WHEN** `ch2 · p07` is REVISED by the person as `Вона пішла.` and the stage proposes `Він пішов.`
 - **THEN** the desk shows the proposal and the segment keeps `Вона пішла.`
 - **AND** when the person accepts the proposal the segment reads `Він пішов.`, stays REVISED, and opens in the editor as `Він пішов.`
+
+#### Scenario: A proposal on a flagged segment is applied as the person's edit
+
+- **WHEN** `ch2 · p07` stays FLAGGED because a proofread rewrite of it left a blocking finding, and the rewrite waits as a proposal
+- **THEN** applying the proposal makes it the segment's text as the person's edit, REVISED, and resolves the proposal
 
 #### Scenario: A saved edit or a revert withdraws the proposal built on the old wording
 

@@ -273,7 +273,9 @@ D-18). In order:
    repair, and deferrals whose fact arrived; tier 2 = NOTE findings, audit doubts and the detectors (a map name in the
    source with none of its target forms, one source with different targets, a recurring term off its rendering, gender
    endings against a person's or the book's gender). A mark is a finding or an open deferral on a segment, never a
-   record of its own, so the review desk computes the same list.
+   record of its own, so the review desk computes the same list. A machine text the person reviewed (accepted, reverted
+   to, or undid a proofread rewrite of) is never marked or rewritten again; a window shows it only as a read-only
+   neighbour (owner decision). The person's own edit stays readable; a rewrite of it is only ever a proposal.
 6. **Windows** (Balanced and Max): marks merged in reading order with at most one unmarked segment between them, up to
    the model profile's batch size, plus one read-only neighbour each side; one minimal-edit proofread call per window
    (`12_PROMPT_CATALOG.md#proofread`). Max adds a **second round** that tiles every readable story paragraph in windows
@@ -281,7 +283,7 @@ D-18). In order:
 
 **Fast** stops after step 5: no model call; every mark goes to the review desk with its reasons (the gender mismatches
 under "Waiting on a gender" and "Worth a second look"). Continue at Fast runs the code part again when a glossary change
-or a gender set after the run left work.
+or a gender set after the run left work; the Translating screen offers Continue for that work at every dial.
 
 **Verdicts.** The reply is `{"unchanged":true}` or the changed items; ids outside the focus and texts equal to the
 current are dropped, a focus id left out is UNCHANGED, an unreadable reply stores no verdict. Each change passes the hard
@@ -294,11 +296,11 @@ a gender is now known may have just the words the gender check finds wrong chang
 person's words or any other word, or adds or drops one, is refused as `gender-scope`. A kept text settles each gender
 deferral it now agrees with. A window's texts, verdicts and resolved deferrals commit in one transaction.
 
-**Resume.** Each verdict carries the window's fingerprint (`r<round>:<sha-256>` of the focus sources and texts, the
-neighbours' texts, the map lines the call carries and the prompt version); a window whose focus all holds a verdict with
-the current fingerprint is skipped, so Continue starts at the first unread window ("Continues with Proofread at window
-41 of 120.", counted as the round's windows planned now and the first one after those already read, the same count
-the run logs) and a finished Max run reads nothing. A pause makes the in-flight call again on resume; a stop leaves the
+**Resume.** Each verdict carries the window's fingerprint (`r<round>:<sha-256>` of the focus sources, texts and mark
+reasons, the neighbours' texts, the map lines the window names, the narrator's person and gender and the prompt
+version); a window whose focus all holds a verdict with the current fingerprint is skipped, so Continue starts at the
+first unread window ("Continues with Proofread at window 41 of 120.", counted as the round's windows planned now and the
+place of the first one not yet read, the same count the run logs) and a finished Max run reads nothing. A pause makes the in-flight call again on resume; a stop leaves the
 window undecided; a window past its pause budget is left unread with its marks kept.
 
 | ID         | Requirement                                                                                                                                                                                                                                                                            |

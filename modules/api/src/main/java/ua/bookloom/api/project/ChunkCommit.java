@@ -14,7 +14,8 @@ import org.jspecify.annotations.Nullable;
  * @param glossaryAdditions the glossary entries proposed by this chunk
  * @param deferrals the deferrals recorded by this chunk
  * @param resolvedDeferralIds the ids of deferrals this commit settles, deleted in the same step as the texts and
- *     verdicts that settled them
+ *     verdicts that settled them, and before this commit's deferrals are added, so a deferral superseding one of the
+ *     same key replaces it
  * @param run the run's record as it stands at this chunk, stored in the same step so the run's counts never disagree
  *     with its stored decisions, or null when the commit carries none
  */

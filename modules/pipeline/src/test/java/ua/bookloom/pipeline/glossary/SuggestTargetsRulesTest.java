@@ -167,7 +167,9 @@ class SuggestTargetsRulesTest {
             "Earth turned slowly under them.",
             "They had left Earth long ago.",
             "Write it in Markdown, then export.",
-            "The Markdown file was short."));
+            "The Markdown file was short.",
+            "The Glass Ministry sealed the gate.",
+            "Nobody argued with the Glass Ministry."));
 
     // A one-word place the model renders twice as the same word (Земля) is an established word no letter table
     // derives; refusing it for not opening like "Earth" would leave the entry without a target.
@@ -201,6 +203,44 @@ class SuggestTargetsRulesTest {
 
         assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Markdown");
         assertThat(model.requests()).hasSize(1);
+    }
+
+    // A technical word is one word; an invented term of several capitalised words copied as written is the source
+    // spelling, refused and asked once more, never passed as a Latin run.
+    @Test
+    void suggest_inventedPhraseTermCopied_refusedAndAskedAgain() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(says("Glass Ministry", "Glass Ministry"))
+                .answer(says("Glass Ministry", "Скляне міністерство"));
+
+        final Result<List<Suggestion>> suggested = suggest.suggest(
+                List.of(entry("Glass Ministry", TermType.TERM, Gender.UNKNOWN, null)),
+                CAPITALISED_ONLY,
+                FRAME,
+                NamePolicy.TRANSLITERATE,
+                calls(model));
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(suggested.data()).extracting(Suggestion::target).containsExactly("Скляне міністерство");
+    }
+
+    // IF the prompt both told the model to keep a technical word and never to answer with the term itself, THEN the
+    // model would be left to guess which rule wins.
+    @Test
+    void suggest_prompt_namesTheTechnicalWordAsAnExceptionToEveryKeepRule() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(says("Markdown", "Markdown"));
+
+        suggest.suggest(
+                List.of(entry("Markdown", TermType.TERM, Gender.UNKNOWN, null)),
+                CAPITALISED_ONLY,
+                FRAME,
+                NamePolicy.TRANSLITERATE,
+                calls(model));
+
+        final String prompt = model.requests().getFirst().messages().get(1).content();
+        assertThat(prompt)
+                .contains("unless it is an identifier such as \"ZX-81\", a one-word technical, format or code word")
+                .contains("never keep its spelling unless it is a one-word technical, format or code word");
     }
 
     @Test

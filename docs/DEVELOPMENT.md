@@ -2726,3 +2726,35 @@ Proofread stage's reach).
   Russian source, so the echo check flagged it (13.5 had to change the acceptance test's trap draft). Close languages may
   produce correct drafts the echo check calls untranslated; open question: measure the echo check's false flags on
   decided ru→uk text (`DetectorsRuUkTest` holds the cases) before tuning its threshold per pair.
+
+**Fixed after an independent review of group 13** (2026-11-08, each with the test that was red first):
+
+- *A second proposal lost both.* A proposal keeps no waiting-on, so a new one shares the earlier one's deferral key: both
+  adapters now resolve a commit's settled deferrals before they add its new ones (`CheckpointContractTest` over the
+  in-memory and SQLite adapters), and the window pass tracks the deferrals each window committed, so round 2 supersedes
+  round 1's proposal (`WindowVerdictsTest`); a proposal on a FLAGGED segment is applied from the desk as the person's
+  edit (`ProofreadProposalDeskTest`).
+- *Continue after a finished run.* The tally reads a window as read by the very fingerprint the run compares
+  (`WindowFingerprint.isRead`), plans the windows without the deferrals the code part would settle, and names the first
+  unread window's place; the fingerprint is taken with no planner (the map lines the window's texts name) and now holds
+  the marks' reasons and the narrator's person and gender. `ProofreadProgress.codeWorkLeft` (an open TERM deferral, or a
+  gender deferral the text already agrees with) makes the Translating screen offer Continue at every dial
+  (`ProofreadContinueTest`, `WindowFingerprintTest`, `TranslatingViewModelControlTest`).
+- *The person's decision.* A machine text the person reviewed — accepted, reverted to, a rewrite undone — is never
+  marked or a window's focus again, only a read-only neighbour (owner decision; `ProofreadWindowsTest`,
+  `ProofreadContinueTest`). The person's own edit stays readable, since a rewrite of it is only ever a proposal (the
+  spec's "Make a proposal of a proofread rewrite of the person's own edit"; `WholeBookPipelineEndToEndTest` reads one). Changed by proofread lists a kept rewrite only while it is the text in place and a proposal
+  only while it waits (`ReviewDeskProofreadTest`).
+- *Book text in logs.* A refused rewrite logs only its veto's name above TRACE; the words go to TRACE
+  (`WindowVerdictsTest`). The gender scope compares masked forms, so the book's markup is no word (`WindowVerdictsTest`
+  with an EPUB `<em>` name).
+- *Suggested targets.* A copied term passes as kept-as-written only when it is one word (`Markdown`); a coined phrase
+  (`Glass Ministry`) copied is refused and asked again, and the prompt names the one-word technical word as the
+  exception to each keep rule (`SuggestTargetsRulesTest`).
+- *Summary words.* `summary-words/uk.txt` is a short list of everyday numerals, ordinals and story verbs that the chapter
+  summary's gate alone allows besides the chapter's decided words and the glossary; it is no dictionary, and nothing in
+  the translation, the checks or the glossary reads it (the owner's "no word dictionary" decision is about those). It is
+  read per chapter, with no shared cache.
+- *Not changed:* the export's consistency summary counts only GENDER_UNKNOWN as "waiting for a gender"; a GENDER_CHANGED
+  deferral waits on no gender, and the export's "wait on a fact you have since given" line is task 14.5's, with the pass
+  group 14 removes.

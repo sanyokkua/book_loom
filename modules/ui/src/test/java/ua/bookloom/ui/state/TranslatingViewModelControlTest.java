@@ -255,6 +255,27 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
         assertThat(controls().start()).isEqualTo(ENABLED);
     }
 
+    // IF only proofread windows counted as work left, THEN a target renamed after a Fast run, which the code part
+    // sweeps with no window, would never be offered.
+    @Test
+    void controls_codeWorkLeftAfterACompletedRun_offerStart() throws Exception {
+        openBookAndChooseModel();
+        buildViewModel();
+        startAndPrepare();
+        job.finish(Result.ok(completedReport(10)));
+        awaitState(RunState.COMPLETED);
+        WaitForAsyncUtils.waitForFxEvents();
+        final ControlState finished = controls().start();
+
+        codeWorkLeft = true;
+        onFx(() -> glossaryRows.add(
+                GlossaryEntry.of("p:Hale", "p", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true)));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(finished).isEqualTo(HIDDEN);
+        assertThat(controls().start()).isEqualTo(ENABLED);
+    }
+
     // IF start stayed pressable while the run is paused on a provider error, THEN a second run would begin beside the
     // one that can be resumed.
     @Test
