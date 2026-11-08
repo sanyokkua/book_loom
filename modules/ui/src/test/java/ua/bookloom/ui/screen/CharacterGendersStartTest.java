@@ -140,8 +140,9 @@ class CharacterGendersStartTest extends TranslatingScreenTestBase {
                         "Dane → no translation yet",
                         "9 mentions",
                         "This character has only a suggested gender, which the translation does not hold to. Confirm it"
-                                + " in Names & style (Confirm suggested genders), or start anyway: the next export"
-                                + " re-renders those segments.");
+                                + " in Names & style (Confirm suggested genders), or start anyway: once it is confirmed,"
+                                + " Continue translation proofreads those segments, or lists them for your review at"
+                                + " Fast.");
     }
 
     @Test

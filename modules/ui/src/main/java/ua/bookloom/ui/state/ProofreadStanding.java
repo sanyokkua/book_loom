@@ -8,6 +8,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
+import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,10 @@ import ua.bookloom.ui.BackgroundExecutor;
 /**
  * Where the open project's Proofread stage stands while no run is at work, so a reopened or stopped project says
  * "Continues with Proofread at window 41 of 120." (design D15 "Resume"). It is read in the background, with no model
- * call, whenever the open book changes or a run settles; the windows are planned with the chosen model's batch size, as
- * the run will plan them, or the built-in one when no model is chosen. A read that a newer one overtook is dropped.
- * FX thread only, apart from that read.
+ * call, whenever the open book changes, a run settles, or the glossary is written while no run is at work (a gender set
+ * after a finished run marks segments for Proofread at once); the windows are planned with the chosen model's batch
+ * size, as the run will plan them, or the built-in one when no model is chosen. A read that a newer one overtook is
+ * dropped. FX thread only, apart from that read.
  */
 @Slf4j
 @Singleton
@@ -39,6 +41,8 @@ public final class ProofreadStanding {
     private final Executor background;
     private final Executor fx;
     private final ReadOnlyObjectWrapper<@Nullable ProofreadTally> tally = new ReadOnlyObjectWrapper<>();
+    // Held so the read-only view of the glossary rows, which follows its source only weakly, lives as long as this.
+    private final Observable glossary;
     private long asked;
 
     /**
@@ -49,6 +53,7 @@ public final class ProofreadStanding {
      * @param current the open project
      * @param mirror the run's state, whose settling reads the tally again
      * @param background where the windows are planned, never the FX thread
+     * @param names the glossary rows as stored, whose change reads the tally again while no run is at work
      */
     @Inject
     public ProofreadStanding(
@@ -56,8 +61,9 @@ public final class ProofreadStanding {
             final SettingsViewModel settings,
             final CurrentProject current,
             final StateMirror mirror,
-            final @BackgroundExecutor ExecutorService background) {
-        this(ports, settings, current, mirror, background, Platform::runLater);
+            final @BackgroundExecutor ExecutorService background,
+            final NamesStyleViewModel names) {
+        this(ports, settings, current, mirror, background, Platform::runLater, names.rows());
     }
 
     ProofreadStanding(
@@ -66,14 +72,24 @@ public final class ProofreadStanding {
             final CurrentProject current,
             final StateMirror mirror,
             final Executor background,
-            final Executor fx) {
+            final Executor fx,
+            final Observable glossary) {
         this.progress = Objects.requireNonNull(ports, "ports").progress();
         this.models = ports.models();
         this.settings = Objects.requireNonNull(settings, "settings");
         this.current = Objects.requireNonNull(current, "current");
         this.background = Objects.requireNonNull(background, "background");
         this.fx = Objects.requireNonNull(fx, "fx");
+        this.glossary = Objects.requireNonNull(glossary, "glossary");
         current.book().addListener((observed, was, now) -> refresh());
+        // A run at work reads the glossary itself and its settling reads the tally again.
+        this.glossary.addListener(observed -> {
+            final RunState state = mirror.runState().get();
+            log.debug("proofread standing: glossary written in run state {}", state);
+            if (state.isSettled() || state == RunState.IDLE) {
+                refresh();
+            }
+        });
         mirror.runState().addListener((observed, was, now) -> {
             if (now.isSettled() || now == RunState.IDLE) {
                 refresh();

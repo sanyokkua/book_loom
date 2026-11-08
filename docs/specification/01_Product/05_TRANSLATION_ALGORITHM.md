@@ -289,13 +289,16 @@ gates and the never-worse gate (no check may get worse; a refusal names what got
 `function-word-residue: что`). A kept rewrite of an ACCEPTED segment makes it REVISED (outcome KEPT, the text, status
 and findings before kept for Undo proofread); a FLAGGED one becomes REVISED only when the rewrite clears every blocking
 finding, else it stays FLAGGED with the text as a proposal (PROPOSED); a person-edited text is never rewritten — the
-change waits as a proposal (PROPOSED); a refused one is REJECTED with the gate's reason. A kept text settles each gender
+change waits as a proposal (PROPOSED); a refused one is REJECTED with the gate's reason. A segment marked only because
+a gender is now known may have just the words the gender check finds wrong changed: a rewrite that changes another
+person's words or any other word, or adds or drops one, is refused as `gender-scope`. A kept text settles each gender
 deferral it now agrees with. A window's texts, verdicts and resolved deferrals commit in one transaction.
 
 **Resume.** Each verdict carries the window's fingerprint (`r<round>:<sha-256>` of the focus sources and texts, the
 neighbours' texts, the map lines the call carries and the prompt version); a window whose focus all holds a verdict with
 the current fingerprint is skipped, so Continue starts at the first unread window ("Continues with Proofread at window
-41 of 120.") and a finished Max run reads nothing. A pause makes the in-flight call again on resume; a stop leaves the
+41 of 120.", counted as the round's windows planned now and the first one after those already read, the same count
+the run logs) and a finished Max run reads nothing. A pause makes the in-flight call again on resume; a stop leaves the
 window undecided; a window past its pause budget is left unread with its marks kept.
 
 | ID         | Requirement                                                                                                                                                                                                                                                                            |

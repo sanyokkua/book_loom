@@ -2662,7 +2662,9 @@ every dial and is Completed only after Proofread (`01_Product/05_TRANSLATION_ALG
 is green on both dialects (3 cases × Ollama-native and OpenAI-compatible). Task 13.10 results: the whole gate
 (`./gradlew clean build check spotlessCheck`) passed in 19 min 48 s after the hand-check fixes; `scripts/ci-linux-ui.sh` was
 green; Sonar reports 0 open issues with the quality gate OK (15 issues fixed on the way, among them `RunWiring`'s
-dependency count, by moving the Proofread wiring, the call seam and the job's live parts into their own classes).
+dependency count, by moving the Proofread wiring, the call seam and the job's live parts into their own classes). After
+the fixes of the hand-check findings below, the whole gate passed again in 19 min 29 s, `scripts/ci-linux-ui.sh` was
+green and Sonar reports 0 open issues with the quality gate OK (one issue, a non-possessive word pattern, fixed).
 
 Hand check (2026-11-08, `BOOKLOOM_DATA_DIR=.temporary_context/handcheck-13/data`, seeded with an older database;
 `gemma4:e4b-mlx` on Ollama, Balanced, the invented `gravity.md`, 152 segments in 9 chapters; screenshots in
@@ -2679,28 +2681,28 @@ after with stored `⟦gN⟧` tokens (both now masked, numbered `⟦N⟧`); a win
 the Book Brief's quality hint and tooltip and the Generation tab still described the backward revision (now the
 Proofread stage's reach).
 
-**Found in the hand check, not fixed** (each with its repro):
+**Found in the hand check, fixed after it** (each with the test that was red first):
 
-- *No Continue in the same session after a late fact.* After a Completed run, setting a character's gender records
-  `GENDER_CHANGED` deferrals, but Translating keeps "Finished" with no Continue until the app is restarted (then "Ready ·
-  Continues with Proofread at window N of M"). `Controls.of(COMPLETED)` offers start only while segments are pending,
-  and `ProofreadStanding` refreshes only on a project change or a settled run state, not on a glossary write.
-- *A gender rewrite changes another person's words.* After setting Newton female, the window kept
-  `Альберт Ейнштейн опублікувала …` (and `простір` → `космічний простір`) as clearing the Newton mark: the never-worse
-  gate has no check that a rewrite for one name leaves other names' agreement and the other words alone.
-- *All calls… is empty after a Continue that only proofreads* (screenshot `49-all-calls.png`): the run sent proofread
-  calls, but the dialog lists none.
-- *Counts.* "Chapter 0 of 9" while a Continue proofreads a fully decided book; "Stopped at 100 %" while Proofread had
-  windows left; the Continue line said "window 15 of 19" while the run logged `continues at window 1 of 18`; the welcome
-  banner says "picks up at the first segment not done" when every segment is done; the live line reads "Now
-  translating." during Proofread.
-- *Words.* "Genders to confirm" still says "the next export re-renders those segments" (the Proofread stage does now;
-  group 14 removes the export pass); the names pass gave Newton and Cavendish "neuter (likely)".
-- *Fast.* A Fast run of the invented `saltglass-en.md` (19 segments, 2 chapters) logged `Proofread stage … coverage=NONE`
-  and sent no proofread call (draft and chapter-summary calls only), with "Chapter 2 of 2" and the new Fast hint. The
-  "Waiting on a gender" list after a late gender was not reached by hand (typing a Cyrillic target through `osascript`
-  failed); acceptance case (c) and `ReviewDeskListTest` cover it.
-- *Not reached:* a stopped proofread call in All calls (the list was empty).
+- *Continue in the same session after a late fact.* A glossary write while no run is at work reads the Proofread
+  standing again, and a Completed run offers Continue while Proofread has windows left (`Controls.of` takes "work
+  remains": pending segments or windows); the live line then reads "Continues with Proofread at window N of M."
+  (`TranslatingViewModelControlTest`, `RunStateMappingTest`).
+- *A gender rewrite changed another person's words.* A mark only genders now known stand behind may change just the
+  words the gender check finds wrong; any other changed, added or dropped word is refused as `gender-scope` before the
+  never-worse gate, which is unchanged (`GenderScope`, `WindowVerdictsTest` with the Newton/Einstein case).
+- *All calls… empty after a proofread-only Continue.* The proofread call now carries a call descriptor, so the run shows
+  it like a draft (`ProofreadCallWireMockTest`); a proofread call cut by Stop reads Stopped there, not Failed
+  (`LiveAllCallsTest`; it already did, the list was empty).
+- *Counts.* The strip names no chapter while a Continue only proofreads; a stop in Proofread titles "Stopped · Proofread
+  window N of M"; the Continue line and the run's log count windows the same way (the round's windows planned now, the
+  first after those read; `ProofreadResumeTest`); the welcome banner of a decided book names the Proofread window; the
+  live line reads "Now proofreading" during Proofread.
+- *Words.* "Characters without a gender", "Genders to confirm" and its footer say Continue translation proofreads the
+  segments (or lists them at Fast), EN and UK; the Export screen's lines still name the export, whose pass group 14
+  removes. The names pass's "neuter (likely)" was a code defect: the name-knowledge call answered `neuter` for both
+  names and `NameKnowledgeReplies` gave it to a character; a bare-name guess now gives a character only male or female.
+- *Fast.* The "Waiting on a gender" list after a late gender was not reached by hand (typing a Cyrillic target through
+  `osascript` failed); acceptance case (c) and `ReviewDeskListTest` cover it.
 
 **Open items carried forward** (none blocks the group; each names what would settle it):
 

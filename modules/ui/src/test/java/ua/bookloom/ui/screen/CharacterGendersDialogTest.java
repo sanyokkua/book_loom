@@ -157,7 +157,9 @@ class CharacterGendersDialogTest extends TranslatingScreenTestBase {
         ask(List.of(likely("e1", "Ivar", Gender.MALE, 0.55)));
 
         assertThat(textsUnder(required(CARD)))
-                .contains("Rows you leave alone stay as suggestions; the next export may re-render those segments.");
+                .contains(
+                        "Rows you leave alone stay as suggestions; one confirmed later is proofread when you continue the"
+                                + " translation.");
     }
 
     @Test

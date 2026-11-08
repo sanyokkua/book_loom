@@ -104,6 +104,7 @@ public final class RunStateSource {
                 mirror.live().throughput(),
                 mirror.live().waitingCall(),
                 mirror.live().calls(),
+                mirror.live().stage(),
                 mirror.live().suspicious(),
                 mirror.review().recovery(),
                 mirror.review().providerError(),
@@ -260,7 +261,8 @@ public final class RunStateSource {
                 translating.otherWork().get(),
                 span(call, waiting),
                 null,
-                standing.tally().get());
+                standing.tally().get(),
+                mirror.live().stage().get());
     }
 
     // The desk reads the stored count, which lags the run's last flush; while the run decides, its own figure counts

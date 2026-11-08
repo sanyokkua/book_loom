@@ -6,10 +6,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
@@ -18,6 +20,9 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.pipeline.CallState;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.WireMockProvider;
 import ua.bookloom.pipeline.context.ContextBuilder;
@@ -151,6 +156,31 @@ class ProofreadCallWireMockTest {
         }
     }
 
+    // A proofread call is shown like a draft: All calls… lists it with its window's sources and current texts.
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void proofread_call_announcedAsShownCall(final ProviderKind kind) {
+        try (WireMockProvider provider = new WireMockProvider(kind)) {
+            provider.stubResponder(body -> UNCHANGED);
+            final List<JobEvent> events = new ArrayList<>();
+
+            read(provider, ProofreadFixtures.brief("ru", "uk"), events::add);
+
+            assertThat(events)
+                    .filteredOn(CallSnapshotUpdated.class::isInstance)
+                    .map(event -> ((CallSnapshotUpdated) event).snapshot())
+                    .last()
+                    .satisfies(snapshot -> {
+                        assertThat(snapshot.kind()).isEqualTo(CallKind.PROOFREAD);
+                        assertThat(snapshot.state()).isEqualTo(CallState.ANSWERED);
+                        assertThat(snapshot.segments()).singleElement().satisfies(segment -> {
+                            assertThat(segment.id()).isEqualTo(FOCUS);
+                            assertThat(segment.currentTarget()).isEqualTo(FOCUS_TARGET);
+                        });
+                    });
+        }
+    }
+
     /** The planner a call was planned with and the answer it gave. */
     private record Called(TranslatePlanner planner, ProofreadCall.Answer answer) {}
 
@@ -159,6 +189,11 @@ class ProofreadCallWireMockTest {
     }
 
     private static Called read(final WireMockProvider provider, final BookBrief brief) {
+        return read(provider, brief, event -> {});
+    }
+
+    private static Called read(
+            final WireMockProvider provider, final BookBrief brief, final Consumer<JobEvent> events) {
         final Document document = ProofreadFixtures.chapter(
                 "ch02.md",
                 ProofreadFixtures.lines(
@@ -180,7 +215,7 @@ class ProofreadCallWireMockTest {
                         4)
                 .getFirst();
         final Result<ProofreadCall.Answer> answer = new ProofreadCall(
-                        planner, ProofreadFixtures.calls(model, event -> {}), MAPPER)
+                        planner, ProofreadFixtures.calls(model, events), MAPPER)
                 .read(window, texts(document), ProofreadFixtures.map(List.of(), brief));
         assertThat(answer.isOk()).as("proofread call: %s", answer.error()).isTrue();
         return new Called(planner, Objects.requireNonNull(answer.data()));

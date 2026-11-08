@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -16,7 +19,9 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.EnglishMessages;
 import ua.bookloom.ui.FakeProviderConfigs;
@@ -75,6 +80,12 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected final ScriptedProviderVerifier settingsVerifier = ScriptedProviderVerifier.idle();
 
     protected TranslatingViewModel viewModel;
+
+    /** Where the stored project's Proofread stage stands as the next read gives it; none left unless a test says. */
+    protected volatile @Nullable ProofreadTally proofreadLeft;
+
+    /** The glossary rows as stored, whose change reads the Proofread standing again. */
+    protected final ObservableList<GlossaryEntry> glossaryRows = FXCollections.observableArrayList();
 
     /** What the server says when a run starts: whether it loads the model with settings of its own (LM Studio). */
     protected volatile boolean modelLoadsWithOwnSettings;
@@ -160,13 +171,25 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 activities);
         viewModel = onFx(() -> new TranslatingViewModel(
                 new RunAccess(mirror, runner),
-                new RunSubject(current, settings),
+                new RunSubject(current, settings, new ReadyQuantChip(settings), standing()),
                 new RunLaunch(starter, graph.getInstance(ContinueGuard.class)),
                 new Reporting(toasts, errors),
                 desk,
                 new DirectExecutor(),
                 activities));
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private ProofreadStanding standing() {
+        return new ProofreadStanding(
+                new ProofreadStanding.Ports(
+                        (projectId, batchSize) -> Result.ok(Optional.ofNullable(proofreadLeft)), models),
+                settings,
+                current,
+                mirror,
+                new DirectExecutor(),
+                Runnable::run,
+                glossaryRows);
     }
 
     /** Opens the book (declaring English) and chooses a target and a model, so that {@code start()} has all it needs. */

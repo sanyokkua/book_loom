@@ -267,7 +267,8 @@ final class TranslatingSummaryStrip {
                 MessageKey.TRANSLATING_STRIP_DONE,
                 counted ? figures.total() - figures.remaining() : storedDecided,
                 counted ? figures.total() : storedTotal));
-        if (figures.sections() > 0) {
+        // A Continue that only proofreads a decided book enters no chapter, so it names none.
+        if (figures.sections() > 0 && figures.section() > 0) {
             parts.add(messages.get(MessageKey.TRANSLATING_LINE_SECTION, figures.section(), figures.sections()));
         }
         if (!pace.elapsed().isZero()) {

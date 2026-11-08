@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -179,6 +181,63 @@ class WindowVerdictsTest {
 
         assertThat(decided.records().getFirst().machineTarget()).isEqualTo("Івар сказала, що повернеться.");
         assertThat(decided.resolved()).containsExactly("d1");
+    }
+
+    private static final GlossaryEntry NEWTON =
+            GlossaryEntry.of("p:Ньютон", PROJECT, "Ньютон", "Ньютон", TermType.CHARACTER, Gender.FEMALE, false);
+    private static final GlossaryEntry EINSTEIN = GlossaryEntry.of(
+            "p:Эйнштейн", PROJECT, "Альберт Эйнштейн", "Альберт Ейнштейн", TermType.CHARACTER, Gender.MALE, false);
+    private static final String GRAVITY_SOURCE =
+            "Ньютон опубликовал закон тяготения, а Альберт Эйнштейн опубликовал теорию, где пространство искривлено.";
+    private static final String GRAVITY_CURRENT =
+            "Ньютон опублікував закон тяжіння, а Альберт Ейнштейн опублікував теорію, де простір викривлений.";
+
+    // The hand check's case: a mark for Newton's gender alone may change Newton's verb, not Einstein's verb or another
+    // word, so a rewrite that also makes Einstein a woman and adds a word is refused and the text stays.
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "Ньютон опублікувала закон тяжіння, а Альберт Ейнштейн опублікувала теорію, де космічний простір"
+                        + " викривлений.",
+                "Ньютон опублікувала закон тяжіння, а Альберт Ейнштейн опублікувала теорію, де простір викривлений.",
+                "Ньютон опублікувала закон тяжіння, а Альберт Ейнштейн опублікував теорію, де космічний простір"
+                        + " викривлений."
+            })
+    void rewrite_genderMarkChangesOtherWords_rejectedAndTextStays(final String rewrite) {
+        final WindowVerdicts.Decided decided = decideGravity(rewrite);
+
+        final SegmentRecord record = decided.records().getFirst();
+        assertThat(record.machineTarget()).isEqualTo(GRAVITY_CURRENT);
+        assertThat(record.proofread()).extracting(ProofreadVerdict::outcome).isEqualTo(ProofreadOutcome.REJECTED);
+        assertThat(Objects.requireNonNull(record.proofread()).reason()).startsWith("gender-scope");
+        assertThat(decided.resolved()).isEmpty();
+    }
+
+    @Test
+    void rewrite_genderMarkChangesOnlyTheWrongWord_keptAndDeferralSettled() {
+        final String rewrite =
+                "Ньютон опублікувала закон тяжіння, а Альберт Ейнштейн опублікував теорію, де простір викривлений.";
+
+        final WindowVerdicts.Decided decided = decideGravity(rewrite);
+
+        assertThat(decided.records().getFirst().machineTarget()).isEqualTo(rewrite);
+        assertThat(decided.resolved()).containsExactly("d-newton");
+    }
+
+    private static WindowVerdicts.Decided decideGravity(final String rewrite) {
+        final Deferral waiting =
+                new Deferral("d-newton", PROJECT, ID, DeferralReason.GENDER_CHANGED, "Ньютон", null, null, null);
+        final Document document = ProofreadFixtures.chapter("ch02.md", GRAVITY_SOURCE);
+        final SegmentRecord record = decided(ID, SegmentStatus.ACCEPTED, GRAVITY_CURRENT);
+        return verdicts(List.of(NEWTON, EINSTEIN), List.of(waiting))
+                .decide(
+                        List.of(new WindowVerdicts.Read(
+                                document.units().getFirst().segments().getFirst(),
+                                record,
+                                Objects.requireNonNull(MarkList.maskedTarget(record)),
+                                List.of("gender now known: Ньютон — female"))),
+                        Map.of(ID, rewrite),
+                        PRINT);
     }
 
     // Max's whole-book round reads a segment whose first-round rewrite was kept and changes nothing: the kept verdict

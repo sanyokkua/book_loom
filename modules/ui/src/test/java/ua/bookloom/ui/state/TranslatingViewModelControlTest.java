@@ -10,9 +10,13 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 
@@ -228,6 +232,27 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
 
         awaitState(RunState.FAILED);
         assertThat(controls()).isEqualTo(START_ONLY);
+    }
+
+    // IF a gender set after a finished run left Translating at "Finished" with no Continue, THEN the windows it marked
+    // could be proofread only after a restart.
+    @Test
+    void controls_glossaryWrittenAfterACompletedRunLeavesProofreadWindows_offerStart() throws Exception {
+        openBookAndChooseModel();
+        buildViewModel();
+        startAndPrepare();
+        job.finish(Result.ok(completedReport(10)));
+        awaitState(RunState.COMPLETED);
+        WaitForAsyncUtils.waitForFxEvents();
+        final ControlState finished = controls().start();
+
+        proofreadLeft = new ProofreadTally(1, 19, 18, 19);
+        onFx(() -> glossaryRows.add(
+                GlossaryEntry.of("p:Newton", "p", "Newton", "Ньютон", TermType.CHARACTER, Gender.FEMALE, false)));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(finished).isEqualTo(HIDDEN);
+        assertThat(controls().start()).isEqualTo(ENABLED);
     }
 
     // IF start stayed pressable while the run is paused on a provider error, THEN a second run would begin beside the

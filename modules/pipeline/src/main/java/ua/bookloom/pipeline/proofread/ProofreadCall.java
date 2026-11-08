@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.context.Block;
 import ua.bookloom.pipeline.context.BlockSlots;
 import ua.bookloom.pipeline.context.BookMap;
@@ -23,6 +24,7 @@ import ua.bookloom.pipeline.context.FocusItem;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.context.Window;
 import ua.bookloom.pipeline.context.WindowPair;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -188,7 +190,19 @@ public final class ProofreadCall {
         if (log.isTraceEnabled()) {
             log.trace("Proofread prompt ids={} messages={}", readIds, request.messages());
         }
-        return calls.callAbout(CallKind.PROOFREAD, readIds, request).map(response -> answer(readIds, texts, response));
+        return calls.callAbout(CallKind.PROOFREAD, readIds, request, descriptor(planned, texts))
+                .map(response -> answer(readIds, texts, response));
+    }
+
+    // Shown like a draft, so "All calls…" lists a Continue that only proofreads: each focus item's source and text.
+    private static CallDescriptor descriptor(final Planned planned, final Texts texts) {
+        final List<String> readIds = planned.readIds();
+        return new CallDescriptor(
+                PromptName.PROOFREAD.resourceBaseName(),
+                null,
+                readIds.stream().map(id -> DisplayText.of(texts.source(id))).toList(),
+                planned.fitted().plan()::sections,
+                readIds.stream().map(id -> DisplayText.of(texts.current(id))).toList());
     }
 
     private Answer answer(final List<String> readIds, final Texts texts, final ChatResponse response) {

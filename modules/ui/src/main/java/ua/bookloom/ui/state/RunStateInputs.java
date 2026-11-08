@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.ProofreadTally;
  * @param continuesAt where a stopped or reopened project continues, or {@code null} while not known
  * @param proofread where a stopped or reopened project's Proofread stage stands, or {@code null} when it has no window
  *     left or the Translate stage still has work
+ * @param stage the stage a run at work is in, or {@code null} while none is shown
  */
 public record RunStateInputs(
         RunState state,
@@ -44,7 +45,8 @@ public record RunStateInputs(
         @Nullable ActivityKind otherWork,
         @Nullable String span,
         @Nullable String continuesAt,
-        @Nullable ProofreadTally proofread) {
+        @Nullable ProofreadTally proofread,
+        @Nullable RunStage stage) {
 
     /** Rejects a missing part or a negative count. */
     public RunStateInputs {

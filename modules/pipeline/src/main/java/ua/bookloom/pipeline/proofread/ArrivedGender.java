@@ -12,8 +12,10 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.checks.CharacterName;
+import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
+import ua.bookloom.pipeline.checks.TextSpan;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
@@ -31,6 +33,9 @@ record ArrivedGender(String name, Gender gender, boolean narrator) {
 
     /** How a narrator deferral's reason names the one it waited on. */
     static final String NARRATOR_NAME = "narrator";
+
+    /** How every reason of a gender now known starts. */
+    static final String REASON_PREFIX = "gender now known: ";
 
     /** Rejects a missing part. */
     ArrivedGender {
@@ -78,17 +83,29 @@ record ArrivedGender(String name, Gender gender, boolean narrator) {
      *     with no gender check
      */
     boolean mismatches(final String text, final String targetLanguage) {
+        return !wrongWords(text, targetLanguage).isEmpty();
+    }
+
+    /**
+     * The words of a decided text that disagree with the gender.
+     *
+     * @param text the non-null decided target, plain
+     * @param targetLanguage the non-null target language tag, whose language file names its gender check
+     * @return each wrong word's span on {@code text}, in text order; never null, empty when the text agrees or the
+     *     language has no gender check
+     */
+    List<TextSpan> wrongWords(final String text, final String targetLanguage) {
         final GenderCheck check = GenderChecks.named(LanguageRules.bundled().genderCheck(targetLanguage));
-        final boolean found = narrator
-                ? !check.find(text, gender).isEmpty()
-                : !check.findCharacters(text, List.of(new CharacterName(name, gender)))
-                        .isEmpty();
-        log.debug("Gender check of a settled fact narrator={} gender={} mismatch={}", narrator, gender, found);
+        final List<TextSpan> found = (narrator
+                        ? check.find(text, gender)
+                        : check.findCharacters(text, List.of(new CharacterName(name, gender))))
+                .stream().map(CheckFinding::span).toList();
+        log.debug("Gender check of a settled fact narrator={} gender={} wrongWords={}", narrator, gender, found.size());
         return found;
     }
 
     /** {@return the mark's reason, such as {@code gender now known: Івар — female}} */
     String reason() {
-        return "gender now known: " + name + " — " + gender.name().toLowerCase(Locale.ROOT);
+        return REASON_PREFIX + name + " — " + gender.name().toLowerCase(Locale.ROOT);
     }
 }

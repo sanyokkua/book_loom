@@ -172,7 +172,7 @@ final class ProofreadWindowPass {
             log.info(
                     "Proofread round {} continues at window {} of {}",
                     round,
-                    windows.indexOf(unread.getFirst()) + 1,
+                    windows.size() - unread.size() + 1,
                     windows.size());
         }
     }

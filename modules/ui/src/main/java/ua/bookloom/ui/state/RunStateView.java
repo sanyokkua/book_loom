@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.StateMarker;
 import ua.bookloom.ui.i18n.ErrorWords;
@@ -114,10 +115,18 @@ public record RunStateView(
             case PAUSED, PAUSED_AFTER_ERROR, STOPPED_TRYING, MODEL_MISSING ->
                 Text.of(MessageKey.RUN_TITLE_PAUSED, in.percent());
             case STOPPING -> Text.of(MessageKey.RUN_TITLE_STOPPING);
-            case STOPPED -> Text.of(MessageKey.RUN_TITLE_STOPPED, in.percent());
+            case STOPPED -> stopped(in);
             case FINISHED_TO_REVIEW, FINISHED_NONE -> Text.of(MessageKey.RUN_TITLE_FINISHED);
             case FAILED -> Text.of(MessageKey.RUN_TITLE_FAILED);
         };
+    }
+
+    // Stopped during Proofread, every segment is decided: the window Continue reads first says how far it is.
+    private static Text stopped(final RunStateInputs in) {
+        final ProofreadTally proofread = in.proofread();
+        return proofread == null
+                ? Text.of(MessageKey.RUN_TITLE_STOPPED, in.percent())
+                : Text.of(MessageKey.RUN_TITLE_STOPPED_PROOFREAD, proofread.next(), proofread.windows());
     }
 
     static Object orNone(final @Nullable String value) {

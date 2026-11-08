@@ -16,7 +16,8 @@ import java.util.Objects;
  *       Retry now ({@link #waitingForProvider()}).
  *   <li>{@code STOPPING}: stop unavailable and nothing else.
  *   <li>{@code STOPPED}: resume only, which starts a new job at the first pending segment.
- *   <li>{@code COMPLETED}: start only while segments are still pending, otherwise nothing.
+ *   <li>{@code COMPLETED}: start only while work remains (segments still pending, or Proofread windows a later fact
+ *       left), otherwise nothing.
  *   <li>{@code FAILED}: start.
  * </ul>
  *
@@ -47,11 +48,11 @@ public record Controls(ControlState start, ControlState pause, ControlState resu
      * @param state where the run is
      * @param preparing whether a start is still building its model and job, which makes start and a stopped run's
      *     resume unavailable
-     * @param pendingRemain whether the project still holds pending segments, which a completed run needs to offer a
-     *     start
+     * @param workRemains whether the project still holds work, pending segments or Proofread windows left, which a
+     *     completed run needs to offer a start
      * @return the controls; never null
      */
-    public static Controls of(final RunState state, final boolean preparing, final boolean pendingRemain) {
+    public static Controls of(final RunState state, final boolean preparing, final boolean workRemains) {
         Objects.requireNonNull(state, "state");
         final ControlState begin = preparing ? ControlState.DISABLED : ControlState.ENABLED;
         return switch (state) {
@@ -61,7 +62,7 @@ public record Controls(ControlState start, ControlState pause, ControlState resu
             case PAUSED -> new Controls(hidden(), hidden(), ControlState.ENABLED, ControlState.ENABLED);
             case STOPPING -> new Controls(hidden(), hidden(), hidden(), ControlState.DISABLED);
             case STOPPED -> new Controls(hidden(), hidden(), begin, hidden());
-            case COMPLETED -> new Controls(pendingRemain ? begin : hidden(), hidden(), hidden(), hidden());
+            case COMPLETED -> new Controls(workRemains ? begin : hidden(), hidden(), hidden(), hidden());
         };
     }
 

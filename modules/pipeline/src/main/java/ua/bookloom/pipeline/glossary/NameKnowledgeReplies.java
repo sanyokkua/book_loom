@@ -76,7 +76,7 @@ final class NameKnowledgeReplies {
 
     /**
      * The entry with the answer recorded and the values it may take: the kind where the type is unset, and for a
-     * character the gender where no person, book or rule value is held.
+     * character the gender, male or female, where no person, book or rule value is held.
      *
      * @param entry the entry asked about; never null
      * @param known the answer for it; never null
@@ -89,8 +89,9 @@ final class NameKnowledgeReplies {
         GlossaryEntry applied = takesKind
                 ? rebuilt(entry, known.type(), known.placeKind(), Origin.LIKELY, known)
                 : recorded(entry, known);
+        // A person is a man or a woman; a bare-name guess of neuter is no gender of a character.
         final boolean takesGender = applied.type() == TermType.CHARACTER
-                && known.gender() != Gender.UNKNOWN
+                && (known.gender() == Gender.MALE || known.gender() == Gender.FEMALE)
                 && Origin.LIKELY.mayReplace(entry.genderOrigin());
         if (takesGender) {
             applied = applied.withGenderFrom(known.gender(), Origin.LIKELY);

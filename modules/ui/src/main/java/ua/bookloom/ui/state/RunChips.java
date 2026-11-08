@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.ui.control.StateMarker.Meaning;
@@ -76,12 +77,18 @@ final class RunChips {
         return waiting == null ? RunStateView.clock(Duration.ZERO) : RunStateView.clock(waiting.attemptWaited());
     }
 
-    // A project whose segments are all decided continues with its Proofread stage, at the window it names.
-    private static Text continuing(final RunStateInputs in, final MessageKey otherwise, final Object continuesAt) {
+    // A project whose segments are all decided continues with its Proofread stage, at the window it names; a finished
+    // one may have Proofread windows a later fact left.
+    private static Text continuing(final RunStateInputs in, final Text otherwise) {
         final ProofreadTally proofread = in.proofread();
         return proofread == null
-                ? Text.of(otherwise, continuesAt)
+                ? otherwise
                 : Text.of(MessageKey.RUN_LIVE_CONTINUES_PROOFREAD, proofread.next(), proofread.windows());
+    }
+
+    private static boolean isProofreading(final RunStateInputs in) {
+        final RunStage stage = in.stage();
+        return stage != null && stage.stage() == JobStage.PROOFREAD;
     }
 
     static Text liveLine(final RunRow row, final RunStateInputs in) {
@@ -89,16 +96,17 @@ final class RunChips {
         final Object continuesAt = RunStateView.orNone(in.continuesAt());
         return switch (row) {
             case READY -> Text.of(MessageKey.RUN_LIVE_READY);
-            case READY_TO_CONTINUE -> continuing(in, MessageKey.RUN_LIVE_CONTINUES, continuesAt);
+            case READY_TO_CONTINUE -> continuing(in, Text.of(MessageKey.RUN_LIVE_CONTINUES, continuesAt));
             case CANNOT_START -> Text.of(MessageKey.RUN_LIVE_CANNOT_START);
-            case TRANSLATING -> Text.of(MessageKey.RUN_LIVE_RUNNING, span);
+            case TRANSLATING ->
+                Text.of(isProofreading(in) ? MessageKey.RUN_LIVE_PROOFREADING : MessageKey.RUN_LIVE_RUNNING, span);
             case PAUSING -> Text.of(MessageKey.RUN_LIVE_PAUSING, span);
             case PAUSED, PAUSED_AFTER_ERROR, STOPPED_TRYING, MODEL_MISSING -> Text.of(MessageKey.RUN_LIVE_PAUSED, span);
             case WAITING -> Text.of(MessageKey.RUN_LIVE_WAITING, in.model().provider(), span);
             case STUCK -> Text.of(MessageKey.RUN_LIVE_STUCK, span);
             case STOPPING -> Text.of(MessageKey.RUN_LIVE_STOPPING, span);
-            case STOPPED -> continuing(in, MessageKey.RUN_LIVE_STOPPED, continuesAt);
-            case FINISHED_TO_REVIEW, FINISHED_NONE -> Text.of(MessageKey.RUN_LIVE_FINISHED);
+            case STOPPED -> continuing(in, Text.of(MessageKey.RUN_LIVE_STOPPED, continuesAt));
+            case FINISHED_TO_REVIEW, FINISHED_NONE -> continuing(in, Text.of(MessageKey.RUN_LIVE_FINISHED));
             case FAILED -> Text.of(MessageKey.RUN_LIVE_FAILED, continuesAt);
         };
     }

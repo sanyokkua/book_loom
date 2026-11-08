@@ -1756,7 +1756,7 @@ set aside once.
     paragraphs and of each side's kept rewrites, kept for arm 7b. Not measured: a book whose proofread rewrites pass the
     gate (`docs/DEVELOPMENT.md#redesign-arms`).
 
-- [ ] 13.10 Make the acceptance test green, run the gate, fix the documents this group makes wrong and check the
+- [x] 13.10 Make the acceptance test green, run the gate, fix the documents this group makes wrong and check the
   stage by hand, so the group merges with evidence. → :api, :persistence, :pipeline, :ui, :app
   - **Satisfies:** enabling work for design D15 and D28 (closes the group; every requirement is named by 13.2–13.8)
   - **Depends on:** 13.1–13.9
@@ -1782,6 +1782,14 @@ set aside once.
     5. On Names & style set a character's gender after the run, Continue: the run continues at Proofread and the
        segment naming the character is fixed or listed.
     6. Repeat on Fast: no proofread call in "All calls…", the mismatch is listed under "Waiting on a gender".
+  - **As built:** `ProofreadStageAcceptanceTest` green on both dialects; the whole gate green (19 min 29 s after the
+    hand-check fixes), `scripts/ci-linux-ui.sh` green, Sonar 0 issues with the gate OK. The hand check (steps 1–5, and
+    step 6's "no proofread call" on Fast) is recorded in `docs/DEVELOPMENT.md#redesign-group-13`, with the defects it
+    found and their fixes, each test-first: Continue in the same session after a late gender, the `gender-scope` limit
+    on a gender-only proofread mark, proofread calls in All calls…, the Proofread counts and words, and no neuter for a
+    character from the name-knowledge call. Step 6's "Waiting on a gender" list was not reached by hand (typing a
+    Cyrillic target through `osascript` failed); acceptance case (c) and `ReviewDeskListTest` cover it. The reset of
+    projects, providers and settings by the set-aside is named in this task's hand-off to the owner.
 
 ## 14. remove-old-passes — remove the backward revision, the export last check and the reviewer (needs group 13; arms 7a and 7b run first inside this group because they gate its removals; may run beside nothing)
 

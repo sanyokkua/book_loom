@@ -217,6 +217,21 @@ class NameKnowledgeRepliesTest {
         assertThat(male.disagreesWithRule(ruled.gender(), ruled.genderOrigin())).isTrue();
     }
 
+    // A bare-name guess of neuter is no person's gender: a character keeps the gender it held (the hand check's
+    // Newton, held male from one reading, and Cavendish, held none, both came out "neuter (likely)").
+    @Test
+    void apply_neuterGuessForCharacter_genderNotTaken() {
+        final GlossaryEntry held = character("Newton").withGenderFrom(Gender.MALE, Origin.LIKELY);
+        final GlossaryEntry none = other("Cavendish");
+        final NameKnowledge neuter = new NameKnowledge(Gender.NEUTER, TermType.CHARACTER, null, 0.8);
+
+        assertThat(List.of(held, none).stream().map(entry -> NameKnowledgeReplies.applyTo(entry, neuter)))
+                .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::genderOrigin)
+                .containsExactly(
+                        tuple(TermType.CHARACTER, Gender.MALE, Origin.LIKELY),
+                        tuple(TermType.CHARACTER, Gender.UNKNOWN, none.genderOrigin()));
+    }
+
     @Test
     void asked_settledCharactersAndKnownKinds_areNotAsked() {
         final List<GlossaryEntry> held = List.of(

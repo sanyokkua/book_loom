@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.NamesEstimate;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -146,7 +147,9 @@ class NamesStyleAutoScreenTest extends NamesStyleAutoScreenTestBase {
 
         assertThat(namesPass.runs()).hasSize(1);
         assertThat(namesPass.runs().getFirst().projectId()).isEqualTo("p1");
-        assertThat(models.selections()).hasSize(1);
+        // The Proofread standing also binds the chosen model, with no call, to read its batch size once the pass has
+        // written the glossary; every binding is of the chosen model.
+        assertThat(models.selections()).extracting(ModelSelection::modelId).containsOnly("gemma3:12b");
     }
 
     // IF the pass ran with no card, THEN the window would look frozen for twenty minutes.

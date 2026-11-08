@@ -14,6 +14,7 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.audit.FinalAudit;
+import ua.bookloom.pipeline.checks.TextSpan;
 import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.DraftSubject;
@@ -109,7 +110,7 @@ final class ProofreadJudge {
             final List<ArrivedGender> arrived) {
         final String candidate = WhitespaceRestoration.restore(current, rewrite.strip());
         return switch (book.gate().restore(segment, candidate)) {
-            case GateResult.Restored restored -> byNeverWorse(segment, new Texts(current, restored), reasons, arrived);
+            case GateResult.Restored restored -> inScope(segment, new Texts(current, restored), reasons, arrived);
             case GateResult.GateFailed failed ->
                 rejected(segment, failed.finding().raisedBy());
             case GateResult.StepError(final AppError error) -> rejected(segment, "gate-error " + error.code());
@@ -118,6 +119,21 @@ final class ProofreadJudge {
 
     /** The text in place and the rewrite as the gate restored it. */
     private record Texts(String current, GateResult.Restored restored) {}
+
+    // A mark only a gender now known stands behind is answered by its wrong words alone (GenderScope).
+    private Judged inScope(
+            final Segment segment, final Texts texts, final List<String> reasons, final List<ArrivedGender> arrived) {
+        if (!GenderScope.holds(reasons)) {
+            return byNeverWorse(segment, texts, reasons, arrived);
+        }
+        final String plainBefore = DisplayText.of(texts.current());
+        final List<TextSpan> wrong = arrived.stream()
+                .flatMap(fact -> fact.wrongWords(plainBefore, book.frame().targetLanguage()).stream())
+                .toList();
+        return GenderScope.breach(plainBefore, texts.restored().restored(), wrong)
+                .map(reason -> rejected(segment, reason))
+                .orElseGet(() -> byNeverWorse(segment, texts, reasons, arrived));
+    }
 
     private Judged byNeverWorse(
             final Segment segment, final Texts texts, final List<String> reasons, final List<ArrivedGender> arrived) {

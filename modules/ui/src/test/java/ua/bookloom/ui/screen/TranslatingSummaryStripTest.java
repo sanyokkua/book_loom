@@ -76,6 +76,14 @@ class TranslatingSummaryStripTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-strip-line")).isEqualTo("791 of 1,240 segments done · Chapter 7 of 11");
     }
 
+    // IF a Continue that only proofreads named the chapter it never entered, THEN the line would read "Chapter 0 of 9".
+    @Test
+    void line_continueProofreadsADecidedBook_namesNoChapter() {
+        running(ua.bookloom.ui.ProgressFixtures.progress(0, 9, 152, 0, 0));
+
+        assertThat(labelText("translating-strip-line")).isEqualTo("152 of 152 segments done");
+    }
+
     // IF a part of the line were shown while unknown, THEN it would say "elapsed" with nothing to count.
     @Test
     void line_elapsedKnown_endsWithTheElapsedTime() {

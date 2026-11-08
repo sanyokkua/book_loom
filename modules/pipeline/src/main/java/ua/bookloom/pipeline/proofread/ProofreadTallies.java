@@ -36,9 +36,9 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /**
- * Where a stored project's Proofread stage stands, with no model call (design D15 "Resume", "Estimate"): the windows a
- * round has already read are counted from the stored fingerprints, one per window, and the windows left are planned
- * by the stage's own rules from the mark list as it stands now. A window whose focus all holds a verdict of the round
+ * Where a stored project's Proofread stage stands, with no model call (design D15 "Resume", "Estimate"): the round's
+ * windows are planned by the stage's own rules from the mark list as it stands now, and counted as the stage counts a
+ * Continue, so the Continue line and the run's own "continues at window" name the same window. A window whose focus all holds a verdict of the round
  * (or, for a first-round window, of Max's whole-book round) is read; the others are what a Continue reads.
  */
 @Slf4j
@@ -132,25 +132,20 @@ public final class ProofreadTallies implements ProofreadProgress {
                 byId);
     }
 
-    // The windows already read are the round's distinct stored fingerprints; the windows left those not yet read.
+    // Counted as the stage counts a Continue: the windows the round holds now, those already read with the
+    // fingerprint they have now, and the first one left after them.
     private static Optional<ProofreadTally> left(final Round round, final Map<String, SegmentRecord> byId) {
         final String prefix = "r" + round.round() + ":";
-        final long read = byId.values().stream()
-                .map(SegmentRecord::proofread)
-                .filter(Objects::nonNull)
-                .map(ProofreadVerdict::fingerprint)
-                .filter(fingerprint -> fingerprint.startsWith(prefix))
-                .distinct()
-                .count();
-        final long unread = round.windows().stream()
+        final int windows = round.windows().size();
+        final int unread = Math.toIntExact(round.windows().stream()
                 .filter(window -> !window.focusIds().stream().allMatch(id -> isRead(byId.get(id), round, prefix)))
-                .count();
-        log.debug("Proofread tally round={} read={} left={}", round.round(), read, unread);
+                .count());
+        log.debug("Proofread tally round={} windows={} left={}", round.round(), windows, unread);
         if (unread == 0) {
             return Optional.empty();
         }
-        final int windows = Math.toIntExact(read + unread);
-        return Optional.of(new ProofreadTally(round.round(), windows, (int) read, (int) read + 1));
+        final int read = windows - unread;
+        return Optional.of(new ProofreadTally(round.round(), windows, read, read + 1));
     }
 
     private static boolean isRead(final @Nullable SegmentRecord record, final Round round, final String prefix) {

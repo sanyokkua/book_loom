@@ -498,7 +498,8 @@ read-only; temperature 0.1, reasoning off unless the person's override allows it
 run's own model through the one gate (`12_PROMPT_CATALOG.md#proofread`).
 
 **Verdicts.** `WindowVerdicts` reads the reply through `ProofreadJudge` (hard gates + `NeverWorse`;
-`qa/NeverWorseReasons` names what got worse) into `api: project/ProofreadVerdict(fingerprint, outcome, reason, before,
+`qa/NeverWorseReasons` names what got worse; for a mark only genders now known stand behind, `GenderScope` first refuses
+a rewrite that changes any word but those the gender check found wrong, as `gender-scope`) into `api: project/ProofreadVerdict(fingerprint, outcome, reason, before,
 statusBefore, maskedBefore, findingsBefore)` with `ProofreadOutcome {KEPT, PROPOSED, REJECTED, UNCHANGED}`, held in
 `SegmentRecord.proofread`. KEPT: ACCEPTED → REVISED, FLAGGED → REVISED only when every blocking finding is cleared;
 otherwise, and for a person-edited text, PROPOSED on a `PROOFREAD` deferral; REJECTED with the gate's reason. A later

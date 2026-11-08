@@ -16,6 +16,7 @@ import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
 import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.LiveRowFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -106,6 +107,34 @@ class LiveAllCallsTest extends LiveCardTestBase {
 
         assertThat(waiting).containsExactly("Working on Translate.", "Nothing yet.");
         assertThat(sayAndOutput()).containsExactly("Translate is done.", "Джерело 1");
+    }
+
+    // IF a proofread call the person stopped were listed as failed, THEN a Stop would read as an error of the model.
+    @Test
+    void allCalls_proofreadCallCutByStop_saysStoppedNotFailed() throws TimeoutException {
+        final CallSnapshot answered = draft(1).answered("{\"1\":\"Джерело 1\"}", null, Duration.ofSeconds(3));
+        final CallSnapshot stopped = CallSnapshot.waiting(
+                        2,
+                        CallKind.PROOFREAD,
+                        "proofread",
+                        null,
+                        List.of(new CallSegment("s-1", "ch1 · p1", "Source 1", "Джерело 1")),
+                        List.of(),
+                        LiveCallFixtures.STARTED,
+                        1,
+                        2,
+                        Duration.ofMinutes(3))
+                .ended(CallState.CANCELLED, Duration.ofSeconds(2));
+        showLive(LiveRowFixtures.calls(LiveRowFixtures.rows(2, Stage.IN_CALL), List.of(answered, stopped)));
+
+        onFx(() -> button("translating-live-all-calls").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+        awaitFx(() -> sayAndOutput().getFirst().contains("Proofreading"));
+
+        assertThat(stepName(0)).isEqualTo("Proofreading");
+        assertThat(sayAndOutput().getFirst()).isEqualTo("Proofreading was stopped.");
+        assertThat(((Label) required("progress-step-0").lookup(".progress-step-result")).getText())
+                .isEqualTo("Stopped");
     }
 
     // IF the dialog listed a call the card no longer keeps, THEN it would promise a prompt that is gone.

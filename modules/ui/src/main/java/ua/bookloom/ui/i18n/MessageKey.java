@@ -3189,6 +3189,8 @@ public enum MessageKey {
     RUN_TITLE_STOPPING("run.title.stopping"),
     /** Title-bar state text of a stopped run: the percent done. */
     RUN_TITLE_STOPPED("run.title.stopped"),
+    /** Title-bar state text of a run stopped during Proofread: the window Continue reads first and the windows. */
+    RUN_TITLE_STOPPED_PROOFREAD("run.title.stoppedProofread"),
     /** Title-bar state text once every segment is decided. */
     RUN_TITLE_FINISHED("run.title.finished"),
     /** Title-bar state text of a run that ended on an error. */
@@ -3257,6 +3259,8 @@ public enum MessageKey {
     RUN_BANNER_WELCOME("run.banner.welcome"),
     /** Second line of the welcome banner: where it continues, or {@code none}. */
     RUN_BANNER_WELCOME_TEXT("run.banner.welcomeText"),
+    /** Second line of the welcome banner of a decided book: the Proofread window Continue reads first, the windows. */
+    RUN_BANNER_WELCOME_PROOFREAD("run.banner.welcomeProofread"),
     /** Banner of a start that lacks an input: the input's token. */
     RUN_BANNER_CANNOT_START("run.banner.cannotStart"),
     /** Banner while the run waits for the AI program by itself: the program. */
@@ -3299,6 +3303,8 @@ public enum MessageKey {
     RUN_LIVE_CANNOT_START("run.live.cannotStart"),
     /** Live line while translating: the segments of the current call, or {@code none}. */
     RUN_LIVE_RUNNING("run.live.running"),
+    /** Live line while the Proofread stage reads: the segments of the current window, or {@code none}. */
+    RUN_LIVE_PROOFREADING("run.live.proofreading"),
     /** Live line while pausing: the segments in flight, or {@code none}. */
     RUN_LIVE_PAUSING("run.live.pausing"),
     /** Live line of a paused run: the segments in flight, or {@code none}. */
