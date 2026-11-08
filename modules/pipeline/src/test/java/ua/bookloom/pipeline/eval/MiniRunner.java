@@ -20,6 +20,8 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -35,6 +37,7 @@ import ua.bookloom.pipeline.eval.MiniRun.Outcome;
 import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.revision.DeferralRegister;
 import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
@@ -111,6 +114,7 @@ final class MiniRunner {
         final JobState end = WholeBookStages.translate(prepared, probe, window, errors);
         final int afterJob = probe.mark();
         final List<MiniRun.Proofread> proofread = proofread(prepared);
+        logOpenDeferrals(prepared);
         consistency(prepared, probe, errors);
         final Calls calls = new Calls(names, afterJob - afterNames, probe.mark() - afterJob);
         final Duration elapsed = Duration.between(started, Instant.now());
@@ -215,6 +219,46 @@ final class MiniRunner {
                 read.size(),
                 read.stream().filter(MiniRun.Proofread::isKept).count());
         return read;
+    }
+
+    // The deferrals the job left open, and how many of them wait on a gender that has arrived (a confirmed glossary
+    // gender, or the narrator's checkable one, as the Proofread stage reads them): the gate of design D25 row 14 wants
+    // none of those on mini-ru (arm 7b).
+    private static void logOpenDeferrals(final Prepared prepared) {
+        final List<Deferral> open =
+                Objects.requireNonNull(prepared.deferrals().open(prepared.projectId()).data(), "open deferrals");
+        final Narrator narrator = Objects.requireNonNull(
+                        prepared.stores().projects().find(prepared.projectId()).data(), "project")
+                .orElseThrow()
+                .brief()
+                .narrator();
+        final Map<String, GlossaryEntry> byTerm = new LinkedHashMap<>();
+        Objects.requireNonNull(prepared.stores().glossary().all(prepared.projectId()).data(), "glossary")
+                .forEach(entry -> byTerm.putIfAbsent(entry.term(), entry));
+        final List<Deferral> arrived = open.stream()
+                .filter(deferral -> hasArrived(deferral, byTerm, narrator))
+                .toList();
+        log.info("Mini eval open deferrals total={} arrivedFact={}", open.size(), arrived.size());
+        open.forEach(deferral -> log.debug(
+                "Mini eval open deferral segmentId={} reason={} arrived={}",
+                deferral.segmentId(),
+                deferral.reason(),
+                arrived.contains(deferral)));
+    }
+
+    private static boolean hasArrived(
+            final Deferral deferral, final Map<String, GlossaryEntry> byTerm, final Narrator narrator) {
+        final String waitingOn = deferral.waitingOn();
+        final boolean gender = deferral.reason() == DeferralReason.GENDER_UNKNOWN
+                || deferral.reason() == DeferralReason.GENDER_CHANGED;
+        if (!gender || waitingOn == null) {
+            return false;
+        }
+        if (DeferralRegister.NARRATOR.equals(waitingOn)) {
+            return narrator.hasCheckableGender();
+        }
+        final GlossaryEntry entry = byTerm.get(waitingOn);
+        return entry != null && entry.hasConfirmedGender();
     }
 
     // Each block of the book with the stored record of its segment, in reading order; a block with no segment or no
