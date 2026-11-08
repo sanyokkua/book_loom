@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.proofread;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +20,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.pipeline.CallItem;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.CallState;
@@ -178,6 +180,27 @@ class ProofreadCallWireMockTest {
                             assertThat(segment.currentTarget()).isEqualTo(FOCUS_TARGET);
                         });
                     });
+        }
+    }
+
+    // IF the rewrites a proofread reply holds stayed off its call, THEN All calls…' Simple view would say the reply
+    // holds no translated text while the window kept a rewrite.
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void proofread_changedReply_itemsShownOnTheCall(final ProviderKind kind) {
+        try (WireMockProvider provider = new WireMockProvider(kind)) {
+            provider.stubResponder(body -> "{\"items\":[{\"id\":\"" + FOCUS + "\",\"target\":\"Мирена кивнула.\"}]}");
+            final List<JobEvent> events = new ArrayList<>();
+
+            read(provider, ProofreadFixtures.brief("ru", "uk"), events::add);
+
+            assertThat(events)
+                    .filteredOn(CallSnapshotUpdated.class::isInstance)
+                    .map(event -> ((CallSnapshotUpdated) event).snapshot())
+                    .last()
+                    .satisfies(snapshot -> assertThat(snapshot.items())
+                            .extracting(CallItem::segmentId, CallItem::target)
+                            .containsExactly(tuple(FOCUS, "Мирена кивнула.")));
         }
     }
 

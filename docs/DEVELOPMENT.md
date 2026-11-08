@@ -2704,6 +2704,35 @@ Proofread stage's reach).
 - *Fast.* The "Waiting on a gender" list after a late gender was not reached by hand (typing a Cyrillic target through
   `osascript` failed); acceptance case (c) and `ReviewDeskListTest` cover it.
 
+Second hand check (2026-11-08, `BOOKLOOM_DATA_DIR=.temporary_context/handcheck-13b/data`, `gemma4:e4b-mlx` on Ollama,
+the invented `saltglass-en.md`, 19 segments in 2 chapters, Balanced, then a copy at Fast; screenshots in
+`.temporary_context/handcheck-13b/`): a gender set on Names & style after a finished run offered Continue in the same
+session ("Continues with Proofread at window 1 of 4"); the Continue read the 4 windows naming the character and kept 5
+rewrites, four of which changed only the gender words (the fifth segment held other marks, so its rewrite was not
+limited); Undo proofread put the earlier text back and no Continue was offered for it, and a later Continue swept the
+renamed target into it but did not re-gender it; All calls… listed the proofread calls; a person-edited segment then
+renamed got exactly one suggestion, which Use the suggestion applied; at Fast, "Waiting on a gender (5)" listed the
+segments of a character with no gender, and still lists them once the gender is set (the text disagrees, so the code
+settles none and no Continue is offered).
+
+**Found in the second hand check, fixed after it** (each with the test that was red first):
+
+- *Continue offered again after a Continue that kept rewrites.* A kept rewrite answered the mark its window was read
+  for, so the windows planned afterwards had other reasons and focus (3..5 became 3) and no stored fingerprint matched;
+  each Continue re-read them. A finished round now plans its windows again and stamps as read each one whose focus
+  segments the round answered for at least the reasons they have now (`ReshapedWindows`;
+  `ProofreadContinueTest.tally_keptGenderRewriteReshapesItsWindow_nothingOfferedAfterTheContinue`).
+- *Continue offered while a rename waits as a suggestion.* A TERM deferral the sweep had already turned into a
+  suggestion on a person-edited segment still counted as sweep work (`ProofreadTallies.codeWorkLeft`;
+  `ProofreadContinueTest.codeWorkLeft_renameSweptIntoAProposal_falseOnceTheProposalWaits`), and a desk action did not
+  read the standing again, so applying the last suggestion left Continue on screen
+  (`TranslatingViewModelControlTest.controls_deskActionLeavesNoWorkAfterACompletedRun_withdrawStart`).
+- *All calls… said a proofread "holds no translated text".* The rewrites a proofread reply holds are now the call's
+  items, so Simple shows them (`ProofreadCallWireMockTest.proofread_changedReply_itemsShownOnTheCall`), and a proofread
+  that changed nothing says so (`ProgressStepDetailTest`); after the fix the Simple view showed the rewrite in the window.
+  Two tries to stop a proofread call by hand came too late (the call had answered); `LiveAllCallsTest` covers
+  "Stopped".
+
 **Open items carried forward** (none blocks the group; each names what would settle it):
 
 - *11.6 prompt wording.* The names, brief and file-name calls moved onto the ANALYSIS frame with their task wording as it

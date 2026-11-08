@@ -352,7 +352,8 @@ final class ProgressStepDetail extends VBox {
     /**
      * What "What it says" reads when a call gave nothing to show: a call still waiting has said nothing yet; an ended
      * call either brought no reply, or one with no translated text, which only the Detailed view shows raw — a review
-     * answers with edits by design, so it says so instead of sounding like a failed translation.
+     * answers with edits by design, so it says so instead of sounding like a failed translation, and a proofread with no
+     * text changed no paragraph (its rewrites are the call's items).
      */
     static MessageKey nothingSaid(final CallState state, final CallKind kind, final @Nullable String reply) {
         if (state == CallState.WAITING) {
@@ -361,7 +362,11 @@ final class ProgressStepDetail extends VBox {
         if (reply == null || reply.isBlank()) {
             return MessageKey.LIVE_CALL_REPLY_NONE;
         }
-        return kind == CallKind.REVIEW ? MessageKey.PROGRESS_REVIEW_IN_DETAILED : MessageKey.PROGRESS_REPLY_IN_DETAILED;
+        return switch (kind) {
+            case REVIEW -> MessageKey.PROGRESS_REVIEW_IN_DETAILED;
+            case PROOFREAD -> MessageKey.PROGRESS_PROOFREAD_UNCHANGED;
+            default -> MessageKey.PROGRESS_REPLY_IN_DETAILED;
+        };
     }
 
     private String orNothing(final @Nullable String text) {

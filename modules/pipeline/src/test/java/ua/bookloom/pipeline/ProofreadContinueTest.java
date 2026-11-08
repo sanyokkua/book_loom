@@ -8,6 +8,7 @@ import static ua.bookloom.pipeline.ProofreadProjects.decided;
 import static ua.bookloom.pipeline.ProofreadProjects.lines;
 import static ua.bookloom.pipeline.ProofreadProjects.locked;
 import static ua.bookloom.pipeline.ProofreadProjects.ok;
+import static ua.bookloom.pipeline.ProofreadProjects.openDeferrals;
 import static ua.bookloom.pipeline.ProofreadProjects.update;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
@@ -26,6 +27,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.ProofreadOutcome;
@@ -78,6 +80,36 @@ class ProofreadContinueTest {
         assertThat(tallies(project).tally(project.id(), 2).data()).isEmpty();
     }
 
+    // IF a kept rewrite stamped its window as planned before the rewrite, THEN the mark the rewrite answered would
+    // reshape the window (here 0..1 becomes 1) and the next Continue would offer, and read, the same paragraphs again.
+    @Test
+    void tally_keptGenderRewriteReshapesItsWindow_nothingOfferedAfterTheContinue() {
+        final TestProject project = book(QualityDial.BALANCED);
+        final String russianLetter = "Дзвін ударыв 1 разів на світанку.";
+        update(
+                project,
+                "Book.md:1",
+                record -> record.withStatus(SegmentStatus.FLAGGED).withMachineTarget(russianLetter, russianLetter));
+        final GlossaryEntry hale = ok(project.stores().glossary().add(character(project, "Hale", "Хейл", Gender.MALE)));
+        assertThat(report(job(project, new ScriptedChatModel()).run()).end()).isEqualTo(JobState.COMPLETED);
+        final GlossaryEntry female = hale.withGender(Gender.FEMALE);
+        ok(project.stores().glossary().update(female));
+        DeferralRegister.changed(hale, female, decided(project), Set.of("Book.md:0"), "uk")
+                .forEach(deferral -> ok(project.deferrals().add(deferral)));
+        final ScriptedChatModel gendered = new ScriptedChatModel()
+                .answerTo(
+                        PROOFREAD,
+                        Result.ok(new ChatResponse(
+                                "{\"items\":[{\"id\":\"Book.md:0\",\"target\":\"Хейл пішла.\"}]}", FinishReason.STOP)));
+        assertThat(report(job(project, gendered).run()).end()).isEqualTo(JobState.COMPLETED);
+        assertThat(stored(project, "Book.md:0").machineTarget()).isEqualTo("Хейл пішла.");
+
+        assertThat(tallies(project).tally(project.id(), 2).data()).isEmpty();
+        final ScriptedChatModel again = new ScriptedChatModel();
+        assertThat(report(job(project, again).run()).end()).isEqualTo(JobState.COMPLETED);
+        assertThat(proofreadCalls(again)).isZero();
+    }
+
     // IF only proofread windows counted as work left, THEN a renamed target after a Fast run would never be swept.
     @Test
     void codeWorkLeft_termRenamedAfterFastRun_trueUntilTheContinueSweepsIt() {
@@ -95,6 +127,29 @@ class ProofreadContinueTest {
         assertThat(report(job(project, new ScriptedChatModel()).run()).end()).isEqualTo(JobState.COMPLETED);
 
         assertThat(stored(project, "Book.md:0").machineTarget()).isEqualTo("Гейл пішов.");
+        assertThat(ok(tallies(project).codeWorkLeft(project.id()))).isFalse();
+    }
+
+    // IF a renamed target already swept into a proposal still counted as sweep work, THEN a person-edited segment's
+    // waiting proposal would offer Continue after every Continue until the person applied it.
+    @Test
+    void codeWorkLeft_renameSweptIntoAProposal_falseOnceTheProposalWaits() {
+        final TestProject project = book(QualityDial.FAST);
+        update(project, "Book.md:0", record -> record.withUserTarget(HALE_LEFT, HALE_LEFT));
+        assertThat(report(job(project, new ScriptedChatModel()).run()).end()).isEqualTo(JobState.COMPLETED);
+        final GlossaryEntry hale = locked(project, "Hale", "Хейл");
+        ok(project.stores().glossary().add(hale));
+        final GlossaryEntry renamed = locked(project, "Hale", "Гейл");
+        ok(project.stores().glossary().update(renamed));
+        DeferralRegister.termChanged(hale, renamed, decided(project))
+                .forEach(deferral -> ok(project.deferrals().add(deferral)));
+
+        assertThat(report(job(project, new ScriptedChatModel()).run()).end()).isEqualTo(JobState.COMPLETED);
+
+        assertThat(openDeferrals(project))
+                .singleElement()
+                .extracting(Deferral::proposal)
+                .isEqualTo("Гейл пішов.");
         assertThat(ok(tallies(project).codeWorkLeft(project.id()))).isFalse();
     }
 

@@ -276,6 +276,29 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
         assertThat(controls().start()).isEqualTo(ENABLED);
     }
 
+    // IF only a glossary write or a run read the standing again, THEN applying the last waiting proposal on the desk
+    // would leave Continue offered for a run with nothing to do.
+    @Test
+    void controls_deskActionLeavesNoWorkAfterACompletedRun_withdrawStart() throws Exception {
+        openBookAndChooseModel();
+        buildViewModel();
+        startAndPrepare();
+        job.finish(Result.ok(completedReport(10)));
+        awaitState(RunState.COMPLETED);
+        codeWorkLeft = true;
+        onFx(() -> glossaryRows.add(
+                GlossaryEntry.of("p:Hale", "p", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true)));
+        WaitForAsyncUtils.waitForFxEvents();
+        final ControlState offered = controls().start();
+
+        codeWorkLeft = false;
+        mirror.review().publishDecided("acceptProposal", "Book.md:0");
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(offered).isEqualTo(ENABLED);
+        assertThat(controls().start()).isEqualTo(HIDDEN);
+    }
+
     // IF start stayed pressable while the run is paused on a provider error, THEN a second run would begin beside the
     // one that can be resumed.
     @Test

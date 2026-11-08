@@ -43,6 +43,7 @@ final class ProofreadWindowPass {
     private final RunSettings settings;
     private final RunSinks sinks;
     private final WindowReader reader;
+    private final RunStores stores;
 
     /**
      * What the pass reads, as the code part left it.
@@ -62,7 +63,8 @@ final class ProofreadWindowPass {
         this.tools = Objects.requireNonNull(tools, "tools");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
-        this.reader = new WindowReader(tools, settings, Objects.requireNonNull(stores, "stores"), sinks.emit());
+        this.stores = Objects.requireNonNull(stores, "stores");
+        this.reader = new WindowReader(tools, settings, stores, sinks.emit());
     }
 
     /**
@@ -79,14 +81,17 @@ final class ProofreadWindowPass {
             return Optional.empty();
         }
         final WindowReading reading = reading(state);
-        final List<String> order = List.copyOf(reading.segments().keySet());
         final Set<SegmentKind> kept = state.book().brief().alsoTranslate().keptKinds();
-        final Predicate<String> readable = MarkList.readable(reading.records(), kept);
-        final Predicate<String> focusable = MarkList.focusable(reading.records(), kept);
-        final int batchSize = tools.planner().profile().batchSize();
+        final Layout layout = new Layout(
+                List.copyOf(reading.segments().keySet()),
+                MarkList.readable(reading.records(), kept),
+                MarkList.focusable(reading.records(), kept),
+                tools.planner().profile().batchSize());
         final Optional<RunEnd> marked = round(
                 WindowFingerprint.ROUND_MARKED,
-                ProofreadWindows.of(state.marks(), order, readable, focusable, batchSize),
+                ProofreadWindows.of(
+                        state.marks(), layout.order(), layout.readable(), layout.focusable(), layout.batchSize()),
+                layout,
                 reading,
                 progress);
         if (marked.isPresent() || coverage != ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH) {
@@ -94,9 +99,30 @@ final class ProofreadWindowPass {
         }
         return round(
                 WindowFingerprint.ROUND_WHOLE_BOOK,
-                ProofreadWindows.tiles(order, readable, focusable, batchSize, openReasons(state, reading)),
+                planned(WindowFingerprint.ROUND_WHOLE_BOOK, layout, reading),
+                layout,
                 reading,
                 progress);
+    }
+
+    /** How the stage lays its windows out: the story's order, what a window may show and hold, and its size. */
+    private record Layout(List<String> order, Predicate<String> readable, Predicate<String> focusable, int batchSize) {}
+
+    // The windows a Continue would plan for the round from what the windows committed so far, as a stored project's
+    // tally plans them: a mark a kept rewrite answered is gone, and a proposal or a settled deferral counts.
+    private static List<ProofreadWindow> planned(final int round, final Layout layout, final WindowReading reading) {
+        final List<Mark> marks = MarkList.of(
+                reading.state().book(),
+                List.copyOf(reading.records().values()),
+                reading.verdicts().open());
+        return round == WindowFingerprint.ROUND_MARKED
+                ? ProofreadWindows.of(marks, layout.order(), layout.readable(), layout.focusable(), layout.batchSize())
+                : ProofreadWindows.tiles(
+                        layout.order(),
+                        layout.readable(),
+                        layout.focusable(),
+                        layout.batchSize(),
+                        MarkList.reasonsById(marks));
     }
 
     private WindowReading reading(final State state) {
@@ -113,19 +139,10 @@ final class ProofreadWindowPass {
                 SegmentLocators.of(state.book().document()));
     }
 
-    // The marks still open after round 1, listed again from what round 1 committed, as a stored project's tally lists
-    // them: a mark a kept rewrite answered is gone, and a proposal or a settled deferral counts.
-    private static Map<String, List<String>> openReasons(final State state, final WindowReading reading) {
-        final List<Mark> marks = MarkList.of(
-                state.book(),
-                List.copyOf(reading.records().values()),
-                reading.verdicts().open());
-        return MarkList.reasonsById(marks);
-    }
-
     private Optional<RunEnd> round(
             final int round,
             final List<ProofreadWindow> windows,
+            final Layout layout,
             final WindowReading reading,
             final Supplier<JobProgress> progress) {
         final List<ProofreadWindow> unread = windows.stream()
@@ -134,18 +151,31 @@ final class ProofreadWindowPass {
         started(round, windows, unread);
         sinks.emit().accept(new ProofreadRoundStarted(round, rounds(), windows.size(), unread.size()));
         tools.call().steps().planned(StepKind.PROOFREAD, unread.size(), false);
+        final ReshapedWindows reshaped = new ReshapedWindows(round);
+        windows.stream().filter(window -> !unread.contains(window)).forEach(reshaped::covered);
         for (final ProofreadWindow window : unread) {
-            if (sinks.boundaries().isStopRequested()) {
-                log.info("Proofread stage stopped before window {} project={}", window.label(), settings.projectId());
-                return Optional.of(new RunEnd(JobState.CANCELLED, null));
-            }
-            final Optional<RunEnd> end = reader.read(reader.question(round, window, reading), reading, progress);
+            final Optional<RunEnd> end = read(round, window, reading, progress);
             if (end.isPresent()) {
                 return end;
             }
+            if (reading.isRead(round, window)) {
+                reshaped.covered(window);
+            }
         }
         log.info("Proofread round {} ended project={} read={}", round, settings.projectId(), unread.size());
-        return Optional.empty();
+        return reshaped.stamp(planned(round, layout, reading), reading, stores, settings.projectId());
+    }
+
+    private Optional<RunEnd> read(
+            final int round,
+            final ProofreadWindow window,
+            final WindowReading reading,
+            final Supplier<JobProgress> progress) {
+        if (sinks.boundaries().isStopRequested()) {
+            log.info("Proofread stage stopped before window {} project={}", window.label(), settings.projectId());
+            return Optional.of(new RunEnd(JobState.CANCELLED, null));
+        }
+        return reader.read(reader.question(round, window, reading), reading, progress);
     }
 
     private int rounds() {

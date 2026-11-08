@@ -39,6 +39,18 @@ record WindowReading(
         return Objects.requireNonNull(segments.get(id), () -> "no segment for " + id);
     }
 
+    /** {@return the fingerprint the window has in this round as committed now} */
+    String fingerprint(final int round, final ProofreadWindow window) {
+        return WindowFingerprint.of(
+                round, window, texts(window), map, state.book().brief());
+    }
+
+    /** {@return whether every focus segment of the window holds a verdict read with the question it has now} */
+    boolean isRead(final int round, final ProofreadWindow window) {
+        return WindowFingerprint.isRead(
+                fingerprint(round, window), window, id -> record(id).proofread());
+    }
+
     /** {@return the window's sources and current texts, its neighbours' included, as committed now} */
     ProofreadCall.Texts texts(final ProofreadWindow window) {
         return texts(window, segments, records);

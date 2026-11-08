@@ -88,11 +88,12 @@ public final class ProofreadStanding {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         current.book().addListener((observed, was, now) -> refresh());
         // A run at work reads the glossary itself and its settling reads the tally again.
-        this.glossary.addListener(observed -> {
-            final RunState state = mirror.runState().get();
-            log.debug("proofread standing: glossary written in run state {}", state);
-            if (state.isSettled() || state == RunState.IDLE) {
-                refresh();
+        this.glossary.addListener(observed -> refreshWhileNoRun(mirror, "glossary written"));
+        // A desk action can take the last work away (an applied proposal) while no run is at work.
+        mirror.review().decided().addListener((observed, was, now) -> {
+            if (now != null) {
+                log.debug("proofread standing: desk action {} on segment {}", now.action(), now.segmentId());
+                refreshWhileNoRun(mirror, "desk action");
             }
         });
         mirror.runState().addListener((observed, was, now) -> {
@@ -103,6 +104,14 @@ public final class ProofreadStanding {
                 codeWork.set(false);
             }
         });
+    }
+
+    private void refreshWhileNoRun(final StateMirror mirror, final String cause) {
+        final RunState state = mirror.runState().get();
+        log.debug("proofread standing: {} in run state {}", cause, state);
+        if (state.isSettled() || state == RunState.IDLE) {
+            refresh();
+        }
     }
 
     /**

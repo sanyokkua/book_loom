@@ -110,7 +110,9 @@ public final class ProofreadTallies implements ProofreadProgress {
             return Result.ok(false);
         }
         return deferrals.open(projectId).flatMap(waiting -> {
-            if (waiting.stream().anyMatch(deferral -> deferral.reason() == DeferralReason.TERM)) {
+            // A TERM deferral that carries a proposal was swept already and waits on the person, not on a Continue.
+            if (waiting.stream()
+                    .anyMatch(deferral -> deferral.reason() == DeferralReason.TERM && deferral.proposal() == null)) {
                 log.debug("Proofread code work: a renamed target waits for the sweep");
                 return Result.ok(true);
             }

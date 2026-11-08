@@ -13,6 +13,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.pipeline.CallItem;
+import ua.bookloom.api.pipeline.CallItemStatus;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.context.BookMap;
@@ -210,6 +212,14 @@ public final class ProofreadCall {
         items.forEach(item -> changed(item, readIds, texts)
                 .ifPresent(id -> changes.put(id, item.path("target").asText())));
         log.debug("Proofread reply ids={} items={} changes={}", readIds.size(), items.size(), changes.size());
+        calls.read(changes.entrySet().stream()
+                .map(change -> new CallItem(
+                        change.getKey(),
+                        change.getKey(),
+                        DisplayText.of(change.getValue()),
+                        CallItemStatus.OK,
+                        List.of()))
+                .toList());
         return new Answer(readIds, changes, true);
     }
 
