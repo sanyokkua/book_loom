@@ -181,7 +181,7 @@ public final class WireMockProvider implements AutoCloseable {
     }
 
     /** Every request the server received, oldest first, as {@code METHOD path}. */
-    List<String> servedInOrder() {
+    public List<String> servedInOrder() {
         return server.findAll(anyRequestedFor(anyUrl())).stream()
                 .map(request -> request.getMethod() + " " + request.getUrl())
                 .toList();
