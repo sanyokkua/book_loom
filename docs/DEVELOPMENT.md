@@ -1203,6 +1203,72 @@ summaries. Balanced, en-uk, single-flight; e4b K = 3, 26b K = 1; `sequence` (8 c
   with the glossary.
 - *Runs* (`.temporary_context/eval-history/*arm6-{on,off}*`, logs `.temporary_context/arm6-*.log`).
 
+**Arm 7a: the per-chunk reviewer (task 14.2).** Default OFF: no reviewer call, so a chunk is draft, checks, the one
+repair, and then the Proofread stage. Alternative ON: today's reviewer at Balanced as built (it fixes in place, the code
+verifies every edit, a refused edit gets a directed fix), on the same pipeline. The alternative reached the job through
+the test-only `PromptVariants.reviewer` field (`BOOKLOOM_EVAL_VARIANTS=reviewer=ON`). Every ON run made `REVIEW` calls
+and no OFF run did. Balanced, Ollama, single-flight, paired by seed. `gemma4:e4b-mlx` ran `mini-en` and `mini-ru` with
+K = 3 (seeds 1000-1002) and `sequence` with K = 3. `gemma4:26b-mlx` ran both mini books once (K = 1).
+
+| Per repeat | OFF | ON |
+|---|---|---|
+| e4b `mini-en` grader pass rate | 0.931 ×3 | 0.914, 0.948, 0.931 |
+| e4b `mini-ru` / 26b `mini-en` / 26b `mini-ru` | 0.963 ×3 / 0.948 / 0.963 | the same |
+| Proofread rewrites kept (every mini run) | 0 | 0 |
+| `sequence` LTCR-1 (%) | 96.6, 95.7, 89.6 (mean 94.0) | 88.9, 97.1, 96.8 (mean 94.3) |
+| `sequence` narrator-gender slips | 5, 9, 2 (16) | 0, 6, 2 (8) |
+| `sequence` first-round hard gates / flagged / batch fallbacks | 14, 12, 15 / 12, 11, 12 / 4, 8, 9 | 14, 15, 15 / 12, 11, 11 / 6, 8, 8 |
+| Calls, e4b `mini-en` / 26b `mini-en` | 32, 31, 32 / 30 | 46, 38, 43 / 43 |
+| `sequence` calls and seconds per segment | 0.92-0.95, 5.1-5.4 | 1.06-1.09, 5.5-6.6 |
+
+- *Graders* (`eval-score.py diff --paired`). e4b `mini-en`: `address-same` 2:0 for ON and `every-usable` 1:0 for OFF.
+  The `address-same` count is one mini case, counted on its two blocks: ON's second repeat used the same form of
+  address in m25 as in m26. p = 0.5, noise band 0.0345. The screen counter reads "moves >= 2 cases", but the cases come
+  from one repeat and the screen is not confirmed on `sequence` (see below). Every other set is 0:0 on every grader.
+- *Judge on the final text after Proofread.* `gemma4:26b-mlx`, `bl-judge-1`, reasoning off, the order swapped. It read
+  every paragraph and repeat whose final text differs between the sides; the source paragraph's neighbours were given as
+  context. Proofread kept no rewrite in any mini run, so `ProofreadJudgeEvalTest` (which grades kept rewrites) would
+  have had nothing to read. The judge was therefore driven by a throwaway test with the same `JudgeRunner` calls; the
+  items and verdicts are in `.temporary_context/arm7a/judge/`.
+
+| Set | Paragraph-repeats that differ | OFF better | ON better | Tie / unread | Sign test p |
+|---|---|---|---|---|---|
+| e4b `mini-en`, K = 3 | 61 | 19 | 28 | 14 / 0 | 0.24 |
+| e4b `mini-ru`, K = 3 | 4 | 0 | 2 | 2 / 0 | 0.50 |
+| 26b `mini-en`, K = 1 | 19 | 5 | 5 | 9 / 0 | 1.00 |
+| 26b `mini-ru`, K = 1 | 0 | — | — | — | — |
+| e4b `sequence`, K = 3 | 697 | 216 | 223 | 255 / 3 | 0.78 |
+
+  Pooled over the e4b mini books it is 19:30, p = 0.15. On `sequence`, every repeat is close to even (77:68, 72:82,
+  67:73), and the first-person and third-person chapters are too (81:86 and 135:137). Most of these differences come
+  from the MLX runtime's own nondeterminism at a fixed seed (arm 3a). In arm 7c, two sides whose prompts differed
+  only in the proofread call already had 14-19 of 33 `mini-en` blocks differ. So the judge is comparing two noisy
+  draws, and neither side is ahead.
+- *The `gender` and `LTCR-1` lines of the matrix table.* The table's "5 against 0" slips and "96.6 % against 88.9 %"
+  LTCR-1 describe the first repeat only. Over the three repeats LTCR-1 is 94.0 % against 94.3 %. To count the slips in
+  every repeat, the production `GenderChecks` (`uk`, narrator male) was run on each repeat's stored outputs in the three
+  first-person chapters: 16 slips on OFF against 8 on ON. Each slip is a feminine past verb after «я» in a paragraph
+  where the narrating spirit acts. These are real slips, not false hits, and they are still in the final text: at
+  Balanced the narrator inference stores the gender but re-renders nothing (that happens only at Max). By segment and
+  repeat the slips do not line up with the reviewer. OFF has 7 segment-repeats with a slip where ON has none: the
+  same two paragraphs in repeats 1 and 2, one paragraph in repeat 2, and one in repeats 2 and 3. ON has 5 where OFF has
+  none: four paragraphs of repeat 2 (three of them short dialogue tags) and one paragraph of repeat 3. That is 7:5,
+  p = 0.77. ON's lower total is a hint in the same direction as the 9 : 4 of arm 5c, not a result. The judge does not
+  pick it up either: the paragraphs with a slip on either side come out 5:4 (OFF better : ON better), the rest tied
+  or unread, so the judge does not grade narrator gender. `nameV` 2 against 3 is one name variant, first repeat only. Seen this way, the slips are
+  noise in which side they fall on, but they are a real, recurring defect of e4b at Balanced, whatever the reviewer
+  setting.
+- *Decision rule.* The reviewer stays only on p < 0.05 for ON by the sign test on discordant paragraphs of the final
+  text, or with at least 2 mini cases confirmed on `sequence`. Neither holds: the best p is 0.15 (pooled e4b mini), the
+  one grader that moved is a single case, and `sequence` is even on the judge, on LTCR-1, on hard gates and on flags.
+  So **the reviewer goes (OFF)**, and task 14.7 deletes it as planned. The reviewer costs 14-45 % more calls and 3-30 %
+  more time (reported, not weighed). On the `sequence` first repeat it applied 18 edits and refused 36 (40 `REVIEW`
+  calls and 2 directed fixes).
+- *For the owner.* Narrator slips at Balanced are not fixed by either side. If they matter, the Max re-render, or a
+  Balanced re-render of the slips the code finds, is the lever, not the reviewer.
+- *Runs* (`.temporary_context/eval-history/20261108-*arm7a-{OFF,ON}*`; the script, the matrix logs and the judge files are
+  in `.temporary_context/arm7a/`).
+
 **Arm 7c: the proofread prompt (task 13.9).** Default P1: block 12 of a proofread call states the target language's own
 instruction and rules (`proofreadInstruction`, `proofreadRules` in `uk.properties`; the English default for a target with
 none). Alternative P2: the English instruction of `generic.properties` for every target, the target's rules kept, every other
