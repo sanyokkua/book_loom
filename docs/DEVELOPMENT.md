@@ -2659,7 +2659,10 @@ and replies cut by length, and the decided segments a kill in mid-chunk loses.
 Group 13 (the Proofread stage of `redesign-translation-pipeline`) is built: a run is Prepare · Translate · Proofread at
 every dial and is Completed only after Proofread (`01_Product/05_TRANSLATION_ALGORITHM.md#proofread-stage`,
 `02_Architecture/05_PIPELINE_ENGINE.md#proofread-stage`, `12_PROMPT_CATALOG.md#proofread`). `ProofreadStageAcceptanceTest`
-is green on both dialects (3 cases × Ollama-native and OpenAI-compatible). Task 13.10 results: GATE_RESULT
+is green on both dialects (3 cases × Ollama-native and OpenAI-compatible). Task 13.10 results: the whole gate
+(`./gradlew clean build check spotlessCheck`) passed in 19 min 48 s after the hand-check fixes; `scripts/ci-linux-ui.sh` was
+green; Sonar reports 0 open issues with the quality gate OK (15 issues fixed on the way, among them `RunWiring`'s
+dependency count, by moving the Proofread wiring, the call seam and the job's live parts into their own classes).
 
 Hand check (2026-11-08, `BOOKLOOM_DATA_DIR=.temporary_context/handcheck-13/data`, seeded with an older database;
 `gemma4:e4b-mlx` on Ollama, Balanced, the invented `gravity.md`, 152 segments in 9 chapters; screenshots in
@@ -2693,8 +2696,11 @@ Proofread stage's reach).
   translating." during Proofread.
 - *Words.* "Genders to confirm" still says "the next export re-renders those segments" (the Proofread stage does now;
   group 14 removes the export pass); the names pass gave Newton and Cavendish "neuter (likely)".
-- *Not reached:* a stopped proofread call in All calls (the list was empty), and a Fast run with "Waiting on a gender"
-  (covered by acceptance case (c) and `ReviewDeskListTest`).
+- *Fast.* A Fast run of the invented `saltglass-en.md` (19 segments, 2 chapters) logged `Proofread stage … coverage=NONE`
+  and sent no proofread call (draft and chapter-summary calls only), with "Chapter 2 of 2" and the new Fast hint. The
+  "Waiting on a gender" list after a late gender was not reached by hand (typing a Cyrillic target through `osascript`
+  failed); acceptance case (c) and `ReviewDeskListTest` cover it.
+- *Not reached:* a stopped proofread call in All calls (the list was empty).
 
 **Open items carried forward** (none blocks the group; each names what would settle it):
 

@@ -48,8 +48,8 @@ class LiveCardWindowRowTest extends LiveCardTestBase {
                 .toList());
     }
 
-    // IF a window's long text squeezed its locator away, THEN the row would not say which paragraphs the window read;
-    // the text gives way first and the locator stays whole.
+    // IF a window's long text squeezed its locator away, THEN the row would not say which paragraphs the window read.
+    // The text gives way first and the locator stays whole.
     @Test
     void windowRow_longTextAfter_locatorStaysWhole() {
         resizeScene(960, 640);

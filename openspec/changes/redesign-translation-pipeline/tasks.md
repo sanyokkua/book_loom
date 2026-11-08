@@ -1348,7 +1348,7 @@ without rewriting text that was already right. The backward-revision classes sta
 only until group 14 deletes both. The stored shape changes (the proofread verdict kept on a segment, a new deferral reason), so the database is
 set aside once.
 
-- [ ] 13.1 Write the group's acceptance test and record it red, so the Proofread stage is driven by one observable
+- [x] 13.1 Write the group's acceptance test and record it red, so the Proofread stage is driven by one observable
   whole-run case. → :pipeline
   - **Satisfies:** enabling work for design D15
   - **Depends on:** groups 10, 11, 12 (mini-ru, the one repair, the never-worse gate, the context builder)
@@ -1389,7 +1389,7 @@ set aside once.
     drafts pass first); the failure output is pasted into the commit message. It stays red on the branch (tagged `slow`,
     as 11.1 and 12.1 did) and goes green with 13.6, with case (c) fully green at 14.x.
 
-- [ ] 13.2 Rename the stage to PROOFREAD and add the stored proofread verdict, the changed-gender reason and the
+- [x] 13.2 Rename the stage to PROOFREAD and add the stored proofread verdict, the changed-gender reason and the
   window's commit, so a decided window's text, verdicts and settled deferrals are saved together and survive a restart.
   → :api, :persistence, :pipeline, :ui
   - **Satisfies:** "Store a proofread verdict with each segment the stage read" (local-storage), "Write a chunk's decisions together" (local-storage), "Keep the application's work across a restart" (local-storage), "Remove a project's saved work and nothing else" (local-storage), "Set aside a database that cannot be used and start a fresh one" (local-storage)
