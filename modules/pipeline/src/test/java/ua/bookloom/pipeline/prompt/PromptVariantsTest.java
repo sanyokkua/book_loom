@@ -14,6 +14,7 @@ import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
+import ua.bookloom.pipeline.prompt.PromptVariants.ReviewerVariant;
 
 /**
  * The production injector binds the variants that reproduce today's prompts, and a test injector that binds another
@@ -36,12 +37,33 @@ class PromptVariantsTest {
         assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.bundled());
     }
 
-    // Each settled arm deletes its field (arm 7c's proofreadPrompt in task 13.9); task 14.7 deletes the last one.
+    // Each settled arm deletes its field (arm 7c's proofreadPrompt in task 13.9); task 14.7 deletes the last ones.
     @Test
-    void components_afterArm7c_areTheLanguageRulesAlone() {
+    void components_duringArm7a_areTheLanguageRulesAndTheReviewer() {
         assertThat(PromptVariants.class.getRecordComponents())
                 .extracting(RecordComponent::getName)
-                .containsExactly("languageRules");
+                .containsExactly("languageRules", "reviewer");
+    }
+
+    @Test
+    void defaults_untilArm7aIsDecided_keepTodaysReviewer() {
+        assertThat(PromptVariants.DEFAULTS.reviewer()).isEqualTo(ReviewerVariant.ON);
+        assertThat(new PromptVariants().reviewer()).isEqualTo(ReviewerVariant.ON);
+        assertThat(PromptVariants.DEFAULTS.isDefault()).isTrue();
+    }
+
+    @Test
+    void isDefault_reviewerOff_isFalse() {
+        assertThat(PromptVariants.DEFAULTS.withReviewer(ReviewerVariant.OFF).isDefault())
+                .isFalse();
+    }
+
+    @Test
+    void templates_boundVariants_carryTheReviewerChoice() {
+        final PromptVariants off = PromptVariants.DEFAULTS.withReviewer(ReviewerVariant.OFF);
+
+        assertThat(new PromptTemplates(off).variants()).isEqualTo(off);
+        assertThat(new PromptTemplates().variants()).isEqualTo(PromptVariants.DEFAULTS);
     }
 
     @Test

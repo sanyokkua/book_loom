@@ -50,6 +50,7 @@ public final class PromptTemplates {
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
+    private final PromptVariants variants;
     private final PreparationExamples preparations;
 
     /** Loads the bundled templates with the bundled language rules. */
@@ -64,13 +65,16 @@ public final class PromptTemplates {
      */
     @Inject
     public PromptTemplates(final PromptVariants variants) {
-        this(PromptTemplates.class::getResourceAsStream, variantRules(variants));
+        this(PromptTemplates.class::getResourceAsStream, variantRules(variants), variants);
     }
 
     private static LanguageRules variantRules(final PromptVariants variants) {
         Objects.requireNonNull(variants, "variants");
         if (!variants.isDefault()) {
-            log.debug("Prompt variants differ from the defaults: languageRules={}", variants.languageRules());
+            log.debug(
+                    "Prompt variants differ from the defaults: languageRules={} reviewer={}",
+                    variants.languageRules(),
+                    variants.reviewer());
         }
         return variants.rules();
     }
@@ -80,7 +84,12 @@ public final class PromptTemplates {
     }
 
     PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
+        this(loader, rules, PromptVariants.DEFAULTS);
+    }
+
+    private PromptTemplates(final ResourceLoader loader, final LanguageRules rules, final PromptVariants variants) {
         Objects.requireNonNull(loader, "loader");
+        this.variants = variants;
         this.rules = Objects.requireNonNull(rules, "rules");
         this.preparations = new PreparationExamples(rules);
         for (final PromptName name : PromptName.values()) {
@@ -93,6 +102,16 @@ public final class PromptTemplates {
                 Stream.concat(systems.values().stream(), users.values().stream())
                         .map(Template::fileName)
                         .toList());
+    }
+
+    /**
+     * The variants the templates were built with; the run reads the reviewer choice (arm 7a) from here because the
+     * eval and the application both hand a run its templates.
+     *
+     * @return never null
+     */
+    public PromptVariants variants() {
+        return variants;
     }
 
     /**

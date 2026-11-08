@@ -92,7 +92,8 @@ final class RunWiring {
                 run.index().majorityScript().orElse(null),
                 words);
         final ModelCalls calls = RunModelCalls.of(model, live, clock, run.document(), runWindow, frame);
-        final RunSettings settings = RunSettings.forRun(request, brief, frame, runWindow.current());
+        final RunSettings settings =
+                RunSettings.forRun(request, brief, frame, runWindow.current(), templates.variants());
         RunStartLog.write(request, providerKind, settings.window(), brief.dial(), batchSize, prepared);
         final TranslatePlanner planner = new TranslatePlanner(
                 new ContextBuilder(templates),

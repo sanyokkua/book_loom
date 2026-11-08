@@ -10,9 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
+import ua.bookloom.pipeline.prompt.PromptVariants.ReviewerVariant;
 
 /**
- * The prompt variants an eval run asks for, read from {@value #ENV} ({@code languageRules=GENERIC_ONLY}, fields
+ * The prompt variants an eval run asks for, read from {@value #ENV} ({@code languageRules=GENERIC_ONLY}, {@code reviewer=OFF}; fields
  * separated by commas; unset is the defaults) and handed to the templates through a test injector's binding. Only the
  * eval reads this variable; the application's injector always binds {@link PromptVariants#DEFAULTS}.
  */
@@ -51,9 +52,6 @@ public final class EvalVariants {
                 .getInstance(PromptTemplates.class);
     }
 
-    // The combining shape stays for a later arm's second field (arms 7a and 7c); today one field leaves `current`
-    // unread.
-    @SuppressWarnings("UnusedVariable")
     private static PromptVariants with(final PromptVariants current, final String field) {
         final String[] pair = field.split("=", 2);
         if (pair.length != 2) {
@@ -61,7 +59,8 @@ public final class EvalVariants {
         }
         final String value = pair[1].strip();
         return switch (pair[0].strip()) {
-            case "languageRules" -> new PromptVariants(LanguageRulesVariant.valueOf(value));
+            case "languageRules" -> current.withLanguageRules(LanguageRulesVariant.valueOf(value));
+            case "reviewer" -> current.withReviewer(ReviewerVariant.valueOf(value));
             default -> throw new IllegalArgumentException(ENV + " names no field " + pair[0]);
         };
     }

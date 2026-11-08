@@ -41,6 +41,16 @@ public record DialParameters(
     }
 
     /**
+     * The same mechanics with another number of reviewer passes; arm 7a's OFF choice passes zero.
+     *
+     * @param passes how many times the reviewer reads each chunk; zero for none
+     * @return the copy
+     */
+    public DialParameters withReviewerPasses(final int passes) {
+        return new DialParameters(repair, passes, backwardRevision, proofreadCoverage);
+    }
+
+    /**
      * Whether the reviewer reads each chunk.
      *
      * @return {@code true} for every dial but Fast
