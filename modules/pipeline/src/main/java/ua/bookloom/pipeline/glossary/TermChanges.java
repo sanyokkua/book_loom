@@ -15,8 +15,8 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.DeferralRegister;
-import ua.bookloom.pipeline.revision.SummarySweep;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
+import ua.bookloom.pipeline.proofread.SummarySweep;
 
 /**
  * What a glossary write leaves behind, the same for an edit of the cell, a row of a glossary file and the names pass:

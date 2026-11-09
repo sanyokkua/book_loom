@@ -17,7 +17,6 @@ import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
 import ua.bookloom.pipeline.checks.TextSpan;
 import ua.bookloom.pipeline.prompt.LanguageRules;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * The gender a gender deferral waited for, once it is known: a glossary entry's gender the person or the book gave

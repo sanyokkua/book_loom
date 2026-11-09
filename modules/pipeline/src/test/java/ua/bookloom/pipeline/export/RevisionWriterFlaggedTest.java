@@ -27,8 +27,8 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.review.ReviewQueries;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * A name swap by backward revision never hides a real problem: a FLAGGED segment takes the swapped name but stays

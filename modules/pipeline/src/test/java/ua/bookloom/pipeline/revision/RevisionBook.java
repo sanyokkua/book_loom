@@ -25,6 +25,7 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
@@ -107,21 +108,6 @@ final class RevisionBook {
     /** Runs the pass as an export does, with every call sent through {@code calls}. */
     Result<ConsistencyReport> runExport(final ModelCalls calls, final PassOptions options) {
         return pass().run(desk.projectId(), calls, options);
-    }
-
-    /** Runs the Proofread stage's code sweep over the book. */
-    Result<CodeSweep.Swept> sweep() {
-        return new CodeSweep(
-                        desk.documents(),
-                        desk.openProjects(),
-                        desk.projects(),
-                        desk.segments(),
-                        desk.deferrals(),
-                        desk.glossary(),
-                        desk.lexicon())
-                .run(
-                        desk.projectId(),
-                        Objects.requireNonNull(desk.openProjects().get(desk.projectId()), "open book"));
     }
 
     private ConsistencyPass pass() {

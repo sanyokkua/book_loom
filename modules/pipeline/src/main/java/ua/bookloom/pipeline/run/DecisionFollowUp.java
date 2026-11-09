@@ -22,7 +22,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.ScanEntries;
 import ua.bookloom.pipeline.index.BookIndex;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * What follows a decision besides the decision itself: the deferrals it leaves, and at a body unit's end the names the

@@ -37,7 +37,7 @@ import ua.bookloom.pipeline.eval.MiniRun.Outcome;
 import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.revision.PassOptions;
 
 /**

@@ -10,7 +10,6 @@ import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.revision.GenderWaits;
 
 /** The open gender deferrals read as what the person has to do, over invented names. */
 class GenderWaitsTest {

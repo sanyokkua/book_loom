@@ -20,9 +20,9 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.proofread.Mark;
 import ua.bookloom.pipeline.proofread.MarkList;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /** The stored state a Proofread stage test sets up before a run and reads after it, over a job test's project. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

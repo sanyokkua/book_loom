@@ -29,7 +29,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.narrator.NarratorInference;
 import ua.bookloom.pipeline.narrator.NarratorInference.Verdict;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * The narrator's gender from the run's own work (15i.T5, 15f.A4): when translation has ended and the brief still holds

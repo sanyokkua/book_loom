@@ -20,7 +20,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * Writes what the names pass decided into the stored tables (15i.N8, 15i review): the glossary's removals, changes and

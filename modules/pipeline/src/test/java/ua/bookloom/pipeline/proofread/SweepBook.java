@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.Deferral;
@@ -14,10 +15,10 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
-import ua.bookloom.pipeline.revision.CodeSweep;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * A two-chapter EPUB, English to Ukrainian, opened over the in-memory stores through the review desk's fixture, for the
@@ -47,18 +48,13 @@ final class SweepBook {
     }
 
     /** Runs the Proofread stage's code sweep over the book. */
-    Result<CodeSweep.Swept> sweep() {
-        return new CodeSweep(
-                        desk.documents(),
-                        desk.openProjects(),
-                        desk.projects(),
-                        desk.segments(),
-                        desk.deferrals(),
-                        desk.glossary(),
-                        desk.lexicon())
+    Result<TermSweep.Swept> sweep() {
+        return new CodeSweep(desk.segments(), desk.deferrals(), desk.glossary())
                 .run(
                         desk.projectId(),
-                        Objects.requireNonNull(desk.openProjects().get(desk.projectId()), "open book"));
+                        Objects.requireNonNull(desk.openProjects().get(desk.projectId()), "open book"),
+                        TypographyGate.around(GateFunction.of(desk.documents(), BookFormat.EPUB), "uk"),
+                        "uk");
     }
 
     GlossaryEntry character(

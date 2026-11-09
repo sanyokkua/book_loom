@@ -23,6 +23,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.proofread.RevisionWriter;
 import ua.bookloom.pipeline.qa.BlockingFindings;
 
 /**

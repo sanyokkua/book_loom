@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.revision;
+package ua.bookloom.pipeline.proofread;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,7 +23,7 @@ import ua.bookloom.pipeline.review.Proposals;
  *     null when the text is the person's own or the machine target
  * @param read the stored record the text was taken from; the revision is stored only while the segment still reads so
  */
-record RevisionBase(String masked, @Nullable Deferral proposal, SegmentRecord read) {
+public record RevisionBase(String masked, @Nullable Deferral proposal, SegmentRecord read) {
 
     /**
      * Picks the text a revision of {@code record} starts from.
@@ -33,7 +33,7 @@ record RevisionBase(String masked, @Nullable Deferral proposal, SegmentRecord re
      * @return the machine target for a machine-owned segment; for a person-edited one the waiting proposal, else the
      *     person's own text; null when that text has no masked form
      */
-    static @Nullable RevisionBase of(final SegmentRecord record, final List<Deferral> open) {
+    public static @Nullable RevisionBase of(final SegmentRecord record, final List<Deferral> open) {
         if (record.userTarget() == null) {
             final String machine = record.maskedMachineTarget();
             return machine == null ? null : new RevisionBase(machine, null, record);
@@ -49,7 +49,7 @@ record RevisionBase(String masked, @Nullable Deferral proposal, SegmentRecord re
      * @param resolved the non-empty deferrals the new target answers, the first of which will carry it as a proposal
      * @return never null; {@code resolved} followed by the superseded carrier unless it is already among them
      */
-    List<Deferral> answering(final List<Deferral> resolved) {
+    public List<Deferral> answering(final List<Deferral> resolved) {
         final Deferral superseded = proposal;
         if (superseded == null || resolved.contains(superseded)) {
             return List.copyOf(resolved);

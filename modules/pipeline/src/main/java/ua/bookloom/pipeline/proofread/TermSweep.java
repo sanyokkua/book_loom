@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.revision;
+package ua.bookloom.pipeline.proofread;
 
 import static ua.bookloom.util.contract.ArgNames.ERROR;
 
@@ -26,8 +26,7 @@ import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.heal.GateResult;
 
 /**
- * The deterministic sweep of renamed glossary targets, run by the Proofread stage and by the export's backward
- * revision: each TERM deferral's previous rendering is replaced in the segment's masked form — whole-word by a locked
+ * The deterministic sweep of renamed glossary targets, run by the Proofread stage: each TERM deferral's previous rendering is replaced in the segment's masked form — whole-word by a locked
  * entry's current target, and form by form by the same case of a pinned entry's (a suggested entry is never swept) —
  * and the plain form is restored from it through the document gate, so both forms stay consistent and no tag or token
  * is touched. Every term deferral of one segment is swept into one new target, so two renamed terms in one sentence
@@ -36,40 +35,106 @@ import ua.bookloom.pipeline.heal.GateResult;
  */
 @Slf4j
 @RequiredArgsConstructor
-final class TermSweep {
+public final class TermSweep {
 
     private final GlossaryRepository glossary;
     private final SegmentRepository segments;
     private final RevisionWriter writer;
 
     /**
+     * What one sweep changed.
+     *
+     * @param substitutions how many term deferrals were swept into a machine target
+     * @param proposals how many swept texts wait as a proposal on a segment the person edited
+     */
+    public record Swept(int substitutions, int proposals) {}
+
+    /** Told of each segment the sweep changes, for a caller that keeps notes of them. */
+    public interface Observer {
+
+        /** An observer that is told nothing. */
+        Observer NONE = new Observer() {
+            @Override
+            public void swept(final String segmentId, final int terms) {}
+
+            @Override
+            public void proposed(final String segmentId) {}
+        };
+
+        /** A machine target took {@code terms} term deferrals. */
+        void swept(String segmentId, int terms);
+
+        /** A swept text waits as a proposal on a segment the person edited. */
+        void proposed(String segmentId);
+    }
+
+    /** The counts of one sweep as it goes; used from the sweep's own thread only. */
+    private static final class Counts {
+
+        private final Observer observer;
+        private int substitutions;
+        private int proposals;
+
+        Counts(final Observer observer) {
+            this.observer = observer;
+        }
+
+        void swept(final String segmentId, final int terms) {
+            substitutions += terms;
+            observer.swept(segmentId, terms);
+        }
+
+        void proposed(final String segmentId) {
+            proposals++;
+            observer.proposed(segmentId);
+        }
+
+        Swept done() {
+            return new Swept(substitutions, proposals);
+        }
+    }
+
+    /**
      * Sweeps every open TERM deferral.
      *
-     * @param inputs what the pass read as it started
-     * @param open the project's open deferrals
-     * @param tally where each change is counted
-     * @return ok once every term deferral is swept or resolved, or the storage or gate error that stopped the sweep
+     * @param inputs the non-null run facts
+     * @param open the non-null open deferrals of the project
+     * @return what the sweep changed once every term deferral is swept or resolved, or the storage or gate error that
+     *     stopped it
      */
-    Result<Boolean> sweep(final PassInputs inputs, final List<Deferral> open, final PassTally tally) {
+    public Result<Swept> sweep(final SweepInputs inputs, final List<Deferral> open) {
+        return sweep(inputs, open, Observer.NONE);
+    }
+
+    /**
+     * Sweeps every open TERM deferral and tells {@code observer} of each segment it changes.
+     *
+     * @param inputs the non-null run facts
+     * @param open the non-null open deferrals of the project
+     * @param observer the non-null listener of the changes
+     * @return as {@link #sweep(SweepInputs, List)}
+     */
+    public Result<Swept> sweep(final SweepInputs inputs, final List<Deferral> open, final Observer observer) {
+        final Counts counts = new Counts(Objects.requireNonNull(observer, "observer"));
         final Map<String, List<Deferral>> bySegment = open.stream()
                 .filter(deferral -> deferral.reason() == DeferralReason.TERM)
                 .collect(Collectors.groupingBy(Deferral::segmentId, LinkedHashMap::new, Collectors.toList()));
         log.debug("Sweeping term deferrals project={} segments={}", inputs.projectId(), bySegment.size());
         for (final Map.Entry<String, List<Deferral>> segment : bySegment.entrySet()) {
-            final Result<Boolean> swept = sweepSegment(inputs, segment.getKey(), segment.getValue(), open, tally);
+            final Result<Boolean> swept = sweepSegment(inputs, segment.getKey(), segment.getValue(), open, counts);
             if (swept.isErr()) {
-                return swept;
+                return Result.err(Objects.requireNonNull(swept.error(), ERROR));
             }
         }
-        return Result.ok(true);
+        return Result.ok(counts.done());
     }
 
     private Result<Boolean> sweepSegment(
-            final PassInputs inputs,
+            final SweepInputs inputs,
             final String segmentId,
             final List<Deferral> terms,
             final List<Deferral> open,
-            final PassTally tally) {
+            final Counts tally) {
         final Result<Optional<SegmentRecord>> found = segments.find(inputs.projectId(), segmentId);
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error(), ERROR));
@@ -105,7 +170,7 @@ final class TermSweep {
     }
 
     private Result<Sweep> substitute(
-            final PassInputs inputs, final String segmentId, final String masked, final List<Deferral> terms) {
+            final SweepInputs inputs, final String segmentId, final String masked, final List<Deferral> terms) {
         String working = masked;
         final List<Deferral> swept = new ArrayList<>();
         for (final Deferral term : terms) {
@@ -124,7 +189,7 @@ final class TermSweep {
 
     /** One term's substitution, or empty when the deferral was resolved instead: the answer is then already stored. */
     private Result<Optional<String>> replaceOne(
-            final PassInputs inputs, final String segmentId, final String working, final Deferral term) {
+            final SweepInputs inputs, final String segmentId, final String working, final Deferral term) {
         final String waitingOn = term.waitingOn();
         final String previous = term.replacedRendering();
         final Result<Optional<GlossaryEntry>> found =
@@ -139,10 +204,8 @@ final class TermSweep {
             return resolvedUnswept(segmentId, term, reason.get());
         }
         final GlossaryEntry swept = Objects.requireNonNull(entry, "entry");
-        final Map<String, String> renamings = renamings(
-                swept,
-                Objects.requireNonNull(previous, "previous"),
-                inputs.frame().targetLanguage());
+        final Map<String, String> renamings =
+                renamings(swept, Objects.requireNonNull(previous, "previous"), inputs.targetLanguage());
         final Matcher matcher = WholeWord.anyOf(renamings.keySet()).matcher(working);
         if (!matcher.find()) {
             return resolvedUnswept(segmentId, term, "the target no longer holds the old rendering");
@@ -187,15 +250,15 @@ final class TermSweep {
     }
 
     private Result<Boolean> restoreAndStore(
-            final PassInputs inputs,
+            final SweepInputs inputs,
             final Segment source,
             final RevisionBase base,
             final Sweep sweep,
-            final PassTally tally) {
+            final Counts tally) {
         final String candidate =
                 WhitespaceRestoration.restore(source.masked(), sweep.masked().strip());
         return switch (inputs.gate().restore(source, candidate)) {
-            case GateResult.Restored restored -> store(inputs, source.id(), base, restored, sweep, tally);
+            case GateResult.Restored restored -> store(source.id(), base, restored, sweep, tally);
             case GateResult.GateFailed failed -> {
                 log.debug(
                         "Swept target kept unstored segmentId={}: the gate refused it raisedBy={}",
@@ -208,12 +271,11 @@ final class TermSweep {
     }
 
     private Result<Boolean> store(
-            final PassInputs inputs,
             final String segmentId,
             final RevisionBase base,
             final GateResult.Restored restored,
             final Sweep sweep,
-            final PassTally tally) {
+            final Counts tally) {
         final Result<RevisionWriter.Stored> stored =
                 writer.store(base.read(), restored, base.answering(sweep.swept()), RevisionWriter.Change.NAME_SWAP);
         if (stored.isErr()) {
@@ -227,11 +289,10 @@ final class TermSweep {
                 how);
         log.trace("Term sweep segmentId={} before={} after={}", segmentId, base.masked(), restored.maskedForm());
         switch (how) {
-            case MACHINE_TARGET ->
-                tally.swept(segmentId, inputs.locator(segmentId), sweep.swept().size());
+            case MACHINE_TARGET -> tally.swept(segmentId, sweep.swept().size());
             case PROPOSAL -> {
                 log.warn("Term sweep stored a proposal segmentId={}: the person edited the segment", segmentId);
-                tally.proposed(segmentId, inputs.locator(segmentId));
+                tally.proposed(segmentId);
             }
             // The sweep makes no model call, so only a truly concurrent action gets here; the next pass sweeps again.
             case STALE ->

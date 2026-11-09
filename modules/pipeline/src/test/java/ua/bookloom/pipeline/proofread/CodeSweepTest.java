@@ -20,7 +20,6 @@ import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.revision.CodeSweep;
 
 /**
  * The Proofread stage's term sweep over a real opened EPUB, with no model: a locked target is replaced as written, a
@@ -45,13 +44,13 @@ class CodeSweepTest {
         book.decide(HALE_LEFT, "Хейл пішов.", "Хейл пішов.");
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, true));
 
-        final CodeSweep.Swept swept = ok(book.sweep());
+        final TermSweep.Swept swept = ok(book.sweep());
 
         final SegmentRecord record = book.stored(HALE_LEFT);
         assertThat(record.machineTarget()).isEqualTo("Гейл пішов.");
         assertThat(record.maskedMachineTarget()).isEqualTo("Гейл пішов.");
         assertThat(record.status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(swept).isEqualTo(new CodeSweep.Swept(1, 0));
+        assertThat(swept).isEqualTo(new TermSweep.Swept(1, 0));
         assertThat(book.openDeferrals()).isEmpty();
     }
 
@@ -76,7 +75,7 @@ class CodeSweepTest {
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, false));
         book.glossaryUpdate(book.character("Hale", null, Gender.MALE, false).withSuggestedTarget("Гейл"));
 
-        assertThat(ok(book.sweep())).isEqualTo(new CodeSweep.Swept(0, 0));
+        assertThat(ok(book.sweep())).isEqualTo(new TermSweep.Swept(0, 0));
 
         assertThat(book.stored(HALE_LEFT).machineTarget()).isEqualTo("Хейл пішов.");
         assertThat(book.openDeferrals()).isEmpty();
@@ -89,7 +88,7 @@ class CodeSweepTest {
         book.edit(HALE_LEFT, "Хейл тихо пішов.", "Хейл тихо пішов.");
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, true));
 
-        assertThat(ok(book.sweep())).isEqualTo(new CodeSweep.Swept(0, 1));
+        assertThat(ok(book.sweep())).isEqualTo(new TermSweep.Swept(0, 1));
 
         assertThat(book.stored(HALE_LEFT).userTarget()).isEqualTo("Хейл тихо пішов.");
         assertThat(book.openDeferrals())
@@ -105,7 +104,7 @@ class CodeSweepTest {
         book.decide(HALE_LEFT, "Хейл прийшов.", "Хейл прийшов.");
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, true));
 
-        assertThat(ok(book.sweep())).isEqualTo(new CodeSweep.Swept(0, 0));
+        assertThat(ok(book.sweep())).isEqualTo(new TermSweep.Swept(0, 0));
 
         assertThat(book.stored(HALE_LEFT).machineTarget()).isEqualTo("Хейл прийшов.");
         assertThat(book.stored(HALE_LEFT).status()).isEqualTo(SegmentStatus.ACCEPTED);
@@ -151,10 +150,10 @@ class CodeSweepTest {
         book.change(hale, book.character("Hale", "Гейл", Gender.MALE, true));
         book.change(went, term("вийшов"));
 
-        final CodeSweep.Swept swept = ok(book.sweep());
+        final TermSweep.Swept swept = ok(book.sweep());
 
         assertThat(book.stored(HALE_LEFT).maskedMachineTarget()).isEqualTo("Гейл вийшов.");
-        assertThat(swept).isEqualTo(new CodeSweep.Swept(2, 0));
+        assertThat(swept).isEqualTo(new TermSweep.Swept(2, 0));
     }
 
     // A swept term keeps the segment's placeholders: the plain form is restored from the swept masked form.

@@ -35,7 +35,7 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Narrator.GenderOrigin;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * A first-person narrator whose gender nobody stated, seen through a whole Max run on the scripted model (15i.T5,

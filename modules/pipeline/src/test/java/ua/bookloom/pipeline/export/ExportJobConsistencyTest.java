@@ -26,7 +26,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * With the consistency pass on, a locked name the person renamed is carried back into earlier chapters before the book

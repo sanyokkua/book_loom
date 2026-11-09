@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.revision;
+package ua.bookloom.pipeline.proofread;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;

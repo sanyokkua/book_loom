@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.proofread;
 import com.google.inject.Inject;
 import java.util.Objects;
 import ua.bookloom.api.persistence.DeferralRepository;
-import ua.bookloom.pipeline.revision.CodeSweep;
 
 /**
  * The collaborators the Proofread stage needs beyond the run's own stores.

@@ -34,7 +34,7 @@ import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.RecordingDocumentPort;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
-import ua.bookloom.pipeline.revision.DeferralRegister;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * A cancel is honoured as soon as the export can see it: before it starts, no model call and no write happen; raised

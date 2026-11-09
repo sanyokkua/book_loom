@@ -35,6 +35,9 @@ import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.proofread.GenderWaits;
+import ua.bookloom.pipeline.proofread.RevisionWriter;
+import ua.bookloom.pipeline.proofread.TermSweep;
 import ua.bookloom.pipeline.review.RetryDraft;
 
 /**
@@ -144,7 +147,7 @@ public final class ConsistencyPass {
         final PassTally tally = new PassTally();
         final RevisionWriter writer = new RevisionWriter(segments, deferrals);
         return new TermSweep(glossary, segments, writer)
-                .sweep(inputs, open, tally)
+                .sweep(SweepAdapter.inputsOf(inputs), open, SweepAdapter.countingIn(inputs, tally))
                 .flatMap(swept -> deferrals.open(inputs.projectId()))
                 .flatMap(afterSweep -> revise(inputs, afterSweep, calls, writer, tally, options))
                 .flatMap(done -> deferrals.open(inputs.projectId()))

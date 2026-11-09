@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.revision;
+package ua.bookloom.pipeline.proofread;
 
 import java.util.Comparator;
 import java.util.HashMap;

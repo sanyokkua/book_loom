@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.pipeline.proofread.GenderWaits;
 
 /**
  * The counts and notes of one pass as it goes. Used from the pass's own thread only, which is why it is plain

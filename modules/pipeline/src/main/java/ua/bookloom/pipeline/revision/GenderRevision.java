@@ -25,6 +25,9 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
+import ua.bookloom.pipeline.proofread.RevisionBase;
+import ua.bookloom.pipeline.proofread.RevisionWriter;
 
 /**
  * The model half of backward revision: a segment that waits on characters whose gender is now known is re-rendered by

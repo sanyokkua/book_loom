@@ -34,9 +34,9 @@ import ua.bookloom.api.project.ProofreadOutcome;
 import ua.bookloom.api.project.ProofreadVerdict;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.dial.DialParameterProfiles;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.proofread.ProofreadTallies;
 import ua.bookloom.pipeline.review.SegmentActions;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**

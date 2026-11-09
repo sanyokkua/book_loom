@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.revision;
+package ua.bookloom.pipeline.proofread;
 
 import java.util.List;
 import java.util.Objects;
@@ -23,13 +23,13 @@ import ua.bookloom.pipeline.heal.GateResult;
  */
 @Slf4j
 @RequiredArgsConstructor
-final class RevisionWriter {
+public final class RevisionWriter {
 
     private final SegmentRepository segments;
     private final DeferralRepository deferrals;
 
     /** How a revised target was stored. */
-    enum Stored {
+    public enum Stored {
         /**
          * The machine target was replaced; the segment takes {@link Change#statusAfter}'s status, so a FLAGGED one stays
          * FLAGGED while a finding remains unfixed.
@@ -48,7 +48,7 @@ final class RevisionWriter {
      * swap must never hide a real problem, so a FLAGGED segment becomes REVISED only when every finding it carries is
      * one of these.
      */
-    enum Change {
+    public enum Change {
         /**
          * A renamed glossary target swept in. It fixes a {@code glossary} finding: a finding does not name its term, so
          * every glossary finding on the segment is taken to be about the swapped name. Only the spelling of a name the
@@ -99,7 +99,7 @@ final class RevisionWriter {
      * @return how the target was stored — {@link Stored#STALE} when the segment changed meanwhile, with every
      *     deferral left open — or the storage error
      */
-    Result<Stored> store(
+    public Result<Stored> store(
             final SegmentRecord base,
             final GateResult.Restored revised,
             final List<Deferral> answered,
@@ -193,7 +193,7 @@ final class RevisionWriter {
         return resolveAll(answered).flatMap(done -> deferrals.add(withProposal)).map(added -> Stored.PROPOSAL);
     }
 
-    Result<Boolean> resolveAll(final List<Deferral> answered) {
+    public Result<Boolean> resolveAll(final List<Deferral> answered) {
         for (final Deferral deferral : answered) {
             final Result<Boolean> resolved = deferrals.resolve(deferral.projectId(), deferral.id());
             if (resolved.isErr()) {

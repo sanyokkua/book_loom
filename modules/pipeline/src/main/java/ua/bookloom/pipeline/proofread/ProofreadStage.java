@@ -24,7 +24,6 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.context.TranslatePlanner;
 import ua.bookloom.pipeline.heal.GateFunction;
-import ua.bookloom.pipeline.revision.CodeSweep;
 import ua.bookloom.pipeline.run.NarratorStage;
 import ua.bookloom.pipeline.run.RoutedCalls;
 import ua.bookloom.pipeline.run.RunAudit;
@@ -96,7 +95,7 @@ public final class ProofreadStage {
 
     /** What the code part did, for its end line, and what the windows read after it. */
     private record Done(
-            CodeSweep.Swept swept,
+            TermSweep.Swept swept,
             DeferralSettler.Settled settled,
             List<Mark> marks,
             Stored stored,
@@ -154,7 +153,9 @@ public final class ProofreadStage {
         if (isStopped("the term sweep")) {
             return new RunEnd(JobState.CANCELLED, null);
         }
-        final Result<CodeSweep.Swept> swept = parts.tools().sweep().run(projectId, document);
+        final Result<TermSweep.Swept> swept = parts.tools()
+                .sweep()
+                .run(projectId, document, windows.gate(), settings.frame().targetLanguage());
         if (swept.isErr()) {
             return failed(Objects.requireNonNull(swept.error(), ERROR));
         }
@@ -191,7 +192,7 @@ public final class ProofreadStage {
         return new RunEnd(JobState.COMPLETED, null);
     }
 
-    private Result<Done> settleAndList(final String projectId, final CodeSweep.Swept swept) {
+    private Result<Done> settleAndList(final String projectId, final TermSweep.Swept swept) {
         final String language = settings.frame().targetLanguage();
         return stored(projectId).flatMap(state -> {
             final Map<String, SegmentRecord> byId = new HashMap<>();

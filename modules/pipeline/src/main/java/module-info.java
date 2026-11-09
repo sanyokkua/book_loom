@@ -49,6 +49,8 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.revision to
             com.google.guice;
+    opens ua.bookloom.pipeline.proofread to
+            com.google.guice;
     opens ua.bookloom.pipeline.setup to
             com.google.guice;
     opens ua.bookloom.pipeline.batch to

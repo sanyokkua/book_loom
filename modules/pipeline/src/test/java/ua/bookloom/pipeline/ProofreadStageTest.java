@@ -56,8 +56,8 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.audit.AuditFindings;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 import ua.bookloom.pipeline.proofread.Mark;
-import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * The Proofread stage's code part inside a whole run, at every dial: the audit closes Translate, then the term sweep,
