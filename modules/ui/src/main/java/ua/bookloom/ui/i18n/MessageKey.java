@@ -2619,6 +2619,14 @@ public enum MessageKey {
     EXPORT_BANNER_NOTHING_NOTE("export.banner.nothing.note"),
     /** Banner before Export book: argument 0 is how many segments will be written in the source language. */
     EXPORT_BANNER_SOURCE_FALLBACK("export.banner.source_fallback"),
+    /** Banner before Export book: argument 0 is the windows read, argument 1 the windows planned. */
+    EXPORT_BANNER_PROOFREAD_UNREAD("export.banner.proofreadUnread"),
+    /** Banner before Export book: argument 0 is how many segments wait, argument 1 the facts they wait on, joined. */
+    EXPORT_BANNER_WAITING_FACT("export.banner.waitingFact"),
+    /** One fact a segment waits on: argument 0 is the character's name. */
+    EXPORT_BANNER_WAITING_FACT_GENDER("export.banner.waitingFact.gender"),
+    /** Banner before Export book: argument 0 is how many segments still carry a proofread mark. */
+    EXPORT_BANNER_OPEN_MARKS("export.banner.openMarks"),
     /** Label of the original title. */
     EXPORT_BOOK_TITLE_ORIGINAL("export.bookTitle.original"),
     /** Label of the translated title field. */

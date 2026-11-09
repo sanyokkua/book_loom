@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.NamesPass;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -94,6 +95,7 @@ public final class UiTestInjector {
         private ProjectService projects = new ScriptedProjectService();
         private LanguageSupport languages = tag -> true;
         private ExportService exports = new ScriptedExportService();
+        private ScriptedProofreadProgress proofread = new ScriptedProofreadProgress();
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
         private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
@@ -149,6 +151,12 @@ public final class UiTestInjector {
         /** What the graph's {@link LanguageSupport} is; by default every language has tested rules. */
         public Builder languages(final LanguageSupport value) {
             languages = Objects.requireNonNull(value, "languages");
+            return this;
+        }
+
+        /** What the graph's {@link ProofreadProgress} is. */
+        public Builder proofread(final ScriptedProofreadProgress value) {
+            proofread = Objects.requireNonNull(value, "proofread");
             return this;
         }
 
@@ -360,7 +368,7 @@ public final class UiTestInjector {
             final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
                     .with(
-                            new ReviewPortsModule(glossary, lexicon, namesPass, desk, reviewMode),
+                            new ReviewPortsModule(proofread, glossary, lexicon, namesPass, desk, reviewMode),
                             new ScriptedPorts(),
                             replacements.module(),
                             open));

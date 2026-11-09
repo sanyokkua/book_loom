@@ -1,9 +1,7 @@
 package ua.bookloom.ui;
 
 import com.google.inject.AbstractModule;
-import java.util.Optional;
 import java.util.function.Supplier;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LexiconService;
@@ -21,13 +19,16 @@ final class ReviewPortsModule extends AbstractModule {
     private final ReviewDesk desk;
     private final Supplier<ReviewMode> reviewMode;
     private final MemorySummaries summaries = new MemorySummaries();
+    private final ScriptedProofreadProgress proofread;
 
     ReviewPortsModule(
+            final ScriptedProofreadProgress proofread,
             final GlossaryService glossary,
             final LexiconService lexicon,
             final NamesPass namesPass,
             final ReviewDesk desk,
             final Supplier<ReviewMode> reviewMode) {
+        this.proofread = proofread;
         this.glossary = glossary;
         this.lexicon = lexicon;
         this.namesPass = namesPass;
@@ -43,7 +44,7 @@ final class ReviewPortsModule extends AbstractModule {
         bind(ReviewDesk.class).toInstance(desk);
         bind(ReviewMode.class).toProvider(reviewMode::get);
         bind(SummaryRepository.class).toInstance(summaries);
-        // No stored project has proofread windows left unless a test says so through the run-state inputs.
-        bind(ProofreadProgress.class).toInstance((projectId, batchSize) -> Result.ok(Optional.empty()));
+        // No stored project has proofread windows left unless a test scripts them.
+        bind(ProofreadProgress.class).toInstance(proofread);
     }
 }

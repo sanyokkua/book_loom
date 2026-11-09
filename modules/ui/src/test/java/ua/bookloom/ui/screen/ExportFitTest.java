@@ -8,8 +8,10 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.pipeline.ExportOpenWork;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ProofreadSummary;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.FitProbe;
@@ -54,6 +56,28 @@ class ExportFitTest extends ExportScreenTestBase {
 
         final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
 
+        assertThat(cut).as("parts drawn shorter than their words").isEmpty();
+    }
+
+    // IF the four warnings wrapped badly in Ukrainian, THEN the person would miss which one blocks what.
+    @ParameterizedTest(name = "{0} at {1} x {2}")
+    @CsvSource({"en, 944, 600", "uk, 944, 600"})
+    void screen_allWarningBanners_cutNothing(final String language, final double width, final double height)
+            throws TimeoutException {
+        useLocale(Locale.forLanguageTag(language));
+        proofread.tallyIs(new ProofreadTally(1, 120, 40, 41));
+        exportService().openWorkIs(new ExportOpenWork(4, 3, List.of("Велемир", "Mara Quill")));
+        desk.willAnswerCounts(new ReviewCounts(142, 50, 0, 2, 6, 30, 2, 2, 0, 0, 2));
+        openAndShowExport(EPUB);
+        awaitFx(() -> exports().exportAvailable().get());
+        resizeScene(width, height);
+        awaitFx(() -> isShown("export-banner-proofread") && isShown("export-banner-open-marks"));
+
+        final List<String> cut = ThemeTestSupport.onFx(() -> FitProbe.cutParts(scene.getRoot()));
+
+        assertThat(isShown("export-banner-partial")).isTrue();
+        assertThat(isShown("export-banner-waiting-fact")).isTrue();
+        assertThat(isShown("export-banner-source-fallback")).isTrue();
         assertThat(cut).as("parts drawn shorter than their words").isEmpty();
     }
 }

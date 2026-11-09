@@ -22,6 +22,7 @@ import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ProofreadTally;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -57,6 +58,7 @@ public final class ExportViewModel {
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
     private final ExportProposals proposals;
     private final ExportStatement statement;
+    private final ProofreadStanding proofread;
     private final ExportOccupancy occupancy;
     private final ExportRun run;
     public final NameSuggestion nameSuggestion; // the model's proposal of the translated book's file name
@@ -85,7 +87,8 @@ public final class ExportViewModel {
         this.announcer = dialogs.announcer();
         this.proposals = new ExportProposals(book.projects(), executor, project.book()::get);
         this.nameSuggestion = new NameSuggestion(project, messages, setup, this);
-        this.statement = new ExportStatement(book.desk(), storage.store(), messages, executor);
+        this.statement = new ExportStatement(book.desk(), storage.store(), engine.exports(), messages, executor);
+        this.proofread = book.proofread();
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
         this.run = new ExportRun(
                 engine,
@@ -143,6 +146,11 @@ public final class ExportViewModel {
     /** The project's counts and last written export, or null while they are not known. */
     public ReadOnlyObjectProperty<@Nullable ExportFigures> figures() {
         return statement.figures();
+    }
+
+    /** Where the Proofread stage stands: null at Fast, with segments still to draft, while a run works or all is read. */
+    public ReadOnlyObjectProperty<@Nullable ProofreadTally> proofreadLeft() {
+        return proofread.tally();
     }
 
     /** The running work that rules an export out, or null when none does. */

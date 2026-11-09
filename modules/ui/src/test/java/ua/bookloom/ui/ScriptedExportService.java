@@ -20,6 +20,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportOpenWork;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
@@ -46,10 +47,21 @@ public final class ScriptedExportService implements ExportService {
     private final AtomicInteger cancels = new AtomicInteger();
     private volatile @Nullable CountDownLatch hold;
     private volatile @Nullable Error thrown;
+    private volatile ExportOpenWork openWork = ExportOpenWork.NONE;
 
     /** Makes every successful export answer with {@code scripted}; {@code null} answers a one-segment report. */
     public void reportWith(@Nullable final ExportReport scripted) {
         report = scripted;
+    }
+
+    /** Makes {@link #openWork} answer with {@code scripted} for every project. */
+    public void openWorkIs(final ExportOpenWork scripted) {
+        openWork = Objects.requireNonNull(scripted, "scripted");
+    }
+
+    @Override
+    public Result<ExportOpenWork> openWork(final String projectId) {
+        return Result.ok(openWork);
     }
 
     /** Makes every successful export create its destination file, as a real one does, holding one byte. */

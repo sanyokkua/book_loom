@@ -17,6 +17,7 @@ import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.MemorySettings;
 import ua.bookloom.ui.RecordingProjectRepository;
 import ua.bookloom.ui.ScriptedExportService;
+import ua.bookloom.ui.ScriptedProofreadProgress;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -29,6 +30,7 @@ import ua.bookloom.ui.state.ExportViewModel;
 abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
 
     final MemorySettings stored = new MemorySettings();
+    final ScriptedProofreadProgress proofread = new ScriptedProofreadProgress();
 
     @Override
     protected Injector createInjector(final Locale locale) {
@@ -36,6 +38,7 @@ abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
                 .projects(projects)
                 .models(models)
                 .engine(engine)
+                .proofread(proofread)
                 .glossary(glossary)
                 .lexicon(lexicon)
                 .namesPass(namesPass)

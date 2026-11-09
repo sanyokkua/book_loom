@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
+import javafx.collections.FXCollections;
 import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedModelSettings;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.ScriptedProofreadProgress;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.UiTestInjector;
@@ -121,13 +123,24 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     /** Builds an export view model with a setup helper, or none. FX thread only. */
     ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
-                new ExportBook(current, desk, projects),
+                new ExportBook(current, desk, projects, standing()),
                 new ExportEngine(exportService),
                 new ExportWork(progress, activities),
                 executor,
                 setup,
                 new ExportStorage(storedSettings, store, Clock.fixed(UiTestInjector.NOW, ZoneOffset.UTC)),
                 new ExportDialogs(messages, new RecordingConfirmPrompt(), (ExportOutcome outcome) -> {}));
+    }
+
+    private ProofreadStanding standing() {
+        return new ProofreadStanding(
+                new ProofreadStanding.Ports(new ScriptedProofreadProgress(), models),
+                settings,
+                current,
+                mirror,
+                new DirectExecutor(),
+                Runnable::run,
+                FXCollections.observableArrayList());
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */
