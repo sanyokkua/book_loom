@@ -15,7 +15,7 @@ import ua.bookloom.api.pipeline.CallKind;
 
 /**
  * Words the per-kind call totals the one way every summary line prints them — a run's final line and the
- * {@code prep summary} line the names pass, the brief suggestion and the export end with — so the cost of each part of
+ * {@code prep summary} line the names pass and the brief suggestion end with — so the cost of each part of
  * the work reads the same in a shared log. A figure no call reported prints as {@value #NOT_REPORTED}, never 0.
  */
 @Slf4j
@@ -31,7 +31,7 @@ public final class PrepSummary {
     /**
      * Writes the one INFO line a preparation step ends with, with the seconds per call of each kind it measured.
      *
-     * @param stage the step's short name, {@code names}, {@code brief} or {@code export}
+     * @param stage the step's short name, {@code names} or {@code brief}
      * @param projectId the project the step worked on
      * @param records the calls the step made; none lists no kind
      */
@@ -67,7 +67,7 @@ public final class PrepSummary {
     /**
      * Writes the one INFO line a preparation step ends with.
      *
-     * @param stage the step's short name, {@code names}, {@code brief} or {@code export}
+     * @param stage the step's short name, {@code names} or {@code brief}
      * @param projectId the project the step worked on
      * @param totals the calls the step made, by kind; none lists no kind
      */

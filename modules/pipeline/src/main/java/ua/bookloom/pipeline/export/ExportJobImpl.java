@@ -6,14 +6,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
@@ -25,8 +23,6 @@ import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.CallKindTotals;
-import ua.bookloom.pipeline.PrepSummary;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 
@@ -45,25 +41,16 @@ final class ExportJobImpl implements ExportJob {
     private final ExportRequest request;
     private final ExportParts parts;
     private final ExportProgressListener progress;
-    private final CallLedger ledger;
     private final AtomicBoolean cancelled = new AtomicBoolean();
-    // What the finished line names; the report carries the older consistency summary until the screens read this.
-    private final AtomicReference<ProofreadSummary> proofread = new AtomicReference<>(ProofreadSummary.NONE);
 
-    ExportJobImpl(
-            final ExportRequest request,
-            final ExportParts parts,
-            final ExportProgressListener progress,
-            final CallLedger ledger) {
+    ExportJobImpl(final ExportRequest request, final ExportParts parts, final ExportProgressListener progress) {
         this.request = Objects.requireNonNull(request, "request");
-        this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.parts = Objects.requireNonNull(parts, "parts");
         this.progress = Objects.requireNonNull(progress, "progress");
     }
 
     @Override
     public Result<ExportReport> run() {
-        final long mark = ledger.mark();
         try {
             log.info(
                     "export starting project={} destination={} overwrite={} sideFiles={}",
@@ -77,8 +64,6 @@ final class ExportJobImpl implements ExportJob {
             return result;
         } catch (Exception cause) {
             return Result.err(internalError("run the export", cause));
-        } finally {
-            PrepSummary.log("export", request.projectId(), CallKindTotals.of(ledger.since(mark)));
         }
     }
 
@@ -119,7 +104,6 @@ final class ExportJobImpl implements ExportJob {
         log.debug("export step=read-records project={} keptKinds={}", project.id(), kept);
         final List<SegmentRecord> stored = inputs.records();
         final ProofreadSummary summary = ProofreadSummaries.of(inputs.book(), stored, inputs.open());
-        proofread.set(summary);
         final EffectiveTargets targets = EffectiveTargets.apply(
                 opened,
                 stored,
@@ -135,8 +119,8 @@ final class ExportJobImpl implements ExportJob {
         return publish(project, targets, fallbacks, inputs.book().glossary(), summary);
     }
 
-    // The side files are built once the book is written, so the quality report counts the segments the check had to
-    // write in their source.
+    // The side files are built once the book is written, so the quality report counts the segments that had to be
+    // written in their source.
     private Result<ExportReport> publish(
             final Project project,
             final EffectiveTargets targets,
@@ -228,7 +212,7 @@ final class ExportJobImpl implements ExportJob {
             return;
         }
         final ExportReport report = Objects.requireNonNull(result.data(), "report");
-        final ProofreadSummary summary = Objects.requireNonNull(proofread.get(), "proofread");
+        final ProofreadSummary summary = report.proofread();
         log.info(
                 "export finished project={} destination={} written={} pending={} sourceKept={} keptVerbatim={}"
                         + " flaggedWritten={} autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}"

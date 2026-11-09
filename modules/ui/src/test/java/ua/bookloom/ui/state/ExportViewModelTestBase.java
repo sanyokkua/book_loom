@@ -134,7 +134,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
 
     private ProofreadStanding standing() {
         return new ProofreadStanding(
-                new ProofreadStanding.Ports(new ScriptedProofreadProgress(), models),
+                new ProofreadStanding.Ports(new ScriptedProofreadProgress(), new ModelBatchSize(models, settings)),
                 settings,
                 current,
                 mirror,

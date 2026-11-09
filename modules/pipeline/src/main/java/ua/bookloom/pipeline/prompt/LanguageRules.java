@@ -290,6 +290,16 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
+     * Whether a target language capitalises its common nouns, from its {@code capitalisesNouns} key.
+     *
+     * @param targetTag the non-null target language tag
+     * @return {@code true} only when the language's file says {@code capitalisesNouns=true}
+     */
+    public boolean capitalisesNouns(final String targetTag) {
+        return "true".equalsIgnoreCase(targetValue(Objects.requireNonNull(targetTag, TARGET_TAG), "capitalisesNouns"));
+    }
+
+    /**
      * The letter table of a target language, from its {@code translit} key, rows written {@code source>letters}
      * ({@code sh>ш}): the letters a transliteration of a source word that opens so may open with.
      *

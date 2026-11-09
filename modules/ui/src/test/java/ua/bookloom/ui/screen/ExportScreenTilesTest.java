@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import javafx.scene.Node;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -140,12 +141,14 @@ class ExportScreenTilesTest extends ExportScreenTestBase {
     }
 
     @Test
-    void proofreadLine_noExport_dash() throws TimeoutException {
+    void proofreadLine_noExport_isHidden() throws TimeoutException {
         desk.willAnswerCounts(counts(68));
         openAndShowExport(EPUB);
 
         awaitFx(() -> "74 of 142".equals(labelText("export-written-value")));
 
-        assertThat(labelText("export-proofread-line")).isEqualTo("—");
+        final Node line = required("export-proofread-line");
+        assertThat(line.isVisible()).isFalse();
+        assertThat(line.isManaged()).isFalse();
     }
 }

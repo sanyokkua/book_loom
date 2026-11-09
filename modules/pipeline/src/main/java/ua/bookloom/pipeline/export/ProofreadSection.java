@@ -13,7 +13,7 @@ import ua.bookloom.api.pipeline.ProofreadSummary;
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ConsistencySection {
+final class ProofreadSection {
 
     /**
      * Words the proofread summary.

@@ -239,10 +239,9 @@ class ExportJobImplTest {
         assertThat(entries(tempDir.resolve("b.epub"))).isEqualTo(entries(tempDir.resolve("a.epub")));
     }
 
-    // A provider that answers nothing never stops a book from being written: the export asks it nothing, not even
-    // about a flagged segment.
+    // A flagged segment is written as stored: no model is consulted for it.
     @Test
-    void export_providerDown_writesFile() {
+    void export_flaggedSegment_writesStoredText() {
         final String id = markdown("He went away.");
         fixture.flag(id, "Book.md:0", "Він пішов геть.");
         final Path destination = tempDir.resolve("Book.uk.md");

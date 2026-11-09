@@ -17,9 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelProfile;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ProofreadProgress;
 import ua.bookloom.api.pipeline.ProofreadTally;
@@ -39,7 +36,7 @@ import ua.bookloom.ui.BackgroundExecutor;
 public final class ProofreadStanding {
 
     private final ProofreadProgress progress;
-    private final ChatModelFactory models;
+    private final ModelBatchSize batchSizes;
     private final SettingsViewModel settings;
     private final CurrentProject current;
     private final Executor background;
@@ -53,7 +50,7 @@ public final class ProofreadStanding {
     /**
      * Follows the open project and the run's state.
      *
-     * @param ports the planner of the windows and the factory the chosen model's batch size is read from
+     * @param ports the planner of the windows and the reader of the chosen model's batch size
      * @param settings the chosen model
      * @param current the open project
      * @param mirror the run's state, whose settling reads the tally again
@@ -80,7 +77,7 @@ public final class ProofreadStanding {
             final Executor fx,
             final Observable glossary) {
         this.progress = Objects.requireNonNull(ports, "ports").progress();
-        this.models = ports.models();
+        this.batchSizes = ports.batchSizes();
         this.settings = Objects.requireNonNull(settings, "settings");
         this.current = Objects.requireNonNull(current, "current");
         this.background = Objects.requireNonNull(background, "background");
@@ -118,15 +115,15 @@ public final class ProofreadStanding {
      * The ports the standing reads.
      *
      * @param progress the planner of a stored project's proofread windows
-     * @param models the factory the chosen model's profile, and so its batch size, comes from
+     * @param batchSizes the reader of the chosen model's batch size
      */
-    public record Ports(ProofreadProgress progress, ChatModelFactory models) {
+    public record Ports(ProofreadProgress progress, ModelBatchSize batchSizes) {
 
         /** Rejects a missing port. */
         @Inject
         public Ports {
             Objects.requireNonNull(progress, "progress");
-            Objects.requireNonNull(models, "models");
+            Objects.requireNonNull(batchSizes, "batchSizes");
         }
     }
 
@@ -161,7 +158,7 @@ public final class ProofreadStanding {
     }
 
     private void read(final long ask, final String projectId, final @Nullable ModelSelection chosen) {
-        final @Nullable ProofreadTally now = known(ask, "tally", progress.tally(projectId, batchSize(chosen)))
+        final @Nullable ProofreadTally now = known(ask, "tally", progress.tally(projectId, batchSizes.of(chosen)))
                 .flatMap(found -> found)
                 .orElse(null);
         final boolean work =
@@ -186,12 +183,5 @@ public final class ProofreadStanding {
                     error.code());
         }
         return Optional.ofNullable(read.data());
-    }
-
-    // Binding a model makes no call; a choice that cannot be bound plans with the built-in batch size.
-    private int batchSize(final @Nullable ModelSelection chosen) {
-        final @Nullable ChatModel model =
-                chosen == null ? null : models.create(chosen).data();
-        return model == null ? ModelProfile.DEFAULT_BATCH_SIZE : model.profile().batchSize();
     }
 }

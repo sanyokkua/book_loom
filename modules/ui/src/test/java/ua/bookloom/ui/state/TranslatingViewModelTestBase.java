@@ -186,7 +186,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     private ProofreadStanding standing() {
         return new ProofreadStanding(
-                new ProofreadStanding.Ports(progress(), models),
+                new ProofreadStanding.Ports(progress(), new ModelBatchSize(models, settings)),
                 settings,
                 current,
                 mirror,

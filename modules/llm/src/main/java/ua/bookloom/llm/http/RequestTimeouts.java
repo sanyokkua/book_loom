@@ -11,7 +11,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ProviderConfig;
 
 /**
- * Chooses a chat call's request timeout by what the call is for. The reviewer and the helper calls have a capped,
+ * Chooses a chat call's request timeout by what the call is for. The helper calls have a capped,
  * short reply, so their own bound ends a stuck call long before the provider's flat timeout would, unless the call
  * thinks first, which lengthens the bound to 60 ms per expected token; every other call scales with its expected
  * output, the reasoning reserve included, never below the provider's configured timeout.
@@ -29,7 +29,7 @@ public final class RequestTimeouts {
      *
      * @param config the provider config a chat call is about to be sent with
      * @param request the call; its kind and expected output choose the timeout
-     * @return a copy whose timeout is 90 s for a reviewer call, 120 s for a prescan, glossary review or summary call
+     * @return a copy whose timeout is {@link CallLimits#HELPER_TIMEOUT} for a prescan, glossary review, summary or other helper call
      *     (for a call with room reserved for reasoning, the longer of that and 60 ms per expected token), and otherwise
      *     {@code max(config.requestTimeout(), min(600s, expectedOutputTokens * 500ms))}; {@code config} unchanged when
      *     the call has neither one of those kinds nor an expected output

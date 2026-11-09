@@ -28,7 +28,16 @@ public final class ModelBatchSize {
      * @return the most segments one draft call carries; positive; FX thread only
      */
     public int current() {
-        final @Nullable ModelSelection chosen = settings.selection().orElse(null);
+        return of(settings.selection().orElse(null));
+    }
+
+    /**
+     * Reads the profile of a model chosen earlier, so a background read can use a choice captured on the FX thread.
+     *
+     * @param chosen the model, or null for none
+     * @return the most segments one draft call carries; positive; any thread
+     */
+    public int of(final @Nullable ModelSelection chosen) {
         final @Nullable ChatModel model = chosen == null
                 ? null
                 : Objects.requireNonNull(models, "models").create(chosen).data();

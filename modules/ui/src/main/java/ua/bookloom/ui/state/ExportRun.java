@@ -141,8 +141,7 @@ final class ExportRun {
     private ExportActivity register(final ExportRequest request) {
         final ActivityTracker.Handle registered = activities.begin(ActivityKind.EXPORT, this::stop);
         handle = registered;
-        final ExportActivity shown =
-                new ExportActivity(registered, messages, request.destination(), null, activities::now);
+        final ExportActivity shown = new ExportActivity(registered, messages, request.destination());
         shown.announce(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         return shown;
     }

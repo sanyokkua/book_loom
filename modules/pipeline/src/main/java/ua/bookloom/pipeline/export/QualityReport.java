@@ -65,7 +65,7 @@ final class QualityReport {
                 + "\n## Suspicious accepted segments\n\n"
                 + suspicious(sources.suspicious())
                 + "\n## Proofread\n\n"
-                + ConsistencySection.of(summary);
+                + ProofreadSection.of(summary);
         log.debug(
                 "Quality report built title={} length={} proofreadReRead={} proofreadWaiting={}",
                 title,

@@ -81,7 +81,7 @@ final class NeverWorseVetoes {
             new Rule("stress-mark", pair -> rises(pair, text -> (long) StressMarks.count(text))),
             new Rule("doubled-word", pair -> rises(pair, TextChecks::doubledWords)),
             new Rule("sentence-case", pair -> rises(pair, CaseVetoes::lowerStarts)),
-            new Rule("mid-capital", pair -> exceeds(pair, CaseVetoes::midCapitals)));
+            new Rule("mid-capital", NeverWorseVetoes::raisesMidCapitals));
 
     /**
      * The first veto the candidate breaks.
@@ -169,6 +169,13 @@ final class NeverWorseVetoes {
         final long source = measure.applyAsLong(pair.source());
         log.trace("Never-worse measure {}->{} source={}", before, after, source);
         return after > Math.max(before, source);
+    }
+
+    // A language that capitalises its common nouns has no mid-sentence capital that marks a name.
+    private static boolean raisesMidCapitals(final Pair pair) {
+        final String target = pair.facts().targetLanguage();
+        return !LanguageRules.bundled().capitalisesNouns(target)
+                && exceeds(pair, text -> CaseVetoes.midCapitals(text, target));
     }
 
     // A source language with no negation list gives no bound, so the candidate is held to the current text alone.

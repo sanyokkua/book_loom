@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportOpenWork;
@@ -31,12 +30,6 @@ public final class ExportServiceImpl implements ExportService {
     private final RunStores stores;
     private final DocumentPort documents;
     private final DeferralRepository deferrals;
-    private final CallLedger ledger;
-
-    /** An export service whose calls are counted nowhere (tests). */
-    public ExportServiceImpl(final RunStores stores, final DocumentPort documents, final DeferralRepository deferrals) {
-        this(stores, documents, deferrals, CallLedger.none());
-    }
 
     @Override
     public Result<ExportJob> newExport(final ExportRequest request) {
@@ -112,7 +105,7 @@ public final class ExportServiceImpl implements ExportService {
         if (checked.isErr()) {
             return Result.err(Objects.requireNonNull(checked.error(), "error"));
         }
-        return Result.ok(new ExportJobImpl(request, parts(moves), progress, ledger));
+        return Result.ok(new ExportJobImpl(request, parts(moves), progress));
     }
 
     private ExportParts parts(final ExportMoveOperation moves) {

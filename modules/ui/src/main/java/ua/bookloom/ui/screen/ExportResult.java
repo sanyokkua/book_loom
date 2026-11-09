@@ -196,7 +196,8 @@ final class ExportResult {
                 messages.get(last == null ? MessageKey.EXPORT_TILE_DONE : MessageKey.EXPORT_TILE_WRITTEN));
         validCaption.setText(
                 messages.get(last == null ? MessageKey.EXPORT_TILE_VALID : MessageKey.EXPORT_TILE_VALID_DONE));
-        proofreadLine.setText(last == null ? DASH : ExportReportLines.proofreadLine(messages, last.proofread()));
+        proofreadLine.setText(last == null ? "" : ExportReportLines.proofreadLine(messages, last.proofread()));
+        Visibility.show(proofreadLine, last != null);
         valid.setText(last == null ? DASH : CHECK);
         valid.getStyleClass().remove(Tone.OK.statusClass());
         if (last != null) {

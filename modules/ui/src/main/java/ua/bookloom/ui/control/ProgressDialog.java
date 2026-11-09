@@ -341,9 +341,6 @@ public final class ProgressDialog extends ModalCard {
         if (now.kind() == ActivityKind.SUGGEST_NAME) {
             return messages.get(MessageKey.PROGRESS_SUGGEST_NAME_PURPOSE);
         }
-        if (now.title() == MessageKey.PROGRESS_EXPORT_TITLE) {
-            return messages.get(MessageKey.PROGRESS_EXPORT_PURPOSE);
-        }
         if (!now.cancellable()) {
             return messages.get(MessageKey.BUSY_NOT_CANCELLABLE);
         }

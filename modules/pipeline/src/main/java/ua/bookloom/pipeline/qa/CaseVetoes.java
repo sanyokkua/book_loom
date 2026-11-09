@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.pipeline.prompt.AddressForms;
 
 /**
  * The capital-letter counts behind the {@code sentence-case} and {@code mid-capital} vetoes of {@link NeverWorse}.
@@ -24,10 +25,13 @@ final class CaseVetoes {
                 .count();
     }
 
-    static long midCapitals(final String text) {
+    // A formal "you" (Ви, Вас) is capitalised wherever it stands, so it is no sign of a name.
+    static long midCapitals(final String text, final String targetLanguage) {
         final Set<Integer> sentenceStarts = new HashSet<>(SentenceStarts.of(text));
+        final Set<String> formal = AddressForms.formal(targetLanguage);
         return WORD.matcher(text)
                 .results()
+                .filter(word -> !formal.contains(word.group()))
                 .filter(word -> !sentenceStarts.contains(word.start()))
                 .filter(word -> Character.isUpperCase(text.codePointAt(word.start())))
                 .count();

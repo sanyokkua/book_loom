@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param autoAccepted segments accepted without repair
  * @param reviewed segments a person acted on
  * @param sideFiles the side files written beside the book
- * @param verifiedSegments the body segments the consistency check verified
+ * @param verifiedSegments the body segments the export re-opened and verified before it published the book
  * @param proofread what the Proofread stage had re-read and what still waits, read from the stored records
  * @param keptVerbatim segments written as they are because nothing in them needed translating (numbers, symbols,
  *     Roman numerals, a single character); counted in {@code written}, never in {@code sourceKept}

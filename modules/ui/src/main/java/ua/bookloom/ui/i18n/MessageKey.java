@@ -115,14 +115,8 @@ public enum MessageKey {
     EXPORT_PROGRESS_WRITING("export.progress.writing"),
     /** Busy-card detail label: the file being worked on. */
     ACTIVITY_DETAIL_FILE("activity.detail.file"),
-    /** Busy-card detail label: the model being asked. */
-    ACTIVITY_DETAIL_MODEL("activity.detail.model"),
-    /** Busy-card detail label: how many model requests were sent. */
-    ACTIVITY_DETAIL_REQUESTS("activity.detail.requests"),
     /** Busy-card detail label: how many segments of a step counted by segment are done. */
     ACTIVITY_DETAIL_SEGMENTS("activity.detail.segments"),
-    /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
-    ACTIVITY_DETAIL_OF("activity.detail.of"),
     /** Progress dialog: label of the button that stops the work. */
     BUSY_CANCEL("busy.cancel"),
     /** Hover explanation of the progress dialog's Cancel button. */
@@ -2152,10 +2146,6 @@ public enum MessageKey {
     /** The estimate under that button; arguments are the fewest and most minutes and the dial's name. */
     NAMES_STYLE_AUTO_ABOUT("namesStyle.auto.about"),
     PROGRESS_NAMES_PURPOSE("progress.namesPurpose"),
-    /** Heading of the progress dialog of an export that runs the last check before saving. */
-    PROGRESS_EXPORT_TITLE("progress.exportTitle"),
-    /** Purpose line of the progress dialog of an export that runs the last check before saving. */
-    PROGRESS_EXPORT_PURPOSE("progress.exportPurpose"),
     RECURRING_HELP_LINK("namesStyle.recurring.helpLink"),
     RECURRING_HELP_LINK_TIP("namesStyle.recurring.helpLink.tip"),
     RECURRING_HELP("namesStyle.recurring.help"),

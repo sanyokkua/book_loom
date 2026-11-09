@@ -43,6 +43,7 @@ class WholeBookSoakTest {
         SoakReport.print(shape.name(), outcome);
         SoakAssertions.assertFinishedAndDecided(outcome);
         SoakAssertions.assertEveryFaultAnswered(outcome);
+        SoakAssertions.assertPlainProofreadReplyChangedNothing(outcome, exported);
         SoakAssertions.assertBounded(outcome);
         SoakAssertions.assertRetainedPerSegment(outcome);
         SoakAssertions.assertNoLeftoverPlaceholders(exported);

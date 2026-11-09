@@ -15,6 +15,7 @@ import ua.bookloom.document.archfixture.LombokAnnotatedService;
 import ua.bookloom.llm.archfixture.SqlUsingClient;
 import ua.bookloom.persistence.archfixture.FixtureProjectDao;
 import ua.bookloom.pipeline.archfixture.HttpUsingCoordinator;
+import ua.bookloom.pipeline.export.archfixture.ModelUsingExporter;
 import ua.bookloom.ui.archfixture.ConcreteDaoConsumer;
 import ua.bookloom.ui.archfixture.FxUsingView;
 import ua.bookloom.ui.archfixture.InlineStyledView;
@@ -82,6 +83,16 @@ class RuleViolationFixtureTest {
                 ArchitectureRules.NO_HTTP_IN_CORE_EXCEPT_LLM,
                 fixture(HttpUsingCoordinator.class),
                 HttpUsingCoordinator.class.getName());
+    }
+
+    // ===== 10. export-makes-no-model-call ================================================================
+
+    @Test
+    void exportMakesNoModelCall_chatModelInsideExport_isRejected() {
+        assertRejects(
+                ArchitectureRules.EXPORT_MAKES_NO_MODEL_CALL,
+                fixture(ModelUsingExporter.class),
+                ModelUsingExporter.class.getName());
     }
 
     // ===== 5. no-sql-in-core-except-persistence ==========================================================

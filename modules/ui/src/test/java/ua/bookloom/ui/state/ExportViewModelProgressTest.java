@@ -14,11 +14,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgress.Step;
 import ua.bookloom.ui.BookFixtures;
-import ua.bookloom.ui.LiveCallFixtures;
 
 /** An export is a blocking, stoppable activity that shows the step and the call count its job announces. */
 class ExportViewModelProgressTest extends ExportViewModelTestBase {
@@ -101,26 +99,6 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         assertThat(shown.kind()).isEqualTo(ActivityKind.EXPORT);
         assertThat(shown.cancellable()).isTrue();
         assertThat(shown.details()).extracting(Activity.Detail::value).contains("Frankenstein.uk.epub");
-        exportService.release();
-    }
-
-    // IF the pass's calls never reached the activity, THEN the busy card could not show what the model is asked.
-    @Test
-    void export_jobShowsACall_theActivityCarriesItForTheCallView() throws Exception {
-        exportService.announceCalls(LiveCallFixtures.waiting(3, 1, "Two.", LiveCallFixtures.smallPrompt()));
-        exportService.holdRuns();
-
-        export();
-        WaitForAsyncUtils.waitFor(
-                5,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().calls().current() != null));
-
-        final Activity shown = onFx(() -> activities.running().getFirst());
-        assertThat(shown.calls().current())
-                .isNotNull()
-                .extracting(CallSnapshot::callId)
-                .isEqualTo(3L);
         exportService.release();
     }
 

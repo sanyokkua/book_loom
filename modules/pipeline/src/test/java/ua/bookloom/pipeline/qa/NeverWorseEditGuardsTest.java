@@ -5,6 +5,7 @@ import static ua.bookloom.pipeline.qa.NeverWorseTest.EN;
 import static ua.bookloom.pipeline.qa.NeverWorseTest.en;
 import static ua.bookloom.pipeline.qa.NeverWorseTest.facts;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -62,6 +63,29 @@ class NeverWorseEditGuardsTest {
 
         final Verdict verdict = NeverWorse.judge(
                 en(source, "Він зустрів анну сміт."), en(source, "Він зустрів Анну Сміт."), facts(source, EN));
+
+        assertThat(verdict).isNotEqualTo(new Verdict.Reject("mid-capital"));
+    }
+
+    @Test
+    void judge_capitalisesAFormalAddressForm_isNoMidCapitalVeto() {
+        final String source = "Tell me, do you know the way?";
+
+        final Verdict verdict = NeverWorse.judge(
+                en(source, "Скажіть, чи ви знаєте дорогу?"),
+                en(source, "Скажіть, чи Ви знаєте дорогу?"),
+                facts(source, EN));
+
+        assertThat(verdict).isNotEqualTo(new Verdict.Reject("mid-capital"));
+    }
+
+    @Test
+    void judge_capitalisedNounsInATargetThatCapitalisesThem_isNoMidCapitalVeto() {
+        final String source = "He opened the door in the house.";
+        final WindowFacts german = WindowFacts.of(source, EN, "de", List.of(), null, false);
+
+        final Verdict verdict = NeverWorse.judge(
+                en(source, "Er öffnete die tür im haus."), en(source, "Er öffnete die Tür im Haus."), german);
 
         assertThat(verdict).isNotEqualTo(new Verdict.Reject("mid-capital"));
     }

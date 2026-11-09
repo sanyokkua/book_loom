@@ -6,11 +6,12 @@ import ua.bookloom.ui.i18n.MessageKey;
 /**
  * The kinds of work that talk to the model or to the provider, and which of them may not run beside each other.
  *
- * <p>The local model serves one request at a time, so every kind that asks it for text — the run, the names' and terms' scan,
- * review and translate, a review retry, the provider's inference test and an export is not among them: it asks no model — and the rest is
- * <em>exclusive</em>: one excludes every other. The light provider checks (connection, model list) and the model
- * listing ask the server, not the model, so they may run during a run; any kind still excludes a second of its own
- * kind. The relation is symmetric by construction ({@link #conflictsWith}).
+ * <p>The local model serves one request at a time, so every kind that asks it for text (the run, the names' and terms'
+ * scan, review and translate, a review retry, the provider's inference test) is <em>exclusive</em>: one excludes every
+ * other. The light provider checks (connection, model list) and the model listing ask the server, not the model, so
+ * they may run during a run; any kind still excludes a second of its own kind. {@link #EXPORT} asks no model, but it is
+ * exclusive too, because the export is not allowed while a translation is at work. The relation is symmetric by
+ * construction ({@link #conflictsWith}).
  */
 public enum ActivityKind {
 

@@ -139,6 +139,8 @@ final class RunReport {
         export.put("autoAccepted", report.autoAccepted());
         export.put("keptVerbatim", report.keptVerbatim());
         export.put("verifiedSegments", report.verifiedSegments());
+        export.put("proofreadReRead", report.proofread().reRead());
+        export.put("proofreadWaiting", report.proofread().waiting());
         final ArrayNode fallbacks = export.putArray("sourceFallbacks");
         for (final SourceFallback fallback : report.sourceFallbacks()) {
             fallbacks

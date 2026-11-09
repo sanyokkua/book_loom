@@ -57,7 +57,7 @@ final class RetryRequests {
      */
     record Note(String text, boolean lower) {
 
-        /** No note, at the draft's own temperature: the consistency pass's retry. */
+        /** No note, at the draft's own temperature: a retry that proposes a candidate without the person's instruction. */
         static final Note NONE = new Note("", false);
 
         /** Rejects a missing text. */

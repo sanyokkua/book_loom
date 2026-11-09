@@ -60,6 +60,9 @@ final class FaultyModel implements ChatModel {
         THROW
     }
 
+    /** The words of the plain-text proofread reply the {@link Fault#PROOFREAD_TEXT} fault answers with. */
+    static final String PLAIN_PROOFREAD_REPLY = "The windows read well, nothing to change.";
+
     /** The message of an injected throw, so the log check can tell it from a real one. */
     static final String INJECTED = "soak: injected fault";
 
@@ -173,8 +176,7 @@ final class FaultyModel implements ChatModel {
             case TIMEOUT, UPSTREAM_BURST, UNREACHABLE, OUTAGE, MODEL_UNLOADED, EMPTY_COMPLETION ->
                 Result.err(failure(fault));
             case HANG -> hang();
-            case PROOFREAD_TEXT ->
-                Result.ok(new ChatResponse("The windows read well, nothing to change.", FinishReason.STOP));
+            case PROOFREAD_TEXT -> Result.ok(new ChatResponse(PLAIN_PROOFREAD_REPLY, FinishReason.STOP));
             case THROW -> throw new IllegalStateException(INJECTED);
             case NONE, EMPTY_TARGET, DROP_TOKEN, DUPLICATE_TOKEN, GARBLE_TOKEN, STRAY_BRACKET, REFUSAL ->
                 reply(fault, request);

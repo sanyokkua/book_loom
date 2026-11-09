@@ -253,5 +253,7 @@ Enforced as JUnit tests in a shared `arch-test` source set, run in CI (and `pre-
    nodes, tooltips, context menus, menu items, tabs. Styling comes from the single `theme.css` token sheet and style
    classes (`getStyleClass()` stays allowed), so a theme swap reaches every element (`FR-THEME-5`,
    `.claude/rules/theming-tokens.md`).
+10. **export-makes-no-model-call** — no class in `ua.bookloom.pipeline.export..` depends on `ChatModel`,
+    `ChatModelFactory` or `InferenceGate`: the checked export reads stored decisions and reaches no provider.
 
 A failing ArchUnit test fails the build; the boundary is not a guideline.

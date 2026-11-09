@@ -29,6 +29,13 @@ final class SoakAssertions {
     /** The fixture's own repository path, relative to the module the tests run in. */
     static final Path FIXTURES = Path.of("..", "app", "src", "test", "resources", "fixtures", "earth-gravity");
 
+    private static final Set<ErrorCode> FLAG_REASONS = Set.of(
+            ErrorCode.emptyCompletion,
+            ErrorCode.validation,
+            ErrorCode.timeout,
+            ErrorCode.upstream,
+            ErrorCode.unreachable,
+            ErrorCode.modelUnavailable);
     private static final int EXTRA_THREADS = 2;
     private static final long MAX_HEAP_MIB = 400;
     private static final long MAX_BYTES_PER_SEGMENT = 16 * 1024;
@@ -91,8 +98,28 @@ final class SoakAssertions {
                 .as("the long outage was waited through")
                 .isGreaterThanOrEqualTo(7);
         assertThat(outcome.virtual()).isGreaterThan(Duration.ofMinutes(25));
-        // Which other reasons strike a segment twice is chance; an empty reply always flags its segment.
-        assertThat(reasons(outcome.report().flaggedSegments())).contains(ErrorCode.emptyCompletion);
+        // An empty reply always flags its segment. Which other fault strikes a segment twice depends on the seed, so
+        // those are held to the reasons a flagged segment may carry, none unexplained.
+        assertThat(reasons(outcome.report().flaggedSegments()))
+                .contains(ErrorCode.emptyCompletion)
+                .isSubsetOf(FLAG_REASONS);
+    }
+
+    /**
+     * A proofread reply in plain text where JSON was asked for is no reading: the window changes nothing and keeps no
+     * verdict, so the reply's words reach neither the exported text nor the run's end.
+     */
+    static void assertPlainProofreadReplyChangedNothing(final SoakRun.Outcome outcome, final Path exported) {
+        assertThat(outcome.injected().get(Fault.PROOFREAD_TEXT))
+                .as("a plain-text proofread reply was injected")
+                .isPositive();
+        assertThat(outcome.report().end()).isEqualTo(JobState.COMPLETED);
+        try {
+            assertThat(Files.readString(exported, StandardCharsets.UTF_8))
+                    .doesNotContain(FaultyModel.PLAIN_PROOFREAD_REPLY);
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
     }
 
     /** No placeholder of the masking survived into the exported text. */

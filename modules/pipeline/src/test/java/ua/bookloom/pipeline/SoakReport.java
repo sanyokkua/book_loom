@@ -14,7 +14,7 @@ final class SoakReport {
         final String line = String.format(
                 java.util.Locale.ROOT,
                 "soak %s: %s segments=%d accepted=%d flagged=%d counts=%s exported=%d calls=%d elapsed=%s virtual=%s"
-                        + " heap=%s bytesPerSegment=%d threads=%d->%d %s injected=%s errors=%d",
+                        + " heap=%s bytesPerSegment=%d threads=%d->%d %s injected=%s errors=%d reasons=%s",
                 name,
                 outcome.report().end(),
                 outcome.documentSegments(),
@@ -31,7 +31,12 @@ final class SoakReport {
                 outcome.threadsAfter(),
                 outcome.events(),
                 outcome.injected(),
-                outcome.errors().size());
+                outcome.errors().size(),
+                outcome.report().flaggedSegments().stream()
+                        .collect(java.util.stream.Collectors.groupingBy(
+                                flagged -> flagged.reason(),
+                                java.util.TreeMap::new,
+                                java.util.stream.Collectors.counting())));
         log.info("{}", line);
     }
 }
