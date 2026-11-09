@@ -34,7 +34,7 @@ final class SoakReport {
                 outcome.errors().size(),
                 outcome.report().flaggedSegments().stream()
                         .collect(java.util.stream.Collectors.groupingBy(
-                                flagged -> flagged.reason(),
+                                ua.bookloom.api.pipeline.FlaggedSegment::reason,
                                 java.util.TreeMap::new,
                                 java.util.stream.Collectors.counting())));
         log.info("{}", line);
