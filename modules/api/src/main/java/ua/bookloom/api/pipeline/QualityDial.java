@@ -6,12 +6,12 @@ package ua.bookloom.api.pipeline;
  */
 public enum QualityDial {
 
-    /** No reviewer; fastest wall-clock time. */
+    /** No fixing call beyond lost marks and no proofread call; fastest wall-clock time. */
     FAST,
 
     /** The default balance of speed and repair/review effort. */
     BALANCED,
 
-    /** A second reviewer pass and the backward-revision pass. */
+    /** One repair and a proofread that also re-reads the whole book. */
     MAX
 }

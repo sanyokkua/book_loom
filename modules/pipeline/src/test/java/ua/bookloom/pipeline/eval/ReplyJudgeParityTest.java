@@ -39,7 +39,7 @@ class ReplyJudgeParityTest {
         final QualityLoop loop = new QualityLoop();
         final LoopSettings settings = new LoopSettings(
                         ReviewMode.UNATTENDED,
-                        new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
+                        new DialParameters(RepairMode.ONE, ProofreadCoverage.NONE),
                         project.frame(),
                         project.settings().names(),
                         List.of())

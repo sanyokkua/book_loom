@@ -9,10 +9,7 @@ import javafx.scene.layout.GridPane;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.DialProfile;
-import ua.bookloom.api.pipeline.DialProfiles;
-import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.ui.control.ReadOnlyGrid;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -34,9 +31,9 @@ final class GenerationQualityTable {
 
     private record Row(String name, MessageKey label, Function<DialProfile, String> cell) {}
 
-    static GridPane of(final Messages messages, final DialProfiles profiles) {
+    static GridPane of(final Messages messages, final QualityWords words) {
         Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(profiles, "profiles");
+        Objects.requireNonNull(words, "words");
         final GridPane grid = ReadOnlyGrid.of("generation-quality", WIDTHS);
         grid.setHgap(GAP);
         grid.setVgap(GAP);
@@ -49,48 +46,28 @@ final class GenerationQualityTable {
                     column(dial),
                     0);
         }
-        final List<Row> rows = rows(messages);
+        final List<Row> rows = rows(words);
         for (int index = 0; index < rows.size(); index++) {
-            addRow(grid, messages, profiles, rows.get(index), index + 1);
+            addRow(grid, messages, words, rows.get(index), index + 1);
         }
         return grid;
     }
 
     private static void addRow(
-            final GridPane grid, final Messages messages, final DialProfiles profiles, final Row row, final int line) {
+            final GridPane grid, final Messages messages, final QualityWords words, final Row row, final int line) {
         grid.add(cell("generation-quality-label-" + row.name(), messages.get(row.label()), "kv-key"), 0, line);
         for (final QualityDial dial : DIALS) {
             final String id =
                     "generation-quality-" + row.name() + "-" + dial.name().toLowerCase(Locale.ROOT);
-            grid.add(cell(id, row.cell().apply(profiles.of(dial)), "kv-value"), column(dial), line);
+            grid.add(cell(id, row.cell().apply(words.profile(dial)), "kv-value"), column(dial), line);
         }
     }
 
-    private static List<Row> rows(final Messages messages) {
+    private static List<Row> rows(final QualityWords words) {
         return List.of(
-                new Row(
-                        "repair",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR,
-                        profile -> messages.get(
-                                profile.repair() == RepairMode.ONE
-                                        ? MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR_ONE
-                                        : MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY)),
-                new Row(
-                        "reviews",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_REVIEWS,
-                        profile -> Integer.toString(profile.reviewPasses())),
-                new Row(
-                        "proofread",
-                        MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD,
-                        profile -> messages.get(coverageKey(profile.proofreadCoverage()))));
-    }
-
-    private static MessageKey coverageKey(final ProofreadCoverage coverage) {
-        return switch (coverage) {
-            case NONE -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_NONE;
-            case MARKED_AND_DOUBTFUL -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_MARKED;
-            case MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH -> MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD_WHOLE;
-        };
+                new Row("repair", MessageKey.SETTINGS_GENERATION_QUALITY_REPAIR, words::fixing),
+                new Row("proofread", MessageKey.SETTINGS_GENERATION_QUALITY_PROOFREAD, words::proofread),
+                new Row("extra", MessageKey.SETTINGS_GENERATION_QUALITY_EXTRA, words::extra));
     }
 
     private static int column(final QualityDial dial) {

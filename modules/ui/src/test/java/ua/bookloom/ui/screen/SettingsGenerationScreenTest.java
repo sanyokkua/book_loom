@@ -13,8 +13,10 @@ import javafx.scene.control.TextInputControl;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.MemorySettings;
+import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
+import ua.bookloom.ui.state.SettingsViewModel;
 
 /** Settings › Generation as the window builds it: the quality table and the fixed limits; it stores nothing. */
 class SettingsGenerationScreenTest extends SettingsScreenTestBase {
@@ -23,7 +25,7 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
 
     @Override
     void customize(final UiTestInjector.Builder builder) {
-        builder.settings(store);
+        builder.settings(store).models(ScriptedChatModelFactory.withBatchSize(4));
     }
 
     private void openGeneration() throws TimeoutException {
@@ -68,6 +70,23 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
                 .isFalse();
     }
 
+    // IF the call counts ignored the model's batch size, THEN the person would be told a cost the run does not have.
+    @Test
+    void qualityTable_modelWithBatchOfFour_extraCallsNameTheBatch() throws TimeoutException {
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set(MODEL));
+        openGeneration();
+
+        assertThat(text("generation-quality-label-extra")).isEqualTo("Extra model calls");
+        assertThat(List.of(
+                        text("generation-quality-extra-fast"),
+                        text("generation-quality-extra-balanced"),
+                        text("generation-quality-extra-max")))
+                .containsExactly(
+                        "no extra calls",
+                        "about one call per marked passage",
+                        "about one call per marked passage, plus one call per 4 paragraphs of the whole book");
+    }
+
     // IF a cell of the table could be edited, THEN the table would offer a choice the program does not have.
     @Test
     void qualityTable_opened_listsFastBalancedMaxAndNoEditableCell() throws TimeoutException {
@@ -79,18 +98,34 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
                         text("generation-quality-head-max")))
                 .containsExactly("Fast", "Balanced", "Max quality");
         assertThat(lookup("#generation-quality-batch-max").tryQuery()).isEmpty();
-        assertThat(text("generation-quality-reviews-fast")).isEqualTo("0");
+        assertThat(lookup("#generation-quality-reviews-fast").tryQuery()).isEmpty();
+        assertThat(lookup("#generation-quality-summary-max").tryQuery()).isEmpty();
+        assertThat(ThemeTestSupport.onFx(() -> holdsInput(required("generation-quality"))))
+                .isFalse();
+    }
+
+    // IF a cell worded the dial differently from the requirement, THEN the person would read a promise the run lacks.
+    @Test
+    void qualityTable_opened_fixingAndProofreadCellsReadAsSpecified() throws TimeoutException {
+        openGeneration();
+
+        assertThat(text("generation-quality-label-repair")).isEqualTo("Fixing calls");
+        assertThat(List.of(
+                        text("generation-quality-repair-fast"),
+                        text("generation-quality-repair-balanced"),
+                        text("generation-quality-repair-max")))
+                .containsExactly(
+                        "none, marks for review (lost formatting marks retried once)",
+                        "one repair per piece",
+                        "one repair per piece");
+        assertThat(text("generation-quality-label-proofread")).isEqualTo("Proofread");
         assertThat(List.of(
                         text("generation-quality-proofread-fast"),
                         text("generation-quality-proofread-balanced"),
                         text("generation-quality-proofread-max")))
                 .containsExactly(
-                        "marks for review, no model calls", "marked passages", "marked passages, then the whole book");
-        assertThat(text("generation-quality-label-proofread")).isEqualTo("Proofread after the last chapter");
-        assertThat(lookup("#generation-quality-summary-max").tryQuery()).isEmpty();
-        assertThat(text("generation-quality-repair-balanced")).isEqualTo("one repair");
-        assertThat(text("generation-quality-repair-fast")).isEqualTo("lost marks only");
-        assertThat(ThemeTestSupport.onFx(() -> holdsInput(required("generation-quality"))))
-                .isFalse();
+                        "marks for review, no model calls",
+                        "marked and doubtful windows",
+                        "marked and doubtful windows, then the whole book re-read");
     }
 }

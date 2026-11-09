@@ -42,8 +42,7 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 class OneRepairTest {
 
     // A dial with the one repair, so every request a test sees is the draft's repair.
-    private static final DialParameters ONE_REPAIR =
-            new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE);
+    private static final DialParameters ONE_REPAIR = new DialParameters(RepairMode.ONE, ProofreadCoverage.NONE);
 
     @TempDir
     private Path tempDir;

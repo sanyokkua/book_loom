@@ -14,8 +14,10 @@ import ua.bookloom.ui.state.StartAdvice;
  * @param stored the open project's stored name and size
  * @param estimate the time estimate under the quality choice
  * @param advice the language, quant, licence and thinking advice for the model the run will use
+ * @param quality what each quality position does, in words
  */
-public record BriefFacts(BriefLock lock, BriefProject stored, BriefEstimate estimate, StartAdvice advice) {
+public record BriefFacts(
+        BriefLock lock, BriefProject stored, BriefEstimate estimate, StartAdvice advice, QualityWords quality) {
 
     /** Rejects a missing part. */
     @Inject
@@ -24,5 +26,6 @@ public record BriefFacts(BriefLock lock, BriefProject stored, BriefEstimate esti
         Objects.requireNonNull(stored, "stored");
         Objects.requireNonNull(estimate, "estimate");
         Objects.requireNonNull(advice, "advice");
+        Objects.requireNonNull(quality, "quality");
     }
 }

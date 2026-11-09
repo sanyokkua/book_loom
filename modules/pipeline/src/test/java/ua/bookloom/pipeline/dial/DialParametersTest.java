@@ -8,21 +8,16 @@ import ua.bookloom.api.pipeline.ProofreadCoverage;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RepairMode;
 
-/** The dial's parameter table is the one place chunking, repairs and the reviewer read the dial from. */
+/** The dial's parameter table is the one place chunking, repairs and the proofread read the dial from. */
 class DialParametersTest {
 
     @ParameterizedTest
     @CsvSource({
-        "FAST,MARKS_ONLY,0,false,NONE",
-        "BALANCED,ONE,1,false,MARKED_AND_DOUBTFUL",
-        "MAX,ONE,2,true,MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH"
+        "FAST,MARKS_ONLY,NONE",
+        "BALANCED,ONE,MARKED_AND_DOUBTFUL",
+        "MAX,ONE,MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH"
     })
-    void of_eachDial_holdsItsRow(
-            final QualityDial dial,
-            final RepairMode repairs,
-            final int reviewPasses,
-            final boolean backward,
-            final ProofreadCoverage coverage) {
-        assertThat(DialParameters.of(dial)).isEqualTo(new DialParameters(repairs, reviewPasses, backward, coverage));
+    void of_eachDial_holdsItsRow(final QualityDial dial, final RepairMode repairs, final ProofreadCoverage coverage) {
+        assertThat(DialParameters.of(dial)).isEqualTo(new DialParameters(repairs, coverage));
     }
 }

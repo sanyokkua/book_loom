@@ -47,6 +47,7 @@ public final class BookBriefController {
     private final BriefProject stored;
     private final BriefEstimate estimate;
     private final StartAdvice advice;
+    private final QualityWords quality;
     private final TranslatingViewModel translating;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
@@ -90,6 +91,7 @@ public final class BookBriefController {
         this.stored = facts.stored();
         this.estimate = facts.estimate();
         this.advice = facts.advice();
+        this.quality = facts.quality();
         this.translating = run.translating();
     }
 
@@ -117,6 +119,7 @@ public final class BookBriefController {
                                 stored,
                                 estimate,
                                 advice,
+                                quality,
                                 translating))
                         .root()
                 : NoBookView.build(messages, navigator);

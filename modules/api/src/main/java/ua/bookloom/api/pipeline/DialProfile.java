@@ -14,20 +14,6 @@ public interface DialProfile {
     RepairMode repair();
 
     /**
-     * How many times the reviewer reads each chunk.
-     *
-     * @return the count; zero means no reviewer
-     */
-    int reviewPasses();
-
-    /**
-     * Whether the backward-revision pass runs after the last segment.
-     *
-     * @return {@code true} when it runs
-     */
-    boolean backwardRevision();
-
-    /**
      * Which decided segments the Proofread stage reads.
      *
      * @return the coverage; {@code NONE} means no model call in the stage

@@ -259,13 +259,26 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
                 .isEqualTo(
-                        "Balanced: one repair per failing segment · AI reviewer on · proofread of the marked passages");
+                        "Balanced: fixing calls — one repair per piece · proofread — marked and doubtful windows · extra calls — about one call per marked passage");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 
         assertThat(labelText("brief-quality-hint"))
                 .isEqualTo(
-                        "Max: one repair per failing segment · AI reviewer twice · proofread of the marked passages, then the whole book");
+                        "Max: fixing calls — one repair per piece · proofread — marked and doubtful windows, then the whole book re-read · extra calls — about one call per marked passage, plus one call per 2 paragraphs of the whole book");
+    }
+
+    // IF Fast's hint promised a reviewer or calls it does not make, THEN the trade would be made on a false picture.
+    @Test
+    void qualityHint_dialMovedToFast_namesNoExtraCalls() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> segmented("brief-quality").getButtons().get(0).setSelected(true));
+
+        assertThat(labelText("brief-quality-hint"))
+                .isEqualTo(
+                        "Fast: fixing calls — none, marks for review (lost formatting marks retried once) · proofread — marks for review, no model calls · extra calls — no extra calls");
+        assertThat(labelText("brief-quality-same")).isEqualTo("The same for every model.");
     }
 
     // IF the model row named another model than the run uses, THEN the person would trust the wrong one; and

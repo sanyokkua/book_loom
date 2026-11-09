@@ -1,8 +1,6 @@
 package ua.bookloom.ui.screen;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
@@ -34,15 +32,14 @@ import ua.bookloom.ui.state.SettingsViewModel;
 final class BriefQualityCard {
 
     private static final double ROW_SPACING = 8;
-    private static final Map<QualityDial, MessageKey> HINTS = Map.of(
-            QualityDial.FAST, MessageKey.BRIEF_QUALITY_HINT_FAST,
-            QualityDial.BALANCED, MessageKey.BRIEF_QUALITY_HINT_BALANCED,
-            QualityDial.MAX, MessageKey.BRIEF_QUALITY_HINT_MAX);
 
     private final Messages messages;
     private final SettingsViewModel settings;
     private final BriefChoice<QualityDial> dial;
+    private final QualityWords quality;
     private final Label hint = new Label();
+    private final Label same = new Label();
+    private QualityDial shown = QualityDial.BALANCED;
     private final Label model = new Label();
     private final Node node;
     // The settings are held by the view model, which outlives this card; the listeners reach it through weak
@@ -53,6 +50,7 @@ final class BriefQualityCard {
         final BookBriefViewModel viewModel = parts.viewModel();
         this.messages = parts.messages();
         this.settings = parts.settings();
+        this.quality = parts.quality();
         this.dial = new BriefChoice<>(
                 "brief-quality",
                 messages,
@@ -65,6 +63,10 @@ final class BriefQualityCard {
         hint.setId("brief-quality-hint");
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
+        same.setId("brief-quality-same");
+        same.getStyleClass().add("hint");
+        same.setWrapText(true);
+        same.setText(messages.get(MessageKey.SETTINGS_GENERATION_QUALITY_SAME));
         model.setId("brief-model");
         settings.model().addListener(new WeakChangeListener<>(onSettings));
         settings.selectedProviderId().addListener(new WeakChangeListener<>(onSettings));
@@ -79,6 +81,7 @@ final class BriefQualityCard {
                 MessageKey.BRIEF_CARD_QUALITY,
                 dial.node(),
                 hint,
+                same,
                 new BriefEstimateLines(messages, parts.estimate()).node(),
                 new StartAdviceLines(parts.advice(), messages, parts.names()).node(),
                 modelRow(parts.navigator()));
@@ -90,7 +93,8 @@ final class BriefQualityCard {
 
     void show(final BookBrief brief) {
         dial.show(brief.dial());
-        hint.setText(messages.get(Objects.requireNonNull(HINTS.get(brief.dial()), "a hint for every dial position")));
+        shown = brief.dial();
+        showHint();
     }
 
     private Node modelRow(final Navigator navigator) {
@@ -111,7 +115,12 @@ final class BriefQualityCard {
         return row;
     }
 
+    private void showHint() {
+        hint.setText(quality.hint(shown));
+    }
+
     private void showModel() {
+        showHint();
         final Optional<ModelSelection> chosen = settings.selection();
         model.setText(chosen.map(selection -> messages.get(
                         MessageKey.BRIEF_MODEL_VALUE,

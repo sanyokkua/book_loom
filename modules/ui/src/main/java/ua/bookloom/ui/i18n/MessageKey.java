@@ -1205,8 +1205,6 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_REPAIR_ONE("settings.generation.quality.repair.one"),
     /** Cell of the repair row: only lost formatting marks are drafted again. */
     SETTINGS_GENERATION_QUALITY_REPAIR_MARKS_ONLY("settings.generation.quality.repair.marks_only"),
-    /** Row of the quality table: reviewer passes. */
-    SETTINGS_GENERATION_QUALITY_REVIEWS("settings.generation.quality.reviews"),
     /** Row of the quality table: how far the Proofread stage reads. */
     SETTINGS_GENERATION_QUALITY_PROOFREAD("settings.generation.quality.proofread"),
     /** Cell of the proofread row: code only, the marks go to the review desk. */
@@ -1215,6 +1213,14 @@ public enum MessageKey {
     SETTINGS_GENERATION_QUALITY_PROOFREAD_MARKED("settings.generation.quality.proofread.marked"),
     /** Cell of the proofread row: the marked passages, then every story paragraph. */
     SETTINGS_GENERATION_QUALITY_PROOFREAD_WHOLE("settings.generation.quality.proofread.whole"),
+    /** Row of the quality table: the extra model calls the dial costs, counted in calls. */
+    SETTINGS_GENERATION_QUALITY_EXTRA("settings.generation.quality.extra"),
+    /** Cell of the extra-calls row: the dial makes none. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_NONE("settings.generation.quality.extra.none"),
+    /** Cell of the extra-calls row: one call per marked passage. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_MARKED("settings.generation.quality.extra.marked"),
+    /** Cell of the extra-calls row: marked passages plus one call per batch of paragraphs; argument 0 is the batch. */
+    SETTINGS_GENERATION_QUALITY_EXTRA_WHOLE("settings.generation.quality.extra.whole"),
     /** Title of the card listing the fixed time limits. */
     SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
     /** Tag saying the limits cannot be changed. */
@@ -1723,12 +1729,8 @@ public enum MessageKey {
     BRIEF_QUALITY_BALANCED("brief.quality.balanced"),
     /** Quality option: best quality. */
     BRIEF_QUALITY_MAX("brief.quality.max"),
-    /** Hint describing what the fast quality setting turns on. */
-    BRIEF_QUALITY_HINT_FAST("brief.quality.hint.fast"),
-    /** Hint describing what the balanced quality setting turns on. */
-    BRIEF_QUALITY_HINT_BALANCED("brief.quality.hint.balanced"),
-    /** Hint describing what the max quality setting turns on. */
-    BRIEF_QUALITY_HINT_MAX("brief.quality.hint.max"),
+    /** Hint of the quality card; arguments: the dial's name, then the fixing, proofread and extra-calls words. */
+    BRIEF_QUALITY_HINT("brief.quality.hint"),
     /** Label of the row naming the model a run will use. */
     BRIEF_MODEL_LABEL("brief.model.label"),
     /** The model row's value; argument 0 is the model, argument 1 the provider's name. */

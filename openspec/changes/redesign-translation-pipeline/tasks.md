@@ -1978,7 +1978,7 @@ database is set aside once.
     the soak run (local, recorded in the task notes) ends Completed with a retained heap below 16 KB per segment.
   - **Done when:** all three sub-steps are done and the module checks are green.
 
-- [ ] 14.8 Remove the dial's reviewer and backward-revision fields and their words, and show the new meaning of each
+- [x] 14.8 Remove the dial's reviewer and backward-revision fields and their words, and show the new meaning of each
   quality on Generation, the Book Brief and the estimates, so every screen describes the dial that now exists.
   → :api, :pipeline, :ui
   - **Satisfies:** "Show what each quality choice does on Generation" (settings; the final rows), "Choose the quality dial and show what it turns on" (book-brief)
