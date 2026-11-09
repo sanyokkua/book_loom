@@ -43,9 +43,6 @@ final class ExportActivity implements ExportProgressListener {
     private int startedAt = -1;
     private String stageLabel = "";
     private String groupLabel = "";
-    private int rereadDone;
-    private int rereadFixed;
-    private int rereadTotal;
 
     /**
      * How far the last check's reread got.
@@ -104,35 +101,20 @@ final class ExportActivity implements ExportProgressListener {
         }
         if (counted) {
             lines.add(new Activity.Detail(
-                    messages.get(
-                            progress.step() == ExportProgress.Step.RETRY_DOUBTED
-                                    ? MessageKey.ACTIVITY_DETAIL_SEGMENTS
-                                    : MessageKey.ACTIVITY_DETAIL_REQUESTS),
+                    messages.get(MessageKey.ACTIVITY_DETAIL_REQUESTS),
                     messages.get(MessageKey.ACTIVITY_DETAIL_OF, progress.done(), progress.total())));
             handle.progress(progress.done(), progress.total(), step);
         } else {
             handle.indeterminate(step);
         }
         handle.details(lines);
-        count(progress);
         stages(progress, step);
         steps(progress, step);
     }
 
-    /** The reread so far. FX thread only. */
+    /** The reread so far: nothing, as no reread runs any more; 14.6 removes the tally. */
     RereadTally tally() {
-        return new RereadTally(rereadDone, rereadFixed, rereadTotal);
-    }
-
-    private void count(final ExportProgress progress) {
-        if (progress.step() != ExportProgress.Step.CONSISTENCY_NEIGHBOUR) {
-            return;
-        }
-        rereadTotal = progress.total();
-        if (progress.itemRef() != null && progress.done() > rereadDone && "fixed".equals(progress.verdict())) {
-            rereadFixed++;
-        }
-        rereadDone = Math.max(rereadDone, progress.done());
+        return new RereadTally(0, 0, 0);
     }
 
     // One group row per stage reached, so the dialog can show the stages apart from their items; no percentage counts
@@ -149,9 +131,7 @@ final class ExportActivity implements ExportProgressListener {
                             StepResult.DONE),
                     null);
         }
-        final boolean reread = progress.step() == ExportProgress.Step.CONSISTENCY_NEIGHBOUR;
-        final String shown =
-                reread ? messages.get(MessageKey.EXPORT_GROUP_REREAD, progress.done(), progress.total()) : label;
+        final String shown = label;
         final boolean ended = progress.total() > 0 && progress.done() >= progress.total();
         groupLabel = shown;
         handle.step(
@@ -207,9 +187,6 @@ final class ExportActivity implements ExportProgressListener {
     private static MessageKey stepKey(final ExportProgress.Step step) {
         return switch (step) {
             case VALIDATING -> MessageKey.EXPORT_PROGRESS_VALIDATING;
-            case CONSISTENCY_RETRY -> MessageKey.EXPORT_PROGRESS_RETRY;
-            case RETRY_DOUBTED -> MessageKey.EXPORT_PROGRESS_RETRY_DOUBTED;
-            case CONSISTENCY_NEIGHBOUR -> MessageKey.EXPORT_PROGRESS_NEIGHBOUR;
             case WRITING -> MessageKey.EXPORT_PROGRESS_WRITING;
         };
     }

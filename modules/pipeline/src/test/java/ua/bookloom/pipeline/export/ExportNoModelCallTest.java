@@ -32,10 +32,10 @@ class ExportNoModelCallTest {
     @TempDir
     private Path tempDir;
 
-    // IF the export is asked for the last check, THEN it still writes the book and sends the provider no request.
+    // IF a provider is set, THEN the export still writes the book and sends the provider no request.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_lastCheckOnWithProviderSet_sendsNoRequestAndWritesTheBook(final ProviderKind kind) {
+    void run_providerSet_sendsNoRequestAndWritesTheBook(final ProviderKind kind) {
         final ExportJobFixture fixture = new ExportJobFixture();
         final Path source = TestBooks.epubAtRoot(
                 tempDir.resolve("Mini.epub"),
@@ -52,7 +52,7 @@ class ExportNoModelCallTest {
             provider.stubResponder(ignored -> ANY_REPLY);
             final ChatModel model = provider.model(Duration.ofSeconds(5), ignored -> {});
 
-            ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of(), true), model))
+            ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of()), model))
                     .run());
 
             assertThat(provider.servedInOrder())

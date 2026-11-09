@@ -79,8 +79,6 @@ public final class AutomationSettings {
                         writer.read(AppSetting.REVIEW_MODE),
                         writer.read(AppSetting.DEFAULT_DIAL),
                         writer.read(AppSetting.OPEN_REVIEW_DESK),
-                        writer.read(AppSetting.LAST_CHECK),
-                        writer.isWritten(AppSetting.LAST_CHECK),
                         writer.read(AppSetting.KEEP_AWAKE),
                         writer.read(AppSetting.REOPEN_LAST_PROJECT),
                         reviewModeChoice.launchOverride().orElse(null)),
@@ -92,8 +90,6 @@ public final class AutomationSettings {
             ReviewMode reviewMode,
             QualityDial dial,
             boolean openDesk,
-            boolean lastCheck,
-            boolean lastCheckWritten,
             boolean keepAwake,
             boolean reopen,
             @Nullable String override) {}
@@ -103,10 +99,6 @@ public final class AutomationSettings {
         setUnlessChosen(Choice.REVIEW_MODE, reviewMode, stored.reviewMode());
         setUnlessChosen(Choice.DIAL, defaultDial, stored.dial());
         setUnlessChosen(Choice.OPEN_DESK, openReviewDesk, stored.openDesk());
-        setUnlessChosen(Choice.LAST_CHECK, lastCheck, stored.lastCheck());
-        if (!chosen.contains(Choice.LAST_CHECK)) {
-            lastCheckChosen.set(stored.lastCheckWritten());
-        }
         setUnlessChosen(Choice.KEEP_AWAKE, keepAwake, stored.keepAwake());
         setUnlessChosen(Choice.REOPEN, reopenLastProject, stored.reopen());
         reviewModeOverride.set(stored.override());
@@ -159,7 +151,7 @@ public final class AutomationSettings {
     }
 
     /**
-     * Holds and stores the last-check default; from now on it is a written choice, not the follow-the-quality default.
+     * Holds the last-check default for this session only; nothing is stored, as the last check no longer exists.
      *
      * @param on the choice
      */
@@ -168,7 +160,6 @@ public final class AutomationSettings {
         hold(Choice.LAST_CHECK);
         lastCheck.set(on);
         lastCheckChosen.set(true);
-        writer.put(AppSetting.LAST_CHECK, on);
     }
 
     /**

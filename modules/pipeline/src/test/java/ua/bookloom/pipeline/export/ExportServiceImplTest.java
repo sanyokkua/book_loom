@@ -292,7 +292,7 @@ class ExportServiceImplTest {
     }
 
     private static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {
-        return new ExportRequest(projectId, destination, overwrite, Set.of(), false);
+        return new ExportRequest(projectId, destination, overwrite, Set.of());
     }
 
     private static BookBrief withTarget(final BookBrief brief, @Nullable final String targetLanguage) {

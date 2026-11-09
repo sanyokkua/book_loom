@@ -10,7 +10,6 @@ import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ProofreadSummary;
-import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 
@@ -23,19 +22,8 @@ class ExportLeftScreenAnnouncementTest extends ExportScreenTestBase {
     private static final Path EPUB = Path.of("Frankenstein.epub");
 
     private void startHeldExport() throws TimeoutException {
-        stored.put(AppSetting.LAST_CHECK, true);
         desk.willAnswerCounts(counts(0));
-        exportService()
-                .announce(new ExportProgress(
-                        ExportProgress.Step.CONSISTENCY_NEIGHBOUR,
-                        1,
-                        4,
-                        "ch1:1",
-                        "Вона втомилася",
-                        null,
-                        "unchanged",
-                        new ExportProgress.Neighbours(
-                                "She ran.", "Вона бігла.", "She was tired.", "She slept.", "Вона спала.")));
+        exportService().announce(new ExportProgress(ExportProgress.Step.WRITING, 0, 1));
         exportService().holdRuns();
         exportService().reportWith(report(Path.of("Frankenstein.uk.epub"), List.of(), ProofreadSummary.NONE));
         openAndShowExport(EPUB);

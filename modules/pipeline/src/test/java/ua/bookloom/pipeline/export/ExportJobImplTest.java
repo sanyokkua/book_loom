@@ -257,7 +257,7 @@ class ExportJobImplTest {
         };
         final Path destination = tempDir.resolve("Book.uk.md");
 
-        ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of(), true), down))
+        ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of()), down))
                 .run());
 
         assertThat(read(destination)).isEqualTo("Він пішов геть.");
@@ -278,7 +278,7 @@ class ExportJobImplTest {
         final List<SegmentRecord> stored = fixture.records(id);
         final Path destination = tempDir.resolve("Book.uk.md");
 
-        ok(fixture.export(new ExportRequest(id, destination, false, Set.of(), true)));
+        ok(fixture.export(new ExportRequest(id, destination, false, Set.of())));
 
         assertThat(read(destination)).isEqualTo("Джастін пішла.");
         assertThat(fixture.records(id)).isEqualTo(stored);

@@ -136,11 +136,11 @@ class ExportJobCancelTest {
     }
 
     private ExportRequest withoutPass() {
-        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT), false);
+        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT));
     }
 
     private ExportRequest request() {
-        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT), true);
+        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT));
     }
 
     /** Sam's segment is accepted while his gender is unknown, then the gender is set: the pass must call the model. */

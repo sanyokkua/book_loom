@@ -109,9 +109,9 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
         assertThat(calls).last().isEqualTo("stop");
     }
 
-    // IF pausing the run released the lock while an export still asked the model, THEN the export would be frozen.
+    // IF pausing the run released the lock while an export was still writing, THEN the export would be frozen.
     @Test
-    void run_pausedWhileAnExportCallsTheModel_staysAwakeUntilTheExportEnds() {
+    void run_pausedWhileAnExportRuns_staysAwakeUntilTheExportEnds() {
         final ActivityTracker tracker = tracker();
         publish(RunState.RUNNING);
         final ActivityTracker.Handle export = onFx(() -> tracker.begin(ActivityKind.EXPORT, null));

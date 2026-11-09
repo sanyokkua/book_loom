@@ -28,9 +28,6 @@ public final class ExportStages {
     public static int rowOf(final ExportProgress.Step step) {
         return switch (step) {
             case VALIDATING -> 0;
-            case CONSISTENCY_RETRY -> 1;
-            case RETRY_DOUBTED -> 2;
-            case CONSISTENCY_NEIGHBOUR -> REREAD;
             case WRITING -> WRITING;
         };
     }

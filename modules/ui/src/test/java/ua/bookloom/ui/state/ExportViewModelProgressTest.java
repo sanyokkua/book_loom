@@ -84,25 +84,23 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         }
     }
 
-    // IF the job's announcements never reached the activity, THEN its dialog would spin through a long pass.
+    // IF the job's announcements never reached the activity, THEN its dialog would stay on its first words.
     @Test
-    void export_jobAnnouncesACountedStep_theActivityShowsFractionStepAndCallCount() throws Exception {
-        exportService.announce(new ExportProgress(Step.CONSISTENCY_NEIGHBOUR, 1, 4));
+    void export_jobAnnouncesTheWritingStep_theActivityShowsItsWordsAndTheFile() throws Exception {
+        exportService.announce(new ExportProgress(Step.WRITING, 0, 1));
         exportService.holdRuns();
 
         export();
         WaitForAsyncUtils.waitFor(
                 5,
                 TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().steps().done() == 2));
+                () -> onFx(() ->
+                        "Write the file".equals(activities.running().getFirst().stepText())));
 
         final Activity shown = onFx(() -> activities.running().getFirst());
         assertThat(shown.kind()).isEqualTo(ActivityKind.EXPORT);
         assertThat(shown.cancellable()).isTrue();
-        // The bar counts every step of the export: the check before it (1) and the first of the 4 rereads, of 5.
-        assertThat(shown.fraction()).isEqualTo(0.4);
-        assertThat(shown.stepText()).isEqualTo("Reread next to the neighbours");
-        assertThat(shown.details()).extracting(Activity.Detail::value).contains("1 of 4", "Frankenstein.uk.epub");
+        assertThat(shown.details()).extracting(Activity.Detail::value).contains("Frankenstein.uk.epub");
         exportService.release();
     }
 
@@ -123,24 +121,6 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
                 .isNotNull()
                 .extracting(CallSnapshot::callId)
                 .isEqualTo(3L);
-        exportService.release();
-    }
-
-    // IF the retry step were counted as requests, THEN "3 of 8 requests" would describe eight segments.
-    @Test
-    void export_jobAnnouncesTheRetryStep_theActivityCountsSegments() throws Exception {
-        exportService.announce(new ExportProgress(Step.RETRY_DOUBTED, 3, 8));
-        exportService.holdRuns();
-
-        export();
-        WaitForAsyncUtils.waitFor(
-                5,
-                TimeUnit.SECONDS,
-                () -> onFx(() -> activities.running().getFirst().fraction() != null));
-
-        final Activity shown = onFx(() -> activities.running().getFirst());
-        assertThat(shown.stepText()).isEqualTo("Translate unsure segments again");
-        assertThat(shown.details()).contains(new Activity.Detail("Segments", "3 of 8"));
         exportService.release();
     }
 

@@ -54,12 +54,6 @@ public record AppSetting<T>(
     /** Whether the review desk opens when a translation ends with segments to review. */
     public static final AppSetting<Boolean> OPEN_REVIEW_DESK = ofBoolean("automation.openReviewDesk", true);
 
-    /**
-     * Whether the last check runs before saving by default. Absent until the person writes it, then Export shows the
-     * switch off for a book below Max quality unless this says otherwise; Automation writes it explicitly.
-     */
-    public static final AppSetting<Boolean> LAST_CHECK = ofBoolean("automation.lastCheck", false);
-
     /** Whether the computer is kept awake during a run. */
     public static final AppSetting<Boolean> KEEP_AWAKE = ofBoolean("automation.keepAwake", true);
 

@@ -100,9 +100,7 @@ class PrepSummaryTest extends NamesPassTestBase {
         final String projectId = importBook(injector);
 
         Objects.requireNonNull(injector.getInstance(ExportService.class)
-                        .newExport(
-                                new ExportRequest(projectId, tempDir.resolve("Book.uk.md"), false, Set.of(), false),
-                                null)
+                        .newExport(new ExportRequest(projectId, tempDir.resolve("Book.uk.md"), false, Set.of()), null)
                         .data())
                 .run();
 

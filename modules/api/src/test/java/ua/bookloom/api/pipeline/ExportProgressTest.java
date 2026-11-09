@@ -40,8 +40,8 @@ class ExportProgressTest {
 
     @Test
     void new_withItem_keepsReferenceTextsAndVerdict() {
-        final ExportProgress progress = new ExportProgress(
-                ExportProgress.Step.RETRY_DOUBTED, 1, 4, "Book.md:2", "Old text.", "New text.", "kept");
+        final ExportProgress progress =
+                new ExportProgress(ExportProgress.Step.WRITING, 1, 4, "Book.md:2", "Old text.", "New text.", "kept");
 
         assertThat(progress.itemRef()).isEqualTo("Book.md:2");
         assertThat(progress.before()).isEqualTo("Old text.");
@@ -58,7 +58,7 @@ class ExportProgressTest {
             return Result.err(AppError.of(ErrorCode.internal, "none", "none"));
         };
         final ExportRequest request =
-                new ExportRequest("p", java.nio.file.Path.of("out.epub"), false, java.util.Set.of(), false);
+                new ExportRequest("p", java.nio.file.Path.of("out.epub"), false, java.util.Set.of());
 
         plain.newExport(request, null, ExportProgressListener.NONE);
 
@@ -69,7 +69,7 @@ class ExportProgressTest {
     @Test
     void new_sevenArguments_hasNoNeighbours() {
         final ExportProgress progress =
-                new ExportProgress(ExportProgress.Step.RETRY_DOUBTED, 1, 4, "Book.md:2", "Old.", "New.", "kept");
+                new ExportProgress(ExportProgress.Step.WRITING, 1, 4, "Book.md:2", "Old.", "New.", "kept");
 
         assertThat(progress.neighbours()).isNull();
     }
@@ -79,8 +79,8 @@ class ExportProgressTest {
         final ExportProgress.Neighbours around =
                 new ExportProgress.Neighbours("Before.", "Перед.", "Now.", "After.", "Після.");
 
-        final ExportProgress progress = new ExportProgress(
-                ExportProgress.Step.CONSISTENCY_NEIGHBOUR, 2, 6, "Book.md:2", "Тепер.", null, "unchanged", around);
+        final ExportProgress progress =
+                new ExportProgress(ExportProgress.Step.WRITING, 2, 6, "Book.md:2", "Тепер.", null, "unchanged", around);
 
         assertThat(progress.neighbours()).isEqualTo(around);
         final ExportProgress.Neighbours shown = java.util.Objects.requireNonNull(progress.neighbours(), "neighbours");

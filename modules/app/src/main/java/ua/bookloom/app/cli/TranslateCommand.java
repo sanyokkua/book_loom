@@ -249,8 +249,8 @@ public final class TranslateCommand {
     // After Ctrl+C the export of what the stopped run translated is not cancelled by the same stop; the stop waits
     // for it a while longer instead.
     private Result<ExportReport> export(String projectId, Path destination, TranslateArguments arguments) {
-        final Result<ExportJob> job = exports.newExport(
-                new ExportRequest(projectId, destination, arguments.overwrite(), Set.of(), false), null);
+        final Result<ExportJob> job =
+                exports.newExport(new ExportRequest(projectId, destination, arguments.overwrite(), Set.of()), null);
         if (job.isErr()) {
             return Result.err(errorOf(job));
         }

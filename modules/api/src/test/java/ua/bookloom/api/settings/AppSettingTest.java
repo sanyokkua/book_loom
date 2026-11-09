@@ -20,7 +20,6 @@ class AppSettingTest {
         assertThat(AppSetting.REVIEW_MODE.defaultValue()).isEqualTo(ReviewMode.UNATTENDED);
         assertThat(AppSetting.DEFAULT_DIAL.defaultValue()).isEqualTo(QualityDial.BALANCED);
         assertThat(AppSetting.OPEN_REVIEW_DESK.defaultValue()).isTrue();
-        assertThat(AppSetting.LAST_CHECK.defaultValue()).isFalse();
         assertThat(AppSetting.KEEP_AWAKE.defaultValue()).isTrue();
         assertThat(AppSetting.REOPEN_LAST_PROJECT.defaultValue()).isTrue();
         assertThat(AppSetting.CURRENT_MODEL.defaultValue()).isNull();
@@ -36,7 +35,6 @@ class AppSettingTest {
         assertThat(AppSetting.REVIEW_MODE.key()).isEqualTo("run.reviewMode");
         assertThat(AppSetting.DEFAULT_DIAL.key()).isEqualTo("run.defaultDial");
         assertThat(AppSetting.OPEN_REVIEW_DESK.key()).isEqualTo("automation.openReviewDesk");
-        assertThat(AppSetting.LAST_CHECK.key()).isEqualTo("automation.lastCheck");
         assertThat(AppSetting.KEEP_AWAKE.key()).isEqualTo("automation.keepAwake");
         assertThat(AppSetting.REOPEN_LAST_PROJECT.key()).isEqualTo("automation.reopenLastProject");
         assertThat(AppSetting.CURRENT_MODEL.key()).isEqualTo("model.current");
@@ -72,14 +70,13 @@ class AppSettingTest {
     @ValueSource(strings = {"yes", "1", "", "TRUE!"})
     void parse_badBoolean_fallsBackToTheDefault(final String raw) {
         assertThat(AppSetting.KEEP_AWAKE.parse(raw)).isTrue();
-        assertThat(AppSetting.LAST_CHECK.parse(raw)).isFalse();
         assertThat(AppSetting.FIRST_LAUNCH_PROBED.parse(raw)).isNull();
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"true", "TRUE", "false"})
     void parse_goodBoolean_isTaken(final String raw) {
-        assertThat(AppSetting.LAST_CHECK.parse(raw)).isEqualTo(Boolean.parseBoolean(raw));
+        assertThat(AppSetting.KEEP_AWAKE.parse(raw)).isEqualTo(Boolean.parseBoolean(raw));
     }
 
     @ParameterizedTest

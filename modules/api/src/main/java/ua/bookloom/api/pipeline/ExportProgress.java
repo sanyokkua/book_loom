@@ -85,12 +85,6 @@ public record ExportProgress(
     public enum Step {
         /** Checking the destination, the side files and the stored project before anything slow. */
         VALIDATING,
-        /** One model call per segment whose character's gender became known, to re-render it. */
-        CONSISTENCY_RETRY,
-        /** One fresh draft per flagged or audit-doubted segment, kept only when it is better; counted by segment. */
-        RETRY_DOUBTED,
-        /** One model call per repaired or flagged paragraph, checking it against its neighbours. */
-        CONSISTENCY_NEIGHBOUR,
         /** Writing the book and the chosen side files. */
         WRITING
     }

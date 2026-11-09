@@ -107,10 +107,9 @@ final class BookRunner {
         final JobState end = WholeBookStages.translate(prepared, probe, options.window(), errors);
         final int afterJob = probe.mark();
         log.info("Book run stage: exports");
-        final Optional<Written> without = export(prepared, NO_PASS, false, probe, errors);
-        final Optional<Written> with = export(prepared, WITH_PASS, true, probe, errors);
-        final Calls calls =
-                new Calls(afterBrief, afterNames - afterBrief, afterJob - afterNames, probe.mark() - afterJob);
+        final Optional<Written> without = export(prepared, NO_PASS, errors);
+        final Optional<Written> with = export(prepared, WITH_PASS, errors);
+        final Calls calls = new Calls(afterBrief, afterNames - afterBrief, afterJob - afterNames);
         final BookRunSummary summary =
                 summary(prepared, modelName, suggested, end, calls, started, without, with, errors);
         write(summary);
@@ -161,18 +160,11 @@ final class BookRunner {
         }
     }
 
-    private Optional<Written> export(
-            final Prepared prepared,
-            final String label,
-            final boolean consistencyPass,
-            final StageProbe probe,
-            final List<String> errors) {
+    private Optional<Written> export(final Prepared prepared, final String label, final List<String> errors) {
         final Path destination = options.outDir().resolve(stem() + "." + label + "." + extension());
-        log.debug("Export {} to {} consistencyPass={}", label, destination, consistencyPass);
-        final ExportRequest request =
-                new ExportRequest(prepared.projectId(), destination, true, SIDE_FILES, consistencyPass);
-        final Result<ExportJob> job =
-                SequenceJobs.exportService(prepared).newExport(request, consistencyPass ? probe : null);
+        log.debug("Export {} to {}", label, destination);
+        final ExportRequest request = new ExportRequest(prepared.projectId(), destination, true, SIDE_FILES);
+        final Result<ExportJob> job = SequenceJobs.exportService(prepared).newExport(request, null);
         WholeBookStages.note("export " + label, job, errors);
         if (job.isErr()) {
             return Optional.empty();

@@ -96,7 +96,7 @@ public final class ExportViewModel {
                 messages,
                 new ExportRecorder(storage.store(), clock::instant),
                 new ReplaceCheck(dialogs.confirm()));
-        this.lastCheck = new LastCheckChoice(storage.stored(), executor);
+        this.lastCheck = new LastCheckChoice();
         this.blocker = work.activities().blocker(ActivityKind.EXPORT);
         wire();
         lastCheck.followBrief(project.brief().get());
@@ -219,12 +219,7 @@ public final class ExportViewModel {
         }
         final Set<SideFile> chosen = Set.copyOf(sideFiles);
         run.start(
-                new ExportRequest(
-                        book.projectId(),
-                        path.get(),
-                        false,
-                        chosen,
-                        lastCheck.shown().get()),
+                new ExportRequest(book.projectId(), path.get(), false, chosen),
                 ExportPathRules.writtenPaths(
                         path.get(), Objects.requireNonNull(book.inspection().format(), "format"), chosen));
     }

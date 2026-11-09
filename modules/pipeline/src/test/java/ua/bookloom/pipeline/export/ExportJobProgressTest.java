@@ -37,8 +37,7 @@ class ExportJobProgressTest {
     @Test
     void run_passOff_announcesOnlyValidatingAndWriting() {
         final List<ExportProgress> seen = new CopyOnWriteArrayList<>();
-        final ExportRequest request =
-                new ExportRequest(projectId, tempDir.resolve("Book.uk.epub"), false, Set.of(), false);
+        final ExportRequest request = new ExportRequest(projectId, tempDir.resolve("Book.uk.epub"), false, Set.of());
 
         ok(ok(fixture.service().newExport(request, null, seen::add)).run());
 

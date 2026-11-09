@@ -157,17 +157,6 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
                 .isEqualTo("Not chosen yet: on for books at Max quality, off otherwise.");
     }
 
-    @Test
-    void lastCheck_switchedOn_storedTrueHintHidden() throws TimeoutException {
-        openAutomation();
-
-        onFx(() -> switchOf("automation-last-check").setSelected(true));
-
-        awaitStored(AppSetting.LAST_CHECK);
-        assertThat(store.stored(AppSetting.LAST_CHECK)).contains(true);
-        assertThat(isShown("automation-last-check-hint")).isFalse();
-    }
-
     // IF the switch only changed the stored value, THEN the computer would stay awake until the next launch.
     @Test
     void keepAwake_switchedOff_storedFalseAndGateOff() throws TimeoutException {

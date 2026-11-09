@@ -213,7 +213,7 @@ final class SoakRun {
 
     private ExportReport export(final String projectId, final Path destination) {
         return dataOf(dataOf(injector.getInstance(ExportService.class)
-                        .newExport(new ExportRequest(projectId, destination, false, Set.of(), false), null))
+                        .newExport(new ExportRequest(projectId, destination, false, Set.of()), null))
                 .run());
     }
 

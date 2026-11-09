@@ -13,7 +13,7 @@ public interface ExportService {
      * Creates a new export job bound to the given request.
      *
      * @param request the non-null export request
-     * @param model the model the consistency pass calls, or null when {@code request.consistencyPass()} is false
+     * @param model unused: the export makes no model call, so it may be null
      * @return the created job, ready to {@link ExportJob#run()}
      */
     Result<ExportJob> newExport(ExportRequest request, @Nullable ChatModel model);
@@ -22,7 +22,7 @@ public interface ExportService {
      * Creates a job that also announces its progress.
      *
      * @param request the non-null export request
-     * @param model the model the consistency pass calls, or null when {@code request.consistencyPass()} is false
+     * @param model unused: the export makes no model call, so it may be null
      * @param progress told of each step and finished unit from the thread that runs the job; never null
      * @return the created job; a service that does not report progress ignores {@code progress}
      */

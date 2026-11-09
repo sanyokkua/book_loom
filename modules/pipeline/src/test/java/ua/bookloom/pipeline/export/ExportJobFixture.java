@@ -170,12 +170,12 @@ final class ExportJobFixture {
     }
 
     static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {
-        return new ExportRequest(projectId, destination, overwrite, Set.of(), false);
+        return new ExportRequest(projectId, destination, overwrite, Set.of());
     }
 
     static ExportRequest request(
             final String projectId, final Path destination, final boolean overwrite, final Set<SideFile> sideFiles) {
-        return new ExportRequest(projectId, destination, overwrite, sideFiles, false);
+        return new ExportRequest(projectId, destination, overwrite, sideFiles);
     }
 
     static BookBrief brief(final String sourceLanguage, final AlsoTranslate alsoTranslate) {

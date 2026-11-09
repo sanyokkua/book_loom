@@ -150,7 +150,7 @@ class ExportServiceDestinationTest {
     }
 
     private static ExportRequest request(final Path destination, final boolean overwrite) {
-        return new ExportRequest("p1", destination, overwrite, Set.of(), false);
+        return new ExportRequest("p1", destination, overwrite, Set.of());
     }
 
     private static AppError errorOf(final Result<?> result) {

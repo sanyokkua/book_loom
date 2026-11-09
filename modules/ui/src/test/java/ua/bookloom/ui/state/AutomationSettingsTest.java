@@ -76,25 +76,28 @@ class AutomationSettingsTest {
     }
 
     @Test
-    void load_lastCheckWrittenOn_onAndChosen() {
-        store.put(AppSetting.LAST_CHECK, true);
-        final AutomationSettings automation = direct(store);
-
-        automation.load();
-
-        assertThat(automation.lastCheckProperty().get()).isTrue();
-        assertThat(automation.lastCheckChosenProperty().get()).isTrue();
-    }
-
-    @Test
-    void chooseLastCheck_on_writesExplicitlyAndChosen() {
+    void chooseLastCheck_on_holdsItInMemoryOnly() {
         final AutomationSettings automation = direct(store);
         automation.load();
 
         automation.chooseLastCheck(true);
 
-        assertThat(store.stored(AppSetting.LAST_CHECK)).contains(true);
+        assertThat(automation.lastCheckProperty().get()).isTrue();
         assertThat(automation.lastCheckChosenProperty().get()).isTrue();
+        assertThat(store.all().data()).isEmpty();
+    }
+
+    // IF a choice still wrote the retired key, THEN a stale row would come back with every launch.
+    @Test
+    void chooseEveryChoice_storesNoLastCheckEntry() {
+        final AutomationSettings automation = direct(store);
+        automation.load();
+
+        automation.chooseReviewMode(ReviewMode.ASSISTED);
+        automation.chooseLastCheck(true);
+        automation.chooseKeepAwake(false);
+
+        assertThat(store.all().data()).doesNotContainKey("automation.lastCheck").isNotEmpty();
     }
 
     @Test

@@ -81,13 +81,12 @@ record BookRunSummary(
      * @param briefSuggestion the brief suggestion's calls
      * @param names the names pass's calls
      * @param translation the translation job's calls
-     * @param consistencyPass the consistency pass's calls inside the second export
      */
-    record Calls(int briefSuggestion, int names, int translation, int consistencyPass) {
+    record Calls(int briefSuggestion, int names, int translation) {
 
         /** The calls of all stages. */
         int total() {
-            return briefSuggestion + names + translation + consistencyPass;
+            return briefSuggestion + names + translation;
         }
     }
 

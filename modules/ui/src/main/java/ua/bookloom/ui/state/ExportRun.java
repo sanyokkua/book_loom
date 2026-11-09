@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,9 +21,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportReport;
@@ -39,15 +35,12 @@ import ua.bookloom.ui.i18n.Messages;
  * One export at a time: builds the job, runs it and reads the written file's size off the FX thread, and keeps the
  * outcome or the failure for the screen. Every property is touched on the FX thread only.
  *
- * <p>The model for the consistency pass is created on the background thread because creating one can load it, but
- * the selection is read on the FX thread, where the settings live.
+ * <p>The export makes no model call, so no model is chosen or created for it.
  */
 @Slf4j
 final class ExportRun {
 
     private final ExportService service;
-    private final ChatModelFactory models;
-    private final SettingsViewModel settings;
     private final WorkflowProgress progress;
     private final ExecutorService executor;
     private final ActivityTracker activities;
@@ -70,8 +63,6 @@ final class ExportRun {
             final ExportRecorder recorder,
             final ReplaceCheck replace) {
         this.service = Objects.requireNonNull(engine, "engine").exports();
-        this.models = engine.models();
-        this.settings = engine.settings();
         this.progress = Objects.requireNonNull(work, "work").progress();
         this.executor = Objects.requireNonNull(executor, "executor");
         this.activities = work.activities();
@@ -106,22 +97,19 @@ final class ExportRun {
             log.debug("export not started: one is already running");
             return;
         }
-        final Optional<ModelSelection> selection = request.consistencyPass() ? settings.selection() : Optional.empty();
         log.info(
-                "export of project {} to {} starting: side files {}, consistency pass {}, model chosen {}",
+                "export of project {} to {} starting: side files {}",
                 request.projectId(),
                 request.destination().getFileName(),
-                request.sideFiles().stream().map(SideFile::name).sorted().toList(),
-                request.consistencyPass(),
-                selection.isPresent());
+                request.sideFiles().stream().map(SideFile::name).sorted().toList());
         running.set(true);
         stopped.set(false);
         job.set(null);
-        final ExportActivity shown = register(request, selection);
+        final ExportActivity shown = register(request);
         outcome.set(null);
         failure.set("");
         try {
-            executor.execute(() -> checkThenWork(request, written, selection.orElse(null), shown));
+            executor.execute(() -> checkThenWork(request, written, shown));
         } catch (RejectedExecutionException rejected) {
             log.error("the export could not be submitted", rejected);
             finish(null, AppError.of(ErrorCode.internal, "Export failed", "The export could not be started."));
@@ -173,15 +161,11 @@ final class ExportRun {
         failure.set("");
     }
 
-    private ExportActivity register(final ExportRequest request, final Optional<ModelSelection> selection) {
+    private ExportActivity register(final ExportRequest request) {
         final ActivityTracker.Handle registered = activities.begin(ActivityKind.EXPORT, this::stop);
         handle = registered;
-        final ExportActivity shown = new ExportActivity(
-                registered,
-                messages,
-                request.destination(),
-                selection.map(ModelSelection::modelId).orElse(null),
-                activities::now);
+        final ExportActivity shown =
+                new ExportActivity(registered, messages, request.destination(), null, activities::now);
         shown.announce(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         shownActivity = shown;
         return shown;
@@ -198,14 +182,10 @@ final class ExportRun {
     }
 
     // Files are looked for off the FX thread, before the job exists, so declining writes nothing and calls no model.
-    private void checkThenWork(
-            final ExportRequest request,
-            final List<Path> written,
-            final @Nullable ModelSelection selection,
-            final ExportActivity shown) {
+    private void checkThenWork(final ExportRequest request, final List<Path> written, final ExportActivity shown) {
         final List<Path> taken = request.overwrite() ? List.of() : existing(written);
         if (taken.isEmpty()) {
-            work(request, selection, shown);
+            work(request, shown);
             return;
         }
         log.debug("export of project {} waits for the replace question", request.projectId());
@@ -228,13 +208,7 @@ final class ExportRun {
     }
 
     private static ExportRequest withOverwrite(final ExportRequest request) {
-        return new ExportRequest(
-                request.projectId(),
-                request.destination(),
-                true,
-                request.sideFiles(),
-                request.consistencyPass(),
-                request.consistencyScope());
+        return new ExportRequest(request.projectId(), request.destination(), true, request.sideFiles());
     }
 
     private void endActivity() {
@@ -246,14 +220,13 @@ final class ExportRun {
         }
     }
 
-    private void work(
-            final ExportRequest request, final @Nullable ModelSelection selection, final ExportActivity shown) {
+    private void work(final ExportRequest request, final ExportActivity shown) {
         ExportOutcome result = null;
         // Failed until the job answers: an Error (a stack overflow, out of memory) escapes the catch below, and the
         // finally must still end the activity, or its scrim and the disabled navigation would stay for good.
         AppError error = AppError.of(ErrorCode.internal, "Export failed", "The book could not be written.");
         try {
-            final Result<ExportReport> ran = run(request, selection, shown);
+            final Result<ExportReport> ran = run(request, shown);
             if (ran.isOk()) {
                 final ExportReport report = Objects.requireNonNull(ran.data(), "report");
                 // Written and checked: the window keeps it on the project, so the tiles read it after a restart.
@@ -276,13 +249,8 @@ final class ExportRun {
         }
     }
 
-    private Result<ExportReport> run(
-            final ExportRequest request, final @Nullable ModelSelection selection, final ExportActivity shown) {
-        ChatModel model = null;
-        if (selection != null) {
-            model = modelOrNull(selection);
-        }
-        final Result<ExportJob> built = service.newExport(request, model, shown);
+    private Result<ExportReport> run(final ExportRequest request, final ExportActivity shown) {
+        final Result<ExportJob> built = service.newExport(request, null, shown);
         if (built.isErr()) {
             return Result.err(Objects.requireNonNull(built.error(), "error"));
         }
@@ -292,17 +260,6 @@ final class ExportRun {
             created.cancel();
         }
         return created.run();
-    }
-
-    // The pass's name sweep needs no model, so a provider that is down must not stop the book being written.
-    private @Nullable ChatModel modelOrNull(final ModelSelection selection) {
-        final Result<ChatModel> created = models.create(selection);
-        if (created.isErr()) {
-            final AppError refused = Objects.requireNonNull(created.error(), "error");
-            log.warn("no model for the consistency pass, its gender step is skipped: code {}", refused.code());
-            return null;
-        }
-        return created.data();
     }
 
     private long sizeOf(final Path file) {

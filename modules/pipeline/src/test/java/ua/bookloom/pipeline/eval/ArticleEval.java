@@ -152,7 +152,7 @@ final class ArticleEval {
 
     private static String export(final Prepared prepared, final Path destination) {
         log.debug("Article eval export to {}", destination);
-        final ExportRequest request = new ExportRequest(prepared.projectId(), destination, true, Set.of(), false);
+        final ExportRequest request = new ExportRequest(prepared.projectId(), destination, true, Set.of());
         final Result<ExportJob> job = SequenceJobs.exportService(prepared).newExport(request, null);
         final Result<ExportReport> done = Objects.requireNonNull(job.data(), () -> "export job: " + job.error())
                 .run();
