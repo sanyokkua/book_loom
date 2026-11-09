@@ -56,15 +56,9 @@ public final class SegmentFindings {
         return List.copyOf(defects);
     }
 
-    /**
-     * A decided segment's recorded findings: its last evaluation's findings plus the reviewer's — each applied edit,
-     * each note, each unresolved issue — de-duplicated ({@code specs/quality-gates/spec.md} "Record each segment's
-     * findings for review and repair").
-     */
-    static List<QaFinding> recorded(final QaResult qa, final List<QaFinding> reviewerFindings) {
-        final LinkedHashSet<QaFinding> combined = new LinkedHashSet<>(qa.findings());
-        combined.addAll(reviewerFindings);
-        return List.copyOf(combined);
+    /** A decided segment's recorded findings: its last evaluation's, de-duplicated. */
+    static List<QaFinding> recorded(final QaResult qa) {
+        return List.copyOf(new LinkedHashSet<>(qa.findings()));
     }
 
     /** The kinds of a segment's findings, for a WARN log line that never carries the findings' text. */

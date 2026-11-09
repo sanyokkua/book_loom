@@ -4,9 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_ECHO;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
@@ -32,8 +30,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
@@ -49,15 +45,6 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  * cut-off repair again from the draft kept in memory").
  */
 class RepairResumeTest {
-
-    // The draft writes a full stop for the source's question mark (a repair-level finding the reviewer leaves), and
-    // the reviewer's edit swaps a word for a different one, which earns its own fix before the one repair.
-    private static final String SOURCE = "Did the old man walk to the harbour?";
-    private static final String DRAFTED = "Старий чоловік пішов до гавані.";
-    private static final String FIXED = "Старий чоловік повільно пішов до гавані.";
-    private static final String REPAIRED = "Старий чоловік повільно пішов до гавані?";
-    private static final String REFUSED_EDIT = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"meaning\",\"quote\":\"чоловік пішов\",\"replacement\":\"чоловік побіг\"}]}]}";
 
     private static final AppError UNREACHABLE =
             AppError.of(ErrorCode.unreachable, "Provider unreachable", "The provider did not answer.");
@@ -111,33 +98,6 @@ class RepairResumeTest {
         assertRepairSentAgain(project, model);
     }
 
-    // IF a resume decided the segment again from its draft, THEN the reviewer's fix of the refused edit would be sent
-    // a second time before the repair.
-    @Test
-    void resume_errorDuringRepairAfterARefusedEditFix_resendsOnlyTheRepair() {
-        final ScriptedChatModel model = replies(DRAFTED)
-                .answerTo(REVIEW, ok(REFUSED_EDIT))
-                .answerTo(FIX, ChunkRunFixtures.singleTarget(FIXED))
-                .answerTo(REPAIR, Result.err(AppError.of(ErrorCode.upstream, "Provider failure", "Scripted.")))
-                .answerTo(REPAIR, target(REPAIRED));
-        final TestProject project = project(
-                TestBooks.markdown(tempDir.resolve("Book.md"), SOURCE), brief("en", "uk", QualityDial.BALANCED));
-        final TranslationJobImpl translation = job(project, model);
-        final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-
-        final Future<Result<JobReport>> run = executor().submit(translation::run);
-        final Paused pause = awaitPaused(pauses);
-        translation.resume();
-        report(await(run));
-
-        assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, FIX, REPAIR, REPAIR);
-        assertThat(stored(project, "Book.md:0"))
-                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::machineTarget)
-                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, REPAIRED);
-    }
-
     private TestProject doorAtBalanced() {
         return project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
     }
@@ -154,9 +114,5 @@ class RepairResumeTest {
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         return pauses;
-    }
-
-    private static Result<ChatResponse> ok(final String content) {
-        return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
 }

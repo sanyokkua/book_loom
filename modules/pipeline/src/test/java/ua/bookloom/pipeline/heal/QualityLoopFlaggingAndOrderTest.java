@@ -59,7 +59,7 @@ class QualityLoopFlaggingAndOrderTest {
     // never reads it; Balanced's one repair returns a target that still fails length and is not kept, and nothing
     // follows it. The FLAGGED record carries the draft's confidence and the medium omission from the length check.
     @Test
-    void nextDecision_repairStillFailsLength_flagsAfterTheOneRepairWithTheLengthFindingAndNoReviewerCall() {
+    void nextDecision_repairStillFailsLength_flagsAfterTheOneRepairWithTheLengthFinding() {
         final String source =
                 "He left the small house at dawn and never once looked back at the old road far from the sleepy"
                         + " town.";
@@ -79,10 +79,9 @@ class QualityLoopFlaggingAndOrderTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
 
-        final Result<ChunkDecider> started =
+        final ChunkDecider started =
                 loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
-        final Result<SegmentOutcome> decision =
-                Objects.requireNonNull(started.data()).nextDecision();
+        final Result<SegmentOutcome> decision = started.nextDecision();
 
         assertThat(model.requests()).hasSize(1);
         final SegmentOutcome result = Objects.requireNonNull(decision.data());
@@ -101,39 +100,6 @@ class QualityLoopFlaggingAndOrderTest {
                     assertThat(finding.kind()).isEqualTo(kind);
                     assertThat(finding.severity()).isEqualTo(severity);
                 });
-    }
-
-    // An accepted segment keeps the low note the reviewer left on it; a style remark is never applied.
-    @Test
-    void nextDecision_acceptedSegment_keepsTheReviewersStyleNoteAsALowFinding() {
-        final Segment segment = segment("Book.md:0");
-        final String good = "Він покинув дім на світанку і жодного разу не озирнувся на стару дорогу.";
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment, SOURCE, List.of(), good, good, good, null);
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":[{\"criterion\":"
-                        + "\"style\",\"quote\":\"стару дорогу\",\"replacement\":\"давню дорогу\"}]}]}"));
-        final LoopSettings settings = new LoopSettings(
-                ReviewMode.ASSISTED,
-                DialParameters.of(ua.bookloom.api.pipeline.QualityDial.BALANCED),
-                QualityLoopFixtures.FRAME,
-                NamePolicy.TRANSLITERATE,
-                List.of());
-
-        final Result<ChunkDecider> started =
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
-        final Result<SegmentOutcome> decision =
-                Objects.requireNonNull(started.data()).nextDecision();
-
-        final SegmentOutcome result = Objects.requireNonNull(decision.data());
-        assertThat(result.status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(result.path()).isEqualTo(SegmentPath.DRAFT);
-        assertThat(result.machineTarget()).isEqualTo(good);
-        assertThat(result.findings()).anySatisfy(finding -> {
-            assertThat(finding.severity()).isEqualTo(Severity.LOW);
-            assertThat(finding.raisedBy()).isEqualTo("reviewer");
-            assertThat(finding.kind()).isEqualTo("style");
-        });
     }
 
     @Test
@@ -167,12 +133,8 @@ class QualityLoopFlaggingAndOrderTest {
                 new DraftOutcome.Drafted(segment("Book.md:1"), SOURCE, List.of(), good, good, good, null);
         final LoopSettings settings =
                 QualityLoopFixtures.settings(ReviewMode.UNATTENDED, ua.bookloom.api.pipeline.QualityDial.FAST);
-        final ChunkDecider decider = Objects.requireNonNull(loop.start(
-                        List.of(first, second),
-                        settings,
-                        QualityLoopFixtures.PASSTHROUGH_GATE,
-                        calls(new ScriptedChatModel()))
-                .data());
+        final ChunkDecider decider = loop.start(
+                List.of(first, second), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(new ScriptedChatModel()));
 
         assertThat(decider.hasNext()).isTrue();
         final SegmentOutcome firstDecision =
@@ -191,8 +153,7 @@ class QualityLoopFlaggingAndOrderTest {
     private ChunkDecider start(final List<DraftOutcome> outcomes, final ScriptedChatModel model) {
         final LoopSettings settings =
                 QualityLoopFixtures.settings(ReviewMode.ASSISTED, ua.bookloom.api.pipeline.QualityDial.BALANCED);
-        return Objects.requireNonNull(loop.start(outcomes, settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                .data());
+        return loop.start(outcomes, settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
     }
 
     private static Segment segment(final String id) {

@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.heal;
 
-import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -10,40 +9,20 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Builds the decided {@link SegmentOutcome} of a drafted segment: accepted, flagged, or flagged for want of a
- * reviewer. The outcome's {@code judgeScore} is always {@code null}: the reviewer gives no score, and the confidence
- * the checks derive is what orders segments.
+ * Builds the decided {@link SegmentOutcome} of a drafted segment: accepted or flagged. The outcome's
+ * {@code judgeScore} is always {@code null}: the confidence the checks derive is what orders segments.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class SegmentOutcomes {
 
-    /** The kind of the finding a segment carries when the reviewer never answered for it. */
-    static final String REVIEWER_UNAVAILABLE = "reviewer-unavailable";
-
-    /** The {@code raisedBy} of every finding the reviewer raises that is not an applied edit. */
-    static final String REVIEWER = "reviewer";
-
-    private static final String REVIEWER_UNAVAILABLE_NOTE =
-            "The reviewer did not answer, so this target was decided by the quality checks alone.";
-
     static SegmentOutcome accepted(
-            final String segmentId,
-            final MachineTarget machine,
-            final QaResult qa,
-            final List<QaFinding> reviewerFindings,
-            final SegmentPath path) {
-        log.debug(
-                "Segment {} accepted path={} confidence={} reviewerFindings={}",
-                segmentId,
-                path,
-                qa.confidence(),
-                reviewerFindings.size());
+            final String segmentId, final MachineTarget machine, final QaResult qa, final SegmentPath path) {
+        log.debug("Segment {} accepted path={} confidence={}", segmentId, path, qa.confidence());
         return new SegmentOutcome(
                 segmentId,
                 SegmentStatus.ACCEPTED,
@@ -51,7 +30,7 @@ final class SegmentOutcomes {
                 machine.masked(),
                 qa.confidence(),
                 null,
-                SegmentFindings.recorded(qa, reviewerFindings),
+                SegmentFindings.recorded(qa),
                 path,
                 null);
     }
@@ -60,27 +39,9 @@ final class SegmentOutcomes {
             final String segmentId,
             final MachineTarget machine,
             final QaResult qa,
-            final List<QaFinding> reviewerFindings,
             final boolean repaired,
             @Nullable final AppError flagReason) {
-        return flaggedWith(
-                segmentId, machine, qa, repaired, flagReason, SegmentFindings.recorded(qa, reviewerFindings));
-    }
-
-    /**
-     * Flags a segment the reviewer could not review, keeping its latest target and adding the
-     * {@link #REVIEWER_UNAVAILABLE} finding, so the quality checks alone never accept it
-     * ({@code specs/quality-gates/spec.md} "Flag a segment the reviewer could not review").
-     *
-     * @param cause the error the call that never answered ended with, or {@code null} for a reply that could not be
-     *     read
-     */
-    static SegmentOutcome reviewerUnavailable(
-            final String segmentId, final MachineTarget machine, final QaResult qa, @Nullable final AppError cause) {
-        final List<QaFinding> findings = new ArrayList<>(SegmentFindings.recorded(qa, List.of()));
-        findings.add(new QaFinding(REVIEWER_UNAVAILABLE, Severity.MEDIUM, REVIEWER_UNAVAILABLE_NOTE, REVIEWER));
-        log.debug("Reviewer unavailable for segment={} code={}", segmentId, cause == null ? null : cause.code());
-        return flaggedWith(segmentId, machine, qa, false, cause, findings);
+        return flaggedWith(segmentId, machine, qa, repaired, flagReason, SegmentFindings.recorded(qa));
     }
 
     private static SegmentOutcome flaggedWith(

@@ -89,7 +89,6 @@ class PromptShapeTest {
                 "REVIEW_TERMS",
                 "SUGGEST_TARGETS",
                 "CHAPTER_SUMMARY",
-                "SUSPICIOUS_WORDS",
                 "FILE_NAME",
                 "BRIEF_SUGGESTION",
                 "TERM_CHOICE",
@@ -128,7 +127,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(PromptName.class)
     void render_everyCall_keepsItsSystemMessageWithinBudget(final PromptName name) {
-        final boolean large = name == PromptName.REVIEWER || name == PromptName.SUGGEST_TARGETS;
+        final boolean large = name == PromptName.SUGGEST_TARGETS;
 
         assertThat(TokenEstimator.estimate(system(name), "en"))
                 .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
@@ -301,18 +300,12 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"TRANSLATE", "REVIEWER", "SUGGEST_TARGETS"})
+            names = {"TRANSLATE", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
         assertThat(prompt(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
                 .contains("Source — English", "Pair — English -> Ukrainian")
                 .doesNotContain("Polish", "Russian");
-    }
-
-    @Test
-    void render_reviewer_addsTheReviewerChecksTheDraftDoesNotCarry() {
-        assertThat(system(PromptName.REVIEWER)).contains("Check: Quotes are «…» and balanced");
-        assertThat(system(PromptName.TRANSLATE)).doesNotContain("Check: ");
     }
 
     @ParameterizedTest

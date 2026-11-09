@@ -37,14 +37,14 @@ import ua.bookloom.pipeline.memory.TmLookup;
 
 /**
  * The prompts of one chunk, built the one way a run builds them: the window and map each draft is shown, the batch
- * that fits the window, the requests of a draft, its format re-ask and its repair, and the inputs of the chunk's reviewer.
+ * that fits the window, the requests of a draft, its format re-ask and its repair.
  * Every translate-family request is planned by the run's context builder over the window the book's reading order
  * gives and the book map as it stands. The job takes its chunk's inputs, its batches and its loop
  * settings from here, and the prompt evals build their requests through the same methods, so what an eval measures is
  * what a run sends — a hand-made context is how an eval drifts from the app.
  *
- * <p>The reviewer's and the directed fix's requests are built inside their own production classes
- * ({@code ReviewerCall}, {@code DirectedFix}) from the inputs given here, {@link #loopSettings()} and a mask's text.
+ * <p>The directed fix's request is built inside its own production class ({@code DirectedFix}) from the inputs given
+ * here, {@link #loopSettings()} and a mask's text.
  *
  * <p>Used from the job thread only.
  */
@@ -325,7 +325,7 @@ public final class PromptRequests {
         return drafter.request(prepared.plan(), prepared.items());
     }
 
-    /** What the chunk's quality loop and its reviewer are given: the chunk's term pairs and character sheet. */
+    /** What the chunk's quality loop is given: the chunk's term pairs and character sheet. */
     public LoopSettings loopSettings() {
         log.debug("Reading the chunk's loop settings project={}", settings.projectId());
         return new LoopSettings(
@@ -335,8 +335,7 @@ public final class PromptRequests {
                         settings.names(),
                         inputs.terms(),
                         inputs.termPairs(),
-                        inputs.characterLines(),
-                        inputs.reviewerSheets())
+                        inputs.characterLines())
                 .withPinnedTargets(inputs.pinnedTargets())
                 .withNames(inputs.names());
     }

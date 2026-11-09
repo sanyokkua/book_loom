@@ -10,8 +10,8 @@ import ua.bookloom.api.pipeline.RepairMode;
  * What one quality-dial setting means for a run's mechanics.
  *
  * @param repair what a segment whose draft fails a check is given
- * @param reviewPasses how many times the reviewer reads each chunk: none for Fast, one for Balanced, two for Max, the
- *     second with a narrower checklist
+ * @param reviewPasses the dial's reviewer-pass figure, which no run reads any more (task 14.8 retires it with the
+ *     dial table)
  * @param backwardRevision whether the backward-revision pass runs after the last segment of the book (until group 14)
  * @param proofreadCoverage which decided segments the Proofread stage reads
  */
@@ -38,24 +38,5 @@ public record DialParameters(
             case MAX ->
                 new DialParameters(RepairMode.ONE, 2, true, ProofreadCoverage.MARKED_AND_DOUBTFUL_THEN_EVERY_PARAGRAPH);
         };
-    }
-
-    /**
-     * The same mechanics with another number of reviewer passes; arm 7a's OFF choice passes zero.
-     *
-     * @param passes how many times the reviewer reads each chunk; zero for none
-     * @return the copy
-     */
-    public DialParameters withReviewerPasses(final int passes) {
-        return new DialParameters(repair, passes, backwardRevision, proofreadCoverage);
-    }
-
-    /**
-     * Whether the reviewer reads each chunk.
-     *
-     * @return {@code true} for every dial but Fast
-     */
-    public boolean hasReviewer() {
-        return reviewPasses > 0;
     }
 }

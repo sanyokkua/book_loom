@@ -46,7 +46,7 @@ class ProgressLedgerTest {
 
     @Test
     void draftSecondsPerSegment_noDraftTimed_null() {
-        run(StepKind.CHECK, 3, 2);
+        run(StepKind.REPAIR, 3, 2);
 
         assertThat(ledger.draftSecondsPerSegment()).isNull();
     }
@@ -54,7 +54,7 @@ class ProgressLedgerTest {
     @Test
     void draftSecondsPerSegment_checksTimed_notCounted() {
         run(StepKind.DRAFT, 2, 2);
-        run(StepKind.CHECK, 2, 5);
+        run(StepKind.REPAIR, 2, 5);
 
         assertThat(ledger.draftSecondsPerSegment()).isEqualTo(2.0);
     }
@@ -106,15 +106,13 @@ class ProgressLedgerTest {
     void read_oneChunkOfABookDone_isNotTheWholeBar() {
         ledger.seed(100, 0);
         ledger.planned(StepKind.DRAFT, 10);
-        ledger.planned(StepKind.CHECK, 1);
         run(StepKind.DRAFT, 10, 5);
-        run(StepKind.CHECK, 1, 5);
         ledger.seed(100, 10);
 
         final Figures read = ledger.read(now);
 
-        assertThat(read.done()).isEqualTo(11);
-        assertThat(read.total()).isEqualTo(110);
+        assertThat(read.done()).isEqualTo(10);
+        assertThat(read.total()).isEqualTo(100);
         assertThat(read.percent()).isEqualTo(10);
     }
 
@@ -123,9 +121,9 @@ class ProgressLedgerTest {
     @Test
     void read_draftsAndChecksMeasured_sumsStepsLeftTimesEachKindsOwnTime() {
         ledger.planned(StepKind.DRAFT, 20);
-        ledger.planned(StepKind.CHECK, 4);
+        ledger.planned(StepKind.REPAIR, 4);
         run(StepKind.DRAFT, 10, 12);
-        run(StepKind.CHECK, 2, 60);
+        run(StepKind.REPAIR, 2, 60);
 
         final Figures read = ledger.read(now);
 
@@ -227,7 +225,7 @@ class ProgressLedgerTest {
     @Test
     void rebuilt_74Of142Decided_startsTheBarThereAndHidesTimeLeftUntilFiveNewSteps() {
         final ProgressLedger rebuilt =
-                ProgressLedger.rebuilt(clock, List.of(new ProgressLedger.ChunkState(142, 74)), 0, List.of(), NONE);
+                ProgressLedger.rebuilt(clock, List.of(new ProgressLedger.ChunkState(142, 74)), List.of(), NONE);
         assertThat(rebuilt.read(now).percent()).isEqualTo(52);
         assertThat(rebuilt.read(now).done()).isEqualTo(74);
         assertThat(rebuilt.read(now).total()).isEqualTo(142);
@@ -244,9 +242,9 @@ class ProgressLedgerTest {
         assertThat(rebuilt.read(now).left()).isNotNull();
     }
 
-    // IF the checks of finished chunks were not counted, THEN a Balanced book would reopen below where it stood.
+    // IF the decided segments of finished chunks were not counted, THEN a book would reopen below where it stood.
     @Test
-    void rebuilt_fiveChunksOfEightTwoDecided_is18Of45Steps() {
+    void rebuilt_fiveChunksOfEightTwoDecided_is16Of40Steps() {
         final List<ProgressLedger.ChunkState> chunks = List.of(
                 new ProgressLedger.ChunkState(8, 8),
                 new ProgressLedger.ChunkState(8, 8),
@@ -255,10 +253,10 @@ class ProgressLedgerTest {
                 new ProgressLedger.ChunkState(8, 0));
 
         final Figures read =
-                ProgressLedger.rebuilt(clock, chunks, 1, List.of(), NONE).read(now);
+                ProgressLedger.rebuilt(clock, chunks, List.of(), NONE).read(now);
 
-        assertThat(read.done()).isEqualTo(18);
-        assertThat(read.total()).isEqualTo(45);
+        assertThat(read.done()).isEqualTo(16);
+        assertThat(read.total()).isEqualTo(40);
         assertThat(read.percent()).isEqualTo(40);
     }
 
@@ -281,10 +279,9 @@ class ProgressLedgerTest {
                 new ProgressLedger.ChapterState(false, false),
                 new ProgressLedger.ChapterState(false, false));
 
-        final Figures read =
-                ProgressLedger.rebuilt(clock, chunks, 0, stored, NONE).read(now);
+        final Figures read = ProgressLedger.rebuilt(clock, chunks, stored, NONE).read(now);
         final Figures missing =
-                ProgressLedger.rebuilt(clock, chunks, 0, secondMissing, NONE).read(now);
+                ProgressLedger.rebuilt(clock, chunks, secondMissing, NONE).read(now);
 
         assertThat(read.done()).isEqualTo(22);
         assertThat(read.total()).isEqualTo(44);
@@ -301,7 +298,7 @@ class ProgressLedgerTest {
                 List.of(new ProgressLedger.ChapterState(true, true), new ProgressLedger.ChapterState(true, false));
 
         final Figures read = ProgressLedger.rebuilt(
-                        clock, List.of(new ProgressLedger.ChunkState(10, 10)), 0, chapters, NONE)
+                        clock, List.of(new ProgressLedger.ChunkState(10, 10)), chapters, NONE)
                 .read(now);
 
         assertThat(read.done()).isEqualTo(12);
@@ -328,16 +325,16 @@ class ProgressLedgerTest {
     @Test
     void read_balancedRun_listsPlannedDoneAndMeasuredSecondsPerKind() {
         ledger.planned(StepKind.DRAFT, 8);
-        ledger.planned(StepKind.CHECK, 1);
+        ledger.planned(StepKind.REPAIR, 1);
         run(StepKind.DRAFT, 4, 12);
-        run(StepKind.CHECK, 1, 30);
+        run(StepKind.REPAIR, 1, 30);
 
         final List<ProgressFigures.KindFigures> kinds = ledger.read(now).kinds();
 
         assertThat(kinds)
                 .containsExactly(
                         new ProgressFigures.KindFigures(StepKind.DRAFT, 8, 4, 12.0),
-                        new ProgressFigures.KindFigures(StepKind.CHECK, 1, 1, 30.0));
+                        new ProgressFigures.KindFigures(StepKind.REPAIR, 1, 1, 30.0));
     }
 
     static KindFigures proofreadOf(final Figures read) {
@@ -353,7 +350,6 @@ class ProgressLedgerTest {
         final Figures read = ProgressLedger.rebuilt(
                         clock,
                         List.of(new ProgressLedger.ChunkState(142, 142)),
-                        0,
                         List.of(),
                         new ProgressLedger.ProofreadState(6, 1))
                 .read(now);

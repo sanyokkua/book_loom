@@ -34,7 +34,7 @@ class InjectionCorpusTest {
 
     private RealRunRow runWith(final String reply) {
         final ModelCalls calls = (kind, segmentId, request) -> Result.ok(new ChatResponse(reply, FinishReason.STOP));
-        return new RealRunRunner(calls, 1, dir).injection(injection);
+        return new RealRunRunner(calls, dir).injection(injection);
     }
 
     private String replyWith(final String template) {

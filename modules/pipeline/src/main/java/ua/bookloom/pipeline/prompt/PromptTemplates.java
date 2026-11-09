@@ -71,10 +71,7 @@ public final class PromptTemplates {
     private static LanguageRules variantRules(final PromptVariants variants) {
         Objects.requireNonNull(variants, "variants");
         if (!variants.isDefault()) {
-            log.debug(
-                    "Prompt variants differ from the defaults: languageRules={} reviewer={}",
-                    variants.languageRules(),
-                    variants.reviewer());
+            log.debug("Prompt variants differ from the defaults: languageRules={}", variants.languageRules());
         }
         return variants.rules();
     }
@@ -105,8 +102,7 @@ public final class PromptTemplates {
     }
 
     /**
-     * The variants the templates were built with; the run reads the reviewer choice (arm 7a) from here because the
-     * eval and the application both hand a run its templates.
+     * The variants the templates were built with, which a test injector binds to try another language-rules choice.
      *
      * @return never null
      */
@@ -253,9 +249,7 @@ public final class PromptTemplates {
             values.put(EXAMPLES, examplesFor(name, frame));
         }
         if (slots.declares(LANGUAGE_RULES)) {
-            values.put(
-                    LANGUAGE_RULES,
-                    rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
+            values.put(LANGUAGE_RULES, rules.section(frame.sourceLanguage(), frame.targetLanguage()));
         }
         return values;
     }

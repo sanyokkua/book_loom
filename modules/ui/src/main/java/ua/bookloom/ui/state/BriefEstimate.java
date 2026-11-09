@@ -18,8 +18,6 @@ import ua.bookloom.api.llm.ModelSettings;
 import ua.bookloom.api.persistence.ModelSettingsRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChapterTally;
-import ua.bookloom.api.pipeline.DialProfile;
-import ua.bookloom.api.pipeline.DialProfiles;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
@@ -48,7 +46,6 @@ public final class BriefEstimate {
     private final BriefProject project;
     private final ModelSettingsRepository stored;
     private final ProjectService projects;
-    private final DialProfiles profiles;
     private final Executor background;
     private final Executor fx;
     private long asked;
@@ -91,7 +88,6 @@ public final class BriefEstimate {
             final Executor background,
             final Executor fx) {
         final ModelSpeeds speeds = Objects.requireNonNull(sources, "sources").speeds();
-        this.profiles = sources.profiles();
         this.background = Objects.requireNonNull(background, "background");
         this.fx = Objects.requireNonNull(fx, "fx");
         this.current = Objects.requireNonNull(current, "current");
@@ -120,12 +116,11 @@ public final class BriefEstimate {
         final int segments = project.totalSegments().get();
         final long ask = ++asked;
         log.debug("estimate #{} asked for {} segments on {}, model chosen {}", ask, segments, dial, chosen.isPresent());
-        final DialProfile profile = profiles.of(dial);
         final @Nullable String projectId = brief != null && brief.summariesOn() ? openProjectId() : null;
         final int chunks = Math.ceilDiv(Math.max(0, segments), ESTIMATED_SEGMENTS_PER_CHUNK);
         background.execute(() -> {
-            final StartEstimate now = StartEstimates.of(
-                    speedsOf(chosen), segments, chunks, dial, profile.reviewPasses(), summariesOf(projectId));
+            final StartEstimate now =
+                    StartEstimates.of(speedsOf(chosen), segments, chunks, dial, summariesOf(projectId));
             fx.execute(() -> publish(ask, now));
         });
     }

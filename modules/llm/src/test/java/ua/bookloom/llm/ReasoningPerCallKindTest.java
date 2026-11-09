@@ -239,7 +239,7 @@ class ReasoningPerCallKindTest {
                 chatPath,
                 CallKind.DRAFT,
                 CallKind.STRUCTURAL_REPAIR,
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 CallKind.TERM_READING,
                 CallKind.BRIEF_SYNTHESIS);
 
@@ -267,7 +267,7 @@ class ReasoningPerCallKindTest {
         storeThinking(model, ThinkingOverride.ALLOW_PROOFREAD_AND_NAMES);
 
         final List<JsonNode> bodies = chats(
-                model, chatPath, CallKind.REVIEW, CallKind.TERM_READING, CallKind.DRAFT, CallKind.BRIEF_SYNTHESIS);
+                model, chatPath, CallKind.PROOFREAD, CallKind.TERM_READING, CallKind.DRAFT, CallKind.BRIEF_SYNTHESIS);
 
         assertThat(bodies).extracting(body -> body.path(field).asText()).containsExactly(on, on, off, off);
         assertThat(bodies)

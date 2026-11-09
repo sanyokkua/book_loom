@@ -65,6 +65,6 @@ class FrameWordingTest {
 
         assertThat(FrameWording.section(rules, "ru", "uk", Set.of(RuleKey.AGREEMENT)))
                 .doesNotContain("- Agreement:");
-        assertThat(rules.section("ru", "uk", false)).contains("- Agreement:");
+        assertThat(rules.section("ru", "uk")).contains("- Agreement:");
     }
 }

@@ -7,8 +7,6 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.PromptVariants;
-import ua.bookloom.pipeline.prompt.PromptVariants.ReviewerVariant;
 
 /**
  * What the run's brief and review mode set for every chunk.
@@ -30,30 +28,12 @@ public record RunSettings(
      * @param brief the non-null brief the run translates by
      * @param frame the non-null languages and style of the run
      * @param window the context window in tokens; positive
-     * @param variants the non-null prompt variants; the reviewer OFF choice (arm 7a, until task 14.7) leaves the dial
-     *     with no reviewer pass
      * @return the settings
      */
     public static RunSettings forRun(
-            final RunRequest request,
-            final BookBrief brief,
-            final CallFrame frame,
-            final int window,
-            final PromptVariants variants) {
+            final RunRequest request, final BookBrief brief, final CallFrame frame, final int window) {
         return new RunSettings(
-                request.projectId(), request.mode(), dialOf(brief, variants), frame, brief.names(), window);
-    }
-
-    /**
-     * The brief's dial row, without its reviewer passes when arm 7a's OFF variant is bound.
-     *
-     * @param brief the non-null brief
-     * @param variants the non-null prompt variants
-     * @return the dial mechanics a run reads
-     */
-    public static DialParameters dialOf(final BookBrief brief, final PromptVariants variants) {
-        final DialParameters row = DialParameters.of(brief.dial());
-        return variants.reviewer() == ReviewerVariant.OFF ? row.withReviewerPasses(0) : row;
+                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names(), window);
     }
 
     /**

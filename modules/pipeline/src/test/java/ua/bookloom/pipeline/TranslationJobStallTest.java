@@ -1,14 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
-import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
-import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
-import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
-import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
-import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
@@ -32,14 +24,11 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
@@ -49,36 +38,12 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class TranslationJobStallTest {
 
-    private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
-    // The reviewer's edit for s1 swaps a word for a different one: a directed fix follows.
-    private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"meaning\",\"quote\":\"чоловік пішов\",\"replacement\":\"чоловік побіг\"}]}]}";
-
     @TempDir
     private Path tempDir;
 
     @AfterEach
     void cleanUpWorkers() {
         TranslationJobTestSupport.shutdownAll();
-    }
-
-    // Only a stall degrades the reviewer; a provider outage pauses, as TranslationJobUnattendedRecoveryTest proves. The
-    // second request is the same call sent again without its response format.
-    @Test
-    void run_chunkReviewTimesOutTwice_flagsTheChunkAndFinishesWithoutAPause() {
-        final ScriptedChatModel model = replies(T0, T1)
-                .answerTo(REVIEW, Result.err(error(ErrorCode.timeout)))
-                .answer(Result.err(error(ErrorCode.timeout)));
-        final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
-        final TranslationJobImpl translation = job(project, model);
-        final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-
-        final JobReport report = report(await(executor().submit(translation::run)));
-
-        assertThat(pauses).isEmpty();
-        assertThat(report.flagged()).isEqualTo(2);
-        assertThat(stored(project, "Book.md:1").machineTarget()).isEqualTo(T1);
     }
 
     // Two pauses for the same draft are the budget: the third failure flags it and the run sends the next draft. A
@@ -127,34 +92,6 @@ class TranslationJobStallTest {
         assertThat(model.requests()).hasSize(3);
     }
 
-    // The reviewer had already answered when the directed fix for its refused edit failed: resuming sends the fix
-    // again,
-    // not the reviewer.
-    @Test
-    void run_resumedAfterTheFixForARefusedEditFailed_continuesAtTheFix() {
-        final ScriptedChatModel model = replies(T0, T1)
-                .answer(Result.err(error(ErrorCode.upstream)))
-                .answer(ChunkRunFixtures.singleTarget(FIXED_T0))
-                .answerTo(REVIEW, ok(REFUSED_EDIT_ON_S1));
-        final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
-        final TranslationJobImpl translation = job(project, model);
-        final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-
-        final Future<Result<JobReport>> run = executor().submit(translation::run);
-        awaitPaused(pauses);
-        translation.resume();
-        final JobReport report = report(await(run));
-
-        assertThat(report.accepted()).isEqualTo(2);
-        assertThat(stored(project, "Book.md:0").machineTarget()).isEqualTo(FIXED_T0);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, REVIEW, FIX, FIX);
-    }
-
-    private Path twoParagraphs() {
-        return TestBooks.markdown(tempDir.resolve("Book.md"), String.join("\n\n", S0, S1));
-    }
-
     private Path threeLines() {
         return TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree.");
     }
@@ -163,10 +100,6 @@ class TranslationJobStallTest {
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         return pauses;
-    }
-
-    private static Result<ChatResponse> ok(final String content) {
-        return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
 
     private static AppError error(final ErrorCode code) {

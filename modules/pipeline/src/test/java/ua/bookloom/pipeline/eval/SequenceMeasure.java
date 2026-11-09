@@ -123,7 +123,7 @@ final class SequenceMeasure {
                 .leakedProtocol((int) run.segments().stream()
                         .filter(s -> s.target() != null && ProtocolLeak.leaks(s.target()))
                         .count())
-                .reviewerTruncated(run.reviewerTruncated())
+                .proofreadTruncated(run.proofreadTruncated())
                 .termClaimedWrong(claims.values().stream().mapToInt(List::size).sum())
                 .claimedRenderings(claims.entrySet().stream()
                         .map(e -> e.getKey() + " <- " + String.join(", ", e.getValue()))

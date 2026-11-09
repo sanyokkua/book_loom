@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.pipeline.JobState;
@@ -17,18 +16,16 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.index.BookIndex;
 
 /**
- * Takes each unit's pending segments through chunks, in document order (design D4a). With the reviewer on, a chunk's
- * segments are all drafted before its reviewer call and only then decided one at a time, because the reviewer reads the
- * whole chunk; with it off each segment is drafted and decided before the next is drafted. The reviewer on or off is
- * this one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
- * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
+ * Takes each unit's pending segments through chunks, in document order (design D4a): each segment is drafted and
+ * decided (checks, then the one repair) before the next is drafted. A segment whose context matches a memory entry that
+ * passes its checks takes the draft's place and is decided in its turn with no draft. What follows each decision — its deferrals, the
  * unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary. Before the first draft
  * every finished chapter that lacks a current summary gets one, and a chunk whose commit finishes a chapter is followed
  * by that chapter's summary call ({@link ChapterSummaries}) before the next chunk; the brief's switch is read again at
  * each chunk, so a change made while the run is paused applies from the resume.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
- * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
+ * aborted — a draft or the repair that failed. A step that pauses the run twice
  * for a provider error, or that the person skips from the pause, is flagged and the run goes on. A stop drops the
  * undecided drafts: those segments stay PENDING with no target, and the next run drafts them from the first pending
  * one.
@@ -43,7 +40,6 @@ public final class ChunkRunner {
     private final ChunkPlanner planner;
     private final RunStores stores;
     private final RunSinks sinks;
-    private final RoutedCalls calls;
     private final TermLearning learning;
     private final ChunkSteps announced;
     private final ChunkDrafting drafting;
@@ -80,7 +76,6 @@ public final class ChunkRunner {
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         final ChunkDrafting.Collaborators shared =
                 ChunkDrafting.Collaborators.wire(steps, settings, stores, sinks, index, document);
-        this.calls = shared.calls();
         this.announced = shared.announced();
         this.learning = new TermLearning(
                 stores,
@@ -172,9 +167,7 @@ public final class ChunkRunner {
         }
         final PromptRequests requests = Objects.requireNonNull(read.data(), "requests");
         final Current current = Current.of(work, items, requests, budget);
-        final Optional<RunEnd> end = planner.settings().dial().hasReviewer()
-                ? reviewedChunk(current, items)
-                : unreviewedChunk(current, items);
+        final Optional<RunEnd> end = decidedChunk(current, items);
         if (end.isPresent()) {
             final List<String> dropped = current.drafts().undecidedIds();
             log.debug("Stopped inside chunk={} droppedDrafts={} ids={}", index, dropped.size(), dropped);
@@ -189,21 +182,9 @@ public final class ChunkRunner {
         return summaries.afterCommit(work, items);
     }
 
-    // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.
-    private Optional<RunEnd> reviewedChunk(final Current current, final List<WorkItem> items) {
-        for (final WorkItem item : items) {
-            final Step<DraftOutcome> drafted =
-                    SegmentLogContext.within(item.segment().id(), () -> drafting.draft(current, item));
-            if (drafted instanceof Step.Stopped<DraftOutcome>(final RunEnd end)) {
-                return Optional.of(end);
-            }
-        }
-        log.debug("Chunk drafted segments={}; reviewing it", items.size());
-        return decideWith(current, null, items, current.drafts().all());
-    }
-
-    private Optional<RunEnd> unreviewedChunk(final Current current, final List<WorkItem> items) {
-        log.debug("Chunk not reviewed segments={}: the dial turns the reviewer off", items.size());
+    // Each segment is drafted and decided in turn; its lines name it, a chunk's own lines do not.
+    private Optional<RunEnd> decidedChunk(final Current current, final List<WorkItem> items) {
+        log.debug("Deciding a chunk segment by segment segments={}", items.size());
         for (final WorkItem item : items) {
             final Optional<RunEnd> end =
                     SegmentLogContext.within(item.segment().id(), () -> draftAndDecide(current, item));
@@ -218,32 +199,16 @@ public final class ChunkRunner {
         return switch (drafting.draft(current, item)) {
             case Step.Stopped<DraftOutcome>(final RunEnd stopped) -> Optional.of(stopped);
             case Step.Done<DraftOutcome>(final DraftOutcome outcome) ->
-                decideWith(current, item.segment().id(), List.of(item), List.of(outcome));
+                decideWith(current, List.of(item), List.of(outcome));
         };
     }
 
-    /**
-     * Starts the quality loop over the outcomes — the reviewer call, when the dial enables it — then decides them.
-     * {@code segmentId} is the one segment an unreviewed loop starts for, or {@code null} for a reviewed chunk.
-     */
+    // The quality loop over the drafted outcomes, then their decisions.
     private Optional<RunEnd> decideWith(
-            final Current current,
-            @Nullable final String segmentId,
-            final List<WorkItem> items,
-            final List<DraftOutcome> outcomes) {
-        final Step<ChunkDecider> decider = calls.untilAnsweredOrFlagged(
-                current.work(),
-                segmentId,
-                new RoutedCalls.StepName("review", items.getFirst().segment().id()),
-                () -> steps.loop()
-                        .start(outcomes, current.loop(), current.inputs().gate(), steps.calls()),
-                error -> steps.loop()
-                        .startWithoutReviewer(
-                                outcomes, current.loop(), current.inputs().gate(), steps.calls(), error));
-        return switch (decider) {
-            case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
-            case Step.Done<ChunkDecider>(final ChunkDecider started) -> deciding.decideEach(current, items, started);
-        };
+            final Current current, final List<WorkItem> items, final List<DraftOutcome> outcomes) {
+        final ChunkDecider started =
+                steps.loop().start(outcomes, current.loop(), current.inputs().gate(), steps.calls());
+        return deciding.decideEach(current, items, started);
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {

@@ -90,7 +90,7 @@ final class ChunkDrafting {
             final MemoryReuse memory =
                     new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
             final RoutedCalls calls = new RoutedCalls(sinks.boundaries());
-            final ChunkSteps announced = new ChunkSteps(steps.calls().steps(), settings.dial());
+            final ChunkSteps announced = new ChunkSteps(steps.calls().steps());
             final DecisionFollowUp followUp = new DecisionFollowUp(
                     new DecisionFollowUp.BookFacts(
                             settings.projectId(), settings.frame().analysisLanguage(), index),

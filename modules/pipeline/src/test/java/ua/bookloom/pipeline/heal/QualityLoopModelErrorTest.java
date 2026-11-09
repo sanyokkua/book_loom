@@ -53,9 +53,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
 
         final Result<SegmentOutcome> first = decider.nextDecision();
         assertThat(first.isErr()).isTrue();
@@ -82,9 +81,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.ALWAYS_INTERNAL_ERROR, calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.ALWAYS_INTERNAL_ERROR, calls(model));
 
         final Result<SegmentOutcome> decision = decider.nextDecision();
 

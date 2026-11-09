@@ -69,7 +69,7 @@ class RunSessionPaceTest extends LiveSessionTestBase {
     void judgeCall_isNotCounted() {
         final RunSession session = session();
 
-        session.onEvent(call("s-1", CallKind.REVIEW));
+        session.onEvent(call("s-1", CallKind.PROOFREAD));
         tick(session);
 
         assertThat(throughput().tokensPerSecond()).isNull();

@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline.reviewer;
+package ua.bookloom.pipeline.qa;
 
 import java.util.ArrayList;
 import java.util.List;

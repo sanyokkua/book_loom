@@ -41,7 +41,6 @@ final class ChunkRunFixtures {
     static final String DOOR_ECHO = "HE OPENED THE OLD DOOR.";
     static final String DOOR_TARGET = "Він відчинив старі двері.";
     static final String EDIT = "Він рвучко відчинив двері.";
-    static final String REVIEW = "reviewer";
     static final String DRAFT = "draft";
     static final String PROOFREAD = "proofread";
     static final String FIX = "directed-fix";
@@ -57,11 +56,6 @@ final class ChunkRunFixtures {
 
     static Path door(final Path directory) {
         return TestBooks.txt(directory.resolve("Book.txt"), DOOR);
-    }
-
-    /** A reviewer reply that finds nothing to change in any pair of the chunk. */
-    static Result<ChatResponse> reviewed() {
-        return Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP));
     }
 
     static Result<ChatResponse> target(final String text) {

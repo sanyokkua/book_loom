@@ -121,11 +121,11 @@ class GatedChatModelLedgerTest {
             final ProviderKind kind, final String basePath, final String chatPath) {
         stubChat(chatPath, List.of(failure(503, NO_ROW)));
 
-        final Result<ChatResponse> result = model(kind, basePath).chat(request(CallKind.REVIEW));
+        final Result<ChatResponse> result = model(kind, basePath).chat(request(CallKind.PROOFREAD));
 
         assertThat(result.isErr()).isTrue();
         assertThat(ledger.since(0)).hasSize(chatRequests(chatPath)).allSatisfy(record -> {
-            assertThat(record.callKind()).isEqualTo(CallKind.REVIEW);
+            assertThat(record.callKind()).isEqualTo(CallKind.PROOFREAD);
             assertThat(record.isFailed()).isTrue();
             assertThat(record.failureReason()).isEqualTo(FailureReason.UNCLASSIFIED);
             assertThat(record.usage()).isNull();

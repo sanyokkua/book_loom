@@ -58,7 +58,7 @@ class NamesStyleRunBannerScreenTest extends TranslatingScreenTestBase {
     private void stuck() {
         mirror().live()
                 .publishWaitingCall(new WaitingCall(
-                        CallKind.REVIEW,
+                        CallKind.PROOFREAD,
                         "ch7 · p42",
                         0,
                         1,

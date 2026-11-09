@@ -9,9 +9,6 @@ import java.time.Duration;
  */
 public record CallLimits() {
 
-    /** How long a reviewer call may take. */
-    public static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(90);
-
     /** How long a helper call (names, brief, file name, summary) may take. */
     public static final Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
 

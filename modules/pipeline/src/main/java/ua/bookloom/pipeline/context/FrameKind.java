@@ -26,7 +26,7 @@ enum FrameKind {
                     TERM_READING,
                     TERM_CHOICE,
                     NAME_KNOWLEDGE -> ANALYSIS;
-            case REVIEW, DIRECTED_FIX -> NONE;
+            case DIRECTED_FIX -> NONE;
         };
     }
 

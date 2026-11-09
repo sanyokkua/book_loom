@@ -45,9 +45,9 @@ class StepAnnouncerTest {
     @Test
     void started_otherKind_countsFromZeroAgain() {
         steps.started(StepKind.DRAFT, "draft", "s0", "s0");
-        steps.started(StepKind.CHECK, "check-1", "check:s0:1", "s0");
+        steps.started(StepKind.REPAIR, "check-1", "check:s0:1", "s0");
 
-        assertThat(events).last().isEqualTo(started(StepKind.CHECK, "check-1", 0, "s0"));
+        assertThat(events).last().isEqualTo(started(StepKind.REPAIR, "check-1", 0, "s0"));
     }
 
     @Test
@@ -73,11 +73,11 @@ class StepAnnouncerTest {
 
     @Test
     void ended_openKey_carriesTheLabelItemAndResultOfItsStart() {
-        steps.started(StepKind.CHECK, "check-2", "check:s0:2", "s0");
+        steps.started(StepKind.REPAIR, "check-2", "check:s0:2", "s0");
 
-        steps.ended(StepKind.CHECK, "check:s0:2", StepResult.DONE);
+        steps.ended(StepKind.REPAIR, "check:s0:2", StepResult.DONE);
 
-        assertThat(events).last().isEqualTo(ended(StepKind.CHECK, "check-2", 0, "s0", StepResult.DONE));
+        assertThat(events).last().isEqualTo(ended(StepKind.REPAIR, "check-2", 0, "s0", StepResult.DONE));
     }
 
     @Test
@@ -89,7 +89,7 @@ class StepAnnouncerTest {
 
     @Test
     void planned_zero_emitsNothing() {
-        steps.planned(StepKind.CHECK, 0, false);
+        steps.planned(StepKind.REPAIR, 0, false);
 
         assertThat(events).isEmpty();
     }
@@ -103,27 +103,27 @@ class StepAnnouncerTest {
 
     @Test
     void instant_newKey_startsAndEndsAtOnce() {
-        steps.instant(StepKind.CHECK, "check-1", "check:s0:1", "s0", StepResult.NO_CALL);
+        steps.instant(StepKind.REPAIR, "check-1", "check:s0:1", "s0", StepResult.NO_CALL);
 
         assertThat(events)
                 .containsExactly(
-                        started(StepKind.CHECK, "check-1", 0, "s0"),
-                        ended(StepKind.CHECK, "check-1", 0, "s0", StepResult.NO_CALL));
+                        started(StepKind.REPAIR, "check-1", 0, "s0"),
+                        ended(StepKind.REPAIR, "check-1", 0, "s0", StepResult.NO_CALL));
     }
 
     @Test
     void endOpen_prefix_endsOnlyMatching() {
-        steps.started(StepKind.CHECK, "check-1", "check:a:1", "a");
-        steps.started(StepKind.CHECK, "check-2", "check:a:2", "a");
-        steps.started(StepKind.CHECK, "check-1", "check:b:1", "b");
+        steps.started(StepKind.REPAIR, "check-1", "check:a:1", "a");
+        steps.started(StepKind.REPAIR, "check-2", "check:a:2", "a");
+        steps.started(StepKind.REPAIR, "check-1", "check:b:1", "b");
         events.clear();
 
-        steps.endOpen(StepKind.CHECK, "check:a", StepResult.FAILED);
+        steps.endOpen(StepKind.REPAIR, "check:a", StepResult.FAILED);
 
         assertThat(events)
                 .containsExactly(
-                        ended(StepKind.CHECK, "check-1", 0, "a", StepResult.FAILED),
-                        ended(StepKind.CHECK, "check-2", 1, "a", StepResult.FAILED));
+                        ended(StepKind.REPAIR, "check-1", 0, "a", StepResult.FAILED),
+                        ended(StepKind.REPAIR, "check-2", 1, "a", StepResult.FAILED));
     }
 
     @Test

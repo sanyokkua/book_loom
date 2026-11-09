@@ -116,7 +116,6 @@ class RealRunCorpusTest {
         final List<String> ids = Stream.of(
                         RunCorpus.text().stream().map(RunCase::id),
                         RunCorpus.batches().stream().map(BatchCase::id),
-                        RunCorpus.reviewerBatches().stream().map(ReviewerBatchCase::id),
                         RunCorpus.repairs().stream().map(RepairCase::id))
                 .flatMap(Function.identity())
                 .toList();
@@ -259,7 +258,7 @@ class RealRunCorpusTest {
             final String id,
             final RepairCase repairCase,
             @org.junit.jupiter.api.io.TempDir final java.nio.file.Path dir) {
-        final RealRunRunner runner = new RealRunRunner((kind, segment, request) -> null, 1, dir);
+        final RealRunRunner runner = new RealRunRunner((kind, segment, request) -> null, dir);
         final ua.bookloom.api.document.Segment real = runner.documentSegment(repairCase);
 
         assertThat(runner.restores(real, repairCase.good())).as(id + " good").isTrue();

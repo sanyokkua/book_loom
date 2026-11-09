@@ -7,9 +7,7 @@ import static ua.bookloom.pipeline.BatchDraftingJobTest.entry;
 import static ua.bookloom.pipeline.BatchDraftingJobTest.items;
 import static ua.bookloom.pipeline.BatchDraftingJobTest.numbered;
 import static ua.bookloom.pipeline.BatchedJobs.batchedJob;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.counts;
@@ -75,7 +73,6 @@ class BatchStageTest {
                 .answerTo(BATCH, batchReply(numbered(1, 4, 0)))
                 .answerTo(BATCH, batchReply(numbered(5, 4, 0)))
                 .answerTo(BATCH, batchReply(numbered(9, 2, 0)));
-        IntStream.range(0, SEGMENTS).forEach(ignored -> model.answerTo(REVIEW, reviewed()));
         return model;
     }
 

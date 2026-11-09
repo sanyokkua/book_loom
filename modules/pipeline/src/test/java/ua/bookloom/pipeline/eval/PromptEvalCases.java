@@ -13,7 +13,6 @@ import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Repair;
 import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
-import ua.bookloom.pipeline.eval.EvalCase.Review;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalCase.SuggestedName;
 
@@ -209,26 +208,6 @@ final class PromptEvalCases {
                     "He opened the old door.",
                     "{\"translation\": \"Він відчинив старі двері.\"}",
                     Expect.containing("(?iu)відчин")),
-            new Review(
-                    "review-door",
-                    "He opened the ⟦g0⟧old⟦g1⟧ door.",
-                    "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.",
-                    "Він зачинив ⟦g0⟧нові⟦g1⟧ вікна."),
-            new Review(
-                    "review-omission",
-                    "She walked slowly to the harbour, where the ships were waiting in the fog.",
-                    "Вона повільно пішла до гавані, де в тумані чекали кораблі.",
-                    "Вона пішла."),
-            new Review(
-                    "review-untranslated",
-                    "The magician raised his staff and spoke a single word.",
-                    "Чарівник підняв свій посох і промовив одне-єдине слово.",
-                    "The magician raised his staff and spoke a single word."),
-            new Review(
-                    "review-meaning",
-                    "Nobody in the city had ever seen the djinni smile.",
-                    "Ніхто в місті ніколи не бачив, щоб джин усміхався.",
-                    "Усі в місті щодня бачили, як джин плаче."),
             new Suggest(
                     "suggest",
                     NamePolicy.TRANSLITERATE,

@@ -2,9 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
@@ -13,16 +11,12 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.targetReply;
 
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -43,15 +37,9 @@ class TranslationJobGenderOriginTest {
     private static final String SOURCE = "Chisel opened the old door.";
     private static final String MASCULINE = "Чизел відчинив старі двері.";
     private static final String FEMININE = "Чизел відчинила старі двері.";
-    private static final String GENDER_EDIT = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"gender\",\"quote\":\"відчинив\",\"replacement\":\"відчинила\"}]}]}";
 
     @TempDir
     private Path tempDir;
-
-    private static Result<ChatResponse> answer(final String content) {
-        return Result.ok(new ChatResponse(content, FinishReason.STOP));
-    }
 
     // IF the draft saw a guess, THEN a wrong one would spread over every paragraph the character is in; the draft is
     // shown the name alone (design D5).
@@ -87,23 +75,10 @@ class TranslationJobGenderOriginTest {
 
         report(TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);
-    }
-
-    @Test
-    void run_reviewerEditsTowardAVerifiedGender_isApplied() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(REVIEW, answer(GENDER_EDIT));
-        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withInferredGender(Gender.FEMALE));
-
-        report(TranslationJobTestSupport.job(project, model).run());
-
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
-        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(FEMININE);
     }
 
     private TestProject chisel(final QualityDial dial, final UnaryOperator<GlossaryEntry> gender) {

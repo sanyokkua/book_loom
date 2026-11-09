@@ -119,10 +119,10 @@ class ModelSettingsTest {
     @Test
     void withMeasuredSpeed_draft_keepsOtherKinds() {
         final ModelSettings measured = ModelSettings.defaults("ollama", "gemma")
-                .withMeasuredSpeed(CallKind.REVIEW, 4.0, MeasuredFrom.RUN)
+                .withMeasuredSpeed(CallKind.PROOFREAD, 4.0, MeasuredFrom.RUN)
                 .withMeasuredSpeed(CallKind.DRAFT, 1.2, MeasuredFrom.TEST);
 
-        assertThat(measured.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(4.0, MeasuredFrom.RUN));
+        assertThat(measured.speedOf(CallKind.PROOFREAD)).hasValue(new MeasuredSpeed(4.0, MeasuredFrom.RUN));
         assertThat(measured.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(1.2, MeasuredFrom.TEST));
         assertThat(measured.speedOf(CallKind.CHAPTER_SUMMARY)).isEmpty();
     }

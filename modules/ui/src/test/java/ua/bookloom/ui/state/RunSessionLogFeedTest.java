@@ -96,28 +96,36 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
         session.onEvent(started("s-1", LOCATOR, "Text."));
 
         session.onEvent(new ModelCallFinished(
-                "s-1", CallKind.REVIEW, Duration.ofSeconds(90), null, 0, false, List.of("s-1"), 2, ErrorCode.timeout));
+                "s-1",
+                CallKind.PROOFREAD,
+                Duration.ofSeconds(90),
+                null,
+                0,
+                false,
+                List.of("s-1"),
+                2,
+                ErrorCode.timeout));
         tick(session);
 
         assertThat(logEntries())
                 .containsExactly(LogEntry.of(
                         LogKind.RETRIED,
                         MessageKey.LOG_CALL_FAILED,
-                        List.of("review", " · " + LOCATOR, "0", "2", "1:30", "timeout")));
+                        List.of("proofread", " · " + LOCATOR, "0", "2", "1:30", "timeout")));
     }
 
-    // IF a chunk's reviewer call named only its first segment, THEN the line would hide that it reviewed several.
+    // IF a window's proofread call named only its first segment, THEN the line would hide that it read several.
     @Test
-    void chunkReviewCall_namesItsFirstSegmentAndHowManyMore() {
+    void windowProofreadCall_namesItsFirstSegmentAndHowManyMore() {
         final RunSession session = session();
         session.onEvent(started("s-1", "ch7 · p41", "A."));
         session.onEvent(started("s-2", LOCATOR, "B."));
 
         session.onEvent(new ModelCallFinished(
-                null, CallKind.REVIEW, Duration.ofSeconds(6), null, 40, false, List.of("s-1", "s-2"), 1, null));
+                null, CallKind.PROOFREAD, Duration.ofSeconds(6), null, 40, false, List.of("s-1", "s-2"), 1, null));
         tick(session);
 
-        assertThat(logEntries()).containsExactly(technicalCall("review", " · ch7 · p41 +1", "0", "1", "0:06"));
+        assertThat(logEntries()).containsExactly(technicalCall("proofread", " · ch7 · p41 +1", "0", "1", "0:06"));
     }
 
     // IF a call in a repair round did not name its round, THEN three fixes of one segment would read as one.
@@ -156,7 +164,7 @@ class RunSessionLogFeedTest extends LiveSessionTestBase {
     void sameFailureFourTimes_isOneLineCountedFour() {
         final RunSession session = session();
         final ModelCallFinished timedOut = new ModelCallFinished(
-                null, CallKind.REVIEW, Duration.ofSeconds(90), null, 0, false, List.of(), 1, ErrorCode.timeout);
+                null, CallKind.PROOFREAD, Duration.ofSeconds(90), null, 0, false, List.of(), 1, ErrorCode.timeout);
 
         session.onEvent(timedOut);
         session.onEvent(timedOut);

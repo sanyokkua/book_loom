@@ -18,7 +18,7 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.CallKind;
 
 /**
- * Proves a chat call's timeout is chosen by its kind: the judge and the helper calls have their own bound, every other
+ * Proves a chat call's timeout is chosen by its kind: the helper calls have their own bound, every other
  * call scales with its expected output with the configured timeout as the floor.
  */
 class RequestTimeoutsTest {
@@ -52,24 +52,11 @@ class RequestTimeoutsTest {
         assertThat(scaled).isSameAs(config);
     }
 
-    // The judge's reply is capped, so a judge still running after ninety seconds is stuck, not slow.
-    @ParameterizedTest
-    @CsvSource({"180,", "180,512", "600,1024", "30,"})
-    void forChat_judge_isNinetySecondsWhateverTheConfigAndExpectedOutput(
-            long configuredSeconds, @Nullable Integer expectedOutputTokens) {
-        final ProviderConfig judged = RequestTimeouts.forChat(
-                config(Duration.ofSeconds(configuredSeconds)), request(CallKind.REVIEW, expectedOutputTokens));
-
-        assertThat(judged.requestTimeout()).isEqualTo(Duration.ofSeconds(90));
-    }
-
     // The window shows CallLimits, so the client must read its bounds from there and nowhere else.
     @Test
-    void forChat_reviewAndHelper_useCallLimits() {
+    void forChat_helper_useCallLimits() {
         final ProviderConfig base = config(Duration.ofMinutes(3));
 
-        assertThat(RequestTimeouts.forChat(base, request(CallKind.REVIEW, null)).requestTimeout())
-                .isEqualTo(CallLimits.REVIEW_TIMEOUT);
         assertThat(RequestTimeouts.forChat(base, request(CallKind.CHAPTER_SUMMARY, null))
                         .requestTimeout())
                 .isEqualTo(CallLimits.HELPER_TIMEOUT);
@@ -110,11 +97,11 @@ class RequestTimeoutsTest {
     }
 
     // A model that thinks on every call writes its reasoning first, so a fixed bound becomes the longer of itself and
-    // 60 ms per expected token, the reserve included: 2,600 tokens is 156 s, 1,000 tokens keeps 90 s; a prescan keeps
-    // its two minutes until its reasoning needs more; a draft still scales at 0.5 s per token.
+    // 60 ms per expected token, the reserve included: 2,600 tokens is 156 s; a prescan keeps its two minutes until its
+    // reasoning needs more; a draft still scales at 0.5 s per token.
     @ParameterizedTest
-    @CsvSource({"REVIEW,2600,156", "REVIEW,1000,90", "PRESCAN,2600,156", "PRESCAN,1000,120", "DRAFT,800,400"})
-    void timeout_alwaysThinkingModel_isTheLongerOfNinetySecondsAndSixtyMsPerToken(
+    @CsvSource({"PRESCAN,2600,156", "PRESCAN,1000,120", "DRAFT,800,400"})
+    void timeout_alwaysThinkingModel_isTheLongerOfTheFixedBoundAndSixtyMsPerToken(
             CallKind kind, int expectedOutputTokens, long effectiveSeconds) {
         final ChatRequest thinking = new ChatRequest(
                         List.of(new ChatMessage(ChatRole.USER, "hello")),

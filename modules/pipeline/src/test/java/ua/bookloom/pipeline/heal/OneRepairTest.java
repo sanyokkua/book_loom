@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.calls;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.itemReply;
 import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
-import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.targetReply;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -42,8 +41,8 @@ import ua.bookloom.pipeline.qa.CheckLevels;
  */
 class OneRepairTest {
 
-    // A dial with the one repair and no reviewer, so every request a test sees is the draft's repair.
-    private static final DialParameters ONE_NO_REVIEWER =
+    // A dial with the one repair, so every request a test sees is the draft's repair.
+    private static final DialParameters ONE_REPAIR =
             new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE);
 
     @TempDir
@@ -87,7 +86,7 @@ class OneRepairTest {
                 GlossaryEntry.of("e1", "p1", "Велемир", "Велемир", TermType.CHARACTER, Gender.MALE, false);
         final LoopSettings named = new LoopSettings(
                         ReviewMode.UNATTENDED,
-                        ONE_NO_REVIEWER,
+                        ONE_REPAIR,
                         frame("ru"),
                         NamePolicy.TRANSLITERATE,
                         List.of("Велемир"),
@@ -103,45 +102,17 @@ class OneRepairTest {
         assertThat(decided.machineTarget()).isEqualTo("Велемир сказав, что ключ у кишені.");
     }
 
-    // IF a verified reviewer blocker still stood, THEN the repair would be sent and kept and the segment flagged
-    // anyway.
-    @Test
-    void repair_verifiedReviewerBlockerLeft_flagsWithNoRepairCall() {
-        final Segment segment = plain("Он открыл старую дверь, что вела в сад.");
-        final String draft = "Він відчинив старі дверзі, что вели в сад.";
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":[{\"criterion\":"
-                        + "\"meaning\",\"quote\":\"дверзі\",\"replacement\":\"вікна\"}]}]}"))
-                .answer(readable(targetReply(draft)))
-                .answer(readable(itemReply("Він відчинив старі двері, що вели в сад.")));
-        final LoopSettings reviewed = new LoopSettings(
-                ReviewMode.UNATTENDED,
-                new DialParameters(RepairMode.ONE, 1, false, ProofreadCoverage.NONE),
-                frame("ru"),
-                NamePolicy.TRANSLITERATE,
-                List.of());
-
-        final SegmentOutcome decided = decide(drafted(segment, draft), "ru", model, reviewed);
-
-        assertThat(model.requests())
-                .extracting(ScriptedChatModel::callName)
-                .containsExactly("reviewer", "directed-fix");
-        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decided.machineTarget()).isEqualTo(draft);
-    }
-
     // IF only the first defect counted as the trigger, THEN a repair that clears the second at an equal score would be
     // refused as no gain.
     @Test
     void repair_clearsSecondDefectAtEqualScore_isKept() {
         final Segment segment = plain("Они спросили, что там?");
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable(itemReply("Вони спитали, что там там?")));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(itemReply("Вони спитали,  что там?")));
 
         final SegmentOutcome decided = decide(segment, "Вони спитали, что там.", "ru", model);
 
         assertThat(model.requests()).hasSize(1);
-        assertThat(decided.machineTarget()).isEqualTo("Вони спитали, что там там?");
+        assertThat(decided.machineTarget()).isEqualTo("Вони спитали,  что там?");
     }
 
     @Test
@@ -211,12 +182,11 @@ class OneRepairTest {
         final DraftOutcome.Drafted draft =
                 QualityLoopFixtures.repairing(drafted(segment, "He opened the old door."), documents, frame("en"));
 
-        final SegmentOutcome decided = Objects.requireNonNull(loop.start(
-                                List.of(draft),
-                                settings("en").withoutRepair(),
-                                QualityLoopFixtures.PASSTHROUGH_GATE,
-                                calls(model))
-                        .data())
+        final SegmentOutcome decided = loop.start(
+                        List.of(draft),
+                        settings("en").withoutRepair(),
+                        QualityLoopFixtures.PASSTHROUGH_GATE,
+                        calls(model))
                 .nextDecision()
                 .data();
 
@@ -246,9 +216,8 @@ class OneRepairTest {
 
     private SegmentOutcome decide(
             final DraftOutcome.Drafted repairing, final ScriptedChatModel model, final LoopSettings settings) {
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(repairing), settings, GateFunction.of(documents, BookFormat.MARKDOWN), calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(repairing), settings, GateFunction.of(documents, BookFormat.MARKDOWN), calls(model));
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 
@@ -262,7 +231,7 @@ class OneRepairTest {
 
     private static LoopSettings settings(final String sourceLanguage) {
         return new LoopSettings(
-                ReviewMode.UNATTENDED, ONE_NO_REVIEWER, frame(sourceLanguage), NamePolicy.TRANSLITERATE, List.of());
+                ReviewMode.UNATTENDED, ONE_REPAIR, frame(sourceLanguage), NamePolicy.TRANSLITERATE, List.of());
     }
 
     private static CallFrame frame(final String sourceLanguage) {

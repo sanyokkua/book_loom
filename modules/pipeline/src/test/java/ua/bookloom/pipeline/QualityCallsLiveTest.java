@@ -39,16 +39,11 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.reviewer.ReviewPass;
-import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
-import ua.bookloom.pipeline.reviewer.ReviewVerdict;
-import ua.bookloom.pipeline.reviewer.ReviewedPair;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
- * Proves the reviewer and self-heal calls against a REAL local model, in both provider dialects — the unit
+ * Proves the self-heal calls against a REAL local model, in both provider dialects — the unit
  * tests (WireMock/{@link ScriptedChatModel}) only prove our side of the wire; this proves the real model's reply
- * still fits the shapes {@link ReviewerCall}/{@link DirectedFix} read
+ * still fits the shape {@link DirectedFix} reads
  * ({@code .claude/rules/testing.md} "SHOULD add a liveLocal-tagged case per provider-related feature"). A real
  * model's wording is non-deterministic, so every assertion here is structural only.
  */
@@ -56,13 +51,12 @@ import ua.bookloom.pipeline.reviewer.ReviewerCall;
 class QualityCallsLiveTest {
 
     private static final String SOURCE = "He opened the old door.";
-    private static final String GOOD_TARGET = "Він відчинив старі двері.";
     private static final String MASKED_SOURCE = "He opened the ⟦g0⟧old⟦g1⟧ door.";
     private static final String REJECTED_TARGET = "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.";
 
     @ParameterizedTest
     @EnumSource(Provider.class)
-    void reviewerAndDirectedFix_realModel_matchStructure(final Provider provider) {
+    void directedFix_realModel_matchesStructure(final Provider provider) {
         Assumptions.assumeTrue(provider.urlConfigured(), provider.name() + ": " + provider.urlEnv + " is not set");
 
         final ModelCalls calls = provider.calls();
@@ -71,26 +65,9 @@ class QualityCallsLiveTest {
         final ObjectMapper mapper = new ObjectMapper();
         final PromptTemplates templates = new PromptTemplates();
         final DraftReplyParser replyParser = new DraftReplyParser(mapper);
-        final ReviewerCall reviewerCall = new ReviewerCall(templates, new ReviewReplyParser(mapper));
         final DirectedFix directedFix = new DirectedFix(templates, replyParser);
 
-        assertReviewer(reviewerCall, frame, calls);
         assertDirectedFix(directedFix, frame, calls);
-    }
-
-    private static void assertReviewer(final ReviewerCall reviewerCall, final CallFrame frame, final ModelCalls calls) {
-        final List<ReviewedPair> pairs = List.of(
-                new ReviewedPair("s1", SOURCE, GOOD_TARGET),
-                new ReviewedPair("s2", "It was a dark night.", "IT WAS A DARK NIGHT."));
-
-        final Result<ReviewVerdict> result = reviewerCall.review(pairs, frame, List.of(), ReviewPass.FIRST, calls);
-
-        assertThat(result.isOk()).as("review result: " + result.error()).isTrue();
-        final ReviewVerdict verdict = Objects.requireNonNull(result.data());
-        assertThat(verdict.readable()).as("review verdict: " + verdict).isTrue();
-        assertThat(verdict.items())
-                .as("review verdict: " + verdict)
-                .allSatisfy(item -> assertThat(item.segmentId()).isIn("s1", "s2"));
     }
 
     private static void assertDirectedFix(

@@ -164,13 +164,8 @@ class PromptTemplatesTest {
     @Test
     void renderSystem_genericOnlyRules_carryTheGenericSectionAndNoLanguageRule() {
         final PromptTemplates templates = new PromptTemplates(BUNDLED, new LanguageRules(BUNDLED, true));
-        final CallFrame frame = new CallFrame(
-                "en",
-                "uk",
-                StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
-                ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
 
-        assertThat(templates.renderSystem(PromptName.REVIEWER, frame))
+        assertThat(templates.languageRules().section("en", "uk"))
                 .contains(
                         "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
                 .doesNotContain("«…» for speech", "russisms");
@@ -181,13 +176,8 @@ class PromptTemplatesTest {
     void render_genericOnlyVariant_statesOnlyTheGenericRules() {
         final PromptTemplates templates =
                 new PromptTemplates(new PromptVariants(PromptVariants.LanguageRulesVariant.GENERIC_ONLY));
-        final CallFrame frame = new CallFrame(
-                "en",
-                "uk",
-                StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
-                ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
 
-        assertThat(templates.renderSystem(PromptName.REVIEWER, frame))
+        assertThat(templates.languageRules().section("en", "uk"))
                 .contains(
                         "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
                 .doesNotContain("«…» for speech", "russisms");

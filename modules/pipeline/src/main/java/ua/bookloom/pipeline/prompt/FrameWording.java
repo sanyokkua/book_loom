@@ -132,7 +132,7 @@ public final class FrameWording {
         Objects.requireNonNull(excluded, "excluded");
         final Set<String> starts =
                 excluded.stream().map(rule -> LINE_START + rule.label() + ": ").collect(Collectors.toSet());
-        final List<String> kept = rules.section(sourceTag, targetTag, false)
+        final List<String> kept = rules.section(sourceTag, targetTag)
                 .lines()
                 .filter(line -> starts.stream().noneMatch(line::startsWith))
                 .toList();

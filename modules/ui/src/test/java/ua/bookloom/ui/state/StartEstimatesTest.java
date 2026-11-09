@@ -27,7 +27,7 @@ class StartEstimatesTest {
     // IF a time showed with nothing measured, THEN a guess of hours would be believed.
     @Test
     void of_nothingStored_givesNoLine() {
-        final StartEstimate estimate = StartEstimates.of(Map.of(), 400, 50, QualityDial.BALANCED, 1, 0);
+        final StartEstimate estimate = StartEstimates.of(Map.of(), 400, 50, QualityDial.BALANCED, 0);
 
         assertThat(estimate).isEqualTo(new StartEstimate.None());
         assertThat(estimate.lines(EN)).isEmpty();
@@ -38,7 +38,7 @@ class StartEstimatesTest {
     @Test
     void of_onlyAReviewFigure_givesNoLine() {
         final StartEstimate estimate = StartEstimates.of(
-                Map.of(CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN)), 400, 50, QualityDial.BALANCED, 1, 0);
+                Map.of(CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN)), 400, 50, QualityDial.BALANCED, 0);
 
         assertThat(estimate).isEqualTo(new StartEstimate.None());
     }
@@ -53,7 +53,6 @@ class StartEstimatesTest {
                 300,
                 20,
                 QualityDial.BALANCED,
-                0,
                 0);
 
         assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofMinutes(17)));
@@ -69,7 +68,6 @@ class StartEstimatesTest {
                 300,
                 20,
                 QualityDial.FAST,
-                0,
                 4);
 
         assertThat(estimate).isEqualTo(new StartEstimate.Measured(Duration.ofMinutes(17)));
@@ -78,7 +76,7 @@ class StartEstimatesTest {
     // With no summary measured the plan cannot be priced kind by kind, so the draft speed gives the range.
     @Test
     void of_summariesPlannedButNeverMeasured_isTheRangeFromTheDraftSpeed() {
-        final StartEstimate estimate = StartEstimates.of(draft(3.0, MeasuredFrom.RUN), 300, 20, QualityDial.FAST, 0, 4);
+        final StartEstimate estimate = StartEstimates.of(draft(3.0, MeasuredFrom.RUN), 300, 20, QualityDial.FAST, 4);
 
         assertThat(estimate).isInstanceOf(StartEstimate.Ranged.class);
     }
@@ -86,8 +84,7 @@ class StartEstimatesTest {
     // IF a draft speed from the model test counted as measured, THEN a single test call would read as a whole run.
     @Test
     void of_draftFromTheTestAtFast_isARangeFromTheModelTest() {
-        final StartEstimate estimate =
-                StartEstimates.of(draft(3.0, MeasuredFrom.TEST), 3000, 375, QualityDial.FAST, 0, 0);
+        final StartEstimate estimate = StartEstimates.of(draft(3.0, MeasuredFrom.TEST), 3000, 375, QualityDial.FAST, 0);
 
         assertThat(estimate)
                 .isEqualTo(new StartEstimate.Ranged(Duration.ofHours(2), Duration.ofHours(3), MeasuredFrom.TEST));
@@ -97,7 +94,7 @@ class StartEstimatesTest {
     @ParameterizedTest(name = "{0}: {1}–{2} min")
     @CsvSource({"FAST, 1, 10", "BALANCED, 5, 10", "MAX, 10, 20"})
     void of_draftOnly_scalesByTheDialAndRoundsToFiveMinutes(final QualityDial dial, final long low, final long high) {
-        final StartEstimate estimate = StartEstimates.of(draft(3.0, MeasuredFrom.TEST), 100, 13, dial, 1, 0);
+        final StartEstimate estimate = StartEstimates.of(draft(3.0, MeasuredFrom.TEST), 100, 13, dial, 0);
 
         assertThat(estimate)
                 .isEqualTo(
@@ -107,7 +104,7 @@ class StartEstimatesTest {
     @ParameterizedTest
     @CsvSource({"3.0, 0"})
     void of_emptyBook_givesNoLine(final double speed, final int segments) {
-        assertThat(StartEstimates.of(draft(speed, MeasuredFrom.RUN), segments, 0, QualityDial.FAST, 0, 0))
+        assertThat(StartEstimates.of(draft(speed, MeasuredFrom.RUN), segments, 0, QualityDial.FAST, 0))
                 .isEqualTo(new StartEstimate.None());
     }
 

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.review.RetryDraftTest.DRAFT;
 import static ua.bookloom.pipeline.review.RetryDraftTest.NOTE;
 import static ua.bookloom.pipeline.review.RetryDraftTest.SNAPSHOT;
-import static ua.bookloom.pipeline.review.RetryDraftTest.formatOf;
 import static ua.bookloom.pipeline.review.RetryDraftTest.ok;
 import static ua.bookloom.pipeline.review.RetryDraftTest.reply;
 import static ua.bookloom.pipeline.review.RetryDraftTest.userMessage;
@@ -47,7 +46,7 @@ class RetryDraftPiecesTest {
     @Test
     void retry_segmentTheRunDraftsInPieces_draftsEachPieceWithTheNoteAndJoinsThem() {
         // 400 sentences are above the small tier's current part of 600 tokens: six piece drafts,
-        // each at the lower temperature with the note, joined into one target that the reviewer then lets stand
+        // each at the lower temperature with the note, joined into one target
         final String source = IntStream.range(100, 500)
                 .mapToObj(number -> "The night number " + number + " was calm.")
                 .collect(Collectors.joining(" "));
@@ -62,7 +61,7 @@ class RetryDraftPiecesTest {
 
         assertThat(model.requests)
                 .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
-                .containsExactly(PIECE, PIECE, PIECE, PIECE, PIECE, PIECE, tuple("reviewer", 0.0));
+                .containsExactly(PIECE, PIECE, PIECE, PIECE, PIECE, PIECE);
         assertThat(model.requests.subList(0, 6))
                 .allSatisfy(draft -> assertThat(userMessage(draft)).contains("[Extra instruction]\n" + NOTE));
         assertThat(userMessage(model.requests.getFirst())).contains("The night number 100 was calm.");
@@ -76,7 +75,7 @@ class RetryDraftPiecesTest {
                         .collect(Collectors.joining(" ")));
     }
 
-    /** Translates each night sentence of whatever text a draft shows it, and accepts whatever the reviewer is shown. */
+    /** Translates each night sentence of whatever text a draft shows it,. */
     private static final class PieceTranslatingModel implements ChatModel {
 
         private static final Pattern TEXT = Pattern.compile("<s id=\"1\">(.*?)</s>", Pattern.DOTALL);
@@ -87,7 +86,7 @@ class RetryDraftPiecesTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final Matcher body = TEXT.matcher(userMessage(request));
-            return "reviewer".equals(formatOf(request)) || !body.find()
+            return !body.find()
                     ? Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP))
                     : reply(NIGHT.matcher(body.group(1)).replaceAll("Ніч номер $1 була дуже тихою."));
         }

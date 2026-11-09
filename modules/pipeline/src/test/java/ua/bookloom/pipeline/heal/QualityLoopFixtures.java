@@ -28,19 +28,13 @@ import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.qa.QaResult;
-import ua.bookloom.pipeline.reviewer.EditApplier;
-import ua.bookloom.pipeline.reviewer.EditVerifier;
-import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
  * Real collaborators and small builders shared by the {@code QualityLoopTest} theme classes: a real
- * {@link DocumentPort} (real placeholder gate), a real {@link QualityLoop} wired over the real self-heal calls, and
+ * {@link DocumentPort} (real placeholder gate), a real {@link QualityLoop}, and
  * a {@link DraftOutcome.Drafted} builder that replays what the draft step answers under design D3 rule 5: a reply
  * restored through the placeholder gate, or one whose markup still fails it and carries the gate's markup finding.
  */
@@ -65,13 +59,7 @@ final class QualityLoopFixtures {
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
     static QualityLoop loop() {
-        final ObjectMapper mapper = new ObjectMapper();
-        final PromptTemplates templates = new PromptTemplates();
-        final DraftReplyParser draftReplyParser = new DraftReplyParser(mapper);
-        return new QualityLoop(
-                new ReviewerCall(templates, new ReviewReplyParser(mapper)),
-                new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, draftReplyParser));
+        return new QualityLoop();
     }
 
     static LoopSettings settings(final ReviewMode mode, final QualityDial dial) {

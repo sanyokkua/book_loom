@@ -68,7 +68,6 @@ public final class RequestTimeouts {
             return null;
         }
         return switch (request.callKind()) {
-            case REVIEW -> CallLimits.REVIEW_TIMEOUT;
             case PRESCAN,
                     REVIEW_TERMS,
                     SUGGEST_TARGETS,

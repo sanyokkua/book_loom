@@ -14,7 +14,6 @@ import ua.bookloom.pipeline.CallLedgerTestModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
-import ua.bookloom.pipeline.prompt.PromptVariants.ReviewerVariant;
 
 /**
  * The production injector binds the variants that reproduce today's prompts, and a test injector that binds another
@@ -37,32 +36,33 @@ class PromptVariantsTest {
         assertThat(injector.getInstance(LanguageSupport.class)).isSameAs(LanguageRules.bundled());
     }
 
-    // Each settled arm deletes its field (arm 7c's proofreadPrompt in task 13.9); task 14.7 deletes the last ones.
+    // Each settled arm deletes its field (arm 7a's reviewer in task 14.7a); task 14.7c deletes the last one.
     @Test
-    void components_duringArm7a_areTheLanguageRulesAndTheReviewer() {
+    void components_afterArm7a_areTheLanguageRulesAlone() {
         assertThat(PromptVariants.class.getRecordComponents())
                 .extracting(RecordComponent::getName)
-                .containsExactly("languageRules", "reviewer");
+                .containsExactly("languageRules");
     }
 
     @Test
-    void defaults_untilArm7aIsDecided_keepTodaysReviewer() {
-        assertThat(PromptVariants.DEFAULTS.reviewer()).isEqualTo(ReviewerVariant.ON);
-        assertThat(new PromptVariants().reviewer()).isEqualTo(ReviewerVariant.ON);
+    void defaults_noChoice_areTheShippedPrompts() {
+        assertThat(new PromptVariants()).isEqualTo(PromptVariants.DEFAULTS);
         assertThat(PromptVariants.DEFAULTS.isDefault()).isTrue();
     }
 
     @Test
-    void isDefault_reviewerOff_isFalse() {
-        assertThat(PromptVariants.DEFAULTS.withReviewer(ReviewerVariant.OFF).isDefault())
+    void isDefault_genericOnlyRules_isFalse() {
+        assertThat(PromptVariants.DEFAULTS
+                        .withLanguageRules(LanguageRulesVariant.GENERIC_ONLY)
+                        .isDefault())
                 .isFalse();
     }
 
     @Test
-    void templates_boundVariants_carryTheReviewerChoice() {
-        final PromptVariants off = PromptVariants.DEFAULTS.withReviewer(ReviewerVariant.OFF);
+    void templates_boundVariants_carryTheChoice() {
+        final PromptVariants generic = PromptVariants.DEFAULTS.withLanguageRules(LanguageRulesVariant.GENERIC_ONLY);
 
-        assertThat(new PromptTemplates(off).variants()).isEqualTo(off);
+        assertThat(new PromptTemplates(generic).variants()).isEqualTo(generic);
         assertThat(new PromptTemplates().variants()).isEqualTo(PromptVariants.DEFAULTS);
     }
 

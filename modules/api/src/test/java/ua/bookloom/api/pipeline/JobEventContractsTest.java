@@ -108,7 +108,7 @@ class JobEventContractsTest {
 
     @Test
     void stepsPlanned_negativeCount_isRejected() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.CHECK, -1, false));
+        assertThatIllegalArgumentException().isThrownBy(() -> new StepsPlanned(StepKind.REPAIR, -1, false));
     }
 
     @Test
@@ -125,13 +125,13 @@ class JobEventContractsTest {
     void stepChanged_startedWithResult_isRejected() {
         assertThatIllegalArgumentException()
                 .isThrownBy(
-                        () -> new StepChanged(StepKind.CHECK, "Check", 0, StepState.STARTED, null, StepResult.DONE));
+                        () -> new StepChanged(StepKind.REPAIR, "Check", 0, StepState.STARTED, null, StepResult.DONE));
     }
 
     @Test
     void stepChanged_negativeIndex_isRejected() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new StepChanged(StepKind.CHECK, "Check", -1, StepState.STARTED, null, null));
+                .isThrownBy(() -> new StepChanged(StepKind.REPAIR, "Check", -1, StepState.STARTED, null, null));
     }
 
     @ParameterizedTest
@@ -153,7 +153,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_twoArgConstructor_isAFirstAttemptAboutItsSegment() {
-        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.REVIEW);
+        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.PROOFREAD);
 
         assertThat(started.segmentIds()).containsExactly("s-1");
         assertThat(started.attempt()).isEqualTo(1);
@@ -164,7 +164,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_attemptBeyondItsMaximum_isRejected() {
-        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.REVIEW, List.of(), 3, 2, null, null))
+        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.PROOFREAD, List.of(), 3, 2, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -172,7 +172,7 @@ class JobEventContractsTest {
     void modelCallStarted_segmentIds_areCopied() {
         final List<String> ids = new ArrayList<>(List.of("s-1", "s-2"));
         final ModelCallStarted started = new ModelCallStarted(
-                null, CallKind.REVIEW, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
+                null, CallKind.PROOFREAD, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
         ids.clear();
 
         assertThat(started.segmentIds()).containsExactly("s-1", "s-2");
@@ -182,7 +182,15 @@ class JobEventContractsTest {
     @Test
     void modelCallFinished_failedAttempt_isNotAnswered() {
         final ModelCallFinished failed = new ModelCallFinished(
-                "s-1", CallKind.REVIEW, Duration.ofSeconds(90), null, 0, false, List.of("s-1"), 2, ErrorCode.timeout);
+                "s-1",
+                CallKind.PROOFREAD,
+                Duration.ofSeconds(90),
+                null,
+                0,
+                false,
+                List.of("s-1"),
+                2,
+                ErrorCode.timeout);
 
         assertThat(failed.isAnswered()).isFalse();
         assertThat(failed.attempt()).isEqualTo(2);

@@ -21,7 +21,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 class RealRunRunnerTest {
 
     private static final String DRAFT_REPLY = "{\"target\":\"«Зачекай», — сказав хлопчик, — «лампа згасла».\"}";
-    private static final String REVIEW_OK = "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"}]}";
 
     @TempDir
     private Path dir;
@@ -51,15 +50,14 @@ class RealRunRunnerTest {
     }
 
     private RealRunRunner runner(final List<Sent> sent, final Function<CallKind, ChatResponse> replies) {
-        return new RealRunRunner(scripted(sent, replies), 1, dir);
+        return new RealRunRunner(scripted(sent, replies), dir);
     }
 
     @Test
     void text_quotesDraft_carriesTheUkrainianRulesQuoteInstruction() {
         final List<Sent> sent = new ArrayList<>();
 
-        runner(sent, kind -> stop(kind == CallKind.DRAFT ? DRAFT_REPLY : REVIEW_OK))
-                .text(text("quotes-stray-close-1"));
+        runner(sent, kind -> stop(DRAFT_REPLY)).text(text("quotes-stray-close-1"));
 
         assertThat(sent.getFirst().kind()).isEqualTo(CallKind.DRAFT);
         assertThat(all(sent.getFirst())).contains("«…» for speech, „…“ inside; never “…”.");
@@ -84,14 +82,13 @@ class RealRunRunnerTest {
     }
 
     @Test
-    void text_defectiveQuotes_areCaughtByTheGateSoOnlyTheCleanCandidateIsReviewed() {
+    void text_quotesCase_sendsOnlyTheDraftCallAndOneRow() {
         final List<Sent> sent = new ArrayList<>();
 
-        final List<RealRunRow> rows = runner(sent, kind -> stop(kind == CallKind.DRAFT ? DRAFT_REPLY : REVIEW_OK))
-                .text(text("quotes-stray-close-1"));
+        final List<RealRunRow> rows = runner(sent, kind -> stop(DRAFT_REPLY)).text(text("quotes-stray-close-1"));
 
-        assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT, CallKind.REVIEW);
-        assertThat(rows).extracting(RealRunRow::call).containsExactly("draft", "review");
+        assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT);
+        assertThat(rows).extracting(RealRunRow::call).containsExactly("draft");
         assertThat(rows).extracting(RealRunRow::outcome).containsOnly(Outcome.PASS);
     }
 
@@ -104,99 +101,6 @@ class RealRunRunnerTest {
                 .text(text("quotes-stray-close-1"));
 
         assertThat(rows.getFirst().outcome()).isEqualTo(Outcome.FAIL);
-    }
-
-    @Test
-    void text_shortLine_passesTheLengthCheckAndReachesTheReviewer() {
-        final List<Sent> sent = new ArrayList<>();
-
-        final List<RealRunRow> rows = runner(
-                        sent, kind -> stop(kind == CallKind.DRAFT ? "{\"target\":\"А за мить — вибух.\"}" : REVIEW_OK))
-                .text(text("short-split-second"));
-
-        assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT, CallKind.REVIEW);
-        assertThat(rows).extracting(RealRunRow::outcome).doesNotContain(Outcome.KNOWN_RED);
-    }
-
-    @Test
-    void text_russianLetterCase_isCaughtByTheAlphabetCheckSoOnlyTheCleanCandidateIsReviewed() {
-        final List<Sent> sent = new ArrayList<>();
-
-        final List<RealRunRow> rows = runner(sent, kind -> stop(kind == CallKind.DRAFT ? DRAFT_REPLY : REVIEW_OK))
-                .text(text("russian-mare"));
-
-        assertThat(rows).extracting(RealRunRow::call).containsExactly("draft", "review");
-        assertThat(rows.getLast().outcome()).isEqualTo(Outcome.PASS);
-    }
-
-    @Test
-    void text_russianWordInUkrainianLetters_isOnlyAReviewerRow() {
-        final List<Sent> sent = new ArrayList<>();
-
-        final List<RealRunRow> rows = runner(sent, kind -> stop(REVIEW_OK)).text(text("russian-sob"));
-
-        assertThat(rows).extracting(RealRunRow::call).containsExactly("review");
-        assertThat(rows.getFirst().outcome()).isEqualTo(Outcome.FAIL);
-    }
-
-    @Test
-    void reviewerBatch_oneDefectFlaggedAmongCleanPairs_everyPairRowPasses() {
-        final ReviewerBatchCase batchCase = RunCorpus.reviewerBatches().getFirst();
-        final String reply = "{\"results\":["
-                + "{\"id\":\"s1\",\"status\":\"ok\"},{\"id\":\"s2\",\"status\":\"ok\"},{\"id\":\"s3\",\"status\":\"ok\"},"
-                + "{\"id\":\"s4\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"terminology\","
-                + "\"quote\":\"Ніл\",\"replacement\":\"Нелл\"}]},"
-                + "{\"id\":\"s5\",\"status\":\"ok\"},{\"id\":\"s6\",\"status\":\"ok\"}]}";
-        final List<Sent> sent = new ArrayList<>();
-
-        final List<RealRunRow> rows = runner(sent, kind -> stop(reply)).reviewerBatch(batchCase);
-
-        assertThat(sent).hasSize(1);
-        assertThat(all(sent.getFirst())).contains("Нелл", "Nell → Нелл");
-        assertThat(rows)
-                .as(rows.toString())
-                .hasSize(6)
-                .extracting(RealRunRow::outcome)
-                .containsOnly(Outcome.PASS);
-        assertThat(rows).extracting(RealRunRow::truncated).containsOnly(false);
-    }
-
-    @Test
-    void reviewerBatch_replyCutByTheCap_isCountedOnceAsATruncatedCall() {
-        final ReviewerBatchCase longCase = RunCorpus.reviewerBatches().stream()
-                .filter(c -> c.kind().equals("reviewer-long"))
-                .findFirst()
-                .orElseThrow();
-        final List<Sent> sent = new ArrayList<>();
-
-        final List<RealRunRow> rows = runner(
-                        sent,
-                        kind -> new ChatResponse(
-                                "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"},{\"id\":\"s2\",\"sta",
-                                FinishReason.LENGTH))
-                .reviewerBatch(longCase);
-
-        // The cut reply is salvaged (here nothing), then the unread pairs are asked once more, as the run does.
-        assertThat(sent).hasSize(2);
-        assertThat(all(sent.getFirst())).contains("s12");
-        assertThat(rows).hasSize(12);
-        assertThat(rows.stream().filter(RealRunRow::truncated)).hasSize(1);
-        assertThat(rows.getFirst().truncated()).isTrue();
-    }
-
-    @Test
-    void reviewerBatch_repeatedCallsThatDisagree_areMarkedUnstable() {
-        final ReviewerBatchCase batchCase = RunCorpus.reviewerBatches().get(1);
-        final List<String> replies = new ArrayList<>(List.of(
-                "{\"results\":[{\"id\":\"s3\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"terminology\","
-                        + "\"quote\":\"Майстер\",\"replacement\":\"Господар\"}]}]}",
-                "{\"results\":[]}"));
-        final ModelCalls calls = (kind, segmentId, request) -> Result.ok(stop(replies.removeFirst()));
-
-        final List<RealRunRow> rows = new RealRunRunner(calls, 2, dir).reviewerBatch(batchCase);
-
-        assertThat(rows.get(2).stable()).isFalse();
-        assertThat(rows.get(0).stable()).isTrue();
     }
 
     @Test

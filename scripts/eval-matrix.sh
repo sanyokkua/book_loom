@@ -13,8 +13,8 @@
 # builds a temporary one-file corpus directory (the book and its <name>.gold.json beside it) for BOOKLOOM_CORPUS_DIR, so
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
-#   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
+#   scripts/eval-matrix.sh [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
+#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|realrun|sequence|prescan|terms|setup|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
 #                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]] [--summaries on|off]
 # Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
 # in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
@@ -29,11 +29,10 @@
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
 # draft A/B instead (consecutive cases, sized as a job sizes its batches unless --batch-sizes fixes the sweep, through the JSON batch protocol; reports end in
-# -batch.json) and prints one row per model and batch size. --suite words runs the garbled-word check over
-# eval/words.json (reports end in -words.json) and prints recall and false positives per model. --suite realrun runs the
-# real-run corpus (15e.2: quotes, scripts, narrator, short lines, batch protocol, reviewer batches, repairs; reports end in
+# -batch.json) and prints one row per model and batch size. --suite realrun runs the
+# real-run corpus (15e.2: quotes, scripts, narrator, short lines, batch protocol, repairs; reports end in
 # -realrun.json) and prints the share of cases right per kind and call, the known failures beside them, the truncated
-# reviewer calls and the too-short and leaked batch items; --stability repeats the reviewer calls, --only is a case-id prefix.
+# calls and the too-short and leaked batch items; --only is a case-id prefix.
 # --suite sequence runs a generated synthetic book (8 chapters, ~320 paragraphs; 15e.3; reports end in
 # -sequence-<narrator>.json) through the real job and prints one row per model and narrator mode: distinct renderings per
 # term, name variants, narrator-gender slips, English leftovers, quote failures, flagged rate, first-round hard-gate
@@ -121,7 +120,6 @@ cd "$(dirname "$0")/.."
 
 OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
 LMSTUDIO_URL=${LMSTUDIO_URL:-http://localhost:1234/v1}
-STABILITY=1
 ONLY=""
 TABLE_ONLY=0
 RULES=language
@@ -147,7 +145,6 @@ EXTRA_VARIANTS=${BOOKLOOM_EVAL_VARIANTS:-}
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --stability) STABILITY=$2; shift 2 ;;
     --only) ONLY=$2; shift 2 ;;
     --models) MODELS=$(echo "$2" | tr ' ' '\n' | sed 's/,/ /g' | entries); shift 2 ;;
     --all-models) MODELS=$ALL_MODELS; shift ;;
@@ -289,7 +286,7 @@ run_one() {
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY \
     BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
@@ -441,11 +438,6 @@ if sys.argv[2] in ("stability", "gold"):
         print("%-40s %-10s " % (key[-40:], gold[:10]) + " ".join(cells) + "  %5.0f%%" % (100.0 * most / max(1, len(pooled))))
     print("(agreement: share of a field's answers across seeds that are the most common one, target %.0f%%; accuracy: share that match the gold; all-models: agreement of every model's answers pooled)" % (100 * (runs[0]["target"] if runs else 0.8)))
     sys.exit(0)
-if sys.argv[2] == "words":
-    print("%-36s %5s %8s %8s %6s" % ("model", "cases", "recall", "falsePos", "ok"))
-    for r in (r for r in reports if r.get("suite") == "words"):
-        print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
-    sys.exit(0)
 STAGES = ("prescan", "terms", "setup", "retry", "replay")
 if sys.argv[2] in STAGES:
     print("%-36s %-12s %5s %6s %6s %6s %8s %7s" % ("model", "suite", "cases", "pass", "calls", "failed", "repeated", "refused"))
@@ -459,17 +451,9 @@ if sys.argv[2] in STAGES:
         for r in fields:
             print("%-36s " % r["model"] + " ".join("%*s" % (len(n), "n/a" if r["perField"].get(n) is None else "%.0f%%" % (100 * r["perField"][n])) for n in names))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini", "article", "book") + STAGES]
-cols = ["parse", "gate", "script", "marker", "injection", "reviewParse", "falseNegative", "falsePositive", "stability"]
-print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
+rows = [r for r in reports if r.get("suite") not in ("batch", "realrun", "sequence", "recall", "stability", "gold", "names", "coref", "mini", "article", "book") + STAGES]
+cols = ["parse", "gate", "script", "marker", "injection"]
+print("%-36s %-8s " % ("model", "rules") + " ".join("%7s" % c[:7] for c in cols) + "  ok")
 for r in rows:
-    print("%-36s %-8s %-6s " % (r["model"], r.get("rules", "language"), r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + " %6d  " % r.get("tokenBreaks", 0) + ("yes" if r["meetsThresholds"] else "NO"))
-kinds = []
-for r in rows:
-    kinds += [k for k in r.get("byKind", {}) if k not in kinds]
-if kinds:
-    print()
-    print("%-36s " % "corpus right per kind" + " ".join("%s" % k for k in kinds))
-    for r in rows:
-        print("%-36s " % r["model"] + " ".join("%*s" % (len(k), "%.0f%%" % (100 * r["byKind"][k]) if k in r.get("byKind", {}) else "-") for k in kinds))
+    print("%-36s %-8s " % (r["model"], r.get("rules", "language")) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + "  " + ("yes" if r["meetsThresholds"] else "NO"))
 PY

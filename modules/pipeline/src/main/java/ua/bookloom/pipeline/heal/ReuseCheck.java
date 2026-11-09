@@ -74,7 +74,7 @@ public final class ReuseCheck {
                 candidate.remaskedTarget(),
                 restored.maskedForm(),
                 settings.softContext());
-        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa, 0);
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa);
         log.debug(
                 "Memory reuse evaluated segment {} findings block={} repair={} note={} outcome={} hardGatesPass={}"
                         + " failedOutright={} confidence={}",

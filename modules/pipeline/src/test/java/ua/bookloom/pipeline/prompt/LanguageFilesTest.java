@@ -33,13 +33,12 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 class LanguageFilesTest {
 
     private static final int TARGET_LIMIT = 200;
-    private static final int CHECKS_LIMIT = 60;
     private static final int SOURCE_LIMIT = 80;
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|moodWords|translit|namesInflect|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|titleRenderings|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastNeuter|pastSkipWords|pastNotVerbs|paradigmGender|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio|briefApostrophes|briefQuotes"
-                    + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|nonNominativeEndings|articles|openNameFinals|officeTitles|voicingPairs|honorifics|negationWords|translit|namesInflect|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|determiners|indefiniteArticles|pluralPronouns|nameJoiners|firmJoiners|firmTails|femaleTitles|maleTitles|titleRenderings|addressTerms|informalAddress|formalAddress|dialogueAttribution|nameAlternations|nounEndings|clippedVocative|femSurnameMap|pastFemale|pastMale|pastNeuter|pastSkipWords|pastNotVerbs|paradigmGender|pastMaleIrregular|shortAdjFemale|shortAdjMale|addressPositions|stripStressMarks|conventions|negationCounts|outputRatio|briefApostrophes|briefQuotes"
+                    + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+"
                     + "|nameParadigms\\.\\d+|convention\\.[A-Za-z]+\\.(choices|default)"
                     + "|prepExample\\.(termReading|lexiconReading|prescan|reviewTerms)\\.(\\d+|reply)"
@@ -71,7 +70,7 @@ class LanguageFilesTest {
         final Properties properties = file("languages/" + tag + ".properties");
 
         assertThat(properties.stringPropertyNames())
-                .contains("status", "quotes", "agreement", "pitfalls.1", "reviewerChecks.1", "sourceNotes.1");
+                .contains("status", "quotes", "agreement", "pitfalls.1", "sourceNotes.1");
         assertThat(properties.getProperty("status")).isIn("tested", "untested");
     }
 
@@ -80,16 +79,6 @@ class LanguageFilesTest {
         final String rows = file("languages/pairs/en-uk.properties").getProperty("titleRenderings");
 
         assertThat(rows.split("\\s+")).isNotEmpty().allMatch(row -> row.matches("\\p{Ll}+>\\p{IsCyrillic}+"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"languages/ru.properties", "languages/uk.properties"})
-    void file_negationAndMoodWords_shareNoWord(final String resource) throws IOException {
-        final Properties properties = file(resource);
-        final Set<String> negations =
-                Set.of(properties.getProperty("negationWords").split(" "));
-        final Set<String> moods = Set.of(properties.getProperty("moodWords").split(" "));
-        assertThat(negations).doesNotContainAnyElementsOf(moods);
     }
 
     @Test
@@ -258,10 +247,7 @@ class LanguageFilesTest {
     void languageFile_target_staysWithinTheTargetLimits(final String tag) {
         final LanguageRules rules = LanguageRules.bundled();
 
-        assertThat(tokens(rules.targetRules(tag, false))).as(tag).isLessThanOrEqualTo(TARGET_LIMIT);
-        assertThat(tokens(rules.targetRules(tag, true)) - tokens(rules.targetRules(tag, false)))
-                .as(tag + " reviewer checks")
-                .isLessThanOrEqualTo(CHECKS_LIMIT);
+        assertThat(tokens(rules.targetRules(tag))).as(tag).isLessThanOrEqualTo(TARGET_LIMIT);
     }
 
     @ParameterizedTest
@@ -277,7 +263,7 @@ class LanguageFilesTest {
         final String source = pair.substring(0, dash);
         final String target = pair.substring(dash + 1);
 
-        assertThat(tokens(LanguageRules.bundled().pairRules(source, target, true)))
+        assertThat(tokens(LanguageRules.bundled().pairRules(source, target)))
                 .as(pair)
                 .isLessThanOrEqualTo(PAIR_LIMIT);
     }
@@ -286,7 +272,7 @@ class LanguageFilesTest {
     @ValueSource(strings = {"en", "ru", "uk"})
     void section_languagesTheOwnerReads_areNotEmptyInBothDirections(final String tag) {
         assertThat(LanguageRules.bundled().sourceRules(tag)).isNotBlank();
-        assertThat(LanguageRules.bundled().targetRules(tag, false)).startsWith("Target — ");
+        assertThat(LanguageRules.bundled().targetRules(tag)).startsWith("Target — ");
     }
 
     @ParameterizedTest
@@ -379,7 +365,7 @@ class LanguageFilesTest {
     // worked line shows what a straight-quoted dialogue becomes in the target (15h.C3).
     @Test
     void section_englishToUkrainian_quoteLineCarriesAStraightQuotedExample() {
-        final String section = LanguageRules.bundled().section("en", "uk", false);
+        final String section = LanguageRules.bundled().section("en", "uk");
 
         assertThat(section)
                 .contains(

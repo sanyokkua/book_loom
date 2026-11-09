@@ -3,8 +3,6 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
@@ -70,12 +68,6 @@ class TranslationJobStepsTest {
                 .toArray(String[]::new));
     }
 
-    private static ScriptedChatModel maxModel() {
-        final ScriptedChatModel model = tenDrafts();
-        IntStream.range(0, 12).forEach(ignored -> model.answerTo(REVIEW, reviewed()));
-        return model;
-    }
-
     private static List<JobEvent> run(final TranslationJobImpl translation) {
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
         translation.subscribe(events::add);
@@ -118,11 +110,11 @@ class TranslationJobStepsTest {
         return planned(events, kind).stream().mapToInt(Integer::intValue).sum();
     }
 
-    // The task's Fast row: 12 drafts in the one chunk the token budget allows, 2 done at once, no check or revision,
+    // The task's Fast row: 12 drafts in the one chunk the token budget allows, 2 done at once, no revision,
     // and
     // the one chapter's summary step done with no call.
     @Test
-    void run_fastTwelveSegmentsTwoVerbatim_plansTwelveDraftsNoCheck() {
+    void run_fastTwelveSegmentsTwoVerbatim_plansTwelveDrafts() {
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.FAST), tenDrafts()));
 
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
@@ -131,35 +123,28 @@ class TranslationJobStepsTest {
                 .filteredOn(change -> change.result() == StepResult.NO_CALL)
                 .extracting(StepChanged::itemRef)
                 .containsExactly("Book.txt:0", "Book.txt:6");
-        assertThat(planned(events, StepKind.CHECK)).isEmpty();
         assertLastChapterStepOnly(events);
         assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
     @Test
-    void run_balancedTwelveSegmentsTwoVerbatim_plansTwelveDraftsTwoChecks() {
-        final ScriptedChatModel model = tenDrafts().answerTo(REVIEW, reviewed()).answerTo(REVIEW, reviewed());
-
-        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.BALANCED), model));
+    void run_balancedTwelveSegmentsTwoVerbatim_plansTwelveDrafts() {
+        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.BALANCED), tenDrafts()));
 
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
-        assertThat(planned(events, StepKind.CHECK)).containsExactly(1);
-        assertThat(ended(events, StepKind.CHECK)).hasSize(1).allMatch(change -> change.result() == StepResult.DONE);
         assertLastChapterStepOnly(events);
         assertThat(planned(events, StepKind.PROOFREAD)).isEmpty();
     }
 
-    // Max: one chunk of 12 and two checks; the one chapter is the book's last, so its summary step needs no call
+    // Max: one chunk of 12; the one chapter is the book's last, so its summary step needs no call
     // (12.6); no segment is marked, so the Proofread stage plans only its whole-book round: the 10 drafted paragraphs
     // (the two kept verbatim are no story text to read) in windows of the default batch of 2.
     @Test
     void run_maxTwelveSegments_plansOneSummaryStepAndMakesNoSummaryCall() {
-        final ScriptedChatModel model = maxModel();
+        final ScriptedChatModel model = tenDrafts();
         final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), model));
 
         assertThat(planned(events, StepKind.DRAFT)).containsExactly(12);
-        assertThat(planned(events, StepKind.CHECK)).containsExactly(2);
-        assertThat(ended(events, StepKind.CHECK)).hasSize(2);
         assertLastChapterStepOnly(events);
         assertThat(model.requests()).noneMatch(request -> request.callKind() == CallKind.CHAPTER_SUMMARY);
         assertThat(planned(events, StepKind.PROOFREAD)).containsExactly(5);
@@ -182,7 +167,7 @@ class TranslationJobStepsTest {
     // IF a step ended before it started, or twice, THEN the bar would move back or count one step as two.
     @Test
     void run_completed_everyStartedStepEndsOnceInOrder() {
-        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), maxModel()));
+        final List<JobEvent> events = run(job(twelveParagraphs(QualityDial.MAX), tenDrafts()));
 
         final Map<String, List<StepState>> statesByStep = events.stream()
                 .filter(StepChanged.class::isInstance)

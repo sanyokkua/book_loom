@@ -139,7 +139,6 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
     void estimate_chapterSummariesDue_addTheirMeasuredSecondsToTheTime() {
         final Map<CallKind, MeasuredSpeed> measured = Map.of(
                 CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
-                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
                 CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
                 CallKind.CHAPTER_SUMMARY, new MeasuredSpeed(30.0, MeasuredFrom.RUN));
         modelSettings.measured("ollama", "gemma", measured);
@@ -158,11 +157,10 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                         "every planned kind measured by a run",
                         Map.of(
                                 CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
-                                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN),
                                 CallKind.PROOFREAD, new MeasuredSpeed(6.0, MeasuredFrom.RUN)),
                         300,
                         QualityDial.BALANCED,
-                        List.of("For this book on this computer: about 19 min, measured on this model")),
+                        List.of("For this book on this computer: about 17 min, measured on this model")),
                 Arguments.of(
                         "only the draft speed of the model test, at Fast",
                         Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.TEST)),
@@ -170,7 +168,7 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                         QualityDial.FAST,
                         List.of("For this book on this computer: about 2–3 h, estimate from the model test")),
                 Arguments.of(
-                        "a run's draft speed and a never-measured review, at Balanced",
+                        "a run's draft speed and a never-measured proofread, at Balanced",
                         Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN)),
                         300,
                         QualityDial.BALANCED,
@@ -179,7 +177,8 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
                 Arguments.of("nothing measured", Map.of(), 300, QualityDial.BALANCED, List.of()));
     }
 
-    // The plan of the spec's cases: 300 segments in 20 chunks, the reviewer once a chunk at Balanced and never at Fast.
+    // The plan of the spec's cases: 300 segments in 20 chunks, a proofread call once a chunk at Balanced and never at
+    // Fast.
     @ParameterizedTest(name = "{0}")
     @MethodSource("wordings")
     void line_measuredAndEstimate_wording(
@@ -188,20 +187,15 @@ class BriefEstimateTest extends SettingsViewModelTestBase {
             final int segments,
             final QualityDial dial,
             final List<String> expected) {
-        final int passes = dial == QualityDial.FAST ? 0 : 1;
-
-        assertThat(StartEstimates.of(stored, segments, 20, dial, passes, 0).lines(EN))
-                .containsExactlyElementsOf(expected);
+        assertThat(StartEstimates.of(stored, segments, 20, dial, 0).lines(EN)).containsExactlyElementsOf(expected);
     }
     // IF a proofread call never timed counted as measured, THEN Balanced would promise a time no run has seen; the
-    // draft and review speeds of an earlier run give a range marked as an estimate instead.
+    // draft speed of an earlier run gives a range marked as an estimate instead.
     @Test
     void line_neverMeasuredProofreadKindAtBalanced_isAnEstimateFromAnEarlierTranslation() {
-        final Map<CallKind, MeasuredSpeed> stored = Map.of(
-                CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN),
-                CallKind.REVIEW, new MeasuredSpeed(6.0, MeasuredFrom.RUN));
+        final Map<CallKind, MeasuredSpeed> stored = Map.of(CallKind.DRAFT, new MeasuredSpeed(3.0, MeasuredFrom.RUN));
 
-        final StartEstimate estimate = StartEstimates.of(stored, 300, 20, QualityDial.BALANCED, 1, 0);
+        final StartEstimate estimate = StartEstimates.of(stored, 300, 20, QualityDial.BALANCED, 0);
 
         assertThat(estimate).isInstanceOf(StartEstimate.Ranged.class);
         assertThat(estimate.lines(EN)).singleElement().asString().endsWith("estimate from an earlier translation");

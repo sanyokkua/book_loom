@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.eval.ProbeCase.Sending;
 
 /**
- * Every case the probe knows, each wired to the eval class that sends it in the suites: the prompt cases and the
- * defects corpus through {@link PromptEvalRunner}, the realrun files through {@link RealRunRunner}. Nothing here builds
+ * Every case the probe knows, each wired to the eval class that sends it in the suites: the prompt cases through
+ * {@link PromptEvalRunner}, the realrun files through {@link RealRunRunner}. Nothing here builds
  * a request itself.
  */
 @Slf4j
@@ -21,21 +21,17 @@ import ua.bookloom.pipeline.eval.ProbeCase.Sending;
 final class ProbeCases {
 
     static final String PROMPT = "prompt";
-    static final String DEFECTS = "defects";
     static final String REALRUN = "realrun";
     private static final int CLOSEST = 5;
 
     static List<ProbeCase> all() {
         final List<ProbeCase> cases = new ArrayList<>();
         PromptEvalCases.ALL.forEach(c -> cases.add(new ProbeCase(c.name(), PROMPT, s -> prompt(c, s))));
-        EvalCorpus.defects().forEach(c -> cases.add(new ProbeCase(c.id(), DEFECTS, s -> defect(c, s))));
         RunCorpus.text()
                 .forEach(c -> cases.add(realRun(c.id(), s -> rows(runner(s).text(c)))));
         RunCorpus.batches()
                 .forEach(c ->
                         cases.add(realRun(c.id(), s -> rows(List.of(runner(s).batch(c))))));
-        RunCorpus.reviewerBatches()
-                .forEach(c -> cases.add(realRun(c.id(), s -> rows(runner(s).reviewerBatch(c)))));
         RunCorpus.repairs()
                 .forEach(c ->
                         cases.add(realRun(c.id(), s -> rows(List.of(runner(s).repair(c))))));
@@ -67,7 +63,7 @@ final class ProbeCases {
     }
 
     private static RealRunRunner runner(final Sending sending) {
-        return new RealRunRunner(sending.calls(), 1, sending.workDir());
+        return new RealRunRunner(sending.calls(), sending.workDir());
     }
 
     private static List<String> prompt(final EvalCase evalCase, final Sending sending) {
@@ -77,19 +73,6 @@ final class ProbeCases {
                         PromptEvalCases.TARGET_LANGUAGE,
                         sending.window())
                 .runAll(List.of(evalCase)).stream().map(ProbeCases::describe).toList();
-    }
-
-    private static List<String> defect(final DefectCase defect, final Sending sending) {
-        return new PromptEvalRunner(
-                        sending.calls(),
-                        PromptEvalCases.SOURCE_LANGUAGE,
-                        PromptEvalCases.TARGET_LANGUAGE,
-                        sending.window())
-                .runDefects(List.of(defect), 1).stream()
-                        .map(row -> "defective=" + row.defective() + " flagged=" + row.flagged() + " readable="
-                                + row.readable() + " reviewerFlagged=" + row.reviewerFlagged() + " tokenBreaks="
-                                + row.tokenBreaks())
-                        .toList();
     }
 
     private static List<String> rows(final List<RealRunRow> rows) {

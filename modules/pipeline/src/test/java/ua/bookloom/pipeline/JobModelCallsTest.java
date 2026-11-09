@@ -69,10 +69,10 @@ class JobModelCallsTest {
         assertThat(model.requests()).hasSize(1);
     }
 
-    // A judge call scores a whole chunk, so it names no single segment but lists every segment it judges.
+    // A proofread call reads a window of segments, so it names no single segment but lists every segment it reads.
     @Test
-    void callAbout_judgeOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
-        calls.callAbout(CallKind.REVIEW, List.of("Book.md:0", "Book.md:1"), REQUEST);
+    void callAbout_proofreadOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
+        calls.callAbout(CallKind.PROOFREAD, List.of("Book.md:0", "Book.md:1"), REQUEST);
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)

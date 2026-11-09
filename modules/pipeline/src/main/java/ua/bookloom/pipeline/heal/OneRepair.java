@@ -69,7 +69,7 @@ final class OneRepair {
     /**
      * The text a segment ends with after its one repair.
      *
-     * @param standing the text that stays, its evaluation and what the reviewer left on it
+     * @param standing the text that stays and its evaluation
      * @param rejected the repair's refused reply, protected spans put back, kept when no target passed; {@code null}
      *     when the repair made none
      * @param reason why the repair stayed or did not, for the log: {@code keep}, a never-worse veto, {@code gate},
@@ -84,9 +84,9 @@ final class OneRepair {
         }
 
         /**
-         * Whether the segment was given a content-changing call: the one repair, or the reviewer's change of it.
+         * Whether the segment was given a content-changing call: the one repair.
          *
-         * @return {@code true} when the repair call was made or the reviewer changed the text, {@code false} otherwise
+         * @return {@code true} when the repair call was made, {@code false} otherwise
          */
         boolean repaired() {
             return !REASON_NONE.equals(reason) || standing.rounds() > 0;
@@ -97,18 +97,17 @@ final class OneRepair {
      * Repairs the text in place once when it holds a defect and the settings allow a fixing call.
      *
      * @param outcome the drafted segment
-     * @param standing the text in place: the draft's, or the one the reviewer's answer left
+     * @param standing the text in place: the draft's
      * @return the text that stays, or the error the repair call answered, which ends the step
      */
     Result<Repaired> repair(final DraftOutcome.Drafted outcome, final Resolution standing) {
         final String segmentId = outcome.segment().id();
         final List<QaFinding> defects = SegmentFindings.defects(standing.qa());
-        final Fixing fixing = standing.verifiedBlockersLeft() > 0 ? Fixing.NONE : fixing(outcome, defects);
+        final Fixing fixing = fixing(outcome, defects);
         log.debug(
-                "Fixing decision segment={} defects={} verifiedBlockersLeft={} mode={} repairs={} canRepair={} fixing={}",
+                "Fixing decision segment={} defects={} mode={} repairs={} canRepair={} fixing={}",
                 segmentId,
                 defects.size(),
-                standing.verifiedBlockersLeft(),
                 settings.dial().repair(),
                 settings.repairs(),
                 canRepair(outcome),
@@ -143,9 +142,7 @@ final class OneRepair {
     }
 
     // Balanced and Max repair every BLOCK or REPAIR finding; Fast spends a call only on formatting marks the code
-    // restore could not put back, and a review retry spends none. A segment the reviewer left a verified blocker on
-    // spends none either (decided by the caller): no code check can clear that evidence, so the segment is flagged
-    // whatever the repair did.
+    // restore could not put back, and a review retry spends none.
     private Fixing fixing(final DraftOutcome.Drafted outcome, final List<QaFinding> defects) {
         if (defects.isEmpty() || !settings.repairs() || !canRepair(outcome)) {
             return Fixing.NONE;
@@ -198,9 +195,7 @@ final class OneRepair {
                 new Resolution(
                         repaired.restored() != null ? repaired : standing.machine(),
                         evaluated.qa(),
-                        standing.findings(),
                         counted(standing),
-                        standing.verifiedBlockersLeft(),
                         null,
                         evaluated.maskedCandidate()),
                 null,
@@ -274,16 +269,14 @@ final class OneRepair {
                 new Resolution(
                         standing.machine(),
                         standing.qa(),
-                        standing.findings(),
                         standing.rounds(),
-                        standing.verifiedBlockersLeft(),
                         flag == null ? standing.reason() : flag,
                         standing.maskedText()),
                 rejected,
                 reason);
     }
 
-    // A kept repair changed the text, so it counts once whatever the reviewer's edits did.
+    // A kept repair changed the text, so it counts once.
     private static int counted(final Resolution standing) {
         return Math.max(standing.rounds(), 1);
     }

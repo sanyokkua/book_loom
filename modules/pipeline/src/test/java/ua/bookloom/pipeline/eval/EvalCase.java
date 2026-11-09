@@ -110,16 +110,6 @@ sealed interface EvalCase {
     }
 
     /**
-     * A review case: the same source reviewed once with a good and once with a bad candidate, in separate calls.
-     *
-     * @param name the case name
-     * @param masked the masked source
-     * @param good a faithful, fluent candidate
-     * @param bad a candidate with a meaning error, an omission or text left untranslated
-     */
-    record Review(String name, String masked, String good, String bad) implements EvalCase {}
-
-    /**
      * A batch of glossary names given suggested targets under one name policy; each name becomes its own report row.
      *
      * @param name the case name

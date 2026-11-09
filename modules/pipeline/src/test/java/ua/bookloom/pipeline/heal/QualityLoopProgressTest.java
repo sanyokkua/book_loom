@@ -72,7 +72,7 @@ class QualityLoopProgressTest {
 
     // A repaired target is decided by the checks alone: no reviewer call follows the repair.
     @Test
-    void nextDecision_repairedTargetPassingTheChecks_isAcceptedWithoutAReviewerCall() {
+    void nextDecision_repairedTargetPassingTheChecks_isAcceptedAfterTheOneRepair() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(itemReply(GOOD_TARGET)));
 
         final SegmentOutcome decided =
@@ -89,10 +89,7 @@ class QualityLoopProgressTest {
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), draft, draft, draft, null));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED, dial, QualityLoopFixtures.FRAME, NamePolicy.TRANSLITERATE, List.of());
-        return Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data(),
-                "decider");
+        return loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
     }
 
     private static SegmentOutcome first(final ChunkDecider decider) {

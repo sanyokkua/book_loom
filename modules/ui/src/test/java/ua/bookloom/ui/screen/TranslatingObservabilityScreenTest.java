@@ -48,7 +48,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
 
     private static WaitingCall reviewCall(final int attempt, final long waited, final long total, final boolean stuck) {
         return new WaitingCall(
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 "ch9 · p02",
                 0,
                 attempt,
@@ -111,7 +111,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         job.awaitRunStarted();
         job.emit(new SegmentStarted("s-2", "ch9 · p02", "Text.", new ChunkPosition(9, 81, 1, 7)));
         job.emit(new ModelCallFinished(
-                "s-2", CallKind.REVIEW, TIMEOUT, null, 0, false, List.of("s-2"), 2, ErrorCode.timeout));
+                "s-2", CallKind.PROOFREAD, TIMEOUT, null, 0, false, List.of("s-2"), 2, ErrorCode.timeout));
         job.emit(new Paused(
                 PauseReason.ON_ERROR,
                 AppError.of(ErrorCode.timeout, "Model server timed out", "The server did not answer."),

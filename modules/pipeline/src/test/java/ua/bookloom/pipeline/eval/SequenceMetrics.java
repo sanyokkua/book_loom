@@ -18,7 +18,7 @@ import lombok.Builder;
  * @param hardGateFailuresRound0 segments whose first evaluation failed a hard gate, so they needed a repair round
  * @param hardGateKinds the findings of those segments' first repair round, counted per kind
  * @param leakedProtocol targets holding batch protocol: a terms field, a code fence or a JSON object with an id
- * @param reviewerTruncated reviewer replies cut off at the output cap ({@code finish=LENGTH})
+ * @param proofreadTruncated proofread replies cut off at the output cap ({@code finish=LENGTH})
  * @param termClaimedWrong lexicon terms whose learned rendering another term also claimed
  * @param claimedRenderings those shared renderings, {@code rendering <- term, term}
  * @param dominantShareMean the mean over the terms of the share of their occurrences carrying the commonest rendering
@@ -74,7 +74,7 @@ record SequenceMetrics(
         int hardGateFailuresRound0,
         Map<String, Integer> hardGateKinds,
         int leakedProtocol,
-        int reviewerTruncated,
+        int proofreadTruncated,
         int termClaimedWrong,
         List<String> claimedRenderings,
         double dominantShareMean,

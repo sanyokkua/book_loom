@@ -78,14 +78,6 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"target\":\"HI\"}");
     }
 
-    // The reviewer never asks for an edit, so a whole pseudo run never changes or flags a segment on its say-so.
-    @Test
-    void chat_reviewerFormat_repliesWithNoResults() {
-        final ChatResponse response = send("anything", "reviewer");
-
-        assertThat(response.content()).isEqualTo("{\"results\":[]}");
-    }
-
     // The pre-scan reports each distinct capitalised word, in order of first appearance, as an unlocked other term.
     @Test
     void chat_prescanFormat_repliesWithCapitalisedWordsAsOtherTerms() {

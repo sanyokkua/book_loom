@@ -46,19 +46,19 @@ class CallLedgerImplTest {
         ledger.record(failed(CallKind.DRAFT));
         final long mark = ledger.mark();
 
-        ledger.record(failed(CallKind.REVIEW));
+        ledger.record(failed(CallKind.PROOFREAD));
         ledger.record(failed(CallKind.CHAPTER_SUMMARY));
 
         assertThat(ledger.since(mark))
                 .extracting(CallRecord::callKind)
-                .containsExactly(CallKind.REVIEW, CallKind.CHAPTER_SUMMARY);
+                .containsExactly(CallKind.PROOFREAD, CallKind.CHAPTER_SUMMARY);
         assertThat(ledger.since(ledger.mark())).isEmpty();
     }
 
     @Test
     void record_oneMoreThanTheCap_keepsTheCapAndDropsTheOldest() {
         final CallLedgerImpl ledger = new CallLedgerImpl();
-        ledger.record(failed(CallKind.REVIEW));
+        ledger.record(failed(CallKind.PROOFREAD));
 
         IntStream.range(0, CallLedgerImpl.MAX_RECORDS).forEach(ignored -> ledger.record(failed(CallKind.DRAFT)));
 

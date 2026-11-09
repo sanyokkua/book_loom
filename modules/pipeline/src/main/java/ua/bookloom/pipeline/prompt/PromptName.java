@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
 import static ua.bookloom.pipeline.prompt.SlotNames.AUTHOR;
-import static ua.bookloom.pipeline.prompt.SlotNames.CHARACTERS;
 import static ua.bookloom.pipeline.prompt.SlotNames.EXAMPLES;
 import static ua.bookloom.pipeline.prompt.SlotNames.FOREIGN_PASSAGE_RULE;
 import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
@@ -80,23 +79,6 @@ public enum PromptName {
             new Temperatures(0.1, null),
             null,
             new Slots(Set.of("instruction"), Set.of("rules"))),
-
-    /**
-     * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a
-     * rewrite; its temperature is zero, because the answer must repeat, and its output limit grows with the pairs.
-     */
-    REVIEWER(
-            "reviewer",
-            CallKind.REVIEW,
-            "reviewer",
-            ReviewerSchema.SCHEMA,
-            new Temperatures(0.0, null),
-            new Slots(
-                    Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE),
-                    Set.of(LANGUAGE_RULES)),
-            new Slots(
-                    Set.of("pairs"),
-                    Set.of("glossaryTerms", "suggestedTerms", "usualRenderings", CHARACTERS, "passFocus"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
     DIRECTED_FIX(
@@ -221,16 +203,6 @@ public enum PromptName {
             null,
             new Slots(Set.of(TERMS, TARGET_LANGUAGE, "nameRule"), Set.of(STYLE_SHEET, EXAMPLES, LANGUAGE_RULES))),
 
-    /** The optional garbled-word check: finished target texts answered with the words that are not real words. */
-    SUSPICIOUS_WORDS(
-            "suspicious-words",
-            CallKind.REVIEW,
-            "suspicious-words",
-            SuspiciousWordsSchema.SCHEMA,
-            new Temperatures(0.0, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE), Set.of(STYLE_SHEET, FOREIGN_PASSAGE_RULE)),
-            new Slots(Set.of("items"), Set.of())),
-
     /**
      * The summary of one finished chapter (design D10), an analysis call: the chapter's source, or one part of a long
      * chapter with the part before it summarised, and the names the chapter holds, answered with two or three sentences
@@ -326,11 +298,6 @@ public enum PromptName {
     /** Whether the {@code examples} slot holds name-suggestion examples rather than translation examples. */
     boolean showsNameExamples() {
         return this == SUGGEST_TARGETS;
-    }
-
-    /** Whether the call reviews a translation, so its language rules include the reviewer checks. */
-    boolean reviewsTranslation() {
-        return this == REVIEWER;
     }
 
     /** The system template's slots, or empty when the call reuses another call's system message. */

@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -23,7 +22,6 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.ChunkDecider;
-import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
@@ -31,13 +29,7 @@ import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
-import ua.bookloom.pipeline.reviewer.EditApplier;
-import ua.bookloom.pipeline.reviewer.EditVerifier;
-import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
  * Replays the 15d.1 defects the checks refuse through the repair path with a model whose every fix makes the text
@@ -47,7 +39,6 @@ import ua.bookloom.pipeline.reviewer.ReviewerCall;
  */
 class RepairReplayTest {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final GateFunction PASSTHROUGH =
             (segment, maskedReply) -> new GateResult.Restored(maskedReply, maskedReply);
     private static final CallFrame FRAME =
@@ -103,11 +94,7 @@ class RepairReplayTest {
     }
 
     private static SegmentOutcome decide(final DefectCase defect, final ScriptedChatModel model) {
-        final PromptTemplates templates = new PromptTemplates();
-        final QualityLoop loop = new QualityLoop(
-                new ReviewerCall(templates, new ReviewReplyParser(MAPPER)),
-                new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, new DraftReplyParser(MAPPER)));
+        final QualityLoop loop = new QualityLoop();
         final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
                 PromptEvalRunner.segment(defect.source()),
                 defect.source(),
@@ -118,9 +105,8 @@ class RepairReplayTest {
                 null);
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED, DialParameters.of(QualityDial.MAX), FRAME, NamePolicy.TRANSLITERATE, List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, PASSTHROUGH, (kind, segmentId, request) -> model.chat(request))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), settings, PASSTHROUGH, (kind, segmentId, request) -> model.chat(request));
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 }

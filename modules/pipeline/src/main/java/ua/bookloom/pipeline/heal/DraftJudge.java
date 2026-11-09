@@ -51,7 +51,7 @@ public final class DraftJudge {
         final DraftOutcome.Drafted kept =
                 fixed.map(QuoteFixUp.FixedDraft::outcome).orElse(drafted);
         final QaResult keptQa = fixed.map(QuoteFixUp.FixedDraft::qa).orElse(qa);
-        final boolean accepted = AcceptanceRule.accepts(keptQa, 0);
+        final boolean accepted = AcceptanceRule.accepts(keptQa);
         if (fixed.isPresent()) {
             log.debug(
                     "Judged draft segmentId={} quote marks repaired accepted={}",

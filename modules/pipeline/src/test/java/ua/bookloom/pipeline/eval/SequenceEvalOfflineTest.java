@@ -132,7 +132,7 @@ class SequenceEvalOfflineTest {
         // Fast makes no repair, so no repair names the echo's findings.
         assertThat(scripted.hardGateKinds()).isEmpty();
         assertThat(scripted.leakedProtocol()).isZero();
-        assertThat(scripted.reviewerTruncated()).isZero();
+        assertThat(scripted.proofreadTruncated()).isZero();
         assertThat(scripted.termClaimedWrong()).isZero();
     }
 
@@ -167,7 +167,7 @@ class SequenceEvalOfflineTest {
                 new ModelCallFinished(
                         null, CallKind.DRAFT, Duration.ofSeconds(2), first, 0, false, List.of("a", "b", "c"), 1, null),
                 new ModelCallFinished("d", CallKind.DRAFT, Duration.ofSeconds(1), second, 0, false),
-                new ModelCallFinished("e", CallKind.REVIEW, Duration.ofSeconds(1), null, 0, false));
+                new ModelCallFinished("e", CallKind.PROOFREAD, Duration.ofSeconds(1), null, 0, false));
     }
 
     private static SequenceMetrics measureHandWrittenRun() {
@@ -223,7 +223,7 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.lexiconDistinct()).isEqualTo(2.0);
         assertThat(metrics.learned()).isEqualTo(1);
         assertThat(metrics.learnedCoverage()).isEqualTo(0.75);
-        assertThat(metrics.callsByKind()).containsEntry("DRAFT", 2).containsEntry("REVIEW", 1);
+        assertThat(metrics.callsByKind()).containsEntry("DRAFT", 2).containsEntry("PROOFREAD", 1);
     }
 
     @Test
@@ -233,7 +233,7 @@ class SequenceEvalOfflineTest {
         assertThat(metrics.narrator()).isEqualTo("set");
         assertThat(metrics.hardGateFailuresRound0()).isEqualTo(3);
         assertThat(metrics.hardGateKinds()).containsEntry("UNBALANCED_QUOTES", 2);
-        assertThat(metrics.reviewerTruncated()).isEqualTo(1);
+        assertThat(metrics.proofreadTruncated()).isEqualTo(1);
         assertThat(term("master", metrics).dominantShare()).isEqualTo(0.5);
     }
 
@@ -355,7 +355,7 @@ class SequenceEvalOfflineTest {
                         "narrator=unset",
                         "hardGateRound0",
                         "leakedProtocol",
-                        "reviewerTruncated",
+                        "proofreadTruncated",
                         "termClaimedWrong",
                         "dominantShare");
         assertThat(report.json())

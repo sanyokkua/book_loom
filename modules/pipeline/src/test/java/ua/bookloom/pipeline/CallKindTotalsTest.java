@@ -38,7 +38,7 @@ class CallKindTotalsTest {
                         CallKind.DRAFT,
                         2000,
                         new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)),
-                answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
+                answered(CallKind.PROOFREAD, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
 
         final CallKindTotals.Totals draft = of(totals, CallKind.DRAFT);
         assertThat(draft.attempts()).isEqualTo(2);
@@ -49,7 +49,7 @@ class CallKindTotalsTest {
         assertThat(draft.cachedTotal()).contains(1100L);
         assertThat(draft.generationTotal()).contains(Duration.ofSeconds(4));
         assertThat(draft.promptEvalTotal()).contains(Duration.ofMillis(700));
-        final CallKindTotals.Totals review = of(totals, CallKind.REVIEW);
+        final CallKindTotals.Totals review = of(totals, CallKind.PROOFREAD);
         assertThat(review.attempts()).isEqualTo(1);
         assertThat(review.promptTotal()).contains(500L);
         assertThat(review.generationTotal()).contains(Duration.ofMillis(800));
@@ -80,12 +80,12 @@ class CallKindTotalsTest {
                         CallKind.DRAFT,
                         2000,
                         new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)),
-                answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
+                answered(CallKind.PROOFREAD, 1000, new TokenUsage(500, 20, Duration.ofMillis(800)))));
 
         assertThat(of(totals, CallKind.DRAFT).meanFirstToken()).contains(Duration.ofMillis(350));
         assertThat(of(totals, CallKind.DRAFT).prefillShare()).contains(0.14);
-        assertThat(of(totals, CallKind.REVIEW).meanFirstToken()).isEmpty();
-        assertThat(of(totals, CallKind.REVIEW).prefillShare()).isEmpty();
+        assertThat(of(totals, CallKind.PROOFREAD).meanFirstToken()).isEmpty();
+        assertThat(of(totals, CallKind.PROOFREAD).prefillShare()).isEmpty();
     }
 
     // A first-token time the call measured itself wins over the provider's prompt-evaluation time.

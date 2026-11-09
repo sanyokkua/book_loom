@@ -25,7 +25,7 @@ import ua.bookloom.api.project.SegmentPath;
  * @param hardGateFailuresRound0 the segments whose first evaluation failed a hard gate (a placeholder or a blocking
  *     text check)
  * @param hardGateKinds the findings that sent those segments to their first repair round, counted per kind
- * @param reviewerTruncated reviewer replies the provider cut off at the output cap
+ * @param proofreadTruncated proofread replies the provider cut off at the output cap
  * @param narrator the narrator mode the brief was written with
  * @param summaryGate what the chapter-summary gate kept and dropped
  */
@@ -39,7 +39,7 @@ record SequenceRun(
         int editsRefused,
         int hardGateFailuresRound0,
         Map<String, Integer> hardGateKinds,
-        int reviewerTruncated,
+        int proofreadTruncated,
         SequenceNarratorMode narrator,
         SummaryGateTally summaryGate) {
 
@@ -54,7 +54,7 @@ record SequenceRun(
             final int editsRefused,
             final int hardGateFailuresRound0,
             final Map<String, Integer> hardGateKinds,
-            final int reviewerTruncated,
+            final int proofreadTruncated,
             final SequenceNarratorMode narrator) {
         this(
                 report,
@@ -66,7 +66,7 @@ record SequenceRun(
                 editsRefused,
                 hardGateFailuresRound0,
                 hardGateKinds,
-                reviewerTruncated,
+                proofreadTruncated,
                 narrator,
                 SummaryGateTally.NONE);
     }

@@ -10,13 +10,11 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.CharacterSheet;
 import ua.bookloom.pipeline.context.ContextBudget;
-import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.glossary.GlossaryNames;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.lexicon.Lexicon;
@@ -24,7 +22,6 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.qa.CheckName;
-import ua.bookloom.pipeline.reviewer.BookReviewerSheets;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
@@ -44,7 +41,6 @@ final class ChunkInputs {
     private final Map<String, ProtectedMask> masks;
     private final GateFunction gate;
     private final Lexicon lexicon;
-    private final LexiconFilter lexiconFilter;
 
     private ChunkInputs(
             final Chunk chunk,
@@ -59,8 +55,6 @@ final class ChunkInputs {
         this.masks = Map.copyOf(masks);
         this.gate = gate;
         this.lexicon = lexicon;
-        this.lexiconFilter = LexiconFilter.of(
-                settings.frame().analysisLanguage(), settings.frame().targetLanguage());
     }
 
     /**
@@ -133,27 +127,14 @@ final class ChunkInputs {
     }
 
     /**
-     * What each reviewer call of this chunk is shown of the glossary, the lexicon and the characters: the call cuts it to
-     * its own pairs, so a name only another pair of the chunk holds never reaches it (15j.J14).
-     */
-    BookReviewerSheets reviewerSheets() {
-        final int allowance =
-                ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window()));
-        final List<LexiconEntry> entries = lexicon.entries(settings.projectId());
-        log.debug("Reviewer sheets for a chunk glossary={} lexicon={}", glossary.size(), entries.size());
-        return new BookReviewerSheets(
-                glossary, entries, lexiconFilter, settings.frame().analysisLanguage(), allowance);
-    }
-
-    /**
-     * The character gender sheet of the chunk, cut to the sheet's own share of the dynamic allowance, for the reviewer.
+     * The character gender sheet of the chunk, cut to the sheet's own share of the dynamic allowance.
      */
     List<String> characterLines() {
         final List<String> lines = TokenEstimator.leadingWithin(
                 CharacterSheet.select(
                         chunk.segments(), glossary, settings.frame().analysisLanguage()),
                 ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window())));
-        log.debug("Reviewer character sheet lines={}", lines.size());
+        log.debug("Character sheet lines={}", lines.size());
         return lines;
     }
 

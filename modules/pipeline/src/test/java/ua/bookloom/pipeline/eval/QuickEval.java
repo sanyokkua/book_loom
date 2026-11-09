@@ -23,7 +23,7 @@ final class QuickEval {
     /**
      * One case per defect class of {@link PromptEvalCases} and a clean control ({@code plain-short}): a locked name,
      * balanced quotes, narrator gender, a drop-cap token, a copied number, an instruction inside the book text, a
-     * glossary rendering, a directed fix and a reviewer pair.
+     * glossary rendering and a directed fix.
      */
     static final List<String> PROMPT_CASES = List.of(
             "dialogue-locked-name",
@@ -34,7 +34,6 @@ final class QuickEval {
             "injection-hello",
             "glossary-name",
             "fix-echo",
-            "review-omission",
             "plain-short");
 
     /** Whether the environment asks for the quick subsets. */
@@ -51,9 +50,6 @@ final class QuickEval {
         return Stream.of(
                         RunCorpus.text().stream().filter(RunCase::isQuick).map(RunCase::id),
                         RunCorpus.batches().stream().filter(BatchCase::isQuick).map(BatchCase::id),
-                        RunCorpus.reviewerBatches().stream()
-                                .filter(ReviewerBatchCase::isQuick)
-                                .map(ReviewerBatchCase::id),
                         RunCorpus.repairs().stream().filter(RepairCase::isQuick).map(RepairCase::id),
                         RunCorpus.injections().stream()
                                 .filter(InjectionCase::isQuick)

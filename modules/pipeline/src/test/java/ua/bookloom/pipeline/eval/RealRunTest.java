@@ -12,11 +12,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * The real-run suite (15e.2): the cases built from the defect classes of the 6 h 17 min run — quotes, mixed script,
- * Russian letters, a first-person narrator, short lines, a batch that asks for {@code terms}, a multi-pair reviewer
- * call and a long one, placeholder and structural repair — sent through the run's own request factory to a real model.
+ * Russian letters, a first-person narrator, short lines, a batch that asks for {@code terms}, placeholder and structural repair — sent through the run's own request factory to a real model.
  * Local-only: {@code scripts/eval-matrix.sh --suite realrun}, or
  * {@code BOOKLOOM_EVAL_SUITE=realrun ./gradlew :pipeline:promptEval} with {@code BOOKLOOM_EVAL_URL},
- * {@code BOOKLOOM_EVAL_PROVIDER}, {@code BOOKLOOM_EVAL_MODEL}, {@code BOOKLOOM_EVAL_STABILITY} (reviewer repeats) and
+ * {@code BOOKLOOM_EVAL_PROVIDER}, {@code BOOKLOOM_EVAL_MODEL} and
  * {@code BOOKLOOM_EVAL_ONLY} (a case-id prefix) and {@code BOOKLOOM_EVAL_QUICK=1} (only the cases marked quick). It measures and asserts no floor: the thresholds per model class are
  * recorded by 15e.4 from these numbers. The report lands in {@code build/reports/promptEval/<model>-realrun.json}.
  */
@@ -32,12 +31,11 @@ class RealRunTest {
     @Test
     void realRun_realModel_reportsEveryKind() throws IOException {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", "gemma4:e4b-mlx");
-        final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
 
         final boolean quick = QuickEval.isOn(System.getenv());
-        final RealRunReport report = new RealRunReport(
-                model, new RealRunRunner(PromptEvalTest.calls(model), repeats, workDir).runAll(only, quick));
+        final RealRunReport report =
+                new RealRunReport(model, new RealRunRunner(PromptEvalTest.calls(model), workDir).runAll(only, quick));
 
         write(report);
         assertThat(report.rows()).as(report.table()).isNotEmpty();

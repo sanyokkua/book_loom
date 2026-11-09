@@ -32,7 +32,6 @@ final class LiveTextFixtures {
     static final String BEFORE_DOOR_ID = "ch07.xhtml:40";
     static final String DOOR_SOURCE = "He opened the <em>old</em> door.";
     static final String DOOR_MASKED_TARGET = "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.";
-    static final String DOOR_REVIEWED = "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"}]}";
     static final int CHAPTERS = 11;
     static final int DOOR_CHAPTER = 7;
 
@@ -45,10 +44,9 @@ final class LiveTextFixtures {
         return decidedExcept(chapters(directory, seventh), Set.of(BEFORE_DOOR_ID, DOOR_ID));
     }
 
-    /** The draft of :40, the door's draft and the chunk's reviewer verdict of ok. */
+    /** The draft of :40 and the door's draft. */
     static ScriptedChatModel doorModel() {
-        return TranslationJobTestSupport.replies(ChunkRunFixtures.T0, DOOR_MASKED_TARGET)
-                .answerTo(ChunkRunFixtures.REVIEW, Result.ok(new ChatResponse(DOOR_REVIEWED, FinishReason.STOP)));
+        return TranslationJobTestSupport.replies(ChunkRunFixtures.T0, DOOR_MASKED_TARGET);
     }
 
     /**
@@ -63,16 +61,10 @@ final class LiveTextFixtures {
         return decidedExcept(project, pending);
     }
 
-    /** Answers every reviewer call with ok and every other call with a Cyrillic target. */
+    /** Answers every call with a Cyrillic target. */
     static ChatModel acceptingModel() {
-        return (final ChatRequest request) -> {
-            final String format =
-                    Objects.requireNonNull(request.responseFormat(), "format").name();
-            final String content = ChunkRunFixtures.REVIEW.equals(format)
-                    ? DOOR_REVIEWED
-                    : TranslationJobTestSupport.targetReply("Рядок номер.");
-            return Result.ok(new ChatResponse(content, FinishReason.STOP));
-        };
+        return (final ChatRequest request) ->
+                Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("Рядок номер."), FinishReason.STOP));
     }
 
     private static TestProject chapters(final Path directory, final List<String> seventh) {

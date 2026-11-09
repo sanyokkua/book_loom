@@ -21,6 +21,7 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.LanguageIdentityCheck;
 import ua.bookloom.pipeline.checks.NegationCount;
 import ua.bookloom.pipeline.checks.Sentences;
+import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.text.StressMarks;
 
@@ -77,7 +78,10 @@ final class NeverWorseVetoes {
             new Rule("dashes", pair -> falls(pair, text -> TextGuards.count(text, TextGuards.DASHES))),
             new Rule("clauses", pair -> falls(pair, text -> TextGuards.count(text, TextGuards.CLAUSE_MARKS))),
             new Rule("latin-run", pair -> TextGuards.bringsLatinRun(pair.old(), pair.fresh())),
-            new Rule("stress-mark", pair -> rises(pair, text -> (long) StressMarks.count(text))));
+            new Rule("stress-mark", pair -> rises(pair, text -> (long) StressMarks.count(text))),
+            new Rule("doubled-word", pair -> rises(pair, TextChecks::doubledWords)),
+            new Rule("sentence-case", pair -> rises(pair, CaseVetoes::lowerStarts)),
+            new Rule("mid-capital", pair -> exceeds(pair, CaseVetoes::midCapitals)));
 
     /**
      * The first veto the candidate breaks.
@@ -156,6 +160,15 @@ final class NeverWorseVetoes {
         final long after = measure.applyAsLong(pair.fresh());
         log.trace("Never-worse measure {}->{} source={}", before, after, source);
         return after < Math.min(before, source);
+    }
+
+    // The candidate holds more than both the current text and the source: what it added, the source did not hold.
+    private static boolean exceeds(final Pair pair, final ToLongFunction<String> measure) {
+        final long before = measure.applyAsLong(pair.old());
+        final long after = measure.applyAsLong(pair.fresh());
+        final long source = measure.applyAsLong(pair.source());
+        log.trace("Never-worse measure {}->{} source={}", before, after, source);
+        return after > Math.max(before, source);
     }
 
     // A source language with no negation list gives no bound, so the candidate is held to the current text alone.

@@ -41,8 +41,6 @@ import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.SegmentFindings;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.reviewer.ReviewPass;
-import ua.bookloom.pipeline.reviewer.ReviewedPair;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.PromptRequests;
 
@@ -57,7 +55,6 @@ class PromptRequestsEquivalenceTest {
 
     private static final String BATCH = "draft-batch-json";
     private static final String DRAFT = "draft";
-    private static final String REVIEW = "reviewer";
     private static final String REPAIR = "repair";
     private static final String REASK = "structural-repair";
     private static final int PARAGRAPHS = 8;
@@ -133,14 +130,19 @@ class PromptRequestsEquivalenceTest {
         return new ScriptedChatModel().answerTimes(PARAGRAPHS * 2, reply("{\"results\":[],\"items\":[]}"));
     }
 
+    // The code at the target's start stands for the locked name Edwin, which the run restores in the stored target.
+    private static String decidedTarget(final int index) {
+        return TARGETS.get(index).replace("⟦g0⟧", "Едвін");
+    }
+
     /**
      * The eval project of the book's segments {@code from} to {@code to}: the segments before them as earlier pairs a
-     * window shows as source only, and the segments after them as the rest of the unit.
+     * window shows as decided, and the segments after them as the rest of the unit.
      */
     private static EvalProject eval(final int from, final int to, final ScriptedChatModel recording) {
         final EvalContext context = new EvalContext(
                 IntStream.range(0, from)
-                        .mapToObj(i -> new Pair(SOURCES.get(i), ""))
+                        .mapToObj(i -> new Pair(SOURCES.get(i), decidedTarget(i)))
                         .toList(),
                 SUMMARY_TEXT,
                 List.of(new EvalContext.Rendering("master", "господар")),
@@ -164,8 +166,7 @@ class PromptRequestsEquivalenceTest {
     private ScriptedChatModel runBatchedJob(final boolean withLexicon) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, reply(items(TARGETS.subList(0, 4))))
-                .answerTo(BATCH, reply(items(TARGETS.subList(4, 8))))
-                .answerTo(REVIEW, reply("{\"results\":[]}"));
+                .answerTo(BATCH, reply(items(TARGETS.subList(4, 8))));
         final TestProject project = book(withLexicon);
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 4)
@@ -176,9 +177,7 @@ class PromptRequestsEquivalenceTest {
     private ScriptedChatModel runSingleDraftJobWithAnEchoedLastSegment() {
         final ScriptedChatModel model = new ScriptedChatModel();
         TARGETS.subList(0, PARAGRAPHS - 1).forEach(target -> model.answerTo(DRAFT, draftReply(target)));
-        model.answerTo(DRAFT, draftReply(ECHO_OF_LAST))
-                .answerTo(REVIEW, reply("{\"results\":[]}"))
-                .answerTo(REPAIR, draftReply(TARGETS.getLast()));
+        model.answerTo(DRAFT, draftReply(ECHO_OF_LAST)).answerTo(REPAIR, draftReply(TARGETS.getLast()));
         final TestProject project = book(true);
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 1)
@@ -191,7 +190,6 @@ class PromptRequestsEquivalenceTest {
         final ScriptedChatModel model = new ScriptedChatModel().answerTo(DRAFT, reply(PROSE));
         model.answerTo(REASK, draftReply(TARGETS.getFirst()));
         TARGETS.subList(1, PARAGRAPHS).forEach(target -> model.answerTo(DRAFT, draftReply(target)));
-        model.answerTo(REVIEW, reply("{\"results\":[]}"));
         final TestProject project = book(true);
 
         report(batchedJob(project, model, new RunRequest(project.id(), ReviewMode.UNATTENDED), 1)
@@ -220,7 +218,7 @@ class PromptRequestsEquivalenceTest {
             return project.requests()
                     .formatReaskRequest(project.segment(0), project.translateContext(0), project.mask(0), PROSE);
         }),
-        REPAIR(PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment, PARAGRAPHS + 1, recording -> {
+        REPAIR(PromptRequestsEquivalenceTest::runSingleDraftJobWithAnEchoedLastSegment, PARAGRAPHS, recording -> {
             final EvalProject project = eval(PARAGRAPHS - 1, PARAGRAPHS, recording);
             return repairOfTheEcho(project);
         });
@@ -284,36 +282,18 @@ class PromptRequestsEquivalenceTest {
         assertThat(sent(job, 0).messages().get(1).content()).doesNotContain("\"terms\"");
     }
 
-    @Test
-    void reviewerRequest_wholeBatchWithTermPairsAndCharacters_equalsTheRequestTheJobSends() {
-        final ScriptedChatModel job = runBatchedJob(true);
-        final ScriptedChatModel recording = answeringAnything();
-        final EvalProject eval = eval(0, PARAGRAPHS, recording);
-        final List<ReviewedPair> pairs = IntStream.range(0, PARAGRAPHS)
-                .mapToObj(
-                        i -> new ReviewedPair(eval.segment(i).id(), eval.mask(i).maskedText(), TARGETS.get(i)))
-                .toList();
-
-        TranslationJobTestSupport.qualityLoop().review(pairs, eval.loop(), ReviewPass.FIRST, evalCalls(recording));
-
-        assertThat(sent(job, 2).messages().get(1).content()).contains("Зерубін", "господар", "<Pair id=\"s8\">");
-        assertThat(sent(recording, 0)).isEqualTo(sent(job, 2));
-    }
-
     private static final String NARRATOR_LINE = "Narrator: first person, male.";
-    private static final String GENDER_CHECK = "matches its subject's gender and number";
 
     private static String system(final ChatRequest request) {
         return request.messages().get(0).content();
     }
 
     @Test
-    void narratorLine_batchedRunWithAFirstPersonMaleNarrator_isInTheBatchAndTheReviewerPrompts() {
+    void narratorLine_batchedRunWithAFirstPersonMaleNarrator_isInTheBatchPrompts() {
         final ScriptedChatModel job = runBatchedJob(false);
 
         assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);
         assertThat(system(sent(job, 1))).contains(NARRATOR_LINE);
-        assertThat(system(sent(job, 2))).contains(NARRATOR_LINE).contains(GENDER_CHECK);
     }
 
     @Test
@@ -321,7 +301,7 @@ class PromptRequestsEquivalenceTest {
         final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
 
         assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);
-        assertThat(system(sent(job, PARAGRAPHS + 1))).isEqualTo(system(sent(job, 0)));
+        assertThat(system(sent(job, PARAGRAPHS))).isEqualTo(system(sent(job, 0)));
     }
 
     // ---- the analysis kinds (design D8): every one is planned on the ANALYSIS frame ------------------------------

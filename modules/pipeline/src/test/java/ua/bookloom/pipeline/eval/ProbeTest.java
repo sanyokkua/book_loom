@@ -31,12 +31,9 @@ class ProbeTest {
                 "dialogue-locked-name",
                 "fix-echo",
                 "repair-placeholder",
-                "review-door",
                 "suggest",
-                "garbled-word",
                 "quotes-stray-close-1",
                 "batch-terms-protocol",
-                "reviewer-glossary-6",
                 "repair-dropped-close",
                 "injection-notes-uk"
             })
@@ -58,7 +55,7 @@ class ProbeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"dialogue-locked-name", "review-door", "quotes-stray-close-1"})
+    @ValueSource(strings = {"dialogue-locked-name", "fix-echo", "quotes-stray-close-1"})
     void pseudo_caseWithAModel_printsTheReplyTheVerdictAndTheUsage(final String id) {
         final Ran ran = probe("--provider", "pseudo", "--case", id);
 
@@ -83,7 +80,7 @@ class ProbeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"prompt", "defects", "realrun"})
+    @ValueSource(strings = {"prompt", "realrun"})
     void list_aSuite_namesItsCases(final String suite) {
         final Ran ran = probe("--list", suite);
 

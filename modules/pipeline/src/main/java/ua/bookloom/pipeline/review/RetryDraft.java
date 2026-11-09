@@ -50,6 +50,7 @@ import ua.bookloom.pipeline.context.ModelWindows;
 import ua.bookloom.pipeline.context.RunFrame;
 import ua.bookloom.pipeline.context.RunFrames;
 import ua.bookloom.pipeline.context.TranslatePlanner;
+import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.index.BookIndex;
@@ -312,7 +313,7 @@ public final class RetryDraft {
         return new RunSettings(
                 plan.record().projectId(),
                 mode.get(),
-                RunSettings.dialOf(brief, templates.variants()),
+                DialParameters.of(brief.dial()),
                 plan.callFrame(),
                 brief.names(),
                 plan.target().window());

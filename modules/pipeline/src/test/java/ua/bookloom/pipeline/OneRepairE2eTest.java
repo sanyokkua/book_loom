@@ -54,7 +54,6 @@ class OneRepairE2eTest {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(List.of(
                     provider.target("Вони сказали, что ключ у шухляді.", Duration.ZERO),
-                    provider.reply("{\"results\":[]}", Duration.ZERO),
                     provider.target("Вони сказали, що ключ у шухляді.", Duration.ZERO)));
             final Path book = TestBooks.markdown(directory.resolve("Book.md"), "Они сказали, что ключ в ящике.");
             final WholeBookRun.Project project = WholeBookRun.project(book, QualityDial.BALANCED, "ru", "uk");
@@ -62,12 +61,11 @@ class OneRepairE2eTest {
             report(project.job(ReviewMode.UNATTENDED, provider.model(REQUEST_TIMEOUT, ignored -> {}))
                     .run());
 
-            // The Balanced reviewer still reads the draft first (until group 14), so the order is draft, reviewer, then
-            // the one repair on the residue the reviewer left.
+            // The order is the draft, then the one repair on the residue the checks found.
             assertThat(provider.chatBodies())
                     .filteredOn(body -> body.contains(PREVIOUS_ATTEMPT_MARK) && body.contains(REPAIR_PROMPT_MARK))
                     .hasSize(1);
-            assertThat(drafting(provider)).hasSize(3);
+            assertThat(drafting(provider)).hasSize(2);
         }
     }
 

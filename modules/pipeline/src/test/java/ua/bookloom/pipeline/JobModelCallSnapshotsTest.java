@@ -171,7 +171,7 @@ class JobModelCallSnapshotsTest {
         final ScriptedChatModel cancelled =
                 new ScriptedChatModel().answer(Result.err(AppError.of(ErrorCode.cancelled, "Cancelled", "Stopped.")));
 
-        callsOver(cancelled).callAbout(CallKind.REVIEW, IDS, REQUEST, BATCH);
+        callsOver(cancelled).callAbout(CallKind.PROOFREAD, IDS, REQUEST, BATCH);
 
         assertThat(snapshots()).extracting(CallSnapshot::state).containsExactly(CallState.WAITING, CallState.CANCELLED);
     }
@@ -224,7 +224,6 @@ class JobModelCallSnapshotsTest {
                 "SUGGEST_TARGETS",
                 "TERM_CHOICE",
                 "CHAPTER_SUMMARY",
-                "SUSPICIOUS_WORDS",
                 "BRIEF_SUGGESTION",
                 "FILE_NAME",
                 "BOOK_KNOWLEDGE",
@@ -251,7 +250,7 @@ class JobModelCallSnapshotsTest {
         final JobModelCalls calls = callsOver(TranslationJobTestSupport.replies("a", "b"));
 
         calls.callAbout(CallKind.DRAFT, IDS, REQUEST, BATCH);
-        calls.callAbout(CallKind.REVIEW, IDS, REQUEST, BATCH);
+        calls.callAbout(CallKind.PROOFREAD, IDS, REQUEST, BATCH);
 
         assertThat(snapshots()).extracting(CallSnapshot::callId).containsExactly(1L, 1L, 2L, 2L);
     }

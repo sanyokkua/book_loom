@@ -8,8 +8,7 @@ import org.junit.jupiter.api.Test;
 class CallLimitsTest {
 
     @Test
-    void timeouts_fixed_areNinetySecondsTwoMinutesTenMinutes() {
-        assertThat(CallLimits.REVIEW_TIMEOUT.toSeconds()).isEqualTo(90);
+    void timeouts_fixed_areTwoMinutesTenMinutes() {
         assertThat(CallLimits.HELPER_TIMEOUT.toMinutes()).isEqualTo(2);
         assertThat(CallLimits.MAX_CHAT_TIMEOUT.toMinutes()).isEqualTo(10);
     }

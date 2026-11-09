@@ -12,7 +12,6 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.pipeline.context.AcceptedTargets;
 import ua.bookloom.pipeline.context.KindExtra;
 import ua.bookloom.pipeline.context.TranslateContext;
-import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -133,17 +132,12 @@ final class RetryRequests {
                 .flatMap(drafted -> decide(segment, drafted, settings, calls));
     }
 
-    // The run's own quality loop with no repair: the same evaluation, the same one-pair reviewer (labelled s1) when the
-    // brief's dial enables it, and the same acceptance rule.
+    // The run's own quality loop with no repair: the same evaluation and the same acceptance rule.
     private Result<SegmentOutcome> decide(
             final Segment segment, final DraftOutcome drafted, final RunSettings settings, final ModelCalls calls) {
         final LoopSettings loop = requests.loopSettings().withoutRepair();
-        log.debug(
-                "retry: deciding segment={} reviewPasses={} mode={}",
-                segment.id(),
-                settings.dial().reviewPasses(),
-                settings.mode());
-        return qualityLoop.start(List.of(drafted), loop, requests.gate(), calls).flatMap(ChunkDecider::nextDecision);
+        log.debug("retry: deciding segment={} mode={}", segment.id(), settings.mode());
+        return qualityLoop.start(List.of(drafted), loop, requests.gate(), calls).nextDecision();
     }
 
     // The window's previous pairs show what the run would show: a target the person or the run kept, else the source.

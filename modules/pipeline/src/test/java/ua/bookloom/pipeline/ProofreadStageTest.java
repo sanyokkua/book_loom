@@ -2,10 +2,8 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.ProofreadProjects.character;
 import static ua.bookloom.pipeline.ProofreadProjects.decide;
@@ -117,7 +115,7 @@ class ProofreadStageTest {
         assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
 
         assertThat(openDeferrals(project)).isEmpty();
-        assertThat(model.requests()).as("the draft and its review only").hasSize(2);
+        assertThat(model.requests()).as("the draft only").hasSize(1);
     }
 
     // At Fast the stage makes no model call and leaves six segments for the desk, each with its reasons.
@@ -268,7 +266,7 @@ class ProofreadStageTest {
 
         assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
 
-        assertThat(model.requests()).as("the draft and its review only").hasSize(2);
+        assertThat(model.requests()).as("the draft only").hasSize(1);
         assertThat(openDeferrals(project)).hasSize(1);
         assertThat(marks(project)).isEmpty();
     }
@@ -371,10 +369,7 @@ class ProofreadStageTest {
     }
 
     private static ScriptedChatModel balancedModel() {
-        return new ScriptedChatModel()
-                .answer(target(T3))
-                .answerTo(REVIEW, reviewed())
-                .answerTo(REVIEW, reviewed());
+        return new ScriptedChatModel().answer(target(T3));
     }
 
     private static void stopOnProofread(final TranslationJobImpl translation, final JobEvent event) {

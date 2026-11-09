@@ -53,7 +53,7 @@ class LogReplayCorpusTest {
                         CallKind.DRAFT,
                         CallKind.DRAFT,
                         CallKind.DRAFT,
-                        CallKind.REVIEW,
+                        CallKind.PROOFREAD,
                         CallKind.PROOFREAD,
                         CallKind.DRAFT);
         assertThat(call(2).segmentIds()).containsExactly("ch1.xhtml:2", "ch1.xhtml:3", "ch1.xhtml:4");

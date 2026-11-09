@@ -31,8 +31,6 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.project to
             com.google.guice;
-    opens ua.bookloom.pipeline.reviewer to
-            com.google.guice;
     opens ua.bookloom.pipeline.heal to
             com.google.guice;
     opens ua.bookloom.pipeline.lexicon to

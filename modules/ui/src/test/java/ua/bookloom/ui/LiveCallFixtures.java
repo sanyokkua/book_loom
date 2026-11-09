@@ -53,7 +53,7 @@ public final class LiveCallFixtures {
     public static CallSnapshot reviewing(final long id, final String source, final String target) {
         return CallSnapshot.waiting(
                 id,
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 "reviewer",
                 null,
                 List.of(new CallSegment("s-" + id + "-1", "ch7 · p" + (id * 100 + 1), source, target)),

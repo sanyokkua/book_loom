@@ -59,7 +59,6 @@ class SettingsGenerationScreenTest extends SettingsScreenTestBase {
         assertThat(lookup("#generation-instant").tryQuery()).isEmpty();
         assertThat(lookup("#generation-running").tryQuery()).isEmpty();
         assertThat(text("generation-quality-same")).isEqualTo("The same for every model.");
-        assertThat(text("generation-limit-check")).isEqualTo("90 s");
         assertThat(text("generation-limit-helper")).isEqualTo("120 s (longer for a model that always thinks)");
         assertThat(text("generation-limit-draft"))
                 .isEqualTo("0.5 s per expected token, at least the provider's request timeout, at most 600 s");

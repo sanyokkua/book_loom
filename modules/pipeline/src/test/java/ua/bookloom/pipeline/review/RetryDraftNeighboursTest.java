@@ -21,10 +21,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
@@ -68,22 +65,6 @@ class RetryDraftNeighboursTest {
         assertThat(userMessage(model.requests().getFirst()))
                 .contains("Source: Chapter 5 line 10.")
                 .doesNotContain("Ніч була дуже темною.");
-    }
-
-    // The run's reviewer saw who the characters are; the retry's reviewer sees today's sheet of the names it holds.
-    @Test
-    void retry_characterTheSegmentNames_showsTheReviewerTheCharacterSheet() {
-        final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
-        Objects.requireNonNull(desk.glossary()
-                .add(GlossaryEntry.of(
-                        "g1", desk.projectId(), "monster", "Чудовисько", TermType.CHARACTER, Gender.MALE, false))
-                .data());
-        final ScriptedChatModel model = passing();
-
-        ok(retry(desk, model));
-
-        assertThat(userMessage(model.requests().get(1)))
-                .contains("[Characters in these pairs — who they are]\nmonster — male");
     }
 
     private Desk flaggedWithSnapshot(final JobState run) {

@@ -8,14 +8,12 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
-import ua.bookloom.pipeline.reviewer.ReviewerSheets;
 
 /**
  * One chunk's quality-loop settings.
  *
  * @param reviewMode the run's review mode; the repair path no longer reads it (it carried the polish window)
- * @param dial the quality dial's mechanics — the repair mode and how many reviewer passes run
+ * @param dial the quality dial's mechanics — the repair mode
  * @param frame the run's language pair, style sheet and foreign-passage policy
  * @param namePolicy the Book Brief's name policy, read by the script and echo checks' name removal
  * @param glossaryTerms every glossary term in the chunk, read by the same name removal
@@ -23,15 +21,13 @@ import ua.bookloom.pipeline.reviewer.ReviewerSheets;
  *     checks hold the candidates to
  * @param characters the chunk's character gender sheet, one {@code name — gender} line each, which the gender checks
  *     read
- * @param reviewerSheets what each reviewer call is shown of the glossary, the lexicon and the characters, cut to its own
- *     pairs; for settings built from ready lines, those lines for every call
  * @param unitRole the role of the chunk's unit, which the Latin-run check reads
  * @param pinnedTargets the renderings of the chunk's pinned glossary entries, which the name-spelling check lets
  *     inflect; empty when none is known
  * @param names the chunk's glossary entries, which the never-worse name vetoes of the one repair hold a repair to; an
  *     entry with no rendering is ignored there; empty when none is known
- * @param repairs whether a draft that fails a check may be given a fixing call — the one repair, or the reviewer's
- *     fix of a refused edit; {@code false} for a review retry, which is one attempt the person asked for
+ * @param repairs whether a draft that fails a check may be given the one repair; {@code false} for a review retry,
+ *     which is one attempt the person asked for
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -41,36 +37,10 @@ public record LoopSettings(
         List<String> glossaryTerms,
         List<String> glossaryPairs,
         List<String> characters,
-        ReviewerSheets reviewerSheets,
         UnitRole unitRole,
         List<String> pinnedTargets,
         List<GlossaryEntry> names,
         boolean repairs) {
-
-    /** Settings for a chunk of a body unit. */
-    public LoopSettings(
-            final ReviewMode reviewMode,
-            final DialParameters dial,
-            final CallFrame frame,
-            final NamePolicy namePolicy,
-            final List<String> glossaryTerms,
-            final List<String> glossaryPairs,
-            final List<String> characters,
-            final ReviewerSheets reviewerSheets) {
-        this(
-                reviewMode,
-                dial,
-                frame,
-                namePolicy,
-                glossaryTerms,
-                glossaryPairs,
-                characters,
-                reviewerSheets,
-                UnitRole.BODY,
-                List.of(),
-                List.of(),
-                true);
-    }
 
     /** These settings for a chunk of a unit with another role. */
     public LoopSettings withUnitRole(final UnitRole role) {
@@ -82,7 +52,6 @@ public record LoopSettings(
                 glossaryTerms,
                 glossaryPairs,
                 characters,
-                reviewerSheets,
                 role,
                 pinnedTargets,
                 names,
@@ -99,7 +68,6 @@ public record LoopSettings(
                 glossaryTerms,
                 glossaryPairs,
                 characters,
-                reviewerSheets,
                 unitRole,
                 pinned,
                 names,
@@ -116,7 +84,6 @@ public record LoopSettings(
                 glossaryTerms,
                 glossaryPairs,
                 characters,
-                reviewerSheets,
                 unitRole,
                 pinnedTargets,
                 entries,
@@ -133,7 +100,6 @@ public record LoopSettings(
                 glossaryTerms,
                 glossaryPairs,
                 characters,
-                reviewerSheets,
                 unitRole,
                 pinnedTargets,
                 names,
@@ -149,7 +115,6 @@ public record LoopSettings(
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
-        Objects.requireNonNull(reviewerSheets, "reviewerSheets");
         Objects.requireNonNull(unitRole, "unitRole");
         Objects.requireNonNull(pinnedTargets, "pinnedTargets");
         pinnedTargets = List.copyOf(pinnedTargets);
@@ -164,7 +129,7 @@ public record LoopSettings(
         return new SoftContext(frame, namePolicy, glossaryTerms, glossaryPairs, characters, unitRole, pinnedTargets);
     }
 
-    /** Settings whose reviewer is shown the glossary pairs and the character lines as they stand, in every call. */
+    /** Settings for a chunk of a body unit. */
     public LoopSettings(
             final ReviewMode reviewMode,
             final DialParameters dial,
@@ -181,10 +146,13 @@ public record LoopSettings(
                 glossaryTerms,
                 glossaryPairs,
                 characters,
-                ReviewerSheets.fixed(new ReviewerCall.Terms(glossaryPairs, List.of()), characters));
+                UnitRole.BODY,
+                List.of(),
+                List.of(),
+                true);
     }
 
-    /** Settings for a chunk whose glossary has no rendering the reviewer needs to check. */
+    /** Settings for a chunk whose glossary has no rendering the checks need to hold a draft to. */
     public LoopSettings(
             final ReviewMode reviewMode,
             final DialParameters dial,

@@ -197,7 +197,7 @@ final class WindowVerdicts {
 
     // A FLAGGED segment is cleared only when the rewrite leaves no blocking finding.
     private static Optional<String> blockedBy(final SegmentRecord record, final ProofreadJudge.Judged.Keep keep) {
-        if (record.status() != SegmentStatus.FLAGGED || AcceptanceRule.accepts(keep.qa(), 0)) {
+        if (record.status() != SegmentStatus.FLAGGED || AcceptanceRule.accepts(keep.qa())) {
             return Optional.empty();
         }
         final List<String> blockers = keep.qa().findings().stream()

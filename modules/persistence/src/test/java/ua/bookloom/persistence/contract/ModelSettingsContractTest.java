@@ -190,13 +190,13 @@ public abstract class ModelSettingsContractTest {
     // Updating one call kind's speed must leave another kind's stored speed alone, in both adapters.
     @Test
     void update_secondsPerCall_keptPerKind() {
-        repository().save(sample("ollama", "gemma").withMeasuredSpeed(CallKind.REVIEW, 6.0, MeasuredFrom.RUN));
+        repository().save(sample("ollama", "gemma").withMeasuredSpeed(CallKind.PROOFREAD, 6.0, MeasuredFrom.RUN));
 
         repository().update("ollama", "gemma", s -> s.withMeasuredSpeed(CallKind.DRAFT, 0.8, MeasuredFrom.RUN));
 
         final ModelSettings found = repository().find("ollama", "gemma").data().orElseThrow();
         assertThat(found.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(0.8, MeasuredFrom.RUN));
-        assertThat(found.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
+        assertThat(found.speedOf(CallKind.PROOFREAD)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
     }
 
     // IF Send again dropped more than the named row, THEN the other refusals and the settings would be lost with it.

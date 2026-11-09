@@ -10,7 +10,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * the reply.
  *
  * @param id the case id as the suite lists it
- * @param suite {@code prompt}, {@code defects} or {@code realrun}
+ * @param suite {@code prompt} or {@code realrun}
  * @param run sends the case once through the production builders and returns the verdict lines
  */
 record ProbeCase(String id, String suite, Function<Sending, List<String>> run) {

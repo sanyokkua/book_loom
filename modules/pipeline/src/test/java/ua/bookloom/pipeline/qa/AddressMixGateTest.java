@@ -45,7 +45,7 @@ class AddressMixGateTest {
     void repairFindings_mixedAddress_isTheOneFindingTheRepairMends() {
         final QaResult result = evaluate("«Ти втомилася, Нелл. Сядьте, Вам треба відпочити, а я принесу Вам чаю.»");
 
-        assertThat(AcceptanceRule.decide(result, 0).repair())
+        assertThat(AcceptanceRule.decide(result).repair())
                 .extracting(QaFinding::raisedBy)
                 .containsExactly("address-mix");
     }
@@ -55,7 +55,7 @@ class AddressMixGateTest {
         final QaResult result = evaluate("«Ти втомилася, Нелл. Сядь, тобі треба відпочити, а я принесу тобі чаю.»");
 
         assertThat(result.findings()).extracting(QaFinding::raisedBy).doesNotContain("address-mix");
-        assertThat(AcceptanceRule.decide(result, 0).repair()).isEmpty();
+        assertThat(AcceptanceRule.decide(result).repair()).isEmpty();
     }
 
     @Test

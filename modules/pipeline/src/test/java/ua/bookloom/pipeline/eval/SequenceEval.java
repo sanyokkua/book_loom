@@ -159,7 +159,7 @@ final class SequenceEval {
                 capture.editsRefused(ids),
                 failedFirst.size(),
                 capture.firstRepairKinds(failedFirst),
-                recorder.reviewerTruncated(),
+                recorder.proofreadTruncated(),
                 narrator,
                 capture.summaryGate());
     }

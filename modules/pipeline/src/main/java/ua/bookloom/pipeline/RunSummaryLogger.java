@@ -6,10 +6,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -41,7 +39,6 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.StepChanged;
 import ua.bookloom.api.pipeline.StepsPlanned;
-import ua.bookloom.pipeline.reviewer.EditOutcome;
 
 /**
  * Writes one INFO {@code run summary} line a minute while a job runs, and a last one when it ends: segments accepted,
@@ -81,8 +78,6 @@ final class RunSummaryLogger {
     private String locator = NONE;
     private int timeouts;
     // By segment: a segment decided again (a repair, a retry) counts its latest decision only.
-    private final Map<String, Long> ignoredEditsBySegment = new HashMap<>();
-    private long ignoredEdits;
     private long completionTokens;
     private long generationMillis;
 
@@ -150,28 +145,6 @@ final class RunSummaryLogger {
 
     private void decide(final SegmentDecided decided) {
         progress = decided.progress();
-        countIgnoredEdits(decided);
-    }
-
-    private void countIgnoredEdits(final SegmentDecided decided) {
-        final long count = decided.detail() == null
-                ? 0
-                : decided.detail().findingKinds().stream()
-                        .filter(EditOutcome.IGNORED_EDIT_KIND::equals)
-                        .count();
-        final Long before = count > 0
-                ? ignoredEditsBySegment.put(decided.segmentId(), count)
-                : ignoredEditsBySegment.remove(decided.segmentId());
-        final long earlier = before == null ? 0 : before;
-        if (count != earlier) {
-            ignoredEdits += count - earlier;
-            log.debug(
-                    "Ignored reviewer edits segment={} count={} earlier={} total={}",
-                    decided.segmentId(),
-                    count,
-                    earlier,
-                    ignoredEdits);
-        }
     }
 
     private void record(final ModelCallFinished finished) {
@@ -199,7 +172,7 @@ final class RunSummaryLogger {
         final JobProgress at = progress;
         log.info(
                 "run summary {} accepted={} flagged={} verbatim={} pending={} calls={} avgCallMs={} p95CallMs={}"
-                        + " tokensPerSecond={} timeouts={} ignoredEdits={} current={}{}",
+                        + " tokensPerSecond={} timeouts={} current={}{}",
                 kind,
                 at == null ? 0 : at.accepted(),
                 at == null ? 0 : at.flagged(),
@@ -210,7 +183,6 @@ final class RunSummaryLogger {
                 percentileMillis(),
                 tokensPerSecond(),
                 timeouts,
-                ignoredEdits,
                 locator,
                 "final".equals(kind) ? finalTail() : "");
     }

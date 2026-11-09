@@ -1,13 +1,9 @@
 package ua.bookloom.pipeline.prompt;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.llm.SourceSize;
 
 /** The expected length and the hard cap a call states for one masked source. */
@@ -42,37 +38,6 @@ class OutputLimitTest {
     @Test
     void forSource_emptyDisplayText_answersNull() {
         assertThat(OutputLimit.forSource("⟦g0⟧ ⟦g1⟧", "en", "uk")).isNull();
-    }
-
-    @Test
-    void forReview_onePair_capsAtTheBaseAndOneEnvelopeAndTheCandidateItself() {
-        // 128 base + 70 per pair + 120 for a possible edit + the candidate's own tokens (113), because a rewrite may
-        // repeat it whole.
-        assertThat(OutputLimit.forReview(List.of("a".repeat(400)), "en").capTokens())
-                .isEqualTo(431);
-    }
-
-    @ParameterizedTest
-    @CsvSource({"1,431", "4,1340", "8,2552"})
-    void forReview_batchSizeTable_growsByOnePairAllowanceEach(final int pairs, final int cap) {
-        assertThat(OutputLimit.forReview(Collections.nCopies(pairs, "a".repeat(400)), "en")
-                        .capTokens())
-                .isEqualTo(cap);
-    }
-
-    @Test
-    void forReview_threePairs_growsWithEachPairAndExpectsHalfTheCap() {
-        final OutputLimit one = OutputLimit.forReview(List.of("Він відчинив двері."), "uk");
-        final OutputLimit three =
-                OutputLimit.forReview(List.of("Він відчинив двері.", "Вона усміхнулася.", "Було тихо."), "uk");
-
-        assertThat(three.capTokens()).isGreaterThan(one.capTokens() * 2);
-        assertThat(three.expectedTokens()).isEqualTo(three.capTokens() / 2);
-    }
-
-    @Test
-    void forReview_noCandidate_isRejected() {
-        assertThatThrownBy(() -> OutputLimit.forReview(List.of(), "uk")).isInstanceOf(IllegalArgumentException.class);
     }
 
     // The source size sizes a thinking model's reasoning reserve: the source's own tokens and one item per source.

@@ -263,12 +263,13 @@ class NeverWorseTest {
     }
 
     @Test
-    void judge_clearsTriggerWithEqualScore_keeps() {
-        final Candidate current = ru(UK_WITH_CHTO);
-        final Candidate candidate = ru("Вони сказали, що що ключ у кишені.");
+    void judge_clearsTriggerAndAddsRepairFinding_keeps() {
+        final String source = "Я сказал, что ключ в кармане.";
+        final Narrator male = new Narrator(NarratorPerson.FIRST, Gender.MALE);
+        final Candidate current = evaluated(source, "Я сказав, что ключ у кишені.", RU, male, List.of());
+        final Candidate candidate = evaluated(source, "Я сказала, що ключ у кишені.", RU, male, List.of());
 
-        final Verdict verdict =
-                NeverWorse.judge(current, candidate, marked(RU_SOURCE, RU, findingOf(current, RESIDUE)));
+        final Verdict verdict = NeverWorse.judge(current, candidate, marked(source, RU, findingOf(current, RESIDUE)));
 
         assertThat(verdict).isEqualTo(new Verdict.Keep());
     }
@@ -332,10 +333,13 @@ class NeverWorseTest {
 
     @Test
     void judge_higherScore_rejects() {
-        final String source = "He climbed onto the mare.";
+        final String source = "I climbed onto the mare.";
+        final Narrator male = new Narrator(NarratorPerson.FIRST, Gender.MALE);
 
         final Verdict verdict = NeverWorse.judge(
-                en(source, "Він заліз на кобилу."), en(source, "Він заліз на на кобилу."), facts(source, EN));
+                evaluated(source, "Я заліз на кобилу.", EN, male, List.of()),
+                evaluated(source, "Я залізла на кобилу.", EN, male, List.of()),
+                facts(source, EN));
 
         assertThat(verdict).isEqualTo(new Verdict.Reject("score"));
     }

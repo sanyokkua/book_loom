@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
@@ -25,7 +24,6 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -89,19 +87,6 @@ class LiveTextEventsTest {
                 .containsExactly(null, SegmentPath.DRAFT);
     }
 
-    // The reviewer reads the whole chunk, so its call belongs to no one segment but names every segment it reviews.
-    @Test
-    void run_reviewedChunkOfFortyAndFortyOne_announcesOneReviewerCallNamingBothSegments() {
-        final List<JobEvent> events = runDoor();
-
-        assertThat(events)
-                .filteredOn(ModelCallStarted.class::isInstance)
-                .map(ModelCallStarted.class::cast)
-                .filteredOn(started -> started.kind() == CallKind.REVIEW)
-                .extracting(ModelCallStarted::segmentId, ModelCallStarted::segmentIds)
-                .containsExactly(tuple(null, List.of("ch07.xhtml:40", "ch07.xhtml:41")));
-    }
-
     @Test
     void run_oneDirectedFixAndTwoFirstDrafts_lastSnapshotCountsTwoAutoAndOneRepaired() {
         final Path book = TestBooks.markdown(
@@ -110,7 +95,6 @@ class LiveTextEventsTest {
         final TranslationJobImpl translation = job(
                 project(book, TranslationJobTestSupport.brief("en", "uk", QualityDial.BALANCED)),
                 replies(ChunkRunFixtures.ECHO1, ChunkRunFixtures.T2, ChunkRunFixtures.T3)
-                        .answerTo(ChunkRunFixtures.REVIEW, ChunkRunFixtures.reviewed())
                         .answerTo(ChunkRunFixtures.REPAIR, ChunkRunFixtures.target(ChunkRunFixtures.T1)));
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
         translation.subscribe(events::add);

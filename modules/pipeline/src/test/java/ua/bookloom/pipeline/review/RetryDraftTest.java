@@ -85,8 +85,8 @@ class RetryDraftTest {
     }
 
     @Test
-    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperatureThenOneReviewerOverThePair() {
-        // one draft call at 0.1 carrying the note as its extra instruction, then the reviewer over that one pair as s1
+    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperature() {
+        // one draft call at 0.1 carrying the note as its extra instruction
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel model = passing();
 
@@ -94,11 +94,8 @@ class RetryDraftTest {
 
         assertThat(model.requests())
                 .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
-                .containsExactly(tuple(DRAFT, 0.1), tuple("reviewer", 0.0));
+                .containsExactly(tuple(DRAFT, 0.1));
         assertThat(userMessage(model.requests().getFirst())).contains("[Extra instruction]\n" + NOTE);
-        assertThat(userMessage(model.requests().get(1)))
-                .contains(
-                        "<Pair id=\"s1\"><Source>The monster met me at midnight.</Source><Candidate>" + MONSTER_TARGET);
     }
 
     @Test

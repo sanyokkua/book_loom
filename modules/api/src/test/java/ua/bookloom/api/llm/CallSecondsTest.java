@@ -24,9 +24,9 @@ class CallSecondsTest {
 
     @Test
     void of_twentyReviewCallsInTwoMinutes_givesSixSecondsAPerCall() {
-        final List<CallRecord> records = new ArrayList<>(Collections.nCopies(20, answered(CallKind.REVIEW, 6_000)));
+        final List<CallRecord> records = new ArrayList<>(Collections.nCopies(20, answered(CallKind.PROOFREAD, 6_000)));
 
-        assertThat(CallSeconds.of(records)).isEqualTo(Map.of(CallKind.REVIEW, 6.0));
+        assertThat(CallSeconds.of(records)).isEqualTo(Map.of(CallKind.PROOFREAD, 6.0));
     }
 
     @Test

@@ -61,6 +61,6 @@ final class ReplyJudge {
         return new Verdict(
                 true,
                 judged.accepted(),
-                !AcceptanceRule.decide(judged.qa(), 0).repair().isEmpty());
+                !AcceptanceRule.decide(judged.qa()).repair().isEmpty());
     }
 }

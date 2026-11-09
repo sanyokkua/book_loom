@@ -14,18 +14,11 @@ import ua.bookloom.api.pipeline.RepairMode;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.ChunkDecider;
-import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.reviewer.EditApplier;
-import ua.bookloom.pipeline.reviewer.EditVerifier;
-import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
-import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /** The same recorded reply reaches the same verdict through the eval's judge and through the job's quality loop. */
 class ReplyJudgeParityTest {
@@ -38,16 +31,12 @@ class ReplyJudgeParityTest {
         return EvalProject.of(EvalProject.Setup.single("en", "uk", List.of(), EvalContext.none(), SOURCE), NO_MODEL);
     }
 
-    /** What the job's quality loop decides for the reply, with no repair round and no reviewer. */
+    /** What the job's quality loop decides for the reply, with no repair. */
     private static SegmentStatus jobStatus(final EvalProject project, final String reply) {
         final DraftOutcome drafted = project.translator()
                 .adopt(project.segment(0), project.mask(0), reply)
                 .orElseThrow();
-        final PromptTemplates templates = new PromptTemplates();
-        final QualityLoop loop = new QualityLoop(
-                new ReviewerCall(templates, new ReviewReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())),
-                new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, new DraftReplyParser(new com.fasterxml.jackson.databind.ObjectMapper())));
+        final QualityLoop loop = new QualityLoop();
         final LoopSettings settings = new LoopSettings(
                         ReviewMode.UNATTENDED,
                         new DialParameters(RepairMode.ONE, 0, false, ProofreadCoverage.NONE),
@@ -55,8 +44,7 @@ class ReplyJudgeParityTest {
                         project.settings().names(),
                         List.of())
                 .withoutRepair();
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(drafted), settings, project.gate(), NO_MODEL).data());
+        final ChunkDecider decider = loop.start(List.of(drafted), settings, project.gate(), NO_MODEL);
         final SegmentOutcome decided =
                 Objects.requireNonNull(decider.nextDecision().data());
         return decided.status();

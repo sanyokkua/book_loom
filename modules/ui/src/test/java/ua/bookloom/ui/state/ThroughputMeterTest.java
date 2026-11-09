@@ -31,7 +31,7 @@ class ThroughputMeterTest {
     void tokensPerSecond_reviewCall_isNotCounted() {
         final ThroughputMeter meter = new ThroughputMeter();
         meter.finished(call(CallKind.DRAFT, 200, 10));
-        meter.finished(call(CallKind.REVIEW, 400, 10));
+        meter.finished(call(CallKind.PROOFREAD, 400, 10));
 
         assertThat(meter.tokensPerSecond()).isCloseTo(20.0, within(0.001));
     }
@@ -41,7 +41,7 @@ class ThroughputMeterTest {
     void averageTokensPerSecond_everyKindOfCall_isCountedOverTheWholeRun() {
         final ThroughputMeter meter = new ThroughputMeter();
         meter.finished(call(CallKind.DRAFT, 200, 10));
-        meter.finished(call(CallKind.REVIEW, 100, 10));
+        meter.finished(call(CallKind.PROOFREAD, 100, 10));
 
         assertThat(meter.averageTokensPerSecond()).isCloseTo(15.0, within(0.001));
         assertThat(meter.snapshot(null, Duration.ofSeconds(30)).averageTokensPerSecond())

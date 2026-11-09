@@ -72,7 +72,6 @@ public final class GenerationController {
     private void buildLimits() {
         limits.getChildren()
                 .addAll(
-                        row("check", MessageKey.SETTINGS_GENERATION_LIMITS_CHECK, seconds(CallLimits.REVIEW_TIMEOUT)),
                         row(
                                 "helper",
                                 MessageKey.SETTINGS_GENERATION_LIMITS_HELPER,

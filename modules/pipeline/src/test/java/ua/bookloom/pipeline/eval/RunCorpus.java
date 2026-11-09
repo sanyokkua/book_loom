@@ -33,11 +33,6 @@ final class RunCorpus {
         return load("batch.json", new TypeReference<>() {});
     }
 
-    /** Reviewer calls over several pairs. */
-    static List<ReviewerBatchCase> reviewerBatches() {
-        return load("reviewer.json", new TypeReference<>() {});
-    }
-
     /** Placeholder and structural repair calls. */
     static List<RepairCase> repairs() {
         return load("repair.json", new TypeReference<>() {});

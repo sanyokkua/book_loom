@@ -10,10 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
-import ua.bookloom.pipeline.prompt.PromptVariants.ReviewerVariant;
 
 /**
- * The prompt variants an eval run asks for, read from {@value #ENV} ({@code languageRules=GENERIC_ONLY}, {@code reviewer=OFF}; fields
+ * The prompt variants an eval run asks for, read from {@value #ENV} ({@code languageRules=GENERIC_ONLY}; fields
  * separated by commas; unset is the defaults) and handed to the templates through a test injector's binding. Only the
  * eval reads this variable; the application's injector always binds {@link PromptVariants#DEFAULTS}.
  */
@@ -60,7 +59,6 @@ public final class EvalVariants {
         final String value = pair[1].strip();
         return switch (pair[0].strip()) {
             case "languageRules" -> current.withLanguageRules(LanguageRulesVariant.valueOf(value));
-            case "reviewer" -> current.withReviewer(ReviewerVariant.valueOf(value));
             default -> throw new IllegalArgumentException(ENV + " names no field " + pair[0]);
         };
     }

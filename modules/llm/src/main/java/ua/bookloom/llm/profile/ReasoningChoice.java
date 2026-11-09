@@ -30,10 +30,10 @@ import ua.bookloom.api.pipeline.CallKind;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ReasoningChoice {
 
-    // The calls "Allow on proofreading and names" lets think: the per-chunk reviewer, which the proofread replaces,
-    // and every call of the names pass.
+    // The calls "Allow on proofreading and names" lets think: the Proofread stage's window reads and every call of the
+    // names pass.
     private static final Set<CallKind> PROOFREAD_AND_NAMES = EnumSet.of(
-            CallKind.REVIEW,
+            CallKind.PROOFREAD,
             CallKind.PRESCAN,
             CallKind.REVIEW_TERMS,
             CallKind.SUGGEST_TARGETS,

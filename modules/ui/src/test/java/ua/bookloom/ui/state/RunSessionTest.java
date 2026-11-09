@@ -221,7 +221,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF a review pause did not name its segment, THEN the panel could not open the segment the run waits on.
     @ParameterizedTest
     @CsvSource({"ON_FLAGGED, ch05.xhtml:11", "AFTER_SEGMENT, ch01.xhtml:2"})
-    void paused_forReview_publishesItsSegmentAndTheNextResumeClearsIt(final PauseReason reason, final String segment) {
+    void paused_forTheDesk_publishesItsSegmentAndTheNextResumeClearsIt(final PauseReason reason, final String segment) {
         final RunSession session = session();
 
         session.onEvent(new Paused(reason, null, progress(1, 0, 1), segment));

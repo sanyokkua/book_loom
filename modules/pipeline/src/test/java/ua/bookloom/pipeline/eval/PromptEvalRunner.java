@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.ByteSpanAnchor;
@@ -15,39 +14,29 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Repair;
 import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
-import ua.bookloom.pipeline.eval.EvalCase.Review;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.heal.DirectedFix;
-import ua.bookloom.pipeline.heal.DraftOutcome;
-import ua.bookloom.pipeline.heal.DraftSubject;
-import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RepairReply;
-import ua.bookloom.pipeline.heal.SoftContext;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.reviewer.EditApplier;
 import ua.bookloom.pipeline.run.PromptRequests;
 
 /**
  * Sends every case to a real model as a run would: the request of each case is built by the run's own
  * {@link PromptRequests} over an {@link EvalProject} (so the context, the glossary lines, the mask and the window are
- * the app's), the reviewer and the directed fix are the production classes given the production inputs, and each reply
- * is measured before any repair the run would make. A reviewer reply is measured the way the run uses it: its edits go
- * through the production {@link EditApplier}.
+ * the app's), the directed fix is the production class given the production inputs, and each reply is measured before
+ * any repair the run would make.
  */
 @Slf4j
 final class PromptEvalRunner {
@@ -58,7 +47,6 @@ final class PromptEvalRunner {
     private final PromptTemplates templates = EvalVariants.templates();
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
     private final DirectedFix directedFix = new DirectedFix(templates, parser);
-    private final ReviewerEval reviews;
     private final int window;
 
     PromptEvalRunner(final ModelCalls calls) {
@@ -77,7 +65,6 @@ final class PromptEvalRunner {
         this.calls = Objects.requireNonNull(calls, "calls");
         this.sourceLanguage = Objects.requireNonNull(sourceLanguage, "sourceLanguage");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
-        this.reviews = new ReviewerEval(calls, templates, directedFix);
     }
 
     private EvalProject project(final String text, final List<EvalTerm> glossary, final EvalContext context) {
@@ -93,82 +80,9 @@ final class PromptEvalRunner {
         return cases.stream().flatMap(evalCase -> run(evalCase).stream()).toList();
     }
 
-    /** Runs a language corpus: its drafts, then its reviewer cases. */
-    LanguageRun runLanguage(final LanguageCorpus corpus, final int repeats) {
-        final List<EvalRow> rows = corpus.drafts().stream().map(this::draft).toList();
-        return new LanguageRun(rows, runDefects(corpus.reviews(), repeats));
-    }
-
-    /** The outcome of one language corpus. */
-    record LanguageRun(List<EvalRow> rows, List<DefectRow> defectRows) {
-
-        /** Copies the lists. */
-        LanguageRun {
-            rows = List.copyOf(rows);
-            defectRows = List.copyOf(defectRows);
-        }
-    }
-
-    /** Reviews every corpus case {@code repeats} times and records whether the replies agree. */
-    List<DefectRow> runDefects(final List<DefectCase> corpus, final int repeats) {
-        return corpus.stream().map(defect -> defect(defect, repeats)).toList();
-    }
-
-    private DefectRow defect(final DefectCase defect, final int repeats) {
-        log.info("Corpus case {} x{}", defect.id(), repeats);
-        final EvalProject project = project(defect.source());
-        final Checked checked = checkedBy(project, defect);
-        if (checked.refused()) {
-            // The run never shows a candidate a check refuses to the reviewer, so asking would measure nothing.
-            return new DefectRow(
-                    defect.id(), defect.kind(), defect.defective(), true, true, true, Math.max(1, repeats), 0, false);
-        }
-        final List<ReviewerEval.Reviewed> outcomes = IntStream.range(0, Math.max(1, repeats))
-                .mapToObj(run -> reviews.review(project, defect.candidate()))
-                .toList();
-        final boolean byReviewer = outcomes.get(0).flagged();
-        return new DefectRow(
-                defect.id(),
-                defect.kind(),
-                defect.defective(),
-                byReviewer || checked.noted(),
-                outcomes.stream().allMatch(ReviewerEval.Reviewed::readable),
-                outcomes.stream()
-                        .allMatch(review ->
-                                review.signature().equals(outcomes.get(0).signature())),
-                outcomes.size(),
-                outcomes.stream().mapToInt(ReviewerEval.Reviewed::tokenBreaks).sum(),
-                byReviewer);
-    }
-
-    /** What the run's own checks say about a candidate before any reviewer sees it. */
-    private record Checked(boolean refused, boolean noted) {}
-
-    private Checked checkedBy(final EvalProject project, final DefectCase defect) {
-        final CallFrame frame = project.frame();
-        final var drafted = new DraftOutcome.Drafted(
-                project.segment(0),
-                defect.source(),
-                List.of(),
-                defect.candidate(),
-                defect.candidate(),
-                defect.candidate(),
-                null);
-        final var qa = QaEvaluation.evaluate(
-                List.of(),
-                new DraftSubject(drafted.segment(), defect.source(), List.of()),
-                defect.candidate(),
-                defect.candidate(),
-                new SoftContext(frame, project.settings().names(), List.of(), List.of(), List.of()));
-        final boolean noted = !TextChecks.run(
-                        DisplayText.of(defect.source()),
-                        DisplayText.of(defect.candidate()),
-                        frame.sourceLanguage(),
-                        frame.targetLanguage(),
-                        List.of(),
-                        List.of())
-                .isEmpty();
-        return new Checked(!qa.hardGatesPass() || qa.failedOutright(), noted);
+    /** Runs a language corpus: its drafts. */
+    List<EvalRow> runLanguage(final LanguageCorpus corpus) {
+        return corpus.drafts().stream().map(this::draft).toList();
     }
 
     private List<EvalRow> run(final EvalCase evalCase) {
@@ -176,7 +90,6 @@ final class PromptEvalRunner {
         return switch (evalCase) {
             case Draft draft -> List.of(draft(draft));
             case Fix fix -> List.of(fix(fix));
-            case Review review -> List.of(review(review));
             case Repair repair -> List.of(repair(repair));
             case Suggest suggest ->
                 SuggestEval.rows(
@@ -269,24 +182,6 @@ final class PromptEvalRunner {
             case RepairReply.FlagNow flagNow ->
                 failed(fix.name(), "fix", "flagged: " + flagNow.error().code(), fix.expect());
         };
-    }
-
-    private EvalRow review(final Review review) {
-        final EvalProject project = project(review.masked());
-        final ReviewerEval.Reviewed good = reviews.review(project, review.good());
-        final ReviewerEval.Reviewed bad = reviews.review(project, review.bad());
-        final boolean readable = good.readable() && bad.readable();
-        final boolean separated = readable && !good.flagged() && bad.flagged();
-        return new EvalRow(
-                review.name(),
-                "review",
-                Check.of(readable),
-                Check.NA,
-                Check.NA,
-                Check.NA,
-                Check.NA,
-                Check.of(separated),
-                "good: " + good.detail() + "; bad: " + bad.detail());
     }
 
     private EvalRow measured(

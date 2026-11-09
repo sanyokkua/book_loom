@@ -77,7 +77,6 @@ public final class HowCountedPane extends TitledPane {
     private static MessageKey kindName(final StepKind kind) {
         return switch (kind) {
             case DRAFT -> MessageKey.PROGRESS_KIND_DRAFT;
-            case CHECK -> MessageKey.PROGRESS_KIND_CHECK;
             case REPAIR -> MessageKey.PROGRESS_KIND_REPAIR;
             case RE_ASK -> MessageKey.PROGRESS_KIND_RE_ASK;
             case RESEND -> MessageKey.PROGRESS_KIND_RESEND;

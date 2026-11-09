@@ -4,7 +4,6 @@ import static ua.bookloom.util.contract.ArgNames.TARGET_TAG;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -42,7 +41,6 @@ public final class LanguageRules implements LanguageSupport {
     private static final String EXAMPLE = "example";
     private static final String BATCH_EXAMPLE = "batchExample";
     private static final String NAME_EXAMPLE = "nameExample";
-    private static final String REVIEWER_CHECKS = "reviewerChecks";
     private static final int MAX_SOURCE_NOTES = 3;
     private static final List<String> GENERIC_REQUIRED = List.of(
             STATUS,
@@ -122,31 +120,29 @@ public final class LanguageRules implements LanguageSupport {
      * @param sourceTag the source language tag, or null when it is inferred from the text, which leaves out the
      *     source notes and the pair's rules
      * @param targetTag the non-null target language tag
-     * @param reviewing {@code true} when the prompt reviews a translation, which adds the languages' reviewer checks
      * @return the section starting {@code [Language rules: <Source> -> <Target>]}; never null, built once per pair
      */
-    public String section(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {
+    public String section(@Nullable final String sourceTag, final String targetTag) {
         Objects.requireNonNull(targetTag, TARGET_TAG);
-        final String key = primary(sourceTag) + ">" + primary(targetTag) + (reviewing ? "!" : "");
-        return sections.computeIfAbsent(key, ignored -> build(sourceTag, targetTag, reviewing));
+        final String key = primary(sourceTag) + ">" + primary(targetTag);
+        return sections.computeIfAbsent(key, ignored -> build(sourceTag, targetTag));
     }
 
-    private String build(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {
+    private String build(@Nullable final String sourceTag, final String targetTag) {
         final List<String> parts = new ArrayList<>();
-        parts.add(targetRules(targetTag, reviewing));
+        parts.add(targetRules(targetTag));
         if (sourceTag != null && !genericOnly) {
             parts.add(sourceRules(sourceTag));
-            parts.add(pairRules(sourceTag, targetTag, reviewing));
+            parts.add(pairRules(sourceTag, targetTag));
         }
         final String body =
                 String.join("\n", parts.stream().filter(part -> !part.isEmpty()).toList());
         final String heading = "[Language rules: " + (sourceTag == null ? "the source" : name(sourceTag)) + " -> "
                 + name(targetTag) + "]";
         log.debug(
-                "Language rules source={} target={} reviewing={} genericOnly={} lines={}",
+                "Language rules source={} target={} genericOnly={} lines={}",
                 sourceTag,
                 targetTag,
-                reviewing,
                 genericOnly,
                 body.lines().count());
         log.trace("Language rules section {}", body);
@@ -154,10 +150,10 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /** The target language's own rules, or the generic ones when it has no file. */
-    String targetRules(final String targetTag, final boolean reviewing) {
+    String targetRules(final String targetTag) {
         final LanguageFile file = genericOnly ? generic : languageFile(targetTag);
         final LanguageFile used = file.exists() ? file : generic;
-        return block("Target — " + name(targetTag), used, reviewing);
+        return block("Target — " + name(targetTag), used);
     }
 
     /** What to read carefully when the language is the source; empty when it has no file. */
@@ -169,12 +165,12 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /** The rules that exist only for the pair; empty when it has no file. */
-    String pairRules(final String sourceTag, final String targetTag, final boolean reviewing) {
+    String pairRules(final String sourceTag, final String targetTag) {
         final LanguageFile file = pairFile(sourceTag, targetTag);
-        return block("Pair — " + name(sourceTag) + " -> " + name(targetTag), file, reviewing);
+        return block("Pair — " + name(sourceTag) + " -> " + name(targetTag), file);
     }
 
-    private static String block(final String header, final LanguageFile file, final boolean reviewing) {
+    private static String block(final String header, final LanguageFile file) {
         final List<String> lines = new ArrayList<>();
         for (final RuleKey rule : RuleKey.values()) {
             final String value = file.get(rule.key());
@@ -183,9 +179,6 @@ public final class LanguageRules implements LanguageSupport {
             }
         }
         file.indexed(PITFALLS).forEach(pitfall -> lines.add("Watch: " + pitfall));
-        if (reviewing) {
-            file.indexed(REVIEWER_CHECKS).forEach(check -> lines.add("Check: " + check));
-        }
         return lines.isEmpty() ? "" : header + "\n" + bullets(lines);
     }
 
@@ -327,13 +320,6 @@ public final class LanguageRules implements LanguageSupport {
      */
     public List<String> voicingPairs(final String targetTag) {
         return wordsOf(targetTag, "voicingPairs");
-    }
-
-    /** The {@code negationWords} and {@code moodWords} together, which an agreement-only reviewer edit leaves alone. */
-    public Set<String> negationAndMoodWords(final String targetTag) {
-        final Set<String> words = new HashSet<>(negationWords(targetTag));
-        words.addAll(wordsOf(targetTag, "moodWords"));
-        return Set.copyOf(words);
     }
 
     /** The negations of a target language, from its {@code negationWords} key; empty when none are listed. */

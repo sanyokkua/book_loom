@@ -58,7 +58,7 @@ class TranslatingScrollStabilityTest extends TranslatingScreenTestBase {
 
     private void stuckOnAJudge() {
         final WaitingCall call = new WaitingCall(
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 "ch7 · p42",
                 0,
                 1,

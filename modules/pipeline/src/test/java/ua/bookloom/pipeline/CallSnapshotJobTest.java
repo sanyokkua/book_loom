@@ -190,23 +190,4 @@ class CallSnapshotJobTest {
                 .toList()
                 .getLast();
     }
-
-    @Test
-    void run_reviewedChunk_showsTheReviewerCallAboutTheChunkWithItsOwnSections() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo(BATCH, raw(items())).answerTo("reviewer", raw("{\"results\":[]}"));
-
-        run(eightParagraphs(QualityDial.BALANCED), model);
-
-        final List<CallSnapshot> reviews = snapshots(CallKind.REVIEW);
-        assertThat(reviews)
-                .extracting(CallSnapshot::state, CallSnapshot::label)
-                .containsExactly(tuple(CallState.WAITING, "reviewer"), tuple(CallState.ANSWERED, "reviewer"));
-        assertThat(reviews.getFirst().callId()).isEqualTo(2L);
-        assertThat(reviews.getFirst().segments()).hasSize(8);
-        assertThat(reviews.getFirst().sections())
-                .extracting(PromptSection::slot)
-                .startsWith("styleSheet")
-                .endsWith("pairs");
-    }
 }

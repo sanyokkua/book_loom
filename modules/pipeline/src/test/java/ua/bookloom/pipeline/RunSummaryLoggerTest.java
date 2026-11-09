@@ -33,10 +33,8 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.llm.CallLedgerImpl;
 
 /**
@@ -92,36 +90,8 @@ class RunSummaryLoggerTest {
         summary.onEvent(new SegmentStarted("ch12.xhtml:5", "ch12 · p06", "Source", new ChunkPosition(1, 3, 1, 4)));
 
         assertThat(summaries())
-                .containsExactly(
-                        "run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
-                                + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 ignoredEdits=0 current=ch12 · p06");
-    }
-
-    @Test
-    void onEvent_decisionsCarryingIgnoredEditNotes_finalLineCountsThem() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
-
-        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "meaning", "ignored-edit")));
-        summary.onEvent(decidedWith("ch12.xhtml:5", List.of("ignored-edit")));
-        summary.onEvent(
-                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
-
-        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=3 ");
-    }
-
-    // IF a segment decided twice (a repair, a review-desk retry) were counted twice, THEN the count overstates.
-    @Test
-    void onEvent_segmentDecidedTwice_countsItsLatestDecisionOnly() {
-        final RunSummaryLogger summary = new RunSummaryLogger(clock);
-
-        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit", "ignored-edit")));
-        summary.onEvent(decidedWith("ch12.xhtml:4", List.of("ignored-edit")));
-        summary.onEvent(
-                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
-
-        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=1 ");
+                .containsExactly("run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
+                        + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 current=ch12 · p06");
     }
 
     @Test
@@ -151,7 +121,7 @@ class RunSummaryLoggerTest {
 
         assertThat(summaries())
                 .containsExactly("run summary final accepted=5 flagged=1 verbatim=2 pending=10 calls=0 avgCallMs=0"
-                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=- cost=-");
+                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 current=- cost=-");
     }
 
     // The final line says per kind what the calls cost, so a shared log shows where the time went; the ledger, which
@@ -205,17 +175,18 @@ class RunSummaryLoggerTest {
     // The final line says the seconds per answered call of each kind the run stores on its model; DRAFT is per segment
     // and left out, a failed call too.
     @Test
-    void onEvent_finishedAfterReviewCalls_finalLineCarriesTheSecondsPerCall() {
+    void onEvent_finishedAfterProofreadCalls_finalLineCarriesTheSecondsPerCall() {
         final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
 
         ledger.record(new CallRecord(CallKind.DRAFT, null, Duration.ofSeconds(3), null, null));
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(5), null, null));
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(7), null, null));
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(60), null, FailureReason.UNCLASSIFIED));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(5), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(7), null, null));
+        ledger.record(
+                new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(60), null, FailureReason.UNCLASSIFIED));
         summary.onEvent(
                 new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
 
-        assertThat(summaries()).singleElement().asString().endsWith(" secondsPerCall[REVIEW=6.0]");
+        assertThat(summaries()).singleElement().asString().endsWith(" secondsPerCall[PROOFREAD=6.0]");
     }
 
     // The cost is the sum of what the calls reported; a run whose calls reported none prints a dash, never 0.
@@ -260,7 +231,7 @@ class RunSummaryLoggerTest {
     // built is not the run's.
     @Test
     void finalLine_noCallReportedTtft_printsADash() {
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(9), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(9), null, null));
         final RunSummaryLogger summary = new RunSummaryLogger(clock, ledger);
 
         ledger.record(new CallRecord(
@@ -272,7 +243,7 @@ class RunSummaryLoggerTest {
                 .singleElement()
                 .asString()
                 .contains(" byKind[DRAFT=1/0 ")
-                .doesNotContain("REVIEW")
+                .doesNotContain("PROOFREAD")
                 .contains("ttftMs:–")
                 .contains("prefill:–");
     }
@@ -307,11 +278,6 @@ class RunSummaryLoggerTest {
                 .toList();
     }
 
-    private static SegmentDecided decidedWith(final String segmentId, final List<String> kinds) {
-        return new SegmentDecided(
-                segmentId, SegmentStatus.ACCEPTED, null, DECIDED, new SegmentDetail(null, SegmentPath.DRAFT, kinds));
-    }
-
     private static SegmentDecided decided() {
         return new SegmentDecided("ch12.xhtml:4", SegmentStatus.ACCEPTED, null, DECIDED);
     }
@@ -323,7 +289,7 @@ class RunSummaryLoggerTest {
     private static ModelCallFinished timedOut(final Duration elapsed) {
         return new ModelCallFinished(
                 "ch12.xhtml:4",
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 elapsed,
                 null,
                 0,

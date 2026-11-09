@@ -26,7 +26,7 @@ import ua.bookloom.ui.state.LiveRow.Stage;
 /** "All calls..." lists the calls the run kept, newest first, in the progress dialog's Calls view. */
 class LiveAllCallsTest extends LiveCardTestBase {
 
-    private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.REVIEW, CallKind.REPAIR);
+    private static final List<CallKind> KINDS = List.of(CallKind.DRAFT, CallKind.PROOFREAD, CallKind.REPAIR);
 
     // The kinds take turns so the rows tell the calls apart; the label is the pipeline's prompt name, never shown.
     private static CallSnapshot call(final long id) {
@@ -65,7 +65,8 @@ class LiveAllCallsTest extends LiveCardTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(isShown("calls-card")).isTrue();
-        assertThat(List.of(stepName(0), stepName(1), stepName(2))).containsExactly("Repair", "Review", "Translate");
+        assertThat(List.of(stepName(0), stepName(1), stepName(2)))
+                .containsExactly("Repair", "Proofreading", "Translate");
     }
 
     private static CallSnapshot draft(final long id) {

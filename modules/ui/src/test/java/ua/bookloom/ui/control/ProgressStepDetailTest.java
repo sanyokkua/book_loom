@@ -60,16 +60,15 @@ class ProgressStepDetailTest {
         assertThat(ProgressStepDetail.inputOf(step, call)).isNull();
     }
 
-    // IF a finished call with no translated text said "Nothing yet.", THEN a done reviewer would look as if it had not
+    // IF a finished call with no translated text said "Nothing yet.", THEN a done proofread would look as if it had not
     // answered; it says whether a reply came and where to read it.
     @ParameterizedTest
     @CsvSource({
         "WAITING, DRAFT, , PROGRESS_NOTHING",
-        "ANSWERED, REVIEW, '{\"edits\":[]}', PROGRESS_REVIEW_IN_DETAILED",
         "ANSWERED, DRAFT, '{\"1\":\"\"}', PROGRESS_REPLY_IN_DETAILED",
         "ANSWERED, PROOFREAD, '{\"unchanged\":true}', PROGRESS_PROOFREAD_UNCHANGED",
         "ANSWERED, DRAFT, '', LIVE_CALL_REPLY_NONE",
-        "FAILED, REVIEW, , LIVE_CALL_REPLY_NONE",
+        "FAILED, PROOFREAD, , LIVE_CALL_REPLY_NONE",
         "CANCELLED, DRAFT, , LIVE_CALL_REPLY_NONE",
     })
     void nothingSaid_callStateKindAndReply_namesWhatTheEmptyAnswerMeans(

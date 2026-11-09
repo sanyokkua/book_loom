@@ -29,12 +29,6 @@ public record OutputLimit(
         this(expectedTokens, capTokens, null);
     }
 
-    // A reviewer reply is, per pair, an id and a status, and for a defect a few short edits; a rewrite repeats the
-    // whole candidate. The cap lets every pair carry an edit or be rewritten, so a reply that loops is cut off but a
-    // full answer is not: three real replies on batches of 6 to 8 were cut at 845 to 1889 tokens by a tighter cap.
-    private static final int REVIEW_BASE_TOKENS = 128;
-    private static final int REVIEW_TOKENS_PER_PAIR = 70;
-    private static final int REVIEW_TOKENS_PER_POSSIBLE_EDIT = 120;
     private static final int EXPECTED_SHARE_DIVISOR = 2;
     // A one-word source under the estimator's 64-token floor came back as an empty target ("Model returned no
     // translated text"): the JSON envelope and any reasoning preamble share the cap with the word itself.
@@ -53,34 +47,6 @@ public record OutputLimit(
     // non-Latin rendering costs more tokens than its letters suggest, hence the margin.
     private static final int SUGGEST_BASE_TOKENS = 128;
     private static final int SUGGEST_TOKENS_PER_TERM = 40;
-    // A garbled-word reply is empty for clean text and otherwise holds a short entry (id, word, quote) per doubtful
-    // word; a text rarely holds more than one or two, so a few entries' worth per text is a generous cap.
-    private static final int WORDS_BASE_TOKENS = 128;
-    private static final int WORDS_TOKENS_PER_TEXT = 96;
-
-    /**
-     * The limit for one reviewer call.
-     *
-     * @param maskedCandidates the batch's candidates, which a rewrite may repeat whole; never empty
-     * @param targetTag the target language tag; never null
-     * @return the limit, whose cap covers a possible edit for every pair and the whole text of every candidate and whose
-     *     expected length is half the cap
-     */
-    public static OutputLimit forReview(final List<String> maskedCandidates, final String targetTag) {
-        if (maskedCandidates.isEmpty()) {
-            throw new IllegalArgumentException("a review needs at least one candidate");
-        }
-        long cap = REVIEW_BASE_TOKENS;
-        int read = 0;
-        for (final String candidate : maskedCandidates) {
-            final int candidateTokens = TokenEstimator.estimate(candidate, targetTag);
-            read += candidateTokens;
-            cap += REVIEW_TOKENS_PER_PAIR + REVIEW_TOKENS_PER_POSSIBLE_EDIT + candidateTokens;
-        }
-        final int capped = (int) Math.min(Integer.MAX_VALUE, cap);
-        return new OutputLimit(capped / EXPECTED_SHARE_DIVISOR, capped, new SourceSize(read, maskedCandidates.size()));
-    }
-
     /**
      * The limit for one chapter-summary call.
      *
@@ -116,20 +82,6 @@ public record OutputLimit(
         }
         final int cap = SUGGEST_BASE_TOKENS + SUGGEST_TOKENS_PER_TERM * termCount;
         return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap, new SourceSize(0, termCount));
-    }
-
-    /**
-     * The limit for one garbled-word call.
-     *
-     * @param textCount how many texts the call sends; at least one
-     * @return the limit, growing with the texts, whose expected length is half the cap
-     */
-    public static OutputLimit forSuspiciousWords(final int textCount) {
-        if (textCount < 1) {
-            throw new IllegalArgumentException("textCount must be positive: " + textCount);
-        }
-        final int cap = WORDS_BASE_TOKENS + WORDS_TOKENS_PER_TEXT * textCount;
-        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap, new SourceSize(0, textCount));
     }
 
     /**

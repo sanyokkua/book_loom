@@ -39,7 +39,6 @@ public final class PseudoChatModel implements ChatModel {
             Pattern.compile("⟦g\\d+⟧|&(?:#[xX][0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
 
-    private static final String FORMAT_REVIEWER = "reviewer";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_CHAPTER_SUMMARY = "chapter_summary";
     private static final String FORMAT_PROOFREAD = "proofread";
@@ -59,8 +58,6 @@ public final class PseudoChatModel implements ChatModel {
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
     // One numbered window of a term reading: "[<number>] <text>".
     private static final Pattern READING_WINDOW = Pattern.compile("(?m)^\\[(\\d{1,6})] ");
-
-    private static final String REVIEWER_REPLY = "{\"results\":[]}";
 
     private final ObjectMapper mapper;
 
@@ -124,7 +121,6 @@ public final class PseudoChatModel implements ChatModel {
         }
         final String formatName = request.responseFormat().name();
         return switch (formatName) {
-            case FORMAT_REVIEWER -> REVIEWER_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_CHAPTER_SUMMARY -> writeValue(Map.of("summary", translation));
             case FORMAT_PROOFREAD -> PROOFREAD_REPLY;

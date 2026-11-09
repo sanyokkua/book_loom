@@ -327,8 +327,7 @@ class QualityLoopOneRepairCallTest {
             final LoopSettings settings,
             final GateFunction gate,
             final ScriptedChatModel model) {
-        final Result<ChunkDecider> started = loop.start(outcomes, settings, gate, calls(model));
-        return Objects.requireNonNull(started.data());
+        return loop.start(outcomes, settings, gate, calls(model));
     }
 
     private static Segment threeTokenSegment() {

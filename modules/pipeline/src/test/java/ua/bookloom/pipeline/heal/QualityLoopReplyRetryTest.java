@@ -45,14 +45,14 @@ class QualityLoopReplyRetryTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
 
-        final Result<ChunkDecider> started = QualityLoopFixtures.loop()
+        final ChunkDecider started = QualityLoopFixtures.loop()
                 .start(
                         List.of(outcome),
                         settings,
                         QualityLoopFixtures.PASSTHROUGH_GATE,
                         (kind, segmentId, request) -> model.chat(request));
-        final SegmentOutcome decision = Objects.requireNonNull(
-                Objects.requireNonNull(started.data()).nextDecision().data());
+        final SegmentOutcome decision =
+                Objects.requireNonNull(started.nextDecision().data());
 
         assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
         final List<ChatRequest> requests = model.requests();

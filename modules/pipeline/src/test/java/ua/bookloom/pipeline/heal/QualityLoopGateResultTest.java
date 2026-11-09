@@ -113,9 +113,7 @@ class QualityLoopGateResultTest {
             final QualityDial dial,
             final GateFunction gate,
             final ScriptedChatModel model) {
-        final Result<ChunkDecider> started =
-                loop.start(List.of(outcome), QualityLoopFixtures.settings(mode, dial), gate, calls(model));
-        return Objects.requireNonNull(started.data());
+        return loop.start(List.of(outcome), QualityLoopFixtures.settings(mode, dial), gate, calls(model));
     }
 
     private static String userMessage(final ScriptedChatModel model, final int request) {

@@ -149,11 +149,11 @@ class ContextBuilderTest {
     }
 
     @Test
-    void plan_reviewKind_validationError() {
+    void plan_directedFixKind_validationError() {
         final RunFrame frame = FrameFixtures.frame(BOOK);
 
         final Result<PromptPlan> plan = BUILDER.plan(
-                CallKind.REVIEW,
+                CallKind.DIRECTED_FIX,
                 FrameFixtures.focus(NARRATION),
                 FrameFixtures.emptyMap(frame.brief()),
                 frame,

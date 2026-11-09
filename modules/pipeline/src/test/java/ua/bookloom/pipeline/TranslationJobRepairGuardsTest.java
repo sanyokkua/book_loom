@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.draftThenRepair;
@@ -53,8 +52,6 @@ class TranslationJobRepairGuardsTest {
     private static final String CHISEL_SOURCE = "Chisel opened the old door.";
     private static final String MASCULINE = "Чизел відчинив старі двері.";
     private static final String FEMININE = "Чизел відчинила старі двері.";
-    private static final String GENDER_EDIT = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"gender\",\"quote\":\"відчинив\",\"replacement\":\"відчинила\"}]}]}";
 
     @TempDir
     private Path tempDir;
@@ -161,44 +158,10 @@ class TranslationJobRepairGuardsTest {
 
         report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, REPAIR);
+        assertThat(formats(model)).containsExactly(DRAFT, REPAIR);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::path, SegmentRecord::machineTarget)
                 .containsExactly(SegmentPath.REPAIRED, FEMININE);
-    }
-
-    // A gender only suggested never reaches the reviewer (design D5): its sheet names Chisel alone, so the reviewer
-    // holds the text to no guess, and its edit is verified like any other.
-    @Test
-    void run_reviewerOfAGenderOnlySuggested_isNotShownTheGuess() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(REVIEW, answer(GENDER_EDIT));
-        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withSuggestedGender(Gender.FEMALE));
-
-        report(job(project, model).run());
-
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
-        assertThat(model.requests().getLast().messages().getLast().content())
-                .contains("Chisel")
-                .doesNotContain("female");
-        assertThat(stored(project, "Book.txt:0").findings())
-                .extracting(QaFinding::kind)
-                .doesNotContain("ignored-edit");
-    }
-
-    // The same edit toward a gender the person set is applied, before and after the task.
-    @Test
-    void run_reviewerEditsTowardAGenderSetByThePerson_isApplied() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answerTo(DRAFT, answer(targetReply(MASCULINE)))
-                .answerTo(REVIEW, answer(GENDER_EDIT));
-        final TestProject project = chisel(QualityDial.BALANCED, entry -> entry.withGender(Gender.FEMALE));
-
-        report(job(project, model).run());
-
-        assertThat(formats(model)).containsExactly(DRAFT, REVIEW, PROOFREAD);
-        assertThat(stored(project, "Book.txt:0").machineTarget()).isEqualTo(FEMININE);
     }
 
     private TestProject chisel(final QualityDial dial, final UnaryOperator<GlossaryEntry> gender) {

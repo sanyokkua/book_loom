@@ -195,8 +195,8 @@ record SequenceReport(SequenceMetrics metrics) {
                         m.hardGateKinds(),
                         "leakedProtocol",
                         m.leakedProtocol(),
-                        "reviewerTruncated",
-                        m.reviewerTruncated()),
+                        "proofreadTruncated",
+                        m.proofreadTruncated()),
                 row(
                         "termClaimedWrong",
                         m.termClaimedWrong(),

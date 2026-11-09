@@ -55,7 +55,6 @@ public final class StartEstimates {
      * @param segments the segments the book will translate
      * @param chunks the chunks those segments are packed into
      * @param dial the quality chosen; never null
-     * @param reviewPasses how many times the reviewer reads each chunk at that quality; zero for none
      * @param summaries how many chapter-summary calls the run will make; zero when the switch is off or none is due
      * @return measured when a run measured every planned kind, a range from the draft speed when there is one, else
      *     {@link StartEstimate.None}
@@ -65,7 +64,6 @@ public final class StartEstimates {
             final int segments,
             final int chunks,
             final QualityDial dial,
-            final int reviewPasses,
             final int summaries) {
         Objects.requireNonNull(stored, "stored");
         Objects.requireNonNull(dial, "dial");
@@ -74,7 +72,7 @@ public final class StartEstimates {
             log.debug("start estimate: no draft speed stored or no segments, no time shown");
             return new StartEstimate.None();
         }
-        final Map<CallKind, Integer> planned = planned(segments, chunks, reviewPasses, summaries, dial);
+        final Map<CallKind, Integer> planned = planned(segments, chunks, summaries, dial);
         if (planned.keySet().stream().allMatch(kind -> isRunMeasured(stored.get(kind)))) {
             final double seconds = planned.entrySet().stream()
                     .mapToDouble(entry -> entry.getValue()
@@ -108,13 +106,10 @@ public final class StartEstimates {
     }
 
     private static Map<CallKind, Integer> planned(
-            final int segments, final int chunks, final int reviewPasses, final int summaries, final QualityDial dial) {
+            final int segments, final int chunks, final int summaries, final QualityDial dial) {
         final Map<CallKind, Integer> planned = new EnumMap<>(CallKind.class);
         planned.putAll(proofreadCalls(dial, chunks));
         planned.put(CallKind.DRAFT, segments);
-        if (reviewPasses > 0 && chunks > 0) {
-            planned.put(CallKind.REVIEW, chunks * reviewPasses);
-        }
         if (summaries > 0) {
             planned.put(CallKind.CHAPTER_SUMMARY, summaries);
         }

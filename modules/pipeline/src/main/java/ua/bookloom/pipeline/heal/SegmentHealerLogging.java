@@ -42,12 +42,11 @@ final class SegmentHealerLogging {
         return results;
     }
 
-    static void logAcceptanceDecision(
-            final String segmentId, final QaResult qa, final int verifiedBlockersLeft, final boolean accepted) {
-        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa, verifiedBlockersLeft);
+    static void logAcceptanceDecision(final String segmentId, final QaResult qa, final boolean accepted) {
+        final AcceptanceRule.Decision decision = AcceptanceRule.decide(qa);
         log.debug(
                 "Acceptance decision segment {} findings block={} repair={} note={} outcome={} mark={} confidence={}"
-                        + " blockingFindings={} verifiedBlockersLeft={}",
+                        + " blockingFindings={}",
                 segmentId,
                 decision.block().size(),
                 decision.repair().size(),
@@ -55,8 +54,7 @@ final class SegmentHealerLogging {
                 accepted ? "accepted" : "flagged",
                 decision.mark(),
                 qa.confidence(),
-                SegmentFindings.kindsOf(SegmentFindings.concrete(qa)),
-                verifiedBlockersLeft);
+                SegmentFindings.kindsOf(SegmentFindings.concrete(qa)));
     }
 
     static void logTraceTarget(final String segmentId, final String masked, final String restored) {

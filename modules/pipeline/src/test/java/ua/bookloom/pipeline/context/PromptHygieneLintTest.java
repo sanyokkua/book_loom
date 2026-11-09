@@ -24,6 +24,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.PlannedPrompts;
 import ua.bookloom.pipeline.context.PromptLint.Facts;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.NameRules;
 import ua.bookloom.pipeline.prompt.PromptBreakdown;
 import ua.bookloom.pipeline.prompt.PromptName;
@@ -143,14 +144,9 @@ class PromptHygieneLintTest {
     @ParameterizedTest
     @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#languages")
     void render_languageRulesOfEveryV1Language_passTheLintAsTargetAndAsSource(final String tag) {
-        final CallFrame asTarget =
-                new CallFrame("en", tag, StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
-        final CallFrame asSource =
-                new CallFrame(tag, "uk", StyleSheet.from(BookBrief.defaults(tag)), ForeignPassagePolicy.KEEP);
-
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asTarget), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(LanguageRules.bundled().section("en", tag), SAMPLE_FACTS))
                 .isEmpty();
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asSource), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(LanguageRules.bundled().section(tag, "uk"), SAMPLE_FACTS))
                 .isEmpty();
     }
 
@@ -158,13 +154,10 @@ class PromptHygieneLintTest {
     @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#pairs")
     void render_languageRulesOfEveryPair_passTheLint(final String pair) {
         final int dash = pair.indexOf('-');
-        final CallFrame frame = new CallFrame(
-                pair.substring(0, dash),
-                pair.substring(dash + 1),
-                StyleSheet.from(BookBrief.defaults(pair.substring(0, dash))),
-                ForeignPassagePolicy.KEEP);
 
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, frame), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(
+                        LanguageRules.bundled().section(pair.substring(0, dash), pair.substring(dash + 1)),
+                        SAMPLE_FACTS))
                 .isEmpty();
     }
 

@@ -36,7 +36,7 @@ class RunSessionCallsTest extends LiveSessionTestBase {
 
         assertThat(waitingCall())
                 .isEqualTo(new WaitingCall(
-                        CallKind.REVIEW,
+                        CallKind.PROOFREAD,
                         LOCATOR,
                         0,
                         2,
@@ -69,7 +69,7 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         tick(session);
 
         session.onEvent(new ModelCallFinished(
-                "s-2", CallKind.REVIEW, Duration.ofSeconds(15), null, 30, false, List.of("s-2"), 1, null));
+                "s-2", CallKind.PROOFREAD, Duration.ofSeconds(15), null, 30, false, List.of("s-2"), 1, null));
         tick(session);
 
         assertThat(waitingCall()).isNull();
@@ -84,7 +84,7 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         session.onEvent(failed(2, ErrorCode.unreachable));
         session.onEvent(new ModelCallFinished(
                 "s-3",
-                CallKind.REVIEW,
+                CallKind.PROOFREAD,
                 Duration.ofSeconds(6),
                 new TokenUsage(500, 60, Duration.ofSeconds(2)),
                 120,
@@ -143,17 +143,17 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         tick(session);
 
         final PauseNotice notice = onFx(() -> mirror.review().pauseNotice().get());
-        assertThat(notice).isEqualTo(new PauseNotice(ErrorCode.timeout, LOCATOR, CallKind.REVIEW, 2, 2));
+        assertThat(notice).isEqualTo(new PauseNotice(ErrorCode.timeout, LOCATOR, CallKind.PROOFREAD, 2, 2));
         assertThat(notice.isLastPause()).isTrue();
     }
 
     private static ModelCallStarted judgeAttempt(final int attempt, final int of) {
-        return new ModelCallStarted("s-2", CallKind.REVIEW, List.of("s-2"), attempt, of, JUDGE_TIMEOUT, null);
+        return new ModelCallStarted("s-2", CallKind.PROOFREAD, List.of("s-2"), attempt, of, JUDGE_TIMEOUT, null);
     }
 
     private static ModelCallFinished failed(final int attempt, final ErrorCode code) {
         return new ModelCallFinished(
-                "s-2", CallKind.REVIEW, JUDGE_TIMEOUT, null, 0, false, List.of("s-2"), attempt, code);
+                "s-2", CallKind.PROOFREAD, JUDGE_TIMEOUT, null, 0, false, List.of("s-2"), attempt, code);
     }
 
     private WaitingCall waitingCall() {

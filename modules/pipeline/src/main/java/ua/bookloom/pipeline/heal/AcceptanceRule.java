@@ -10,9 +10,8 @@ import ua.bookloom.pipeline.qa.CheckLevels;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Whether a drafted, edited or repaired target may be accepted: the hard gates pass, no soft check failed outright, no
- * finding of level {@link CheckLevel#BLOCK} is left, and no verified blocker is left — an issue the reviewer named
- * with a quote the app found in the text and that no edit fixed. REPAIR findings left become the proofread mark and
+ * Whether a drafted or repaired target may be accepted: the hard gates pass, no soft check failed outright and no
+ * finding of level {@link CheckLevel#BLOCK} is left. REPAIR findings left become the proofread mark and
  * NOTE findings the audit mark (design D13's outcome table). There is no score and no threshold: the confidence the
  * checks derive only orders segments for review ({@code specs/quality-gates/spec.md} "Accept a segment only by the
  * acceptance rule"). Pure and silent — the caller logs the decision it reaches with this rule.
@@ -58,18 +57,15 @@ public final class AcceptanceRule {
      * Decides one segment's evaluated target by the levels of the findings left on it.
      *
      * @param qa the target's hard-gate and soft-check outcome
-     * @param verifiedBlockersLeft how many issues the reviewer evidenced that no edit fixed; zero when the reviewer is
-     *     off or found nothing it could not fix
-     * @return the decision: accepted when every hard gate passes, no soft check failed outright, no BLOCK finding and
-     *     no verified blocker is left
+     * @return the decision: accepted when every hard gate passes, no soft check failed outright and no BLOCK finding is
+     *     left
      */
-    public static Decision decide(final QaResult qa, final int verifiedBlockersLeft) {
+    public static Decision decide(final QaResult qa) {
         Objects.requireNonNull(qa, "qa");
         final List<QaFinding> block = atLevel(qa, CheckLevel.BLOCK);
         final List<QaFinding> repair = atLevel(qa, CheckLevel.REPAIR);
         final List<QaFinding> note = atLevel(qa, CheckLevel.NOTE);
-        final boolean accepted =
-                qa.hardGatesPass() && !qa.failedOutright() && verifiedBlockersLeft == 0 && block.isEmpty();
+        final boolean accepted = qa.hardGatesPass() && !qa.failedOutright() && block.isEmpty();
         return new Decision(accepted, markOf(repair, note), block, repair, note);
     }
 
@@ -77,22 +73,10 @@ public final class AcceptanceRule {
      * Decides whether one segment's evaluated target may be accepted.
      *
      * @param qa the target's hard-gate and soft-check outcome
-     * @param verifiedBlockersLeft how many issues the reviewer evidenced that no edit fixed
      * @return {@code true} when {@link #decide} accepts it, {@code false} otherwise
      */
-    public static boolean accepts(final QaResult qa, final int verifiedBlockersLeft) {
-        return decide(qa, verifiedBlockersLeft).accepted();
-    }
-
-    /**
-     * Whether the reviewer should read a drafted pair: text a check already refuses goes to repair first, and a text
-     * the reviewer edits would only have to pass the same checks again.
-     *
-     * @param qa the draft's evaluation
-     * @return {@code true} when every hard gate passes, no soft check failed outright and no BLOCK finding is left
-     */
-    public static boolean readyForReview(final QaResult qa) {
-        return accepts(qa, 0);
+    public static boolean accepts(final QaResult qa) {
+        return decide(qa).accepted();
     }
 
     private static List<QaFinding> atLevel(final QaResult qa, final CheckLevel level) {

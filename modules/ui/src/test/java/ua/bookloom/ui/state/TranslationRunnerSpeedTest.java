@@ -156,15 +156,15 @@ class TranslationRunnerSpeedTest extends RunnerTestBase {
                 mirror, executor, ticks, desk, clock, RunSpeedSink.NONE, new MeasuredCalls(ledger, store, recorder));
         startJob();
 
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(5), null, null));
-        ledger.record(new CallRecord(CallKind.REVIEW, null, Duration.ofSeconds(7), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(5), null, null));
+        ledger.record(new CallRecord(CallKind.PROOFREAD, null, Duration.ofSeconds(7), null, null));
         job.finish(Result.ok(completedReport(1)));
         awaitState(RunState.COMPLETED);
         waitForRevision(speeds);
 
         final var row =
                 store.stored(SELECTION.providerId(), SELECTION.modelId()).orElseThrow();
-        assertThat(row.speedOf(CallKind.REVIEW)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
+        assertThat(row.speedOf(CallKind.PROOFREAD)).hasValue(new MeasuredSpeed(6.0, MeasuredFrom.RUN));
         assertThat(row.speedOf(CallKind.CHAPTER_SUMMARY)).isEmpty();
         assertThat(row.speedOf(CallKind.DRAFT)).hasValue(new MeasuredSpeed(3.0, MeasuredFrom.TEST));
     }

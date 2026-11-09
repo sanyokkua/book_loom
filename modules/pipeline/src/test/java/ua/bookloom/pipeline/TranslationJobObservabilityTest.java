@@ -2,10 +2,6 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
-import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
-import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
-import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
@@ -43,22 +39,14 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * What a run tells the screen about itself beyond its decisions: the context each draft is sent with, the repair
- * rounds a segment enters, which step an error pause stopped and how often, and a skip from a pause taken while a
- * call hung.
+ * What a run tells the screen about itself beyond its decisions: the context each draft is sent with,
+ * which step an error pause stopped and how often, and a skip from a pause taken while a call hung.
  */
 class TranslationJobObservabilityTest {
 
-    // The reviewer's edit for s1 swaps a word for a different one, which the code refuses but cannot call a wrong
-    // draft.
-    private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"meaning\",\"quote\":\"Старий\",\"replacement\":\"Високий\"}]}]}";
-    private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
     private static final long WAIT_SECONDS = 10;
 
     @TempDir
@@ -87,32 +75,6 @@ class TranslationJobObservabilityTest {
                                 .flatMap(section -> section.lines().stream())
                                 .anyMatch(line -> line.contains("ONE.")))
                 .startsWith(tuple("Book.txt:0", false), tuple("Book.txt:1", true));
-    }
-
-    // A segment whose reviewer edit the code refused enters round 1 of the dial's budget, naming the finding it
-    // repairs.
-    @Test
-    void run_reviewerEditRefused_announcesRoundOneWithTheFinding() {
-        final ScriptedChatModel model = replies(T0, T1, FIXED_T0)
-                .answerTo(
-                        ChunkRunFixtures.REVIEW,
-                        Result.ok(new ChatResponse(REFUSED_EDIT_ON_S1, ua.bookloom.api.llm.FinishReason.STOP)));
-        final TranslationJobImpl translation =
-                job(project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED)), model);
-        final List<JobEvent> events = new CopyOnWriteArrayList<>();
-        translation.subscribe(events::add);
-
-        report(await(executor().submit(translation::run)));
-
-        assertThat(events)
-                .filteredOn(RoundStarted.class::isInstance)
-                .map(RoundStarted.class::cast)
-                .extracting(
-                        RoundStarted::segmentId,
-                        RoundStarted::round,
-                        RoundStarted::judgeScore,
-                        RoundStarted::blockingFinding)
-                .containsExactly(tuple("Book.md:0", 1, null, "meaning"));
     }
 
     // A pause on an error names the segment whose step failed and how many of its pauses are spent.
@@ -157,10 +119,6 @@ class TranslationJobObservabilityTest {
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(stored(project, "Book.txt:1").status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(stored(project, "Book.txt:2").status()).isEqualTo(SegmentStatus.ACCEPTED);
-    }
-
-    private Path twoParagraphs() {
-        return TestBooks.markdown(tempDir.resolve("Book.md"), String.join("\n\n", S0, S1));
     }
 
     private Path threeLines() {

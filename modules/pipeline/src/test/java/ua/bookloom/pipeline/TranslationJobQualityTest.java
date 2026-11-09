@@ -7,9 +7,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
 import static ua.bookloom.pipeline.ChunkRunFixtures.REPAIR;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
@@ -158,15 +156,15 @@ class TranslationJobQualityTest {
     }
 
     @Test
-    void run_draftAndOnePairReview_stateTheirOutputAllowanceAndCap() {
-        final ScriptedChatModel model = replies(DOOR_TARGET).answerTo(REVIEW, reviewed());
+    void run_draft_statesItsOutputAllowanceAndCap() {
+        final ScriptedChatModel model = replies(DOOR_TARGET);
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
-                .containsExactly(tuple(31, 128), tuple(163, 327));
+                .containsExactly(tuple(31, 128));
     }
 
     @Test

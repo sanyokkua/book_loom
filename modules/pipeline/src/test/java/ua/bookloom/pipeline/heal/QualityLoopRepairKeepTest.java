@@ -158,9 +158,8 @@ class QualityLoopRepairKeepTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), repairs ? settings : settings.withoutRepair(), gate, calls(model))
-                        .data());
+        final ChunkDecider decider =
+                loop.start(List.of(outcome), repairs ? settings : settings.withoutRepair(), gate, calls(model));
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 

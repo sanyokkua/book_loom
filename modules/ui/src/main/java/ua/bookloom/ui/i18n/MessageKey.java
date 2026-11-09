@@ -151,8 +151,6 @@ public enum MessageKey {
     PROGRESS_HOW_COUNTED_ESTIMATE("progress.howCounted.estimate"),
     /** Name of the draft steps in the note on how progress is counted. */
     PROGRESS_KIND_DRAFT("progress.kind.draft"),
-    /** Name of the check steps in the note on how progress is counted. */
-    PROGRESS_KIND_CHECK("progress.kind.check"),
     /** Name of the repair steps in the note on how progress is counted. */
     PROGRESS_KIND_REPAIR("progress.kind.repair"),
     /** Name of the re-ask steps in the note on how progress is counted. */
@@ -213,7 +211,6 @@ public enum MessageKey {
     PROGRESS_NOTHING("progress.nothing"),
     /** Progress dialog, Simple: what an answered call with no translated text says; the raw reply is Detailed's. */
     PROGRESS_REPLY_IN_DETAILED("progress.replyInDetailed"),
-    PROGRESS_REVIEW_IN_DETAILED("progress.reviewInDetailed"),
     /** Progress dialog, Simple: what a proofread call that changed no paragraph says. */
     PROGRESS_PROOFREAD_UNCHANGED("progress.proofreadUnchanged"),
     /** Progress dialog, Detailed: the call line; arguments: 0 number, 1 kind words, 2 segments, 3 attempt, 4 of. */
@@ -1224,8 +1221,6 @@ public enum MessageKey {
     SETTINGS_GENERATION_LIMITS("settings.generation.limits"),
     /** Tag saying the limits cannot be changed. */
     SETTINGS_GENERATION_LIMITS_FIXED("settings.generation.limits.fixed"),
-    /** Time-limit row: a reviewer call. */
-    SETTINGS_GENERATION_LIMITS_CHECK("settings.generation.limits.check"),
     /** Time-limit row: the helper calls. */
     SETTINGS_GENERATION_LIMITS_HELPER("settings.generation.limits.helper"),
     /** Time-limit row: every call without a fixed limit, which waits by its expected length. */

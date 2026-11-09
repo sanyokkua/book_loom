@@ -4,9 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.PROOFREAD;
-import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
@@ -45,7 +43,6 @@ import ua.bookloom.pipeline.proofread.DeferralRegister;
  */
 class TranslationJobNarratorInferenceTest {
 
-    private static final int GENEROUS = 60;
     private static final Narrator UNKNOWN_FIRST = new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN);
 
     @TempDir
@@ -61,13 +58,10 @@ class TranslationJobNarratorInferenceTest {
         return TranslationJobTestSupport.project(book, brief("en", "uk", dial).withNarrator(narrator));
     }
 
-    // Drafts in book order, then a reviewer that finds nothing for as many calls as the run may make.
+    // Drafts in book order.
     private static ScriptedChatModel model(final List<String> drafts) {
         final ScriptedChatModel model = new ScriptedChatModel();
         drafts.forEach(draft -> model.answerTo(DRAFT, target(draft)));
-        IntStream.range(0, GENEROUS).forEach(index -> {
-            model.answerTo(REVIEW, reviewed());
-        });
         return model;
     }
 

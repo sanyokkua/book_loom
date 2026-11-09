@@ -17,9 +17,6 @@ public enum CallKind {
      */
     REPAIR,
 
-    /** A reviewer call: reads a batch of candidates and answers with find-and-replace edits. */
-    REVIEW,
-
     /** A directed-fix call repairing the findings a check or the reviewer named. */
     DIRECTED_FIX,
 
