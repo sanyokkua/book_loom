@@ -29,7 +29,7 @@ public interface ModelCalls {
     Result<ChatResponse> call(CallKind kind, @Nullable String segmentId, ChatRequest request);
 
     /**
-     * Sends one model call about several segments, such as a reviewer call over a whole chunk, so its announcements name
+     * Sends one model call about several segments, such as a call over a whole chunk, so its announcements name
      * every segment it is about.
      *
      * @param kind which call this is

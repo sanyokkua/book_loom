@@ -81,12 +81,12 @@ class ChunkRowsTest {
                 .containsExactly("ch7 · p41", "ch7 · p42", "ch7 · p43", "ch7 · p44");
     }
 
-    // IF a directed fix of one paragraph replaced the rows with its own, THEN the chunk would vanish from the card.
+    // IF a repair of one paragraph replaced the rows with its own, THEN the chunk would vanish from the card.
     @Test
-    void directedFixOfOneSegment_keepsTheChunksFourRows() {
+    void repairOfOneSegment_keepsTheChunksFourRows() {
         state.snapshot(ChunkFixtures.batchWithMissingThird());
 
-        state.snapshot(draft(3, CallKind.DIRECTED_FIX, 2));
+        state.snapshot(draft(3, CallKind.REPAIR, 2));
 
         assertThat(rows()).hasSize(4);
         assertThat(rows().get(1).callId()).isEqualTo(3L);

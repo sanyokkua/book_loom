@@ -83,7 +83,6 @@ class JobEventContractsTest {
             case ModelCallFinished _ -> "ModelCallFinished";
             case MemoryUpdated _ -> "MemoryUpdated";
             case ContextAssembled _ -> "ContextAssembled";
-            case RoundStarted _ -> "RoundStarted";
             case RecoveryWaiting _ -> "RecoveryWaiting";
             case BatchStarted _ -> "BatchStarted";
             case CallSnapshotUpdated _ -> "CallSnapshotUpdated";
@@ -204,12 +203,6 @@ class JobEventContractsTest {
         assertThat(finished.isAnswered()).isTrue();
         assertThat(finished.attempt()).isEqualTo(1);
         assertThat(finished.segmentIds()).containsExactly("s-1");
-    }
-
-    @Test
-    void roundStarted_roundBeyondTheBudget_isRejected() {
-        assertThatThrownBy(() -> new RoundStarted("s-1", 3, 2, 0.8, "meaning"))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

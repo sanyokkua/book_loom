@@ -31,7 +31,6 @@ import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.ReviewDesk;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
@@ -258,7 +257,6 @@ final class RunSession implements JobListener {
             case SegmentDrafted drafted -> locked(() -> liveCalls.drafted(drafted));
             case ModelCallFinished finished -> onModelCallFinished(finished);
             case MemoryUpdated updated -> locked(() -> queue(feed.memory(updated)));
-            case RoundStarted round -> locked(() -> queue(feed.roundStarted(round)));
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             // A context is shown with its call, a run sends no batch or brief event, and the returned result decides
             // the outcome rather than Finished.

@@ -24,7 +24,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Turns the deterministic text findings into gate results: a blocking finding fails like a hard gate, so the
- * segment is repaired or flagged before any reviewer reads it; a finding that does not block passes, at medium
+ * segment is repaired or flagged before it is accepted; a finding that does not block passes, at medium
  * severity (repair level, it earns a fix) or, for a note-level check, at low severity (an audit note for review).
  * Skipped for a kept foreign passage, whose letters are meant to differ from the target's.
  */

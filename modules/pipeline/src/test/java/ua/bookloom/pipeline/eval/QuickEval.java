@@ -23,7 +23,7 @@ final class QuickEval {
     /**
      * One case per defect class of {@link PromptEvalCases} and a clean control ({@code plain-short}): a locked name,
      * balanced quotes, narrator gender, a drop-cap token, a copied number, an instruction inside the book text, a
-     * glossary rendering and a directed fix.
+     * glossary rendering and a repair.
      */
     static final List<String> PROMPT_CASES = List.of(
             "dialogue-locked-name",
@@ -33,7 +33,7 @@ final class QuickEval {
             "number-only",
             "injection-hello",
             "glossary-name",
-            "fix-echo",
+            "repair-placeholder",
             "plain-short");
 
     /** Whether the environment asks for the quick subsets. */

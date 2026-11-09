@@ -32,23 +32,6 @@ class PseudoChatModelTest {
         assertThat(response.usage()).isNull();
     }
 
-    // A directed fix reads the rejected target from its one <Translation> block, ignoring the <Source> beside it.
-    @Test
-    void chat_directedFixFormat_repliesWithUppercasedRejectedTarget() {
-        final String message = """
-                <Source>
-                He opened the ⟦g0⟧old⟦g1⟧ door.
-                </Source>
-
-                <Translation>
-                he opened the ⟦g0⟧old⟦g1⟧ door.
-                </Translation>""";
-
-        final ChatResponse response = send(message, "directed-fix");
-
-        assertThat(response.content()).isEqualTo("{\"target\":\"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.\"}");
-    }
-
     // A batch draft answers every numbered item under its own id, tokens kept, and ignores the context blocks.
     @Test
     void chat_batchDraftFormat_repliesWithAnUppercasedEntryPerItemId() {
@@ -71,7 +54,7 @@ class PseudoChatModelTest {
 
     // Every other repair-shaped format answers the same single-target object.
     @ParameterizedTest
-    @ValueSource(strings = {"structural-repair", "repair", "directed-fix"})
+    @ValueSource(strings = {"structural-repair", "repair"})
     void chat_repairFormats_repliesWithUppercasedTargetObject(String formatName) {
         final ChatResponse response = send("<Text>\nhi\n</Text>", formatName);
 

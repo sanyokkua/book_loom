@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * What is left of the window sizes before the context builder: the safety margin every fit holds back, and the
- * allowance the translation memory lines and the reviewer's character sheet are cut to, since the builder never drops
+ * allowance the translation memory lines and the character sheet are cut to, since the builder never drops
  * those lines itself. A chunk's, a batch's and a piece's size is the tier's current part ({@link WindowBudgets}).
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -35,7 +35,7 @@ public final class ContextBudget {
 
     /**
      * What the character gender sheet may take of the dynamic allowance: a tenth, since a line is a name and a word, so
-     * the reviewer's sheet stays short however large the cast.
+     * the sheet stays short however large the cast.
      *
      * @param allowance the dynamic context's allowance in tokens
      * @return the sheet's share, never above the allowance

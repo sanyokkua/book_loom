@@ -43,9 +43,6 @@ import ua.bookloom.pipeline.memory.TmLookup;
  * settings from here, and the prompt evals build their requests through the same methods, so what an eval measures is
  * what a run sends — a hand-made context is how an eval drifts from the app.
  *
- * <p>The directed fix's request is built inside its own production class ({@code DirectedFix}) from the inputs given
- * here, {@link #loopSettings()} and a mask's text.
- *
  * <p>Used from the job thread only.
  */
 @Slf4j

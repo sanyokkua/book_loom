@@ -9,10 +9,9 @@ import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Turns one fixing call's reply — the one repair's, or the reviewer's fix of a refused edit — into a
+ * Turns the one repair's reply into a
  * {@link RepairOutcome}: a rewritten reply goes through the gate, the checks and the code's quote repair, a malformed
- * one produces nothing, and a flag or failure ends the segment or the step. The reviewer's edits are evaluated through
- * {@link #evaluateRewrite} too, so every changed text is judged one way.
+ * one produces nothing, and a flag or failure ends the segment or the step.
  */
 @Slf4j
 final class ReplyEvaluator {

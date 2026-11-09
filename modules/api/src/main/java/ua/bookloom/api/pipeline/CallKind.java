@@ -17,9 +17,6 @@ public enum CallKind {
      */
     REPAIR,
 
-    /** A directed-fix call repairing the findings a check or the reviewer named. */
-    DIRECTED_FIX,
-
     /** A glossary prescan call. */
     PRESCAN,
 

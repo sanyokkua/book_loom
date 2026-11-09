@@ -27,8 +27,7 @@ public sealed interface DraftOutcome {
 
     /**
      * The text the draft was shown — the segment's masked source with its protected spans behind tokens — which every
-     * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once. The
-     * reviewer reads this text too, and quotes the draft's {@link Drafted#maskedReply()}, because its edits are applied to that.
+     * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once.
      */
     String maskedSource();
 

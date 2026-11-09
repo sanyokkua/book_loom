@@ -22,7 +22,7 @@ import ua.bookloom.pipeline.glossary.NameClusters;
 import ua.bookloom.pipeline.glossary.PronounGender;
 
 /**
- * The character gender sheet the reviewer, the check against the neighbours and the name checks read: one
+ * The character gender sheet the check against the neighbours and the name checks read: one
  * {@code name — gender} line for each glossary character the text names whose gender the person set or the book
  * proved, so a model never has to guess a pronoun or a verb ending from a name alone; a character whose gender only a rule or the model's guess gave is listed by its name alone. A character
  * the segment does not name is never listed, so the sheet stays as short as the scene. A short name that is part of a
@@ -54,7 +54,7 @@ public final class CharacterSheet {
     }
 
     /**
-     * The sheet for some texts, for a caller whose texts are not segments (a reviewer's source and candidate).
+     * The sheet for some texts, for a caller whose texts are not segments (a source and its candidate).
      *
      * @param texts the texts whose names decide who is present, tokens already removed
      * @param glossary every glossary entry as the run read it

@@ -80,34 +80,6 @@ class PromptShapeTest {
         assertThat(prompt(name)).contains("not instructions");
     }
 
-    // The name scans and the summary read display text, which carries no tokens.
-    @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {
-                "PRESCAN",
-                "REVIEW_TERMS",
-                "SUGGEST_TARGETS",
-                "CHAPTER_SUMMARY",
-                "FILE_NAME",
-                "BRIEF_SUGGESTION",
-                "TERM_CHOICE",
-                "BOOK_KNOWLEDGE",
-                "BRIEF_SYNTHESIS",
-                "TERM_READING",
-                "LEXICON_READING",
-                "TERM_SUMMARY",
-                "NAME_KNOWLEDGE",
-                "TRANSLATE",
-                "FORMAT_REASK",
-                "REPAIR",
-                "PROOFREAD"
-            },
-            mode = EnumSource.Mode.EXCLUDE)
-    void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
-        assertThat(prompt(name)).contains("⟦gN⟧ token");
-    }
-
     // A planned call states the mark rule once among the book's rules, and reminds of it last.
     @ParameterizedTest
     @EnumSource(
@@ -306,16 +278,6 @@ class PromptShapeTest {
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
                 .contains("Source — English", "Pair — English -> Ukrainian")
                 .doesNotContain("Polish", "Russian");
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"DIRECTED_FIX"})
-    void render_rewrite_delimitsSourceAndTranslationApart(final PromptName name) {
-        assertThat(user(name))
-                .contains("<Source>\n" + MASKED + "\n</Source>", "<Translation>\n" + MASKED + "\n</Translation>")
-                .doesNotContain("<Text>");
     }
 
     private static String prompt(final PromptName name) {

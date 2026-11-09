@@ -15,7 +15,6 @@ public sealed interface JobEvent
                 ModelCallFinished,
                 MemoryUpdated,
                 ContextAssembled,
-                RoundStarted,
                 RecoveryWaiting,
                 BatchStarted,
                 CallSnapshotUpdated,

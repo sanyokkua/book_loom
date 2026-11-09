@@ -73,7 +73,7 @@ final class FaultyModel implements ChatModel {
     private static final String DRAFT = "draft";
     private static final String BATCH = "draft-batch-json";
     private static final String REVIEW = "reviewer";
-    private static final String DIRECTED_FIX = "directed-fix";
+    private static final String REPAIR = "repair";
     // A reviewer that asks to rewrite the first pair with text the checks refuse, so the draft stays and is flagged.
     private static final String REVISE =
             "{\"results\":[{\"id\":\"s1\",\"status\":\"rewrite\",\"rewrite\":\"THE WRONG SENSE\"}]}";
@@ -128,7 +128,7 @@ final class FaultyModel implements ChatModel {
     public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
         calls++;
         final String format = request.responseFormat() == null ? "plain" : ScriptedChatModel.callName(request);
-        final boolean rejudge = REVIEW.equals(format) && DIRECTED_FIX.equals(previousFormat);
+        final boolean rejudge = REVIEW.equals(format) && REPAIR.equals(previousFormat);
         previousFormat = format;
         final Fault fault = choose(format, rejudge);
         injected.merge(fault, 1, Integer::sum);

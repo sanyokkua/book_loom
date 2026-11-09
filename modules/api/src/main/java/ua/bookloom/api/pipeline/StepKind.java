@@ -4,7 +4,7 @@ package ua.bookloom.api.pipeline;
 public enum StepKind {
     /** One segment's draft; a segment kept verbatim is a draft step done at once with no call. */
     DRAFT,
-    /** The one repair, or the directed fix of a refused edit, started after a draft. */
+    /** The one repair, started after a draft. */
     REPAIR,
     /** A batch re-ask for ids the reply left out. */
     RE_ASK,

@@ -37,7 +37,6 @@ import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -140,7 +139,6 @@ final class UnattendedRun {
                     SegmentDrafted _,
                     MemoryUpdated _,
                     ContextAssembled _,
-                    RoundStarted _,
                     BatchStarted _,
                     CallSnapshotUpdated _,
                     StepsPlanned _,

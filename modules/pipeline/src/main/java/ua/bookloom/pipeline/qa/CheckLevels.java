@@ -18,7 +18,7 @@ import ua.bookloom.api.project.Severity;
  * <p>A high finding has its check's {@link CheckName#level()}. A medium finding is a repair, except that a soft check
  * with a confidence weight raises a failure outright at medium ({@link CheckResult#fail}), and that failure blocks
  * acceptance ("Block acceptance when a soft check fails outright"): weight above zero and level BLOCK read as BLOCK.
- * A low finding is a note. A finding no check raised (the reviewer, an applied edit, the audit's prefixed copies, a
+ * A low finding is a note. A finding no check raised (the an applied edit, the audit's prefixed copies, a
  * stored reply flag) is a note: it never decides acceptance.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

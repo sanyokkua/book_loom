@@ -24,13 +24,13 @@ class QuickEvalTest {
     }
 
     @Test
-    void promptCases_quickSet_coversDraftFixAndAControl() {
+    void promptCases_quickSet_coversDraftRepairAndAControl() {
         final List<EvalCase> quick = PromptEvalCases.ALL.stream()
                 .filter(evalCase -> QuickEval.PROMPT_CASES.contains(evalCase.name()))
                 .toList();
 
         assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Draft.class);
-        assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Fix.class);
+        assertThat(quick).hasAtLeastOneElementOfType(EvalCase.Repair.class);
         assertThat(QuickEval.PROMPT_CASES).contains("plain-short");
     }
 

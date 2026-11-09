@@ -18,7 +18,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 /**
  * A name the glossary renders that the source holds and the target has lost — the case the draft-time glossary check
  * cannot see for an unlocked name, since only a locked one travels as a token. {@link NameLossCheck} turns it into a
- * soft finding the directed fix mends. Conservative on purpose: only a person
+ * soft finding the one repair mends. Conservative on purpose: only a person
  * or place entry with a non-empty target counts, the source form must stand as a whole word, and the target is held to
  * the same stem match the lexicon uses for an inflected rendering, so a declined name is not a loss.
  */

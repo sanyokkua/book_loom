@@ -7,7 +7,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * How one fixing call's raw model reply — the one repair, or the reviewer's fix of a refused edit — ended up once
+ * How the one repair's raw model reply ended up once
  * classified into a {@link RepairReply}: a usable candidate that went through the gate and {@code QaEvaluator}, a
  * reply that produced nothing usable, content that flags the segment at once, or a call failure that ends the step.
  */

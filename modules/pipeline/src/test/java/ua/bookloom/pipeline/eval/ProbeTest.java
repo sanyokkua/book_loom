@@ -29,7 +29,6 @@ class ProbeTest {
     @ValueSource(
             strings = {
                 "dialogue-locked-name",
-                "fix-echo",
                 "repair-placeholder",
                 "suggest",
                 "quotes-stray-close-1",
@@ -55,7 +54,7 @@ class ProbeTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"dialogue-locked-name", "fix-echo", "quotes-stray-close-1"})
+    @ValueSource(strings = {"dialogue-locked-name", "repair-placeholder", "quotes-stray-close-1"})
     void pseudo_caseWithAModel_printsTheReplyTheVerdictAndTheUsage(final String id) {
         final Ran ran = probe("--provider", "pseudo", "--case", id);
 

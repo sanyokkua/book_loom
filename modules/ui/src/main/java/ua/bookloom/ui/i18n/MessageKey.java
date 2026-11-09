@@ -488,15 +488,13 @@ public enum MessageKey {
     COMMON_CANCEL_TIP("common.cancel.tip"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_ACCEPTED("log.accepted"),
-    /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the repair round or {@code 0}, 3 the attempt, 4 the time it took as {@code m:ss}; all Strings. */
+    /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the attempt, 3 the time it took as {@code m:ss}; all Strings. */
     LOG_MODEL_CALL("log.modelCall"),
-    /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 5 the error code; all Strings. */
+    /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 4 the error code; all Strings. */
     LOG_CALL_FAILED("log.callFailed"),
     /** Activity-log line for a model call the person's pause or stop interrupted; arguments as {@link #LOG_CALL_FAILED} without the error code. */
     LOG_CALL_PAUSED("log.callPaused"),
-    /** Activity-log entry for a segment entering a repair round; arguments: 0 the locator, 1 the round, 2 the rounds allowed, 3 the finding it repairs or {@code none}; all Strings. */
-    LOG_ROUND("log.round"),
-    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code review} or {@code directed_fix}. */
+    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code review} or {@code repair}. */
     RUN_CALL_KIND("run.callKind"),
     /** Activity-log entry for an applied glossary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),

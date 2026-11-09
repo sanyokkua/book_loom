@@ -27,7 +27,6 @@ class PromptNameTest {
         "PROOFREAD,proofread,PROOFREAD,proofread,0.1",
         "TRANSLATE,translate,DRAFT,draft-batch-json,0.2",
         "FORMAT_REASK,format-reask,STRUCTURAL_REPAIR,draft-batch-json,0.2",
-        "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2",
         "PRESCAN,prescan,PRESCAN,prescan,0.2",
         "REVIEW_TERMS,review-terms,REVIEW_TERMS,review-terms,0.1",
         "SUGGEST_TARGETS,suggest-targets,SUGGEST_TARGETS,suggest-targets,0.1",
@@ -71,7 +70,6 @@ class PromptNameTest {
         "FORMAT_REASK",
         "REPAIR",
         "PROOFREAD",
-        "DIRECTED_FIX",
         "PRESCAN",
         "REVIEW_TERMS",
         "SUGGEST_TARGETS",
@@ -84,21 +82,6 @@ class PromptNameTest {
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {
         assertThatThrownBy(() -> name.temperature(true)).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @ParameterizedTest
-    @CsvSource({"DIRECTED_FIX"})
-    void pseudoModel_everyResponseFormatName_answersTargetObject(final PromptName name) {
-        final ChatRequest request = new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),
-                name.temperature(false),
-                new ResponseFormat(name.responseFormatName(), DraftSchema.SCHEMA),
-                ReasoningLevel.OFF);
-
-        final var result = new PseudoChatModel(new ObjectMapper()).chat(request);
-
-        assertThat(result.isOk()).isTrue();
-        assertThat(result.data()).extracting(ChatResponse::content).isEqualTo("{\"target\":\"HI.\"}");
     }
 
     // A single draft is a batch of one: the offline model answers every translate-family call by its items.

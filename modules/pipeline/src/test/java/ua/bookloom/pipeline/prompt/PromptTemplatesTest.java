@@ -28,23 +28,23 @@ class PromptTemplatesTest {
     // A typo would otherwise send the model a literal {{sumary}}.
     @Test
     void load_undeclaredSlot_namesFileAndSlot() {
-        final var loader = bundledExcept("directed-fix.user.prompt", "{{sumary}} {{source}} {{text}} {{findings}}");
+        final var loader = bundledExcept("repair.user.prompt", "{{sumary}} {{defects}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("directed-fix.user.prompt")
+                .hasMessageContaining("repair.user.prompt")
                 .hasMessageContaining("sumary");
     }
 
     // A file that forgot a required slot would silently drop the segment text.
     @Test
     void load_requiredSlotMissing_namesFileAndSlot() {
-        final var loader = bundledExcept("directed-fix.user.prompt", "{{source}} {{findings}}");
+        final var loader = bundledExcept("format-reask.user.prompt", "{{rejectedReply}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("directed-fix.user.prompt")
-                .hasMessageContaining("text");
+                .hasMessageContaining("format-reask.user.prompt")
+                .hasMessageContaining("diagnostic");
     }
 
     @Test
@@ -60,34 +60,27 @@ class PromptTemplatesTest {
     @Test
     void renderUser_emptyOptionalTokens_removesWholeBlock() {
         final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DIRECTED_FIX,
-                        Map.of("source", "A", "text", "Hi.", "findings", "- language", "expectedTokens", ""));
+                .renderUser(PromptName.REPAIR, Map.of("defects", "- language", "previousAttempt", ""));
 
-        assertThat(user).startsWith("<Source>\nA\n</Source>").doesNotContain("Expected tokens", "{{");
+        assertThat(user).startsWith("[Defects to fix]").doesNotContain("Previous attempt", "{{");
     }
 
     @Test
     void renderUser_filledOptionalTokens_keepsBodyWithoutMarkers() {
         final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DIRECTED_FIX,
-                        Map.of("source", "A", "text", "Hi.", "findings", "- language", "expectedTokens", "⟦g0⟧ ⟦g1⟧"));
+                .renderUser(PromptName.REPAIR, Map.of("defects", "- language", "previousAttempt", "Old text."));
 
         assertThat(user)
-                .contains(
-                        "[Expected tokens — your translation contains exactly this sequence]\n⟦g0⟧ ⟦g1⟧\n\n<Translation>")
+                .contains("<PreviousAttempt>\nOld text.\n</PreviousAttempt>")
                 .doesNotContain("{{");
     }
 
     // A slot value is book text and must be inserted literally, never re-read as a slot or a replacement group.
     @Test
     void renderUser_valueLooksLikeSlotOrReplacement_isInsertedLiterally() {
-        final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DIRECTED_FIX, Map.of("source", "A", "text", "{{source}} $1 \\", "findings", "- x"));
+        final String user = new PromptTemplates().renderUser(PromptName.REPAIR, Map.of("defects", "{{defects}} $1 \\"));
 
-        assertThat(user).contains("<Translation>\n{{source}} $1 \\\n</Translation>");
+        assertThat(user).contains("[Defects to fix]\n{{defects}} $1 \\\n");
     }
 
     @Test
@@ -105,46 +98,6 @@ class PromptTemplatesTest {
         final Map<String, String> values = Map.of();
         assertThatThrownBy(() -> templates.renderSystem(PromptName.FORMAT_REASK, values))
                 .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void renderUser_directedFix_holdsSourceDefectsAndOneTranslationBlock() {
-        final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.DIRECTED_FIX,
-                        Map.of(
-                                "source",
-                                "Sam opened the ⟦g0⟧old⟦g1⟧ door.",
-                                "text",
-                                "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.",
-                                "findings",
-                                "- language"));
-
-        assertThat(user)
-                .startsWith("<Source>\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n[Defects to fix")
-                .contains("\n- language\n\n<Translation>\nСем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</Translation>")
-                .endsWith("{\"target\":\"<the full corrected translation>\"}\n");
-    }
-
-    @Test
-    void renderSystem_directedFix_fillsLanguagesAndStyle() {
-        final String system = new PromptTemplates()
-                .renderSystem(
-                        PromptName.DIRECTED_FIX,
-                        Map.of(
-                                "sourceLanguage",
-                                "English (en)",
-                                "targetLanguage",
-                                "Ukrainian (uk)",
-                                "styleSheet",
-                                "Neutral register.",
-                                "foreignPassageRule",
-                                "Keep foreign passages."));
-
-        assertThat(system)
-                .startsWith("You correct a translation from English (en) into Ukrainian (uk).")
-                .contains("Style:\nNeutral register.\n", "6. Keep foreign passages.\n")
-                .doesNotContain("{{");
     }
 
     @Test

@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.qa.CheckLevel;
  * capitalised Ви-forms), which a reader hears as a slip. Only the speech is read, never the narrator's words, and each
  * speech on its own. The informal forms count in any case; a formal form counts only when it is capitalised in the
  * middle of a sentence, because a sentence start is capitalised whatever the word is. The forms are the language file's
- * ({@link AddressForms}), so a language without them is not checked. Soft: it earns one directed fix.
+ * ({@link AddressForms}), so a language without them is not checked. Soft: it earns the one repair.
  *
  * <p>The source branch ({@link #parity}) compares each target speech with its source speech: one the source addresses
  * only informally (or only formally) must not become the other kind. It reads the speeches in order and only when both

@@ -11,7 +11,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum LogKind {
     /** A segment was accepted. */
     ACCEPTED(MessageKey.LOG_ACCEPTED, Tone.OK, "✓", "ok"),
-    /** The model repaired a segment on a directed fix; worded as the call that did it. */
+    /** The model repaired a segment; worded as the call that did it. */
     REPAIRED(MessageKey.LOG_MODEL_CALL, Tone.INFO, "↺", "fix"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
     MEMORY(MessageKey.LOG_GLOSSARY_APPLIED, Tone.INFO, "≡", "mem"),

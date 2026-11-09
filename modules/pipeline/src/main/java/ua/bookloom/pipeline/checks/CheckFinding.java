@@ -9,9 +9,9 @@ import ua.bookloom.pipeline.qa.CheckLevel;
  *
  * @param kind which check found it
  * @param span the exact place in the checked text
- * @param explanation a plain sentence naming what is wrong and how to put it right, written so the directed-fix
+ * @param explanation a plain sentence naming what is wrong and how to put it right, written so the repair
  *     prompt can repeat it as it is
- * @param blocking whether the segment may not be accepted with it; a soft finding only lowers the reviewer's trust
+ * @param blocking whether the segment may not be accepted with it; a soft finding only lowers the segment's confidence
  * @param level the level this finding is raised at when it differs from its check's default for a non-blocking finding
  *     (a lost number repairs, an extra one is a note), or {@code null} to take the default; a block level makes the
  *     finding blocking whatever {@code blocking} says

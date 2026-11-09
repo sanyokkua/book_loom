@@ -8,7 +8,7 @@ import ua.bookloom.api.pipeline.StepResult;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * The repair steps of the heal paths: the one repair and the reviewer's fix of a refused edit are each one step added
+ * The repair steps of the heal paths: the one repair is a step added
  * when it starts, so a segment that needs no repair adds none. A call that paused the run on a model error stays
  * open for its retry.
  */

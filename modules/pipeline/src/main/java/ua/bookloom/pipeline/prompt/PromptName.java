@@ -2,10 +2,8 @@ package ua.bookloom.pipeline.prompt;
 
 import static ua.bookloom.pipeline.prompt.SlotNames.AUTHOR;
 import static ua.bookloom.pipeline.prompt.SlotNames.EXAMPLES;
-import static ua.bookloom.pipeline.prompt.SlotNames.FOREIGN_PASSAGE_RULE;
 import static ua.bookloom.pipeline.prompt.SlotNames.LANGUAGE_RULES;
 import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE;
-import static ua.bookloom.pipeline.prompt.SlotNames.SOURCE_LANGUAGE;
 import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
 import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
 import static ua.bookloom.pipeline.prompt.SlotNames.TERMS;
@@ -79,16 +77,6 @@ public enum PromptName {
             new Temperatures(0.1, null),
             null,
             new Slots(Set.of("instruction"), Set.of("rules"))),
-
-    /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
-    DIRECTED_FIX(
-            "directed-fix",
-            CallKind.DIRECTED_FIX,
-            "directed-fix",
-            DraftSchema.SCHEMA,
-            new Temperatures(0.2, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
-            new Slots(Set.of(SOURCE, "text", "findings"), Set.of("expectedTokens"))),
 
     /** The Fast dial's choice among recurring words (15i.N7): keep or drop, a batch of candidates a call. */
     TERM_CHOICE(

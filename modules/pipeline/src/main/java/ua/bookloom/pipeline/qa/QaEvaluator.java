@@ -10,7 +10,7 @@ import ua.bookloom.pipeline.checks.WordValidator;
 
 /**
  * Runs every quality-gate check for one segment's restored candidate: the refusal gate this package owns, the
- * deterministic text checks (blocking ones fail like a hard gate, before any reviewer), the five soft checks, and the placeholder/protected-span hard-gate results a caller computed elsewhere.
+ * deterministic text checks (blocking ones fail like a hard gate, before any repair), the five soft checks, and the placeholder/protected-span hard-gate results a caller computed elsewhere.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -60,7 +60,7 @@ public final class QaEvaluator {
 
     /**
      * Runs only the deterministic text checks, the gender check and the word validator on one segment, as a run's gate
-     * does before any reviewer reads it; the final audit asks again with them.
+     * does before any repair is made; the final audit asks again with them.
      *
      * @param input the segment's display texts, languages and policies
      * @param words the word validator; never null

@@ -32,7 +32,6 @@ import ua.bookloom.api.pipeline.ProofreadRoundStarted;
 import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
@@ -119,7 +118,6 @@ final class RunSummaryLogger {
                     SegmentDrafted _,
                     MemoryUpdated _,
                     ContextAssembled _,
-                    RoundStarted _,
                     RecoveryWaiting _,
                     BatchStarted _,
                     CallSnapshotUpdated _,

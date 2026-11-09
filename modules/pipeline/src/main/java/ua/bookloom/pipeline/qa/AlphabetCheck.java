@@ -23,7 +23,7 @@ import ua.bookloom.util.lang.Script;
  * A letter the target language's alphabet does not have, inside a target word — the Russian {@code ы ъ э ё} in a
  * Ukrainian text ({@code бэкона}, {@code кобыли}). The letters come from the language's own file
  * ({@code forbiddenLetters}), so a language that lists none is never checked. The finding blocks acceptance like a
- * mixed-script word and earns the directed fix with the word; a draft that still holds the letter after the repair
+ * mixed-script word and earns the one repair with the word; a draft that still holds the letter after the repair
  * round is flagged. A word that stands in the source as well is a kept foreign word and is left alone.
  */
 @Slf4j

@@ -23,7 +23,7 @@ public final class SegmentFindings {
 
     /**
      * The concrete findings that block a target: a failed hard gate or a soft check failed outright. Public so a
-     * prompt eval names the same findings in a directed fix that a run does.
+     * prompt eval names the same findings in a repair that a run does.
      */
     public static List<QaFinding> concrete(final QaResult qa) {
         final List<QaFinding> findings = new ArrayList<>();

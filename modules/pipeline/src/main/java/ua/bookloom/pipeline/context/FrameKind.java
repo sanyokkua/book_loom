@@ -3,14 +3,12 @@ package ua.bookloom.pipeline.context;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
 
-/** Which fixed part a kind of call sends (design D8): the TRANSLATE frame, the ANALYSIS frame, or none of the builder's. */
+/** Which fixed part a kind of call sends (design D8): the TRANSLATE frame or the ANALYSIS frame. */
 enum FrameKind {
     /** Blocks 1–13: drafts, format re-asks, repairs and proofread windows. */
     TRANSLATE,
     /** Blocks 1, 2 and 7 and the kind's user blocks: the names pass, the brief, the file name, the chapter summary. */
-    ANALYSIS,
-    /** A call the builder does not plan. */
-    NONE;
+    ANALYSIS;
 
     static FrameKind of(final CallKind kind) {
         return switch (kind) {
@@ -26,7 +24,6 @@ enum FrameKind {
                     TERM_READING,
                     TERM_CHOICE,
                     NAME_KNOWLEDGE -> ANALYSIS;
-            case DIRECTED_FIX -> NONE;
         };
     }
 
@@ -38,9 +35,6 @@ enum FrameKind {
      */
     @Nullable
     String refusal(final Focus focus) {
-        if (this == NONE) {
-            return "This kind of call is not built by the context builder.";
-        }
         return this == TRANSLATE && focus.items().isEmpty() ? "A translation call needs at least one item." : null;
     }
 }

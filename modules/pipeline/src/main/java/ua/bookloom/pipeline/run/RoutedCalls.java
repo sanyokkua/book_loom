@@ -19,7 +19,7 @@ import ua.bookloom.api.pipeline.JobState;
 /**
  * Makes a run's calls until they answer, routing each error they answer by design D3: a stop or a pause aborting a
  * call, and a provider error the run pauses on, are answered by the job's boundaries, which either end the run or send
- * the call again once the person resumes. A draft, the reviewer, a unit's summary and a proofread window are all routed
+ * the call again once the person resumes. A draft, a unit's summary and a proofread window are all routed
  * here, so they pause and fail alike.
  *
  * <p>Used from the job thread only.
@@ -82,7 +82,7 @@ public final class RoutedCalls {
      * @param segmentId the segment the call is for, put into the log context, or {@code null} for a call of no single
      *     segment
      * @param step names the step for the pause count and for the person: its kind and the segment it is for (a
-     *     chunk's reviewer call is named by the chunk's first segment)
+     *     chunk-wide call is named by the chunk's first segment)
      * @param call the call
      * @param flag turns the error the step last answered into its flagged answer
      * @return the answer, the flagged answer, or how the run ended while the call was routed
@@ -338,8 +338,8 @@ public final class RoutedCalls {
     /**
      * A step the run may give up on: what kind of step it is and the segment it is for.
      *
-     * @param kind the step's kind, such as {@code draft}, {@code review} or {@code decide}
-     * @param segmentId the segment the step is for, the first of its chunk for a chunk's reviewer call
+     * @param kind the step's kind, such as {@code draft}, {@code repair} or {@code decide}
+     * @param segmentId the segment the step is for, the first of its chunk for a chunk-wide call
      */
     public record StepName(String kind, String segmentId) {
 

@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -22,7 +21,6 @@ import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.ProofreadItem;
 import ua.bookloom.api.pipeline.ProofreadWindowRead;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
-import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.ProofreadOutcome;
@@ -51,8 +49,6 @@ final class ActivityLogFeed {
     private static final long SECONDS_PER_MINUTE = 60;
 
     private final Map<String, String> locators = new LinkedHashMap<>();
-    // The round each segment in repair is in, so a call's line can say which round it belongs to.
-    private final Map<String, Integer> rounds = new HashMap<>();
     private boolean pausedOnError;
 
     void segmentStarted(final SegmentStarted event) {
@@ -61,19 +57,15 @@ final class ActivityLogFeed {
         if (locators.size() > MAX_LOCATORS) {
             locators.remove(locators.keySet().iterator().next());
         }
-        // A segment the run left undecided (a stop, a skip mid-round) never clears its round, so bound those too.
-        if (rounds.size() > MAX_LOCATORS) {
-            rounds.clear();
-        }
     }
 
     /**
-     * How many segments' locators and repair rounds are held.
+     * How many segments' locators are held.
      *
-     * @return the larger of the two counts, never more than {@link #MAX_LOCATORS} plus one
+     * @return the count, never more than {@link #MAX_LOCATORS} plus one
      */
     int heldSegments() {
-        return Math.max(locators.size(), rounds.size());
+        return locators.size();
     }
 
     String locatorOf(final String segmentId) {
@@ -86,7 +78,6 @@ final class ActivityLogFeed {
     }
 
     Optional<LogEntry> decided(final SegmentDecided event) {
-        rounds.remove(event.segmentId());
         final String locator = locatorOf(event.segmentId());
         return switch (event.status()) {
             case ACCEPTED -> Optional.of(new LogEntry(LogKind.ACCEPTED, List.of(locator)));
@@ -117,12 +108,9 @@ final class ActivityLogFeed {
 
     LogEntry modelCall(final ModelCallFinished event) {
         final String locator = callLocator(event.segmentIds());
-        final String round =
-                event.segmentId() == null ? "0" : String.valueOf(rounds.getOrDefault(event.segmentId(), 0));
         final List<String> args = List.of(
                 WaitingCall.tokenOf(event.kind()),
                 locator.isEmpty() ? "" : " · " + locator,
-                round,
                 String.valueOf(event.attempt()),
                 clock(event.elapsed()));
         final ErrorCode failure = event.failure();
@@ -141,31 +129,18 @@ final class ActivityLogFeed {
         return LogEntry.of(
                 LogKind.RETRIED,
                 MessageKey.LOG_CALL_FAILED,
-                List.of(args.get(0), args.get(1), args.get(2), args.get(3), args.get(4), failure.name()));
+                List.of(args.get(0), args.get(1), args.get(2), args.get(3), failure.name()));
     }
 
-    // A directed fix repairs a segment and a structure or placeholder repair sends it again, so both are lines every
+    // A repair repairs a segment and a structure or placeholder repair sends it again, so both are lines every
     // reader sees; any other answered call is a technical line.
     private static LogEntry answered(final CallKind kind, final List<String> args) {
         log.trace("an answered {} call is logged", kind);
         return switch (kind) {
-            case DIRECTED_FIX, REPAIR -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
+            case REPAIR -> LogEntry.of(LogKind.REPAIRED, MessageKey.LOG_MODEL_CALL, args);
             case STRUCTURAL_REPAIR -> LogEntry.of(LogKind.RETRIED, MessageKey.LOG_MODEL_CALL, args);
             default -> LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, args);
         };
-    }
-
-    LogEntry roundStarted(final RoundStarted event) {
-        rounds.put(event.segmentId(), event.round());
-        final String finding = event.blockingFinding();
-        return LogEntry.technical(
-                LogKind.MILESTONE,
-                MessageKey.LOG_ROUND,
-                List.of(
-                        locatorOf(event.segmentId()),
-                        String.valueOf(event.round()),
-                        String.valueOf(event.rounds()),
-                        finding == null ? "none" : finding.toLowerCase(Locale.ROOT)));
     }
 
     private static String clock(final Duration elapsed) {

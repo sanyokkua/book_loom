@@ -157,7 +157,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
                 LogEntry.of(
                         LogKind.RETRIED,
                         MessageKey.LOG_CALL_FAILED,
-                        List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout")),
+                        List.of("review", " · ch9 · p02", "1", "1:30", "timeout")),
                 new LogEntry(LogKind.MILESTONE, List.of("paused")));
         openActivityLog();
 

@@ -23,7 +23,7 @@ class TaggedLogTest extends TranslatingScreenTestBase {
 
     private static final String LOCATOR = "ch7 · p42";
 
-    private static final List<String> CALL_ARGS = List.of("review", " · " + LOCATOR, "2", "1", "0:06");
+    private static final List<String> CALL_ARGS = List.of("review", " · " + LOCATOR, "1", "0:06");
 
     static Stream<Arguments> lines() {
         return Stream.concat(visibleLines(), technicalLines());
@@ -37,8 +37,8 @@ class TaggedLogTest extends TranslatingScreenTestBase {
                         LogEntry.of(
                                 LogKind.REPAIRED,
                                 MessageKey.LOG_MODEL_CALL,
-                                List.of("directed_fix", " · " + LOCATOR, "0", "1", "0:06")),
-                        "fix   ↺ Fix · ch7 · p42 · attempt 1 · 0:06"),
+                                List.of("repair", " · " + LOCATOR, "1", "0:06")),
+                        "fix   ↺ Repair · ch7 · p42 · attempt 1 · 0:06"),
                 Arguments.of(
                         new LogEntry(LogKind.MEMORY, List.of("reuse", LOCATOR)),
                         "mem   ≡ Segment ch7 · p42 was reused from the translation memory."),
@@ -47,8 +47,8 @@ class TaggedLogTest extends TranslatingScreenTestBase {
                         LogEntry.of(
                                 LogKind.RETRIED,
                                 MessageKey.LOG_CALL_FAILED,
-                                List.of("directed_fix", " · " + LOCATOR, "0", "2", "1:30", "timeout")),
-                        "retry ↻ Fix · ch7 · p42 · attempt 2 · 1:30 · failed: timeout"),
+                                List.of("repair", " · " + LOCATOR, "2", "1:30", "timeout")),
+                        "retry ↻ Repair · ch7 · p42 · attempt 2 · 1:30 · failed: timeout"),
                 Arguments.of(
                         new LogEntry(LogKind.RETRIED, List.of("resume", "")),
                         "retry ↻ The run resumed after a provider error."),
@@ -59,14 +59,9 @@ class TaggedLogTest extends TranslatingScreenTestBase {
     }
 
     private static Stream<Arguments> technicalLines() {
-        return Stream.of(
-                Arguments.of(
-                        LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, CALL_ARGS),
-                        "info  ◆ Review · ch7 · p42 · round 2 · attempt 1 · 0:06"),
-                Arguments.of(
-                        LogEntry.technical(
-                                LogKind.MILESTONE, MessageKey.LOG_ROUND, List.of(LOCATOR, "1", "3", "meaning")),
-                        "info  ◆ Segment ch7 · p42 entered repair round 1 of 3 to fix “meaning”."));
+        return Stream.of(Arguments.of(
+                LogEntry.technical(LogKind.MILESTONE, MessageKey.LOG_MODEL_CALL, CALL_ARGS),
+                "info  ◆ Review · ch7 · p42 · attempt 1 · 0:06"));
     }
 
     private void showLog(final LogEntry... entries) {

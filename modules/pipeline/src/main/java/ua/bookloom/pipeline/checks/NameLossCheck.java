@@ -19,7 +19,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.qa.CheckLevel;
 
 /**
- * A glossary name the source holds and the target no longer has, found while the segment is drafted so a directed fix can
+ * A glossary name the source holds and the target no longer has, found while the segment is drafted so the one repair can
  * mend it. When exactly one capitalised word of the target is the rendering written another way (Майлс for Майлз) the
  * finding names that word and the exact replacement; otherwise it names the lost rendering. Soft: a sentence may
  * legitimately turn a name into a pronoun, so the finding earns one fix and never flags the segment. A word that is

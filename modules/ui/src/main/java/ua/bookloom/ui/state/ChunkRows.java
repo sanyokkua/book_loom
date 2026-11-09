@@ -26,8 +26,8 @@ import ua.bookloom.api.project.SegmentPath;
 /**
  * The rows of the live card: every segment the run has started, in book order, each with how far it has got, and a
  * row for each chapter summary the run kept, after its chapter's rows. The
- * chunk being translated is last and earlier chunks stay above it as history, so a reviewed chunk whose check decides
- * all its drafts at once never empties the card. A directed fix or a review call of one segment never adds a
+ * chunk being translated is last and earlier chunks stay above it as history, so a chunk whose check decides
+ * all its drafts at once never empties the card. A repair or a proofread call of one segment never adds a
  * row; only a draft call adds a segment the run did not announce. The history is the run's own: a new run session
  * starts with an empty one.
  *

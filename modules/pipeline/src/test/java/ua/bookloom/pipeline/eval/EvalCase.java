@@ -3,11 +3,10 @@ package ua.bookloom.pipeline.eval;
 import java.util.List;
 import java.util.Objects;
 import ua.bookloom.api.project.NamePolicy;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.TermType;
 
 /**
- * One prompt-eval case: a draft, a directed fix, a review pair or a batch of glossary names, each sent through its
+ * One prompt-eval case: a draft, a repair or a batch of glossary names, each sent through its
  * production prompt builder.
  */
 sealed interface EvalCase {
@@ -90,24 +89,6 @@ sealed interface EvalCase {
      * @param expect what the repaired reply must show
      */
     record Repair(String name, RepairStep step, String masked, String rejected, Expect expect) implements EvalCase {}
-
-    /**
-     * A directed fix of a rejected target.
-     *
-     * @param name the case name
-     * @param masked the masked source
-     * @param rejected the rejected target to fix
-     * @param findings the findings the fix must address
-     * @param expect what the reply must show
-     */
-    record Fix(String name, String masked, String rejected, List<QaFinding> findings, Expect expect)
-            implements EvalCase {
-
-        /** Copies the findings. */
-        public Fix {
-            findings = List.copyOf(findings);
-        }
-    }
 
     /**
      * A batch of glossary names given suggested targets under one name policy; each name becomes its own report row.

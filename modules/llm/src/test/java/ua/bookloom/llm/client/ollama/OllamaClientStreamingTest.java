@@ -243,7 +243,7 @@ class OllamaClientStreamingTest {
                 cap,
                 cap,
                 null,
-                CallKind.DIRECTED_FIX);
+                CallKind.REPAIR);
     }
 
     private OllamaClient client(Duration requestTimeout) {

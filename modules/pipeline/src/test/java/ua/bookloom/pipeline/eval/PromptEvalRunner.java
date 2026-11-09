@@ -17,19 +17,15 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.context.TranslateContext;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
-import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Repair;
 import ua.bookloom.pipeline.eval.EvalCase.RepairStep;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
-import ua.bookloom.pipeline.heal.DirectedFix;
-import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.PromptRequests;
 
 /**
@@ -44,9 +40,7 @@ final class PromptEvalRunner {
     private final ModelCalls calls;
     private final String sourceLanguage;
     private final String targetLanguage;
-    private final PromptTemplates templates = EvalVariants.templates();
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
-    private final DirectedFix directedFix = new DirectedFix(templates, parser);
     private final int window;
 
     PromptEvalRunner(final ModelCalls calls) {
@@ -89,7 +83,6 @@ final class PromptEvalRunner {
         log.info("Prompt eval case {}", evalCase.name());
         return switch (evalCase) {
             case Draft draft -> List.of(draft(draft));
-            case Fix fix -> List.of(fix(fix));
             case Repair repair -> List.of(repair(repair));
             case Suggest suggest ->
                 SuggestEval.rows(
@@ -156,32 +149,6 @@ final class PromptEvalRunner {
             return failed(name, kind, "unparsed: " + content, expect);
         }
         return measured(project, name, kind, shown, parsed.translation(), expect);
-    }
-
-    private EvalRow fix(final Fix fix) {
-        final EvalProject project = project(fix.masked());
-        final Result<RepairReply> reply = directedFix.fix(
-                project.segment(0),
-                project.frame(),
-                project.mask(0).maskedText(),
-                fix.rejected(),
-                fix.findings(),
-                calls);
-        if (reply.isErr()) {
-            return failed(
-                    fix.name(),
-                    "fix",
-                    "call failed: " + Objects.requireNonNull(reply.error()).code(),
-                    fix.expect());
-        }
-        return switch (Objects.requireNonNull(reply.data())) {
-            case RepairReply.Rewritten rewritten ->
-                measured(project, fix.name(), "fix", fix.masked(), rewritten.maskedTarget(), fix.expect());
-            case RepairReply.Malformed malformed ->
-                failed(fix.name(), "fix", "unparsed: " + malformed.diagnostic(), fix.expect());
-            case RepairReply.FlagNow flagNow ->
-                failed(fix.name(), "fix", "flagged: " + flagNow.error().code(), fix.expect());
-        };
     }
 
     private EvalRow measured(

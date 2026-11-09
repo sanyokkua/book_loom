@@ -1,5 +1,5 @@
 /**
- * The acceptance rule, the per-chunk quality loop, and the self-heal calls that repair one failing segment.
+ * The acceptance rule, the per-chunk quality loop, and the one repair of a failing segment.
  *
  * <p>{@link ua.bookloom.pipeline.heal.AcceptanceRule} decides whether a drafted, edited or repaired target may be
  * accepted — hard gates pass and no check blocks; confidence only orders segments.

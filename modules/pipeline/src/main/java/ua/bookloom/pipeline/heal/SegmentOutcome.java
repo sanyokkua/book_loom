@@ -24,7 +24,7 @@ import ua.bookloom.api.project.SegmentPath;
  * @param judgeScore the score of the verdict that last decided this segment, or {@code null} when the judge was
  *     off, never ran for it, or that verdict was unreadable
  * @param findings every finding recorded against this segment, de-duplicated
- * @param path {@link SegmentPath#REPAIRED} when the one repair's text (or the reviewer's change) stays on an accepted
+ * @param path {@link SegmentPath#REPAIRED} when the one repair's text stays on an accepted
  *     segment, or a flagged segment was given the repair; {@link SegmentPath#DRAFT} otherwise — accepted as drafted,
  *     flagged at once by the draft step, or flagged by a review retry, which makes no repair
  * @param flagReason the error a {@code FlagNow} self-heal reply or a {@code FlaggedAtOnce} draft outcome flagged

@@ -149,21 +149,6 @@ class ContextBuilderTest {
     }
 
     @Test
-    void plan_directedFixKind_validationError() {
-        final RunFrame frame = FrameFixtures.frame(BOOK);
-
-        final Result<PromptPlan> plan = BUILDER.plan(
-                CallKind.DIRECTED_FIX,
-                FrameFixtures.focus(NARRATION),
-                FrameFixtures.emptyMap(frame.brief()),
-                frame,
-                ModelProfile.defaults());
-
-        assertThat(plan.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(plan.error()).code()).isEqualTo(ErrorCode.validation);
-    }
-
-    @Test
     void plan_draftWithoutItems_validationError() {
         final RunFrame frame = FrameFixtures.frame(BOOK);
 
