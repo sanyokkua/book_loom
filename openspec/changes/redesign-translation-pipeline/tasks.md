@@ -1847,7 +1847,7 @@ database is set aside once.
   - **Test first:** for any `NeverWorse` tightening, a red `NeverWorseTest` case for the change it now vetoes.
   - **Done when:** the gate holds and is recorded; any tightening is green in the module check.
 
-- [ ] 14.4 Delete Max's backward revision and the export consistency pass and move their survivors into
+- [x] 14.4 Delete Max's backward revision and the export consistency pass and move their survivors into
   `pipeline.proofread`, porting the guard cases of the deleted tests, so one proofreading path remains. → :pipeline
   - **Split (decided at 14.4a):** 14.4a runs before 14.5 and 14.4b after it, because `ExportJobImpl`, `ExportServiceImpl`,
     `ExportParts`, `QualityReport`, `SideFiles`, `ExportSummaries`, `ExportFinish` and `ConsistencySection` still call
