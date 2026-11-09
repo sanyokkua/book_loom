@@ -1,61 +1,44 @@
 package ua.bookloom.pipeline.export;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.pipeline.ConsistencyChecks;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
+import ua.bookloom.api.pipeline.GenderWait;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 
-/** The report's consistency-pass section: what the model steps tried, kept and refused, and each change by locator. */
+/**
+ * The report's proofread section: how many segments the Proofread stage re-read, how many still wait on the person,
+ * and each character whose gender holds segments back — counted from the stores, since the export calls no model.
+ */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ConsistencySection {
 
     /**
-     * Words the pass's outcome.
+     * Words the proofread summary.
      *
-     * @param pass what the pass did, or null when it was not run
-     * @return Markdown lines; a sentence when the pass did not run or changed and tried nothing
+     * @param summary the non-null summary read from the stores
+     * @return Markdown lines: the two counts, then a line per kind of gender wait when one holds a segment back
      */
-    static String of(@Nullable final ConsistencyReport pass) {
-        if (pass == null) {
-            return "The consistency pass was not run.\n";
-        }
-        final List<String> lines = new ArrayList<>(counts(pass.checks(), pass.neighbourFixes()));
-        pass.notes().stream().map(note -> "- " + note).forEach(lines::add);
-        return lines.isEmpty()
-                ? "The consistency pass changed nothing.\n"
-                : lines.stream().map(line -> line + "\n").collect(Collectors.joining());
+    static String of(final ProofreadSummary summary) {
+        final StringBuilder text = new StringBuilder()
+                .append("- Re-read by the Proofread stage: ")
+                .append(summary.reRead())
+                .append('\n')
+                .append("- Still waiting on you: ")
+                .append(summary.waiting())
+                .append('\n');
+        text.append(waits("- Waiting on a gender: ", summary.awaitingGender(), false));
+        text.append(waits("- Waiting on a suggested gender to confirm: ", summary.awaitingGender(), true));
+        return text.toString();
     }
 
-    private static List<String> counts(final ConsistencyChecks checks, final int neighbourFixes) {
-        final List<String> lines = new ArrayList<>();
-        if (checks.retriedImproved() > 0) {
-            lines.add("- Drafted again and replaced: " + checks.retriedImproved());
-        }
-        if (checks.retriedKept() > 0) {
-            lines.add("- Drafted again, old text kept: " + checks.retriedKept());
-        }
-        if (neighbourFixes + checks.neighbourUnchanged() > 0) {
-            lines.add("- Neighbour check: fixed " + neighbourFixes + ", unchanged " + checks.neighbourUnchanged());
-        }
-        if (checks.refusedTotal() > 0) {
-            lines.add("- Answers refused: " + checks.refusedTotal() + " (" + rules(checks.refused()) + ")");
-        }
-        if (checks.skipped() > 0) {
-            lines.add("- Skipped, the call failed: " + checks.skipped());
-        }
-        return lines;
-    }
-
-    private static String rules(final Map<String, Integer> refused) {
-        return refused.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(rule -> rule.getKey() + " " + rule.getValue())
+    private static String waits(final String label, final List<GenderWait> waits, final boolean suggested) {
+        final String named = waits.stream()
+                .filter(wait -> wait.suggested() == suggested)
+                .map(wait -> wait.character() + " " + wait.segments())
                 .collect(Collectors.joining(", "));
+        return named.isEmpty() ? "" : label + named + "\n";
     }
 }

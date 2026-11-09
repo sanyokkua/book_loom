@@ -26,6 +26,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
@@ -48,7 +49,6 @@ import ua.bookloom.pipeline.export.BookExporterTestSupport.BlockingClosePort;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.ScriptedMoveOperation;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /** The export service and job over the real document module and the in-memory repositories. */
@@ -245,10 +245,7 @@ class ExportServiceImplTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final BlockingClosePort port = new BlockingClosePort(TestDocuments.documents(), 2);
         final ExportServiceImpl blocking = new ExportServiceImpl(
-                injector.getInstance(RunStores.class),
-                port,
-                injector.getInstance(ConsistencyPass.class),
-                Clock.systemUTC());
+                injector.getInstance(RunStores.class), port, injector.getInstance(DeferralRepository.class));
         final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
         workers = Executors.newSingleThreadExecutor();
 

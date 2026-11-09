@@ -92,7 +92,7 @@ class ExportJobSideFilesTest {
     }
 
     // The report states the counts — the untranslated book title and page title are pending beside "The end." — names
-    // each flagged segment by its locator with its findings, and says whether the consistency pass ran.
+    // each flagged segment by its locator with its findings, and what the Proofread stage re-read.
     @Test
     void run_reportChosen_writesCountsAndFlaggedSegments() {
         final String id = frankenstein();
@@ -106,7 +106,8 @@ class ExportJobSideFilesTest {
                         "- Pending, written in the source language: 3",
                         "- Flagged, written with the machine translation: 1",
                         "- ch1 · p02: omission (medium) — a clause is missing",
-                        "The consistency pass was not run.");
+                        "## Proofread",
+                        "- Re-read by the Proofread stage: 0");
     }
 
     // IF the report left out who translated the book and for how long, THEN a person comparing two exports of one book

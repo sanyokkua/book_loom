@@ -14,16 +14,34 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.proofread.DeferralRegister;
 
 /**
  * What the export writes into the book, over generated books of every format: each segment's effective target laid
@@ -224,6 +242,81 @@ class ExportJobImplTest {
         ok(fixture.export(request(id, tempDir.resolve("b.epub"), false)));
 
         assertThat(entries(tempDir.resolve("b.epub"))).isEqualTo(entries(tempDir.resolve("a.epub")));
+    }
+
+    // A provider that answers nothing never stops a book from being written: the export asks it nothing, not even
+    // about a flagged segment.
+    @Test
+    void export_providerDown_writesFile() {
+        final String id = markdown("He went away.");
+        fixture.flag(id, "Book.md:0", "Він пішов геть.");
+        final AtomicInteger asked = new AtomicInteger();
+        final ChatModel down = request -> {
+            asked.incrementAndGet();
+            return Result.err(AppError.of(ErrorCode.unreachable, "Provider down", "Nothing answers."));
+        };
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of(), true), down))
+                .run());
+
+        assertThat(read(destination)).isEqualTo("Він пішов геть.");
+        assertThat(asked).hasValue(0);
+    }
+
+    // A locked name renamed after the run is the Proofread stage's business, not the export's: the file keeps the
+    // stored text and no record changes.
+    @Test
+    void export_glossaryChangedAfterRun_notApplied() {
+        final String id = markdown("Justine went away.");
+        final GlossaryEntry before = justine(id, "Джастін");
+        ok(fixture.glossary().add(before));
+        fixture.accept(id, "Book.md:0", "Джастін пішла.");
+        ok(fixture.glossary().update(justine(id, "Жустіна")));
+        DeferralRegister.termChanged(before, justine(id, "Жустіна"), fixture.records(id))
+                .forEach(deferral -> ok(fixture.deferrals().add(deferral)));
+        final List<SegmentRecord> stored = fixture.records(id);
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        ok(fixture.export(new ExportRequest(id, destination, false, Set.of(), true)));
+
+        assertThat(read(destination)).isEqualTo("Джастін пішла.");
+        assertThat(fixture.records(id)).isEqualTo(stored);
+    }
+
+    // A segment that waits on a character's gender is named in the report, though nothing ran before writing.
+    @Test
+    void run_openGenderDeferrals_summaryNamesWaitingCharacter() {
+        final String id = markdown("Justine went away.");
+        fixture.accept(id, "Book.md:0", "Джастін пішла.");
+        ok(fixture.deferrals()
+                .add(new Deferral("d1", id, "Book.md:0", DeferralReason.GENDER_UNKNOWN, "Justine", null, null, null)));
+
+        final ExportReport report = ok(fixture.export(request(id, tempDir.resolve("Book.uk.md"), false)));
+
+        assertThat(report.consistency().awaitingGender()).containsExactly(new GenderWait("Justine", 1));
+        assertThat(report.consistency().openGenderDeferrals()).isEqualTo(1);
+    }
+
+    // Recording the export belongs to the window: the engine's job leaves the project's stored record alone.
+    @Test
+    void run_completedExport_recordsNothingInTheProjectStore() {
+        final String id = markdown("He went away.");
+
+        ok(fixture.export(request(id, tempDir.resolve("Book.uk.md"), false)));
+
+        assertThat(ok(fixture.projects().lastExport(id))).isEmpty();
+    }
+
+    private static GlossaryEntry justine(final String projectId, @Nullable final String target) {
+        return GlossaryEntry.of(
+                GlossaryIds.of(projectId, "Justine"),
+                projectId,
+                "Justine",
+                target,
+                TermType.CHARACTER,
+                Gender.FEMALE,
+                target != null);
     }
 
     private String markdown(final String content) {

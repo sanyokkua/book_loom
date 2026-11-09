@@ -17,17 +17,17 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
 
 /**
  * The report side file: the counts the export reports, every flagged segment named by its locator with its findings,
- * and the consistency pass's notes — what a person reads to decide where to look before sharing the book.
+ * and what the Proofread stage re-read and left waiting — what a person reads to decide where to look before sharing the book.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -44,7 +44,7 @@ final class QualityReport {
      *
      * @param title the non-null written book's file name
      * @param sources the non-null parts of the export the report reads: its counts, the book as written, the stored
-     *     records, the kept auxiliary kinds, what the consistency pass changed (or null when it was not run), the
+     *     records, the kept auxiliary kinds, what the Proofread stage re-read and left waiting, the
      *     accepted segments the final audit doubts, the policy for segments without an accepted target, and the
      *     project's last run (or null when it never ran)
      * @return the report's Markdown text
@@ -52,7 +52,7 @@ final class QualityReport {
     static String of(final String title, final SideFiles.Sources sources) {
         final ExportCounts counts = Objects.requireNonNull(sources.counts(), "counts");
         final ExportPolicy policy = Objects.requireNonNull(sources.policy(), "policy");
-        final ConsistencyReport pass = sources.pass();
+        final ProofreadSummary summary = sources.summary();
         final Document book = sources.targets().document();
         final String text = "# Export report: " + title + "\n\n"
                 + counts(counts)
@@ -64,9 +64,14 @@ final class QualityReport {
                 + flagged(book, sources.records(), sources.keptKinds())
                 + "\n## Suspicious accepted segments\n\n"
                 + suspicious(sources.suspicious())
-                + "\n## Consistency notes\n\n"
-                + ConsistencySection.of(pass);
-        log.debug("Quality report built title={} length={} consistencyPass={}", title, text.length(), pass != null);
+                + "\n## Proofread\n\n"
+                + ConsistencySection.of(summary);
+        log.debug(
+                "Quality report built title={} length={} proofreadReRead={} proofreadWaiting={}",
+                title,
+                text.length(),
+                summary.reRead(),
+                summary.waiting());
         return text;
     }
 

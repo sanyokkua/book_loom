@@ -9,13 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
 
 /**
  * Decides which side files an export writes once the book is down and builds their text: the ones the person chose,
@@ -32,7 +32,7 @@ final class ExportFinish {
             EffectiveTargets targets,
             Fallbacks fallbacks,
             List<GlossaryEntry> glossary,
-            @Nullable ConsistencyReport pass,
+            ProofreadSummary summary,
             @Nullable RunRecord lastRun) {}
 
     /**
@@ -70,7 +70,7 @@ final class ExportFinish {
                         book.fallbacks().stored(),
                         kept,
                         fallen.counts(),
-                        book.pass(),
+                        book.summary(),
                         book.glossary(),
                         suspicious,
                         policy,

@@ -17,13 +17,13 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.GlossaryCsv;
-import ua.bookloom.pipeline.revision.ConsistencyReport;
 
 /**
  * The side files an export writes beside the book, each named through {@link SideFile#pathBeside}. Their contents are
@@ -43,7 +43,7 @@ final class SideFiles {
      * @param records the project's stored records
      * @param keptKinds the auxiliary kinds the brief keeps as source
      * @param counts the counts the export reports
-     * @param pass what the consistency pass changed, or null when it was not run
+     * @param summary what the Proofread stage re-read and what still waits, read from the stores
      * @param glossary the project's glossary entries
      * @param suspicious the accepted segments the final audit doubts
      * @param policy how each segment without an accepted target was written
@@ -55,7 +55,7 @@ final class SideFiles {
             List<SegmentRecord> records,
             Set<SegmentKind> keptKinds,
             ExportCounts counts,
-            @Nullable ConsistencyReport pass,
+            ProofreadSummary summary,
             List<GlossaryEntry> glossary,
             List<SuspiciousSegment> suspicious,
             ExportPolicy policy,
@@ -66,6 +66,7 @@ final class SideFiles {
             Objects.requireNonNull(destination, "destination");
             Objects.requireNonNull(targets, "targets");
             Objects.requireNonNull(counts, "counts");
+            Objects.requireNonNull(summary, "summary");
             Objects.requireNonNull(policy, "policy");
             records = List.copyOf(records);
             keptKinds = Set.copyOf(keptKinds);

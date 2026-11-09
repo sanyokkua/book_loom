@@ -100,7 +100,8 @@ class BookRunnerOfflineTest {
         assertThat(json.get("errors")).isEmpty();
         assertThat(summary.errors()).isEmpty();
         assertThat(summary.calls().translation()).isPositive();
-        assertThat(summary.calls().consistencyPass()).isPositive();
+        // The export calls no model, so the second export asked for the pass still makes no call.
+        assertThat(summary.calls().consistencyPass()).isZero();
         assertThat(summary.minutes()).isNotNegative();
     }
 }

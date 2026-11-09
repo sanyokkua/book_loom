@@ -10,7 +10,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -45,7 +44,6 @@ import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -104,11 +102,7 @@ final class ExportJobFixture {
     }
 
     ExportServiceImpl serviceOver(final DocumentPort port) {
-        return new ExportServiceImpl(
-                injector.getInstance(RunStores.class),
-                port,
-                injector.getInstance(ConsistencyPass.class),
-                Clock.systemUTC());
+        return new ExportServiceImpl(injector.getInstance(RunStores.class), port, deferrals());
     }
 
     /** Imports {@code source} and briefs it from {@code sourceLanguage} to Ukrainian with the default switches. */

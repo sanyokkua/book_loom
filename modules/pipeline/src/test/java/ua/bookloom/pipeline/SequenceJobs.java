@@ -141,8 +141,7 @@ public final class SequenceJobs {
     /** The production export service over the prepared book's own stores, as the Export screen reaches it. */
     public static ExportService exportService(final Prepared prepared) {
         final TestProject project = prepared.project;
-        return new ExportServiceImpl(
-                project.stores(), project.documents(), consistencyPass(prepared), Clock.systemUTC());
+        return new ExportServiceImpl(project.stores(), project.documents(), project.deferrals());
     }
 
     /** The brief stored for the prepared book, as the window shows it. */

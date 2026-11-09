@@ -1,8 +1,6 @@
 package ua.bookloom.pipeline.export;
 
 import com.google.inject.Inject;
-import java.time.Clock;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -13,44 +11,33 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.CallLedger;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ModelProfile;
-import ua.bookloom.api.pipeline.CallSnapshotUpdated;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportOpenWork;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.pipeline.context.ModelWindows;
-import ua.bookloom.pipeline.project.SegmentLocators;
-import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
-import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
  * Refuses a destination the stored project's source cannot be written to, then hands back the job that writes it.
  * The checks run here, before a job exists, so a wrong file type or an alias of the source never reaches a write; the
- * occupied book and side-file paths are the job's own first step, because a file can appear between the two.
+ * occupied book and side-file paths are the job's own first step, because a file can appear between the two. No
+ * export calls a model: writing a book never waits on one.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ExportServiceImpl implements ExportService {
 
-    private static final String UNKNOWN_LANGUAGE = "und";
-
     private final RunStores stores;
     private final DocumentPort documents;
-    private final ConsistencyPass consistencyPass;
-    private final Clock clock;
+    private final DeferralRepository deferrals;
     private final CallLedger ledger;
 
-    /** An export service whose consistency pass's calls are counted nowhere (tests). */
-    public ExportServiceImpl(
-            final RunStores stores,
-            final DocumentPort documents,
-            final ConsistencyPass consistencyPass,
-            final Clock clock) {
-        this(stores, documents, consistencyPass, clock, CallLedger.none());
+    /** An export service whose calls are counted nowhere (tests). */
+    public ExportServiceImpl(final RunStores stores, final DocumentPort documents, final DeferralRepository deferrals) {
+        this(stores, documents, deferrals, CallLedger.none());
     }
 
     @Override
@@ -64,12 +51,38 @@ public final class ExportServiceImpl implements ExportService {
         return newExportWith(request, model, ExportMoveOperation.nio(), progress);
     }
 
+    @Override
+    public Result<ExportOpenWork> openWork(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        try {
+            log.debug("export openWork project={}", projectId);
+            return stores.projects().find(projectId).flatMap(found -> openWorkOf(projectId, found));
+        } catch (Exception cause) {
+            return Result.err(ExportJobImpl.internalError("read the open work", cause));
+        }
+    }
+
     /** The publication move is a seam so a test can script its failure. */
     Result<ExportJob> newExportWith(
             final ExportRequest request, @Nullable final ChatModel model, final ExportMoveOperation moves) {
         return newExportWith(request, model, moves, ExportProgressListener.NONE);
     }
 
+    private Result<ExportOpenWork> openWorkOf(final String projectId, final Optional<Project> found) {
+        final Document opened = stores.openProjects().get(projectId);
+        if (found.isEmpty() || opened == null) {
+            log.debug(
+                    "export openWork project={} known={} open={}: nothing to read",
+                    projectId,
+                    found.isPresent(),
+                    opened != null);
+            return Result.ok(ExportOpenWork.NONE);
+        }
+        return ProofreadInputs.read(parts(ExportMoveOperation.nio()), found.get(), opened)
+                .map(inputs -> OpenWork.of(inputs.book(), inputs.records(), inputs.open()));
+    }
+
+    // The model parameter outlives the pass it fed until the Export screen stops passing one.
     private Result<ExportJob> newExportWith(
             final ExportRequest request,
             @Nullable final ChatModel model,
@@ -79,13 +92,12 @@ public final class ExportServiceImpl implements ExportService {
         Objects.requireNonNull(progress, "progress");
         try {
             log.debug(
-                    "newExport project={} destination={} overwrite={} sideFiles={} consistencyPass={} withModel={}",
+                    "newExport project={} destination={} overwrite={} sideFiles={}",
                     request.projectId(),
                     request.destination(),
                     request.overwrite(),
-                    request.sideFiles(),
-                    request.consistencyPass(),
-                    model != null);
+                    request.sideFiles());
+            log.debug("export model ignored withModel={}", model != null);
             final Result<Optional<Project>> found = stores.projects().find(request.projectId());
             if (found.isErr()) {
                 return Result.err(Objects.requireNonNull(found.error(), "error"));
@@ -94,7 +106,7 @@ public final class ExportServiceImpl implements ExportService {
             if (project.isEmpty()) {
                 return Result.err(ExportJobImpl.unknownProject(request.projectId()));
             }
-            return prepare(request, project.get(), model, moves, progress);
+            return prepare(request, project.get(), moves, progress);
         } catch (Exception cause) {
             return Result.err(ExportJobImpl.internalError("prepare the export", cause));
         }
@@ -103,50 +115,25 @@ public final class ExportServiceImpl implements ExportService {
     private Result<ExportJob> prepare(
             final ExportRequest request,
             final Project project,
-            @Nullable final ChatModel model,
             final ExportMoveOperation moves,
             final ExportProgressListener progress) {
         final Result<Boolean> checked = DestinationChecks.check(project.source(), request.destination());
         if (checked.isErr()) {
             return Result.err(Objects.requireNonNull(checked.error(), "error"));
         }
-        // The pass's calls reach the model the person chose; without one, only the name sweep runs.
-        final ModelCalls calls = model == null ? null : shownCalls(project, model, progress);
-        final ExportParts parts = new ExportParts(
+        return Result.ok(new ExportJobImpl(request, parts(moves), progress, ledger));
+    }
+
+    private ExportParts parts(final ExportMoveOperation moves) {
+        return new ExportParts(
                 stores.projects(),
                 stores.segments(),
                 stores.openProjects(),
                 documents,
                 moves,
-                consistencyPass,
+                deferrals,
                 stores.glossary(),
-                stores.runs());
-        return Result.ok(new ExportJobImpl(
-                request, parts, calls, progress, ledger, model == null ? ModelProfile.defaults() : model.profile()));
-    }
-
-    // The pass's calls are timed and shown as a run's are: each described call reaches the listener as a snapshot.
-    private ModelCalls shownCalls(final Project project, final ChatModel model, final ExportProgressListener progress) {
-        final Document opened = stores.openProjects().get(project.id());
-        final String target = Objects.requireNonNullElse(project.brief().targetLanguage(), UNKNOWN_LANGUAGE);
-        log.debug(
-                "export calls are shown project={} bookOpen={} targetLanguage={}",
-                project.id(),
-                opened != null,
-                target);
-        return new JobModelCalls(
-                onSent -> {
-                    onSent.run();
-                    return model;
-                },
-                event -> {
-                    if (event instanceof CallSnapshotUpdated(var snapshot)) {
-                        progress.onCall(snapshot);
-                    }
-                },
-                clock,
-                target,
-                ModelWindows.of(model, null),
-                opened == null ? Map.of() : SegmentLocators.of(opened));
+                stores.runs(),
+                stores.lexicon());
     }
 }
