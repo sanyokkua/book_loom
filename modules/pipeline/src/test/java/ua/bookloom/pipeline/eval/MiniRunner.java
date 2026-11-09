@@ -225,15 +225,16 @@ final class MiniRunner {
     // gender, or the narrator's checkable one, as the Proofread stage reads them): the gate of design D25 row 14 wants
     // none of those on mini-ru (arm 7b).
     private static void logOpenDeferrals(final Prepared prepared) {
-        final List<Deferral> open =
-                Objects.requireNonNull(prepared.deferrals().open(prepared.projectId()).data(), "open deferrals");
+        final List<Deferral> open = Objects.requireNonNull(
+                prepared.deferrals().open(prepared.projectId()).data(), "open deferrals");
         final Narrator narrator = Objects.requireNonNull(
                         prepared.stores().projects().find(prepared.projectId()).data(), "project")
                 .orElseThrow()
                 .brief()
                 .narrator();
         final Map<String, GlossaryEntry> byTerm = new LinkedHashMap<>();
-        Objects.requireNonNull(prepared.stores().glossary().all(prepared.projectId()).data(), "glossary")
+        Objects.requireNonNull(
+                        prepared.stores().glossary().all(prepared.projectId()).data(), "glossary")
                 .forEach(entry -> byTerm.putIfAbsent(entry.term(), entry));
         final List<Deferral> arrived = open.stream()
                 .filter(deferral -> hasArrived(deferral, byTerm, narrator))

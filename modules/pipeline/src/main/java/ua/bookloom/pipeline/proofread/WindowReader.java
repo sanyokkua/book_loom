@@ -138,6 +138,14 @@ final class WindowReader {
      * @return empty once the window was decided or left unread, or how a stop, a failure or a routed error ended it
      */
     Optional<RunEnd> read(final Question question, final WindowReading reading, final Supplier<JobProgress> progress) {
+        return read(question, reading, progress, true);
+    }
+
+    private Optional<RunEnd> read(
+            final Question question,
+            final WindowReading reading,
+            final Supplier<JobProgress> progress,
+            final boolean mayRedo) {
         final ProofreadWindow window = question.window();
         final String first = window.focusIds().getFirst();
         steps.started(StepKind.PROOFREAD, STEP_LABEL, question.key(), first);
@@ -154,8 +162,60 @@ final class WindowReader {
                 yield Optional.of(end);
             }
             case Step.Done<ProofreadCall.Answer>(final ProofreadCall.Answer answer) ->
-                decided(question, answer, reading);
+                answered(question, answer, reading, progress, mayRedo);
         };
+    }
+
+    // A call may wait through a whole pause, and the person may act on a segment meanwhile: the answer was written for
+    // text that is gone, so it is stored for none. The window is asked once more from the text now stored; if that
+    // changes too, the window is left unread and the person's action stands.
+    private Optional<RunEnd> answered(
+            final Question question,
+            final ProofreadCall.Answer answer,
+            final WindowReading reading,
+            final Supplier<JobProgress> progress,
+            final boolean mayRedo) {
+        if (!answer.readable() || !changedMeanwhile(question.window(), reading)) {
+            return decided(question, answer, reading);
+        }
+        if (mayRedo) {
+            log.debug(
+                    "Proofread window {} redone: a segment changed while its call waited",
+                    question.window().label());
+            steps.ended(StepKind.PROOFREAD, question.key(), StepResult.FAILED);
+            return read(question(question.round(), question.window(), reading), reading, progress, false);
+        }
+        log.warn(
+                "Proofread window {} left unread: a segment changed during both calls",
+                question.window().label());
+        steps.ended(StepKind.PROOFREAD, question.key(), StepResult.FAILED);
+        return Optional.empty();
+    }
+
+    // Refreshes the reading's copy of every changed focus record, so a redone question is built from what is stored.
+    private boolean changedMeanwhile(final ProofreadWindow window, final WindowReading reading) {
+        boolean changed = false;
+        for (final String id : window.focusIds()) {
+            final SegmentRecord held = reading.record(id);
+            final Result<Optional<SegmentRecord>> found = stores.segments().find(settings.projectId(), id);
+            final SegmentRecord now = found.isErr()
+                    ? held
+                    : Objects.requireNonNull(found.data(), "found").orElse(held);
+            if (!readsAs(held, now)) {
+                log.debug("Proofread segment {} changed while its window's call waited", id);
+                reading.records().put(id, now);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static boolean readsAs(final SegmentRecord held, final SegmentRecord now) {
+        return held.status() == now.status()
+                && Objects.equals(held.machineTarget(), now.machineTarget())
+                && Objects.equals(held.maskedMachineTarget(), now.maskedMachineTarget())
+                && Objects.equals(held.userTarget(), now.userTarget())
+                && Objects.equals(held.maskedUserTarget(), now.maskedUserTarget());
     }
 
     private Result<ProofreadCall.Answer> call(final Question question, final WindowReading reading) {

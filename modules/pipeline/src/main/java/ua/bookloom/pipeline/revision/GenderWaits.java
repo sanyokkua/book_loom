@@ -22,16 +22,17 @@ import ua.bookloom.api.project.GlossaryEntry;
  * @param unknownSegments the distinct segments that wait on no gender, or on the narrator's
  */
 @Slf4j
-record GenderWaits(List<GenderWait> characters, int suggestedSegments, int unknownSegments) {
+public record GenderWaits(List<GenderWait> characters, int suggestedSegments, int unknownSegments) {
 
-    GenderWaits {
+    /** Copies the list. */
+    public GenderWaits {
         characters = List.copyOf(Objects.requireNonNull(characters, "characters"));
     }
 
     // A segment naming two waiting characters is one waiting segment in the totals, yet counts for each character,
     // because setting either one is a reason to look at it. A character with only a suggested gender is a suggestion
     // to confirm; one the glossary does not hold, or holds with none, is unknown.
-    static GenderWaits of(final List<Deferral> open, final List<GlossaryEntry> glossary) {
+    public static GenderWaits of(final List<Deferral> open, final List<GlossaryEntry> glossary) {
         log.debug("Gender waits read from {} open deferrals and {} glossary entries", open.size(), glossary.size());
         final Set<String> suggestedTerms = new HashSet<>();
         glossary.stream().filter(GlossaryEntry::isGenderSuggested).forEach(entry -> suggestedTerms.add(entry.term()));

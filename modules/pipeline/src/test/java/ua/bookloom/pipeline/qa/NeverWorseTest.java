@@ -77,6 +77,10 @@ class NeverWorseTest {
         return WindowFacts.of(source, sourceLanguage, UK, List.of(), trigger, false);
     }
 
+    private static WindowFacts unmarkedMax(final String source) {
+        return WindowFacts.of(source, EN, UK, List.of(), null, true);
+    }
+
     private static WindowFacts withName(final String source) {
         final GlossaryEntry velemir =
                 GlossaryEntry.of("e1", "p1", "Velemir", "Велемир", TermType.CHARACTER, Gender.MALE, false);
@@ -318,6 +322,62 @@ class NeverWorseTest {
                 WindowFacts.of(LONG_SOURCE, EN, UK, List.of(), null, true));
 
         assertThat(verdict).isEqualTo(new Verdict.Reject("no-gain"));
+    }
+
+    // IF a rewrite that drops a clause were kept, THEN a sentence of three clauses would lose its middle one.
+    @Test
+    void judge_revisionDropsClausePunctuation_rejectsClauses() {
+        final String source = "Denny came in, then sat down, and then thought it over here.";
+
+        final Verdict verdict = NeverWorse.judge(
+                en(source, "Денні зайшов, потім сів, а далі замислився тут."),
+                en(source, "Денні зайшов, потім сів а далі замислився тут."),
+                facts(source, EN));
+
+        assertThat(verdict).isEqualTo(new Verdict.Reject("clauses"));
+    }
+
+    @Test
+    void judge_unmarkedMaxRewriteKeepsEveryClause_keeps() {
+        final String source = "Denny came in, then sat down, and then thought it over here.";
+
+        final Verdict verdict = NeverWorse.judge(
+                en(source, "Денні зайшов, потім сів, а далі замислився тут."),
+                en(source, "Денні увійшов, потім сів, а далі замислився тут."),
+                unmarkedMax(source));
+
+        assertThat(verdict).isEqualTo(new Verdict.Keep());
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "He said this very quietly and left.|Він сказав це дуже тихо і пішов.|Він сказав це дуже тихо й пішов.|true",
+                "He said this very quietly and left.|Він сказав це дуже тихо і пішов.|Вона мовила інакше голосно та вийшла.|false",
+                "One two three four five six seven.|Раз два три чотири п'ять шість сім.|Раз два три чотири п'ять шість вісім.|true",
+                "One two three four five six seven.|Раз два три чотири п'ять шість сім.|Раз два три чотири інше нове вісім.|false"
+            })
+    void judge_unmarkedMaxChangedWordShare_isCappedAtAThird(
+            final String source, final String current, final String candidate, final boolean kept) {
+        final Verdict verdict = NeverWorse.judge(en(source, current), en(source, candidate), unmarkedMax(source));
+
+        assertThat(verdict).isEqualTo(kept ? new Verdict.Keep() : new Verdict.Reject("no-gain"));
+    }
+
+    @Test
+    void rewriteCap_isThirtyFivePercent() {
+        assertThat(TextGuards.REWRITE_CAP).isEqualTo(0.35);
+    }
+
+    @Test
+    void judge_swapsNumberDigits_rejects() {
+        final String source = "He paid 12 coins.";
+
+        final Verdict verdict = NeverWorse.judge(
+                en(source, "Він заплатив 12 монет."), en(source, "Він заплатив 21 монет."), facts(source, EN));
+
+        assertThat(verdict).isEqualTo(new Verdict.Reject("number-lost"));
     }
 
     @Test

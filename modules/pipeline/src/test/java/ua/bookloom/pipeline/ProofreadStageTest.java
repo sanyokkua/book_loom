@@ -29,10 +29,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -43,6 +45,7 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -232,6 +235,68 @@ class ProofreadStageTest {
         assertThat(stored(project, WIND).status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(stored(project, WIND).machineTarget()).isEqualTo(T3);
         assertThat(stored(project, HALE_LEFT).machineTarget()).as("not swept").isEqualTo("Хейл пішов.");
+    }
+
+    // With no model call at Fast the deterministic sweep still runs and a gender deferral the text contradicts waits.
+    @Test
+    void run_fastWithRenamedTermAndGenderNowKnown_sweepsTermAndKeepsGenderOpen() {
+        final TestProject project = bookWithDeferrals(QualityDial.FAST, "Гейл");
+        final ScriptedChatModel model = new ScriptedChatModel().answer(target(T3));
+
+        assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
+
+        assertThat(stored(project, HALE_LEFT).machineTarget()).isEqualTo("Гейл пішов.");
+        assertThat(stored(project, SAM_LEFT).machineTarget()).isEqualTo("Сем пішов.");
+        assertThat(model.requests()).as("the one draft only").hasSize(1);
+        assertThat(openDeferrals(project))
+                .extracting(Deferral::segmentId, Deferral::reason)
+                .containsExactly(tuple(SAM_LEFT, DeferralReason.GENDER_UNKNOWN));
+    }
+
+    // IF a suggested gender were acted on, THEN one wrong guess would send every paragraph that waits on the character
+    // to the model; only a gender the book verified or the person set marks a segment.
+    @Test
+    void run_balancedGenderOnlySuggested_noProofreadCallAndTheDeferralWaits() {
+        final TestProject project = project(
+                TestBooks.markdown(tempDir.resolve("Book.md"), "Sam went away.\n\n" + S3),
+                brief("en", "uk", QualityDial.BALANCED));
+        final GlossaryEntry sam = ok(project.stores().glossary().add(character(project, "Sam", "Сем", Gender.UNKNOWN)));
+        decide(project, "Book.md:0", "Сем пішов.");
+        recordUnknownGender(project, "Book.md:0", List.of(sam));
+        ok(project.stores().glossary().update(sam.withSuggestedGender(Gender.FEMALE)));
+        final ScriptedChatModel model = balancedModel();
+
+        assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
+
+        assertThat(model.requests()).as("the draft and its review only").hasSize(2);
+        assertThat(openDeferrals(project)).hasSize(1);
+        assertThat(marks(project)).isEmpty();
+    }
+
+    // IF matter were sent to the model, THEN a contents page and a copyright line would cost a call each.
+    @Test
+    void run_balancedFlaggedMatterAndBody_sendsOnlyTheBodyParagraphs() {
+        final TestProject project = project(
+                TestBooks.epubWithFrontMatterAndNavigation(
+                        tempDir.resolve("Book.epub"),
+                        List.of("All rights reserved."),
+                        List.of(List.of("First line.", "Second line.")),
+                        List.of("Label one", "Label two")),
+                brief("en", "uk", QualityDial.BALANCED));
+        ok(project.stores().segments().all(project.id())).forEach(record -> {
+            decide(project, record.segmentId(), "Текст.");
+            update(project, record.segmentId(), flagged -> flagged.withStatus(SegmentStatus.FLAGGED));
+        });
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        assertThat(report(job(project, model).run()).end()).isEqualTo(JobState.COMPLETED);
+
+        final String sent = model.requests().stream()
+                .filter(request -> "proofread".equals(ScriptedChatModel.callName(request)))
+                .flatMap(request -> request.messages().stream())
+                .map(ChatMessage::content)
+                .collect(Collectors.joining("\n"));
+        assertThat(sent).contains("ch01.xhtml:0", "ch01.xhtml:1").doesNotContain("copyright.xhtml", "aux:");
     }
 
     /**

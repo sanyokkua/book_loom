@@ -26,6 +26,9 @@ import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.WireMockProvider;
 import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.context.TranslatePlanner;
@@ -204,6 +207,38 @@ class ProofreadCallWireMockTest {
         }
     }
 
+    private static GlossaryEntry ivar() {
+        return GlossaryEntry.of("p:Ивар", "p", "Ивар", "Івар", TermType.CHARACTER, Gender.UNKNOWN, false);
+    }
+
+    // IF a suggested gender were told to the model as a fact, THEN it would rewrite a right paragraph to match a guess.
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void proofread_genderOnlySuggested_promptCarriesNoGenderForTheCharacter(final ProviderKind kind) {
+        try (WireMockProvider provider = new WireMockProvider(kind)) {
+            provider.stubResponder(body -> UNCHANGED);
+
+            read(provider, ProofreadFixtures.brief("ru", "uk"), List.of(ivar().withSuggestedGender(Gender.FEMALE)));
+
+            assertThat(user(provider.chatBodies().getFirst()))
+                    .contains("Івар")
+                    .doesNotContain("female")
+                    .doesNotContain("likely");
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void proofread_genderVerified_promptCarriesTheFact(final ProviderKind kind) {
+        try (WireMockProvider provider = new WireMockProvider(kind)) {
+            provider.stubResponder(body -> UNCHANGED);
+
+            read(provider, ProofreadFixtures.brief("ru", "uk"), List.of(ivar().withInferredGender(Gender.FEMALE)));
+
+            assertThat(user(provider.chatBodies().getFirst())).contains("Ивар → Івар (character, female)");
+        }
+    }
+
     /** The planner a call was planned with and the answer it gave. */
     private record Called(TranslatePlanner planner, ProofreadCall.Answer answer) {}
 
@@ -217,6 +252,19 @@ class ProofreadCallWireMockTest {
 
     private static Called read(
             final WireMockProvider provider, final BookBrief brief, final Consumer<JobEvent> events) {
+        return read(provider, brief, events, List.of());
+    }
+
+    private static Called read(
+            final WireMockProvider provider, final BookBrief brief, final List<GlossaryEntry> entries) {
+        return read(provider, brief, event -> {}, entries);
+    }
+
+    private static Called read(
+            final WireMockProvider provider,
+            final BookBrief brief,
+            final Consumer<JobEvent> events,
+            final List<GlossaryEntry> entries) {
         final Document document = ProofreadFixtures.chapter(
                 "ch02.md",
                 ProofreadFixtures.lines(
@@ -240,7 +288,7 @@ class ProofreadCallWireMockTest {
                 .getFirst();
         final Result<ProofreadCall.Answer> answer = new ProofreadCall(
                         planner, ProofreadFixtures.calls(model, events), MAPPER)
-                .read(window, texts(document), ProofreadFixtures.map(List.of(), brief));
+                .read(window, texts(document), ProofreadFixtures.map(entries, brief));
         assertThat(answer.isOk()).as("proofread call: %s", answer.error()).isTrue();
         return new Called(planner, Objects.requireNonNull(answer.data()));
     }

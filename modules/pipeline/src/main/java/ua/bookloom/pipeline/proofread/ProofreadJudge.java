@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.proofread;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -11,6 +12,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.ControlCharacterMapper;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.audit.FinalAudit;
@@ -45,6 +48,7 @@ final class ProofreadJudge {
     private static final String GENDER_KIND = "gender";
     private static final String GENDER_DEFERRAL = "gender-deferral";
     private static final String VETO_WORDS = ": ";
+    private static final String CONTROL_CHARACTERS = "control-characters";
 
     private final Book book;
 
@@ -109,13 +113,30 @@ final class ProofreadJudge {
             final String rewrite,
             final List<String> reasons,
             final List<ArrivedGender> arrived) {
-        final String candidate = WhitespaceRestoration.restore(current, rewrite.strip());
+        final Optional<String> readable = withoutControlCodes(segment, rewrite);
+        if (readable.isEmpty()) {
+            return rejected(segment, CONTROL_CHARACTERS);
+        }
+        final String candidate = WhitespaceRestoration.restore(current, readable.get());
         return switch (book.gate().restore(segment, candidate)) {
             case GateResult.Restored restored -> inScope(segment, new Texts(current, restored), reasons, arrived);
             case GateResult.GateFailed failed ->
                 rejected(segment, failed.finding().raisedBy());
             case GateResult.StepError(final AppError error) -> rejected(segment, "gate-error " + error.code());
         };
+    }
+
+    // A model that copies its quote marks and dashes as control codes is read the way a draft's reply is: each code
+    // goes back to the mark it stands for when its place says which, else the rewrite is refused by name. The edge is
+    // stripped without String.strip(), which would take a code at the edge for spacing and lose an opening quote.
+    private Optional<String> withoutControlCodes(final Segment segment, final String rewrite) {
+        final String stripped = ControlCharacters.stripSpacing(rewrite);
+        if (!ControlCharacters.addsControl(segment.masked(), stripped)) {
+            return Optional.of(stripped);
+        }
+        log.debug("Proofread rewrite holds control codes segmentId={}", segment.id());
+        return ControlCharacterMapper.map(
+                segment.masked(), stripped, book.frame().targetLanguage());
     }
 
     /** The text in place and the rewrite as the gate restored it. */
