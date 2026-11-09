@@ -69,6 +69,7 @@ public final class WireMockProvider implements AutoCloseable {
     private static final long POLL_MILLIS = 5;
 
     private final ProviderKind kind;
+    private final ServerEngine engine;
     private final String modelId;
     private final ModelSelection selection;
     // Bound to loopback, not the wildcard: on macOS a wildcard bind succeeds on a port where another program (an IDE's
@@ -84,9 +85,19 @@ public final class WireMockProvider implements AutoCloseable {
         this(kind, MODEL_ID);
     }
 
+    /** A stand-in whose provider record names {@code engine}, as a detected server would, whatever dialect it speaks. */
+    WireMockProvider(final ProviderKind kind, final ServerEngine engine) {
+        this(kind, engine, MODEL_ID);
+    }
+
     /** A stand-in serving {@code modelId}, whose built-in row decides the profile the run reads. */
     WireMockProvider(final ProviderKind kind, final String modelId) {
+        this(kind, kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.LM_STUDIO, modelId);
+    }
+
+    private WireMockProvider(final ProviderKind kind, final ServerEngine engine, final String modelId) {
         this.kind = Objects.requireNonNull(kind, "kind");
+        this.engine = Objects.requireNonNull(engine, "engine");
         this.modelId = Objects.requireNonNull(modelId, "modelId");
         this.selection = new ModelSelection(PROVIDER_ID, modelId);
         server.start();
@@ -145,17 +156,31 @@ public final class WireMockProvider implements AutoCloseable {
     }
 
     private Injector injector(final Duration requestTimeout, final RetryPolicy.Sleeper sleeper) {
-        final URI base = URI.create(kind == ProviderKind.OLLAMA ? server.baseUrl() : server.baseUrl() + "/v1");
         final RetryPolicy policy = new RetryPolicy(Clock.systemUTC(), () -> 0.5, sleeper);
         final Injector injector =
                 Guice.createInjector(Modules.override(new LlmModule(), new InMemoryPersistenceModule())
                         .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
-        // The OpenAI-compatible stand-in is LM Studio: a recognised engine gets the schema and the reasoning switch on
-        // every call, where a generic server would get only what a check had proved.
+        register(injector, requestTimeout);
+        return injector;
+    }
+
+    private void register(final Injector injector, final Duration requestTimeout) {
+        final URI base = URI.create(kind == ProviderKind.OLLAMA ? server.baseUrl() : server.baseUrl() + "/v1");
+        // A recognised engine gets the schema and the reasoning switch on every call, where a generic server would get
+        // only what a check had proved.
         injector.getInstance(ProviderConfigs.class)
                 .save(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout)
-                        .withEngine(kind == ProviderKind.OLLAMA ? ServerEngine.OLLAMA : ServerEngine.LM_STUDIO));
-        return injector;
+                        .withEngine(engine));
+    }
+
+    /**
+     * A model built in {@code injector}, so its calls land in that injector's call ledger, which is the one the run
+     * summary of a job built from the same injector reads.
+     */
+    ChatModel modelIn(final Injector injector, final Duration requestTimeout) {
+        register(injector, requestTimeout);
+        return Objects.requireNonNull(
+                injector.getInstance(ChatModelFactory.class).create(selection).data(), "chat model");
     }
 
     /** The probe the window and the command line give a run, checking this server with the real verifier. */
@@ -218,6 +243,22 @@ public final class WireMockProvider implements AutoCloseable {
         } catch (JsonProcessingException cause) {
             throw new AssertionError("could not encode provider reply", cause);
         }
+    }
+
+    /** A reply carrying {@code content} plus the given top-level fields a server adds beside it ({@code stats}, {@code timings}). */
+    ResponseDefinitionBuilder replyWithFields(final String content, final Map<String, Object> fields) {
+        final Map<String, Object> body = new LinkedHashMap<>(parsed(envelope(content)));
+        body.putAll(fields);
+        try {
+            return aResponse().withStatus(200).withBody(MAPPER.writeValueAsString(body));
+        } catch (JsonProcessingException cause) {
+            throw new AssertionError("could not encode provider reply", cause);
+        }
+    }
+
+    /** Answers every POST to {@code path} with the reply, for a server whose chat route is not this dialect's usual one. */
+    void stubAlwaysAt(final String path, final ResponseDefinitionBuilder reply) {
+        server.stubFor(post(urlEqualTo(path)).willReturn(reply));
     }
 
     private static Map<String, Object> parsed(final String json) {

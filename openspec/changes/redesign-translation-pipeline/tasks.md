@@ -2061,7 +2061,7 @@ looks like zero. Settings › Models becomes the one place that says who a model
 translates (the existing refusal, reworded), the Projects
 screen recommends a model by memory, and every model picker gets a name filter (design D23). No stored shape changes.
 
-- [ ] 15.1 Write the group's two acceptance tests and record them red, so timings and the filter are proven by
+- [x] 15.1 Write the group's two acceptance tests and record them red, so timings and the filter are proven by
   observable output. → :pipeline, :llm, :ui
   - **Satisfies:** enabling work for design D23
   - **Depends on:** group 14
