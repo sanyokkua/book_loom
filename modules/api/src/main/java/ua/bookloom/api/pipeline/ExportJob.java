@@ -20,10 +20,4 @@ public interface ExportJob {
      * written. It may be called before or during {@link #run()}, from any thread.
      */
     void cancel();
-
-    /**
-     * Kept until the Export screen drops its "Write the file now" button: the export makes no model call, so there is
-     * nothing to end early and the call changes nothing. It may be called from any thread.
-     */
-    void writeNow();
 }

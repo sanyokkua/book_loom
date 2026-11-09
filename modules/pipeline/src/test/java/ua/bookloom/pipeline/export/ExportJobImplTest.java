@@ -15,17 +15,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.GenderWait;
@@ -250,18 +245,12 @@ class ExportJobImplTest {
     void export_providerDown_writesFile() {
         final String id = markdown("He went away.");
         fixture.flag(id, "Book.md:0", "Він пішов геть.");
-        final AtomicInteger asked = new AtomicInteger();
-        final ChatModel down = request -> {
-            asked.incrementAndGet();
-            return Result.err(AppError.of(ErrorCode.unreachable, "Provider down", "Nothing answers."));
-        };
         final Path destination = tempDir.resolve("Book.uk.md");
 
-        ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of()), down))
+        ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of())))
                 .run());
 
         assertThat(read(destination)).isEqualTo("Він пішов геть.");
-        assertThat(asked).hasValue(0);
     }
 
     // A locked name renamed after the run is the Proofread stage's business, not the export's: the file keeps the

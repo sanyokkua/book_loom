@@ -147,7 +147,7 @@ class TranslationEngineEndToEndTest {
         final JobReport report = dataOf(job.run());
         assertThat(destination).doesNotExist();
         final ExportJob export = dataOf(injector.getInstance(ExportService.class)
-                .newExport(new ExportRequest(projectId, destination, false, Set.of()), null));
+                .newExport(new ExportRequest(projectId, destination, false, Set.of())));
         return new ExportedBook(report, dataOf(export.run()));
     }
 

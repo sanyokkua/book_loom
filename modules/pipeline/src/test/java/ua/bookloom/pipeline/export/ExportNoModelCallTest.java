@@ -6,13 +6,11 @@ import static ua.bookloom.pipeline.export.ExportJobFixture.bodySegments;
 import static ua.bookloom.pipeline.export.ExportJobFixture.ok;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -50,9 +48,8 @@ class ExportNoModelCallTest {
 
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubResponder(ignored -> ANY_REPLY);
-            final ChatModel model = provider.model(Duration.ofSeconds(5), ignored -> {});
 
-            ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of()), model))
+            ok(ok(fixture.service().newExport(new ExportRequest(id, destination, false, Set.of())))
                     .run());
 
             assertThat(provider.servedInOrder())

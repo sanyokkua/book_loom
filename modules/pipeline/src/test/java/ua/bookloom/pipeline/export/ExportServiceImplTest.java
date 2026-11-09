@@ -229,7 +229,7 @@ class ExportServiceImplTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final ScriptedMoveOperation moves = new ScriptedMoveOperation()
                 .answer(Result.err(error(ErrorCode.internal, new IOException("scripted move failure"))));
-        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), null, moves));
+        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), moves));
 
         final Result<ExportReport> result = job.run();
 
@@ -246,7 +246,7 @@ class ExportServiceImplTest {
         final BlockingClosePort port = new BlockingClosePort(TestDocuments.documents(), 2);
         final ExportServiceImpl blocking = new ExportServiceImpl(
                 injector.getInstance(RunStores.class), port, injector.getInstance(DeferralRepository.class));
-        final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
+        final ExportJob job = dataOf(blocking.newExport(request(id, destination, false)));
         workers = Executors.newSingleThreadExecutor();
 
         final Future<Result<ExportReport>> running = workers.submit(job::run);
@@ -288,7 +288,7 @@ class ExportServiceImplTest {
     }
 
     private ExportJob newExport(final String projectId, final Path destination, final boolean overwrite) {
-        return dataOf(service.newExport(request(projectId, destination, overwrite), null));
+        return dataOf(service.newExport(request(projectId, destination, overwrite)));
     }
 
     private static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {

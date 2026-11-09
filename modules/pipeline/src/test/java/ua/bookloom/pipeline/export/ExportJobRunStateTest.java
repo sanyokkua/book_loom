@@ -77,7 +77,7 @@ class ExportJobRunStateTest {
         final RunRecord finished = ok(fixture.runs().latest(id)).orElseThrow();
         final BlockingClosePort port = new BlockingClosePort(fixture.documents(), 2);
         final ExportJob export =
-                ok(fixture.serviceOver(port).newExport(request(id, tempDir.resolve("Book.uk.epub"), false), null));
+                ok(fixture.serviceOver(port).newExport(request(id, tempDir.resolve("Book.uk.epub"), false)));
 
         final Future<Result<ExportReport>> exporting = workers.submit(export::run);
         port.awaitBlockingClose();

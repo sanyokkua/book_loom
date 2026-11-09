@@ -30,16 +30,16 @@ class ExportProgressTest {
 
     // IF the default overload dropped the request, THEN a service that does not report progress could not export.
     @Test
-    void newExport_serviceWithoutProgress_delegatesToTheTwoArgumentFactory() {
+    void newExport_serviceWithoutProgress_delegatesToTheOneArgumentFactory() {
         final List<ExportRequest> seen = new ArrayList<>();
-        final ExportService plain = (request, model) -> {
+        final ExportService plain = request -> {
             seen.add(request);
             return Result.err(AppError.of(ErrorCode.internal, "none", "none"));
         };
         final ExportRequest request =
                 new ExportRequest("p", java.nio.file.Path.of("out.epub"), false, java.util.Set.of());
 
-        plain.newExport(request, null, ExportProgressListener.NONE);
+        plain.newExport(request, ExportProgressListener.NONE);
 
         assertThat(seen).containsExactly(request);
     }

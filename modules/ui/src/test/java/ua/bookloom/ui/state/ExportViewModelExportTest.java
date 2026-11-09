@@ -82,12 +82,11 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         assertThat(exportService.requests())
                 .containsExactly(new ExportRequest(
                         "p1", destination, false, Set.of(SideFile.GLOSSARY_CSV, SideFile.QUALITY_REPORT)));
-        assertThat(exportService.models()).containsOnlyNulls();
     }
 
     // IF a model were created for the export, THEN a loaded model would be asked for a book that needs none.
     @Test
-    void export_maxDialWithAModelChosen_passesNoModelAndCreatesNone() {
+    void export_maxDialWithAModelChosen_createsNoModel() {
         onFx(() -> {
             brief.setDial(QualityDial.MAX);
             settings.model().set("gemma3:12b");
@@ -96,7 +95,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
 
         export();
 
-        assertThat(exportService.models()).containsOnlyNulls();
         assertThat(models.selections()).isEmpty();
     }
 

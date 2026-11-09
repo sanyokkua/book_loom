@@ -250,7 +250,7 @@ public final class TranslateCommand {
     // for it a while longer instead.
     private Result<ExportReport> export(String projectId, Path destination, TranslateArguments arguments) {
         final Result<ExportJob> job =
-                exports.newExport(new ExportRequest(projectId, destination, arguments.overwrite(), Set.of()), null);
+                exports.newExport(new ExportRequest(projectId, destination, arguments.overwrite(), Set.of()));
         if (job.isErr()) {
             return Result.err(errorOf(job));
         }

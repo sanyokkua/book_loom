@@ -166,7 +166,7 @@ final class ExportJobFixture {
     }
 
     static Result<ExportReport> export(final ExportServiceImpl service, final ExportRequest request) {
-        return service.newExport(request, null).flatMap(ExportJob::run);
+        return service.newExport(request).flatMap(ExportJob::run);
     }
 
     static ExportRequest request(final String projectId, final Path destination, final boolean overwrite) {

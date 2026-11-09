@@ -281,7 +281,7 @@ final class WholeBookRun {
                 destination,
                 false,
                 Set.of(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML, SideFile.QUALITY_REPORT));
-        return dataOf(dataOf(project.injector().getInstance(ExportService.class).newExport(request, null))
+        return dataOf(dataOf(project.injector().getInstance(ExportService.class).newExport(request))
                 .run());
     }
 

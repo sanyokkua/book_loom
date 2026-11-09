@@ -39,7 +39,7 @@ class ExportJobProgressTest {
         final List<ExportProgress> seen = new CopyOnWriteArrayList<>();
         final ExportRequest request = new ExportRequest(projectId, tempDir.resolve("Book.uk.epub"), false, Set.of());
 
-        ok(ok(fixture.service().newExport(request, null, seen::add)).run());
+        ok(ok(fixture.service().newExport(request, seen::add)).run());
 
         assertThat(seen).extracting(ExportProgress::step).containsExactly(Step.VALIDATING, Step.WRITING, Step.WRITING);
     }

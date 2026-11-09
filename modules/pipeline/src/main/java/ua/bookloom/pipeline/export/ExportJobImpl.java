@@ -88,11 +88,6 @@ final class ExportJobImpl implements ExportJob {
         cancelled.set(true);
     }
 
-    @Override
-    public void writeNow() {
-        log.debug("export write-now ignored project={}: the export makes no model call", request.projectId());
-    }
-
     private Result<ExportReport> write() {
         progress.onProgress(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         final Result<Project> found = findProject();

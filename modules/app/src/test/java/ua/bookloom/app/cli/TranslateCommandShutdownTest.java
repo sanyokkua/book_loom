@@ -19,7 +19,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
@@ -170,8 +169,8 @@ class TranslateCommandShutdownTest {
         }
 
         @Override
-        public Result<ExportJob> newExport(ExportRequest request, @Nullable ChatModel model) {
-            final Result<ExportJob> created = real.newExport(request, model);
+        public Result<ExportJob> newExport(ExportRequest request) {
+            final Result<ExportJob> created = real.newExport(request);
             final ExportJob job = created.data();
             return job == null ? created : Result.ok(new KilledExportJob(job));
         }
@@ -206,11 +205,6 @@ class TranslateCommandShutdownTest {
             public void cancel() {
                 delegate.cancel();
                 cancelled.countDown();
-            }
-
-            @Override
-            public void writeNow() {
-                delegate.writeNow();
             }
         }
     }

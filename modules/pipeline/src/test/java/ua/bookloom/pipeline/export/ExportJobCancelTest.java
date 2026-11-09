@@ -18,8 +18,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
@@ -27,7 +25,6 @@ import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.RecordingDocumentPort;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
@@ -40,7 +37,6 @@ import ua.bookloom.pipeline.proofread.DeferralRegister;
  */
 class ExportJobCancelTest {
 
-    private static final String REPLY = "{\"target\":\"Сем пішла.\"}";
     private static final String NOTHING_WRITTEN = "Nothing was written.";
 
     @TempDir
@@ -61,12 +57,10 @@ class ExportJobCancelTest {
         samWaitsOnAKnownGender();
     }
 
-    // A cancel made before run() answers cancelled with no model call, no write and nothing on disk.
+    // A cancel made before run() answers cancelled with no write and nothing on disk.
     @Test
-    void run_cancelledBeforeRun_returnsCancelledWithoutModelCallOrWrite() {
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo("proofread", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
-        final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), model));
+    void run_cancelledBeforeRun_returnsCancelledWithoutWrite() {
+        final ExportJob job = ok(fixture.serviceOver(port).newExport(request()));
         job.cancel();
 
         final Result<ExportReport> result = job.run();
@@ -74,7 +68,6 @@ class ExportJobCancelTest {
         assertThat(error(result))
                 .extracting(AppError::code, AppError::title, AppError::message)
                 .containsExactly(ErrorCode.cancelled, "Export cancelled", NOTHING_WRITTEN);
-        assertThat(model.requests()).isEmpty();
         assertThat(port.writtenDocuments()).isEmpty();
         assertThat(destination).doesNotExist();
         assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
@@ -96,7 +89,7 @@ class ExportJobCancelTest {
                 return super.write(document, target, sourceLanguage, targetLanguage);
             }
         };
-        final ExportJob job = ok(fixture.serviceOver(cancelling).newExport(withoutPass(), null));
+        final ExportJob job = ok(fixture.serviceOver(cancelling).newExport(withoutPass()));
         running.set(job);
 
         final Result<ExportReport> result = job.run();
@@ -119,7 +112,7 @@ class ExportJobCancelTest {
             Objects.requireNonNull(running.get(), "job").cancel();
             return ExportMoveOperation.nio().move(source, target, options);
         };
-        final ExportJob job = ok(fixture.serviceOver(port).newExportWith(withoutPass(), null, cancellingMove));
+        final ExportJob job = ok(fixture.serviceOver(port).newExportWith(withoutPass(), cancellingMove));
         running.set(job);
 
         final Result<ExportReport> result = job.run();

@@ -67,7 +67,7 @@ class ExportJobLogTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "Source.");
         projects.save(TestProjects.of("p1", source, BookFormat.MARKDOWN, "hash", BookBrief.defaults("en")));
         final ExportJob job = Objects.requireNonNull(
-                service.newExport(new ExportRequest("p1", tempDir.resolve("Book.uk.md"), true, Set.of()), null)
+                service.newExport(new ExportRequest("p1", tempDir.resolve("Book.uk.md"), true, Set.of()))
                         .data(),
                 "export job");
 

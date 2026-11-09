@@ -225,7 +225,7 @@ final class ExportRun {
     }
 
     private Result<ExportReport> run(final ExportRequest request, final ExportActivity shown) {
-        final Result<ExportJob> built = service.newExport(request, null, shown);
+        final Result<ExportJob> built = service.newExport(request, shown);
         if (built.isErr()) {
             return Result.err(Objects.requireNonNull(built.error(), "error"));
         }

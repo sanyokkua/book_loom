@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,7 +15,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportOpenWork;
@@ -37,7 +34,6 @@ public final class ScriptedExportService implements ExportService {
     private static final long HOLD_SECONDS = 10;
 
     private final List<ExportRequest> requests = new CopyOnWriteArrayList<>();
-    private final List<@Nullable ChatModel> models = new CopyOnWriteArrayList<>();
     private final List<Boolean> ranOnFxThread = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError failure;
     private volatile @Nullable ExportReport report;
@@ -75,15 +71,13 @@ public final class ScriptedExportService implements ExportService {
     }
 
     @Override
-    public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
-        return newExport(request, model, ExportProgressListener.NONE);
+    public Result<ExportJob> newExport(final ExportRequest request) {
+        return newExport(request, ExportProgressListener.NONE);
     }
 
     @Override
-    public Result<ExportJob> newExport(
-            final ExportRequest request, @Nullable final ChatModel model, final ExportProgressListener progress) {
+    public Result<ExportJob> newExport(final ExportRequest request, final ExportProgressListener progress) {
         requests.add(Objects.requireNonNull(request, "request"));
-        models.add(model);
         return Result.ok(new ScriptedExportJob(request, progress));
     }
 
@@ -125,11 +119,6 @@ public final class ScriptedExportService implements ExportService {
     /** Every request asked for, in order. */
     public List<ExportRequest> requests() {
         return List.copyOf(requests);
-    }
-
-    /** The model each request was made with, in order; an entry is {@code null} when none was passed. */
-    public List<@Nullable ChatModel> models() {
-        return Collections.unmodifiableList(new ArrayList<>(models));
     }
 
     /** One entry per {@code run()}: {@code true} when it ran on the FX Application Thread. */
@@ -198,12 +187,6 @@ public final class ScriptedExportService implements ExportService {
         public void cancel() {
             cancels.incrementAndGet();
             isCancelled = true;
-            release();
-        }
-
-        // Write now ends a held check early: the job then answers as a finished export.
-        @Override
-        public void writeNow() {
             release();
         }
     }

@@ -164,7 +164,7 @@ final class BookRunner {
         final Path destination = options.outDir().resolve(stem() + "." + label + "." + extension());
         log.debug("Export {} to {}", label, destination);
         final ExportRequest request = new ExportRequest(prepared.projectId(), destination, true, SIDE_FILES);
-        final Result<ExportJob> job = SequenceJobs.exportService(prepared).newExport(request, null);
+        final Result<ExportJob> job = SequenceJobs.exportService(prepared).newExport(request);
         WholeBookStages.note("export " + label, job, errors);
         if (job.isErr()) {
             return Optional.empty();

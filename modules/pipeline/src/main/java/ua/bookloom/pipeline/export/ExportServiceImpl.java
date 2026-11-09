@@ -5,12 +5,10 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.CallLedger;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportOpenWork;
@@ -41,14 +39,13 @@ public final class ExportServiceImpl implements ExportService {
     }
 
     @Override
-    public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
-        return newExportWith(request, model, ExportMoveOperation.nio());
+    public Result<ExportJob> newExport(final ExportRequest request) {
+        return newExportWith(request, ExportMoveOperation.nio());
     }
 
     @Override
-    public Result<ExportJob> newExport(
-            final ExportRequest request, @Nullable final ChatModel model, final ExportProgressListener progress) {
-        return newExportWith(request, model, ExportMoveOperation.nio(), progress);
+    public Result<ExportJob> newExport(final ExportRequest request, final ExportProgressListener progress) {
+        return newExportWith(request, ExportMoveOperation.nio(), progress);
     }
 
     @Override
@@ -63,9 +60,8 @@ public final class ExportServiceImpl implements ExportService {
     }
 
     /** The publication move is a seam so a test can script its failure. */
-    Result<ExportJob> newExportWith(
-            final ExportRequest request, @Nullable final ChatModel model, final ExportMoveOperation moves) {
-        return newExportWith(request, model, moves, ExportProgressListener.NONE);
+    Result<ExportJob> newExportWith(final ExportRequest request, final ExportMoveOperation moves) {
+        return newExportWith(request, moves, ExportProgressListener.NONE);
     }
 
     private Result<ExportOpenWork> openWorkOf(final String projectId, final Optional<Project> found) {
@@ -82,12 +78,8 @@ public final class ExportServiceImpl implements ExportService {
                 .map(inputs -> OpenWork.of(inputs.book(), inputs.records(), inputs.open()));
     }
 
-    // The model parameter outlives the pass it fed until the Export screen stops passing one.
     private Result<ExportJob> newExportWith(
-            final ExportRequest request,
-            @Nullable final ChatModel model,
-            final ExportMoveOperation moves,
-            final ExportProgressListener progress) {
+            final ExportRequest request, final ExportMoveOperation moves, final ExportProgressListener progress) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(progress, "progress");
         try {
@@ -97,7 +89,6 @@ public final class ExportServiceImpl implements ExportService {
                     request.destination(),
                     request.overwrite(),
                     request.sideFiles());
-            log.debug("export model ignored withModel={}", model != null);
             final Result<Optional<Project>> found = stores.projects().find(request.projectId());
             if (found.isErr()) {
                 return Result.err(Objects.requireNonNull(found.error(), "error"));
