@@ -1911,7 +1911,7 @@ database is set aside once.
   - **Log:** INFO export start/end with counts (no consistency flag); DEBUG for each banner datum computed.
   - **Done when:** `ExportNoModelCallTest` is green on both dialects and the module checks are green.
 
-- [ ] 14.6 Remove the last check from the windows — the Export screen's switch, reread grid, "Write the file now",
+- [x] 14.6 Remove the last check from the windows — the Export screen's switch, reread grid, "Write the file now",
   the Automation default and the dialogs — and show the new export banners and tiles, so no screen offers a pass that
   no longer exists. → :ui, :app
   - **Satisfies:** "Choose when to stop and ask, and the defaults, on Automation" (settings), REMOVED "Choose when to stop and ask on Automation" (settings), "Answer Enter, Escape and Tab alike in every dialog" (app-shell), REMOVED "Answer Enter, Escape and Tab the same way in every dialog" (app-shell), "Show all model work in one progress dialog" (app-shell; the last-check steps go), "Let long work continue in the background" (app-shell); REMOVED (export): "Show the last check as a progress dialog the person can leave or end", "Show each reread item next to its neighbours with a before and an after", "Let the person write the file early or cancel the last check with a question first"
@@ -1927,8 +1927,7 @@ database is set aside once.
     dialog hides long work and cancels short work, only the export dialog's Cancel asks "Cancel the export?". Export
     banners for unread windows, waiting facts, source fallbacks and open marks; tiles and report read
     `ProofreadSummary`. Delete the last-check tests; adapt the export and Automation tests.
-  - **Test first:** TestFX `ExportBannersTest` (invented values: "Proofread read 40 of 120 windows", "2 segments wait on
-    a gender", "2 segments will be written in the source language", "3 segments still carry a proofread mark");
+  - **Test first:** TestFX `ExportBannersTest` (invented values: "Proofread stopped at 40 of 120 windows — Continue on Translating, or export as it is.", "3 segments wait on a fact you have since given (gender of …). Continue on Translating to apply it.", "2 segments will be written in the source language", "4 segments still carry a proofread mark. They are written as they are; review them on the desk.");
     `SettingsAutomationScreenTest.noLastCheckSwitch`; a dialog test that Escape cancels a short progress dialog and only
     the export Cancel asks; `ScreenFitTest`/`DialogFitTest` in Ukrainian.
   - **Done when:** the UI tests and `VocabularyTest` are green and `scripts/ci-linux-ui.sh` passes.
