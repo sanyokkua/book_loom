@@ -72,12 +72,6 @@ public final class AutomationController {
     private ToggleSwitch openDesk;
 
     @FXML
-    private ToggleSwitch lastCheck;
-
-    @FXML
-    private Label lastCheckHint;
-
-    @FXML
     private ToggleSwitch keepAwake;
 
     @FXML
@@ -132,11 +126,9 @@ public final class AutomationController {
 
     private void wireSwitches() {
         ModelSwitch.bind(openDesk, settings.openReviewDeskProperty(), settings::chooseOpenReviewDesk);
-        ModelSwitch.bind(lastCheck, settings.lastCheckProperty(), settings::chooseLastCheck);
         ModelSwitch.bind(keepAwake, settings.keepAwakeProperty(), settings::chooseKeepAwake);
         ModelSwitch.bind(reopen, settings.reopenLastProjectProperty(), settings::chooseReopenLastProject);
         Tips.install(messages, openDesk, MessageKey.SETTINGS_AUTOMATION_OPEN_DESK_TIP);
-        Tips.install(messages, lastCheck, MessageKey.SETTINGS_AUTOMATION_LAST_CHECK_TIP);
         Tips.install(messages, keepAwake, MessageKey.SETTINGS_AUTOMATION_KEEP_AWAKE_TIP);
         Tips.install(messages, reopen, MessageKey.SETTINGS_AUTOMATION_REOPEN_TIP);
     }
@@ -144,9 +136,6 @@ public final class AutomationController {
     private void bindNotes() {
         Visibility.bind(running, SettingsNotes.runUnderWay(mirror));
         Visibility.bind(saveError, settings.saveFailedProperty());
-        Visibility.bind(
-                lastCheckHint,
-                settings.loadedProperty().and(settings.lastCheckChosenProperty().not()));
         SettingsNotes.overrideNote(
                 messages,
                 reviewOverride,

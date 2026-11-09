@@ -146,15 +146,13 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
         assertThat(store.stored(AppSetting.OPEN_REVIEW_DESK)).contains(false);
     }
 
-    // IF an unwritten default looked like a made choice, THEN a person could not tell it still follows the quality.
+    // IF the retired last-check switch came back, THEN a person could set a default for a pass that no longer runs.
     @Test
-    void lastCheck_unwritten_offWithFollowsDialHint() throws TimeoutException {
+    void noLastCheckSwitch() throws TimeoutException {
         openAutomation();
 
-        assertThat(switchOf("automation-last-check").isSelected()).isFalse();
-        assertThat(isShown("automation-last-check-hint")).isTrue();
-        assertThat(text("automation-last-check-hint"))
-                .isEqualTo("Not chosen yet: on for books at Max quality, off otherwise.");
+        assertThat(scene.getRoot().lookup("#automation-last-check")).isNull();
+        assertThat(scene.getRoot().lookup("#automation-last-check-hint")).isNull();
     }
 
     // IF the switch only changed the stored value, THEN the computer would stay awake until the next launch.
@@ -194,7 +192,7 @@ class SettingsAutomationScreenTest extends SettingsScreenTestBase {
             switches.forEach(each -> all.add(each.getText()));
             return all;
         });
-        assertThat(switches).hasSize(4);
+        assertThat(switches).hasSize(3);
         assertThat(words).noneMatch(word -> word.matches("(?is).*(notif|сповіщ).*"));
     }
 

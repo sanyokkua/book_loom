@@ -1134,12 +1134,6 @@ public enum MessageKey {
     SETTINGS_AUTOMATION_OPEN_DESK("settings.automation.openDesk"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_OPEN_DESK}. */
     SETTINGS_AUTOMATION_OPEN_DESK_TIP("settings.automation.openDesk.tip"),
-    /** Switch: the last-check default. */
-    SETTINGS_AUTOMATION_LAST_CHECK("settings.automation.lastCheck"),
-    /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_LAST_CHECK}. */
-    SETTINGS_AUTOMATION_LAST_CHECK_TIP("settings.automation.lastCheck.tip"),
-    /** Hint shown while the last-check default has not been written. */
-    SETTINGS_AUTOMATION_LAST_CHECK_UNSET("settings.automation.lastCheck.unset"),
     /** Switch: keep the computer awake while a model works. */
     SETTINGS_AUTOMATION_KEEP_AWAKE("settings.automation.keepAwake"),
     /** Hover explanation of the control labelled by {@link #SETTINGS_AUTOMATION_KEEP_AWAKE}. */

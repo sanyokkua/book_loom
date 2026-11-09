@@ -37,7 +37,6 @@ public final class AutomationSettings {
         REVIEW_MODE,
         DIAL,
         OPEN_DESK,
-        LAST_CHECK,
         KEEP_AWAKE,
         REOPEN
     }
@@ -48,8 +47,6 @@ public final class AutomationSettings {
     private final ObjectProperty<ReviewMode> reviewMode = new SimpleObjectProperty<>(ReviewMode.UNATTENDED);
     private final ObjectProperty<QualityDial> defaultDial = new SimpleObjectProperty<>(QualityDial.BALANCED);
     private final BooleanProperty openReviewDesk = new SimpleBooleanProperty(true);
-    private final BooleanProperty lastCheck = new SimpleBooleanProperty(false);
-    private final BooleanProperty lastCheckChosen = new SimpleBooleanProperty(false);
     private final BooleanProperty keepAwake = new SimpleBooleanProperty(true);
     private final BooleanProperty reopenLastProject = new SimpleBooleanProperty(true);
     private final StringProperty reviewModeOverride = new SimpleStringProperty();
@@ -151,18 +148,6 @@ public final class AutomationSettings {
     }
 
     /**
-     * Holds the last-check default for this session only; nothing is stored, as the last check no longer exists.
-     *
-     * @param on the choice
-     */
-    public void chooseLastCheck(final boolean on) {
-        log.debug("last check default choice {} -> {}", lastCheck.get(), on);
-        hold(Choice.LAST_CHECK);
-        lastCheck.set(on);
-        lastCheckChosen.set(true);
-    }
-
-    /**
      * Holds and stores keep-awake; a computer held awake is let go at once when this turns it off.
      *
      * @param on the choice
@@ -204,16 +189,6 @@ public final class AutomationSettings {
     /** {@return whether the review desk opens by itself when a run ends with segments to review} */
     public BooleanProperty openReviewDeskProperty() {
         return openReviewDesk;
-    }
-
-    /** {@return the last-check default, off while it has not been chosen} */
-    public BooleanProperty lastCheckProperty() {
-        return lastCheck;
-    }
-
-    /** {@return whether the last-check default has been written, so it no longer follows the book's quality} */
-    public ReadOnlyBooleanProperty lastCheckChosenProperty() {
-        return lastCheckChosen;
     }
 
     /** {@return whether the computer is kept awake while a model works} */
