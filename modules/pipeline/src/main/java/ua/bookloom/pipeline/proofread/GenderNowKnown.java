@@ -59,6 +59,28 @@ public final class GenderNowKnown {
         return reasons;
     }
 
+    /**
+     * The segments whose open gender deferral now has its gender, whatever their text says: what the Export screen's
+     * banner names as waiting on a fact the person has since given.
+     *
+     * @param open the non-null open deferrals of the project
+     * @param glossary the non-null glossary entries as they are now
+     * @param narrator the non-null narrator of the brief as it is now
+     * @return the name of the arrived fact by segment id, in the order of the deferrals, the first fact of a segment
+     *     winning; never null, empty when no fact arrived
+     */
+    public static Map<String, String> arrived(
+            final List<Deferral> open, final List<GlossaryEntry> glossary, final Narrator narrator) {
+        Objects.requireNonNull(open, "open");
+        Objects.requireNonNull(narrator, "narrator");
+        final Map<String, GlossaryEntry> byTerm = MarkList.byTerm(Objects.requireNonNull(glossary, "glossary"));
+        final Map<String, String> names = new LinkedHashMap<>();
+        open.forEach(deferral -> ArrivedGender.of(deferral, byTerm, narrator)
+                .ifPresent(fact -> names.putIfAbsent(deferral.segmentId(), fact.name())));
+        log.debug("Gender facts arrived: deferrals={} waiting segments={}", open.size(), names.size());
+        return names;
+    }
+
     private static boolean disagrees(
             final SegmentRecord record, final ArrivedGender arrived, final String targetLanguage) {
         return record.effectiveTarget()

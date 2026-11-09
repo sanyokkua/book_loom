@@ -30,4 +30,14 @@ public interface ExportService {
             ExportRequest request, @Nullable ChatModel model, ExportProgressListener progress) {
         return newExport(request, model);
     }
+
+    /**
+     * Reads what still waits in a project before its book is written, for the Export screen's banners.
+     *
+     * @param projectId the non-null project id
+     * @return the open work, {@link ExportOpenWork#NONE} for a service that does not read it; or the storage error
+     */
+    default Result<ExportOpenWork> openWork(String projectId) {
+        return Result.ok(ExportOpenWork.NONE);
+    }
 }
