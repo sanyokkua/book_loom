@@ -137,6 +137,20 @@ public final class ExportReportLines {
                 .map(name -> messages.get(MessageKey.EXPORT_REPORT_FILE, name));
     }
 
+    /**
+     * What the Proofread stage had re-read and what still waited when the book was written; both counts are always
+     * stated, zero included.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param summary the proofread summary of the written export
+     * @return the line; never empty
+     */
+    public static String proofreadLine(final Messages messages, final ProofreadSummary summary) {
+        Objects.requireNonNull(messages, MESSAGES);
+        Objects.requireNonNull(summary, SUMMARY);
+        return messages.get(MessageKey.EXPORT_PROOFREAD_SUMMARY, summary.reRead(), summary.waiting());
+    }
+
     private static Optional<String> fallbackLine(
             final Messages messages,
             final ExportReport report,

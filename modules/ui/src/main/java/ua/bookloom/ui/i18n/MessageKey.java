@@ -111,10 +111,6 @@ public enum MessageKey {
     ACTIVITY_BLOCKED("activity.blocked"),
     /** Busy-card step: the export checks the destination and the project. */
     EXPORT_PROGRESS_VALIDATING("export.progress.validating"),
-    /** Busy-card step: the consistency pass re-renders segments whose character's gender became known. */
-    EXPORT_PROGRESS_RETRY("export.progress.retry"),
-    /** Busy-card step: the consistency pass drafts flagged and doubted segments again, keeping only a better text. */
-    EXPORT_PROGRESS_RETRY_DOUBTED("export.progress.retryDoubted"),
     /** Busy-card step: the export writes the book and its side files. */
     EXPORT_PROGRESS_WRITING("export.progress.writing"),
     /** Busy-card detail label: the file being worked on. */
@@ -2627,6 +2623,8 @@ public enum MessageKey {
     EXPORT_BANNER_WAITING_FACT_GENDER("export.banner.waitingFact.gender"),
     /** Banner before Export book: argument 0 is how many segments still carry a proofread mark. */
     EXPORT_BANNER_OPEN_MARKS("export.banner.openMarks"),
+    /** The Proofread summary of a written export: argument 0 is the segments re-read, argument 1 those waiting. */
+    EXPORT_PROOFREAD_SUMMARY("export.proofread.summary"),
     /** Label of the original title. */
     EXPORT_BOOK_TITLE_ORIGINAL("export.bookTitle.original"),
     /** Label of the translated title field. */

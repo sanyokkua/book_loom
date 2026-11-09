@@ -112,4 +112,40 @@ class ExportScreenTilesTest extends ExportScreenTestBase {
         assertThat(labelText("export-auto-value")).isEqualTo("50");
         assertThat(labelText("export-reviewed-value")).isEqualTo("6");
     }
+
+    // IF the tile row hid what the Proofread stage left, THEN a restart would erase the summary the export was written
+    // with.
+    @Test
+    void proofreadLine_storedExport_readsSummary() throws TimeoutException {
+        repository()
+                .recordExport(
+                        "p1",
+                        new ExportRecord(
+                                Instant.parse("2026-10-20T09:00:00Z"),
+                                Path.of("Frankenstein.uk.epub"),
+                                70,
+                                72,
+                                0,
+                                0,
+                                50,
+                                6,
+                                new ua.bookloom.api.pipeline.ProofreadSummary(12, 3),
+                                List.of()));
+        desk.willAnswerCounts(counts(68));
+        openAndShowExport(EPUB);
+
+        awaitFx(() -> "70 of 142".equals(labelText("export-written-value")));
+
+        assertThat(labelText("export-proofread-line")).isEqualTo("Proofread: 12 segments re-read, 3 waiting for you");
+    }
+
+    @Test
+    void proofreadLine_noExport_dash() throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
+        openAndShowExport(EPUB);
+
+        awaitFx(() -> "74 of 142".equals(labelText("export-written-value")));
+
+        assertThat(labelText("export-proofread-line")).isEqualTo("—");
+    }
 }

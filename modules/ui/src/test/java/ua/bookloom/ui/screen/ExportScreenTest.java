@@ -74,6 +74,17 @@ class ExportScreenTest extends ExportScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
+    @Test
+    void screen_afterExportWithWaitingSegments_checkListStatesTheProofreadSummary() throws TimeoutException {
+        desk.willAnswerCounts(counts(68));
+        openEpubAndShowExport();
+
+        exportBook(new ExportReport(
+                Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, new ProofreadSummary(12, 3), 0));
+
+        assertThat(textOf("export-check-proofread")).contains("Proofread: 12 segments re-read, 3 waiting for you");
+    }
+
     private static ExportReport report(final int written, final int auto, final int reviewed) {
         return new ExportReport(
                 Path.of("Frankenstein.uk.epub"),

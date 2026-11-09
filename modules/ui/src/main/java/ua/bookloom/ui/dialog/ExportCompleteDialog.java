@@ -146,6 +146,10 @@ public final class ExportCompleteDialog {
             row.getStyleClass().add("kv");
             body.getChildren().add(row);
         }
+        final Label proofread = plain(ExportReportLines.proofreadLine(messages, report.proofread()));
+        proofread.setId("export-complete-proofread");
+        proofread.setWrapText(true);
+        body.getChildren().add(proofread);
         addPartialWarnings(body, report);
     }
 

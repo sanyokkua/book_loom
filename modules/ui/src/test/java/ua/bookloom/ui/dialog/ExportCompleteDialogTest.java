@@ -105,6 +105,14 @@ class ExportCompleteDialogTest extends ShellTestBase {
     }
 
     @Test
+    void show_proofreadSummary_statesBothCounts() {
+        show(List.of(), new ProofreadSummary(12, 3));
+
+        assertThat(textsUnder(required("export-complete-proofread")))
+                .contains("Proofread: 12 segments re-read, 3 waiting for you");
+    }
+
+    @Test
     void show_noSideFiles_hasNoAlsoSavedLine() {
         show();
 
