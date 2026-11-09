@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.pipeline.ExportService;
@@ -27,6 +29,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.eval.EvalVariants;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
@@ -39,11 +42,11 @@ import ua.bookloom.pipeline.glossary.PreScan;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermChoice;
 import ua.bookloom.pipeline.glossary.TermReview;
+import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
-import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -133,11 +136,6 @@ public final class SequenceJobs {
         return new Prepared(TranslationJobTestSupport.project(book, brief));
     }
 
-    /** The consistency pass over the prepared book's own stores (the eval's stage runners reach it from here). */
-    public static ConsistencyPass consistencyPass(final Prepared prepared) {
-        return ConsistencyPassFixture.over(prepared.project, EvalVariants.templates());
-    }
-
     /** The production export service over the prepared book's own stores, as the Export screen reaches it. */
     public static ExportService exportService(final Prepared prepared) {
         final TestProject project = prepared.project;
@@ -163,7 +161,23 @@ public final class SequenceJobs {
 
     /** The review desk's retry over the prepared book's own stores. */
     public static RetryDraft retryDraft(final Prepared prepared) {
-        return ConsistencyPassFixture.retryDraft(prepared.project, EvalVariants.templates());
+        final TestProject project = prepared.project;
+        return new RetryDraft(
+                project.documents(),
+                project.stores().openProjects(),
+                project.stores().projects(),
+                project.stores().segments(),
+                project.stores().glossary(),
+                project.stores().lexicon(),
+                project.stores().promptFrames(),
+                project.stores().runs(),
+                project.stores().summaries(),
+                EvalVariants.templates(),
+                new ObjectMapper(),
+                Guice.createInjector().getInstance(QualityLoop.class),
+                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                () -> ReviewMode.UNATTENDED,
+                Clock.systemUTC());
     }
 
     /**

@@ -88,43 +88,31 @@ class PromptSectionsTest {
     }
 
     @Test
-    void userSectionsOf_revision_listsFactsBeforeTheSourceTokensAndTheTextLast() {
+    void userSectionsOf_directedFix_listsSourceDefectsTokensAndTheTextLast() {
         final Map<String, String> values = new HashMap<>();
         values.put("source", "⟦g0⟧He⟦g1⟧ left.");
-        values.put("tokens", "⟦g0⟧ ⟦g1⟧");
+        values.put("expectedTokens", "⟦g0⟧ ⟦g1⟧");
         values.put("text", "⟦g0⟧Він⟦g1⟧ пішов.");
-        values.put("resolvedFacts", "He is a djinni.");
+        values.put("findings", "- language");
 
-        final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.REVISION, values);
+        final List<PromptSection> sections = TEMPLATES.userSectionsOf(PromptName.DIRECTED_FIX, values);
 
         assertThat(sections)
                 .extracting(PromptSection::slot, PromptSection::heading)
                 .containsExactly(
-                        tuple("resolvedFacts", "[Resolved facts revealed later in the book]"),
                         tuple("source", "<Source>"),
-                        tuple("tokens", "[Immutable tokens]"),
+                        tuple("findings", "[Defects to fix — address each exactly]"),
+                        tuple("expectedTokens", "[Expected tokens — your translation contains exactly this sequence]"),
                         tuple("text", "<Translation>"));
-    }
-
-    // The token line is a sentence with the slot inside it; the section holds the line as the model read it.
-    @Test
-    void userSectionsOf_slotInsideAHeadedLine_holdsTheWholeRenderedLine() {
-        final Map<String, String> values = Map.of("source", "⟦g0⟧Hi", "tokens", "⟦g0⟧", "text", "⟦g0⟧Привіт");
-
-        assertThat(TEMPLATES.userSectionsOf(PromptName.REVISION, values))
-                .filteredOn(section -> section.slot().equals("tokens"))
-                .singleElement()
-                .extracting(PromptSection::lines)
-                .isEqualTo(List.of("Copy this exact ordered sequence unchanged: ⟦g0⟧"));
     }
 
     @Test
     void userSectionsOf_undeclaredSlot_isRejectedAsRenderingIs() {
-        final Map<String, String> values = new HashMap<>(Map.of("source", "English", "text", "Hi"));
+        final Map<String, String> values = new HashMap<>(Map.of("source", "English", "text", "Hi", "findings", "- x"));
         values.put("nope", "x");
 
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> TEMPLATES.userSectionsOf(PromptName.REVISION, values))
+                .isThrownBy(() -> TEMPLATES.userSectionsOf(PromptName.DIRECTED_FIX, values))
                 .withMessageContaining("nope");
     }
 }

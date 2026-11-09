@@ -71,7 +71,7 @@ class PseudoChatModelTest {
 
     // Every other repair-shaped format answers the same single-target object.
     @ParameterizedTest
-    @ValueSource(strings = {"structural-repair", "repair", "directed-fix", "revision"})
+    @ValueSource(strings = {"structural-repair", "repair", "directed-fix"})
     void chat_repairFormats_repliesWithUppercasedTargetObject(String formatName) {
         final ChatResponse response = send("<Text>\nhi\n</Text>", formatName);
 

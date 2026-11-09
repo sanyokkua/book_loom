@@ -28,22 +28,22 @@ class PromptTemplatesTest {
     // A typo would otherwise send the model a literal {{sumary}}.
     @Test
     void load_undeclaredSlot_namesFileAndSlot() {
-        final var loader = bundledExcept("revision.user.prompt", "{{sumary}} {{source}} {{text}}");
+        final var loader = bundledExcept("directed-fix.user.prompt", "{{sumary}} {{source}} {{text}} {{findings}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("revision.user.prompt")
+                .hasMessageContaining("directed-fix.user.prompt")
                 .hasMessageContaining("sumary");
     }
 
     // A file that forgot a required slot would silently drop the segment text.
     @Test
     void load_requiredSlotMissing_namesFileAndSlot() {
-        final var loader = bundledExcept("revision.user.prompt", "{{source}} {{tokens}}");
+        final var loader = bundledExcept("directed-fix.user.prompt", "{{source}} {{findings}}");
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("revision.user.prompt")
+                .hasMessageContaining("directed-fix.user.prompt")
                 .hasMessageContaining("text");
     }
 
@@ -58,21 +58,25 @@ class PromptTemplatesTest {
     }
 
     @Test
-    void renderUser_emptyOptionalFacts_removesWholeBlock() {
+    void renderUser_emptyOptionalTokens_removesWholeBlock() {
         final String user = new PromptTemplates()
                 .renderUser(
-                        PromptName.REVISION, Map.of("source", "A", "text", "Hi.", "tokens", "", "resolvedFacts", ""));
+                        PromptName.DIRECTED_FIX,
+                        Map.of("source", "A", "text", "Hi.", "findings", "- language", "expectedTokens", ""));
 
-        assertThat(user).startsWith("<Source>\nA\n</Source>").doesNotContain("Resolved facts", "{{");
+        assertThat(user).startsWith("<Source>\nA\n</Source>").doesNotContain("Expected tokens", "{{");
     }
 
     @Test
-    void renderUser_filledOptionalFacts_keepsBodyWithoutMarkers() {
+    void renderUser_filledOptionalTokens_keepsBodyWithoutMarkers() {
         final String user = new PromptTemplates()
-                .renderUser(PromptName.REVISION, Map.of("source", "A", "text", "Hi.", "resolvedFacts", "It began."));
+                .renderUser(
+                        PromptName.DIRECTED_FIX,
+                        Map.of("source", "A", "text", "Hi.", "findings", "- language", "expectedTokens", "⟦g0⟧ ⟦g1⟧"));
 
         assertThat(user)
-                .startsWith("[Resolved facts revealed later in the book]\nIt began.\n\n<Source>")
+                .contains(
+                        "[Expected tokens — your translation contains exactly this sequence]\n⟦g0⟧ ⟦g1⟧\n\n<Translation>")
                 .doesNotContain("{{");
     }
 
@@ -80,7 +84,8 @@ class PromptTemplatesTest {
     @Test
     void renderUser_valueLooksLikeSlotOrReplacement_isInsertedLiterally() {
         final String user = new PromptTemplates()
-                .renderUser(PromptName.REVISION, Map.of("source", "A", "text", "{{source}} $1 \\"));
+                .renderUser(
+                        PromptName.DIRECTED_FIX, Map.of("source", "A", "text", "{{source}} $1 \\", "findings", "- x"));
 
         assertThat(user).contains("<Translation>\n{{source}} $1 \\\n</Translation>");
     }
@@ -102,63 +107,30 @@ class PromptTemplatesTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // The revision call holds one <Translation> block with the masked target; the masked source sits in <Source>.
     @Test
-    void renderUser_revisionWithoutFacts_holdsSourceAndOneTranslationBlock() {
+    void renderUser_directedFix_holdsSourceDefectsAndOneTranslationBlock() {
         final String user = new PromptTemplates()
                 .renderUser(
-                        PromptName.REVISION,
+                        PromptName.DIRECTED_FIX,
                         Map.of(
                                 "source",
                                 "Sam opened the ⟦g0⟧old⟦g1⟧ door.",
                                 "text",
-                                "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері."));
-
-        assertThat(user).isEqualTo("""
-                        <Source>
-                        Sam opened the ⟦g0⟧old⟦g1⟧ door.
-                        </Source>
-
-                        <Translation>
-                        Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.
-                        </Translation>
-
-                        Return one JSON object: {"target":"<the revised translation, or the same text if nothing changes>"}
-                        """);
-    }
-
-    // A source with tokens lists them for the rewrite, as the draft does.
-    @Test
-    void renderUser_revisionWithTokens_listsThemBeforeTheTranslation() {
-        final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.REVISION,
-                        Map.of(
-                                "source", "Sam opened the ⟦g0⟧old⟦g1⟧ door.",
-                                "text", "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.",
-                                "tokens", "⟦g0⟧ ⟦g1⟧"));
+                                "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.",
+                                "findings",
+                                "- language"));
 
         assertThat(user)
-                .contains("[Immutable tokens]\nCopy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n\n<Translation>");
+                .startsWith("<Source>\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n[Defects to fix")
+                .contains("\n- language\n\n<Translation>\nСем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</Translation>")
+                .endsWith("{\"target\":\"<the full corrected translation>\"}\n");
     }
 
     @Test
-    void renderUser_revisionWithFacts_namesThemBeforeTheSource() {
-        final String user = new PromptTemplates()
-                .renderUser(
-                        PromptName.REVISION,
-                        Map.of("source", "Sam left.", "text", "Сем пішов.", "resolvedFacts", "- Sam (Сем): female"));
-
-        assertThat(user)
-                .startsWith(
-                        "[Resolved facts revealed later in the book]\n- Sam (Сем): female\n\n<Source>\nSam left.\n");
-    }
-
-    @Test
-    void renderSystem_revision_fillsLanguagesAndStyle() {
+    void renderSystem_directedFix_fillsLanguagesAndStyle() {
         final String system = new PromptTemplates()
                 .renderSystem(
-                        PromptName.REVISION,
+                        PromptName.DIRECTED_FIX,
                         Map.of(
                                 "sourceLanguage",
                                 "English (en)",
@@ -170,8 +142,8 @@ class PromptTemplatesTest {
                                 "Keep foreign passages."));
 
         assertThat(system)
-                .startsWith("You revise one segment of a book already translated from English (en) into Ukrainian (uk)")
-                .contains("Style:\nNeutral register.\n", "5. Keep foreign passages.\n")
+                .startsWith("You correct a translation from English (en) into Ukrainian (uk).")
+                .contains("Style:\nNeutral register.\n", "6. Keep foreign passages.\n")
                 .doesNotContain("{{");
     }
 

@@ -38,7 +38,6 @@ import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.proofread.DeferralRegister;
-import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
  * Runs the mini book the way the app does a whole book: the autonomous names pass, the translation job, then the
@@ -115,7 +114,6 @@ final class MiniRunner {
         final int afterJob = probe.mark();
         final List<MiniRun.Proofread> proofread = proofread(prepared);
         logOpenDeferrals(prepared);
-        consistency(prepared, probe, errors);
         final Calls calls = new Calls(names, afterJob - afterNames, probe.mark() - afterJob);
         final Duration elapsed = Duration.between(started, Instant.now());
         log.info("Mini eval end state={} calls={} errors={} elapsed={}", end, calls, errors, elapsed);
@@ -187,15 +185,6 @@ final class MiniRunner {
                             .data(),
                     "added");
         }
-    }
-
-    private void consistency(final Prepared prepared, final StageProbe probe, final List<String> errors) {
-        final Result<?> result = SequenceJobs.consistencyPass(prepared)
-                .run(
-                        prepared.projectId(),
-                        probe.calls(book.targetLanguage()),
-                        new PassOptions(true, dial == QualityDial.MAX));
-        WholeBookStages.note("consistency pass", result, errors);
     }
 
     private Map<String, Outcome> outcomes(final Prepared prepared) {

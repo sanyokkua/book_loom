@@ -12,7 +12,7 @@ import ua.bookloom.api.llm.ChatModel;
 final class StageSuites {
 
     /** The suite names, as the environment variable and the report carry them. */
-    static final List<String> NAMES = List.of("prescan", "terms", "setup", "consistency", "retry", "replay");
+    static final List<String> NAMES = List.of("prescan", "terms", "setup", "retry", "replay");
 
     static StageReport run(final String suite, final String modelId, final ChatModel model, final Path workDir) {
         if ("setup".equals(suite)) {
@@ -24,7 +24,6 @@ final class StageSuites {
                 switch (suite) {
                     case "prescan" -> new PreScanEvalRunner(model).run(StageCases.prescan());
                     case "terms" -> new TermsEvalRunner(model).run(StageCases.terms());
-                    case "consistency" -> new RetryEvalRunner(model, workDir).consistency(StageCases.retry());
                     case "retry" -> new RetryEvalRunner(model, workDir).retry(StageCases.retry());
                     case "replay" -> replay(model);
                     default -> throw new IllegalArgumentException("unknown stage suite: " + suite);

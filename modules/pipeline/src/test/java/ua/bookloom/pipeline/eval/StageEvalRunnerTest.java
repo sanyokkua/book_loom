@@ -182,31 +182,6 @@ class StageEvalRunnerTest {
     }
 
     @Test
-    void consistency_goodModel_repairsEveryPlantedDefect() {
-        final List<RetryBook> books = StageCases.retry();
-        final RetryEvalRunner runner = new RetryEvalRunner(new PlantedDrafts(draftsOf(books, true)), workDir);
-
-        final List<StageRow> rows = runner.consistency(books);
-
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":pass"))).hasSize(2);
-        assertThat(rows).extracting(StageRow::passed).as(rows.toString()).containsOnly(true);
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":pass")))
-                .allSatisfy(row -> assertThat(row.calls()).isPositive());
-        assertThat(runner.probe().requests()).extracting(ChatRequest::callKind).contains(CallKind.DRAFT);
-    }
-
-    @Test
-    void consistency_modelThatKeepsThePlantedDrafts_failsTheDefectiveCases() {
-        final List<RetryBook> books = StageCases.retry();
-
-        final List<StageRow> rows =
-                new RetryEvalRunner(new PlantedDrafts(draftsOf(books, false)), workDir).consistency(books);
-
-        assertThat(rows.stream().filter(row -> row.id().endsWith(":mixed-script")))
-                .allSatisfy(row -> assertThat(row.passed()).isFalse());
-    }
-
-    @Test
     void retry_goodModel_fixesEachCaseAndSendsDraftRequests() {
         final List<RetryBook> books = StageCases.retry();
         final RetryEvalRunner runner = new RetryEvalRunner(new PlantedDrafts(draftsOf(books, true)), workDir);
@@ -220,12 +195,10 @@ class StageEvalRunnerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"prescan", "terms", "setup", "consistency", "retry"})
+    @ValueSource(strings = {"prescan", "terms", "setup", "retry"})
     void suites_everyName_runsAndReports(final String suite) {
         final List<RetryBook> books = StageCases.retry();
-        final var model = suite.equals("consistency") || suite.equals("retry")
-                ? new PlantedDrafts(draftsOf(books, true))
-                : new StageFakeModel(false);
+        final var model = suite.equals("retry") ? new PlantedDrafts(draftsOf(books, true)) : new StageFakeModel(false);
 
         final StageReport report = StageSuites.run(suite, "fake", model, workDir);
 

@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.reviewer.Verification.FailureReason;
-import ua.bookloom.pipeline.revision.RevisionGuards;
 
 /**
  * What an edit did to the whole text, read from the candidate and the edited text alone: a doubled word, a changed
@@ -94,7 +93,7 @@ final class EditGuards {
         if (criterion == ReviewCriterion.QUOTES) {
             return false;
         }
-        return RevisionGuards.violationOfEdit(before, after, criterion == ReviewCriterion.OMISSION)
+        return EditCounts.violationOfEdit(before, after, criterion == ReviewCriterion.OMISSION)
                 .isPresent();
     }
 

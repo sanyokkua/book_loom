@@ -14,7 +14,7 @@
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
+#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|words|realrun|sequence|prescan|terms|setup|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
 #                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]] [--summaries on|off]
 # Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
 # in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
@@ -49,10 +49,10 @@
 # joined by commas: "lmstudio:google/gemma-4-e4b,32768,q8". The brief the eval sends is BOOKLOOM_EVAL_PRESET (e.g.
 # glass-harbour), BOOKLOOM_EVAL_BRIEF (a JSON file) or BOOKLOOM_EVAL_REGISTER / _NAMES / _GENRE / _DIAL; they pass through.
 # The window is the model's reported context length capped at 16384 (as a run does) unless BOOKLOOM_EVAL_WINDOW is set.
-# --suite prescan|terms|setup|consistency|retry runs the model-call stages the other suites never reach (A4), each through
+# --suite prescan|terms|setup|retry runs the model-call stages the other suites never reach (A4), each through
 # its production class on small invented fixtures (eval/stages/*.json; reports end in -<suite>.json): prescan = the glossary
 # name scan, terms = the recurring-term choice and the glossary review, setup = the file-name and Book Brief suggestions,
-# consistency = the export pass (retry of doubted segments, check against the neighbours), retry = the review desk's Retry.
+# retry = the review desk's Retry.
 # One row per model and suite: share of cases right, calls, failed and repeated calls, refused answers.
 # --suite replay sends the calls of a real run's trace log again (BOOKLOOM_EVAL_REPLAY_LOG=<bookloom-trace.log[.gz]>; see
 # docs/DEVELOPMENT.md, replay): BOOKLOOM_EVAL_REPLAY_MODE=raw|fast, _MAX_BYTES, _LIMIT, _TARGET pass through the environment.
@@ -76,7 +76,7 @@
 # read right, the wrong votes, the abstentions and the wrong-vote rate (the gate is at most 5 %, else that model's votes
 # only break ties).
 # --suite mini (15j.J15) runs the invented 33-block EPUB (eval/datasets/mini-en/book.json, one block per defect seen so far) through the
-# names pass, the translation job and the export's consistency pass, and scores each expectation of eval/datasets/mini-en/expectations.json
+# names pass, the translation job, and scores each expectation of eval/datasets/mini-en/expectations.json
 # (reports end in -mini-<policy>.json): one row per model with the expectations met, the segments flagged, the calls and the
 # seconds, then the defects that missed. Measured: see docs/DEVELOPMENT.md. --names transliterate|translate|keep_original (default
 # transliterate, BOOKLOOM_EVAL_NAMES) is the brief's name policy and decides what the three brand expectations demand;
@@ -446,7 +446,7 @@ if sys.argv[2] == "words":
     for r in (r for r in reports if r.get("suite") == "words"):
         print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
     sys.exit(0)
-STAGES = ("prescan", "terms", "setup", "consistency", "retry", "replay")
+STAGES = ("prescan", "terms", "setup", "retry", "replay")
 if sys.argv[2] in STAGES:
     print("%-36s %-12s %5s %6s %6s %6s %8s %7s" % ("model", "suite", "cases", "pass", "calls", "failed", "repeated", "refused"))
     for r in (r for r in reports if r.get("suite") == sys.argv[2]):

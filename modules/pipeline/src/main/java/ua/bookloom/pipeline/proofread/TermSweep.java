@@ -49,44 +49,18 @@ public final class TermSweep {
      */
     public record Swept(int substitutions, int proposals) {}
 
-    /** Told of each segment the sweep changes, for a caller that keeps notes of them. */
-    public interface Observer {
-
-        /** An observer that is told nothing. */
-        Observer NONE = new Observer() {
-            @Override
-            public void swept(final String segmentId, final int terms) {}
-
-            @Override
-            public void proposed(final String segmentId) {}
-        };
-
-        /** A machine target took {@code terms} term deferrals. */
-        void swept(String segmentId, int terms);
-
-        /** A swept text waits as a proposal on a segment the person edited. */
-        void proposed(String segmentId);
-    }
-
     /** The counts of one sweep as it goes; used from the sweep's own thread only. */
     private static final class Counts {
 
-        private final Observer observer;
         private int substitutions;
         private int proposals;
 
-        Counts(final Observer observer) {
-            this.observer = observer;
-        }
-
-        void swept(final String segmentId, final int terms) {
+        void swept(final int terms) {
             substitutions += terms;
-            observer.swept(segmentId, terms);
         }
 
-        void proposed(final String segmentId) {
+        void proposed() {
             proposals++;
-            observer.proposed(segmentId);
         }
 
         Swept done() {
@@ -103,19 +77,7 @@ public final class TermSweep {
      *     stopped it
      */
     public Result<Swept> sweep(final SweepInputs inputs, final List<Deferral> open) {
-        return sweep(inputs, open, Observer.NONE);
-    }
-
-    /**
-     * Sweeps every open TERM deferral and tells {@code observer} of each segment it changes.
-     *
-     * @param inputs the non-null run facts
-     * @param open the non-null open deferrals of the project
-     * @param observer the non-null listener of the changes
-     * @return as {@link #sweep(SweepInputs, List)}
-     */
-    public Result<Swept> sweep(final SweepInputs inputs, final List<Deferral> open, final Observer observer) {
-        final Counts counts = new Counts(Objects.requireNonNull(observer, "observer"));
+        final Counts counts = new Counts();
         final Map<String, List<Deferral>> bySegment = open.stream()
                 .filter(deferral -> deferral.reason() == DeferralReason.TERM)
                 .collect(Collectors.groupingBy(Deferral::segmentId, LinkedHashMap::new, Collectors.toList()));
@@ -289,10 +251,10 @@ public final class TermSweep {
                 how);
         log.trace("Term sweep segmentId={} before={} after={}", segmentId, base.masked(), restored.maskedForm());
         switch (how) {
-            case MACHINE_TARGET -> tally.swept(segmentId, sweep.swept().size());
+            case MACHINE_TARGET -> tally.swept(sweep.swept().size());
             case PROPOSAL -> {
                 log.warn("Term sweep stored a proposal segmentId={}: the person edited the segment", segmentId);
-                tally.proposed(segmentId);
+                tally.proposed();
             }
             // The sweep makes no model call, so only a truly concurrent action gets here; the next pass sweeps again.
             case STALE ->

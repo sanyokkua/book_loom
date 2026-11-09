@@ -65,7 +65,7 @@ class ExportJobCancelTest {
     @Test
     void run_cancelledBeforeRun_returnsCancelledWithoutModelCallOrWrite() {
         final ScriptedChatModel model =
-                new ScriptedChatModel().answerTo("revision", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
+                new ScriptedChatModel().answerTo("proofread", Result.ok(new ChatResponse(REPLY, FinishReason.STOP)));
         final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), model));
         job.cancel();
 

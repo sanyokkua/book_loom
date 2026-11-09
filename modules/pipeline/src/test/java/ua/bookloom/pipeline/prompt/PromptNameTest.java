@@ -29,7 +29,6 @@ class PromptNameTest {
         "FORMAT_REASK,format-reask,STRUCTURAL_REPAIR,draft-batch-json,0.2",
         "REVIEWER,reviewer,REVIEW,reviewer,0.0",
         "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2",
-        "REVISION,revision,PROOFREAD,revision,0.2",
         "PRESCAN,prescan,PRESCAN,prescan,0.2",
         "REVIEW_TERMS,review-terms,REVIEW_TERMS,review-terms,0.1",
         "SUGGEST_TARGETS,suggest-targets,SUGGEST_TARGETS,suggest-targets,0.1",
@@ -76,7 +75,6 @@ class PromptNameTest {
         "PROOFREAD",
         "REVIEWER",
         "DIRECTED_FIX",
-        "REVISION",
         "PRESCAN",
         "REVIEW_TERMS",
         "SUGGEST_TARGETS",
@@ -93,7 +91,7 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"REVISION", "DIRECTED_FIX"})
+    @CsvSource({"DIRECTED_FIX"})
     void pseudoModel_everyResponseFormatName_answersTargetObject(final PromptName name) {
         final ChatRequest request = new ChatRequest(
                 List.of(new ChatMessage(ChatRole.USER, "<Text>\nHi.\n</Text>")),

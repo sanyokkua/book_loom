@@ -39,11 +39,9 @@ class PromptShapeTest {
             Map.entry("directed-fix", "target"),
             Map.entry("improve", "target"),
             Map.entry("polish", "target"),
-            Map.entry("revision", "target"),
             Map.entry("reviewer", "results"),
             Map.entry("reflect", "issues"),
             Map.entry("prescan", "terms"),
-            Map.entry("consistency", "target"),
             Map.entry("file-name", "target"));
 
     private static final Map<String, String> OTHER_REPLY_KEYS = Map.ofEntries(
@@ -320,15 +318,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"REVISION"})
-    void render_rewriteOfTokenText_listsTheImmutableTokens(final PromptName name) {
-        assertThat(user(name)).contains("[Immutable tokens]\nCopy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧");
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = PromptName.class,
-            names = {"DIRECTED_FIX", "REVISION"})
+            names = {"DIRECTED_FIX"})
     void render_rewrite_delimitsSourceAndTranslationApart(final PromptName name) {
         assertThat(user(name))
                 .contains("<Source>\n" + MASKED + "\n</Source>", "<Translation>\n" + MASKED + "\n</Translation>")

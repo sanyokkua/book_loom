@@ -11,7 +11,6 @@ import static ua.bookloom.pipeline.prompt.SlotNames.STYLE_SHEET;
 import static ua.bookloom.pipeline.prompt.SlotNames.TARGET_LANGUAGE;
 import static ua.bookloom.pipeline.prompt.SlotNames.TERMS;
 import static ua.bookloom.pipeline.prompt.SlotNames.TITLE;
-import static ua.bookloom.pipeline.prompt.SlotNames.TOKENS;
 
 import java.util.Optional;
 import java.util.Set;
@@ -108,34 +107,6 @@ public enum PromptName {
             new Temperatures(0.2, null),
             new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
             new Slots(Set.of(SOURCE, "text", "findings"), Set.of("expectedTokens"))),
-
-    /**
-     * Backward revision's re-render of one decided segment whose character's gender became known after it was
-     * drafted; the facts block names each such character and gender, since the style sheet cannot.
-     */
-    REVISION(
-            "revision",
-            CallKind.PROOFREAD,
-            "revision",
-            DraftSchema.SCHEMA,
-            new Temperatures(0.2, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
-            new Slots(Set.of(SOURCE, "text"), Set.of("resolvedFacts", TOKENS))),
-
-    /**
-     * The consistency pass's check of one decided paragraph against the translated paragraph before it and after it, the
-     * names and terms the book holds and the source: it fixes what disagrees and returns the rest unchanged.
-     */
-    CONSISTENCY(
-            "consistency",
-            CallKind.PROOFREAD,
-            "consistency",
-            ConsistencySchema.SCHEMA,
-            new Temperatures(0.1, null),
-            new Slots(Set.of(SOURCE_LANGUAGE, TARGET_LANGUAGE, STYLE_SHEET, FOREIGN_PASSAGE_RULE), Set.of(EXAMPLES)),
-            new Slots(
-                    Set.of(SOURCE, "text"),
-                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", CHARACTERS, TOKENS))),
 
     /** The Fast dial's choice among recurring words (15i.N7): keep or drop, a batch of candidates a call. */
     TERM_CHOICE(
