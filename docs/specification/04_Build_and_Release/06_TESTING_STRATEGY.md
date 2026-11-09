@@ -263,8 +263,8 @@ root hash, rechecked by `DatasetManifestCheckTest`), so a changed fixture can ne
 `article-gravity`. A run repeats K times with recorded seeds, writes one record per case (`cases.jsonl`, with the prompt and
 reply of each call in `calls/`) and a version-2 `report.json` with the dataset, model, judge, repeats and noise band.
 `scripts/eval-score.py` holds the statistics (`diff --paired` with the exact sign test, `calibrate`, `show`, `blind`,
-`baseline`). Arms select a prompt alternative only through the test-only `PromptVariants` binding; no environment
-switch reaches production code (`BOOKLOOM_REASONING`, `BOOKLOOM_SAMPLING`, `BOOKLOOM_EVAL_RULES` and the batch-format
+`baseline`). Arms selected a prompt alternative through a test-only `PromptVariants` binding, deleted in group 14 once the last arm
+was settled; no environment switch reaches production code (`BOOKLOOM_REASONING`, `BOOKLOOM_SAMPLING`, `BOOKLOOM_EVAL_RULES` and the batch-format
 switch are gone, and ArchUnit guards keep the first two out). The two arms of redesign task 6.10 that were not prompt
 variants (sampling and batch start size) used test-only switches that were deleted with the losing data once the arms
 were settled (`docs/DEVELOPMENT.md#redesign-arms`). Baselines of the
@@ -283,10 +283,10 @@ Embeddings appear **only here**, in the test harness — never in the app runtim
 - **Layer 0 — structural, deterministic, hard-fail.** Masked-tag multiset preserved (exact set equality of `⟦gN⟧`
   placeholders), **no reasoning/`<think>`/code-fence leakage**, JSON parses and has the required shape, output non-empty
   and length-sane. These catch the errors similarity hides (e.g. a dropped tag or a leaked reasoning block).
-- **Layer 1 — field assertions on structured output.** For judge/directed-fix steps: verdict/enum in the allowed set,
-  score in `[0,1]`, arrays present. Assert on fields, not prose.
+- **Layer 1 — field assertions on structured output.** For structured steps (batch draft, proofread): the verdict or status in the allowed set,
+  the ids present, arrays present. Assert on fields, not prose.
 - **Layer 2 — embedding cosine similarity vs a reference answer.** Advisory-by-default, for free-text steps (draft,
-  directed fix). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
+  repair). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
   small labelled good/bad set, and assert against `threshold − margin`. Cosine is a **drift/aboutness** signal, not a
   correctness oracle.
 - **Layer 3 — local LLM-as-judge tie-breaker.** Only in the ambiguous cosine band: reference-guided binary PASS/FAIL

@@ -1,6 +1,6 @@
 # ADR-0035 — Export is a separate action; a run ends when the translation ends
 
-**Status:** accepted **Date:** 2026-09-26 **Deciders:** owner **Amends:** ADR-0033 (the job's stages)
+**Status:** accepted; amended by ADR-0046 (2026-11-09) **Date:** 2026-09-26 **Deciders:** owner **Amends:** ADR-0033 (the job's stages)
 
 ## Context and problem statement
 
@@ -46,3 +46,9 @@ translates into memory and the Export screen owns where and how the book is writ
 
 People regularly finish a run and lose the translation because nothing was written, or an export taken while a run is
 still translating writes a book whose segments disagree with what the run later decides.
+
+## Amended by ADR-0046 (2026-11-09)
+
+The job prepares, translates and proofreads, and a run is Completed only after Proofread. Export still stays a separate
+action, and it now makes no model call: it validates each segment, writes the file and reports the stored Proofread
+summary. The final consistency pass named above is gone; the text above is kept as history.

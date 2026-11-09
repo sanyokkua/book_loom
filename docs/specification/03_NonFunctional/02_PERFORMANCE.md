@@ -49,7 +49,7 @@ afterward. From the first release migrations are incremental, so normal launches
   (`02_Architecture/04_LLM_INTEGRATION.md#inference-gate`).
 - The app overlaps non-generation work (context assembly for the next chunk, QA of the previous, checkpoint writes) with
   the in-flight call so the model is the only serialized stage.
-- The quality dial trades throughput for quality explicitly (chunk size, repair budget, judge, backward revision —
+- The quality dial trades throughput for quality explicitly (the fixing call, how far the Proofread stage reads —
   `05_PIPELINE_ENGINE.md#quality-dial`); FAST minimizes calls per chunk.
 
 ## virtualized-lists {#virtualized-lists}

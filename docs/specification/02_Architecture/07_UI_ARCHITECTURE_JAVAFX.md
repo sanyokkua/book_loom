@@ -73,9 +73,9 @@ testable.
 - `ModelCallStarted(segmentId?, CallKind, segmentIds, attempt, maxAttempts, timeout?, RequestSummary(messageChars,
   contextWindow?, maxOutputTokens?)?)` and `ModelCallFinished(segmentId?, CallKind, elapsed, usage?, outputChars,
   usageEstimated, segmentIds, attempt, failure?)` bracket each **attempt** of a model call by its kind (draft, repair,
-  judge, name scan, summary): the provider client reports every request it sends through a `CallAttemptListener`
-  (`:api`), so a retry after a timeout is announced as attempt 2 with its own clock; a chunk's judge call names every
-  segment it judges in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
+  proofread, name scan, summary): the provider client reports every request it sends through a `CallAttemptListener`
+  (`:api`), so a retry after a timeout is announced as attempt 2 with its own clock; a draft batch names every
+  segment it drafts in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
   count the client estimated rather than one the provider reported.
 - `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with: the key to
   the run's fixed frame (stored once per project as a `PromptFrame`) and the call's own user-message sections. The
@@ -87,27 +87,22 @@ testable.
   reason, a segment `ACCEPTED` or `FLAGGED` on the draft call that last drafted it) sends it again. It carries the
   segments the call is about (`CallSegment(id, locator, displaySource)`) and the prompt's filled parts in the order
   they were sent (`PromptSection(slot, heading, origin SYSTEM|USER, lines)`, the system style sheet first). Only the
-  run's described calls are shown — the drafts (single and batch, with their repairs), the reviewer, the directed fix
-  and the backward revision and consistency calls; the name scans and the summary are not. **Planned:** `CallSnapshot`
+  run's described calls are shown — the drafts (single and batch, with their repairs) and the proofread windows; the name scans and the summary are not. **Planned:** `CallSnapshot`
   also carries the parsed batch items (id → target, item status) so the reply view can show a per-item grid
   (`mockups/README.md`, G5).
-- `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces, for the log, the reviewer's
-  directed fix for a refused edit (always round 1 of 1, no judge score). The one repair has no rounds and no event of
-  this name: it is announced by its `REPAIR` plan step and its model-call events (`CallKind.REPAIR`), until group 14
-  removes the reviewer and with it this event.
-- `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
+- `SegmentDecided` carries a `SegmentDetail(judgeScore? (always empty: there is no judge), path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
   snapshot, announcing a segment as decided.
 - `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one
   glossary entry (label `+n`) and on each memory reuse (labelled with the segment's locator). A kept chapter summary
   is its own event, `ChapterSummaryKept(chapterKey, chapter, sentences, text)`: a live row and a `sum` log entry
   naming the chapter (its text is book text, left out of `toString` and of every line above TRACE).
 - `Paused` names the segment the run paused on — for a pause on a provider error, the segment whose step failed (a
-  chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what "Try
+  batch call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what "Try
   again now" and "Skip these n segments" will do (`mockups/README.md`, Run states).
 
 The count snapshot is `JobProgress(JobStage stage, int section, int sections, int chunk, int chunks, int
 autoAccepted, int repairedAccepted, int accepted, int flagged, int pending)`, where `JobStage` is `PREP | TRANSLATE |
-REVISE`; it rides on `SegmentDecided` and `Paused`. `section, sections` is the 1-based position and count of **body**
+PROOFREAD`; it rides on `SegmentDecided` and `Paused`. `section, sections` is the 1-based position and count of **body**
 units — the auxiliary unit is never counted, and `section = sections` while it runs; the screen labels this column
 "Chapter" (no separate chapter field exists — the screen supplies the label). `chunk, chunks` is the position and
 count within the current section's chunking. `pending` leaves out segments kept as source by choice.
@@ -304,7 +299,7 @@ Dialogs live in the window, never in a second OS window except the native file c
 ### Progress dialog {#progress-dialog}
 
 **Planned (G4, G10):** one pattern for model work — filling in the brief, the names pass and the Scan / Review /
-Translate actions, suggesting a file name, the export's last check and the list of the translation's model calls.
+Translate actions, suggesting a file name, the export and the list of the translation's model calls.
 
 - `control/ProgressDialog` is a card on the work layer, driven by a **`ProgressDialogModel`** (steps, figures, selection,
   follow, mode) that holds no scene-graph references. It is fed by the state package's `CallFeed` /
@@ -317,7 +312,7 @@ Translate actions, suggesting a file name, the export's last check and the list 
   and ends with a toast offering "Review the results".
 - Clocks and figures tick in their own layout roots (**`FigureLabel`**, built), so a tick never re-lays out the dialog.
   Engine publications stay coalesced (the `RunSession` publishes at most once per 100 ms tick, `#state-mirror`), and a
-  long item list (the consistency pass can list thousands) is a virtualized list of small row records with the detail
+  long item list (a names pass can list thousands) is a virtualized list of small row records with the detail
   looked up by segment id and full prompts kept only for the last 50 calls.
 - **Prompt and reply views:** `control/PromptContextPane` and `control/ReplyPane` were replaced (finalize 5.2) by a
   **`PromptView`** (a card per message role, a `TitledPane` per `PromptSection` shaped by its slot, the messages as sent in

@@ -680,7 +680,7 @@ const D = {
     get stepsTotal() { return Object.values(this.steps).reduce((a, [p]) => a + p, 0); },
     get stepsDone() { return Object.values(this.steps).reduce((a, [, d]) => a + d, 0); },
     get pct() { return Math.round(100 * this.stepsDone / this.stepsTotal); },
-    reviewed: 0, exportFixes: 3,
+    reviewed: 0,
     elapsed: '1 h 12 min', timeLeft: 'about 1 h 10 min', took: '2 h 25 min', speed: '9.4 tok/s', estimate: 'about 2 h 30 min',
     chapter: 'Chapter 2 of 5', call: 42,
 };
@@ -1369,8 +1369,6 @@ ${!hasProgress() ? `<div class="banner" style="margin-bottom:12px"><span class="
       <div class="chk"><input type="checkbox" checked> Glossary (CSV) — reuse it for the next book</div>
       <div class="chk"><input type="checkbox"> Bilingual copy (original and translation side by side)</div>
       <div class="chk"><input type="checkbox" checked> Quality report (what needed review)</div></div></div>
-    <div class="card"><div class="card-h"><h3>Last check before saving</h3></div><div class="card-b">
-      <div class="toggle-row">${sw(!partial, partial ? 'title="Runs when the whole book is translated"' : '')}<div class="tx">Check the uncertain places again<small>${partial ? 'Runs when the whole book is translated.' : 'Recommended. Rereads the segments that needed fixing next to their neighbours. Adds about 3 min for this book.'}</small></div></div></div></div>
   </div>
 </div></div>`;
 };
@@ -1500,7 +1498,6 @@ SET.automation = () => `${instant()}
   ${fld('When to stop and ask you', seg(['Never — translate unattended', 'When something needs review', 'After every segment'], 0), 'The last two pause the translation so you can look; Resume continues.')}
   ${fld('Default quality for new books', seg(['Fast', 'Balanced', 'Max quality'], 1))}
   <div class="toggle-row">${sw(true)}<div class="tx">Open the review desk when a translation finishes with segments to review</div></div>
-  <div class="toggle-row">${sw(true)}<div class="tx">Run the last check before saving by default</div></div>
   <div class="toggle-row">${sw(true)}<div class="tx">Keep the computer awake while translating<small>A closed laptop lid still sleeps; translating goes on after it wakes.</small></div></div>
   <div class="toggle-row">${sw(true)}<div class="tx">Reopen the last project when BookLoom starts<small>A translation that was going waits paused until you continue.</small></div></div>
 </div></div>`;
@@ -1547,7 +1544,7 @@ S.components = () => `<div class="page">
 <div class="stack" style="max-width:760px"><div class="banner"><span class="ico">ℹ</span><div>Information</div></div><div class="banner banner-warn"><span class="ico">⚠</span><div>Needs you</div></div><div class="banner banner-err"><span class="ico">⛔</span><div>Failed or unreachable</div></div><div class="banner banner-ok"><span class="ico">✓</span><div>Done</div></div></div>
 </div>`;
 const DLG_INDEX = [
-    ['Progress dialogs (G4, E1) — the work layer', [['w:brief', 'Fill in from the book'], ['n:auto', 'Prepare names → Results'], ['w:fileName', 'Suggest a file name'], ['w:exportRun', 'Export with the last check'], ['w:calls', 'All model calls']]],
+    ['Progress dialogs (G4, E1) — the work layer', [['w:brief', 'Fill in from the book'], ['n:auto', 'Prepare names → Results'], ['w:fileName', 'Suggest a file name'], ['w:exportRun', 'Export'], ['w:calls', 'All model calls']]],
     ['Work dialogs', [['review', 'Review desk'], ['test:inference', 'Inference test'], ['addterm', 'Add a term'], ['narrator', 'Who tells the story?'], ['genders', 'Character genders']]],
     ['Project names (PN)', [['samePair', 'Same language pair'], ['rename', 'Rename the project'], ['translateAgain', 'Translate into another language'], ['findBook', 'Find the book']]],
     ['Confirm and result', [['confirmStop', 'Stop translating?'], ['changeDuringRun', 'Change the AI model mid-book'], ['unsaved', 'Unsaved changes'], ['confirmDelete', 'Delete provider'], ['confirmRemove', 'Remove project'], ['replaceRun', 'Open another book'], ['leave', 'Model work is running'], ['exported', 'Export complete'], ['err', 'Error with details'], ['bindUnavailable', 'AI model unavailable on continue'], ['bindChanged', 'Model changed on continue'], ['about', 'About']]],
@@ -1650,7 +1647,7 @@ WORK.names = () => {
 };
 WORK_ESC.names = () => NAMES.kind === 'auto' && !NAMES.finished ? hideWork('Names', 'names') : closeWork();
 
-/* ============================================================ EXPORT — file name, last check (E2, E3) */
+/* ============================================================ EXPORT — file name, export (E2, E3) */
 WORK.fileName = () => progressDialog({
     id: 'fileName', ico: '✦', title: 'Suggest a file name', sub: 'The title in Ukrainian, made safe for a file name.',
     overall: [1, 1], extra: [['Elapsed', '0:04']],
@@ -1662,35 +1659,19 @@ WORK.fileName = () => progressDialog({
 });
 WORK_ESC.fileName = () => closeWork();
 const EXP_STEPS = [
-    {group: 'Steps', name: 'Check the translation is complete', state: mk('ok'), res: '1 of 1 · no request'},
-    {group: 'Steps', name: 'Fix he/she forms that became known', state: mk('ok'), res: '2 of 2 requests · 2 fixed'},
-    {group: 'Steps', name: 'Translate unsure segments again', state: mk('ok'), res: '3 of 3 requests · 1 better, 2 kept'},
-    {group: 'Reread · 6 of 18', name: 'ch1 · p02', state: mk('ok', 'unchanged'), res: 'Fine as it was', g: 1},
-    {group: 'Reread · 6 of 18', name: 'ch1 · p03', state: mk('ok', 'kept'), res: '“Зміст” is right; nothing changed', g: 1},
-    {group: 'Reread · 6 of 18', name: 'ch2 · p04', state: mk('ok', 'fixed'), res: 'Name form: “Ньютон” → “Ньютона”', g: 1, fixed: true},
-    {group: 'Reread · 6 of 18', name: 'ch2 · p11', state: mk('run', 'reading…'), res: 'The model is answering', g: 1, wait: true},
-    {group: 'Reread · 6 of 18', name: 'ch3 · p05', state: mk('wait'), res: '', g: 1, none: true},
-    {group: 'Reread · 6 of 18', name: '… 11 more', state: '', res: '', g: 1, none: true},
-    {group: 'Finish', name: 'Write the file', state: mk('wait'), res: '1 step'},
+    {group: 'Steps', name: 'Check the translation', state: mk('ok'), res: 'Destination, side files and 142 segments · no request'},
+    {group: 'Finish', name: 'Write the file', state: mk('run', 'writing…'), res: 'earth-gravity.uk.md · 1 step'},
 ];
 function expDetail(s, mode) {
-    const h = `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}${mode === 'detailed' && s.g ? '<span class="badge b-neutral mono">consistency</span>' : ''}</div>`;
-    if (!s.g) return `${h}<div class="say">${s.res}</div>`;
-    if (s.none) return `${h}<div class="card pad muted">Not started yet.</div>`;
-    return `${h}<div class="say">${s.wait ? 'The model is rereading this segment next to the ones before and after it.' : s.fixed ? 'The model found a problem and the new text passed every check, so it replaced the old one.' : 'The model found nothing to change.'}</div>
-  ${mode === 'detailed' ? callInfo({'Attempt': '1 of 2', 'Clock': s.wait ? clock(8, '0:06 of 2:00') : '5.2 s', 'Tokens in · out': s.wait ? '1,610 · —' : '1,640 · 74', 'Why checked': 'fixed during the translation'}) : ''}
-  <div class="io"><div class="h">Before</div><div class="h">After</div>
-    <div class="c"><span class="muted small">Segment before · ch2 · p10</span><br>Newton asked what would happen if the cannon were fired faster still.</div><div class="c">Ньютон запитав, що станеться, якщо вистрілити з гармати ще швидше.</div>
-    <div class="c"><span class="muted small">This segment</span><br>The ball would fall all the way around the Earth.</div><div class="c">${s.wait ? '<span class="pending">The model is answering… 0:06</span>' : s.fixed ? '<span style="text-decoration:line-through" class="muted">Ядро впало б навколо Землю.</span><br><b>Ядро падало б навколо всієї Землі.</b> <span class="badge b-info">fixed</span>' : 'Ядро падало б навколо всієї Землі. <span class="badge b-ok">unchanged</span>'}</div>
-    <div class="c last"><span class="muted small">Segment after · ch2 · p12</span><br>That is exactly what the Moon does.</div><div class="c last">Саме так і робить Місяць.</div></div>
-  ${mode === 'detailed' ? `<div class="mt3">${parsedPrompt([{h: 'Task', kind: 'list', open: true, lines: ['Check the segment against its neighbours: names, terms, he/she forms, tense', 'Answer “unchanged” when nothing is wrong']}], [{h: 'Names here', cnt: '1', kind: 'terms', lines: [['Isaac Newton', 'Ісаак Ньютон', 'male']]}, {h: 'Segments', cnt: '3', kind: 'pairs', open: true, lines: [['Newton asked…', 'Ньютон запитав…'], ['The ball would fall…', 'Ядро впало б…'], ['That is exactly…', 'Саме так…']]}], {raw: '== System ==\n…'})}${!s.wait && !s.fixed ? '<div class="hint">The reply was <span class="mono">{"unchanged":true}</span>.</div>' : ''}</div>` : ''}`;
+    const h = `<div class="state"><h3 style="font-size:15px">${s.name}</h3>${s.state}</div>`;
+    return `${h}<div class="say">${s.res}</div>`;
 }
 WORK.exportRun = () => progressDialog({
-    id: 'exportRun', ico: '⬇', title: 'Export · last check before saving', sub: 'Rereads the segments that needed fixing next to their neighbours, then writes earth-gravity.uk.md.',
-    overall: [12, 25], left: 'about 2 min', extra: [['Elapsed', '0:41'], ['Speed', '10 tok/s'], ['Fixed so far', '1']],
-    steps: EXP_STEPS, sel: 6, detail: expDetail, long: {label: 'Export', screen: 'export', screenName: 'Export'},
+    id: 'exportRun', ico: '⬇', title: 'Export', sub: 'Checks the translation, then writes earth-gravity.uk.md. No model is asked.',
+    overall: [1, 2], extra: [['Elapsed', '0:02']],
+    steps: EXP_STEPS, sel: 1, detail: expDetail, long: {label: 'Export', screen: 'export', screenName: 'Export'},
     cancelSays: 'Cancel writes no file.',
-    footer: `<button class="btn btn-ghost btn-sm" onclick="closeWork();ST.exported=true;openDialog('exported')" title="Mockup only">Mockup: finish →</button><button class="btn btn-secondary" onclick="openDialog('skipCheck')">Write the file now</button><button class="btn btn-ghost" onclick="openDialog('confirmCancelExport')">Cancel</button>`,
+    footer: `<button class="btn btn-ghost btn-sm" onclick="closeWork();ST.exported=true;openDialog('exported')" title="Mockup only">Mockup: finish →</button><button class="btn btn-ghost" onclick="openDialog('confirmCancelExport')">Cancel</button>`,
 });
 WORK_ESC.exportRun = () => hideWork('Export', 'export');
 
@@ -1734,7 +1715,7 @@ const FLAGGED = [
     {loc: 'ch3 · p17', kind: ['may be in another language', 'b-err'], src: 'The tide tables are printed in every harbour.', tgt: 'The tide tables are printed in every harbour.', why: 'The translation is still in English.', tech: 'untranslated · language check · high; refused twice · acceptance rule'},
     {loc: 'ch4 · p02', kind: ['number differs', 'b-warn'], src: 'g is about 9.81 m/s².', tgt: 'g дорівнює приблизно 9,8 м/с².', why: '9.81 became 9,8.', tech: 'number · number check · low'},
     {loc: 'ch4 · p19', kind: ['he/she form', 'b-warn'], src: 'The narrator says she measured it herself.', tgt: 'Оповідач каже, що виміряв це сам.', why: 'The narrator is a woman; the verb is in the male form.', tech: 'narrator-gender · gender check · medium'},
-    {loc: 'ch5 · p08', kind: ['the check was unsure', 'b-warn'], src: 'Weightlessness is falling without stopping.', tgt: 'Невагомість — це падіння без зупинки.', why: 'The reviewer suggested a smoother wording.', tech: 'reviewer-doubt · reviewer · low', proposal: 'Невагомість — це безупинне падіння.'},
+    {loc: 'ch5 · p08', kind: ['the check was unsure', 'b-warn'], src: 'Weightlessness is falling without stopping.', tgt: 'Невагомість — це падіння без зупинки.', why: 'The proofread suggested a smoother wording.', tech: 'proofread-doubt · reviewer · low', proposal: 'Невагомість — це безупинне падіння.'},
 ];
 const RV = {sel: 0, tab: 'why', st: FLAGGED.map(() => 'flag'), dirty: false, note: false, menu: false, tech: false};
 const RV_WORD = {flag: ['to review', 'flag'], ok: ['accepted', 'done'], edit: ['your edit', 'done'], skip: ['later', 'wait']};
@@ -1792,15 +1773,14 @@ DLG.narrator = () => simple('?', 'info', 'Who tells the story?', 'The book is to
 DLG.genders = () => simple('?', 'info', 'Characters without a gender', '2 characters are named often, and their gender is only a guess. Least confident first; the guess is chosen. Change a choice or tick Confirm to make it yours; a row left alone stays a hint.', gridTable(['Name', 'Where the guess comes from', 'Gender', ''], [['Ivar — 12 mentions', '<span class="muted">likely, low confidence</span>', seg(['woman', 'man', 'not known'], 1), '<label><input type="checkbox"> Confirm</label>'], ['Mira Holt — 30 mentions', '<span class="muted">rule: male · model: female</span>', seg(['woman', 'man', 'not known'], 1), '<label><input type="checkbox"> Confirm</label>']]), `${closeBtn('Back')}<button class="btn btn-primary" onclick="closeDialog()">Start anyway</button>`, true);
 DLG.meanings = () => simple('?', 'info', 'Names the book plays on', 'The book explains or plays on the meaning of these names. Choose how each is rendered; a name you leave is sounded out and its meaning kept as a note.', `<div class="field"><label class="fld">Brightwater — “bright water”</label>${seg(['Sound it out', 'Translate it', 'Sound it out, explain once'], 0)}</div><div class="field mt2"><label class="fld">Ashgrove — “ash grove”</label>${seg(['Sound it out', 'Translate it', 'Sound it out, explain once'], 0)}</div>`, `${closeBtn('Back')}<button class="btn btn-primary" onclick="closeDialog()">Save and start</button>`, true);
 DLG.confirmStop = () => simple('■', 'warn', 'Stop translating?', '', `${D.decided} of ${D.total} segments are done and saved. The 4 being translated now are translated next time. For a short break, use Pause.`, `<button class="btn btn-ghost" onclick="closeDialog()">Keep translating</button><button class="btn btn-secondary" onclick="closeDialog();setRun('stopped')">■ Stop</button>`);
-DLG.confirmCancelExport = () => simple('■', 'warn', 'Cancel the export?', '', `No file is written. The ${D.exportFixes} fixes made so far are not kept.`, `<button class="btn btn-ghost" onclick="closeDialog()">Keep exporting</button><button class="btn btn-danger" onclick="closeDialog();closeWork()">Cancel export</button>`);
-DLG.skipCheck = () => simple('⬇', 'info', 'Write the file now?', '', `The last check stops here: 6 of 18 segments were reread and 1 was fixed. The file is written with that fix; the other 12 stay as they are.`, `<button class="btn btn-ghost" onclick="closeDialog()">Keep checking</button><button class="btn btn-primary" onclick="closeDialog();closeWork();ST.exported=true;openDialog('exported')">Write the file now</button>`);
+DLG.confirmCancelExport = () => simple('■', 'warn', 'Cancel the export?', '', `No file is written.`, `<button class="btn btn-ghost" onclick="closeDialog()">Keep exporting</button><button class="btn btn-danger" onclick="closeDialog();closeWork()">Cancel export</button>`);
 DLG.unsaved = (to = 'models') => simple('●', 'warn', 'Save the changes to Ollama?', 'You changed the provider settings.', '', `<button class="btn btn-ghost" onclick="closeDialog()">Keep editing</button><button class="btn btn-secondary" onclick="ST.dirty=false;closeDialog();ST.settingsTab='${to}';rerender()">Discard</button><button class="btn btn-primary" onclick="ST.dirty=false;closeDialog();ST.settingsTab='${to}';rerender();toast('ok','Saved','Used from the next request.')">Save</button>`);
 DLG.changeDuringRun = () => simple('⚠', 'warn', 'Use LM Studio for the rest of this book?', `This book has been translated with ${D.provider} · ${D.model} so far.`, `Using the same AI model keeps the style even. Segments already done keep their translation; the change applies to the segments not translated yet.`, `<button class="btn btn-ghost" onclick="closeDialog()">Keep ${D.provider}</button><button class="btn btn-primary" onclick="closeDialog();toast('ok','LM Studio is now used','For the segments not translated yet.')">Use LM Studio</button>`, true);
 DLG.confirmDelete = () => simple('🗑', 'err', 'Delete “LM Studio”?', '', `Its settings are removed. Projects that used it ask for another AI model when they continue. LM Studio itself is not touched.`, `${closeBtn()}<button class="btn btn-danger" onclick="closeDialog()">Delete</button>`);
 DLG.confirmRemove = () => simple('🗑', 'err', 'Remove “Earth Gravity · EN → PL”?', '', `This project’s saved work — brief, glossary, translations — is deleted from BookLoom. The book file, exported files and the book’s other projects stay.`, `${closeBtn()}<button class="btn btn-danger" onclick="closeDialog()">Remove project</button>`);
 DLG.replaceRun = () => simple('⚠', 'warn', 'Open another book?', '', `This project is translating “${D.file}” (${D.pct} % done). Open the new book as a new project — this one stays as it is.`, `${closeBtn()}<button class="btn btn-danger-outline" onclick="closeDialog()">Replace and delete this translation</button><button class="btn btn-primary" onclick="closeDialog();newProject()">Open as a new project</button>`, true);
 DLG.leave = () => simple('⚠', 'warn', 'Names are still being prepared', '', `Leaving does not stop it: it continues in the background and Names & style stays read-only until it ends.`, `<button class="btn btn-ghost" onclick="closeDialog()">Stay</button><button class="btn btn-primary" onclick="closeDialog()">Continue in background</button>`);
-DLG.exported = () => simple('✓', 'ok', 'Export complete', '', `<div class="kv"><span class="k">Saved as</span><span style="text-align:right;overflow-wrap:anywhere">Books ▸ earth-gravity.uk.md</span></div><div class="kv"><span class="k">Check</span><span>✓ opens, nothing missing</span></div><div class="kv"><span class="k">Size</span><span>41 KB</span></div><div class="kv"><span class="k">Also saved</span><span>glossary.csv · report.md</span></div><div class="kv"><span class="k">Last check</span><span>18 segments reread · 1 fixed</span></div>`, `${closeBtn('Close')}<button class="btn btn-secondary">Open folder</button><button class="btn btn-primary" onclick="closeDialog();if(current==='export')rerender()">Open book</button>`, true);
+DLG.exported = () => simple('✓', 'ok', 'Export complete', '', `<div class="kv"><span class="k">Saved as</span><span style="text-align:right;overflow-wrap:anywhere">Books ▸ earth-gravity.uk.md</span></div><div class="kv"><span class="k">Check</span><span>✓ opens, nothing missing</span></div><div class="kv"><span class="k">Size</span><span>41 KB</span></div><div class="kv"><span class="k">Also saved</span><span>glossary.csv · report.md</span></div><div class="kv"><span class="k">Proofread</span><span>12 segments re-read · 3 waiting for you</span></div>`, `${closeBtn('Close')}<button class="btn btn-secondary">Open folder</button><button class="btn btn-primary" onclick="closeDialog();if(current==='export')rerender()">Open book</button>`, true);
 DLG.err = () => simple('⛔', 'err', 'This file cannot be read', 'Frankenstein.epub', `The file looks damaged. Try downloading it again.<details class="sec mt2"><summary>Details for support</summary><pre class="raw">code: unsupportedFormat\nentry: META-INF/container.xml → OEBPS/content.opf (missing)</pre></details>`, `<button class="btn btn-secondary" onclick="toast('ok','Copied','Details copied.')">Copy details</button><button class="btn btn-primary" onclick="closeDialog()">Close</button>`, true);
 DLG.bindUnavailable = () => simple('⚠', 'warn', 'LM Studio is not answering', '“Earth Gravity · EN → PL” was translated with LM Studio · lapa-v0.1.2-instruct.', `Is the LM Studio app open, with the model loaded? Open it and press Try again. Or continue with another AI model — finished segments stay as they are.`, `${closeBtn('Not now')}<button class="btn btn-secondary" onclick="closeDialog()">Use another AI model…</button><button class="btn btn-primary" onclick="closeDialog()">Try again</button>`, true);
 DLG.bindChanged = () => simple('⚠', 'warn', 'A different AI model is chosen now', 'This book was translated with gemma4:26b so far; gemma4:e4b is chosen now.', `Using the same model keeps the style even. Segments already done keep their translation.`, `${closeBtn()}<button class="btn btn-secondary" onclick="closeDialog()">Continue with gemma4:e4b</button><button class="btn btn-primary" onclick="closeDialog()">Use gemma4:26b</button>`, true);

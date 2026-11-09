@@ -87,7 +87,7 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 | `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing, the language catalogue (`util.lang`) |
 | `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close; book inspection, sentence splitting, auxiliary text units; the placeholder gate checks the multiset and the order/nesting of paired placeholders (ADR-0040) |
 | `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
-| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the judge and self-heal — built and tested but not yet wired into a run |
+| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the one repair behind the never-worse gate, the Proofread stage, the context builder and chapter summaries |
 | `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034; command line, tests) and, built by `finalize-ui-and-persistence`, SQLite + JDBI adapters for the window (ADR-0043; Flyway only from the first release); `RepositoryContractTest` runs against both |
 | `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
@@ -174,8 +174,8 @@ file name the model can suggest. *Names & style*: the glossary and the recurring
 with model, Translate and CSV import and export, or one "Prepare names automatically" pass with Undo all. *Translating*:
 start, pause, resume, stop; a live panel with every model call, the activity log, the provider-error banner with Retry
 now and Skip segment, and the review panel — accept, edit, revert, leave for later, apply a proposal, retry with a note — inside
-the same screen. *Export*: Save to, the side files (glossary CSV, bilingual HTML, quality report), a consistency pass,
-and the export-complete dialog with a button that shows the written file in the file manager; a stopped or partial run
+the same screen. *Export*: Save to, the side files (glossary CSV, bilingual HTML, quality report),
+and the export-complete dialog (export makes no model call) with a button that shows the written file in the file manager; a stopped or partial run
 can be exported, and what it did not translate stays in the source. Verify a provider on Settings (Providers: connection,
 models, then a test inference, each measured), choose a model, and start. Pause and Stop abort the request in flight.
 Only one translation exists per application run: importing a book while a run can continue asks whether to discard it.
@@ -309,8 +309,7 @@ did not complete, Ctrl+C included, **still exports what it translated** (the res
 `Partial: <path> (accepted=…, flagged=…, pending=…) — the run ended <state>: <reason>`; `--no-partial` writes nothing
 instead. `--report <file>` writes a JSON summary: provider, model, dial and names, phase timings and model calls, how
 the run ended and why, every flagged segment with its reason and finding kinds, each outage, the names review counts and
-what the export wrote, source fallbacks included. `modelCallsByKind` in it holds, per call kind (draft, judge, directed
-fix …), the attempts and failures, prompt and completion tokens, the tokens the server says its cache served, and the
+what the export wrote, source fallbacks included. `modelCallsByKind` in it holds, per call kind (draft, repair, proofread …), the attempts and failures, prompt and completion tokens, the tokens the server says its cache served, and the
 elapsed, prompt-evaluation and generation seconds — counts and times only, never book text, each figure summed from
 what the calls reported (the call ledger) and left out when no call reported it; the final `run summary` log line
 carries the same totals as `byKind[…]`, and the names pass, the brief suggestion and the export each end with one
@@ -1524,7 +1523,7 @@ real Ollama model (`BOOKLOOM_EVAL_MODEL`, default `gemma4:e4b-mlx`; `BOOKLOOM_EV
 `suggest`, runs only those cases; skipped when `BOOKLOOM_EVAL_OLLAMA_URL` is unset) and measures each reply before any
 repair: it parses, its tokens are intact with every pair around words (gate), it is in Cyrillic, it holds the case's
 marker (a glossary rendering, a correct drop cap, a translated instruction, a name's uninflected dictionary form), and
-the reviewer leaves a good candidate alone and asks for a change to a bad one (an edit whose quote is in the text, or a rewrite; an edit that quotes nothing is a harmless hallucination). The table lands in
+the table lands in
 `modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95% or gate 90%
 or a defect threshold.
 
@@ -1532,8 +1531,7 @@ or a defect threshold.
 (test side): its glossary entries and recurring terms go into the in-memory stores, its segments form one unit with the
 earlier pairs, summary and narrator the case states (`EvalContext`; a case that states none gets none), and the request
 is built by the run's own `PromptRequests` (`ua.bookloom.pipeline.run`) — the same code the job calls for a chunk's
-context, a batch's fit and previous pairs, the draft and its two repairs, and the reviewer's
-term pairs and character sheet. A locked name is written out in the case text and hidden behind the run's token by
+context, a batch's fit and previous pairs, the draft and its repair. A locked name is written out in the case text and hidden behind the run's token by
 the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
 exactly as in a run; the window is the context length the provider reports for the model, limited to 16,384 tokens as a run limits it (16,384 when it reports none), and `BOOKLOOM_EVAL_WINDOW` overrides it; the chosen window is logged at INFO (`Eval window …`) and in the report line. The brief the requests carry is the defaults unless `BOOKLOOM_EVAL_PRESET` (`burning-chrome`: formal literary register, names translated, Balanced, cyberpunk genre — one model's frozen answer, kept so earlier reports can be measured again), `BOOKLOOM_EVAL_GOLD` (the owner's gold file for the book, [judgement evals](#judgement-evals): its brief's register, names, genre, voice, audience and narrator — prefer it for a new measurement), `BOOKLOOM_EVAL_BRIEF` (a JSON file with `register`, `names`, `genre`, `voiceEra`, `audience`, `dial`, `balance`) or `BOOKLOOM_EVAL_REGISTER` / `_NAMES` (`translate`, `transliterate`, `keep`) / `_GENRE` / `_DIAL` say otherwise The equality of the
 two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path yet: the name prescan, the glossary
@@ -1584,17 +1582,15 @@ scripts/eval-matrix.sh --suite realrun --models "ollama:gemma4:e4b-mlx ollama:ge
 |---|---|---|
 | `text.json` | `quotes` (10), `mixed-script` (6), `invented-word` (3), `russian-letters` (5), `narrator` (6), `short-line` (6) | one source with a clean and a defective Ukrainian candidate (`good`, `bad`), the production check that decides it (`QUOTES`, `SCRIPT`, `GENDER`, `LENGTH`, `NONE`), a glossary and the context (earlier pairs, summary, lexicon, narrator) |
 | `batch.json` | `batch-terms`, `batch-context` | a batch over recurring lexicon terms (it asked for `terms` until arm 5b; the parser now ignores the field), with scripted replies of the shapes the run produced: correct, the `terms` JSON leaked into a target (`«terms»: {…}}, {`), a code fence in a target, a far-too-short target |
-| `reviewer.json` | `reviewer-batch` (6, 5 and 8 pairs with glossary, lexicon, characters and the narrator), `reviewer-long` (12 long paragraphs) | one defect among clean pairs; each pair labelled |
 | `repair.json` | `repair-placeholder`, `repair-structural` | a Markdown source the real parser masks, the reply a run refuses and two scripted answers for the production document gate |
 | `scan.json` | offline only | the key-term and name scans on synthetic lines (titles, `Great Hall`, `Old Bailey`) |
 
-Every request of a model run is the run's own (draft, batch, reviewer over a whole chunk with
-the term pairs and character sheet, repairs). Each label of a deterministic case is held to the production code by plain
+Every request of a model run is the run's own (draft, batch, repairs). Each label of a deterministic case is held to the production code by plain
 offline tests (`RealRunCorpusTest`, `RealRunRunnerTest`; no model, part of `check`): the text checks, `GenderChecks`, the
 draft evaluation's length check, `BatchReplyParser` with `ItemValidator`, the real document gate, `KeyTermScan`.
-`deterministic: false` marks a case only the reviewer can judge (the Russian-only letters `ы ъ э ё` until the alphabet
+`deterministic: false` marks a case no production check can judge (the Russian-only letters `ы ъ э ё` until the alphabet
 check of 15e.11; invented words, since no dictionary is bundled; an ASCII `"` inside « »; a gender slip behind `нічого не`),
-so it counts for the reviewer only.
+so it counts for the model run only.
 
 *Known failures.* `knownFailure: true` marks a case production gets wrong today, with `fixedBy` naming the task: the
 generic words `great`, `hall` and `old` that `KeyTermScan` proposes (15e.11). They are
@@ -1620,10 +1616,10 @@ whose target carries no listed rendering (echoed, untranslated, flagged without 
 neither side. The ratio is the kept count over the later segments, summed over all terms and names. It is -1, printed as `n/a`, when no term has a
 later segment, because a run that repeated nothing is not 0 % consistent.
 
-*Report.* Rows are grouped by kind and call (`quotes/draft`, `quotes/review`, `reviewer-long/review-batch`, …); a rate is
-the share of counted cases that came out as labelled. Extra metrics: `truncated` (reviewer calls whose reply stopped with
+*Report.* Rows are grouped by kind and call (`quotes/draft`, `quotes/repair`, …); a rate is
+the share of counted cases that came out as labelled. Extra metrics: `truncated` (calls whose reply stopped with
 `finish=LENGTH`), `tooShort` and `leaked` (share of batch items whose target is far shorter than the source, or carries the
-`terms` object, an `id` entry or a fence), and `stability` (reviewer rows whose `BOOKLOOM_EVAL_STABILITY` repeats agree).
+`terms` object, an `id` entry or a fence), and `stability` (rows whose `BOOKLOOM_EVAL_STABILITY` repeats agree).
 `tooShort` and `leaked` also appear in the batch A/B (`--suite batch`), and every case-set report now ends with the share
 of corpus cases right per kind (`byKind` in its JSON, a second table in the matrix). No threshold is set yet: 15e.4 records
 the "before" numbers and the thresholds per model class from this suite.
@@ -1631,7 +1627,7 @@ the "before" numbers and the thresholds per model class from this suite.
 **Sequence eval (15e.3).** Every case above stands alone; the defects of the 6 h run (a title drifting between renderings, a
 name in two spellings, a narrator's gender slipping, English paragraphs exported as source) only show over many segments
 with the context accumulating. The sequence suite runs a synthetic book through the *real batched job* — preparation, token-budgeted
-batches, the reviewer the dial enables, the repair path, the lexicon and its learner — against a real
+batches, the repair path, the Proofread stage, the lexicon and its learner — against a real
 model, unattended, then reads what the run decided and measures it with production checks only.
 
 ```bash
@@ -1690,11 +1686,10 @@ so the difference between the two rows is what the narrator field buys.
 | `flaggedNoTarget` | flagged segments with no stored target, which an export writes as the source (the 23-English-paragraphs bug, fixed by 15e.5) |
 | `hardGateRound0` and `kinds` | segments whose first evaluation failed a hard gate (a blocking quote or script finding, a placeholder), read from the run's `Evaluated ... round=0 ... hardGatesPass=false` line; `kinds` counts the findings of their first repair round (`Round choice ... round=1`). The real run: 73 of 3,783 |
 | `leakedProtocol` | final targets holding protocol text (`ProtocolLeak`: a `terms`/`items` key and colon, a brace holding an `id` key, a code fence; the real run: 4) |
-| `reviewerTruncated` | reviewer replies the provider cut off at the output cap (`finish=LENGTH`), counted by a recording wrapper around the model |
 | `termClaimedWrong` and `claimed` | lexicon terms whose learned rendering another term also claimed (`mr` and `mrs` both learning «пані»), with the shared renderings |
 | `quote` / `ascii` / `mixed` | `TextChecks` blocking unbalanced-quote and mixed-script findings in the final targets (a soft "English quote marks" note is not counted); `ascii` counts targets that still hold a straight `"` (an eval-side count, the quote check does not read the kind) |
 | `flag%`, `fallbk%` | flagged share; batch items that fell back to their own draft over batched items (reasons are `status/problems`, read from the run's own warning) |
-| `calls`, `sec/seg`, `edits+`, `edits-` | finished model calls and wall seconds per segment; reviewer edits applied and refused |
+| `calls`, `sec/seg`, `edits+`, `edits-` | finished model calls and wall seconds per segment; repair edits kept and refused |
 | `learned`, `coverage`, `lexicon/t` | renderings the lexicon learned by co-occurrence, the share of those terms' occurrences carrying it (the `--report` lexicon section), the lexicon's own distinct renderings per term |
 
 Offline (`check`, no model, under 20 s): `SequenceFixtureTest` (the committed book equals the generator's output; paragraph, word and density
@@ -1770,22 +1765,7 @@ Rerun what is missing: `scripts/eval-matrix.sh --models ollama:gemma4:26b-mlx --
 (then `--suite sequence --narrator unset` and the replay suite), and grade the six exports with the sample rule: `<p>` blocks
 of 8+ source words translated in all six books, 60 picked evenly by position, letters shuffled per segment.
 
-**Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
-`ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective
-candidates the reviewer asked to change (thresholds: at least 90% on the e4b class, 95% on the 26b class), `falseAlarmEdits`
-the share of clean ones it would have changed (at most 10%), `stability` the share of cases whose repeats ask for the same
-change, and `tokenBreaks` the applied edits that changed a placeholder token (must be 0). One model, five repeats:
-
-```bash
-BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_STABILITY=5 \
-  BOOKLOOM_EVAL_ONLY=corpus ./gradlew :pipeline:promptEval          # e4b: the 19 corpus cases only
-BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:26b-mlx BOOKLOOM_EVAL_STABILITY=5 \
-  BOOKLOOM_EVAL_ONLY=corpus ./gradlew :pipeline:promptEval          # the 26b class
-scripts/eval-matrix.sh --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx" --stability 5 --only corpus   # both, one table
-```
-
-Leave `BOOKLOOM_EVAL_ONLY` out to run the draft, fix and `review-*` pair cases as well; `--langs all` runs each language's
-mini-corpus. Reports land in `modules/pipeline/build/reports/promptEval/<model>.txt` and `.json`.
+**Reviewer eval (15d.6) — removed.** The per-chunk reviewer, its corpus run (`catch`, `falseAlarmEdits`, `tokenBreaks`) and `ReviewerCall` were deleted in group 14 of `redesign-translation-pipeline` (arm 7a, `#redesign-arms`); the corpus case files keep their draft and repair cases, and `--langs all` runs each language's mini-corpus. Reports land in `modules/pipeline/build/reports/promptEval/<model>.txt` and `.json`.
 
 **Coref probe (15i.E2).** 31 invented windows of two to five paragraphs (`src/test/resources/eval/coref/windows.json`), each
 naming one target and listing every third-person pronoun with its gold referent (the target, another character, a place's
@@ -2012,7 +1992,7 @@ says what each block must come to: a check of one segment or of a group (`NO_LAT
 `NOT_FLAGGED`, `NO_FINDING` by the finding's `raisedBy` name, `NARRATOR_MALE`, `MIN_RATIO`, `ADDRESS_SAME`, and the pair-neutral `NO_STRESS_MARK`, `HEADING_NUMBER`, `NEGATION_KEPT`, `NUMBERS_KEPT`, `PLACEHOLDERS`), the two checks every block
 must pass, and what the glossary holds after the names pass (type, gender and whether it is settled, locked, target in Cyrillic, target
 words, junk absent). Each expectation carries the defect it guards. `MiniRunner` runs it as the app runs a whole book: the autonomous
-names pass (`NamesPass`), the batched translation job, then the export's consistency pass, over one imported project; `MiniScorer`
+names pass (`NamesPass`), the batched translation job and the Proofread stage, over one imported project; `MiniScorer`
 scores the result with production checks (`GenderChecks`) and plain patterns.
 
 ```bash
@@ -2021,7 +2001,7 @@ scripts/eval-matrix.sh --suite mini --models "ollama:gemma4:e4b-mlx" --names kee
 BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_SUITE=mini ./gradlew :pipeline:promptEval   # one model, by hand
 ```
 
-The book has 39 segments; a run covers the names pass, the translation and one consistency pass at Balanced. Its runtime on e4b is measured by the orchestrator, not stated here. `--names` (env
+The book has 39 segments; a run covers the names pass, the translation and the Proofread stage at Balanced. Its runtime on e4b is measured by the orchestrator, not stated here. `--names` (env
 `BOOKLOOM_EVAL_NAMES`) is the brief's name policy: under Transliterate and Translate a brand must come out in Cyrillic and unlocked, under Keep
 original it must keep its Latin spelling and be locked; the material and the drug are translated under every policy. The report is
 `build/reports/promptEval/<model>-mini-<POLICY>.{txt,json}` and the history; the `.txt` lists each expectation not met with what was found,
@@ -2031,7 +2011,7 @@ so only the expectations an echo can meet are met), and `MiniBookTest` holds the
 
 **The whole-book run (15j.J16).** `BookRunner` takes any book file and decides what a typical user decides in the window: the predicted
 Book Brief accepted (name policy and the rest at the defaults), the names pass, the Start narrator re-check, the translation at the dial,
-then the export written twice, with the consistency pass off and on, each with the glossary CSV and the report. Select the class, since
+then the export written twice (the two files keep the names `no_consistency_pass` and `with_consistency_pass` from before group 14; export makes no model call, so they are the same book), each with the glossary CSV and the report. Select the class, since
 `PromptEvalTest` also runs whenever `BOOKLOOM_EVAL_URL` is set:
 
 ```bash
@@ -2304,7 +2284,7 @@ worse than the control spread) was not met, so the edit was reverted; the idea w
 (round 8).
 
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
-prompt eval plus 19 labelled reviewer cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
+prompt eval plus 19 labelled defect cases, once sent to the per-chunk reviewer (removed in group 14; the "judge FN/FP" columns below are that history) (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
 one table. `falseNegative` is the share of defective candidates the reviewer left alone (one minus the defect catch rate), `falsePositive` the share of clean ones
 it would have changed (false-alarm edits), `tokenBreaks` the applied edits that changed a placeholder token (always 0), `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repeats agree. Thresholds per model class are in

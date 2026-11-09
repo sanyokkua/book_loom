@@ -56,7 +56,7 @@ their own and plain text has no metadata.
 | `prevKey` / `nextKey` | segment ids of document-order neighbours (context + TM neighbour match)                                                                                                                                                                      |
 | `targetInner`         | translated inner content after unmask (null until translated)                                                                                                                                                                                |
 | `status`              | `PENDING → ACCEPTED \| FLAGGED → REVISED` (state machine below)                                                                                                                                                                              |
-| `confidence`          | QA/judge confidence in `[0,1]`                                                                                                                                                                                                               |
+| `confidence`          | QA confidence in `[0,1]`                                                                                                                                                                                                               |
 
 Each **placeholder pair** (an open/close token bounding inline markup, `⟦g1⟧…⟦g2⟧`) additionally records the declared
 language of the element it came from, alongside its pairing and nesting recorded at mask time (`design.md` D10/D11) —
@@ -236,10 +236,10 @@ charset, so whitespace is not normalized.
 ## segment-status-machine {#segment-status-machine}
 
 ```
-        translate + pass QA/judge
+        translate + pass QA
 PENDING ─────────────────────────► ACCEPTED
    │                                   │
-   │ fail after N repair tries         │ backward-revision re-render
+   │ fail after one repair             │ proofread rewrite
    ▼                                   ▼
 FLAGGED ───(manual/assisted edit)──► REVISED
 ```

@@ -1,6 +1,6 @@
 # ADR-0012 — Per-project provider/model binding with change confirmation and preflight verification
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** accepted; amended by ADR-0046 (2026-11-09) **Date:** 2026-07-17 **Deciders:** architect
 
 ## Context and problem statement
 
@@ -96,3 +96,8 @@ impossible without editing data by hand.
   `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`
 - Related ADRs: ADR-0005 (provider abstraction), ADR-0006 (credentials as reference)
 - Stories: none yet
+
+## Amended by ADR-0046 (2026-11-09)
+
+A project binds one model: the translator. There is no judge model and no judge preflight; the job prepares, translates
+and proofreads with that model. Mentions of a judge model above are history.

@@ -1,6 +1,9 @@
 # ADR-0007 — Adopt an automatic-first, tiered quality pipeline with a single trust dial
 
-**Status:** accepted **Date:** 2026-07-17 **Deciders:** architect
+**Status:** superseded by ADR-0046 **Date:** 2026-07-17 **Deciders:** architect
+
+> Superseded by ADR-0046 (three stages, one repair, the never-worse gate; no judge, no backward revision). The
+> dictionary-free glossary and translation-memory decisions below live on.
 
 ## Context and problem statement
 

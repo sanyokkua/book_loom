@@ -71,7 +71,7 @@ public enum ErrorCode {
   response. It is **retryable** and distinct from `modelNotFound` (which is a specific model being absent) and from
   `modelUnavailable` (a *bound* model missing at run time). When discovery fails, the provider falls back to manual
   model-ID entry / the manual effective-context field (`06_DATA_MODEL_SQLITE.md#providers`, DD-44).
-- **`modelUnavailable`** — a model the project is **bound** to (`translator_model`/`judge_model`) is not offered by the
+- **`modelUnavailable`** — a model the project is **bound** to (`translator_model`) is not offered by the
   provider at run or resume time. This drives the resume **"provider unavailable → prompt"** path
   (`06_DATA_MODEL_SQLITE.md#resume-support`, `05_RELIABILITY_AND_RESUME.md`, DD-31); it is not silently substituted.
 - **A DRM-protected or otherwise unsupported import is an inspection verdict carried as data, not a distinct
@@ -181,9 +181,8 @@ separate `Result`. A **cancelled** run is not itself an error: `TranslationJob.r
 destination exists without overwrite) is instead returned as `Result.err(AppError)` directly, before any report is
 built.
 
-An export whose last check the person ended early ("Write the file now") is a **partial pass, not a failure**: the
-model call in flight answers `cancelled`, which the pass reads as the stop, keeps every fix already stored, writes the
-book and reports the paragraphs it never reached as `ConsistencyChecks.notReread`.
+Export makes no model call (group 14 of `redesign-translation-pipeline`), so there is no "partial pass" to end early:
+a cancelled export writes no file, and the report carries the stored Proofread summary (`ProofreadSummary`).
 
 ## ui-surfacing {#ui-surfacing}
 

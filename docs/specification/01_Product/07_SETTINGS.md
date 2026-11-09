@@ -165,7 +165,7 @@ tested it for {source} → {target}" where a run exists); the *licence* note for
 line only for a poor, unusable or removed quant (or an acceptable one on a model of 5B or less, unless BookLoom measured
 it), a licence line and a thinking line; Start stays enabled.
 
-There is **no separate judge or helper model**: the reviewer and every other call use the project's one chosen model.
+There is **no separate judge or helper model**: every call (prepare, translate, repair, proofread) uses the project's one chosen model.
 These provider + model choices are the **defaults for new projects**; each project keeps its own binding thereafter
 (`04_LLM_PROVIDERS_AND_MODELS.md#per-project-binding`, DD-31).
 
@@ -195,14 +195,14 @@ temperature for this retry" (DD-36).
 **What the quality dial sets (built, `DialParameters`).** The dial (Fast/Balanced/Max) owns only mechanics, and is not
 user-editable per knob:
 
-| Dial     | Fixing call (`RepairMode`) | Reviewer reads per chunk | Proofread stage (`proofreadCoverage`) |
-|----------|----------------------------|--------------------------|----------------------------------------|
-| Fast     | marks-only re-draft        | 0 (no reviewer)          | code only: marks for review, no model calls |
-| Balanced | one repair                 | 1                        | the marked passages                    |
-| Max      | one repair                 | 2                        | the marked passages, then the whole book |
+| Dial     | Fixing call (`RepairMode`) | Proofread stage (`proofreadCoverage`)      | Extra model calls                                        |
+|----------|----------------------------|--------------------------------------------|----------------------------------------------------------|
+| Fast     | marks-only re-draft        | code only: marks for review, no model calls | none                                                     |
+| Balanced | one repair                 | the marked and doubtful windows            | about one call per marked passage                        |
+| Max      | one repair                 | the marked windows, then the whole book    | as Balanced, plus one call per batch of paragraphs   |
 
-The Generation tab's table shows these three rows (Repair after a failed check, Checks of each segment, Proofread
-after the last chapter); Max's backward revision is gone from the run since redesign group 13.
+The Generation tab's table shows these three rows (Fixing calls, Proofread, Extra model calls). There is no
+reviewer pass and no backward revision (removed in redesign group 14).
 
 Chapter summaries are not a dial setting: the Book Brief's switch decides them, the same at every dial.
 
@@ -213,7 +213,7 @@ budget of the model profile's tier, **600** source tokens on a small model and *
 (`05_TRANSLATION_ALGORITHM.md#token-budget`), and the drafting batch size is the model profile's (Settings › Models).
 
 **τ ownership (DD-45).** The **trust threshold τ is owned by the review-mode dial** (Unattended 0.60 / Assisted 0.75 /
-Manual 0.85), not the quality dial. **No manual τ or τ_judge override is offered**, now or in the planned Generation
+Manual 0.85), not the quality dial. **No manual τ override is offered**, now or in the planned Generation
 tab.
 
 **One repair, no rounds.** A segment whose draft keeps a BLOCK or REPAIR finding gets one repair call (FR-ALGO-C12),
@@ -257,7 +257,6 @@ single-instance lock in the lifecycle spec).
 | When to stop and ask you (default review mode) | enum | Never — translate unattended | Never — translate unattended / When something needs review / After every segment (`ReviewMode` UNATTENDED / ASSISTED / MANUAL); stored as `run.reviewMode` and read when a run starts. `BOOKLOOM_REVIEW_MODE` (or the system property `bookloom.review.mode`, launch values `unattended` / `assisted` / `manual`), when set, decides instead and the tab names it. The long phrases are this tab's; every other screen says Unattended / Assisted / Manual | FR-REVIEW-01 |
 | Default quality                | enum    | Balanced   | Fast / Balanced / Max; a book takes it when it is first stored as a project, then keeps its own in the Book Brief | FR-BRIEF-08  |
 | Open the review desk when a translation finishes with segments to review | boolean | on | on / off          | FR-REVIEW-01 |
-| Run the last check before saving by default (final consistency pass) | boolean | not written until chosen: the Export screen follows the book's quality (on at Max); once the value is written the stored value wins | on / off; the tab shows "Not chosen yet" until the switch is changed once | FR-EXPORT-06 |
 | Keep the computer awake        | boolean | on         | on / off, applied at once: off releases the hold of a run already going; the lid note: closing a laptop lid still puts it to sleep, and translating goes on by itself after sleep | FR-RESUME-03 |
 | Reopen the last project (resume on launch) | boolean | on | on / off                                 | FR-RESUME-03 |
 

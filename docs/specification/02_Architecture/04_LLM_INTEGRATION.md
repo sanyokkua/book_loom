@@ -491,8 +491,7 @@ binding is stored with the project (`06_DATA_MODEL_SQLITE.md#projects`, `06_DATA
 project's bound model (s) are actually available, failing fast with a typed error if unreachable or missing (this reuses
 #three-stage-verification). "Available" means: with discovery, membership in `listModels()`; without discovery (a manual
 model), the inference round-trip **is** the availability check (`modelUnavailable` on failure). **Scope:** the
-**translator** model is always verified; the **judge/helper** model is verified **only when the quality dial will invoke
-the judge** — an unused judge slot is not preflighted. It never silently substitutes:
+**translator** model is the only model and is always verified (there is no judge or helper slot). It never silently substitutes:
 
 - If the bound provider or model is **unavailable**, the app prompts the user and falls back to the currently-configured
   default **only on explicit confirmation**, recording the change.

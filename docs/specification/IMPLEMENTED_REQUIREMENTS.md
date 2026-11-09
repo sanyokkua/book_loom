@@ -128,8 +128,8 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-ALGO-06 | implemented | `complete-translation-workflow` | `quality-gates` | Also cited by `translation-pipeline`. |
 | FR-ALGO-07 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-08 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in group 11: a window of the last 2 or 3 pairs across chapters, no chapter-start reset. |
-| FR-ALGO-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. |
-| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 10: the dial now maps the one repair (Fast: marks-only re-draft), reviewer passes and backward revision; batch size is the model profile's. Group 11: the dial sets no preceding count (the window follows the model's tier). |
+| FR-ALGO-10 | implemented | `complete-translation-workflow` | `export` | Also cited by `translation-pipeline`. Redesign group 13 made it the Proofread stage (it replaced Max's backward revision); group 14 removed the export's consistency pass. |
+| FR-ALGO-11 | implemented | `complete-translation-workflow` | `translation-pipeline` | Redesigned in `redesign-translation-pipeline` group 10: the dial now maps the one repair (Fast: marks-only re-draft) and the Proofread coverage (group 14 removed the reviewer passes and the backward-revision field); batch size is the model profile's. Group 11: the dial sets no preceding count (the window follows the model's tier). |
 | FR-ALGO-12 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-B2 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
 | FR-ALGO-C10 | implemented | `complete-translation-workflow` | `translation-pipeline` |  |
@@ -174,7 +174,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-EXPORT-03 | implemented | `complete-translation-workflow` | `export` |  |
 | FR-EXPORT-04 | implemented | `complete-translation-workflow` | `export` | Export is its own action with Save to on the Export screen (ADR-0035). Also cited by `book-brief`. |
 | FR-EXPORT-05 | implemented | `complete-translation-workflow` | `export` | Glossary CSV, bilingual HTML and quality report side files are written. |
-| FR-EXPORT-06 | implemented | `complete-translation-workflow` | `export` | The consistency pass runs on request at export, and after the last segment on Max. |
+| FR-EXPORT-06 | implemented | `complete-translation-workflow` | `export` | Redesign group 14: export makes no model call; it validates, writes and reports the stored Proofread summary. The earlier consistency pass ("last check before saving") is removed. |
 | FR-GLOSS-01 | implemented | `complete-translation-workflow` | `glossary` | Also cited by `translation-pipeline`. |
 | FR-GLOSS-02 | implemented | `complete-translation-workflow` | `glossary` |  |
 | FR-GLOSS-03 | implemented | `complete-translation-workflow` | `glossary` | Also cited by `quality-gates`. |
@@ -240,7 +240,7 @@ Built and verified by the scripted checks at the change's final commit and by th
 | FR-SETTINGS-02 | implemented | `complete-translation-workflow` | `settings` |  |
 | FR-SETTINGS-03 | implemented | `finalize-ui-and-persistence`, `redesign-translation-pipeline` | `settings` | Settings › Generation: the quality table and the fixed time limits, no setting (finalize 7.3; Thinking and Sampling moved to per-model overrides on Settings › Models in redesign tasks 6.7 and 6.9). |
 | FR-SETTINGS-04 | implemented | `complete-translation-workflow` | `settings` | Theme and technical details stored; language after a restart (finalize 7.3). |
-| FR-SETTINGS-05 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Automation: when to stop and ask (next run start), default quality for new books, review desk, last-check default, keep awake, reopen last project (finalize 7.4). |
+| FR-SETTINGS-05 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Automation: when to stop and ask (next run start), default quality for new books, review desk, keep awake (the last-check default was removed in redesign group 14), reopen last project (finalize 7.4). |
 | FR-SETTINGS-06 | implemented | `finalize-ui-and-persistence` | `settings` | Settings › Storage & logs: database folder and size, Open folder, Make a backup…, log folder, detailed-log switch (after a restart), Open log folder, diagnostic bundle (finalize 7.4). |
 | FR-THEME-10 | implemented | `complete-translation-workflow` | `notifications` |  |
 | FR-THEME-4 | implemented | `complete-translation-workflow` | `settings` |  |

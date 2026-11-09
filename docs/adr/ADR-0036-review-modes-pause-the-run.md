@@ -1,6 +1,6 @@
 # ADR-0036 — Review modes decide when the run pauses, as well as the trust threshold
 
-**Status:** accepted; superseded in part by ADR-0045 (review is a dialog and the review mode a setting) **Date:** 2026-09-26 **Deciders:** owner **Extends:** DD-45
+**Status:** accepted; superseded in part by ADR-0045 (review is a dialog and the review mode a setting); amended by ADR-0046 **Date:** 2026-09-26 **Deciders:** owner **Extends:** DD-45
 
 ## Context and problem statement
 
@@ -55,3 +55,8 @@ The owner confirmed during the readiness review of `complete-translation-workflo
 Translating, so a pause shows the segment beside the run it belongs to; the mockup's Review step is recorded as a
 departure in the `app-shell` specification. The pause-and-edit sentence now states the chunk behaviour the design's D4a
 fixes: a chunk's segments are all drafted, and judged, before its decisions, so a pause mid-chunk keeps those drafts.
+
+## Amended by ADR-0046 (2026-11-09)
+
+There is no judge and no per-chunk reviewer: a chunk's segments are drafted, checked and decided by the acceptance rule
+(one repair at most), and the pause rules above apply to those decisions. Every mention of the judge above is history.

@@ -45,9 +45,7 @@ never returns to PENDING once processed. Resume picks up at the **first PENDING*
 **terminal-for-run** — surfaced in the review desk and excluded from auto-resume. The Proofread stage
 (`05_TRANSLATION_ALGORITHM.md#proofread-stage`) may move an ACCEPTED segment, or a FLAGGED one whose rewrite clears
 every blocking finding, to REVISED; REVISED therefore means the person's edit or a kept proofread rewrite. **User-edited
-`REVISED` segments are protected** (FR-REVIEW-10): the stage and the term sweep **propose, never overwrite**. Max's
-backward revision is gone from the run; until group 14 of `redesign-translation-pipeline` removes it, the export's last
-check still proposes in the same way.
+`REVISED` segments are protected** (FR-REVIEW-10): the stage and the term sweep **propose, never overwrite**.
 
 ## flagged-queue {#flagged-queue}
 
@@ -99,7 +97,7 @@ The footer has **Close**, a **More ▾** menu and **one main button**.
 | Try again (Retry) | Re-run the segment through the pipeline as a batch of one, **with a context rebuilt at that moment** from the current brief, glossary, recurring-term renderings and the stored targets kept before it (never a replay of what the first draft saw; design D8); allowed whenever no run of the project is running, refused with `ErrorCode.busy` while one is. | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Try again with a note | Re-run as above, with the rebuilt context and the user's free-text note under `[Extra instruction]` (block 11; no repair call follows a retry).                | ACCEPTED if it now passes, else remains FLAGGED/ACCEPTED (never downgraded) |
 | Leave for later | Writes nothing: the row is marked "later" for this application run only and the desk moves to the next segment of the filter shown. The segment stays to review. | unchanged                                       |
-| Apply a proposal | Take the proposal waiting on an edited segment — a passing Proofread rewrite (or, until group 14, the export's last check) of the person's own text — as the person's own edit, and resolve the deferral that held it. Acts only on a REVISED segment with a proposal waiting; a proposal is never applied by itself. A flagged segment's proofread proposal is shown on the Suggestion tab and applied only by "Use the suggestion". | REVISED                                         |
+| Apply a proposal | Take the proposal waiting on an edited segment — a passing Proofread rewrite of the person's own text — as the person's own edit, and resolve the deferral that held it. Acts only on a REVISED segment with a proposal waiting; a proposal is never applied by itself. A flagged segment's proofread proposal is shown on the Suggestion tab and applied only by "Use the suggestion". | REVISED                                         |
 | Undo proofread (More ▾) | Put back the text, the status (ACCEPTED or FLAGGED) and the findings a kept proofread rewrite replaced, from the stored verdict; clears the verdict and marks the segment reviewed, with no check run. Refused with `validation` on a segment with no kept rewrite or one holding the person's edit. | ACCEPTED / FLAGGED |
 
 A refused action changes nothing and answers `validation` (`SegmentActions`); the desk shows the reason in place.

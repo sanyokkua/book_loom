@@ -120,16 +120,16 @@ Jackson, the `dto` package and `com.fasterxml.jackson.datatype.jsr310` arrive wi
 
 ### pipeline {#module-pipeline}
 
-**Responsibility:** the translation engine — chunk packing, context assembly, the tiered draft→QA→judge→self-heal loop,
-name/term dictionary, context-aware TM, chapter summaries, deferred-resolution + backward revision, prompt builder,
+**Responsibility:** the translation engine — chunk packing, context assembly, the draft→checks→one-repair loop behind the never-worse gate,
+name/term dictionary, context-aware TM, chapter summaries, deferred-resolution + the Proofread stage, prompt builder,
 quality dial. FX-free. Implements `TranslationEngine`.
 
 **Built so far** (`add-translation-engine-and-cli`, ADR-0033): the public `TranslationEngineImpl` (request checks —
 language pattern, matching `BookFormat`, matching FB2 container, a destination that is not the source — before
 creating a job); the package-private `TranslationJobImpl` (pause/resume/cancel at the segment, section, stage and
 error boundaries, `08_THREADING_CONCURRENCY.md#cancellation`), `SegmentTranslator` (prompt building and the
-accept/flag/stop decision) and `BookExporter` (reopen-validate-move). Chunking, context assembly, QA, the judge,
-dictionaries, TM, the chapter summaries and revision are not built yet.
+accept/flag/stop decision) and `BookExporter` (reopen-validate-move). Chunking, context assembly, QA,
+dictionaries, TM, the chapter summaries and the Proofread stage were built later.
 
 ```
 module ua.bookloom.pipeline {

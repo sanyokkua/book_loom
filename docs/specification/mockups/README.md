@@ -117,7 +117,7 @@ Everything else (layout, ids, content) is free to change; the conformance tests 
   - A dialog that replaces another returns to it: Retry with a note was such a case, and is now an inline panel (F1).
 - **Keys.**
   - Focus is trapped in the card (Tab wraps around).
-  - **Esc** closes a dialog. On a progress dialog it *hides* long work (E1), the export's last check included (only
+  - **Esc** closes a dialog. On a progress dialog it *hides* long work (E1), the export included (only
     its Cancel button asks "Cancel the export?"), and cancels short work.
   - **Enter** (or Ctrl/⌘+Enter inside a text area) runs the footer's main button.
   - Only About closes on a click outside.
@@ -158,7 +158,7 @@ It is used by:
 - Fill in the brief from the book;
 - Prepare names automatically and the Scan / Review / Translate card actions;
 - Suggest a file name;
-- Export · last check before saving;
+- Export (check, then write the file);
 - All model calls of the run.
 
 | Part | Content | Behaviour |
@@ -189,7 +189,7 @@ It is used by:
     - names: the `NamesPassImpl` stages;
     - export: `ExportProgress.Step`.
   - `ActivityChip` exists and shows hidden work.
-  - The consistency pass on Max can list thousands of items: use a virtualised list of small row records, look up the
+  - A long list (a names pass can list thousands of items): use a virtualised list of small row records, look up the
     detail by segment id, and keep full prompts only for the last 50 calls (JX-E1).
   - Clocks and figures tick in their own layout roots (`FigureLabel`), so a tick never re-lays out the dialog. Engine
     publications are coalesced to about 10 a second.
@@ -245,8 +245,8 @@ There is no Accent row and no decorative text; each screen has at most one purpo
 ### G10 — Progress and time left count all the work (PR)
 1. **The unit is a step, counted over the whole operation.** All tasks and their items are counted: 3 tasks × 3 items
    are 9 steps.
-   - **Translation run:** a step per segment draft, one per check the quality dial plans for each translated segment
-     (Fast 0, Balanced 1, Max 2), plus Max's chapter summaries and backward revision.
+   - **Translation run:** a step per segment draft, plus the chapter summaries and the Proofread windows the quality dial
+     reads (a repair or a re-ask joins when it starts).
    - A kept-as-is segment is a draft step done at once.
    - **Dialogs:** each step's items (requests, or 1 for a code step).
 2. **Unknown counts are estimated** and marked "about" until known.
@@ -355,7 +355,7 @@ tense for "you".
 | passages (brief samples) | "samples" ("3 of 4 samples agree") | — |
 | Transliterate | "Spell in the target alphabet" | — |
 | Image alt-text, navigation labels, front matter | "Picture descriptions", "Table of contents and chapter titles", "Copyright and edition notes" | — |
-| consistency pass, canonical-equal, round trip | "Last check before saving", "checked: opens, nothing missing" | technical line on Import |
+| canonical-equal, round trip | "checked: opens, nothing missing" | technical line on Import |
 | BOOKLOOM_* and wire names in hints | the plain label first; the wire name in grey (`num_ctx`) only in Advanced | — |
 
 An ellipsis in the interface ("Change...", "Rename...", "Waiting for the model...") is written as **three full
@@ -438,8 +438,7 @@ banner (L3), the live panel's line and the markers of the current call's segment
   - **disabled** while translating, pausing or stopping, with "Pause or stop the translation to export";
   - **allowed** when paused, stopped or failed, with the banner "74 of 142 segments are translated. The other segments
     keep the original text";
-  - the **last check is off and disabled for a partial export** ("Runs when the whole book is translated").
-- **A screen another job writes to** (names pass, export pass hidden in the background) is read-only (G4).
+- **A screen another job writes to** (the names pass hidden in the background) is read-only (G4).
 - **One model request at a time** (single-flight inference, the `InferenceGate` rule). While translating, the
   model actions elsewhere are disabled with "Pause the translation first — BookLoom sends one model request at a time":
   Prepare names, Scan / Review / Translate, Fill in from the book. While the names pass runs (also when it is hidden),
@@ -672,31 +671,19 @@ language more than once, for example with another model, quality or thinking set
 | **Title and author** (E1) | Original (read-only) and translated (editable); when there is none, one line says why ("The book names no author"). Markdown takes the title from its first heading or front matter | `ExportTitleCard`, `BookTitleViewModel.read` (add `aux:fm:*` and the reason) |
 | **Where to save** | "Books ▸ earth-gravity.uk.md (in your home folder)" with the full path as tooltip · Change… · ✦ Suggest a name; the same format as the original; **if the file exists, BookLoom asks before replacing it** (no Replace switch that is on by default) | `ExportDestinationCard`, `ExportPathRules`, `ExportOccupancy` |
 | Also save | Glossary (CSV) · Bilingual copy · Quality report | `ExportSideFilesColumn` |
-| **Last check before saving** | "Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours. Adds about 3 min for this book." Off and disabled for a partial export | `ExportSideFilesColumn` |
 
 ### Dialog · Suggest a file name (G4, short)
 - One step: Sent (title, target, format) \| Answer (the name and how it was made).
 - Footer: "Cancel keeps the current name." · Cancel · **Use this name**.
 
-### Dialog · Export · last check before saving (G4, long) — E2, E3
-- **Groups.**
-  - Steps: Check the translation is complete · Fix he/she forms that became known (`CONSISTENCY_RETRY`) · Translate
-    unsure segments again (`RETRY_DOUBTED`).
-  - **Reread next to the neighbours · 6 of 18** (one item per segment: unchanged · kept · fixed · reading… · waiting).
-  - Finish: Write the file.
-- **Figures.** "48 % · 12 of 25 steps · Left about 2 min".
-- **Item detail.** A plain sentence, then a bordered **Before \| After** grid: the segment before, this segment, the
-  segment after. A fix shows the old text struck through above the new one; "unchanged" is said in words. Detailed adds
-  the parsed prompt and the raw reply note.
-- **Footer.**
-  - Left: Continue in background and "Cancel writes no file."
-  - Right: **Write the file now** (asks: "6 of 18 reread, 1 fixed; the other 12 stay as they are") and **Cancel**,
-    which asks "Cancel the export? No file is written."
-  - Esc hides.
-  - On finish, **Export complete** opens: Saved as (wraps), Check, Size, Also saved, Last check "18 segments reread · 1
-    fixed"; Close · Open folder · Open book.
-- **Code.** `ExportProgress.Step` (VALIDATING → CONSISTENCY_RETRY → RETRY_DOUBTED → CONSISTENCY_NEIGHBOUR → WRITING),
-  `ExportCalls`, `ConsistencyPass`, `dialog/ExportCompleteDialog`.
+### Dialog · Export (G4, short) — E2, E3
+- **Groups.** Check the translation (the destination, the side files and every segment, `ExportProgress.Step`
+  VALIDATING) · Write the file (WRITING). Export makes no model call; the earlier "last check before saving" with its
+  reread-next-to-the-neighbours group was removed in group 14 of `redesign-translation-pipeline`.
+- **Footer.** Continue in background; **Cancel**, which asks "Cancel the export? No file is written."; Esc hides.
+- On finish, **Export complete** opens: Saved as (wraps), Check, Size, Also saved, Proofread (segments re-read ·
+  waiting); Close · Open folder · Open book.
+- **Code.** `ExportProgress.Step`, `dialog/ExportCompleteDialog`.
 
 ---
 
@@ -808,7 +795,6 @@ BookLoom handles a refusal the same way for every optional setting:
     script the launch values; it reaches the next run that starts, and `BOOKLOOM_REVIEW_MODE` is named when it decides.
   - Default quality (new books take it when first stored; Fast · Balanced · Max).
   - Open the review desk when a translation finishes with segments to review.
-  - Run the last check before saving by default ("Not chosen yet" until the switch is changed once).
   - Keep the computer awake (with the lid note; off releases a hold at once).
   - Reopen the last project.
   - There is no OS-notification switch.

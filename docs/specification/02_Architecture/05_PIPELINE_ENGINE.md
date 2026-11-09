@@ -60,8 +60,7 @@ card covers a chapter start (`#context-builder`). A worked multi-paragraph packi
 
 ## context-builder {#context-builder}
 
-One `ContextBuilder` (`ua.bookloom.pipeline.context`) plans every translate-family call (draft batch, reviewer, repair,
-revision, consistency, retry) and the analysis calls (names, brief, file name). A call is thirteen blocks (`BlockSlots`),
+One `ContextBuilder` (`ua.bookloom.pipeline.context`) plans every translate-family call (draft batch, repair, proofread, retry) and the analysis calls (names, brief, file name). A call is thirteen blocks (`BlockSlots`),
 in the order sent, so the **load-bearing items sit at the edges** against lost-in-the-middle; an empty block is left out.
 
 - **Blocks 1–7, the fixed system part of the run:** role and language pair; book text is data; the book rules (chosen
@@ -93,15 +92,14 @@ Prompts are built from **templates + slots**: fixed instruction scaffolding in p
 `ua/bookloom/pipeline/prompt/` with named slots (`PromptTemplates`, `Slots`), filled by the context builder's blocks.
 The repair template adds the previous attempt, the defects and the expected tokens to the same frame. Templates are
 data, so the quality dial and policies parameterize the prompt without code changes. The concrete system/user
-templates for every pipeline call — batch draft, reviewer, repair, backward revision, book-brief/tone setup, and
+templates for every pipeline call — batch draft, repair, proofread, book-brief/tone setup, and
 the chapter summary — with their injected variables, required-vs-optional fields, parameters, and expected JSON
 shapes, are the normative catalogue in `01_Product/12_PROMPT_CATALOG.md`.
 
 ## tiered-loop {#tiered-loop}
 
-Scoring is **per chunk** when the judge runs, but each check and each repair act on **one segment**: a failure — a
-hard gate, a check, or a judge finding — repairs only the **offending segment**, and the repair call returns exactly
-one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-translate-loop.mermaid`):
+Each check and each repair acts on **one segment**: a failure — a hard gate or a check — repairs only the
+**offending segment**, and the repair call returns exactly one segment's target, never a chunk-mate's (ADR-0046). Per chunk (see `chunk-translate-loop.mermaid`):
 
 1. **Draft** — consecutive segments of the chunk go out together in one batch call, and the reply is read per id. The
    batch **starts at the model profile's size** (`ModelProfile.batchSize`, read once per run by the run wiring; the
@@ -113,32 +111,22 @@ one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-tra
    reply; a failed or unreadable re-ask changes nothing. An id that is missing, malformed or wrong-shape after that is
    drafted alone as a batch of one in the same `translate` prompt and `{"items":[…]}` reply; a malformed reply gets the
    format re-ask (`format-reask`), and no text fallback is accepted. The window's previous
-   pairs provide context only. A **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call (and the
-   reviewer) entirely.
+   pairs provide context only. A **context-match TM auto-reuse** and a segment with nothing to translate skip the draft call entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Lost formatting marks are first **put back by code** where they can
    be; a mismatch that remains is a BLOCK finding.
 3. **Deterministic QA gate** — run the checks in `#qa-checks` (each finding has a level: BLOCK, REPAIR or NOTE);
    compute `confidence`. Typography and code repairs (apostrophes, quote marks, dashes, a heading's number) are made
    by code before any model reads the draft.
-4. **Reviewer (dial-gated)** — when the dial enables it, one reviewer call per chunk and pass (Balanced one, Max two)
-   over the drafted pairs whose checks passed; it answers per segment `ok`, edits or a rewrite. The code verifies each
-   edit (the quote occurs exactly once after normalisation, the replacement keeps the `⟦gN⟧` tokens in order, the
-   deterministic checks pass on the edited text, the set of blocking checks does not grow) and applies the verified
-   ones; an edit whose quote was found but that was refused gets one directed fix naming the quote (the directed fix
-   remains for this one use until redesign group 14 removes the reviewer); a rewrite is taken only when every check
-   passes. A malformed reply is salvaged entry by entry and its unread pairs are asked once more (another seed),
-   those still unread being taken as `ok`; an empty reply, a refused prompt, or a call that times out twice, flags
-   its segments `reviewer-unavailable` instead of pausing the run.
-5. **Accept**, per segment — `AcceptanceRule.decide`: `accepted = hardGatesPass ∧ noSoftCheckFailedOutright ∧
-   noBlockLevelFindingLeft ∧ noVerifiedBlockerLeft`, where a finding's level is read by `CheckLevels.of`
+4. **Accept**, per segment — `AcceptanceRule.decide`: `accepted = hardGatesPass ∧ noSoftCheckFailedOutright ∧
+   noBlockLevelFindingLeft `, where a finding's level is read by `CheckLevels.of`
    (`#qa-checks`, levels); a failed untranslated-echo check on a source under 20 code points of display text does not
    count as a failed soft check (`#qa-thresholds`). There is no score and no threshold: confidence only orders
-   segments for review, and the review mode decides when the run pauses (ADR-0038; a model-call error instead of a
+   segments for review, and the review mode decides when the run pauses (ADR-0046; a model-call error instead of a
    quality failure is routed by `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`. REPAIR findings
    that remain on an accepted segment become its **proofread mark**, NOTE findings its **audit mark**
    (`AcceptanceRule.Mark`).
-6. **The one repair** (`heal/OneRepair`, `RepairMode` of the dial) — otherwise, and also for an accepted draft that
+5. **The one repair** (`heal/OneRepair`, `RepairMode` of the dial) — otherwise, and also for an accepted draft that
    still holds a REPAIR finding:
     - **Balanced and Max (`RepairMode.ONE`)**: exactly **one** call (`CallKind.REPAIR`, prompt `repair`,
       `12_PROMPT_CATALOG.md#repair`) names every BLOCK and REPAIR defect with the span it quotes, shows the previous
@@ -159,7 +147,7 @@ one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see `chunk-tra
       (`DialParameters.repairRounds`, `SegmentRecord.repairRounds`; a database stored with it is set aside on the next
       launch). A reply that is blank or cut off flags the segment at once. A pause or a pausing error during the repair
       makes the repair call again on resume from the draft kept in memory, counted as the one repair.
-7. **Persist + update memory** — atomically write the segment; update name dictionary and context-keyed TM; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
+6. **Persist + update memory** — atomically write the segment; update name dictionary and context-keyed TM; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
    (FLAGGED is terminal-for-run, excluded from auto-resume). Opening a stored project never continues a run: a stored RUNNING or PAUSED run belongs to a process that is gone and is rewritten as CANCELLED, so the next Start or Continue resumes at the first PENDING segment. Chapter summaries are kept per finished chapter (`#rolling-summary`).
 
 Every model call, the repair included, passes through the `InferenceGate` (`04_LLM_INTEGRATION.md#inference-gate`).
@@ -174,15 +162,14 @@ inside stays open — it is never ended `FAILED` — because the next run plans 
 | Kind | Planned or added | `itemRef` | Ends |
 |------|------------------|-----------|------|
 | `DRAFT` | one per segment, planned when its chunk is entered | the segment id | `DONE`; `NO_CALL` for a shortcut or memory reuse; `FAILED` when flagged at once |
-| `CHECK` | one per reviewer pass the dial enables, planned when the chunk is entered | the chunk's first segment id | `DONE`; `NO_CALL` when no pair qualified or the first verdict was unreadable (pass 2); `FAILED` when the reviewer is given up |
-| `REPAIR` | one added when the one repair (or Fast's marks-only re-draft) or the reviewer's directed fix starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
+| `REPAIR` | one added when the one repair (or Fast's marks-only re-draft) starts | the segment id | `DONE`; `FAILED` when the segment is flagged now |
 | `RE_ASK` | one added when a batch reply left out two or more ids | the first missing id | `DONE`; `FAILED` when the second reply is unreadable |
 | `RESEND` | one added for each attempt past the first of a model call | the call's only segment, or none | `DONE` or `FAILED` with the attempt |
 | `SUMMARY` | one per chapter, planned at the start of translation while the brief's chapter-summary switch is on | the chapter's first segment id | `DONE`; `NO_CALL` for a stored summary or the book's last chapter; `FAILED` when not kept or not stored |
 | `PROOFREAD` | one per proofread window, planned exactly when each round starts (windows whose fingerprint is already stored are skipped); before that the ledger forecasts them (Balanced and Max: one per mark so far; Max: ⌈story paragraphs ÷ B⌉ for round 2); none at Fast | the window's first focus segment id | `DONE`; `FAILED` when left unread after its pause budget |
 
-Labels are stable lower-case keys the screens translate (`draft`, `check-1`, `check-2`, `repair`, `redraft`,
-`directed-fix`, `re-ask`, `resend-N`, `summary`, `proofread`). The plan is per chunk, not per book; a screen that shows
+Labels are stable lower-case keys the screens translate (`draft`, `repair`, `redraft`,
+`re-ask`, `resend-N`, `summary`, `proofread`). The plan is per chunk, not per book; a screen that shows
 a book-level total seeds it from the run's figures.
 
 ## qa-checks {#qa-checks}
@@ -216,10 +203,10 @@ finding keeps only its check's wire name and its severity):
 | `REPAIR` | the segment may be accepted; the finding earns the one repair and, if it stays, the **proofread mark** | medium |
 | `NOTE` | the segment is accepted with an **audit mark**; the finding earns no call | low |
 
-A finding that no check raised (the reviewer's, an applied edit's, the audit's prefixed copies, a stored reply flag)
+A finding that no check raised (the audit's prefixed copies, a stored reply flag)
 reads as `NOTE`. `AcceptanceRule.decide` splits a segment's findings by level and accepts when the hard gates pass, no
-soft check failed outright, no `BLOCK` finding is left and no verified blocker is left. `BlockingFindings` is the
-reader the export and the consistency pass use; it answers `CheckLevels.of(finding) == BLOCK`, so a finding that kept a
+soft check failed outright, and no `BLOCK` finding is left. `BlockingFindings` is the
+reader the export uses; it answers `CheckLevels.of(finding) == BLOCK`, so a finding that kept a
 segment from being accepted is called blocking in the same way before and after the run (and none when the person's
 own text replaced the machine's).
 
@@ -276,7 +263,7 @@ source only when its language has a negation list), so a repair that replaces a 
 removes a stray quote or drops a doubled sentence is not refused for it.
 A candidate that passes the vetoes is kept when its score is not higher and the finding that triggered the edit is
 cleared or the score is strictly lower; the score weighs a blocking finding 5, a repair-level (soft) one 1 and an
-audit one 1. The one repair and the Proofread stage's windows (`#proofread-stage`) use it; the export's last check reaches it in group 14 of the redesign.
+audit one 1. The one repair and the Proofread stage's windows (`#proofread-stage`) use it.
 
 ### qa-thresholds {#qa-thresholds}
 
@@ -339,7 +326,7 @@ foreign-keep is not a blanket excuse for an untranslated output.
 ### confidence {#confidence}
 
 `confidence ∈ [0,1]` is a **documented weighted blend of the soft-check margins only** — hard gates are excluded (they
-are pre-gate booleans) and the **judge score is NOT folded in** (it is compared separately against `τ_judge`). For each
+are pre-gate booleans) and there is no judge score. For each
 soft check, `margin_i ∈ [0,1]` is how far the observed value sits from that check's failure cutoff: a **failed** check
 contributes margin `0.0` and a **skipped** check contributes margin `1.0`; a passing, non-skipped check's margin is:
 
@@ -357,17 +344,15 @@ confidence = 0.30·m_glossary + 0.25·m_lengthRatio + 0.20·m_script
            + 0.15·m_untranslatedEcho + 0.10·m_repetitionLoop
 ```
 
-(weights sum to 1.0). `confidence` is then compared against the review-mode dial's `τ`; the judge, when run, is a
-separate `judgeScore ≥ τ_judge` term in the accept rule (`#tiered-loop`).
+(weights sum to 1.0). `confidence` only orders segments for review; it is not compared with a threshold (`#tiered-loop`).
 
 **A soft check that fails outright blocks acceptance**, independently of the blended `confidence` value, and raises a
 `medium` finding — `language` for a failed target-script or untranslated-echo check, `fluency` for a failed
 repetition check, `omission` for a failed length-ratio check, `glossary` for a failed glossary-compliance check —
 except the **echo floor** above, where a failed echo under 20 code points contributes only its `0.0` margin and a
-`low` finding without blocking. The blend decides only the close calls that no check failed outright (ADR-0038).
+`low` finding without blocking. The blend decides only the close calls that no check failed outright (ADR-0046).
 Every finding also records what raised it — the check (`script`, `echo`, `repetition`, `length`, `glossary`,
-`refusal`, `placeholder`, `locked-term`, `kept-run`) or `judge` — so a review can tell a length-ratio omission from a
-judge's.
+`refusal`, `placeholder`, `locked-term`, `kept-run`) — so a review can tell a length-ratio omission from another kind of finding.
 
 ## name-term-dictionary {#name-term-dictionary}
 
@@ -405,7 +390,7 @@ Match kinds:
 - **Exact match** — same `source_hash`; used as a *hint*, not forced.
 - **Context match** — same `source_hash` *and* same `context_key` (both neighbours match) → safe to **auto-reuse**. An
   auto-reused target still passes the **tag-multiset hard gate + the deterministic QA gate** before acceptance, but
-  **skips the draft and judge calls**.
+  **skips the draft call**.
 - **Fuzzy match** — near source by **deterministic string similarity** (e.g. normalized edit distance / token overlap,
   **not** vector embeddings) → surfaced as a *suggestion* only.
 
@@ -414,7 +399,7 @@ Store: `06_DATA_MODEL_SQLITE.md#tm`.
 
 ## chapter-summaries {#rolling-summary}
 
-The rolling summary, its every-`K`-segments refresh and the Max unit-end `SUMMARY` call are gone (design D10 of
+The earlier rolling summary, its every-`K`-segments refresh and the Max unit-end `SUMMARY` call are gone (design D10 of
 `redesign-translation-pipeline`, task 12.3); the recently-present card (`#context-builder`) carries who was last seen.
 In their place each finished chapter gets its own summary: a `ChapterSummary` record (project, chapter key, the unit
 and first segment it starts at, its segment count, the text in the target language and the hash of the source it was
@@ -461,7 +446,7 @@ from a summary.
 `Chapter summary not kept chapter=… key=… reason=…`; a storage failure logs one WARN too; the run goes on. The INFO line
 is `chapter summary chapter=… sentences=… dropped=…`; the text is logged at TRACE only. The kept summaries reach later draft prompts as the earlier-chapters block (`12_PROMPT_CATALOG.md#draft-translation`).
 
-## deferred-resolution-and-backward-revision {#deferred-resolution}
+## deferred-resolution {#deferred-resolution}
 
 When a segment is decided before a fact it depends on is known (a character's gender, a target the person changes
 later), the engine records a **deferral** (`api: project/Deferral`, `DeferralReason`). One helper,
@@ -470,8 +455,7 @@ later), the engine records a **deferral** (`api: project/Deferral`, `DeferralRea
 deferral when a PINNED or LOCKED entry's non-empty target changes, a `GENDER_CHANGED` one per decided segment naming an
 entry whose enforced gender (the person's or the book's, a confirmed likely value included) appears or changes, and
 `GENDER_UNKNOWN` only for an entry with no gender of any origin. A proofread rewrite of the person's edit waits on a
-`PROOFREAD` deferral, which carries the proposal. Max's backward-revision pass is gone from the run; the deferrals are
-the Proofread stage's input.
+`PROOFREAD` deferral, which carries the proposal. The deferrals are the Proofread stage's input (there is no backward-revision pass).
 
 ### proofread-stage {#proofread-stage}
 
@@ -543,7 +527,7 @@ no edit, a `placeholder` finding).
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
-output): draft 0.2 (the default), judge 0.1, repair 0.1, directed fix 0.2, proofread
+output): draft 0.2 (the default), repair 0.1, proofread
 0.1, pre-scan/summary 0.2. These are the pipeline's per-kind values; a model's own settings on Settings ›
 Models (`01_Product/07_SETTINGS.md#models-tab`) may replace them, and a review-desk retry can opt into 0.1 for its draft
 call when a lower temperature is asked. Every call carries a **reasoning intent** for its kind (off for draft, repair,
@@ -564,15 +548,14 @@ embedding or RAG stage.
 
 A single "quality vs speed" dial (`FAST | BALANCED | MAX`) parameterizes the engine's **mechanics**. It does **not** own
 the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual) alone — a manual
-Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.md`); `τ_judge` equals `τ`.
+Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.md`).
 
 | Parameter                          | FAST             | BALANCED | MAX   |
 |------------------------------------|------------------|----------|-------|
 | fixing call (`RepairMode`)         | marks-only re-draft | one repair | one repair |
-| reviewer passes per chunk          | 0                | 1        | 2     |
 | Proofread stage (`#proofread-stage`) | code only, no call | + one call per marked window | + round 2 over every story paragraph |
 
 The dial no longer sets the batch size or a chunk's segment cap: the batch size belongs to the model profile
 (`#tiered-loop`, step 1), so the dial means the same for every model. A review retry runs with no repair
-(`LoopSettings.repairs` false). The dial sets mechanics; `τ`/`τ_judge` come from the review-mode dial (DD-45). The
-automatic-first, tiered-pipeline model this dial serves is ADR-0007. Requirements: `FR-ALGO-*`, `FR-QA-*`.
+(`LoopSettings.repairs` false). The dial sets mechanics; `τ` comes from the review-mode dial (DD-45). The
+three-stage pipeline this dial serves is ADR-0046. Requirements: `FR-ALGO-*`, `FR-QA-*`.

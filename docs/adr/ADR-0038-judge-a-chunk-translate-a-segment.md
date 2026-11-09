@@ -1,6 +1,6 @@
 # ADR-0038 — Judge a chunk of segments together; generate every target one segment at a time
 
-**Status:** accepted **Date:** 2026-09-26 **Deciders:** owner (plan approval) **Amends:** FR-ALGO-C13
+**Status:** superseded by ADR-0046 **Date:** 2026-09-26 **Deciders:** owner (plan approval) **Amends:** FR-ALGO-C13
 
 ## Context and problem statement
 

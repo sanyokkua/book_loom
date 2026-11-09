@@ -27,12 +27,12 @@ explicitly — read them before planning work.
 | ADR-0004 | Supported formats scope — EPUB / FB2 / MD / TXT                                       | DD-08               |
 | ADR-0005 | Provider abstraction — two client implementations (Ollama-native + OpenAI-compatible) | DD-09, DD-10, DD-32 |
 | ADR-0006 | Credentials stored as a reference                                                     | DD-11               |
-| ADR-0007 | Automatic-first tiered translation pipeline                                           | DD-15…DD-19         |
+| ADR-0007 | Automatic-first tiered translation pipeline (superseded by ADR-0046)                  | DD-15…DD-19         |
 | ADR-0008 | Inference concurrency — single-flight gate + typed retry                              | DD-12, DD-13        |
 | ADR-0009 | Persistence — SQLite + Flyway + JDBI (amended by ADR-0043)                            | DD-20               |
 | ADR-0010 | Offline network policy                                                                | DD-01               |
 | ADR-0011 | App icon & branding — one background-removed master, per-OS derivation                | DD-29               |
-| ADR-0012 | Per-project provider/model binding + change confirmation + preflight verification     | DD-31               |
+| ADR-0012 | Per-project provider/model binding + change confirmation + preflight verification (amended by ADR-0046) | DD-31               |
 | ADR-0013 | Response-handling contract — JSON-first, tolerant, repair + text fallback             | DD-33               |
 | ADR-0014 | Lombok on services, records for data carriers (hybrid)                                | DD-05               |
 | ADR-0015 | Per-OS app paths resolved first, hand-rolled, dev/prod separation                     | DD-39               |
@@ -55,10 +55,10 @@ explicitly — read them before planning work.
 | ADR-0032 | Tests are the evidence; no requirement-id tracking                                    | process             |
 | ADR-0033 | The translation engine gets a bound chat model and runs as a pausable job             | DD-10, DD-15, DD-31 |
 | ADR-0034 | Working state behind storage ports; in-memory adapters until SQLite                   | DD-20               |
-| ADR-0035 | Export is a separate action; a run ends when the translation ends (amends ADR-0033)   | DD-30               |
-| ADR-0036 | Review modes decide when the run pauses, as well as τ                                 | DD-45               |
+| ADR-0035 | Export is a separate action; a run ends when the translation ends (amends ADR-0033; amended by ADR-0046) | DD-30               |
+| ADR-0036 | Review modes decide when the run pauses, as well as τ (amended by ADR-0046)           | DD-45               |
 | ADR-0037 | Source language from metadata only; target language checked by script                 | EC-LANG-1           |
-| ADR-0038 | Judge a chunk together; generate every target one segment at a time                   | DD-16, DD-45        |
+| ADR-0038 | Judge a chunk together; generate every target one segment at a time (superseded by ADR-0046) | DD-16, DD-45        |
 | ADR-0039 | Import refusal kind reported as data; ErrorCode stays at fifteen                      | DD-14               |
 | ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
 | ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |
@@ -66,5 +66,5 @@ explicitly — read them before planning work.
 | ADR-0043 | Application state in SQLite as JSON documents; no schema migrations before release     | DD-20               |
 | ADR-0044 | Look for a local AI program once, by itself, at first launch (amends ADR-0010)        | DD-01               |
 | ADR-0045 | Review is an in-window dialog; the review mode is a stored setting                    | DD-45               |
-| ADR-0046 | Three stages, one repair, and an edit stays only if no check got worse (accepted for the one repair, proposed for the rest) | DD-16, DD-45 |
+| ADR-0046 | Three stages, one repair, and an edit stays only if no check got worse (accepted; supersedes ADR-0007 and ADR-0038) | DD-16, DD-45 |
 | ADR-0047 | Server engines and model profiles; the engine is stored on the provider | DD-01, DD-20 |

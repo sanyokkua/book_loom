@@ -1999,7 +1999,7 @@ database is set aside once.
     them; a guard that no `estimate.relative.` key remains in either bundle.
   - **Done when:** the tests and `VocabularyTest` are green and `scripts/ci-linux-ui.sh` passes.
 
-- [ ] 14.9 Settle the decision records and fix every document the removals make wrong, so the specification describes
+- [x] 14.9 Settle the decision records and fix every document the removals make wrong, so the specification describes
   three stages, one repair, the never-worse gate and an export with no model call. → :pipeline (its documents), docs
   - **Satisfies:** enabling work for design D28
   - **Depends on:** 14.8

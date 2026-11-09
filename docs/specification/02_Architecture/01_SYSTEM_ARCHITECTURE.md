@@ -17,8 +17,8 @@ at `ua.bookloom.<module>`. Work flows through four horizontal layers:
 
 - **Presentation** (`:ui`, `:app`) — JavaFX launcher, `Application`, FXML views, controllers, viewmodels, the observable
   state mirror, theming, i18n. The only layer permitted to touch `javafx.*`.
-- **Orchestration** (`:pipeline`) — the translation engine: chunking, context assembly, the tiered
-  translate→QA→judge→repair loop, glossary/TM/summary consistency stack, prompt building. Pure Java, no UI, no direct
+- **Orchestration** (`:pipeline`) — the translation engine: chunking, context assembly, the
+  Prepare · Translate · Proofread stages (draft→checks→one repair→never-worse gate), glossary/TM/summary consistency stack, prompt building. Pure Java, no UI, no direct
   HTTP or SQL.
 - **Domain services** (`:document`, `:llm`, `:persistence`) — document parsing/masking/repackaging, provider abstraction
   (two clients over a detected server engine) and inference, and durable storage. Each owns exactly one concern and exposes it through a `:api` port.
@@ -87,7 +87,7 @@ flowchart TD
         UI[":ui<br/>FXML · controllers · viewmodels · state mirror"]
     end
     subgraph Orchestration
-        PIPE[":pipeline<br/>chunking · context · QA · judge · self-heal"]
+        PIPE[":pipeline<br/>chunking · context · checks · one repair · proofread"]
     end
     subgraph Services
         DOC[":document<br/>parse · mask · reassemble · repackage"]

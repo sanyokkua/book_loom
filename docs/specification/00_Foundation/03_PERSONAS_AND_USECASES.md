@@ -69,7 +69,7 @@ Covers `FR-GLOSS-*`.
 **Configure a provider and models.** The user adds a provider (choosing a preset kind — Ollama uses the native client,
 everything else the OpenAI-compatible client — or a custom endpoint), supplies an endpoint and, if needed, a credential
 reference (never a stored secret), runs the three-stage verification (connection → models → inference) on the draft
-config, selects the translator and judge/helper models from live discovery or types them manually when the server has no
+config, selects the translator model from live discovery or types them manually when the server has no
 discovery endpoint, and sets it current. Covers `FR-PROV-*`, `FR-MODEL-*`, `FR-INFER-*`.
 
 ## use-case-persona-matrix {#use-case-persona-matrix}

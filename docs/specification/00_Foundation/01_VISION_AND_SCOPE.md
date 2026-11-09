@@ -14,8 +14,8 @@ llama-server or Unsloth) or reaches through any OpenAI-compatible endpoint. The 
 translates only the visible text while keeping structure, images, fonts, and identifiers intact through a
 structure-and-text-preserving (canonical-equal) round trip — exact bytes may differ under re-serialization (DD-43) — and
 runs automatically end to end: the target reader completes a full-length book with no human interaction for roughly 99%
-of the content (a non-gating aspiration, not a guarantee). A tiered quality pipeline (draft → deterministic checks →
-LLM-as-judge → self-heal repair, with an optional whole-book consistency pass) keeps names, tone, and formatting
+of the content (a non-gating aspiration, not a guarantee). A three-stage pipeline (Prepare · Translate · Proofread; each segment
+drafted, checked by code and given at most one repair, with every edit kept only if no check got worse) keeps names, tone, and formatting
 consistent. Only the small minority of segments the machine cannot clear on its own are flagged for optional
 side-by-side review. BookLoom is private when used with local models: with a local model every byte of book content
 and every model call stays on the user's machine; with a provider outside this computer, the text being translated is
@@ -30,7 +30,7 @@ sent to the endpoint the user chose, and that choice is theirs.
 | V3 | Structure-faithful         | The translated book is structure-and-text-preserving (canonical-equal) against the original everywhere except the translated text nodes — images, fonts, IDs, and layout survive the round trip; exact bytes may differ under re-serialization (DD-43).                        |
 | V4 | Consistent voice and names | A name/term dictionary, context-aware translation memory, and per-chapter summaries keep terminology and register stable across an entire book.                                                                                                                          |
 | V5 | Bring-your-own model       | Any local or OpenAI-compatible general instruction model works; no vendor lock-in and no per-word cloud cost of BookLoom's own; a hosted gateway such as OpenRouter works as an ordinary OpenAI-compatible provider, with its price shown per call and its routing left to the gateway.                                                                                                                                                                  |
-| V6 | Review only what matters   | Deterministic and judge-based quality gates surface just the small minority (~1%, a non-gating aspiration) of segments that need a human, in a focused side-by-side queue.                                                                                                     |
+| V6 | Review only what matters   | Deterministic quality checks and a proofread stage surface just the small minority (~1%, a non-gating aspiration) of segments that need a human, in a focused side-by-side queue.                                                                                                     |
 
 ## target-users {#target-users}
 

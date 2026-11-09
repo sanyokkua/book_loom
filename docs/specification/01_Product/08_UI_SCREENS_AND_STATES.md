@@ -83,7 +83,7 @@ narrower title bar still shortens the name first and hides the speed, the mode a
 
 Every background operation is registered as an activity with a title, a start time, optional progress (a fraction, a
 step, key/value details and a time left) and, when it can be stopped, a cancel. Work the window waits for is
-**blocking**: opening and inspecting a book, preparing a run, the export and its consistency pass, the glossary's model
+**blocking**: opening and inspecting a book, preparing a run, the export, the glossary's model
 scan and review, the Book Brief's style suggestion, the file-name suggestion, the provider's inference test and a
 review retry. The translation run itself, the model listing, the connection check and structure checks are not.
 
@@ -110,7 +110,7 @@ check before saving, and All calls (the translation's model calls). Its parts:
 | Follow current step | Switch | On: the list selects the step the work is on. Only a person's click or key turns it off |
 | Left list | Steps or items in groups, each with a state marker (G11) and one result line | Finished steps stay selectable with their data; a step not started says so |
 | Requests of a stage | Under the selected stage row (the names pass and every work that plans stages), the stage's requests as a compact list of fixed-height lines: "Request 3 · answered · 0:04 · 36.4 tok/s", "Request 4 · waiting 0:12 · attempt 2/2", "Request 5 · failed · 0:30", "Request 6 · stopped"; a request whose call is no longer kept says "done" or "failed". Each call belongs to the request announced just before it, so two calls in one 100 ms update are never swapped. The list follows the newest request, keeping a request on show for 1.5 s after its reply so the answer can be read; choosing a line shows that request in the detail pane and turns follow off | Replaces the single "last request" a stage row showed |
-| What a request asked and read | A call about no segment (names, kinds, readings, suggestions, term choice and review) says **what it asked** the moment it goes out (Simple: one line per name or term under a heading in the stage's own words — "Names asked about", "Terms asked about", "Names to render", "Book passages read", "Paragraphs checked", "Text summarized", "Book details sent"; a call about segments keeps "What it reads") and, once the reply is parsed, **what the reply was read as** beside each line (under "Model's reading", "Model's answer", "Suggested renderings", "Model's suggestion", "Model's verdict", "Summary" or "Suggested name"; `Faquarl → male, character`; a line the reply gave nothing for says "no answer"). Every inference call of a dialog (names pass, glossary, recurring terms, brief, file name, summary, consistency pass, word check) says what it asked. Detailed adds the call line, clock, tokens and speed, the prompt and reply views, and two collapsed JSON blocks with Copy: **Request as sent (JSON)**, shown as soon as the request goes out, and **Reply as received (JSON)**, shown once it is answered; both laid out with indentation, with no header or credential. Simple never shows them. A stage's request list reads "Request 2" while the stage runs and "Request 2 of 5" once it has ended; after a reply the next request is followed after a 1.5 s hold | A stage that sent requests never says "This step made no model call" |
+| What a request asked and read | A call about no segment (names, kinds, readings, suggestions, term choice and review) says **what it asked** the moment it goes out (Simple: one line per name or term under a heading in the stage's own words — "Names asked about", "Terms asked about", "Names to render", "Book passages read", "Paragraphs checked", "Text summarized", "Book details sent"; a call about segments keeps "What it reads") and, once the reply is parsed, **what the reply was read as** beside each line (under "Model's reading", "Model's answer", "Suggested renderings", "Model's suggestion", "Model's verdict", "Summary" or "Suggested name"; `Faquarl → male, character`; a line the reply gave nothing for says "no answer"). Every inference call of a dialog (names pass, glossary, recurring terms, brief, file name, summary, word check) says what it asked. Detailed adds the call line, clock, tokens and speed, the prompt and reply views, and two collapsed JSON blocks with Copy: **Request as sent (JSON)**, shown as soon as the request goes out, and **Reply as received (JSON)**, shown once it is answered; both laid out with indentation, with no header or credential. Simple never shows them. A stage's request list reads "Request 2" while the stage runs and "Request 2 of 5" once it has ended; after a reply the next request is followed after a 1.5 s hold | A stage that sent requests never says "This step made no model call" |
 | Footer | Left: **Continue in background** (long work only) and one line saying what Cancel does ("Cancel writes nothing."), shown only while the work can be cancelled (work that cannot, such as opening a book, says "This work cannot be stopped; it ends by itself." under the title instead). Right: Cancel, then the result action | The export pass also offers **Write the file now** |
 
 **Continue in background** is offered only for long work — the names pass and the export pass; short work (brief
@@ -119,7 +119,7 @@ on the chip reopens the same dialog with its state. While work is hidden, the sc
 behind a banner ("Names & style work is running in the background", then "This screen is read-only until it ends, so its results and your edits do not overwrite each other." and a Show progress button), and other model work is
 refused with a toast offering "Show progress". When it finishes, the chip goes and a toast with **Review the results**
 appears; nothing pops up by itself. A press of Cancel disables the button until the work ends; work that cannot be
-stopped shows no Cancel and says so. Esc hides long work, the export's last check included, and cancels short work;
+stopped shows no Cancel and says so. Esc hides long work, the export included, and cancels short work;
 only the export's Cancel button asks first ("Cancel the export? No file is written.").
 
 ### Start and Resume {#start-and-resume}
@@ -287,8 +287,7 @@ them by number.
 ### Progress and time left {#progress-counting}
 
 **Planned.** The unit is a **step**, counted over the whole operation (3 tasks × 3 items are 9 steps). For a translation
-run: a step per segment draft, one per check the quality dial plans for each translated segment (Fast 0, Balanced 1,
-Max 2), plus Max's chapter summaries and backward revision; a kept-as-is segment is a draft step done at once. For a
+run: a step per segment draft, plus the chapter summaries and the Proofread windows the dial reads (a repair or a re-ask joins when it starts); a kept-as-is segment is a draft step done at once. For a
 dialog: each step's items (requests, or 1 for a code step). Unknown counts are estimated and marked "about" until
 known; work found on the way (the one repair after a failed check, or Fast's marks-only re-draft, a re-ask, a resend after a timeout) joins the total when it
 starts, and the bar never moves back. **Time left** is the sum over step kinds of steps left × the measured time per
@@ -313,7 +312,7 @@ left" for auto-accepted / repaired & accepted / remaining, "translated again alo
 translating" for run, **"Try again now"** for Retry / Send again / Retry now, "Skip these 4 segments" (always the count),
 "✦ Fill in from the book" for Suggest with model, "Text in other languages", "samples", "Spell in the target alphabet"
 (by target language), "Picture descriptions", "Table of contents and chapter titles", "Copyright and edition notes",
-"Last check before saving". The **Glossary**, **Recurring terms**, **Scan · Review · Translate** and **Locked** keep the
+The **Glossary**, **Recurring terms**, **Scan · Review · Translate** and **Locked** keep the
 owner's names (15i.U5). Ukrainian follows the same rules: one idea per sentence, ICU plurals for every count, no
 gendered past tense for "you". "Stay paused" is gone (the toolbar's Pause does it).
 
@@ -664,9 +663,8 @@ verb.)
 - **Provider or model change** during a translation asks first, in the resume dialog's words (`#dialog-provider-binding`).
 - **Export:** disabled while translating, pausing or stopping, with "Pause or stop the translation to export"; allowed
   when paused, stopped or failed, with the banner "74 of 142 segments are translated. The other segments keep the
-  original text"; the last check is off and disabled for a partial export ("Runs when the whole book is translated")
-  (`#screen-export`).
-- **A screen another job writes to** (the names pass or the export pass hidden in the background) is read-only (G4).
+  original text" (`#screen-export`).
+- **A screen another job writes to** (the names pass hidden in the background) is read-only (G4).
 
 ### Translating screen — layout {#translating-planned}
 
@@ -755,7 +753,6 @@ Purpose: choose the destination and export the translated book.
 | Format                       | read-only `Label`                 | The book's original format (EPUB/FB2/MD/TXT) — export is same-format only; there is **no format chooser** (DD-30, FR-EXPORT-01)          |
 | Title and author             | read-only `Label`s + `TextField`s | Original (read-only) and translated (editable); a book that names no author says "The book names no author"; the title's reason line names where it came from. A title with formatting marks shows them as `⟦0⟧` and the field keeps every one; an edit that is not saved says "Not saved: …" |
 | Also save (side files)       | three `CheckBox`es (live)         | "Glossary (CSV) — reuse it for the next book" / "Bilingual copy (original and translation side by side)" / "Quality report (what needed review)" (FR-EXPORT-05) — the glossary and the report start checked and the bilingual copy unchecked, as in the mockup; each produces its file when checked; an existing chosen side file is asked about like the book |
-| Last check before saving     | `ToggleSwitch` (live)             | FR-EXPORT-06 — "Check the uncertain places again — Recommended. Rereads the segments that needed fixing next to their neighbours."; starts from the stored Automation setting, else on at Max; off and disabled for a partial export ("Runs when the whole book is translated") without changing the setting |
 | Banners                      | `Banner`s                         | Translating: "Pause or stop the translation to export. You can export what is done so far; the rest keeps the original text." [Pause]. Partial: "74 of 142 segments are translated. The other segments keep the original text". Nothing translated: "Nothing is translated yet." The export in the background: the screen is read-only until it ends |
 | Tiles                        | stat tiles                        | Before any export, from the project: **74 of 142** segments done · translated without changes · reviewed by you · "checked when written" (—). After a written export, the first from the stored export ("70 of 142" segments written, also after a restart) and the fourth ✓ "checked: opens, nothing missing"; the middle two stay live |
 | `⬇ Export book`              | `Button` in the toolbar           | Writes the book; unavailable while a run of this project is translating ("Pause or stop the translation to export") or nothing is translated ("Nothing is translated yet."), the reason beside it. When the book or a chosen side file exists it asks first ("Replace 2 existing files?" naming each path); Cancel writes nothing |
@@ -765,12 +762,12 @@ The partial-export statement names **pending segments** (not yet decided), **seg
 **segments kept as is** (a chapter number, a scene break — nothing to translate, decided with no model call) apart, so a
 partial export never describes every remaining segment as the same kind of gap. The
 **export-complete dialog** (`#dialog-export-complete`) is the export's **only** success notice — no `ok` toast
-duplicates it; it opens also when the export finished in the background, and holds the row **Last check** ("18
-segments reread · 1 fixed") when the check ran. A finished export is recorded on its project (`ExportRecord`) by the
+duplicates it; it opens also when the export finished in the background, and holds the row **Proofread** (the
+stored summary: segments re-read, segments still waiting). A finished export is recorded on its project (`ExportRecord`) by the
 window only; the command line keeps nothing.
 
 States: **populated** (ready to export), **running** (a run translates: banner with Pause, action disabled), **partial**
-(banner, last check locked off), **nothing translated** (banner, action disabled) and **exported** (checks, Open folder,
+(banner), **nothing translated** (banner, action disabled) and **exported** (checks, Open folder,
 Open book). With no book open the screen shows only its tiles and the unavailable action.
 
 ### Suggest a file name — progress dialog {#dialog-progress-file-name}
@@ -778,17 +775,14 @@ Open book). With no book open the screen shows only its tiles and the unavailabl
 One step: what was sent and the answer. Footer: "Cancel keeps the current name." · Cancel · **Use this name**, which
 puts the name in Save as; Cancel keeps the current name.
 
-### Export · last check before saving — progress dialog {#dialog-progress-export}
+### Export — progress dialog {#dialog-progress-export}
 
-Sections: **Steps** — Check the translation is complete · Fix he/she forms that became known (`CONSISTENCY_RETRY`) ·
-Translate unsure segments again (`RETRY_DOUBTED`); **Reread next to the neighbours · 6 of 18** (one item per segment);
-**Finish** — Write the file. Item detail: a plain sentence, then a bordered **Before \| After** grid (the segment before,
-this segment, the segment after, source above translation; a fix shows the old text struck through above the new one;
-"Unchanged — kept as it was" in words). Footer: left, Continue in background and "Cancel writes no file."; right,
-**Write the file now** (asks: "6 of 18 reread, 1 fixed; the other 12 stay as they are"; yes keeps every fix made,
-gives up the call in flight and reports the rest as not reread) and **Cancel**, which asks "Cancel the export? No file is
-written."; Esc hides and the activity chip reopens it. On finish **Export complete** opens (`#dialog-export-complete`).
-`ExportProgress.Step` is VALIDATING → CONSISTENCY_RETRY → RETRY_DOUBTED → CONSISTENCY_NEIGHBOUR → WRITING.
+Export makes no model call, so the dialog holds two steps: **Check the translation** (the destination, the side files
+and every segment's text, `ExportProgress.Step` VALIDATING) and **Write the file** (WRITING). Footer: Continue in
+background and Cancel, which asks "Cancel the export? No file is written."; Esc hides and the activity chip reopens it.
+On finish **Export complete** opens (`#dialog-export-complete`). The earlier "last check before saving" steps
+(rereading next to the neighbours, retrying doubted segments) and the Write the file now button were removed in group
+14 of `redesign-translation-pipeline`.
 
 Requirements: FR-EXPORT-01..06. Export always writes the book back in its original format; converting to another format
 is out of scope (DD-30). P6 reference: the page title reads "Export the translated book" before an export, "The translated book is ready" after one with nothing pending, and "Your book so far" after a partial one (a partial book is not "ready").
@@ -852,7 +846,7 @@ restarts".
   details** (G12). There is no Accent row and no Reduce-motion switch in the mockup README's tab.
 - **Automation:** When to stop and ask you (Never — translate unattended · When something needs review · After every
   segment = `ReviewMode` UNATTENDED / ASSISTED / MANUAL); Default quality; Open the review desk when a translation
-  finishes with segments to review; Run the last check before saving by default; Keep the computer awake (with the lid
+  finishes with segments to review; Keep the computer awake (with the lid
   note); Reopen the last project. There is no OS-notification switch.
 - **Storage & logs:** Your projects (saved in, size, saved as it goes, Open data folder, Make a backup…, Delete all
   data…); Logs (folder, kept 10 launches, Detailed diagnostic log, Open log folder, Save a diagnostic bundle…). Paths
@@ -881,8 +875,8 @@ first launch as the empty Projects screen, `#screen-projects`; whether the dialo
 Add/edit provider with endpoint, kind, auth, and credential-reference fields, plus the Test connection / models /
 inference trio (FR-PROV-06). The kind selects the client implementation (Ollama → native client; everything else →
 OpenAI-compatible). Model fields come from live discovery when the provider offers it, and always allow **manual
-model-ID entry** (a free-text field used when the server has no discovery endpoint — DD-38, FR-MODEL-02). Two model
-slots only: translator and judge/helper (no embedding). Controls: `Dialog` with `TextField`/`ComboBox`/editable
+model-ID entry** (a free-text field used when the server has no discovery endpoint — DD-38, FR-MODEL-02). One model
+slot only: the translator (no judge or helper, no embedding). Controls: `Dialog` with `TextField`/`ComboBox`/editable
 `ComboBox` and three test `Button`s each showing a per-stage result. **Planned:** the form lives in Settings ›
 Providers (the Connection details fold, `#screen-settings`); the tests open `#dialog-test-provider`. P6 reference: Add
 provider dialog. Built: under the address the detected-engine line with **Detect again** beside it (and, after a
@@ -976,8 +970,8 @@ with expandable content. P6 reference: Translation failed.
 
 **Ships in this build.** Shown once the run's export stage finishes writing the book: the written path, the format,
 and an `Open folder` action that shows the file in the system file manager. It is the export's **only** success
-notice — no `ok` toast duplicates it. **Planned content:** Saved as (wraps), Check, Size, Also saved, Last check "18
-segments reread · 1 fixed"; Close · Open folder · Open book. Control: `Dialog` (`dialog/ExportCompleteDialog`). P6
+notice — no `ok` toast duplicates it. **Planned content:** Saved as (wraps), Check, Size, Also saved, Proofread (segments
+re-read · waiting); Close · Open folder · Open book. Control: `Dialog` (`dialog/ExportCompleteDialog`). P6
 reference: Export complete.
 
 ### dialog-about {#dialog-about}

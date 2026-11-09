@@ -30,7 +30,7 @@ of a book, and the steps are unavailable until a project is open (G6).
 | 3. Names & style   | Names & style | Review the names/terms proposed by the **deterministic frequency-and-capitalization scan**, which seeds the glossary and grows it again at the end of each body unit; edit target renderings, type, gender; lock entries. The **LLM pre-scan is a button on this screen** (Scan · Review · Translate on a card, or Prepare names automatically), never automatic and never run at a run's start — the person presses it to add type and provisional gender the deterministic scan cannot infer (DD-46). The step is optional: left alone, BookLoom builds the glossary and recurring terms while it translates. | FR-GLOSS-01..05                        |
 | 4. Translate       | Translating   | Start the run; the pipeline processes the whole book automatically; the user may **pause**, **stop** (a terminal `stopped` state), resume or continue, or leave (see Pause vs Stop below). | FR-ALGO-01, FR-RESUME-03, FR-RESUME-05 |
 | (Review)           | Review dialog | Optionally review the segments that need it side by side and accept/edit/revert/retry/leave for later. Opened from Review (n) in the toolbar or the "n to review" button, and by itself when a translation finishes with segments to review (see below). | FR-REVIEW-01..07                       |
-| 5. Export          | Export        | Export is its own action, started from this screen. It is disabled while the translation is running, pausing or stopping, and allowed once it is paused, stopped, failed or finished (a partial export keeps the original text in untranslated segments). It chooses the save path and asks before replacing an existing file, and confirms a finished export in an export-complete dialog — export is same-format-only (DD-30). The last check before saving (the consistency pass) and side exports are offered here. | FR-EXPORT-01..06                       |
+| 5. Export          | Export        | Export is its own action, started from this screen. It is disabled while the translation is running, pausing or stopping, and allowed once it is paused, stopped, failed or finished (a partial export keeps the original text in untranslated segments). It chooses the save path and asks before replacing an existing file, and confirms a finished export in an export-complete dialog — export is same-format-only (DD-30). Export makes no model call: it validates and writes the book, reports the stored Proofread summary and writes the side exports chosen here. | FR-EXPORT-01..06                       |
 
 Export is reachable whenever the run is not actively translating, independent of remaining segments that need review
 (FR-REVIEW-07).
@@ -80,8 +80,7 @@ segments). Concretely:
 
 - Before the run, the prep phase seeds the glossary via the deterministic frequency-and-capitalization scan (DD-46) so
   the Names & Style step opens pre-populated; the LLM pre-scan runs only from its own button, never at a run's start.
-- Every chunk is drafted, deterministically checked, read by the reviewer (when the dial enables it), and repaired
-  once on failure, all without prompting the user.
+- Every chunk is drafted, deterministically checked, and repaired once on failure (the run then ends with the Proofread stage), all without prompting the user.
 - Failures flag only the **offending segments** (shown to the person as "to review"): a segment that still holds a blocking finding after
   the one repair is FLAGGED; everything else is auto-accepted.
 - The user can close the Book Brief and glossary steps quickly and rely on defaults; sensible defaults are provided for
@@ -117,12 +116,12 @@ planned Settings › Automation tab ("When to stop and ask you") will own the ch
 A single trust-threshold dial (FR-REVIEW-02) is the one control the user turns to trade automation for oversight. It
 sets τ, the minimum deterministic confidence for automatic acceptance (DD-45):
 
-- A segment is ACCEPTED automatically when the hard gates pass **and** no soft check failed outright **and** its
-  no verified reviewer blocker is left (15d.6: there is no confidence threshold and no judge score).
+- A segment is ACCEPTED automatically when the hard gates pass **and** no soft check failed outright
+  **and** no BLOCK-level finding is left (there is no confidence threshold, no judge score and no model reviewer).
 - A segment that misses the accept rule gets the one repair (Fast: a marks-only re-draft); if a BLOCK finding is still left, it is FLAGGED.
 - The three review modes are named positions of this dial (τ 0.60 / 0.75 / 0.85), and the dial is the **exclusive
   owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — the fixing call,
-  reviewer passes, and whether backward revision runs (the batch size is the model profile's) — and never sets τ (FR-ALGO-11). A manual Settings
+  how far the Proofread stage reads and the extra calls (the batch size is the model profile's) — and never sets τ (FR-ALGO-11). A manual Settings
   override of τ is not offered.
 
 The dial is the only quality/automation knob the user must understand; all other tuning lives in Settings → Generation
@@ -151,9 +150,8 @@ for advanced users.
   locked once translating has started.
 - **Export** is disabled while translating, pausing or stopping. When paused, stopped or failed it is allowed as a
   **partial export**: the translated segments are written and the others keep the original text, the banner says how
-  many segments are translated, and the last check before saving is off and disabled ("Runs when the whole book is
-  translated").
-- A hidden long job (the names pass, the export pass) makes the screen it writes to read-only until it ends.
+  many segments are translated, and the Proofread summary on the Export screen says what was not re-read.
+- A hidden long job (the names pass) makes the screen it writes to read-only until it ends.
 
 ## workflow-states-and-recovery {#workflow-states-and-recovery}
 

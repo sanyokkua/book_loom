@@ -18,9 +18,9 @@ any language the JDK can name, not only the 34 offered — tone, name/foreign-pa
 dial, who narrates, the "Also translate" switches), settles names and recurring terms on Names & style, starts the run
 on Translating, where the review panel lives (accept, edit, revert, leave for later, apply a proposal, retry with a note), and
 writes the book from Export, which is its own action and not a job stage. A run is a pausable job over a **stored
-project**: it packs each unit into chunks, drafts, reviews and decides every segment through the acceptance rule and the
-quality loop, reuses translation memory, keeps the glossary, pauses as the review mode says
-(`BOOKLOOM_REVIEW_MODE`, §5), recovers from a provider outage by itself, and on Max revises backwards after the last
+project**: it packs each unit into chunks, drafts, checks and decides every segment through the acceptance rule and the
+one-repair quality loop, reuses translation memory, keeps the glossary, pauses as the review mode says
+(`BOOKLOOM_REVIEW_MODE`, §5), recovers from a provider outage by itself, and ends with a Proofread stage after the last
 segment. Importing another book while a run can continue asks first (one translation per application run). The model
 is the offline `pseudo` provider, an Ollama-native endpoint or an OpenAI-compatible one; every call is capped in output
 (`ChatRequest.maxOutputTokens`) and bounded by a timeout scaled to the expected output.
@@ -169,17 +169,17 @@ interface TranslationJob {
 ```
 
 A `TranslationJob` is both a run and its own handle. It runs over a **stored project**, from its first pending segment,
-in the stages `PREP` (the style sheet, a deterministic names scan of an empty glossary), `TRANSLATE` and, on Max,
-`REVISE`; there is **no export stage**. `ReviewMode` (`UNATTENDED`, `ASSISTED`, `MANUAL`) carries its pause points and
+in the stages `PREP` (the style sheet, a deterministic names scan of an empty glossary), `TRANSLATE` and
+`PROOFREAD`; there is **no export stage**. `ReviewMode` (`UNATTENDED`, `ASSISTED`, `MANUAL`) carries its pause points and
 the confidence threshold. `JobReport` is always terminal and counts the accepted, flagged and pending segments from the
-project. The job announces its work as sealed `JobEvent`s (segment started/drafted/decided, round and batch started,
+project. The job announces its work as sealed `JobEvent`s (segment started/drafted/decided, batch and proofread round started,
 context assembled, memory updated, model call started/finished with a live `CallSnapshot`, paused, resumed, recovery
 waiting, finished).
 
 Export is a separate action: `ExportService.newExport(ExportRequest, model)` returns an `ExportJob` whose `run()`
 writes the book (destination checks, a temporary file, re-open, per-segment verification of the markup, atomic move),
-the chosen side files (glossary CSV, bilingual HTML, quality report) and, on request, the consistency pass; it
-writes what the project has decided, leaving the rest in the source, so a stopped run can still be exported.
+the chosen side files (glossary CSV, bilingual HTML, quality report) and reports the stored Proofread summary; it
+makes no model call and writes what the project has decided, leaving the rest in the source, so a stopped run can still be exported.
 
 ### 3.6 Project, storage and service ports
 
@@ -366,11 +366,10 @@ boundaries, write the book back canonical-equal (byte-exact for TXT), and releas
 
 **Can, through the engine, the export service and the command line:** translate a whole book of any format end to end
 over a stored project with the pseudo model or a real local provider — drafts go out in token-budgeted JSON batches,
-deterministic checks and a typography pass run before any model reads a draft, a per-chunk reviewer fixes in place and
-the code verifies every edit, the acceptance rule and quality loop repair or flag an echo, and protected spans, the
+deterministic checks and a typography pass run before any model reads a draft, the acceptance rule and the one repair (kept only if no check got worse) fix or flag an echo, and protected spans, the
 context package, translation memory, the recently-present card, the glossary and recurring terms keep the book consistent;
-pause on a flagged segment or after each segment as the review mode says; recover from an outage by itself; on Max,
-revise backwards; export a stopped or partial run, with the chosen side files and an optional consistency pass, never
+pause on a flagged segment or after each segment as the review mode says; recover from an outage by itself; end every run with a Proofread stage;
+export a stopped or partial run, with the chosen side files and no model call, never
 overwriting a source or an existing destination without being told.
 
 **Can, as an app:** start once, refuse a second instance, log to the right per-OS directory, keep the machine awake

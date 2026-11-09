@@ -1,8 +1,8 @@
 # ADR-0046 — Run a book in three stages, repair a segment once, and keep an edit only if no check got worse
 
-**Status:** accepted for the one repair, proposed for the rest **Date:** 2026-11-04
+**Status:** accepted (built across groups 10, 13 and 14 of `redesign-translation-pipeline`) **Date:** 2026-11-04
 **Deciders:** owner (decisions D-12 to D-14 of the 2026-10-27 pipeline research)
-**Supersedes:** ADR-0007 and ADR-0038, when group 14 of `redesign-translation-pipeline` accepts this decision fully
+**Supersedes:** ADR-0007 and ADR-0038 (group 14 accepted this decision fully)
 
 ## Context and problem statement
 

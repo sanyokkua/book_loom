@@ -149,7 +149,7 @@ NFR-REL-01.
 
 **Decision:** The pipeline runs automatically end to end; a single trust-threshold dial governs review; human review is
 opt-in. **Why:** The core value is a hands-off full-book translation. **Consequences:** Review UI is optional; ~99% of
-chunks pass without a human. **ADR:** ADR-0007 **Requirements:** FR-ALGO-01, FR-REVIEW-01.
+chunks pass without a human. **ADR:** ADR-0007 (superseded), ADR-0046 **Requirements:** FR-ALGO-01, FR-REVIEW-01.
 
 ## dd-16-tiered-self-heal {#dd-16-tiered-self-heal}
 
@@ -159,16 +159,18 @@ chunks pass without a human. **ADR:** ADR-0007 **Requirements:** FR-ALGO-01, FR-
 REPAIR defect, replacing the text only when `NeverWorse` keeps it) and runs only when a check finds something at those
 levels; Fast re-drafts once, only when formatting marks are lost. **Why:** Spend extra inference only where needed, and
 stop the rounds that measured no gain. **Consequences:** Passing chunks incur no repair cost; there is no repair
-budget N, no reflect→improve chain and no soft-fix call (redesign group 10). **ADR:** ADR-0007
+budget N, no reflect→improve chain and no soft-fix call (redesign group 10). **ADR:** ADR-0046 (supersedes ADR-0007)
 **Requirements:** FR-ALGO-08, FR-QA-02.
 
 ## dd-17-deterministic-qa-plus-judge {#dd-17-deterministic-qa-plus-judge}
 
-### DD-17 — Deterministic QA gate + LLM-as-judge; neural QE deferred
+### DD-17 — Deterministic QA gate; no LLM judge; neural QE deferred
 
-**Decision:** Combine deterministic checks with an LLM-as-judge score; defer a neural quality-estimation sidecar.
-**Why:** Cheap deterministic gates catch hard failures; the judge scores subtle quality. **Consequences:** Neural QE is
-a documented future extension. **ADR:** ADR-0007 **Requirements:** FR-QA-01, FR-QA-02.
+**Decision:** Decide acceptance by deterministic checks in code; there is no LLM judge or per-chunk reviewer (the
+original decision's judge was replaced by a reviewer in 15d.6 and both were removed by redesign group 14); defer a
+neural quality-estimation sidecar. **Why:** Cheap deterministic gates catch hard failures; a model that scores a chunk
+cannot name the wrong word and flagged faithful text. **Consequences:** Neural QE is a documented future extension.
+**ADR:** ADR-0046 (supersedes ADR-0007) **Requirements:** FR-QA-01, FR-QA-02.
 
 ## dd-18-consistency-stack {#dd-18-consistency-stack}
 
@@ -313,7 +315,7 @@ FR-EXPORT-02, FR-EXPORT-04.
 ### DD-31 — Per-project provider/model binding with change confirmation
 
 **Decision:** The settings-configured provider and models are **defaults for new projects only**. On creation, a project
-copies the current default provider + translator/judge models as its own binding and records a **last-used** snapshot
+copies the current default provider + translator model as its own binding and records a **last-used** snapshot
 (provider id + endpoint + model ids). A project reuses its own binding on every resume. On resume the app
 **preflight-verifies** connection and model availability; if the bound provider/model is unavailable it prompts and
 falls back to the current default **only on user confirmation**; if the settings default differs from the project's
@@ -381,7 +383,7 @@ documents, providers, pipeline, and a binding UI; local models can only be truly
 ### DD-36 — Low default temperature, per-phase guidance, user-adjustable
 
 **Decision:** Recommend a **low** sampling temperature for fidelity: default **0.2**, with per-phase guidance (draft ~
-0.2; judge/QA ~0.0–0.2; repair/reflect may go slightly higher), and a per-retry "lower temperature" option exists.
+0.2; repair ~0.1; proofread ~0.1), and a per-retry "lower temperature" option exists.
 There is no global setting; per model, Settings > Models chooses how it is sent: **Let BookLoom choose** (the per-phase
 value above), **My value** (one value for every call kind, 0.0–2.0) or **Don't send** (the field is left out), and the
 Sampling override sends either the profile's samplers or the person's Custom temperature, `top_k`, `top_p` and `min_p`;
@@ -517,18 +519,16 @@ flight. **ADR:** ADR-0038 **Requirements:** FR-ALGO-02, FR-INFER-02, FR-MODEL-07
 
 **Decision:** The **review-mode dial** (Unattended/Assisted/Manual) is the sole owner of the trust threshold τ — 0.60,
 0.75 and 0.85 respectively; the **quality dial** (Fast/Balanced/Max) owns only mechanics (preceding-target
-count, the fixing call, reviewer passes, backward-revision on/off; the batch size is the model profile's) and never sets τ. A manual Settings override of τ is
-**not offered in this build**. The judge scores a **chunk** once; a **segment** — not a chunk — is accepted only when
+count, the fixing call, how far Proofread reads; the batch size is the model profile's) and never sets τ. A manual Settings override of τ is
+**not offered in this build**. A **segment** — not a chunk — is accepted only when
 its hard gates pass, no soft check failed outright (a failed check raises at least a medium finding and sends the
 segment to the one repair, except that a failed untranslated-echo check on a source under 20 code points only lowers
-confidence), and no BLOCK-level finding and no verified reviewer blocker is left (a finding's level is read by `CheckLevels.of`; `AcceptanceRule.decide`) — 15d.6 retired the confidence threshold and the judge score; a
-context-matched translation-memory reuse is accepted without the reviewer.
-`confidence` is a documented weighted blend of the soft deterministic-QA check margins (hard gates excluded; the judge
-score is not folded into it, and it only orders segments). The reviewer returns per segment `ok`, verified edits or a rewrite.
-**Why:** τ had three owners and three meanings; the accept gate must be single-sourced and testable, including when the
-judge is off, and a soft-check failure must never be outvoted by a high confidence score. **Consequences:**
-Quality-dial mapping loses its τ row; τ_judge defaults to τ; acceptance is per-segment even though scoring is per-chunk.
-**ADR:** ADR-0038, ADR-0036 **Requirements:** FR-ALGO-01, FR-QA-02, FR-QA-07, FR-REVIEW-02.
+confidence), and no BLOCK-level finding is left (a finding's level is read by `CheckLevels.of`; `AcceptanceRule.decide`);
+there is no confidence threshold, no judge score and no model reviewer, and a context-matched translation-memory reuse
+is accepted without a draft call. `confidence` is a documented weighted blend of the soft deterministic-QA check margins
+(hard gates excluded) and only orders segments. **Why:** τ had three owners and three meanings; the accept gate must be
+single-sourced and testable, and a soft-check failure must never be outvoted by a high confidence score.
+**Consequences:** Quality-dial mapping loses its τ row; acceptance is per-segment. **ADR:** ADR-0046, ADR-0036 **Requirements:** FR-ALGO-01, FR-QA-02, FR-QA-07, FR-REVIEW-02.
 
 ## dd-46-glossary-llm-pre-scan {#dd-46-glossary-llm-pre-scan}
 
