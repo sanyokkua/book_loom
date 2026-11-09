@@ -14,19 +14,15 @@
 # the names and gold suites run one owner book. The loop above it: scripts/probe.sh (one case), --quick, --suite mini, then
 # one full run per suite, and the 26b once at the end of a change (docs/DEVELOPMENT.md, "The fast loop").
 #   scripts/eval-matrix.sh [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"] [--all-models] [--quick] [--book-file PATH] [--out-dir DIR]
-#                          [--rules generic] [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|realrun|sequence|prescan|terms|setup|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
-#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--variants FIELD=VALUE[,...]] [--summaries on|off]
+#                          [--langs all|fr,de,...] [--names transliterate|translate|keep_original] [--suite batch|realrun|sequence|prescan|terms|setup|retry|replay|recall|stability|gold|names|coref|mini|article|book] [--batch-sizes 4,8]
+#                          [--repeats K] [--pair en-uk|ru-uk] [--baseline-of SHA] [--summaries on|off]
 # Thinking is decided per model from its profile (redesign task 6.7), so the matrix has no reasoning switch. Batches go out
 # in one JSON format (redesign task 2.3: no format, notes or related-pairs switch is left).
-# --variants FIELD=VALUE[,...] binds further PromptVariants fields in the eval's test injector (an arm's alternative,
-# e.g. languageRules=GENERIC_ONLY); it is joined with the --rules choice, and without it an outer BOOKLOOM_EVAL_VARIANTS
-# is kept. Set BOOKLOOM_EVAL_LABEL to name the arm's side in the run's history folder.
+# Set BOOKLOOM_EVAL_LABEL to name the arm's side in the run's history folder.
 # --summaries on|off (BOOKLOOM_EVAL_CHAPTER_SUMMARIES, arm 6) forces the brief's chapter-summaries switch in the mini and
 # sequence runs; unset leaves it to the story shape, which those briefs leave unread, so summaries are on. The mini and
 # sequence reports carry, per repeat, what the chapter-summary gate kept and dropped (`summaryGate`).
-# --rules generic binds the generic language rules in the eval's test injector (BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY,
-# read only by the eval test classes; reports end in -generic.json), so run the matrix
-# once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
+# --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
 # draft A/B instead (consecutive cases, sized as a job sizes its batches unless --batch-sizes fixes the sweep, through the JSON batch protocol; reports end in
 # -batch.json) and prints one row per model and batch size. --suite realrun runs the
@@ -122,7 +118,6 @@ OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
 LMSTUDIO_URL=${LMSTUDIO_URL:-http://localhost:1234/v1}
 ONLY=""
 TABLE_ONLY=0
-RULES=language
 LANGS=""
 SUITE=""
 BATCH_SIZES=""
@@ -141,7 +136,6 @@ MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | head -n 1 | entries)
 QUICK=0
 BOOK_FILE=""
 OUT_DIR=""
-EXTRA_VARIANTS=${BOOKLOOM_EVAL_VARIANTS:-}
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -152,12 +146,6 @@ while [ $# -gt 0 ]; do
     --book-file) BOOK_FILE=$2; shift 2 ;;
     --out-dir) OUT_DIR=$2; shift 2 ;;
     --table-only) TABLE_ONLY=1; shift ;;
-    --rules)
-      case "$2" in
-        generic|language) RULES=$2 ;;
-        *) echo "--rules takes generic or language, not $2" >&2; exit 2 ;;
-      esac
-      shift 2 ;;
     --langs) LANGS=$2; shift 2 ;;
     --suite) SUITE=$2; shift 2 ;;
     --batch-sizes) BATCH_SIZES=$2; shift 2 ;;
@@ -171,7 +159,6 @@ while [ $# -gt 0 ]; do
       case "$2" in en-uk|ru-uk) PAIR=$2 ;; *) echo "--pair takes en-uk or ru-uk, not $2" >&2; exit 2 ;; esac
       shift 2 ;;
     --baseline-of) BASELINE_OF=$2; shift 2 ;;
-    --variants) EXTRA_VARIANTS=$2; shift 2 ;;
     --summaries)
       case "$2" in on|off) export BOOKLOOM_EVAL_CHAPTER_SUMMARIES=$2 ;; *) echo "--summaries takes on or off, not $2" >&2; exit 2 ;; esac
       shift 2 ;;
@@ -179,10 +166,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# The rules choice reaches the eval's test injector as a PromptVariants field; the application never reads it.
-VARIANTS=$EXTRA_VARIANTS
-if [ "$RULES" = generic ]; then VARIANTS="languageRules=GENERIC_ONLY${VARIANTS:+,$VARIANTS}"; fi
-[ -n "$VARIANTS" ] && echo "-- prompt variants: BOOKLOOM_EVAL_VARIANTS=$VARIANTS"
 [ -n "${BOOKLOOM_EVAL_CHAPTER_SUMMARIES:-}" ] && echo "-- chapter summaries: BOOKLOOM_EVAL_CHAPTER_SUMMARIES=$BOOKLOOM_EVAL_CHAPTER_SUMMARIES"
 
 if [ "$QUICK" = 1 ]; then
@@ -286,7 +269,7 @@ run_one() {
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   if ! MATRIX_LOG="$log" DEFAULT_TIMEOUT=$DEFAULT_TIMEOUT MODEL_TIMEOUT=${MODEL_TIMEOUT:-} \
     BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_VARIANTS=$VARIANTS BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES BOOKLOOM_EVAL_NAMES=$NAMES_POLICY \
     BOOKLOOM_EVAL_REPEATS=$REPEATS BOOKLOOM_EVAL_PAIR=$PAIR BOOKLOOM_EVAL_BASELINE_OF=$BASELINE_OF BOOKLOOM_EVAL_QUANT=$quant \
     gradle_locked; then
     echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
@@ -346,9 +329,9 @@ if sys.argv[2] == "realrun":
         cells = ["%*s" % (len(k), ("%.0f%%" % (100 * by[k]["rate"]) + ("+%dk" % by[k]["known"] if by[k]["known"] else "")) if k in by else "-") for k in keys]
         print("%-36s " % r["model"] + " ".join(cells))
     print()
-    print("%-36s %9s %8s %7s %9s" % ("model", "truncated", "tooShort", "leaked", "stability"))
+    print("%-36s %8s %7s" % ("model", "tooShort", "leaked"))
     for r in runs:
-        print("%-36s %9d %7.1f%% %6.1f%% %8.0f%%" % (r["model"], r.get("truncated", 0), 100 * r.get("tooShort", 0), 100 * r.get("leaked", 0), 100 * r.get("stability", 0)))
+        print("%-36s %7.1f%% %6.1f%%" % (r["model"], 100 * r.get("tooShort", 0), 100 * r.get("leaked", 0)))
     print("(+Nk: N known failures reported beside the rate, see additional-work.md 15e.2)")
     sys.exit(0)
 if sys.argv[2] == "sequence":

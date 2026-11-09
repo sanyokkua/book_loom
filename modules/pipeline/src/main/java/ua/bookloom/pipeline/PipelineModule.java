@@ -27,8 +27,8 @@ import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.glossary.NamesPassImpl;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.proofread.ProofreadTallies;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
 import ua.bookloom.pipeline.setup.SetupAssistantImpl;
@@ -36,8 +36,7 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 /**
  * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine}, {@code ExportService},
  * {@code ProjectService}, {@code GlossaryService}, {@code LexiconService} and {@code ReviewDesk} ports bound to their implementations, the
- * language-rules map behind {@code LanguageSupport} (as the bound {@code PromptVariants} choose; the production
- * injector binds their defaults), the
+ * bundled language-rules map behind {@code LanguageSupport}, the
  * clock a run times itself with, and the prompt
  * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
@@ -57,7 +56,8 @@ public final class PipelineModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(PromptVariants.class).toInstance(PromptVariants.DEFAULTS);
+        bind(LanguageRules.class).toInstance(LanguageRules.bundled());
+        bind(LanguageSupport.class).to(LanguageRules.class);
         bind(PromptTemplates.class).asEagerSingleton();
         // The context builder and its frame (task 11.2); nothing in the run calls them until task 11.5.
         bind(BookRules.class).in(Singleton.class);
@@ -76,12 +76,6 @@ public final class PipelineModule extends AbstractModule {
         bind(SetupAssistant.class).to(SetupAssistantImpl.class);
         // No dictionary of words is bundled or planned, so a run's word check has no opinion.
         bind(WordValidator.class).toInstance(WordValidator.none());
-    }
-
-    /** The language rules the bound prompt variants choose, so a test injector's choice reaches every service. */
-    @Provides
-    LanguageSupport languageSupport(final PromptVariants variants) {
-        return variants.rules();
     }
 
     @Provides

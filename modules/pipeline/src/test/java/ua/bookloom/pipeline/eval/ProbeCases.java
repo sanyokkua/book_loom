@@ -78,7 +78,7 @@ final class ProbeCases {
     private static List<String> rows(final List<RealRunRow> rows) {
         return rows.stream()
                 .map(row -> "outcome=" + row.outcome().label() + " call=" + row.call() + " kind=" + row.kind()
-                        + " stable=" + row.stable() + " truncated=" + row.truncated() + " | " + row.id() + ": "
+                        + " | " + row.id() + ": "
                         + row.detail())
                 .toList();
     }

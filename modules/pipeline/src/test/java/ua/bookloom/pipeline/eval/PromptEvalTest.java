@@ -26,7 +26,6 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.InMemoryPersistenceModule;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.PromptVariants.LanguageRulesVariant;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
@@ -38,9 +37,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * {@code build/reports/promptEval/<model>.txt}.
  *
  * <p>{@code BOOKLOOM_EVAL_LANGS} (a comma list of tags, or {@code all}) runs the per-language mini-corpora under
- * {@code eval/languages/} instead; {@code BOOKLOOM_EVAL_VARIANTS=languageRules=GENERIC_ONLY} binds the generic language
- * rules in the eval's test injector ({@link EvalVariants}), and the reports then end in {@code -generic}, so the two can
- * be compared. With
+ * {@code eval/languages/} instead. With
  * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, with {@code BOOKLOOM_EVAL_SUITE=realrun}
  * {@link RealRunTest} does, and with {@code BOOKLOOM_EVAL_SUITE=sequence} {@link SequenceEvalTest} does, and with {@code prescan}, {@code terms}, {@code setup}, {@code consistency} or {@code retry} {@link StageEvalTest} does, and with {@code stability} or {@code gold} {@link JudgementEvalTest} does, and with {@code names} {@link NamesEvalTest} does, and with {@code coref} {@link CorefEvalTest} does, and with {@code mini} {@link MiniEvalTest} does.
  *
@@ -103,11 +100,8 @@ class PromptEvalTest {
         return new EvalReport(model + " [" + tag + "]", rows, rulesLabel());
     }
 
-    /** {@code generic} when the eval's variants bind the generic rules, else {@code language}. */
     private static String rulesLabel() {
-        return EvalVariants.fromEnvironment(System.getenv()).languageRules() == LanguageRulesVariant.GENERIC_ONLY
-                ? "generic"
-                : "language";
+        return "language";
     }
 
     private static void writeAll(final List<EvalReport> reports) throws IOException {

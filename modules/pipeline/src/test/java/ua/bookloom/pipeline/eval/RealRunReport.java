@@ -12,8 +12,7 @@ import ua.bookloom.pipeline.eval.RealRunRow.Outcome;
 
 /**
  * The rates of a real-run run, grouped by the defect family and the call: the share of cases that came out as labelled,
- * the known failures reported beside them and outside every rate, the reviewer calls whose reply was cut by the output
- * cap, and the batch items that came back far too short or with the protocol leaked into their text.
+ * the known failures reported beside them and outside every rate, and the batch items that came back far too short or with the protocol leaked into their text.
  *
  * @param model the model measured
  * @param rows every row, in case order
@@ -65,11 +64,6 @@ record RealRunReport(String model, List<RealRunRow> rows) {
         return (int) own.stream().filter(test).count();
     }
 
-    /** How many reviewer calls were cut by the output cap. */
-    int truncatedCalls() {
-        return count(rows, RealRunRow::truncated);
-    }
-
     /** The share of batch items whose target is far shorter than its source. */
     double tooShortRate() {
         return share(RealRunRow::tooShort);
@@ -83,13 +77,6 @@ record RealRunReport(String model, List<RealRunRow> rows) {
     private double share(final ToIntFunction<RealRunRow> part) {
         final int items = rows.stream().mapToInt(RealRunRow::items).sum();
         return items == 0 ? 0 : (double) rows.stream().mapToInt(part).sum() / items;
-    }
-
-    /** The share of reviewer rows whose repeated runs asked for the same changes. */
-    double stability() {
-        final List<RealRunRow> reviewer =
-                rows.stream().filter(row -> row.call().startsWith("review")).toList();
-        return reviewer.isEmpty() ? 1.0 : (double) count(reviewer, RealRunRow::stable) / reviewer.size();
     }
 
     /** The report as one JSON object; {@code suite} tells the matrix table which kind of report it is. */
@@ -108,13 +95,10 @@ record RealRunReport(String model, List<RealRunRow> rows) {
         }
         return String.format(
                 Locale.ROOT,
-                "{\"suite\":\"realrun\",\"model\":\"%s\",\"truncated\":%d,\"tooShort\":%.3f,\"leaked\":%.3f,"
-                        + "\"stability\":%.3f,\"groups\":[%s]}",
+                "{\"suite\":\"realrun\",\"model\":\"%s\",\"tooShort\":%.3f,\"leaked\":%.3f,\"groups\":[%s]}",
                 model,
-                truncatedCalls(),
                 tooShortRate(),
                 leakedRate(),
-                stability(),
                 String.join(",", groups));
     }
 
@@ -134,12 +118,7 @@ record RealRunReport(String model, List<RealRunRow> rows) {
                 100 * cell.rate(),
                 cell.known())));
         lines.add(String.format(
-                Locale.ROOT,
-                "truncated reviewer calls %d  batch tooShort %.1f%%  batch leaked %.1f%%  reviewer stability %.0f%%",
-                truncatedCalls(),
-                100 * tooShortRate(),
-                100 * leakedRate(),
-                100 * stability()));
+                Locale.ROOT, "batch tooShort %.1f%%  batch leaked %.1f%%", 100 * tooShortRate(), 100 * leakedRate()));
         return String.join("\n", lines);
     }
 

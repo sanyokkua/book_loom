@@ -111,28 +111,4 @@ class PromptTemplatesTest {
 
         assertThat(injector.getInstance(PromptTemplates.class)).isNotNull();
     }
-
-    // The eval's generic switch must reach the rendered prompt, or "rules on vs generic" would compare a prompt with
-    // itself.
-    @Test
-    void renderSystem_genericOnlyRules_carryTheGenericSectionAndNoLanguageRule() {
-        final PromptTemplates templates = new PromptTemplates(BUNDLED, new LanguageRules(BUNDLED, true));
-
-        assertThat(templates.languageRules().section("en", "uk"))
-                .contains(
-                        "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
-                .doesNotContain("«…» for speech", "russisms");
-    }
-
-    // An arm chooses the generic rules through the injector's binding, never through a variable src/main reads.
-    @Test
-    void render_genericOnlyVariant_statesOnlyTheGenericRules() {
-        final PromptTemplates templates =
-                new PromptTemplates(new PromptVariants(PromptVariants.LanguageRulesVariant.GENERIC_ONLY));
-
-        assertThat(templates.languageRules().section("en", "uk"))
-                .contains(
-                        "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
-                .doesNotContain("«…» for speech", "russisms");
-    }
 }

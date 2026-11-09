@@ -26,6 +26,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.eval.BareNames.BareName;
 import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
@@ -70,7 +71,7 @@ class BareNamesEvalTest {
     // One call stream per language, each name as a character with no gender, so the stage asks every one of them.
     private static Map<String, NameKnowledge> ask(final ChatModel model, final List<BareName> names) {
         final StageProbe probe = new StageProbe(model);
-        final NameKnowledgeCalls knowledge = new NameKnowledgeCalls(EvalVariants.templates(), MAPPER);
+        final NameKnowledgeCalls knowledge = new NameKnowledgeCalls(new PromptTemplates(), MAPPER);
         final Map<String, NameKnowledge> byTerm = new LinkedHashMap<>();
         for (final String language : List.of("en", "ru")) {
             final List<GlossaryEntry> entries = names.stream()

@@ -43,7 +43,7 @@ final class JudgementRunner {
 
     static final String DIAL_ENV = "BOOKLOOM_EVAL_DIAL";
 
-    private static final PromptTemplates TEMPLATES = EvalVariants.templates();
+    private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final StageProbe probe;

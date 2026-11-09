@@ -38,7 +38,7 @@ final class PreparationExamples {
         final String language = sourceTag == null ? "" : sourceTag;
         return chosen.computeIfAbsent(prefix + "|" + language, ignored -> {
             final LanguageFile own = rules.languageFile(sourceTag);
-            final LanguageFile file = rules.genericOnly || own.indexed(prefix).isEmpty() ? rules.generic : own;
+            final LanguageFile file = own.indexed(prefix).isEmpty() ? rules.generic : own;
             final String reply = file.get(prefix + REPLY);
             if (file.indexed(prefix).isEmpty() || reply == null) {
                 throw new IllegalStateException(file.name() + " lacks the examples " + prefix);

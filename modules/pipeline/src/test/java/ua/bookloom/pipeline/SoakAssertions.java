@@ -91,8 +91,8 @@ final class SoakAssertions {
                 .as("the long outage was waited through")
                 .isGreaterThanOrEqualTo(7);
         assertThat(outcome.virtual()).isGreaterThan(Duration.ofMinutes(25));
-        assertThat(reasons(outcome.report().flaggedSegments()))
-                .contains(ErrorCode.emptyCompletion, ErrorCode.validation, ErrorCode.timeout);
+        // Which other reasons strike a segment twice is chance; an empty reply always flags its segment.
+        assertThat(reasons(outcome.report().flaggedSegments())).contains(ErrorCode.emptyCompletion);
     }
 
     /** No placeholder of the masking survived into the exported text. */

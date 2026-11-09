@@ -51,7 +51,7 @@ public final class ProofreadInstruction {
     public static Block of(final LanguageRules rules, @Nullable final String sourceTag, final String targetTag) {
         Objects.requireNonNull(rules, "rules");
         Objects.requireNonNull(targetTag, "targetTag");
-        final @Nullable String own = rules.genericOnly ? null : targetInstruction(rules, sourceTag, targetTag);
+        final @Nullable String own = targetInstruction(rules, sourceTag, targetTag);
         final String instruction = own != null ? own : englishInstruction(rules, sourceTag, targetTag);
         final String ruleLines = String.join("\n", ruleLines(rules, targetTag));
         log.debug(
@@ -86,7 +86,7 @@ public final class ProofreadInstruction {
 
     // The target's own rules, else the generic ones; never more than MAX_RULES lines.
     private static List<String> ruleLines(final LanguageRules rules, final String targetTag) {
-        final @Nullable String own = rules.genericOnly ? null : rules.targetValue(targetTag, RULES);
+        final @Nullable String own = rules.targetValue(targetTag, RULES);
         final String text = own != null ? own : rules.genericValue(RULES);
         final List<String> lines = Arrays.stream(text.split("\n"))
                 .map(String::strip)

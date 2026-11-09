@@ -76,7 +76,7 @@ class LanguageRulesTest {
 
     @Test
     void section_englishToUkrainian_isOneSectionOfTargetSourceAndPairRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "uk");
+        final String section = new LanguageRules(sentinelFiles()).section("en", "uk");
 
         assertThat(section)
                 .startsWith("[Language rules: English -> Ukrainian]\n")
@@ -88,7 +88,7 @@ class LanguageRulesTest {
     void section_englishToUkrainian_opensOnlyThePairsOwnFiles() {
         final Files files = sentinelFiles();
 
-        new LanguageRules(files, false).section("en", "uk");
+        new LanguageRules(files).section("en", "uk");
 
         assertThat(files.opened)
                 .containsExactlyInAnyOrder(
@@ -100,14 +100,14 @@ class LanguageRulesTest {
 
     @Test
     void section_englishToUkrainian_neverShowsAnotherLanguagesRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "uk");
+        final String section = new LanguageRules(sentinelFiles()).section("en", "uk");
 
         assertThat(section).doesNotContain("FR-", "GENERIC-");
     }
 
     @Test
     void section_unknownTarget_getsTheGenericRules() {
-        final String section = new LanguageRules(sentinelFiles(), false).section("en", "xx");
+        final String section = new LanguageRules(sentinelFiles()).section("en", "xx");
 
         assertThat(section)
                 .contains("GENERIC-QUOTES", "generic pitfall", "EN-SOURCE-NOTE")
@@ -116,14 +116,14 @@ class LanguageRulesTest {
 
     @Test
     void section_regionalAndScriptTags_useThePrimaryLanguageFile() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
         assertThat(rules.section("en-GB", "uk-UA")).contains("UK-QUOTES", "EN-UK-PAIR");
     }
 
     @Test
     void section_unknownSource_leavesOutSourceNotesAndPair() {
-        final String section = new LanguageRules(sentinelFiles(), false).section(null, "uk");
+        final String section = new LanguageRules(sentinelFiles()).section(null, "uk");
 
         assertThat(section)
                 .startsWith("[Language rules: the source -> Ukrainian]\n")
@@ -132,18 +132,8 @@ class LanguageRulesTest {
     }
 
     @Test
-    void section_genericOnly_ignoresEveryLanguageFile() {
-        final Files files = sentinelFiles();
-
-        final String section = new LanguageRules(files, true).section("en", "uk");
-
-        assertThat(section).contains("GENERIC-QUOTES").doesNotContain("UK-", "EN-");
-        assertThat(files.opened).containsExactly("languages/generic.properties");
-    }
-
-    @Test
     void section_twoCallsOfOnePair_areTheSameBytes() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
         assertThat(rules.section("en", "uk")).isSameAs(rules.section("en", "uk"));
     }
@@ -153,19 +143,17 @@ class LanguageRulesTest {
         final Files files = new Files(Map.of("languages/generic.properties", "status=untested"));
 
         assertThatIllegalStateException()
-                .isThrownBy(() -> new LanguageRules(files, false))
+                .isThrownBy(() -> new LanguageRules(files))
                 .withMessageContaining("generic.properties")
                 .withMessageContaining("quotes");
     }
 
     @Test
     void examples_pairBeforeTargetBeforeGeneric() {
-        final LanguageRules rules = new LanguageRules(
-                new Files(Map.of(
-                        "languages/generic.properties", GENERIC,
-                        "languages/uk.properties", "example.1=TARGET-EXAMPLE",
-                        "languages/pairs/en-uk.properties", "example.1=PAIR-EXAMPLE")),
-                false);
+        final LanguageRules rules = new LanguageRules(new Files(Map.of(
+                "languages/generic.properties", GENERIC,
+                "languages/uk.properties", "example.1=TARGET-EXAMPLE",
+                "languages/pairs/en-uk.properties", "example.1=PAIR-EXAMPLE")));
 
         assertThat(rules.examples("en", "uk")).isEqualTo("PAIR-EXAMPLE");
         assertThat(rules.examples("de", "uk")).isEqualTo("TARGET-EXAMPLE");
@@ -175,7 +163,7 @@ class LanguageRulesTest {
 
     @Test
     void isTested_markedAndUnmarkedAndUnknown() {
-        final LanguageRules rules = new LanguageRules(sentinelFiles(), false);
+        final LanguageRules rules = new LanguageRules(sentinelFiles());
 
         assertThat(rules.hasTestedRules("uk")).isTrue();
         assertThat(rules.hasTestedRules("fr")).isFalse();

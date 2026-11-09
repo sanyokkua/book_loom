@@ -29,8 +29,8 @@ import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.project.ChapterBoundaries;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
@@ -72,7 +72,7 @@ final class ProofreadFixtures {
     }
 
     static RunFrame runFrame(final Document document, final BookBrief brief, final ChatModel model) {
-        return Objects.requireNonNull(new RunFrames(TEMPLATES, new BookRules(PromptVariants.DEFAULTS))
+        return Objects.requireNonNull(new RunFrames(TEMPLATES, new BookRules(LanguageRules.bundled()))
                 .build(
                         brief,
                         document,

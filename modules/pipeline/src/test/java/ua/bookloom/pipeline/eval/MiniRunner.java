@@ -36,6 +36,7 @@ import ua.bookloom.pipeline.eval.MiniRun.Calls;
 import ua.bookloom.pipeline.eval.MiniRun.Outcome;
 import ua.bookloom.pipeline.glossary.NameKnowledgeCalls;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.proofread.DeferralRegister;
 
@@ -158,8 +159,7 @@ final class MiniRunner {
                 book.targetLanguage(),
                 StyleSheet.from(BookBrief.defaults(book.sourceLanguage())),
                 ForeignPassagePolicy.KEEP);
-        final Result<List<GlossaryEntry>> answered = new NameKnowledgeCalls(
-                        EvalVariants.templates(), new ObjectMapper())
+        final Result<List<GlossaryEntry>> answered = new NameKnowledgeCalls(new PromptTemplates(), new ObjectMapper())
                 .applied(held, frame, probe.calls(book.targetLanguage()));
         Objects.requireNonNull(answered.data(), () -> "name knowledge: " + answered.error())
                 .forEach(entry -> Objects.requireNonNull(glossary.update(entry).data(), "update"));

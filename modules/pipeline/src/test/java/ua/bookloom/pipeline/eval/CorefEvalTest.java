@@ -13,6 +13,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.glossary.TermReading;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
@@ -38,7 +39,7 @@ class CorefEvalTest {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", PromptEvalTest.DEFAULT_MODEL);
         final List<CorefWindow> windows = CorefCorpus.windows();
         final CorefReader reader = new TermReadingCorefReader(
-                new TermReading(EvalVariants.templates(), new ObjectMapper()), FRAME, PromptEvalTest.calls(model));
+                new TermReading(new PromptTemplates(), new ObjectMapper()), FRAME, PromptEvalTest.calls(model));
 
         final CorefReport report = CorefScorer.score(windows, reader);
 

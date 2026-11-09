@@ -9,7 +9,7 @@ import ua.bookloom.pipeline.eval.RealRunRow.Outcome;
 class RealRunReportTest {
 
     private static RealRunRow row(final String id, final String kind, final String call, final Outcome outcome) {
-        return new RealRunRow(id, kind, call, outcome, true, false, 0, 0, 0, "d");
+        return new RealRunRow(id, kind, call, outcome, 0, 0, 0, "d");
     }
 
     @Test
@@ -31,20 +31,15 @@ class RealRunReportTest {
     }
 
     @Test
-    void metrics_batchAndReviewerRows_sumTheirCounts() {
+    void metrics_batchRows_sumTheirCounts() {
         final RealRunReport report = new RealRunReport(
                 "m",
                 List.of(
-                        new RealRunRow("b1", "batch-terms", "batch", Outcome.FAIL, true, false, 4, 1, 2, "d"),
-                        new RealRunRow("b2", "batch-terms", "batch", Outcome.PASS, true, false, 4, 0, 0, "d"),
-                        new RealRunRow("r#1", "reviewer-long", "review-batch", Outcome.PASS, false, true, 0, 0, 0, "d"),
-                        new RealRunRow(
-                                "r#2", "reviewer-long", "review-batch", Outcome.PASS, true, false, 0, 0, 0, "d")));
+                        new RealRunRow("b1", "batch-terms", "batch", Outcome.FAIL, 4, 1, 2, "d"),
+                        new RealRunRow("b2", "batch-terms", "batch", Outcome.PASS, 4, 0, 0, "d")));
 
         assertThat(report.tooShortRate()).isEqualTo(0.125);
         assertThat(report.leakedRate()).isEqualTo(0.25);
-        assertThat(report.truncatedCalls()).isEqualTo(1);
-        assertThat(report.stability()).isEqualTo(0.5);
     }
 
     @Test
@@ -62,6 +57,6 @@ class RealRunReportTest {
                 "m",
                 List.of(row("a", "quotes", "draft", Outcome.PASS), row("b", "short-line", "draft", Outcome.KNOWN_RED)));
 
-        assertThat(report.table()).contains("quotes/draft", "short-line/draft", "known", "truncated reviewer calls 0");
+        assertThat(report.table()).contains("quotes/draft", "short-line/draft", "known", "batch tooShort 0.0%");
     }
 }

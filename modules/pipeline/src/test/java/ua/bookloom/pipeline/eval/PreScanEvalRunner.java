@@ -31,7 +31,7 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 final class PreScanEvalRunner {
 
     private static final String PROJECT = "eval";
-    private static final PromptTemplates TEMPLATES = EvalVariants.templates();
+    private static final PromptTemplates TEMPLATES = new PromptTemplates();
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final StageProbe probe;

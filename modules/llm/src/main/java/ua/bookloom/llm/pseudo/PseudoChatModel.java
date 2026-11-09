@@ -24,8 +24,8 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 
 /**
- * Deterministic offline chat model that upper-cases a delimited block — a draft's {@code <Text>}, else a rewrite's
- * {@code <Translation>} — or else the last user message.
+ * Deterministic offline chat model that upper-cases a draft's delimited {@code <Text>} block, or else the last user
+ * message.
  */
 @Slf4j
 public final class PseudoChatModel implements ChatModel {
@@ -103,7 +103,7 @@ public final class PseudoChatModel implements ChatModel {
     }
 
     private Optional<String> delimitedDraftSource(String userMessage) {
-        return delimited(userMessage, "Text").or(() -> delimited(userMessage, "Translation"));
+        return delimited(userMessage, "Text");
     }
 
     private static Optional<String> delimited(String userMessage, String tag) {

@@ -31,7 +31,6 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
-import ua.bookloom.pipeline.eval.EvalVariants;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
@@ -172,7 +171,7 @@ public final class SequenceJobs {
                 project.stores().promptFrames(),
                 project.stores().runs(),
                 project.stores().summaries(),
-                EvalVariants.templates(),
+                new PromptTemplates(),
                 new ObjectMapper(),
                 Guice.createInjector().getInstance(QualityLoop.class),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
@@ -190,7 +189,7 @@ public final class SequenceJobs {
 
     /** The glossary and lexicon services over the prepared book's stores (the names eval reaches them from here). */
     public static Names names(final Prepared prepared) {
-        final PromptTemplates templates = EvalVariants.templates();
+        final PromptTemplates templates = new PromptTemplates();
         final ObjectMapper mapper = new ObjectMapper();
         final RunStores stores = prepared.stores();
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);
@@ -218,7 +217,7 @@ public final class SequenceJobs {
 
     /** The autonomous names pass ("Prepare names automatically") over the prepared book's own stores. */
     public static NamesPass namesPass(final Prepared prepared) {
-        final PromptTemplates templates = EvalVariants.templates();
+        final PromptTemplates templates = new PromptTemplates();
         final ObjectMapper mapper = new ObjectMapper();
         final RunStores stores = prepared.stores();
         final SuggestTargets suggest = new SuggestTargets(templates, mapper);
@@ -253,7 +252,7 @@ public final class SequenceJobs {
             final JobListener listener) {
         // The eval's variants reach the run frame and the context builder through the job's templates.
         final TranslationJobImpl job = BatchedJobs.batchedJob(
-                prepared.project, model, new RunRequest(prepared.project.id(), mode, window), EvalVariants.templates());
+                prepared.project, model, new RunRequest(prepared.project.id(), mode, window), new PromptTemplates());
         job.subscribe(listener);
         return job.run();
     }

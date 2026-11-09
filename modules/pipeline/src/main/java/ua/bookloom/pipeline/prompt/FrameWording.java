@@ -51,8 +51,7 @@ public final class FrameWording {
     public static String bookRule(final LanguageRules rules, final String targetTag, final String key) {
         Objects.requireNonNull(targetTag, TARGET_TAG);
         Objects.requireNonNull(key, "key");
-        final List<LanguageFile> order =
-                rules.genericOnly ? List.of(rules.generic) : List.of(rules.languageFile(targetTag), rules.generic);
+        final List<LanguageFile> order = List.of(rules.languageFile(targetTag), rules.generic);
         for (final LanguageFile file : order) {
             final String own = Objects.requireNonNullElse(file.get(BOOK_RULE + key), "");
             final String found = own.isEmpty() ? Objects.requireNonNullElse(file.get(key), "") : own;
@@ -77,7 +76,7 @@ public final class FrameWording {
     public static String wording(final LanguageRules rules, final String targetTag, final String key) {
         Objects.requireNonNull(targetTag, TARGET_TAG);
         Objects.requireNonNull(key, "key");
-        final String own = rules.genericOnly ? null : rules.targetValue(targetTag, key);
+        final String own = rules.targetValue(targetTag, key);
         return own != null ? own : Objects.requireNonNullElse(rules.generic.get(key), "");
     }
 
@@ -94,7 +93,7 @@ public final class FrameWording {
     public static String pairExamples(
             final LanguageRules rules, @Nullable final String sourceTag, final String targetTag) {
         Objects.requireNonNull(targetTag, TARGET_TAG);
-        if (sourceTag == null || rules.genericOnly) {
+        if (sourceTag == null) {
             return "";
         }
         final List<String> raw = rules.pairFile(sourceTag, targetTag).indexed("batchExample");
@@ -111,7 +110,7 @@ public final class FrameWording {
      */
     public static String illustration(final LanguageRules rules, final String targetTag) {
         Objects.requireNonNull(targetTag, TARGET_TAG);
-        final String value = rules.genericOnly ? null : rules.targetValue(targetTag, "illustration");
+        final String value = rules.targetValue(targetTag, "illustration");
         return value == null ? "" : value;
     }
 

@@ -56,13 +56,11 @@ public final class LanguageRules implements LanguageSupport {
             "names.convention");
 
     private static final class Holder {
-        static final LanguageRules NORMAL = new LanguageRules(LanguageRules::openBundled, false);
-        static final LanguageRules GENERIC_ONLY = new LanguageRules(LanguageRules::openBundled, true);
+        static final LanguageRules NORMAL = new LanguageRules(LanguageRules::openBundled);
     }
 
     private final PromptTemplates.ResourceLoader loader;
     // Read by PreparationExamples too, which picks the names-pass examples from the same files.
-    final boolean genericOnly;
     final LanguageFile generic;
     private final Map<String, LanguageFile> files = new ConcurrentHashMap<>();
     private final Map<String, String> sections = new ConcurrentHashMap<>();
@@ -73,12 +71,9 @@ public final class LanguageRules implements LanguageSupport {
      * Opens the map over a loader.
      *
      * @param loader opens a file by its name beside the templates
-     * @param genericOnly {@code true} to build every section from the generic rules alone, which is how the eval
-     *     measures what the language files add
      */
-    LanguageRules(final PromptTemplates.ResourceLoader loader, final boolean genericOnly) {
+    LanguageRules(final PromptTemplates.ResourceLoader loader) {
         this.loader = Objects.requireNonNull(loader, "loader");
-        this.genericOnly = genericOnly;
         this.generic = LanguageFile.load(GENERIC_FILE, DIRECTORY + GENERIC_FILE + SUFFIX, loader);
         for (final String key : Stream.concat(GENERIC_REQUIRED.stream(), FrameWording.GENERIC_KEYS.stream())
                 .toList()) {
@@ -91,11 +86,6 @@ public final class LanguageRules implements LanguageSupport {
     /** The bundled map. */
     public static LanguageRules bundled() {
         return Holder.NORMAL;
-    }
-
-    /** The bundled map that states only the generic rules, for the eval's {@link PromptVariants} choice. */
-    static LanguageRules genericRulesOnly() {
-        return Holder.GENERIC_ONLY;
     }
 
     /** A language is tested when it has its own file marked {@code status=tested}; any other tag is not. */
@@ -131,7 +121,7 @@ public final class LanguageRules implements LanguageSupport {
     private String build(@Nullable final String sourceTag, final String targetTag) {
         final List<String> parts = new ArrayList<>();
         parts.add(targetRules(targetTag));
-        if (sourceTag != null && !genericOnly) {
+        if (sourceTag != null) {
             parts.add(sourceRules(sourceTag));
             parts.add(pairRules(sourceTag, targetTag));
         }
@@ -140,10 +130,9 @@ public final class LanguageRules implements LanguageSupport {
         final String heading = "[Language rules: " + (sourceTag == null ? "the source" : name(sourceTag)) + " -> "
                 + name(targetTag) + "]";
         log.debug(
-                "Language rules source={} target={} genericOnly={} lines={}",
+                "Language rules source={} target={} lines={}",
                 sourceTag,
                 targetTag,
-                genericOnly,
                 body.lines().count());
         log.trace("Language rules section {}", body);
         return body.isEmpty() ? "" : heading + "\n" + body;
@@ -151,7 +140,7 @@ public final class LanguageRules implements LanguageSupport {
 
     /** The target language's own rules, or the generic ones when it has no file. */
     String targetRules(final String targetTag) {
-        final LanguageFile file = genericOnly ? generic : languageFile(targetTag);
+        final LanguageFile file = languageFile(targetTag);
         final LanguageFile used = file.exists() ? file : generic;
         return block("Target — " + name(targetTag), used);
     }

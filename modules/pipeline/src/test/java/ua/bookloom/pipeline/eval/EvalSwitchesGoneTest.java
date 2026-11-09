@@ -12,15 +12,15 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * An arm chooses its alternative through the injector's {@code PromptVariants} binding; no application source may read
- * the eval's old rules switch, or a release could be steered by a variable.
+ * No application source may read an eval switch, or a release could be steered by a variable.
  */
 class EvalSwitchesGoneTest {
 
-    private static final List<String> SWITCHES = List.of("BOOKLOOM_EVAL_" + "RULES", "bookloom.eval." + "rules");
+    private static final List<String> SWITCHES =
+            List.of("BOOKLOOM_EVAL_" + "RULES", "bookloom.eval." + "rules", "BOOKLOOM_EVAL_" + "VARIANTS");
 
     @Test
-    void sources_noEvalRulesSwitch_remainsInMain() throws IOException {
+    void sources_noEvalSwitch_remainsInMain() throws IOException {
         final Path modules = EvalProvenance.repoRoot().resolve("modules");
 
         assertThat(mainSources(modules))

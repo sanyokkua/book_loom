@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.pipeline.prompt.FrameWording;
 import ua.bookloom.pipeline.prompt.LanguageRules;
-import ua.bookloom.pipeline.prompt.PromptVariants;
 import ua.bookloom.pipeline.prompt.RuleKey;
 
 /**
@@ -33,20 +32,11 @@ public final class BookRules {
     private final LanguageRules rules;
 
     /**
-     * Reads its wording from the language rules the bound variants choose, as the prompt templates do.
-     *
-     * @param variants the non-null prompt alternatives; the production injector binds the bundled defaults
-     */
-    @Inject
-    public BookRules(final PromptVariants variants) {
-        this(Objects.requireNonNull(variants, "variants").rules());
-    }
-
-    /**
      * Reads its wording from a language-rules map already loaded, such as the one a run's templates hold.
      *
      * @param rules the non-null language-rules map
      */
+    @Inject
     public BookRules(final LanguageRules rules) {
         this.rules = Objects.requireNonNull(rules, "rules");
     }

@@ -42,11 +42,12 @@ class StallWatchdogTest {
         appender.stop();
     }
 
-    // A judge call has a 90 s timeout, so the watchdog ends it at 135 s and not a second before.
+    // A proofread call has a 90 s timeout, so the watchdog ends it at 135 s and not a second before.
     @ParameterizedTest
     @CsvSource({"134, false", "135, false", "136, true"})
-    void check_judgeCallOutstanding_endsItOnlyPastOneHundredThirtyFiveSeconds(final long seconds, final boolean ends) {
-        inJudgeCall();
+    void check_proofreadCallOutstanding_endsItOnlyPastOneHundredThirtyFiveSeconds(
+            final long seconds, final boolean ends) {
+        inProofreadCall();
 
         clock.advance(Duration.ofSeconds(seconds));
         watchdog.check();
@@ -55,9 +56,27 @@ class StallWatchdogTest {
         assertThat(watchdog.takeStall() != null).isEqualTo(ends);
     }
 
+    // After the stall the run takes the next proofread call as a fresh one with its own full ceiling.
     @Test
-    void check_judgeCallEnded_endsNothing() {
-        inJudgeCall();
+    void proofreadCall_outstanding136sOf90s_endsAndRunRecovers() {
+        inProofreadCall();
+        clock.advance(Duration.ofSeconds(136));
+        watchdog.check();
+        assertThat(Thread.interrupted()).isTrue();
+        assertThat(watchdog.takeStall()).isNotNull();
+
+        control.exitModelCall();
+        inProofreadCall();
+        clock.advance(Duration.ofSeconds(134));
+        watchdog.check();
+
+        assertThat(Thread.interrupted()).isFalse();
+        assertThat(watchdog.takeStall()).isNull();
+    }
+
+    @Test
+    void check_proofreadCallEnded_endsNothing() {
+        inProofreadCall();
         watchdog.onEvent(new ModelCallFinished(
                 null, CallKind.PROOFREAD, Duration.ofSeconds(3), null, 0, false, List.of("s1"), 1, null));
 
@@ -113,7 +132,7 @@ class StallWatchdogTest {
         assertThat(watchdog.takeStall()).isNull();
     }
 
-    private void inJudgeCall() {
+    private void inProofreadCall() {
         control.claimRun();
         control.enterModelCall();
         watchdog.onEvent(

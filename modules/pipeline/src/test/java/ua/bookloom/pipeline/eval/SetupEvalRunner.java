@@ -19,6 +19,7 @@ import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
 import ua.bookloom.pipeline.context.ContextBuilder;
 import ua.bookloom.pipeline.eval.StageCases.SetupCase;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.setup.BookFacts;
 import ua.bookloom.pipeline.setup.BookKnowledge;
 import ua.bookloom.pipeline.setup.Knowledge;
@@ -71,7 +72,7 @@ final class SetupEvalRunner {
                     prepared.stores().segments(),
                     prepared.stores().glossary(),
                     prepared.stores().openProjects(),
-                    EvalVariants.templates(),
+                    new PromptTemplates(),
                     new ObjectMapper(),
                     java.time.Clock.systemUTC());
             rows.add(fileName(setupCase, assistant, prepared));
@@ -119,7 +120,7 @@ final class SetupEvalRunner {
     private KnowledgeOutcome knowledge(final SetupCase setupCase, final Prepared prepared, final int mark) {
         final Document document = Objects.requireNonNull(
                 prepared.stores().openProjects().get(prepared.projectId()), "the imported book is open");
-        final Knowledge verdict = new BookKnowledge(new ContextBuilder(EvalVariants.templates()), new ObjectMapper())
+        final Knowledge verdict = new BookKnowledge(new ContextBuilder(new PromptTemplates()), new ObjectMapper())
                 .judge(
                         BookFacts.of(document),
                         setupCase.fileStem(),

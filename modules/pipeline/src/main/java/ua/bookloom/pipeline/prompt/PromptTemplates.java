@@ -50,43 +50,20 @@ public final class PromptTemplates {
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
     private final LanguageRules rules;
-    private final PromptVariants variants;
     private final PreparationExamples preparations;
 
     /** Loads the bundled templates with the bundled language rules. */
-    public PromptTemplates() {
-        this(PromptVariants.DEFAULTS);
-    }
-
-    /**
-     * Loads the bundled templates with the language rules the bound variants choose.
-     *
-     * @param variants the non-null prompt alternatives; the production injector binds {@link PromptVariants#DEFAULTS}
-     */
     @Inject
-    public PromptTemplates(final PromptVariants variants) {
-        this(PromptTemplates.class::getResourceAsStream, variantRules(variants), variants);
-    }
-
-    private static LanguageRules variantRules(final PromptVariants variants) {
-        Objects.requireNonNull(variants, "variants");
-        if (!variants.isDefault()) {
-            log.debug("Prompt variants differ from the defaults: languageRules={}", variants.languageRules());
-        }
-        return variants.rules();
+    public PromptTemplates() {
+        this(PromptTemplates.class::getResourceAsStream, LanguageRules.bundled());
     }
 
     PromptTemplates(final ResourceLoader loader) {
-        this(loader, new LanguageRules(loader, false));
+        this(loader, new LanguageRules(loader));
     }
 
     PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
-        this(loader, rules, PromptVariants.DEFAULTS);
-    }
-
-    private PromptTemplates(final ResourceLoader loader, final LanguageRules rules, final PromptVariants variants) {
         Objects.requireNonNull(loader, "loader");
-        this.variants = variants;
         this.rules = Objects.requireNonNull(rules, "rules");
         this.preparations = new PreparationExamples(rules);
         for (final PromptName name : PromptName.values()) {
@@ -99,15 +76,6 @@ public final class PromptTemplates {
                 Stream.concat(systems.values().stream(), users.values().stream())
                         .map(Template::fileName)
                         .toList());
-    }
-
-    /**
-     * The variants the templates were built with, which a test injector binds to try another language-rules choice.
-     *
-     * @return never null
-     */
-    public PromptVariants variants() {
-        return variants;
     }
 
     /**

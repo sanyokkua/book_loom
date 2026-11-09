@@ -24,6 +24,7 @@ import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * Sends a {@link Suggest} case through the production suggestion step and measures each name's target: one row per
@@ -34,7 +35,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class SuggestEval {
 
-    private static final SuggestTargets SUGGEST = new SuggestTargets(EvalVariants.templates(), new ObjectMapper());
+    private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
 
     static List<EvalRow> rows(final Suggest suggest, final CallFrame frame, final ModelCalls calls) {
         final List<GlossaryEntry> entries = suggest.names().stream()

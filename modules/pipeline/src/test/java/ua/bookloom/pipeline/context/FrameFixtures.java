@@ -17,8 +17,8 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.index.BookIndex;
 import ua.bookloom.pipeline.index.IndexTestBooks;
 import ua.bookloom.pipeline.project.ChapterBoundaries;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.PromptVariants;
 
 /** An invented ru→uk book and the services the context-builder tests build its run frame with. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -29,7 +29,7 @@ final class FrameFixtures {
     static final String DIALOGUE = "— Подожди меня, — сказала она и пошла к воротам.";
     static final String MARKED = "В ⟦g0⟧тот⟦g1⟧ день было 1881 шагов до моста.";
 
-    static final BookRules BOOK_RULES = new BookRules(PromptVariants.DEFAULTS);
+    static final BookRules BOOK_RULES = new BookRules(LanguageRules.bundled());
     static final PromptTemplates TEMPLATES = new PromptTemplates();
     static final RunFrames RUN_FRAMES = new RunFrames(TEMPLATES, BOOK_RULES);
     static final ContextBuilder BUILDER = new ContextBuilder(TEMPLATES);
