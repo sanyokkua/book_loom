@@ -1849,6 +1849,23 @@ database is set aside once.
 
 - [ ] 14.4 Delete Max's backward revision and the export consistency pass and move their survivors into
   `pipeline.proofread`, porting the guard cases of the deleted tests, so one proofreading path remains. → :pipeline
+  - **Split (decided at 14.4a):** 14.4a runs before 14.5 and 14.4b after it, because `ExportJobImpl`, `ExportServiceImpl`,
+    `ExportParts`, `QualityReport`, `SideFiles`, `ExportSummaries`, `ExportFinish` and `ConsistencySection` still call
+    `ConsistencyPass`/`ConsistencyReport`/`PassOptions` until 14.5 removes the export's model call.
+    **14.4a (done):** the guard and behaviour cases are ported and green in their new homes (`NeverWorseTest`,
+    `proofread/CodeSweepTest`, `RevisionWriterTest`, `GenderWaitsTest`, `WindowVerdictsTest`, `ProofreadCallWireMockTest`,
+    `ProofreadStageTest`, `ProofreadResumeTest`); `CodeSweep`, `TermSweep` (with `Swept`), `RevisionWriter`,
+    `RevisionBase`, `PinnedForms`, `SummarySweep`, `TargetSwap`, `DeferralRegister`, `GenderWaits` live in
+    `pipeline.proofread`; the sweep reads a `SweepInputs` (project, target language, the run's gate, the book's segments)
+    and no longer reads the stored brief; `revision/SweepAdapter` lets the still-living `ConsistencyPass` call it. Nothing
+    was deleted. Two real gaps the ported cases found are fixed: control codes in a proofread rewrite, and a person's
+    action while a window's call waits.
+    **14.4b (after 14.5):** delete everything in the Change list below that still stands, `revision/SweepAdapter`,
+    `TermSweep.Observer`, `ParagraphFingerprint`, `UnchangedReply` and `RevisionGuards` (first move
+    `violationOfEdit`, which `reviewer/EditGuards` calls, to a surviving class), the old `ConsistencyPass*Test` classes,
+    `RevisionBook`, `ConsistencyPassFixture`, the `opens ...revision` line of `module-info.java` and the `revision`
+    package. Done when `grep -rnw ConsistencyPass modules/*/src` finds nothing. Acceptance test 14.1 turns green at the
+    end of 14.4b (it fails today only for the export's last check, which 14.5 removes), not at the end of 14.4a.
   - **Satisfies:** "Apply backward-revision proposals for edited segments only on acceptance" (review-queue, REMOVED); "Run the whole-book backward revision before writing the book" (export, REMOVED)
   - **Depends on:** 14.3
   - **Read:** `revision/` (23 files), `memory/` leftovers, `revision/RevisionGuardsPolicyTest`, the 13
@@ -1866,12 +1883,12 @@ database is set aside once.
   - **Test first:** the ported cases are written in their new homes first and seen green against the Proofread stage
     before the old tests are deleted; a case that fails names a real gap and is fixed in `ProofreadStage` or
     `NeverWorse`.
-  - **Done when:** no class of the deleted list remains (`grep -rn ConsistencyPass modules/*/src` finds nothing), the module check is green and the acceptance test still fails only for the export last check.
+  - **Done when:** (14.4b) no class of the deleted list remains (`grep -rnw ConsistencyPass modules/*/src` finds nothing), the module check is green and the acceptance test 14.1 is green.
 
 - [ ] 14.5 Make export validate and write with no model call, store a proofread summary instead of the consistency
   section, and add the banners for open work, so writing a book never waits on a model. → :api, :pipeline, :persistence
   - **Satisfies:** "Make no model call when the book is written" (export), "Warn when the Proofread stage has not read every window" (export), "Warn about segments that wait on a fact the person has since given" (export), "State the segments that still carry a proofread mark before the book is written" (export), "Keep the proofread summary with the written export" (export), "Write the book in its source format with the target language" (export), "Report the finished file" (export), "Write the side files that are chosen beside the book" (export), "Fill each side file with the book's data" (export), "Show the tiles from the project before any export" (export), "Announce a partial export in a banner" (export), "Keep no setting or record for a behaviour that is gone" (local-storage); REMOVED (export): "Run the final consistency pass before writing when it is switched on", "Sweep only a rendering the glossary held before the person changed it", "Draft flagged and doubted segments again during the pass", "Keep a fresh draft only when it is better and loses nothing", "Check risky paragraphs against their neighbours during the pass", "Show the model the neighbours and the book's context in the neighbour check", "Send only story text to the consistency pass", "Skip a paragraph an earlier check already found unchanged", "Never change an edited segment, and survive a failed call or a cancellation"
-  - **Depends on:** 14.4
+  - **Depends on:** 14.4a
   - **Read:** `export/ExportJobImpl`, `export/ExportCalls`, `export/ExportParts`, `export/ExportServiceImpl`,
     `export/QualityReport`, `export/ConsistencySection`, `api: pipeline/ExportRequest`, `api: pipeline/ConsistencyScope`,
     `api: pipeline/ExportService`, `api: project/ExportRecord`, `api: settings/AppSetting` (`LAST_CHECK`),
