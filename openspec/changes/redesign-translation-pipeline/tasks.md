@@ -2035,7 +2035,7 @@ database is set aside once.
   - **Done when:** the grep finds only history, ADR bodies and the removed-requirement reasons; every edited anchor
     still resolves.
 
-- [ ] 14.10 Make the acceptance test green, run the gate and check by hand that export makes no model call, so the
+- [x] 14.10 Make the acceptance test green, run the gate and check by hand that export makes no model call, so the
   group merges with evidence. → :api, :persistence, :pipeline, :ui, :app
   - **Satisfies:** enabling work for design D16 and D25 (closes the group; every requirement is named by 14.4–14.8)
   - **Depends on:** 14.1–14.9
