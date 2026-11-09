@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 
 /**
  * What a project's last export wrote, kept so the Export screen's tiles can read "checked when written" after a
@@ -17,7 +18,7 @@ import java.util.Objects;
  * @param flaggedWritten flagged segments written with their machine target
  * @param autoAccepted segments accepted without repair
  * @param reviewed segments a person acted on
- * @param verifiedSegments the body segments the consistency check verified
+ * @param proofread what the Proofread stage had re-read and what still waited when the file was written
  * @param sideFiles the side files written beside the book
  */
 public record ExportRecord(
@@ -29,21 +30,16 @@ public record ExportRecord(
         int flaggedWritten,
         int autoAccepted,
         int reviewed,
-        int verifiedSegments,
+        ProofreadSummary proofread,
         List<Path> sideFiles) {
 
     /** Rejects a missing part or a negative count, and copies {@code sideFiles}. */
     public ExportRecord {
         Objects.requireNonNull(exportedAt, "exportedAt");
         Objects.requireNonNull(destination, "destination");
+        Objects.requireNonNull(proofread, "proofread");
         sideFiles = List.copyOf(Objects.requireNonNull(sideFiles, "sideFiles"));
-        if (written < 0
-                || pending < 0
-                || sourceKept < 0
-                || flaggedWritten < 0
-                || autoAccepted < 0
-                || reviewed < 0
-                || verifiedSegments < 0) {
+        if (written < 0 || pending < 0 || sourceKept < 0 || flaggedWritten < 0 || autoAccepted < 0 || reviewed < 0) {
             throw new IllegalArgumentException("export counts must not be negative");
         }
     }

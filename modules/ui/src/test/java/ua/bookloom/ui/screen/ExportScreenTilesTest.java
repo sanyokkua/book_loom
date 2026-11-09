@@ -75,7 +75,7 @@ class ExportScreenTilesTest extends ExportScreenTestBase {
                                 0,
                                 50,
                                 6,
-                                70,
+                                new ua.bookloom.api.pipeline.ProofreadSummary(12, 3),
                                 List.of()));
         desk.willAnswerCounts(counts(68));
         openAndShowExport(EPUB);
@@ -102,7 +102,7 @@ class ExportScreenTilesTest extends ExportScreenTestBase {
                                 0,
                                 1,
                                 1,
-                                70,
+                                new ua.bookloom.api.pipeline.ProofreadSummary(12, 3),
                                 List.of()));
         desk.willAnswerCounts(counts(68));
         openAndShowExport(EPUB);

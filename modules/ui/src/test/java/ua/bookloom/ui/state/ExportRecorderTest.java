@@ -9,8 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.ui.RecordingProjectRepository;
 
@@ -33,7 +33,7 @@ class ExportRecorderTest {
                 6,
                 List.of(Path.of("/out/Book.uk.glossary.csv")),
                 70,
-                ConsistencySummary.NOT_RUN,
+                new ProofreadSummary(12, 3),
                 0);
     }
 
@@ -52,7 +52,7 @@ class ExportRecorderTest {
                         4,
                         50,
                         6,
-                        70,
+                        new ProofreadSummary(12, 3),
                         List.of(Path.of("/out/Book.uk.glossary.csv"))));
     }
 

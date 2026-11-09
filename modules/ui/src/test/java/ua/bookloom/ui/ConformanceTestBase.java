@@ -13,9 +13,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.BriefChoices;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.ui.ConformanceCases.Overlay;
 import ua.bookloom.ui.ConformanceCases.Screen;
@@ -235,7 +235,7 @@ abstract class ConformanceTestBase extends ShellTestBase {
     private static ExportOutcome finishedExport() {
         final Path book = Path.of("/books/Frankenstein.uk.epub");
         return new ExportOutcome(
-                new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
+                new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ProofreadSummary.NONE, 0), 958_464);
     }
 
     /**

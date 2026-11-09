@@ -8,8 +8,8 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.FitProbe;
@@ -46,7 +46,7 @@ class ExportFitTest extends ExportScreenTestBase {
                         0,
                         List.of(),
                         10,
-                        ConsistencySummary.NOT_RUN,
+                        ProofreadSummary.NONE,
                         0,
                         List.of(new SourceFallback("part0009.html:1", "ch12 · p02"))));
         onFx(() -> button("export-run").fire());

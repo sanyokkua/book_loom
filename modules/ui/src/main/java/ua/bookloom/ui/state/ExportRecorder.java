@@ -65,7 +65,7 @@ final class ExportRecorder {
                 report.flaggedWritten(),
                 report.autoAccepted(),
                 report.reviewed(),
-                report.verifiedSegments(),
+                report.proofread(),
                 report.sideFiles());
     }
 }

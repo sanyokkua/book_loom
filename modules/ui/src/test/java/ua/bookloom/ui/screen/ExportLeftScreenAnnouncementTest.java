@@ -8,8 +8,8 @@ import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportProgress;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.settings.AppSetting;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
@@ -37,7 +37,7 @@ class ExportLeftScreenAnnouncementTest extends ExportScreenTestBase {
                         new ExportProgress.Neighbours(
                                 "She ran.", "Вона бігла.", "She was tired.", "She slept.", "Вона спала.")));
         exportService().holdRuns();
-        exportService().reportWith(report(Path.of("Frankenstein.uk.epub"), List.of(), ConsistencySummary.NOT_RUN));
+        exportService().reportWith(report(Path.of("Frankenstein.uk.epub"), List.of(), ProofreadSummary.NONE));
         openAndShowExport(EPUB);
         awaitFx(() -> exports().exportAvailable().get());
         onFx(() -> button("export-run").fire());

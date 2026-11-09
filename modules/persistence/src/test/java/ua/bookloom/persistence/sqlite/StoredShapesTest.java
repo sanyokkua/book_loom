@@ -113,6 +113,17 @@ class StoredShapesTest {
                         "GENDER_CHANGED");
     }
 
+    // The export record keeps the proofread summary instead of the count the consistency check verified, so a database
+    // from before is set aside.
+    @Test
+    void describe_afterProofreadSummary_holdsItOnTheExport() {
+        assertThat(StoredShapes.describe(StoredShapes.ROOTS))
+                .contains("proofread:{awaitingGender:java.util.List<{character:java.lang.String,segments:int,"
+                        + "suggested:boolean}>,reRead:int,suggestedGenderSegments:int,"
+                        + "unknownGenderSegments:int,waiting:int}")
+                .doesNotContain("verifiedSegments");
+    }
+
     @Test
     void current_twoCalls_answerTheSameFingerprint() {
         assertThat(StoredShapes.current()).isEqualTo(StoredShapes.current()).hasSize(64);

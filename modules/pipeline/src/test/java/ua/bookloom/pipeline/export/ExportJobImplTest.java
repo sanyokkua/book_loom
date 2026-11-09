@@ -294,8 +294,8 @@ class ExportJobImplTest {
 
         final ExportReport report = ok(fixture.export(request(id, tempDir.resolve("Book.uk.md"), false)));
 
-        assertThat(report.consistency().awaitingGender()).containsExactly(new GenderWait("Justine", 1));
-        assertThat(report.consistency().openGenderDeferrals()).isEqualTo(1);
+        assertThat(report.proofread().awaitingGender()).containsExactly(new GenderWait("Justine", 1));
+        assertThat(report.proofread().unknownGenderSegments()).isEqualTo(1);
     }
 
     // Recording the export belongs to the window: the engine's job leaves the project's stored record alone.

@@ -156,17 +156,12 @@ final class ExportResult {
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-no-target", line)));
-        final Optional<String> unknown = ExportReportLines.awaitingGender(messages, report.consistency());
-        final Optional<String> suggested = ExportReportLines.suggestedGender(messages, report.consistency());
+        final Optional<String> unknown = ExportReportLines.awaitingGender(messages, report.proofread());
+        final Optional<String> suggested = ExportReportLines.suggestedGender(messages, report.proofread());
         unknown.ifPresent(line -> checks.getChildren().add(warning("export-check-awaiting-gender", line)));
         suggested.ifPresent(line -> checks.getChildren().add(warning("export-check-suggested-gender", line)));
         if (unknown.isPresent() || suggested.isPresent()) {
             checks.getChildren().add(namesStyleLink());
-        }
-        final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
-        for (int index = 0; index < passLines.size(); index++) {
-            checks.getChildren()
-                    .add(check("export-check-consistency" + (index == 0 ? "" : "-" + index), passLines.get(index)));
         }
     }
 

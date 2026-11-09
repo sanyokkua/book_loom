@@ -29,10 +29,12 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.ChapterSummary;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.ExportRecord;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
@@ -327,5 +329,30 @@ class SqliteRepositoryContractTest extends ProjectStorageContractTest {
         assertThat(summaryRepository().list("p1").data())
                 .extracting(ChapterSummary::chapterKey, ChapterSummary::segmentCount, ChapterSummary::text)
                 .containsExactly(tuple("ch2.xhtml:0", 7, "Вони втекли."), tuple("ch1.xhtml:0", 5, "Вони зустрілися."));
+    }
+
+    @Test
+    void lastExport_proofreadSummary_survivesReopen() {
+        projectRepository().save(project("a", "h1", "One", "en", "uk"));
+        final ProofreadSummary summary = new ProofreadSummary(12, 3);
+        projectRepository()
+                .recordExport(
+                        "a",
+                        new ExportRecord(
+                                Instant.parse("2026-10-20T10:00:00Z"),
+                                Path.of("one.epub"),
+                                74,
+                                2,
+                                0,
+                                1,
+                                50,
+                                6,
+                                summary,
+                                List.of()));
+
+        restart();
+
+        assertThat(projectRepository().lastExport("a").data())
+                .hasValueSatisfying(last -> assertThat(last.proofread()).isEqualTo(summary));
     }
 }

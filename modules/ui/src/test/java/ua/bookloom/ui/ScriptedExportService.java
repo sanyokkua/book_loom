@@ -19,13 +19,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.CallSnapshot;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 
 /**
  * A hand-written {@link ExportService} that records each request, each cancel and each write-now and answers with one scripted report, or one scripted
@@ -165,8 +165,7 @@ public final class ScriptedExportService implements ExportService {
                 return Result.ok(scripted);
             }
             final Path destination = request.destination();
-            return Result.ok(
-                    new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN, 0));
+            return Result.ok(new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ProofreadSummary.NONE, 0));
         }
 
         private void writeDestination() {

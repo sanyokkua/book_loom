@@ -31,8 +31,10 @@ import ua.bookloom.api.llm.ServerEngine;
 import ua.bookloom.api.llm.TemperatureChoice;
 import ua.bookloom.api.llm.ThinkingOverride;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.Address;
 import ua.bookloom.api.project.AddressForm;
@@ -80,7 +82,8 @@ class JsonCodecTest {
 
     private static ExportRecord exportWithSideFiles() {
         final List<Path> sideFiles = List.of(Path.of("/tmp/out/glossary.csv"), Path.of("/tmp/out/log.txt"));
-        return new ExportRecord(T0, Path.of("/tmp/out/книга.epub"), 10, 1, 2, 3, 4, 5, 6, sideFiles);
+        final ProofreadSummary proofread = new ProofreadSummary(12, 3, List.of(new GenderWait("Nia", 2, true)), 2, 1);
+        return new ExportRecord(T0, Path.of("/tmp/out/книга.epub"), 10, 1, 2, 3, 4, 5, proofread, sideFiles);
     }
 
     static Stream<Object> storedRecords() {
@@ -101,15 +104,25 @@ class JsonCodecTest {
                 brief(),
                 provider(),
                 modelSettings(),
-                exportWithSideFiles(),
-                new ExportRecord(T0, Path.of("out/книга.epub"), 1, 0, 0, 0, 0, 0, 1, List.of(Path.of("side.csv"))));
+                exportWithSideFiles());
     }
 
     @Test
     void write_relativePath_isStoredAsWritten() {
-        final ExportRecord record = new ExportRecord(T0, Path.of("out/book.epub"), 1, 0, 0, 0, 0, 0, 1, List.of());
+        final ExportRecord record =
+                new ExportRecord(T0, Path.of("out/book.epub"), 1, 0, 0, 0, 0, 0, ProofreadSummary.NONE, List.of());
 
         assertThat(codec.write(record)).contains("\"destination\":\"out/book.epub\"");
+    }
+
+    @Test
+    void exportRecord_proofreadSummary_roundTrip() {
+        final ExportRecord record = exportWithSideFiles();
+
+        final String json = codec.write(record);
+
+        assertThat(json).contains("\"reRead\":12", "\"waiting\":3", "\"Nia\"");
+        assertThat(codec.read(json, ExportRecord.class)).isEqualTo(record);
     }
 
     @ParameterizedTest

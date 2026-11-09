@@ -8,8 +8,8 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.project.ExportRecord;
 
 /** A finished export is recorded on its project by the window, once it was written and checked, and only then. */
@@ -28,17 +28,7 @@ class ExportScreenRecordTest extends ExportScreenTestBase {
     void export_writtenAndChecked_recordsItsFiguresOnTheProject() throws TimeoutException {
         exportService()
                 .reportWith(new ExportReport(
-                        Path.of("Frankenstein.uk.epub"),
-                        70,
-                        72,
-                        0,
-                        0,
-                        50,
-                        6,
-                        List.of(),
-                        70,
-                        ConsistencySummary.NOT_RUN,
-                        0));
+                        Path.of("Frankenstein.uk.epub"), 70, 72, 0, 0, 50, 6, List.of(), 70, ProofreadSummary.NONE, 0));
 
         exportAndAwait();
         awaitFx(() -> !repository().recorded().isEmpty());
@@ -66,7 +56,7 @@ class ExportScreenRecordTest extends ExportScreenTestBase {
     @Test
     void export_recordCannotBeSaved_stillShowsTheExportComplete() throws TimeoutException {
         repository().failRecordingWith(AppError.of(ErrorCode.internal, "Not saved", "The store is closed."));
-        exportService().reportWith(report(Path.of("Frankenstein.uk.epub"), List.of(), ConsistencySummary.NOT_RUN));
+        exportService().reportWith(report(Path.of("Frankenstein.uk.epub"), List.of(), ProofreadSummary.NONE));
 
         exportAndAwait();
         awaitFx(() -> exports().outcome().get() != null);

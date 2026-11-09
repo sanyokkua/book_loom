@@ -16,7 +16,7 @@ import java.util.Objects;
  * @param reviewed segments a person acted on
  * @param sideFiles the side files written beside the book
  * @param verifiedSegments the body segments the consistency check verified
- * @param consistency what the final consistency pass did; {@link ConsistencySummary#NOT_RUN} when it was off
+ * @param proofread what the Proofread stage had re-read and what still waits, read from the stored records
  * @param keptVerbatim segments written as they are because nothing in them needed translating (numbers, symbols,
  *     Roman numerals, a single character); counted in {@code written}, never in {@code sourceKept}
  * @param sourceFallbacks segments written in their source although they had a translation, because it broke their
@@ -36,7 +36,7 @@ public record ExportReport(
         int reviewed,
         List<Path> sideFiles,
         int verifiedSegments,
-        ConsistencySummary consistency,
+        ProofreadSummary proofread,
         int keptVerbatim,
         List<SourceFallback> sourceFallbacks,
         List<SuspiciousSegment> suspicious,
@@ -46,7 +46,7 @@ public record ExportReport(
     public ExportReport {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(sideFiles, "sideFiles");
-        Objects.requireNonNull(consistency, "consistency");
+        Objects.requireNonNull(proofread, "proofread");
         Objects.requireNonNull(sourceFallbacks, "sourceFallbacks");
         Objects.requireNonNull(suspicious, "suspicious");
         Objects.requireNonNull(unresolvedBlocking, "unresolvedBlocking");
@@ -79,7 +79,7 @@ public record ExportReport(
             final int reviewed,
             final List<Path> sideFiles,
             final int verifiedSegments,
-            final ConsistencySummary consistency,
+            final ProofreadSummary proofread,
             final int keptVerbatim,
             final List<SourceFallback> sourceFallbacks,
             final List<SuspiciousSegment> suspicious) {
@@ -93,7 +93,7 @@ public record ExportReport(
                 reviewed,
                 sideFiles,
                 verifiedSegments,
-                consistency,
+                proofread,
                 keptVerbatim,
                 sourceFallbacks,
                 suspicious,
@@ -111,7 +111,7 @@ public record ExportReport(
             final int reviewed,
             final List<Path> sideFiles,
             final int verifiedSegments,
-            final ConsistencySummary consistency,
+            final ProofreadSummary proofread,
             final int keptVerbatim,
             final List<SourceFallback> sourceFallbacks) {
         this(
@@ -124,7 +124,7 @@ public record ExportReport(
                 reviewed,
                 sideFiles,
                 verifiedSegments,
-                consistency,
+                proofread,
                 keptVerbatim,
                 sourceFallbacks,
                 List.of());
@@ -141,7 +141,7 @@ public record ExportReport(
             final int reviewed,
             final List<Path> sideFiles,
             final int verifiedSegments,
-            final ConsistencySummary consistency,
+            final ProofreadSummary proofread,
             final int keptVerbatim) {
         this(
                 destination,
@@ -153,7 +153,7 @@ public record ExportReport(
                 reviewed,
                 sideFiles,
                 verifiedSegments,
-                consistency,
+                proofread,
                 keptVerbatim,
                 List.of());
     }

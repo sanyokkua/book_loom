@@ -2,21 +2,17 @@ package ua.bookloom.pipeline.export;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.ConsistencyChecks;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
-import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.review.ReviewCounting;
 
@@ -149,29 +145,10 @@ record ExportCounts(
                 reviewed,
                 sideFiles,
                 bodySegments,
-                legacyConsistency(proofread),
+                proofread,
                 keptVerbatim,
                 sourceFallbacks,
                 suspicious,
                 unresolvedBlocking);
-    }
-
-    // A bridge until the report holds the proofread summary itself (14.5 step C): no pass runs, so the summary is the
-    // one of a pass that did not run, still naming the segments that wait on a gender.
-    private static ConsistencySummary legacyConsistency(final ProofreadSummary proofread) {
-        final int waitingOnGender = proofread.suggestedGenderSegments() + proofread.unknownGenderSegments();
-        if (waitingOnGender == 0 && proofread.awaitingGender().isEmpty()) {
-            return ConsistencySummary.NOT_RUN;
-        }
-        return new ConsistencySummary(
-                ConsistencySummary.Status.NOT_RUN,
-                0,
-                0,
-                Map.of(DeferralReason.GENDER_UNKNOWN, waitingOnGender),
-                0,
-                ConsistencyChecks.NONE,
-                proofread.awaitingGender(),
-                proofread.suggestedGenderSegments(),
-                proofread.unknownGenderSegments());
     }
 }

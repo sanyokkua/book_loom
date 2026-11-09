@@ -146,15 +146,7 @@ public final class ExportCompleteDialog {
             row.getStyleClass().add("kv");
             body.getChildren().add(row);
         }
-        ExportReportLines.lastCheck(messages, report.consistency()).ifPresent(line -> {
-            final Label value = plain(line);
-            value.setId("export-complete-last-check");
-            body.getChildren().add(row(MessageKey.EXPORT_COMPLETE_LAST_CHECK, value));
-        });
         addPartialWarnings(body, report);
-        for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
-            body.getChildren().add(Wrapped.label(line, "dialog-text"));
-        }
     }
 
     // A partial book is never a surprise: segments nobody translated yet, and those whose translation broke the
@@ -171,9 +163,9 @@ public final class ExportCompleteDialog {
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-no-target", line)));
-        ExportReportLines.awaitingGender(messages, report.consistency())
+        ExportReportLines.awaitingGender(messages, report.proofread())
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-awaiting-gender", line)));
-        ExportReportLines.suggestedGender(messages, report.consistency())
+        ExportReportLines.suggestedGender(messages, report.proofread())
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-suggested-gender", line)));
         ExportReportLines.reportFile(messages, report).ifPresent(line -> {
             final Label note = plain(line);

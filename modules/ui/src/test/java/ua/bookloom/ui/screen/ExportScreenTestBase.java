@@ -8,9 +8,9 @@ import java.util.concurrent.TimeoutException;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
@@ -73,7 +73,7 @@ abstract class ExportScreenTestBase extends TranslatingScreenTestBase {
         return new ReviewCounts(142, 50, 0, 0, 6, pending, 0, 0, 0);
     }
 
-    static ExportReport report(final Path destination, final List<Path> sideFiles, final ConsistencySummary summary) {
+    static ExportReport report(final Path destination, final List<Path> sideFiles, final ProofreadSummary summary) {
         return new ExportReport(destination, 10, 0, 0, 0, 10, 0, sideFiles, 10, summary, 0);
     }
 }

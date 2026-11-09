@@ -14,9 +14,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -54,7 +54,7 @@ class ExportPolishScreenTest extends TranslatingScreenTestBase {
                         0,
                         List.of(),
                         10,
-                        ConsistencySummary.NOT_RUN,
+                        ProofreadSummary.NONE,
                         0));
         onFx(() -> button("export-run").fire());
         awaitFx(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);

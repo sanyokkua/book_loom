@@ -9,8 +9,8 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
-import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.RecordingFileRevealer;
@@ -29,11 +29,11 @@ class ExportCompleteDialogTest extends ShellTestBase {
     private static final double MAX_CARD_WIDTH = 720;
 
     private void show() {
-        show(List.of(), ConsistencySummary.NOT_RUN);
+        show(List.of(), ProofreadSummary.NONE);
     }
 
-    private void show(final List<Path> sideFiles, final ConsistencySummary consistency) {
-        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, sideFiles, 10, consistency, 0);
+    private void show(final List<Path> sideFiles, final ProofreadSummary proofread) {
+        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, sideFiles, 10, proofread, 0);
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
     }
 
@@ -71,17 +71,13 @@ class ExportCompleteDialogTest extends ShellTestBase {
     }
 
     @Test
-    void show_sideFilesAndAConsistencyPass_listsEachFileAndTheResult() {
+    void show_sideFiles_listsEachFile() {
         show(
                 List.of(Path.of("/books/Frankenstein.uk.glossary.csv"), Path.of("/books/Frankenstein.uk.report.md")),
-                new ConsistencySummary(ConsistencySummary.Status.RAN, 1, 0));
+                ProofreadSummary.NONE);
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
-                .contains(
-                        "Also saved",
-                        "Frankenstein.uk.glossary.csv",
-                        "Frankenstein.uk.report.md",
-                        "Consistency pass: 1 segment adjusted");
+                .contains("Also saved", "Frankenstein.uk.glossary.csv", "Frankenstein.uk.report.md");
     }
 
     // More characters wait than the line names: the five most waiting are named and the rest counted.
@@ -89,13 +85,9 @@ class ExportCompleteDialogTest extends ShellTestBase {
     void show_sevenCharactersAwaitGender_namesFiveAndCountsTheRest() {
         show(
                 List.of(),
-                new ConsistencySummary(
-                        ConsistencySummary.Status.RAN,
-                        0,
-                        0,
-                        java.util.Map.of(ua.bookloom.api.project.DeferralReason.GENDER_UNKNOWN, 20),
-                        0,
-                        ua.bookloom.api.pipeline.ConsistencyChecks.NONE,
+                new ProofreadSummary(
+                        12,
+                        20,
                         List.of(
                                 new ua.bookloom.api.pipeline.GenderWait("A", 7),
                                 new ua.bookloom.api.pipeline.GenderWait("B", 6),
@@ -103,7 +95,9 @@ class ExportCompleteDialogTest extends ShellTestBase {
                                 new ua.bookloom.api.pipeline.GenderWait("D", 4),
                                 new ua.bookloom.api.pipeline.GenderWait("E", 3),
                                 new ua.bookloom.api.pipeline.GenderWait("F", 2),
-                                new ua.bookloom.api.pipeline.GenderWait("G", 1))));
+                                new ua.bookloom.api.pipeline.GenderWait("G", 1)),
+                        0,
+                        20));
 
         assertThat(textsUnder(required("export-complete-awaiting-gender")))
                 .contains("20 segments wait on a character's gender: A ×7, B ×6, C ×5, D ×4, E ×3 and 2 more."
@@ -111,11 +105,10 @@ class ExportCompleteDialogTest extends ShellTestBase {
     }
 
     @Test
-    void show_noSideFilesAndNoPass_mentionsNeither() {
+    void show_noSideFiles_hasNoAlsoSavedLine() {
         show();
 
-        assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
-                .noneMatch(text -> text.startsWith("Also saved") || text.startsWith("Consistency pass"));
+        assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID))).noneMatch(text -> text.startsWith("Also saved"));
     }
 
     // Segments written in the source for a broken translation are named, so a partial book is never a surprise.
@@ -131,7 +124,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 0,
                 List.of(),
                 10,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0,
                 List.of(
                         new SourceFallback("part0009.html:1", "ch12 · p02"),
@@ -158,7 +151,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 0,
                 List.of(),
                 10,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0,
                 List.of(
                         new SourceFallback("part0009.html:1", "ch12 · p02", SourceFallback.Reason.NO_TARGET),
@@ -188,7 +181,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 0,
                 List.of(),
                 10,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0,
                 List.of(
                         new SourceFallback("part0009.html:1", "ch12 · p02"),
@@ -294,7 +287,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 0,
                 List.of(Path.of("/books/Frankenstein.uk.report.md")),
                 10,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0,
                 List.of(new SourceFallback("part0009.html:1", "ch12 · p02", SourceFallback.Reason.NO_TARGET)));
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
@@ -318,7 +311,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
                 2,
                 List.of(Path.of("/books/Frankenstein.uk.report.md")),
                 10,
-                ConsistencySummary.NOT_RUN,
+                ProofreadSummary.NONE,
                 0);
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
 
@@ -330,7 +323,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
     private void showLongPathCopyingTo(final List<String> copied) {
         final ExportReport report =
-                new ExportReport(LONG_BOOK, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0);
+                new ExportReport(LONG_BOOK, 10, 0, 0, 0, 8, 2, List.of(), 10, ProofreadSummary.NONE, 0);
         final ExportCompleteDialog dialog = new ExportCompleteDialog(
                 injector.getInstance(ModalHost.class), injector.getInstance(Messages.class), revealer(), copied::add);
         onFx(() -> dialog.show(new ExportOutcome(report, SIZE)));
