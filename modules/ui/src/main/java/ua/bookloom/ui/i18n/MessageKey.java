@@ -115,8 +115,6 @@ public enum MessageKey {
     EXPORT_PROGRESS_RETRY("export.progress.retry"),
     /** Busy-card step: the consistency pass drafts flagged and doubted segments again, keeping only a better text. */
     EXPORT_PROGRESS_RETRY_DOUBTED("export.progress.retryDoubted"),
-    /** Busy-card step: the consistency pass checks repaired paragraphs against their neighbours. */
-    EXPORT_PROGRESS_NEIGHBOUR("export.progress.neighbour"),
     /** Busy-card step: the export writes the book and its side files. */
     EXPORT_PROGRESS_WRITING("export.progress.writing"),
     /** Busy-card detail label: the file being worked on. */
@@ -2516,14 +2514,6 @@ public enum MessageKey {
     EXPORT_AUX_REPORT("export.aux.report"),
     /** Hover explanation of the control labelled by {@link #EXPORT_AUX_REPORT}. */
     EXPORT_AUX_REPORT_TIP("export.aux.report.tip"),
-    /** Heading of the card holding the final consistency pass. */
-    EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_CONSISTENCY_TITLE}. */
-    EXPORT_CONSISTENCY_TITLE_TIP("export.consistency.title.tip"),
-    /** Label beside the switch that turns the final consistency pass on. */
-    EXPORT_CONSISTENCY_SWITCH("export.consistency.switch"),
-    /** Note under the consistency-pass switch saying what it does. */
-    EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the occupied book is the file the last export wrote. */
     EXPORT_NOTE_JUST_EXPORTED("export.note.justExported"),
     /** Note under Save to while it is empty, saying why Export book waits. */
@@ -2669,46 +2659,16 @@ public enum MessageKey {
     EXPORT_SUGGEST_NAME_CANCEL_KEEPS("export.suggestName.cancelKeeps"),
     /** The notice after a title edit: the file name is suggested again only on request. */
     EXPORT_SUGGEST_NAME_TITLE_CHANGED("export.suggestName.titleChanged"),
-    /** The last check's note while the book is partial. */
-    EXPORT_CONSISTENCY_PARTIAL("export.consistency.partial"),
     /** Heading of the export dialog's steps. */
     EXPORT_GROUP_STEPS("export.group.steps"),
-    /** Heading of the reread items; argument 0 is how many were reread, argument 1 how many there are. */
-    EXPORT_GROUP_REREAD("export.group.reread"),
     /** Heading of the export dialog's last step. */
     EXPORT_GROUP_FINISH("export.group.finish"),
-    /** Column heading of the reread grid: the text before. */
-    EXPORT_REREAD_BEFORE("export.reread.before"),
-    /** Column heading of the reread grid: the text after. */
-    EXPORT_REREAD_AFTER("export.reread.after"),
-    /** Row label of the reread grid: the paragraph before. */
-    EXPORT_REREAD_PREVIOUS("export.reread.previous"),
-    /** Row label of the reread grid: the reread paragraph. */
-    EXPORT_REREAD_THIS("export.reread.this"),
-    /** Row label of the reread grid: the paragraph after. */
-    EXPORT_REREAD_NEXT("export.reread.next"),
-    /** The after cell of an item the reread left alone. */
-    EXPORT_REREAD_UNCHANGED("export.reread.unchanged"),
-    /** The after cell of an item whose call is under way. */
-    EXPORT_REREAD_READING("export.reread.reading"),
-    /** Check line after an early write; argument 0 is how many paragraphs were not reread. */
-    EXPORT_CHECK_CONSISTENCY_NOT_REREAD("export.check.consistency.notReread"),
-    /** Row label of the export-complete card: the last check. */
-    EXPORT_COMPLETE_LAST_CHECK("export.complete.lastCheck"),
-    /** Row value of the last check; argument 0 is the segments reread, argument 1 those fixed. */
-    EXPORT_COMPLETE_LAST_CHECK_VALUE("export.complete.lastCheckValue"),
     /** Check line after an export: the file was re-opened and verified. */
     EXPORT_CHECK_REOPENED("export.check.reopened"),
     /** Check line after an export: the language metadata changed; arguments are the source and the target tags. */
     EXPORT_CHECK_LANGUAGE("export.check.language"),
     /** Check line after an export: one side file written beside the book; argument 0 is its file name. */
     EXPORT_CHECK_SIDE_FILE("export.check.sideFile"),
-    /** Check line after an export: the consistency pass adjusted segments; argument 0 is the count. */
-    EXPORT_CHECK_CONSISTENCY_ADJUSTED("export.check.consistency.adjusted"),
-    /** Consistency pass result; argument 0 is how many paragraphs were corrected against their neighbours. */
-    EXPORT_CHECK_CONSISTENCY_NEIGHBOURS("export.check.consistency.neighbours"),
-    /** Check line after an export: the consistency pass ran and changed nothing. */
-    EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
     /**
      * Warning after an export: segments wait on characters whose gender is unknown; argument 0 is the segment count,
      * argument 1 the characters with their segment counts.
@@ -2725,22 +2685,6 @@ public enum MessageKey {
     EXPORT_AWAITING_GENDER_OPEN_TIP("export.awaitingGender.open.tip"),
     /** The tail of the warning's character list when more characters wait than are named; argument 0 is how many. */
     EXPORT_AWAITING_GENDER_MORE("export.awaitingGender.more"),
-    /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
-    EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
-    /**
-     * Check line after an export: argument 0 is how many flagged or doubtful segments a fresh draft improved, argument
-     * 1 how many were drafted again and kept because the new draft was no better.
-     */
-    EXPORT_CHECK_CONSISTENCY_RETRIED("export.check.consistency.retried"),
-    /** Check line after an export: argument 0 is how many paragraphs the neighbour check found nothing to change in. */
-    EXPORT_CHECK_CONSISTENCY_UNCHANGED("export.check.consistency.unchanged"),
-    /**
-     * Check line after an export: argument 0 is how many model answers the pass refused, argument 1 the rules they
-     * broke with their counts ({@code quotes: 2, worse: 1}).
-     */
-    EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
-    /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
-    EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */

@@ -207,18 +207,6 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     }
 
     @Test
-    void export_thenConsistencySwitched_forgetsTheOutcome() {
-        exportedOnce();
-
-        onFx(() -> {
-            exports.setConsistencyPass(true);
-            return null;
-        });
-
-        assertThat(onFx(() -> exports.outcome().get())).isNull();
-    }
-
-    @Test
     void export_thenNothingChanges_keepsTheOutcome() {
         exportedOnce();
 

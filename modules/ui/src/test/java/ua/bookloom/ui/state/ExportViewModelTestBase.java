@@ -122,7 +122,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     ExportViewModel newExports(final ExecutorService executor, final @Nullable SetupHelper setup) {
         return new ExportViewModel(
                 new ExportBook(current, desk, projects),
-                new ExportEngine(exportService, models, settings),
+                new ExportEngine(exportService),
                 new ExportWork(progress, activities),
                 executor,
                 setup,

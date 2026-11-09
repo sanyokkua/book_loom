@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -60,7 +59,6 @@ public final class ExportViewModel {
     private final ExportStatement statement;
     private final ExportOccupancy occupancy;
     private final ExportRun run;
-    private final LastCheckChoice lastCheck;
     public final NameSuggestion nameSuggestion; // the model's proposal of the translated book's file name
     private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
     private final ReadOnlyBooleanWrapper destinationExists = new ReadOnlyBooleanWrapper(false);
@@ -96,11 +94,8 @@ public final class ExportViewModel {
                 messages,
                 new ExportRecorder(storage.store(), clock::instant),
                 new ReplaceCheck(dialogs.confirm()));
-        this.lastCheck = new LastCheckChoice();
         this.blocker = work.activities().blocker(ActivityKind.EXPORT);
         wire();
-        lastCheck.followBrief(project.brief().get());
-        lastCheck.reload();
         log.debug("export view model created, book open {}", project.book().get() != null);
         propose();
         refreshExists();
@@ -112,7 +107,6 @@ public final class ExportViewModel {
         run.running().addListener((observed, was, now) -> recompute());
         run.outcome().addListener((observed, was, now) -> onOutcomeChanged());
         destination.addListener((observed, was, now) -> run.forgetStale("the destination"));
-        lastCheck.shown().addListener((observed, was, now) -> run.forgetStale("the last check"));
         sideFiles.addListener((SetChangeListener<SideFile>) change -> run.forgetStale("the side files"));
         statement.figures().addListener((observed, was, now) -> onFigures(now));
         project.book().addListener((observed, was, now) -> onBookChanged(now));
@@ -144,21 +138,6 @@ public final class ExportViewModel {
             sideFiles.remove(file);
         }
         refreshExists();
-    }
-
-    /** Takes the person's last-check toggle; the saved setting is left as it is. */
-    public void setConsistencyPass(final boolean on) {
-        lastCheck.choose(on);
-    }
-
-    /** Whether the last check runs if the book is exported now: off while the book is partial. */
-    public BooleanBinding lastCheckShown() {
-        return lastCheck.shown();
-    }
-
-    /** Whether the last-check switch is locked off because the book is partial. */
-    public BooleanBinding lastCheckLocked() {
-        return lastCheck.locked();
     }
 
     /** The project's counts and last written export, or null while they are not known. */
@@ -269,14 +248,12 @@ public final class ExportViewModel {
                 book == null ? null : book.projectId());
         destinationEdited = false;
         run.clear();
-        lastCheck.reload();
         propose();
         refreshExists();
         refreshStatement();
     }
 
     private void onBriefChanged(final @Nullable BookBrief brief) {
-        lastCheck.followBrief(brief);
         final String target = brief == null ? null : brief.targetLanguage();
         if (proposals.isProposedFor(target)) {
             return;
@@ -330,7 +307,6 @@ public final class ExportViewModel {
 
     private void onFigures(final @Nullable ExportFigures figures) {
         log.debug("export figures now known {}, partial {}", figures != null, figures != null && figures.isPartial());
-        lastCheck.figures(figures);
         recompute();
     }
 

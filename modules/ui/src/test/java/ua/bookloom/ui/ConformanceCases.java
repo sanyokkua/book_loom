@@ -107,10 +107,6 @@ final class ConformanceCases {
             new Part("#export-aux-bilingual .box", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
     private static final Part BOX_EDGE =
             new Part("#export-aux-bilingual .box", Kind.BORDER, "input-border", "#988462", "#7d949e");
-    private static final Part SWITCH_TRACK =
-            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "toggle-off", "#87939a", "#87939a");
-    private static final Part SWITCH_THUMB =
-            new Part("#export-aux-consistency .thumb", Kind.BACKGROUND, "toggle-thumb", "#ffffff", "#ffffff");
 
     /** One entry per screen; a later screen task adds exactly one line here. */
     private static final List<Screen> BASE = List.of(
@@ -268,15 +264,15 @@ final class ConformanceCases {
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             ConformanceResultsCase.RESULTS_DIALOG,
-            // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
-            // consistency track on the cool border role. It needs an open book to show them; the finished state
+            // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes on the
+            // cool border role. It needs an open book to show them; the finished state
             // follows a real export.
             new Screen(
                     "EXPORT",
                     ViewNames.EXPORT,
                     Preparation.BOOK_OPENED,
                     Overlay.NONE,
-                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE, SWITCH_TRACK, SWITCH_THUMB)),
+                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE)),
             new Screen(
                     "EXPORT_COMPLETED",
                     ViewNames.EXPORT,
@@ -290,9 +286,7 @@ final class ConformanceCases {
                             new Part("#export-auto", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#export-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             BOX_FILL,
-                            BOX_EDGE,
-                            SWITCH_TRACK,
-                            SWITCH_THUMB)));
+                            BOX_EDGE)));
 
     /** Every screen, the import screen's open-book cases and the names screen's included. */
     static final List<Screen> SCREENS = Stream.of(

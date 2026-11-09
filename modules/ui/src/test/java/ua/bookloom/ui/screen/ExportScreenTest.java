@@ -8,7 +8,6 @@ import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
-import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -251,7 +250,7 @@ class ExportScreenTest extends ExportScreenTestBase {
     // IF the side files stayed usable while a run translates, THEN a person could choose outputs that cannot be
     // written.
     @Test
-    void screen_runRunning_showsSideFilesAndTheSwitchUnavailableAndExportBlockedWithTheNote() throws TimeoutException {
+    void screen_runRunning_showsSideFilesUnavailableAndExportBlockedWithTheNote() throws TimeoutException {
         openEpubAndShowExport();
 
         publish(RunState.RUNNING);
@@ -259,11 +258,17 @@ class ExportScreenTest extends ExportScreenTestBase {
         assertThat(((CheckBox) required("export-aux-glossary")).isDisabled()).isTrue();
         assertThat(((CheckBox) required("export-aux-bilingual")).isDisabled()).isTrue();
         assertThat(((CheckBox) required("export-aux-report")).isDisabled()).isTrue();
-        assertThat(((ToggleSwitch) required("export-aux-consistency")).isDisabled())
-                .isTrue();
-        assertThat(isShown("export-aux-consistency")).isTrue();
         assertThat(button("export-run").isDisabled()).isTrue();
         assertThat(labelText("export-run-hint")).isEqualTo("Pause or stop the translation to export");
+    }
+
+    // IF the retired last-check switch came back, THEN a person would be offered a pass the export no longer runs.
+    @Test
+    void screen_bookOpen_offersNoLastCheck() throws TimeoutException {
+        openEpubAndShowExport();
+
+        assertThat(optional("export-consistency-card")).isNull();
+        assertThat(optional("export-aux-consistency")).isNull();
     }
 
     // IF a pause did not free the choices again, THEN a paused run could never export.

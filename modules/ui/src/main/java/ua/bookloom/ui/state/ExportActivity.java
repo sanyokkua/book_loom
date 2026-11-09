@@ -22,10 +22,8 @@ import ua.bookloom.ui.i18n.Messages;
 
 /**
  * Turns what an export job announces into what its progress dialog shows: the worded step, the facts of the export,
- * the consistency pass's model calls, one group row per stage reached (the reread stage's row says how many items it
- * reread), and one step per unit of every stage, the segment it reread with its text before and after, its verdict
- * and the paragraphs around it. The job announces from its own thread; each announcement is handed to the FX thread,
- * where the activity lives, as is the tally the write-now question reads.
+ * one group row per stage reached and one step per unit of every stage. The job announces from its own thread; each
+ * announcement is handed to the FX thread, where the activity lives.
  */
 @Slf4j
 final class ExportActivity implements ExportProgressListener {
@@ -146,14 +144,9 @@ final class ExportActivity implements ExportProgressListener {
             plannedSoFar += progress.total();
         }
         for (int unit = stageDone; unit < progress.done(); unit++) {
-            final boolean last = unit == progress.done() - 1;
-            final String item = last ? progress.itemRef() : null;
             handle.step(
-                    new StepChanged(StepKind.REQUEST, label, stageStart + unit, StepState.ENDED, item, StepResult.DONE),
-                    item == null
-                            ? null
-                            : new StepEntry.StepText(
-                                    progress.before(), progress.after(), progress.verdict(), progress.neighbours()));
+                    new StepChanged(StepKind.REQUEST, label, stageStart + unit, StepState.ENDED, null, StepResult.DONE),
+                    null);
         }
         stageDone = Math.max(stageDone, progress.done());
         final int next = stageStart + stageDone;

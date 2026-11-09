@@ -52,7 +52,6 @@ final class ProgressStepDetail extends VBox {
     private final PromptView prompt;
     private final ReplyView reply;
     private final WireView wire;
-    private final RereadGrid grid;
     private final ProgressRequestList requests;
     private @Nullable Instant lastTick;
 
@@ -71,7 +70,6 @@ final class ProgressStepDetail extends VBox {
         prompt = new PromptView("progress-prompt", messages);
         reply = new ReplyView("progress-reply", messages);
         wire = new WireView("progress-wire", messages);
-        grid = new RereadGrid(messages);
         requests = new ProgressRequestList(model, messages);
         name();
         layOut(mode);
@@ -87,7 +85,6 @@ final class ProgressStepDetail extends VBox {
                         mode,
                         say,
                         requests,
-                        grid,
                         inputHeading,
                         input,
                         outputHeading,
@@ -167,7 +164,6 @@ final class ProgressStepDetail extends VBox {
         final CallHeadings headings = CallHeadings.of(made == null ? null : made.kind());
         inputHeading.setText(messages.get(headings.input()));
         outputHeading.setText(messages.get(headings.output()));
-        Visibility.show(grid, step != null && grid.show(step.text(), step.isRunning()));
         showInput(step, made, headings);
         final boolean technical = model.mode().get() == ProgressDialogModel.Mode.DETAILED;
         output.setText(said(step == null ? null : outputOf(step, made, technical), made));
