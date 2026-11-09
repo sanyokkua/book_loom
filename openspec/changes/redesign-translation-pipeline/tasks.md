@@ -1801,7 +1801,7 @@ reviewer and backward-revision fields and their words, the guard cases of the re
 never-worse tests, and ADR-0046 becomes fully accepted (design D16, D25, D28). The export record changes shape, so the
 database is set aside once.
 
-- [ ] 14.1 Write the group's acceptance test and record it red, so "export makes no model call" is proven at the HTTP
+- [x] 14.1 Write the group's acceptance test and record it red, so "export makes no model call" is proven at the HTTP
   seam. → :pipeline
   - **Satisfies:** enabling work for design D16
   - **Depends on:** group 13
@@ -1814,7 +1814,7 @@ database is set aside once.
   - **Test first:** the test itself; it fails today because the last check creates a model and sends requests.
   - **Done when:** it runs red for that reason; the output is pasted into the commit message.
 
-- [ ] 14.2 Run arm 7a (today's per-chunk reviewer on against off at Balanced, on the same new pipeline) on the final
+- [x] 14.2 Run arm 7a (today's per-chunk reviewer on against off at Balanced, on the same new pipeline) on the final
   text after Proofread, so the reviewer is removed only if nothing is lost. → :pipeline
   - **Satisfies:** enabling work for design D24 (arm 7a) and D25 (row 14)
   - **Depends on:** 14.1
@@ -1833,7 +1833,7 @@ database is set aside once.
   - **Test first:** none new (an eval arm).
   - **Done when:** the result is recorded with the decision; the variant field stays only until 14.7 deletes it.
 
-- [ ] 14.3 Run arm 7b (Max under the new dial against Balanced and against today's Max at `79ffede6`) and check the
+- [x] 14.3 Run arm 7b (Max under the new dial against Balanced and against today's Max at `79ffede6`) and check the
   removal gate, so the old passes go only when the Proofread stage is shown not to make text worse. → :pipeline
   - **Satisfies:** enabling work for design D24 (arm 7b) and D25 (gate of row 14)
   - **Depends on:** 14.2
