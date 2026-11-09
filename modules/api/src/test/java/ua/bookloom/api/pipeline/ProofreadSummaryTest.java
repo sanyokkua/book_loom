@@ -41,6 +41,6 @@ class ProofreadSummaryTest {
 
     @Test
     void none_readNothingAndWaitsOnNothing() {
-        assertThat(ProofreadSummary.NONE).isEqualTo(new ProofreadSummary(0, 0, List.of(), 0, 0));
+        assertThat(new ProofreadSummary(0, 0, List.of(), 0, 0)).isEqualTo(ProofreadSummary.NONE);
     }
 }

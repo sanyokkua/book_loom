@@ -68,12 +68,11 @@ class BatchStageTest {
     }
 
     private static ScriptedChatModel profileFourModel() {
-        final ScriptedChatModel model = new ScriptedChatModel()
+        return new ScriptedChatModel()
                 .withBatchSize(PROFILE_SIZE)
                 .answerTo(BATCH, batchReply(numbered(1, 4, 0)))
                 .answerTo(BATCH, batchReply(numbered(5, 4, 0)))
                 .answerTo(BATCH, batchReply(numbered(9, 2, 0)));
-        return model;
     }
 
     private static List<Integer> batchSizes(final ScriptedChatModel model) {
