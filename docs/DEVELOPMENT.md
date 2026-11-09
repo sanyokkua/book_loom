@@ -1269,6 +1269,61 @@ K = 3 (seeds 1000-1002) and `sequence` with K = 3. `gemma4:26b-mlx` ran both min
 - *Runs* (`.temporary_context/eval-history/20261108-*arm7a-{OFF,ON}*`; the script, the matrix logs and the judge files are
   in `.temporary_context/arm7a/`).
 
+**Arm 7b: Max under the new dial (task 14.3).** New Max is Balanced plus Proofread's second round, which re-reads every
+story paragraph; each rewrite is kept only through the never-worse gate. It is compared with new Balanced and with
+today's Max from the `79ffede6` baseline, which still had the reviewer, the backward revision and the export pass.
+Reviewer OFF on every new run (`BOOKLOOM_EVAL_VARIANTS=reviewer=OFF`, arm 7a). Ollama, single-flight. `sequence` on
+`gemma4:e4b-mlx` with K = 3 (seeds 1000-1002), and `mini-en` and `mini-ru` on `gemma4:26b-mlx` once. New Balanced is
+not run again: it reuses arm 7a's OFF runs, which have the same `src/main` (`f6c39eed`, reviewer OFF). The baseline's
+Max is one stored run (K = 1, seed 1000), so its outputs were judged against each new repeat. The "58 meaning errors
+per 50 paragraphs" in the task came from a blind hand grade of an owner book (`#15j-results`); it cannot be measured
+again on `sequence`. So the comparison here is the judge's preference, not an error count. The eval harness now
+stores the proofread verdicts of every `sequence` repeat (their outcome, their round and the text a kept rewrite
+replaced), names each mini verdict's round, and logs the deferrals a mini run leaves open.
+
+| `sequence`, e4b, per repeat | new Max | new Balanced (arm 7a OFF) | baseline Max (`79ffede6`, K = 1) |
+|---|---|---|---|
+| LTCR-1 (%) | 96.1, 96.1, 97.0 | 96.6, 95.7, 89.6 | 94.6 |
+| First-round hard gates / flagged | 12, 14, 12 / 11, 11, 11 | 14, 12, 15 / 12, 11, 12 | 13 / 8 |
+| Narrator slips (production `GenderChecks`, first-person chapters) | 7, 0, 6 (13) | 5, 9, 2 (16) | 0 |
+| Calls (per segment) | 461, 466, 461 (1.41-1.42) | 302, 312, 306 (0.92-0.95) | 601 (1.83) |
+| Seconds per segment | 7.05, 7.21, 7.15 | 5.37, 5.37, 5.11 | 6.58 |
+| Proofread round 1: unchanged / rejected / kept | 12/12/0, 11/10/0, 13/13/1 | — | — |
+| Proofread round 2: unchanged / rejected / kept | 122/87/5, 122/82/4, 109/85/6 | — | — |
+
+- *Gate (design D25 row 14).* The judge (`gemma4:26b-mlx`, `bl-judge-1`, reasoning off, order swapped) compared each
+  of the 15 round-2 rewrites that were kept with the text it replaced: **12 better, 0 worse, 3 tied** (p = 0.0005). I
+  read them as well. Six put a Latin-letter name into Cyrillic (`Zerubin` → `Зерубін`). Seven fix the male narrator's
+  feminine past forms (`була рада` → `був радий`). Two make a name's spelling match the rest of the book (`Ешдаун` →
+  `Ашдаун`); those two are ties, and the third tie is one of the narrator fixes. Two rewrites are mixed. One also swaps `нескінченно` for the Latin phrase written in
+  Cyrillic. The other adds `кишеньковий` and drops `на ланцюжку`. Neither is clearly worse. That is well above 3 better
+  per worse. Open deferrals whose fact has arrived on `mini-ru`: **0** (0 open in all), on 26b once and on e4b K = 3
+  at Max. **The gate holds, so `NeverWorse` and the round-2 prompt are not tightened.**
+- *New Max against new Balanced* (every paragraph and repeat whose final text differs, same judge): 187 : 174 for Max,
+  258 tied, 5 unread (p = 0.53); by repeat 59:62, 60:52, 68:60. A tie: round 2 kept only 4-6 rewrites per repeat, so
+  most differences are the MLX runtime's own drift at a fixed seed (arm 3a).
+- *New Max against the baseline's Max:* 228 : 265 for the baseline, 238 tied, 7 unread (p = 0.105); by repeat 76:98
+  (repeat 0, same seed, p = 0.11), 79:83, 73:84. This is not significant. The three new repeats are also judged against
+  one baseline draw, so they are not independent. The baseline's lead is a hint, not a result.
+- *Narrator gender.* The baseline's Max has 0 slips, because its backward revision (`GenderRevision`) re-rendered them.
+  New Max has 13 over three repeats, close to Balanced's 16. Round 2 fixed some of them (the seven kept rewrites
+  above), but it left paragraphs 49-50, 71, 255 and 272. Its rewrites of those were refused or never asked. In the run's
+  log the refusals read `gender-scope`, `new-block:glossary` and `no-gain`; over the whole run, `no-gain` caused 253 of
+  the roughly 300 refusals. So the gate is strict rather than loose. But the Proofread stage does not yet do everything
+  the deleted gender pass did. Task 14.4 deletes `GenderRevision`, and this loss is the owner's to weigh; it is not part
+  of the D25 gate.
+- *26b once, Max against Balanced* (Balanced is arm 7a's OFF run). `mini-en`: grader pass rate 0.948 on both sides,
+  0 discordant; 81 against 30 calls; 282 against 166 s. Proofread read 31 segments: round 2 left 26 unchanged and
+  refused 5 (`no-gain`); it kept none. The judge on the 6 blocks that differ: 3 : 1 for Max, 2 tied. `mini-ru`: 0.963
+  on both sides, 0 discordant, no block differs; 50 against 25 calls; 133 against 104 s; round 2 left all 15 it read
+  unchanged. e4b `mini-ru` at Max, K = 3: 0.963 in every repeat; all 15 left unchanged by round 2.
+- *Time* (reported, not weighed): new Max takes 1.35 times new Balanced's time per segment on `sequence` (7.14 against
+  5.28 s, the means), and 1.08 times the baseline's Max (6.58 s). It makes about 1.5 times Balanced's calls and about
+  0.77 times the baseline Max's calls. Nothing flips: Max always re-reads the whole book.
+- *Runs* (`.temporary_context/eval-history/2026110{8,9}-*arm7b-MAX*`; the scripts, the matrix logs, the judge items and
+  verdicts, and the narrator-slip counts are in `.temporary_context/arm7b/`; the judge and the slip count were driven by
+  throwaway tests that were not kept).
+
 **Arm 7c: the proofread prompt (task 13.9).** Default P1: block 12 of a proofread call states the target language's own
 instruction and rules (`proofreadInstruction`, `proofreadRules` in `uk.properties`; the English default for a target with
 none). Alternative P2: the English instruction of `generic.properties` for every target, the target's rules kept, every other
