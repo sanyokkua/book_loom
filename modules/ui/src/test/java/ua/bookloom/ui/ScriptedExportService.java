@@ -44,7 +44,6 @@ public final class ScriptedExportService implements ExportService {
     private final List<ExportProgress> scriptedProgress = new CopyOnWriteArrayList<>();
     private final List<CallSnapshot> scriptedCalls = new CopyOnWriteArrayList<>();
     private final AtomicInteger cancels = new AtomicInteger();
-    private final AtomicInteger writeNows = new AtomicInteger();
     private volatile @Nullable CountDownLatch hold;
     private volatile @Nullable Error thrown;
 
@@ -109,11 +108,6 @@ public final class ScriptedExportService implements ExportService {
     /** How many times a job was cancelled. */
     public int cancels() {
         return cancels.get();
-    }
-
-    /** How many times a job was told to write the file now. */
-    public int writeNows() {
-        return writeNows.get();
     }
 
     /** Every request asked for, in order. */
@@ -198,7 +192,6 @@ public final class ScriptedExportService implements ExportService {
         // Write now ends a held check early: the job then answers as a finished export.
         @Override
         public void writeNow() {
-            writeNows.incrementAndGet();
             release();
         }
     }

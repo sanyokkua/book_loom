@@ -55,8 +55,6 @@ class DialogFitTest extends ShellTestBase {
             Question.QUIT_UNEXPORTED,
             Question.CANCEL_EXPORT,
             Question.REPLACE_EXISTING,
-            Question.WRITE_NOW,
-            Question.WRITE_NOW_EARLY,
             Question.REMOVE_PROJECT,
             Question.DELETE_PROVIDER);
 

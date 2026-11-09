@@ -6,16 +6,14 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ProofreadSummary;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.ViewNames;
 
 /**
- * An export that ends while the Export screen is not on show is still announced: a message offers the Export complete
- * card and nothing opens by itself; on the screen the card opens on its own.
+ * An export ends on the Export screen, which it keeps in front (navigation is locked while it runs and it cannot be put
+ * in the background): the card opens on its own and no message is raised.
  */
 class ExportLeftScreenAnnouncementTest extends ExportScreenTestBase {
 
@@ -35,37 +33,6 @@ class ExportLeftScreenAnnouncementTest extends ExportScreenTestBase {
     private List<Node> toastActions() {
         return ThemeTestSupport.onFx(
                 () -> List.copyOf(required("shell-toast-host").lookupAll(".toast-action")));
-    }
-
-    // IF a book written while the person was elsewhere went unannounced, THEN the file would exist and nobody know.
-    @Test
-    void export_endsWhileAnotherScreenShows_raisesAMessageAndOpensNothing() throws TimeoutException {
-        startHeldExport();
-        onFx(() -> button("progress-background").fire());
-        onFx(() -> shell.activate(ViewNames.IMPORT));
-
-        exportService().release();
-
-        awaitFx(() -> !toastActions().isEmpty());
-        assertThat(optional("export-complete-card")).isNull();
-        assertThat(((Button) toastActions().getFirst()).getText()).isEqualTo("Review the results");
-    }
-
-    // IF the message's action did not come back to Export, THEN the card would open over a screen it does not belong
-    // to.
-    @Test
-    void messageAction_pressed_returnsToExportAndOpensTheCardOnce() throws TimeoutException {
-        startHeldExport();
-        onFx(() -> button("progress-background").fire());
-        onFx(() -> shell.activate(ViewNames.IMPORT));
-        exportService().release();
-        awaitFx(() -> !toastActions().isEmpty());
-
-        onFx(((Button) toastActions().getFirst())::fire);
-
-        awaitFx(() -> optional("export-complete-card") != null);
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.EXPORT);
-        assertThat(textOf("export-complete-card")).contains("Frankenstein.uk.epub");
     }
 
     // IF the card also raised a message on the screen, THEN the person would be told twice.

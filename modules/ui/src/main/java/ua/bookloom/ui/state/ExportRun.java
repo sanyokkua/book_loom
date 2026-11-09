@@ -50,7 +50,6 @@ final class ExportRun {
     private final AtomicReference<@Nullable ExportJob> job = new AtomicReference<>();
     private final AtomicBoolean stopped = new AtomicBoolean();
     private ActivityTracker.@Nullable Handle handle;
-    private @Nullable ExportActivity shownActivity;
     private final ReadOnlyBooleanWrapper running = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<@Nullable ExportOutcome> outcome = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyStringWrapper failure = new ReadOnlyStringWrapper("");
@@ -116,28 +115,6 @@ final class ExportRun {
         }
     }
 
-    /**
-     * Ends the running export's last check early and writes the file with the fixes made so far; does nothing when no
-     * export runs. FX thread only.
-     */
-    void writeNow() {
-        final ExportJob created = job.get();
-        log.info("export write now requested: running {}, job exists {}", running.get(), created != null);
-        if (running.get() && created != null) {
-            created.writeNow();
-        }
-    }
-
-    /**
-     * How far the running export's last check got.
-     *
-     * @return the tally; all zero when no export runs or its check has not started
-     */
-    ExportActivity.RereadTally rereadTally() {
-        final ExportActivity shown = shownActivity;
-        return shown == null ? new ExportActivity.RereadTally(0, 0, 0) : shown.tally();
-    }
-
     /** The file the shown outcome wrote, or null when no outcome is shown. FX thread only. */
     @Nullable
     Path justExported() {
@@ -167,7 +144,6 @@ final class ExportRun {
         final ExportActivity shown =
                 new ExportActivity(registered, messages, request.destination(), null, activities::now);
         shown.announce(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
-        shownActivity = shown;
         return shown;
     }
 
@@ -214,7 +190,6 @@ final class ExportRun {
     private void endActivity() {
         final ActivityTracker.Handle registered = handle;
         handle = null;
-        shownActivity = null;
         if (registered != null) {
             registered.end();
         }

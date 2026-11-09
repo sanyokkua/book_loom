@@ -1,7 +1,6 @@
 package ua.bookloom.ui;
 
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +29,6 @@ import ua.bookloom.ui.notify.DialogFeedback;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
-import ua.bookloom.ui.state.ExportWriteNow;
 import ua.bookloom.ui.state.ProgressDialogDefaults;
 import ua.bookloom.ui.state.ProgressDialogModel;
 import ua.bookloom.ui.state.ProgressFigures;
@@ -69,7 +67,6 @@ public final class BusyHost {
     private final ProgressFigures.Factory figures;
     private final WorkVisibility work;
     private final ConfirmPrompt confirm;
-    private final Provider<ExportWriteNow> writeEarly;
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
     private final Map<Long, Shown> dialogs = new HashMap<>();
@@ -95,8 +92,6 @@ public final class BusyHost {
      *     layer says whether a dialog is showing
      * @param confirm the question asked before the export is cancelled, shown on the layer above
      * @param feedback told which dialog is shown, so a message raised meanwhile becomes its footer line
-     * @param writeEarly the export's "Write the file now", which asks first; got only when pressed, so the export's
-     *     state is not built for a window that never exports
      */
     @Inject
     public BusyHost(
@@ -105,8 +100,7 @@ public final class BusyHost {
             final ModalHost modalHost,
             final ProgressKit kit,
             final ConfirmPrompt confirm,
-            final DialogFeedback feedback,
-            final Provider<ExportWriteNow> writeEarly) {
+            final DialogFeedback feedback) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.defaults = Objects.requireNonNull(kit, "kit").defaults();
@@ -114,7 +108,6 @@ public final class BusyHost {
         this.work = kit.work();
         this.confirm = Objects.requireNonNull(confirm, "confirm");
         this.feedback = Objects.requireNonNull(feedback, "feedback");
-        this.writeEarly = Objects.requireNonNull(writeEarly, "writeEarly");
         keyboard = new BusyKeyboard(host, Objects.requireNonNull(modalHost, "modalHost"));
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
@@ -213,9 +206,7 @@ public final class BusyHost {
         final ProgressDialogModel model = new ProgressDialogModel(first, figures.create(), mode, activities::now);
         final long id = first.id();
         final Runnable hide = first.kind().isHideable() ? () -> activities.hide(id) : null;
-        final Runnable writeNow =
-                first.kind() == ActivityKind.EXPORT ? () -> writeEarly.get().ask() : null;
-        return new Shown(model, new ProgressDialog(model, messages, () -> cancel(first.kind(), id), hide, writeNow));
+        return new Shown(model, new ProgressDialog(model, messages, () -> cancel(first.kind(), id), hide));
     }
 
     private void cancel(final ActivityKind kind, final long id) {

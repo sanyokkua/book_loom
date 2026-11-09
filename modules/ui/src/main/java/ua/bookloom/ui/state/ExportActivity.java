@@ -44,15 +44,6 @@ final class ExportActivity implements ExportProgressListener {
     private String stageLabel = "";
     private String groupLabel = "";
 
-    /**
-     * How far the last check's reread got.
-     *
-     * @param reread the items reread so far
-     * @param fixed the items among them that were fixed
-     * @param total the items the reread planned; zero before it started
-     */
-    record RereadTally(int reread, int fixed, int total) {}
-
     ExportActivity(
             final ActivityTracker.Handle handle,
             final Messages messages,
@@ -110,11 +101,6 @@ final class ExportActivity implements ExportProgressListener {
         handle.details(lines);
         stages(progress, step);
         steps(progress, step);
-    }
-
-    /** The reread so far: nothing, as no reread runs any more; 14.6 removes the tally. */
-    RereadTally tally() {
-        return new RereadTally(0, 0, 0);
     }
 
     // One group row per stage reached, so the dialog can show the stages apart from their items; no percentage counts

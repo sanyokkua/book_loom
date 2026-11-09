@@ -9,7 +9,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.control.Visibility;
@@ -19,15 +18,13 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.ExportFigures;
 import ua.bookloom.ui.state.ExportViewModel;
-import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.Tone;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
  * The Export screen's banners, at most one of each at a time: a translating run (with Pause, since an export waits for
  * it), a partial book (how much is translated; the rest keeps the original text), segments that will be written in the source
- * language because their marks were lost, nothing translated yet, and the
- * export running in the background while the screen is read-only. Each follows the view model; nothing is recomputed
+ * language because their marks were lost, nothing translated yet. Each follows the view model; nothing is recomputed
  * here beyond which one applies.
  */
 @Slf4j
@@ -37,20 +34,14 @@ final class ExportBanners {
 
     private final ExportViewModel exports;
     private final TranslatingViewModel translating;
-    private final HiddenWork hidden;
     private final Messages messages;
     // Held here, so the screen keeps the banner's words alive exactly as long as its nodes.
     private final StringBinding partialWords;
     private final StringBinding fallbackWords;
 
-    ExportBanners(
-            final ExportViewModel exports,
-            final TranslatingViewModel translating,
-            final HiddenWork hidden,
-            final Messages messages) {
+    ExportBanners(final ExportViewModel exports, final TranslatingViewModel translating, final Messages messages) {
         this.exports = Objects.requireNonNull(exports, "exports");
         this.translating = Objects.requireNonNull(translating, "translating");
-        this.hidden = Objects.requireNonNull(hidden, "hidden");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.partialWords = Bindings.createStringBinding(
                 () -> {
@@ -80,8 +71,7 @@ final class ExportBanners {
                 runningBanner(running),
                 partialBanner(running),
                 fallbackBanner(running),
-                nothingBanner(running),
-                hiddenBanner());
+                nothingBanner(running));
         banners.setId("export-banners");
         return banners;
     }
@@ -153,11 +143,5 @@ final class ExportBanners {
                         messages.get(MessageKey.EXPORT_BANNER_NOTHING),
                         messages.get(MessageKey.EXPORT_BANNER_NOTHING_NOTE)),
                 nothing.and(running.not()));
-    }
-
-    private Banner hiddenBanner() {
-        return Visibility.bind(
-                new Banner("export-banner-hidden", Tone.INFO, "ℹ", messages.get(MessageKey.EXPORT_HIDDEN_BANNER), ""),
-                hidden.freezes(ViewNames.EXPORT));
     }
 }

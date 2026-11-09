@@ -7,7 +7,7 @@ import ua.bookloom.ui.i18n.MessageKey;
  * The kinds of work that talk to the model or to the provider, and which of them may not run beside each other.
  *
  * <p>The local model serves one request at a time, so every kind that asks it for text — the run, the names' and terms' scan,
- * review and translate, a review retry, the provider's inference test and an export (whose consistency pass may ask it) — is
+ * review and translate, a review retry, the provider's inference test and an export is not among them: it asks no model — and the rest is
  * <em>exclusive</em>: one excludes every other. The light provider checks (connection, model list) and the model
  * listing ask the server, not the model, so they may run during a run; any kind still excludes a second of its own
  * kind. The relation is symmetric by construction ({@link #conflictsWith}).
@@ -67,8 +67,8 @@ public enum ActivityKind {
             MessageKey.ACTIVITY_MODEL_LISTING,
             ViewNames.SETTINGS,
             new Behavior(false, false, false, false, false, false)),
-    /** Writing the translated book, whose consistency pass may ask the model. */
-    EXPORT(MessageKey.ACTIVITY_EXPORT, ViewNames.EXPORT, new Behavior(true, false, true, true, true, false)),
+    /** Checking and writing the translated book; it asks no model and cannot be hidden. */
+    EXPORT(MessageKey.ACTIVITY_EXPORT, ViewNames.EXPORT, new Behavior(true, false, true, false, false, false)),
     /** The model's proposal of the translated book's file name. */
     SUGGEST_NAME(
             MessageKey.ACTIVITY_SUGGEST_NAME, ViewNames.EXPORT, new Behavior(true, false, true, true, false, false)),
@@ -138,7 +138,7 @@ public enum ActivityKind {
      * Whether its progress dialog may be put in the background with "Continue in background": only long work, which
      * a person should not have to watch for minutes. Short work ends before anyone could want to hide it.
      *
-     * @return {@code true} for the names pass and the export, {@code false} otherwise
+     * @return {@code true} for the names pass, {@code false} otherwise
      */
     public boolean isHideable() {
         return hideable;

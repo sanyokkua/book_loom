@@ -2635,8 +2635,6 @@ public enum MessageKey {
     EXPORT_BANNER_NOTHING_NOTE("export.banner.nothing.note"),
     /** Banner before Export book: argument 0 is how many segments will be written in the source language. */
     EXPORT_BANNER_SOURCE_FALLBACK("export.banner.source_fallback"),
-    /** Banner while the export runs in the background. */
-    EXPORT_HIDDEN_BANNER("export.hidden.banner"),
     /** Label of the original title. */
     EXPORT_BOOK_TITLE_ORIGINAL("export.bookTitle.original"),
     /** Label of the translated title field. */
@@ -2693,22 +2691,6 @@ public enum MessageKey {
     EXPORT_REREAD_UNCHANGED("export.reread.unchanged"),
     /** The after cell of an item whose call is under way. */
     EXPORT_REREAD_READING("export.reread.reading"),
-    /** The progress dialog button that ends the last check and writes the file. */
-    EXPORT_WRITE_NOW("export.writeNow"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW}. */
-    EXPORT_WRITE_NOW_TIP("export.writeNow.tip"),
-    /** Heading of the question before writing early. */
-    EXPORT_WRITE_NOW_TITLE("export.writeNow.title"),
-    /** Text of the question before writing early; arguments are reread, all, fixed and the rest. */
-    EXPORT_WRITE_NOW_TEXT("export.writeNow.text"),
-    /** Text of the question before writing early when nothing was reread yet. */
-    EXPORT_WRITE_NOW_TEXT_EARLY("export.writeNow.textEarly"),
-    /** The button that writes the file early. */
-    EXPORT_WRITE_NOW_YES("export.writeNow.yes"),
-    /** Hover explanation of the control labelled by {@link #EXPORT_WRITE_NOW_YES}. */
-    EXPORT_WRITE_NOW_YES_TIP("export.writeNow.yes.tip"),
-    /** The safe answer of the write-early question. */
-    EXPORT_WRITE_NOW_NO("export.writeNow.no"),
     /** Check line after an early write; argument 0 is how many paragraphs were not reread. */
     EXPORT_CHECK_CONSISTENCY_NOT_REREAD("export.check.consistency.notReread"),
     /** Row label of the export-complete card: the last check. */

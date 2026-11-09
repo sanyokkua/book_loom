@@ -224,15 +224,6 @@ public final class ExportViewModel {
                         path.get(), Objects.requireNonNull(book.inspection().format(), "format"), chosen));
     }
 
-    /** Ends the running export's last check and writes the file with the fixes made so far. */
-    public void writeNow() {
-        run.writeNow();
-    }
-
-    ExportActivity.RereadTally rereadTally() {
-        return run.rereadTally();
-    }
-
     /** The lines stating what a book written now would contain, as last refreshed by {@link #refreshStatement()}. */
     public ObservableList<String> statement() {
         return statement.lines();

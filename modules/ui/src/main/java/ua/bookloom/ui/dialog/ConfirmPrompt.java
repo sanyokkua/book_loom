@@ -72,22 +72,6 @@ public interface ConfirmPrompt {
                 MessageKey.EXPORT_REPLACE_YES,
                 MessageKey.EXPORT_REPLACE_YES_TIP);
 
-        /** Ending the last check early and writing the file; the text says what was reread. */
-        public static final Question WRITE_NOW = new Question(
-                MessageKey.EXPORT_WRITE_NOW_TITLE,
-                MessageKey.EXPORT_WRITE_NOW_TEXT,
-                MessageKey.EXPORT_WRITE_NOW_YES,
-                MessageKey.EXPORT_WRITE_NOW_YES_TIP,
-                MessageKey.EXPORT_WRITE_NOW_NO);
-
-        /** Ending the last check before it reread anything. */
-        public static final Question WRITE_NOW_EARLY = new Question(
-                MessageKey.EXPORT_WRITE_NOW_TITLE,
-                MessageKey.EXPORT_WRITE_NOW_TEXT_EARLY,
-                MessageKey.EXPORT_WRITE_NOW_YES,
-                MessageKey.EXPORT_WRITE_NOW_YES_TIP,
-                MessageKey.EXPORT_WRITE_NOW_NO);
-
         /** Removing a project and its saved work; its title names the project. */
         public static final Question REMOVE_PROJECT = new Question(
                 MessageKey.CONFIRM_REMOVE_PROJECT_TITLE,

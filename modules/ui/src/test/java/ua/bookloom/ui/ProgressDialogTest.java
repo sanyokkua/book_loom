@@ -136,17 +136,18 @@ class ProgressDialogTest extends ProgressWorkTestBase {
         assertThat(required("shell-activity").isVisible()).isTrue();
     }
 
-    // IF Escape on the export's last check asked "Cancel the export?", THEN hiding would cost a second answer.
+    // IF Escape on the export cancelled it without a word, THEN one key would throw away a half-written file.
     @Test
-    void escape_onExport_hidesWithoutAskingAQuestion() throws TimeoutException {
+    void escape_onExport_asksCancelTheExport() throws TimeoutException {
         begin(ActivityKind.EXPORT);
         awaitDialog();
 
         escape();
 
-        await(() -> !isDialogShown());
-        assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
+        assertThat(textsUnder(required("confirm-card"))).contains("Cancel the export?");
         assertThat(cancelled).isEmpty();
+        onFx(((Button) required("confirm-yes"))::fire);
+        assertThat(cancelled).containsExactly("EXPORT");
     }
 
     // IF Escape only hid the brief's suggestion, THEN short work would end out of sight.

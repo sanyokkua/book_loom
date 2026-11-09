@@ -60,15 +60,7 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
     @EnumSource(
             value = ActivityKind.class,
             mode = EnumSource.Mode.INCLUDE,
-            names = {
-                "SUGGEST_STYLE",
-                "SUGGEST_NAME",
-                "EXPORT",
-                "REVIEW_RETRY",
-                "TERM_REVIEW",
-                "RUN_PREPARATION",
-                "NAMES_PASS"
-            })
+            names = {"SUGGEST_STYLE", "SUGGEST_NAME", "REVIEW_RETRY", "TERM_REVIEW", "RUN_PREPARATION", "NAMES_PASS"})
     void begin_otherKindThatCallsTheModel_holdsThenReleases(final ActivityKind kind) {
         final ActivityTracker tracker = tracker();
 
@@ -83,7 +75,7 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
     @EnumSource(
             value = ActivityKind.class,
             mode = EnumSource.Mode.INCLUDE,
-            names = {"PROVIDER_CHECK", "MODEL_LISTING", "IMPORT"})
+            names = {"PROVIDER_CHECK", "MODEL_LISTING", "IMPORT", "EXPORT"})
     void begin_kindThatNeverCallsTheModel_holdsNothing(final ActivityKind kind) {
         final ActivityTracker tracker = tracker();
 
@@ -109,12 +101,12 @@ class ActivityTrackerModelKeepAwakeTest extends FxTestBase {
         assertThat(calls).last().isEqualTo("stop");
     }
 
-    // IF pausing the run released the lock while an export was still writing, THEN the export would be frozen.
+    // IF pausing the run released the lock while the review retry was still asking the model, THEN it would be frozen.
     @Test
-    void run_pausedWhileAnExportRuns_staysAwakeUntilTheExportEnds() {
+    void run_pausedWhileAReviewRetryRuns_staysAwakeUntilItEnds() {
         final ActivityTracker tracker = tracker();
         publish(RunState.RUNNING);
-        final ActivityTracker.Handle export = onFx(() -> tracker.begin(ActivityKind.EXPORT, null));
+        final ActivityTracker.Handle export = onFx(() -> tracker.begin(ActivityKind.REVIEW_RETRY, null));
 
         publish(RunState.PAUSED);
 

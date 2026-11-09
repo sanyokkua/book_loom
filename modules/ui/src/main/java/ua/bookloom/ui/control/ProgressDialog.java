@@ -81,24 +81,6 @@ public final class ProgressDialog extends ModalCard {
             final Messages messages,
             final Runnable onCancel,
             final @Nullable Runnable onHide) {
-        this(model, messages, onCancel, onHide, null);
-    }
-
-    /**
-     * Builds the dialog over its model, with the export's "Write the file now".
-     *
-     * @param model what the dialog shows, kept while the work runs
-     * @param messages the catalogue every word comes from
-     * @param onCancel what Cancel does: stop the work, or ask first
-     * @param onHide what puts the work in the background, or {@code null} for short work, which cannot be hidden
-     * @param onWriteNow what "Write the file now" does, or {@code null} for work that writes no file
-     */
-    public ProgressDialog(
-            final ProgressDialogModel model,
-            final Messages messages,
-            final Runnable onCancel,
-            final @Nullable Runnable onHide,
-            final @Nullable Runnable onWriteNow) {
         Objects.requireNonNull(onCancel, "onCancel");
         super(Size.XL);
         this.model = Objects.requireNonNull(model, "model");
@@ -114,7 +96,7 @@ public final class ProgressDialog extends ModalCard {
         if (getContent() instanceof ScrollPane scroll) {
             scroll.setFitToHeight(true);
         }
-        cancel = footer(onCancel, onHide, onWriteNow);
+        cancel = footer(onCancel, onHide);
         setOnEscape(onHide != null ? onHide : onCancel);
         model.activity().addListener((observed, was, now) -> showActivity(now));
         model.figures().addListener((observed, was, now) -> showFigures());
@@ -213,8 +195,7 @@ public final class ProgressDialog extends ModalCard {
         });
     }
 
-    private Button footer(
-            final Runnable onCancel, final @Nullable Runnable onHide, final @Nullable Runnable onWriteNow) {
+    private Button footer(final Runnable onCancel, final @Nullable Runnable onHide) {
         final ButtonType cancelType =
                 new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType hideType =
@@ -225,9 +206,6 @@ public final class ProgressDialog extends ModalCard {
         } else {
             getButtonTypes().setAll(hideType, cancelType);
             wireHide((Button) lookupButton(hideType), onHide);
-        }
-        if (onWriteNow != null) {
-            ProgressFooterActions.addWriteNow(this, messages, onWriteNow);
         }
         final Button stop = (Button) lookupButton(cancelType);
         stop.setId("progress-cancel");

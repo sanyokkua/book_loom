@@ -16,7 +16,6 @@ import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.ExportViewModel;
-import ua.bookloom.ui.state.HiddenWork;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
@@ -54,7 +53,6 @@ public final class ExportController {
      *     the route from the no-book state lead
      * @param files the save dialog behind Browse, and what Open folder and Open book ask of the system
      * @param translating the run, which the banner's Pause pauses
-     * @param hidden the work in the background, which makes the screen read-only
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -64,12 +62,11 @@ public final class ExportController {
             final BookTitleViewModel titles,
             final ScreenContext context,
             final FilePicker files,
-            final TranslatingViewModel translating,
-            final HiddenWork hidden) {
+            final TranslatingViewModel translating) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.project = Objects.requireNonNull(context, "context").project();
         this.messages = context.messages();
-        this.view = new ExportView(viewModel, titles, context, files, translating, hidden);
+        this.view = new ExportView(viewModel, titles, context, files, translating);
     }
 
     @FXML
